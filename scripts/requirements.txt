@@ -1,0 +1,4 @@
+# to install cli library called click, or can use with venv
+# python3 pip install -r requirements.txt
+
+click
