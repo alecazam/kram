@@ -1,9 +1,17 @@
 # kram
 Encode/decode/info to and from PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.
 
-Kram is a wrapper to many popular encoders.  Most of these have sourcecode, and have been optimized to use very little memory and generate high quality encodings at all settings.  All kram encoders are currently cpu-based.
+kram is a wrapper to many popular encoders.  Most of these have sources, and have been optimized to use very little memory and generate high quality encodings at all settings.  All kram encoders are currently cpu-based.  kram was built to be small and used as a library or app.  The final size with all encoders is under 1MB, and each disabling encoders chops off around 200KB down to a final 200KB app size via dead-code stripping.  
 
-Many of the encoders can multithread a single image. kram is designed to process on texture per thread using the python script or a C++11 task system inside kram.  These currently both take the same amount of time, but the latter is best if kram ever gets gpu accelerated encoding.
+kram handles srgb and premul at key points in mip generation.  Mips are done in-place, and mip data is written out to file to reduce memory usage. kram leaves out BC2 and etcrgb8a1.  Also BC6 needs an encoder and ASTC HDR encoding needs a bit more work to pull from the float4 pixels.  
+
+Many of the encoder sources can multithread a single image, but that is unused.  kram is designed to batch process one texture per thread via a python script or a C++11 task system inside kram.  These currently both take the same amount of cpu time, but the latter is best if kram ever adds gpu accelerated encoding.
+
+Similar to a makefile system, modstamps are used to skip textures that have already been processed.  If the source png is newer, then the file is skipped.  Command line options are not yet compared, so if those change then use --force on the python script to rebuild all textures.
+
+KTX props are added to store the formats for Metal and Vulkan.  Also props are saved for channel content.  I'd like to extend this to provide viewers and shaders more information on the data inside the texture, and ideally each preset should supply these strings. 
+
+KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  But here are no viewers for that format.
 
 There are several commands supported by kram.
 * encode - encode/decode block formats, mipmaps, fast sdf, premul, srgb, swizzles, LDR and HDR support, 16f/32f
@@ -45,13 +53,15 @@ This app would not be possible without the open-source contributions from the fo
 
 Kram includes the following encoders/decoders:
 
-| Encoder  | Author           | License     | Encodes                    | Decodes | 
-|----------|------------------|-------------|----------------------------|---------|
-| BCEnc    | Rich Geldrich    | MIT         | BC1,3,4,5,7                | same    |
-| Squish   | Simon Brown      | MIT         | BC1,3,4,5                  | same    |
-| ATE      | Apple            | no sources  | BC1,4,5,7 ASTC4x4,8x8 LDR  | all LDR |
-| Astcenc  | ARM              | Apache 2.0  | ASTC all LDR/HDR           | same    |
-| Etc2comp | Google           | MIT         | ETC2r11,rg11,rgb,rgba      | same    |
+| Encoder  | Author           | License     | Encodes                     | Decodes | 
+|----------|------------------|-------------|-----------------------------|---------|
+| BCEnc    | Rich Geldrich    | MIT         | BC1,3,4,5,7                 | same    |
+| Squish   | Simon Brown      | MIT         | BC1,3,4,5                   | same    |
+| ATE      | Apple            | no sources  | BC1,4,5,7 ASTC4x4,8x8 LDR   | all LDR |
+| Astcenc  | ARM              | Apache 2.0  | ASTC4x4,5x5,6x6,8x8 LDR/HDR | same    |
+| Etc2comp | Google           | MIT         | ETC2r11,rg11,rgb,rgba       | same    |
+| Explicit | Me               | MIT         | r/rg/rgba 8u/16f/32f        | none    |
+
 
 ```
 ATE
@@ -135,8 +145,8 @@ Usage: kram encode
 	 [-optopaque]
 	 [-v]
    
-   [-test 1002]
-   [-testall]
+         [-test 1002]
+         [-testall]
 
 OPTIONS
 	-type 2d|3d|cube|1darray|2darray|cubearray
