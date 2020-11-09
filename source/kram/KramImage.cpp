@@ -31,7 +31,7 @@
 
 // hack to improve block generation on L1 and LA encoding
 // TODO: this breaks multithreading if not set to 4.
-extern int gAstcenc_UniqueChannelsInPartitioning;
+extern thread_local int gAstcenc_UniqueChannelsInPartitioning;
 #endif
 
 #include <cassert>

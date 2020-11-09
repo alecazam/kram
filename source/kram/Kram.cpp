@@ -1895,9 +1895,6 @@ int kramAppScript(vector<const char*>& args)
     task_system system(numJobs);
     atomic<int> errorCounter;
 
-    // TODO: also need to deal with astc global gAstcenc_UniqueChannelsInPartitioning
-    // that may need to move to TLS, or setting that break multithread.
-
     while (fp) {
         fgets(str, sizeof(str), fp);
         if (feof(fp)) {
