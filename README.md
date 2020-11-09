@@ -113,19 +113,21 @@ SDF altered to support mip generation from bigger distance fields
    This requires srcWidth x dstHeight floats.
   
 ```
-Issues
-Add tile command for SVT tiling
-Add merge command to combine images (similar to ImageMagick)
-Add gpu encoding (compute in Metal/Vulkan)
+Features to complete:
+Tile command for SVT tiling
+Merge command to combine images (similar to ImageMagick)
+Atlas command to atlas to 2D and 2D array textures
+Add GPU encoder (use compute in Metal/Vulkan)
 Add BC6H encoder
 Improve permute in SSE2Neon
 Save prop with args and compare args and modstamp before rebuilding to avoid --force
 Multichannel SDF
-ASTC HDR encoding
+Plumb float4 through to ASTC HDR encoding
 
 Test Images
 Samples from test files used for the various encoders.
-SDF image taken from test on EDT.
+SDF image taken from EDT that inspired heman.
+collectorbarrel-n/a from Id's old GPU BC1/3 compression article.
 
 ```
 
