@@ -1,15 +1,15 @@
 # kram
 Encode/decode/info to and from PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.
 
-kram is a wrapper to many popular encoders.  Most of these have sources, and have been optimized to use very little memory and generate high quality encodings at all settings.  All kram encoders are currently cpu-based.  kram was built to be small and used as a library or app.  The final size with all encoders is under 1MB, and each disabling encoders chops off around 200KB down to a final 200KB app size via dead-code stripping.  
+kram is a wrapper to many popular encoders.  Most of these have sources, and have been optimized to use very little memory and generate high quality encodings at all settings.  All kram encoders are currently cpu-based.  kram was built to be small and used as a library or app.  The final size with all encoders is under 1MB, and disabling each encoder chops off around 200KB down to a final 200KB app size via dead-code stripping.  The code should compile with C++11 or higher.
 
-kram handles srgb and premul at key points in mip generation.  Mips are done in-place, and mip data is written out to file to reduce memory usage. kram leaves out BC2 and etcrgb8a1.  Also BC6 needs an encoder and ASTC HDR encoding needs a bit more work to pull from the float4 pixels.  
+kram handles srgb and premul at key points in mip generation.  Source files use mmap to reduce memory, but fallback to file ops if that fails.  Temp files are generated for output, and then renamed in case the app fails or is terminated.  Mips are done in-place, and mip data is written out to a file to reduce memory usage. kram leaves out BC2 and etcrgb8a1.  Also BC6 still needs an encoder, and ASTC HDR encoding needs a bit more work to pull from the float4 pixels.  
 
 Many of the encoder sources can multithread a single image, but that is unused.  kram is designed to batch process one texture per thread via a python script or a C++11 task system inside kram.  These currently both take the same amount of cpu time, but the latter is best if kram ever adds gpu accelerated encoding.
 
-Similar to a makefile system, modstamps are used to skip textures that have already been processed.  If the source png is newer, then the file is skipped.  Command line options are not yet compared, so if those change then use --force on the python script to rebuild all textures.
+Similar to a makefile system, modstamps are used to skip textures that have already been processed.  If the source png is old than the ktx output, then the file is skipped.  Command line options are not yet compared, so if those change then use --force on the python script to rebuild all textures.
 
-KTX props are added to store the formats for Metal and Vulkan.  Also props are saved for channel content.  I'd like to extend this to provide viewers and shaders more information on the data inside the texture, and ideally each preset should supply these strings. 
+Kram adds props to the KTX file to store data.  Currently props store Metal and Vulkan formats.  Also props are saved for channel content and post-swizzle.  Loaders, viewers, and shaders can utilize this metadata.
 
 KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  But here are no viewers for that format.
 
@@ -20,7 +20,7 @@ There are several commands supported by kram.
 * script - send a series of kram commands that are processed in a task system.  Ammenable to gpu acceleration.
 
 There are sample scripts.
-* kramTextures.py - python3 example that recursively walks directories and calls kram, or accumulates command and runs as a script
+* kramTextures.py  - python3 example that recursively walks directories and calls kram, or accumulates command and runs as a script
 * formatSources.sh - zsh script to run clang_format on the kram source directory (excludes open source)
 
 Kram uses CMake to setup the projects and build.  An executable kram and libkram are generated, but only kram is needed to run.  The library can be useful in apps that want to include the decoder, or run these algorithms on gpu-generated data.
