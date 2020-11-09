@@ -897,6 +897,9 @@ void kramEncodeUsage()
           "\t [-optopaque]\n"
           "\t [-v]\n"
           "\n"
+          "\t [-testall]\n"
+          "\t [-test 1002]\n"
+          "\n"
           "\n"
 
           "OPTIONS\n"
@@ -1009,7 +1012,7 @@ void kramUsage()
 #ifndef NDEBUG  // DEBUG build
           "DEBUG "
 #endif
-          appName "[encode | decode | info | ...]\n");
+          appName "[encode | decode | info | script | ...]\n");
 
     kramEncodeUsage();
     kramInfoUsage();
