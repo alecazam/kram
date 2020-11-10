@@ -574,21 +574,21 @@ int glType(MyMTLPixelFormat format)
 // https://docs.unity3d.com/ScriptReference/Experimental.Rendering.GraphicsFormat.html
 // Unity only handles 4,5,6,8,10,12 square block dimensions
 
-int KTXImage::mipLevelSize(int width, int height) const
+int KTXImage::mipLevelSize(int width_, int height_) const
 {
-    int count = blockCount(width, height);
+    int count = blockCount(width_, height_);
     int size = blockSize();
     return count * size;
 }
 
-int KTXImage::blockCount(int width, int height) const
+int KTXImage::blockCount(int width_, int height_) const
 {
     Int2 dims = blockDims();
 
-    width = (width + dims.x - 1) / dims.x;
-    height = (height + dims.y - 1) / dims.y;
+    width_ = (width_ + dims.x - 1) / dims.x;
+    height_ = (height_ + dims.y - 1) / dims.y;
 
-    int count = width * height;
+    int count = width_ * height_;
     return count;
 }
 

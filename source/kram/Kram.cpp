@@ -53,14 +53,14 @@ bool LoadPng(const uint8_t* data, int dataSize, Image& sourceImage)
 {
     unsigned int width = 0;
     unsigned int height = 0;
-    unsigned int error = 0;
+    unsigned int errorLode = 0;
 
     // can identify 16unorm data for heightmaps via this call
     LodePNGState state;
     lodepng_state_init(&state);
 
-    error = lodepng_inspect(&width, &height, &state, data, dataSize);
-    if (error != 0) {
+    errorLode = lodepng_inspect(&width, &height, &state, data, dataSize);
+    if (errorLode != 0) {
         return false;
     }
 
@@ -69,8 +69,8 @@ bool LoadPng(const uint8_t* data, int dataSize, Image& sourceImage)
     //        return false;
     //    }
 
-    bool hasColor;
-    bool hasAlpha;
+    bool hasColor = true;
+    bool hasAlpha = true;
 
     switch (state.info_png.color.colortype) {
         case LCT_GREY:
@@ -99,8 +99,8 @@ bool LoadPng(const uint8_t* data, int dataSize, Image& sourceImage)
     // this inserts onto end of array, it doesn't resize
     vector<uint8_t> pixels;
     pixels.clear();
-    error = lodepng::decode(pixels, width, height, data, dataSize, LCT_RGBA, 8);
-    if (error != 0) {
+    errorLode = lodepng::decode(pixels, width, height, data, dataSize, LCT_RGBA, 8);
+    if (errorLode != 0) {
         return false;
     }
 
@@ -795,8 +795,8 @@ static void setupTestArgs(vector<const char*>& args)
                 3004,
             };
 
-            for (int i = 0, iEnd = countof(allTests); i < iEnd; ++i) {
-                int testNumber = allTests[i];
+            for (int j = 0, jEnd = countof(allTests); j < jEnd; ++j) {
+                testNumber = allTests[j];
                 if (!kramTestCommand(testNumber, argsTest, cmd)) {
                     KLOGE("Kram", "Test %d not found\n", testNumber);
                     errorCode = -1;
@@ -1123,14 +1123,14 @@ static int kramAppInfo(vector<const char*>& args)
         // vector<uint8_t> pixels;
         unsigned int width = 0;
         unsigned int height = 0;
-        unsigned int error = 0;
+        unsigned int errorLode = 0;
 
         // can identify 16unorm data for heightmaps via this call
         LodePNGState state;
         lodepng_state_init(&state);
 
-        error = lodepng_inspect(&width, &height, &state, data, dataSize);
-        if (error != 0) {
+        errorLode = lodepng_inspect(&width, &height, &state, data, dataSize);
+        if (errorLode != 0) {
             KLOGE("Kram", "info couldn't open png file");
             return -1;
         }

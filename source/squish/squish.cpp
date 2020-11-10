@@ -63,9 +63,9 @@ void CompressMasked( u8 * rgba, int mask, void* block, int format, int flags, fl
     
     Color *colors = (Color*)rgba;
     
-    if( format == kBC1 | format == kBC2 | format == kBC3 ) {
+    if( format == kBC1 || format == kBC2 || format == kBC3 ) {
         // bc2/bc3 write color block after alpha block
-        if ( format == kBC2 | format == kBC3 ) {
+        if ( format == kBC2 || format == kBC3 ) {
             colourBlock = reinterpret_cast< u8* >( block ) + 8;
         }
         
@@ -125,7 +125,7 @@ void CompressMasked( u8 * rgba, int mask, void* block, int format, int flags, fl
 
 // in bytes
 static int GetBlockSize( int format ) {
-    if (format == kBC1 | format == kBC4) {
+    if (format == kBC1 || format == kBC4) {
         return 8;
     }
     return 16;

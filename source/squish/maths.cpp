@@ -34,6 +34,7 @@
 #include <algorithm>
 
 namespace squish {
+using namespace std;
 
 Sym3x3 ComputeWeightedCovariance( int n, Vec3 const* points, float const* weights )
 {
@@ -247,7 +248,8 @@ Vec3 ComputePrincipleComponent( Sym3x3 const& matrix )
 		w = MultiplyAdd(row2, Vec4(v.z), w);
 
 		// get max component from xyz in all channels
-		float a = max(max(w.x, w.y), w.z);
+        // leave std:: or gets confused with simd::max
+		float a = std::max(std::max(w.x, w.y), w.z);
 
 		// divide through and advance
 		v = w / a;

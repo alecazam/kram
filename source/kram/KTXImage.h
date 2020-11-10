@@ -199,10 +199,10 @@ public:
     // block data depends on format
     int blockSize() const;
     Int2 blockDims() const;
-    int blockCount(int width, int height) const;
+    int blockCount(int width_, int height_) const;
 
     // mip data depends on format
-    int mipLevelSize(int width, int height) const;
+    int mipLevelSize(int width_, int height_) const;
     int totalMipLevels() const;
     int totalChunks() const;
 

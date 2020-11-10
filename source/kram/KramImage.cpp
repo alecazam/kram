@@ -196,7 +196,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             return false;
             
             // treat as float for per channel copies
-            float4* dstPixels = _pixelsFloat.data();
+            float* dstPixels = (float*)_pixelsFloat.data();
 
             const uint16_t* srcPixels =
                 (const uint16_t*)(image.fileData + image.mipLevels[0].offset);
@@ -574,10 +574,10 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
 
                 for (int y = 0; y < h; y += blockDim) {
                     for (int x = 0; x < w; x += blockDim) {
-                        int bx = x / blockDim;
-                        int by = y / blockDim;
-                        int b0 = by * blocks_x + bx;
-                        const uint8_t* srcBlock = &srcData[b0 * blockSize];
+                        int bbx = x / blockDim;
+                        int bby = y / blockDim;
+                        int bb0 = bby * blocks_x + bbx;
+                        const uint8_t* srcBlock = &srcData[bb0 * blockSize];
 
                         // decode into temp 4x4 pixels
                         Color pixels[blockDim * blockDim];
@@ -635,7 +635,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
 #endif
 #if COMPILE_SQUISH
             else if (useSquish) {
-                squish::TexFormat format;
+                squish::TexFormat format = squish::kBC1;
 
                 switch (pixelFormat) {
                     case MyMTLPixelFormatBC1_RGBA:
@@ -1664,7 +1664,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                                                              // slighting better
                                                              // quality
 
-            squish::TexFormat format;
+            squish::TexFormat format = squish::kBC1;
 
             success = true;
 

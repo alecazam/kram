@@ -68,7 +68,6 @@ extern int logMessage(const char* group, int logLevel,
         msg = fmt;
     }
     else {
-        va_list args;
         va_start(args, fmt);
         vsprintf(str, fmt, args);
         va_end(args);
