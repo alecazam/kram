@@ -131,12 +131,12 @@ set_target_properties(${myTargetLib} ${myTargetApp} PROPERTIES
     DISABLE_PRECOMPILE_HEADERS ON
 )
 
-# force include instead of precompile
-target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
-target_compile_options(${myTargetApp} PUBLIC -include KramConfig.h)
 
 if (macOS)
-    
+    # force include instead of precompile
+    target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
+    target_compile_options(${myTargetApp} PUBLIC -include KramConfig.h)
+
     # helper to set clang settings
     macro (set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE)
         set_property (TARGET ${TARGET} PROPERTY
@@ -175,14 +175,21 @@ endif()
 
 # these don't set correct setting in xcode, but keep for Win
 if (winOS)
+    target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
+    target_compile_options(${myTargetApp} PUBLIC /FIKramConfig.h)
+
     # TODO: switch to add_target_definitions
 
     # to turn off exceptions/rtti use /GR and /EHsc replacement
     string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-    add_definition(_D_HAS_EXCEPTIONS=0) # fixes STL
-    
+    # fixes STL
+    target_compile_definitions(${myTargetLib} PUBLIC
+        "-D_D_HAS_EXCEPTIONS=0")
+    target_compile_definitions(${myTargetApp} PUBLIC
+        "-D_D_HAS_EXCEPTIONS=0")
+
 endif()
 
 # ALL_BUILD can't execute an app, so change the startup project to something runnable
@@ -194,11 +201,11 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/source/*.h"
 )
 
-#if (APP_OUTPUT_DIR)
-#    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${APP_OUTPUT_DIR})
-#    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${APP_OUTPUT_DIR})
-#    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${APP_OUTPUT_DIR})
-#endif()
+# no objc on winOS
+if (winOS)
+list(FILTER sources EXCLUDE REGEX "*ateencoder.mm$")
+list(FILTER sources EXCLUDE REGEX "*ateencoder.h$")
+endif()
 
 # remove files not used
 list(FILTER sources EXCLUDE REGEX ".*test.cpp$")
