@@ -94,10 +94,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 set(CMAKE_BUILD_TYPE Release)
 
-target_include_directories(${myTargetApp} PUBLIC
+target_include_directories(${myTargetApp} PRIVATE
     "${PROJECT_SOURCE_DIR}/source/kram/"
     )
-target_sources(${myTargetApp} PUBLIC "${PROJECT_SOURCE_DIR}/source/app/KramMain.cpp")
+target_sources(${myTargetApp} PRIVATE "${PROJECT_SOURCE_DIR}/source/app/KramMain.cpp")
 
 
 if (macOS)
@@ -125,7 +125,7 @@ set_target_properties(${myTargetLib} PROPERTIES OUTPUT_NAME kram)
 
 # force include this, so all output goes through common call without having to modify sources too much
 # could be force include, but want precompiled headers anyways
-#target_precompile_headers(${myTargetLib} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/source/kram/KramConfig.h)
+#target_precompile_headers(${myTargetLib} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source/kram/KramConfig.h)
 # turn off pch
 set_target_properties(${myTargetLib} ${myTargetApp} PROPERTIES 
     DISABLE_PRECOMPILE_HEADERS ON
@@ -134,8 +134,8 @@ set_target_properties(${myTargetLib} ${myTargetApp} PROPERTIES
 
 if (macOS)
     # force include instead of precompile
-    target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
-    target_compile_options(${myTargetApp} PUBLIC -include KramConfig.h)
+    target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h)
+    target_compile_options(${myTargetApp} PRIVATE -include KramConfig.h)
 
     # helper to set clang settings
     macro (set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE)
@@ -175,8 +175,8 @@ endif()
 
 # these don't set correct setting in xcode, but keep for Win
 if (winOS)
-    target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
-    target_compile_options(${myTargetApp} PUBLIC /FIKramConfig.h)
+    target_compile_options(${myTargetLib} PRIVATE /FIKramConfig.h)
+    target_compile_options(${myTargetApp} PRIVATE /FIKramConfig.h)
 
     # TODO: switch to add_target_definitions
 
@@ -185,9 +185,9 @@ if (winOS)
     string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
     # fixes STL
-    target_compile_definitions(${myTargetLib} PUBLIC
+    target_compile_definitions(${myTargetLib} PRIVATE
         "-D_D_HAS_EXCEPTIONS=0")
-    target_compile_definitions(${myTargetApp} PUBLIC
+    target_compile_definitions(${myTargetApp} PRIVATE
         "-D_D_HAS_EXCEPTIONS=0")
 
 endif()
@@ -199,6 +199,12 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS
 	"${PROJECT_SOURCE_DIR}/source/*.cpp"
 	"${PROJECT_SOURCE_DIR}/source/*.mm"
     "${PROJECT_SOURCE_DIR}/source/*.h"
+)
+
+file(GLOB_RECURSE appSources CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/source/app/*.cpp"
+    "${PROJECT_SOURCE_DIR}/source/app/*.mm"
+    "${PROJECT_SOURCE_DIR}/source/app/*.h"
 )
 
 # no objc on winOS
@@ -223,12 +229,12 @@ list(FILTER sources EXCLUDE REGEX ".astcenccli_toplevel.cpp$")
 # exclude app/KramMain.cpp from library
 list(FILTER sources EXCLUDE REGEX ".*KramMain.cpp$")
 
-# this will preserve hierarchy of sources a build project
+# this will preserve hierarchy of sources in a build project
 source_group(TREE "${PROJECT_SOURCE_DIR}/source" PREFIX "source" FILES ${sources})
 
-#source_group(TREE "${PROJECT_SOURCE_DIR}/source/app" PREFIX "source" FILES "${PROJECT_SOURCE_DIR}/source/app/KramMain.cpp")
+source_group(TREE "${PROJECT_SOURCE_DIR}/source/app" PREFIX "source" FILES ${appSources})
 
-target_include_directories(${myTargetLib} PUBLIC
+target_include_directories(${myTargetLib} PRIVATE
 	"${PROJECT_SOURCE_DIR}/source/"
     "${PROJECT_SOURCE_DIR}/source/kram/"
 	#"${PROJECT_SOURCE_DIR}/source/squish/"
@@ -236,26 +242,33 @@ target_include_directories(${myTargetLib} PUBLIC
     "${PROJECT_SOURCE_DIR}/source/astc-encoder/"
 	"${PROJECT_SOURCE_DIR}/source/etc2comp/"
 	)
-target_sources(${myTargetLib} PUBLIC ${sources})
+ 
+# only add sources to the library
+target_sources(${myTargetLib} PRIVATE ${sources})
+
+target_include_directories(${myTargetApp} PRIVATE
+    "${PROJECT_SOURCE_DIR}/kram/")
+
+target_sources(${myTargetApp} PRIVATE ${appSources})
 
 # Needed for asctenc 2.0 in SSE 4.2 mode.  But that is buggy.  No Neon support.
 # -msse4.2 -mpopcnt -DASTCENC_SSE=42 -DASTCENC_AVX=0 -DASTCENC_POPCNT=1 -DASTCENC_VECALIGN=16
 
 # want code to run on ARM and on Intel, and SSE/AVX optimizations aren't extensive in astcenc
-target_compile_definitions(${myTargetLib} PUBLIC
+target_compile_definitions(${myTargetLib} PRIVATE
     -DASTCENC_SSE=0 -DASTCENC_AVX=0 -DASTCENC_POPCNT=0 -DASTCENC_VECALIGN=16)
-target_compile_definitions(${myTargetApp} PUBLIC
+target_compile_definitions(${myTargetApp} PRIVATE
     -DASTCENC_SSE=0 -DASTCENC_AVX=0 -DASTCENC_POPCNT=0 -DASTCENC_VECALIGN=16)
 
 # now can set as defines
-target_compile_definitions(${myTargetLib} PUBLIC
+target_compile_definitions(${myTargetLib} PRIVATE
     "-DCOMPILE_ATE=${COMPILE_ATE}"
     "-DCOMPILE_BCENC=${COMPILE_BCENC}"
     "-DCOMPILE_ETCENC=${COMPILE_ETCENC}"
     "-DCOMPILE_SQUISH=${COMPILE_SQUISH}"
     "-DCOMPILE_ASTCENC=${COMPILE_ASTCENC}"
 )
-target_compile_definitions(${myTargetApp} PUBLIC
+target_compile_definitions(${myTargetApp} PRIVATE
     "-DCOMPILE_ATE=${COMPILE_ATE}"
     "-DCOMPILE_BCENC=${COMPILE_BCENC}"
     "-DCOMPILE_ETCENC=${COMPILE_ETCENC}"
@@ -265,21 +278,21 @@ target_compile_definitions(${myTargetApp} PUBLIC
 
 if (macOS)
     # turn on all warnings
-    target_compile_options(${myTargetLib} PUBLIC -W -Wall)
-    target_compile_options(${myTargetApp} PUBLIC -W -Wall)
+    target_compile_options(${myTargetLib} PRIVATE -W -Wall)
+    target_compile_options(${myTargetApp} PRIVATE -W -Wall)
 endif()
 
 if (winOS)
     # turn on most warnings
     #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 
-    target_compile_options(${myTargetLib} PUBLIC /W4)
-    target_compile_options(${myTargetApp} PUBLIC /W4)
+    target_compile_options(${myTargetLib} PRIVATE /W4)
+    target_compile_options(${myTargetApp} PRIVATE /W4)
 
     # https://github.com/microsoft/onnxruntime/pull/3373/files/a5648dcb0cc9081d4b092bed12204efb21e8b8dd
     # stick with AVX since it's more prevalent
-    target_compile_options(${myTargetLib} PUBLIC /arch:AVX)
-    target_compile_options(${myTargetApp} PUBLIC /arch:AVX)
+    target_compile_options(${myTargetLib} PRIVATE /arch:AVX)
+    target_compile_options(${myTargetApp} PRIVATE /arch:AVX)
     
 endif()
 
