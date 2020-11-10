@@ -39,6 +39,7 @@ Image is an array of 4x4 blocks that represent the encoding of the source image
 #include "EtcBlock4x4Encoding_R11.h"
 #include "EtcBlock4x4Encoding_RG11.h"
 
+#include <algorithm>
 #include <ctime>
 #include <chrono>
 //#include <future>

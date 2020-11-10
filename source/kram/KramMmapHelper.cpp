@@ -23,7 +23,7 @@ bool MmapHelper::open(const char *filename)
 #if KRAM_WIN
     return false;
 #else
-    
+
     if (addr) {
         return false;
     }
@@ -64,7 +64,7 @@ bool MmapHelper::open(const char *filename)
 void MmapHelper::close()
 {
 #if KRAM_WIN
-    
+
 #else
     if (addr) {
         munmap((void *)addr, length);

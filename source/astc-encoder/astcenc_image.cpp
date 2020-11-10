@@ -519,7 +519,6 @@ void fetch_imageblock(
                     int px = (yi * xsize + xi); // * 4;
                     assert(px >= 0 && px < xsize * ysize);
                     
-                    // compiler does _Float16 -> float conversion
                     float rf = data32f[px].x;
                     float gf = data32f[px].y;
                     float bf = data32f[px].z;

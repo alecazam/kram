@@ -17,8 +17,9 @@ import time
 # cli handling
 import click
 
+# TODO: this won't run after install on Windows for me, fine on Mac
 # for physical core count to limit spawns
-import psutil
+#import psutil
 
 class TextureContent(Enum):
 	Unknown = 0
@@ -69,6 +70,7 @@ class TextureProcessor:
 		if script:
 			self.doScript = True
 			self.scriptFilename = scriptFilename
+			os.makedirs(os.path.dirname(scriptFilename), exist_ok = True)
 			self.scriptFile = open(scriptFilename, "w")
 
 		self.maxCores = maxCores
@@ -224,7 +226,10 @@ class TextureProcessor:
 	def processScriptKram(self):
 		self.scriptFile.close()
 
-		physicalCores = psutil.cpu_count(logical = False)
+        # Win can't compile psutil, so go back to logical count
+        # psutil.cpu_count(logical = False)
+		physicalCores = os.cpu_count()
+        
 		numWorkers = physicalCores
 		numWorkers = min(numWorkers, self.maxCores) 
 
@@ -237,7 +242,10 @@ class TextureProcessor:
 		# ---------------------------
 		# now process all the work in parallel
 
-		physicalCores = psutil.cpu_count(logical = False)
+        # Win can't compile psutil, so go back to logical count
+        # psutil.cpu_count(logical = False)
+		physicalCores = os.cpu_count()
+        
 		numWorkers = physicalCores
 		numWorkers = min(numWorkers, self.maxCores) 
 		
@@ -383,7 +391,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 	timer -= time.perf_counter()
 
 	result = 0
-
+		
 	processor = TextureProcessor(platform, appKram, maxCores, force, script, scriptFile, formats)
 
 	for srcDir in srcDirs:

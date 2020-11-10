@@ -23,6 +23,15 @@
 #define KRAM_LINUX 0
 #endif
 
+// TODO: add profile
+#if NDEBUG
+#define KRAM_RELEASE 1
+#define KRAM_DEBUG 0
+#else
+#define KRAM_RELEASE 0
+#define KRAM_DEBUG 1
+#endif
+
 //------------------------
 #if KRAM_MAC
 #include <TargetConditionals.h>
@@ -78,10 +87,24 @@
 #define simd_make_float4(x, y, z, w) float4(x, y, z, w)
 #endif
 
+// use _Float16/_fp16 vs. other
+#if KRAM_MAC
+#define USE_FLOAT16 1
+#else
+#define USE_FLOAT16 0
+#endif
+
 // can override from build system
-#if !defined(COMPILE_ATE) && KRAM_MAC
+
+// can't have ATE defined to 1 on other platforms
+#if !KRAM_MAC
+#undef COMPILE_ATE
+#endif
+
+#ifndef COMPILE_ATE
 #define COMPILE_ATE 0
 #endif
+
 #ifndef COMPILE_SQUISH
 #define COMPILE_SQUISH 0
 #endif

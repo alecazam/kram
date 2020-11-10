@@ -203,8 +203,8 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS
 
 # no objc on winOS
 if (winOS)
-list(FILTER sources EXCLUDE REGEX "*ateencoder.mm$")
-list(FILTER sources EXCLUDE REGEX "*ateencoder.h$")
+list(FILTER sources EXCLUDE REGEX ".*ateencoder.mm$")
+list(FILTER sources EXCLUDE REGEX ".*ateencoder.h$")
 endif()
 
 # remove files not used

@@ -43,6 +43,7 @@ extern thread_local int gAstcenc_UniqueChannelsInPartitioning;
 #include "KramSDFMipper.h"
 #include "KramTimer.h"
 
+
 namespace kram {
 
 using namespace std;
@@ -152,10 +153,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
         case MyMTLPixelFormatR16Float:
         case MyMTLPixelFormatRG16Float:
         case MyMTLPixelFormatRGBA16Float: {
-            const _Float16* srcPixels =
-                (const _Float16*)(image.fileData + image.mipLevels[0].offset);
-
-            int numSrcChannels = blockSize / sizeof(_Float16);
+            int numSrcChannels = blockSize / 2; // 2 = sizeof(_float16)
             int numDstChannels = 4;
 
             // Note: clearing unspecified channels to 0000, not 0001
@@ -165,8 +163,13 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                        _pixelsFloat.size() * sizeof(float4));
             }
 
+            
+#if USE_FLOAT16
             // treat as float for per channel copies
             float* dstPixels = (float*)(_pixelsFloat.data());
+
+            const _Float16* srcPixels =
+                (const _Float16*)(image.fileData + image.mipLevels[0].offset);
 
             for (int y = 0; y < _height; ++y) {
                 int y0 = _height * y;
@@ -188,7 +191,38 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                     }
                 }
             }
+#else
+            // TODO: revisit with fp16 <-> fp32 function
+            return false;
+            
+            // treat as float for per channel copies
+            float4* dstPixels = _pixelsFloat.data();
 
+            const uint16_t* srcPixels =
+                (const uint16_t*)(image.fileData + image.mipLevels[0].offset);
+
+            for (int y = 0; y < _height; ++y) {
+                int y0 = _height * y;
+
+                for (int x = 0, xEnd = _width; x < xEnd; ++x) {
+                    int srcX = (y0 + x) * numSrcChannels;
+                    int dstX = (y0 + x) * numDstChannels;
+
+                    switch (numSrcChannels) {
+                        // all fallthrough, convert fp16 to fp32 type
+                        case 4:
+                            dstPixels[dstX + 3] = (float)srcPixels[srcX + 3];
+                        case 3:
+                            dstPixels[dstX + 2] = (float)srcPixels[srcX + 2];
+                        case 2:
+                            dstPixels[dstX + 1] = (float)srcPixels[srcX + 1];
+                        case 1:
+                            dstPixels[dstX + 0] = (float)srcPixels[srcX + 0];
+                    }
+                }
+            }
+#endif
+            
             // caller can swizzle
             // caller can compress to BC6H or ASTC-HDR if encoders available
             // some textures could even go to LDR, but would need to tonemap or
@@ -1230,6 +1264,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             case MyMTLPixelFormatR16Float:
             case MyMTLPixelFormatRG16Float:
             case MyMTLPixelFormatRGBA16Float: {
+#if USE_FLOAT16
                 int count = image.blockSize() / 2;
 
                 _Float16* dst = (_Float16*)outputTexture.data.data();
@@ -1249,7 +1284,30 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                             dst[count * i + 0] = (_Float16)src[i].x;
                     }
                 }
+#else
+                // TODO: revisit with fp16 <-> fp32 function
+                return false;
+                
+                int count = image.blockSize() / 2;
 
+                uint16_t* dst = (uint16_t*)outputTexture.data.data();
+
+                const float4* src = mipImage.pixelsFloat;
+
+                // assumes we don't need to align r16f rows to 4 bytes
+                for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
+                    switch (count) {
+                        case 4:
+                            dst[count * i + 3] = src[i].w;
+                        case 3:
+                            dst[count * i + 2] = src[i].z;
+                        case 2:
+                            dst[count * i + 1] = src[i].y;
+                        case 1:
+                            dst[count * i + 0] = src[i].x;
+                    }
+                }
+#endif
                 break;
             }
             case MyMTLPixelFormatR32Float:

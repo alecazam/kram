@@ -185,18 +185,18 @@ public:
     }
 
     // use these to stay in register (not sure if
-    inline float4 xVec() { return _mm_splatx_ps(reg); }
-    inline float4 yVec() { return _mm_splaty_ps(reg); }
-    inline float4 zVec() { return _mm_splatz_ps(reg); }
-    inline float4 wVec() { return _mm_splatw_ps(reg); }
+    inline float4 xvec() { return float4(_mm_splatx_ps(reg)); }
+    inline float4 yvec() { return float4(_mm_splaty_ps(reg)); }
+    inline float4 zvec() { return float4(_mm_splatz_ps(reg)); }
+    inline float4 wvec() { return float4(_mm_splatw_ps(reg)); }
 
-    inline float4& operator/=(float b)
-    {
-        return *this /= float4(b);
-    }
     inline float4& operator*=(float b)
     {
         return *this *= float4(b);
+    }
+    inline float4& operator/=(float b)
+    {
+        return *this /= float4(b);
     }
     inline float4& operator-=(float b)
     {
@@ -213,15 +213,15 @@ public:
     }
     friend inline float4 operator/(const float4& a, const float4& b)
     {
-        return float4(a) *= b;
+        return float4(a) /= b;
     }
     friend inline float4 operator+(const float4& a, const float4& b)
     {
-        return float4(a) *= b;
+        return float4(a) += b;
     }
     friend inline float4 operator-(const float4& a, const float4& b)
     {
-        return float4(a) *= b;
+        return float4(a) -= b;
     }
 
     // scalar ops for right side
@@ -231,15 +231,15 @@ public:
     }
     friend float4 operator/(const float4& a, float b)
     {
-        return float4(a) *= float4(b);
+        return float4(a) /= float4(b);
     }
     friend float4 operator+(const float4& a, float b)
     {
-        return float4(a) *= float4(b);
+        return float4(a) += float4(b);
     }
     friend float4 operator-(const float4& a, float b)
     {
-        return float4(a) *= float4(b);
+        return float4(a) -= float4(b);
     }
 
     friend inline float4 operator*(float a, const float4& b)
@@ -248,34 +248,34 @@ public:
     }
     friend inline float4 operator/(float a, const float4& b)
     {
-        return float4(a) *= b;
+        return float4(a) /= b;
     }
     friend inline float4 operator+(float a, const float4& b)
     {
-        return float4(a) *= b;
+        return float4(a) += b;
     }
     friend inline float4 operator-(float a, const float4& b)
     {
-        return float4(a) *= b;
+        return float4(a) -= b;
     }
 
     // sse ops start here
-    float4& inline operator/=(const float4& b)
+    inline float4& operator/=(const float4& b)
     {
         reg = _mm_div_ps(reg, b.reg);
         return *this;
     }
-    float4& inline operator*=(const float4& b)
+    inline float4& operator*=(const float4& b)
     {
         reg = _mm_mul_ps(reg, b.reg);
         return *this;
     }
-    float4& inline operator-=(const float4& b)
+    inline float4& operator-=(const float4& b)
     {
         reg = _mm_sub_ps(reg, b.reg);
         return *this;
     }
-    float4& inline operator+=(const float4& b)
+    inline float4& operator+=(const float4& b)
     {
         reg = _mm_add_ps(reg, b.reg);
         return *this;
@@ -350,10 +350,10 @@ public:
     // see if any results are 1
     friend inline bool any(const float4& a)
     {
-        return _mm_hadd4_ps(a.reg)[0] > 0.0f;
+        return float4(_mm_hadd4_ps(a.reg))[0] > 0.0f;
     }
 
-    float4 inline operator-() const
+    inline float4 operator-() const
     {
         return float4(_mm_xor_ps(kSignBitsF32x4, reg));  // -a
     }
@@ -364,6 +364,6 @@ public:
     }
 };
 
-};  // namespace kram
+};  // namespace simd
 
 #endif

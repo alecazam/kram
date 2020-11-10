@@ -9,6 +9,8 @@
 // for Win
 #include <stdarg.h>
 
+#include <mutex>
+
 namespace kram {
 using namespace std;
 
@@ -142,7 +144,10 @@ extern int logMessage(const char* group, int logLevel,
             break;
     }
 
-    // TODO: for output, really need a mutex around this, above code is all re-entrant
+    // stdout isn't thread safe, so to prevent mixed output put this under mutex
+    static mutex gLogLock;
+    unique_lock<mutex> lock(gLogLock);
+
     fprintf(fp, "%s%s%s%s%s%s", tag, groupString, space, msg, needsNewline ? "\n" : "", fileLineFunc.c_str());
 
     return 0;  // reserved for later

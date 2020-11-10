@@ -31,6 +31,7 @@
 
 #include "maths.h"
 #include <cfloat>
+#include <algorithm>
 
 namespace squish {
 

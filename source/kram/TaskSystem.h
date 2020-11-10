@@ -7,8 +7,10 @@
 
 /**************************************************************************************************/
 
+#include <atomic>
 #include <deque>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 

@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 
 #include <algorithm>  // for max
+#include <atomic>
 #include <cmath>
 #include <ctime>
 #include <string>
@@ -826,16 +827,18 @@ static void setupTestArgs(vector<const char*>& args)
     }
 }
 
+#if KRAM_RELEASE
 #define appName "kram"
+#define usageName appName
+#else
+#define appName "kram"
+#define usageName "DEBUG kram"
+#endif
 
 void kramDecodeUsage()
 {
     KLOGI("Kram",
-          "Usage: "
-#ifndef NDEBUG  // DEBUG build
-          "DEBUG "
-#endif
-          appName
+          "Usage: " usageName
           " decode\n"
           "\t -i/nput .ktx -o/utput .ktx [-swizzle rgba01] [-v]\n"
           "\n");
@@ -844,11 +847,7 @@ void kramDecodeUsage()
 void kramInfoUsage()
 {
     KLOGI("Kram",
-          "Usage: "
-#ifndef NDEBUG  // DEBUG build
-          "DEBUG "
-#endif
-          appName
+          "Usage: " usageName
           " info\n"
           "\t -i/nput <.png | .ktx> [-o/utput info.txt] [-v]\n"
           "\n");
@@ -857,11 +856,7 @@ void kramInfoUsage()
 void kramScriptUsage()
 {
     KLOGI("Kram",
-          "Usage: "
-#ifndef NDEBUG  // DEBUG build
-          "DEBUG "
-#endif
-          appName
+          "Usage: " usageName
           " script\n"
           "\t -i/nput kramscript.txt [-v] [-j/obs numJobs]\n"
           "\n");
@@ -870,12 +865,7 @@ void kramScriptUsage()
 void kramEncodeUsage()
 {
     KLOGI("Kram",
-          "Usage: "
-#ifndef NDEBUG  // DEBUG build
-          "DEBUG "
-#endif
-
-          appName
+          "Usage: " usageName
           " encode\n"
           "\t -f/ormat (bc1 | astc4x4 | etc2rgba | rgba16f)\n"
           "\t [-srgb] [-signed] [-normal]\n"
@@ -920,44 +910,45 @@ void kramEncodeUsage()
           // can force an encoder when there is overlap
           "\t-encoder squish"
           "\tbc[1,3,4,5]"
-#if !COMPILE_SQUISH
-          "(DISABLED)"
-#endif
+          // prerocessor in MSVC can't handle this
+          //#if !COMPILE_SQUISH
+          //          "(DISABLED)"
+          //#endif
           "\n"
 
           "\t-encoder bcenc"
           "\tbc[1,3,4,5,7]"
-#if !COMPILE_BCENC
-          "(DISABLED)"
-#endif
+          //#if !COMPILE_BCENC
+          //          "(DISABLED)"
+          //#endif
           "\n"
 
           "\t-encoder ate"
           "\tbc[1,4,5,7]"
-#if !COMPILE_ATE
-          "(DISABLED)"
-#endif
+          //#if !COMPILE_ATE
+          //          "(DISABLED)"
+          //#endif
           "\n"
 
           "\t-encoder ate"
           "\tastc[4x4,8x8]"
-#if !COMPILE_ATE
-          "(DISABLED)"
-#endif
+          //#if !COMPILE_ATE
+          //          "(DISABLED)"
+          //#endif
           "\n"
 
           "\t-encoder astcenc"
           "\tastc[4x4,5x5,6x6,8x8] ldr/hdr support"
-#if !COMPILE_ATE
-          "(DISABLED)"
-#endif
+          //#if !COMPILE_ATE
+          //          "(DISABLED)"
+          //#endif
           "\n"
 
           "\t-encoder etcenc"
           "\tetc2[r,rg,rgb,rgba]"
-#if !COMPILE_ETCENC
-          "(DISABLED)"
-#endif
+          //#if !COMPILE_ETCENC
+          //          "(DISABLED)"
+          //#endif
           "\n"
 
           "\t-encoder explicit"
@@ -1008,11 +999,7 @@ void kramEncodeUsage()
 void kramUsage()
 {
     KLOGI("Kram",
-          "SYNTAX\n"
-#ifndef NDEBUG  // DEBUG build
-          "DEBUG "
-#endif
-          appName "[encode | decode | info | script | ...]\n");
+          "SYNTAX\n" usageName "[encode | decode | info | script | ...]\n");
 
     kramEncodeUsage();
     kramInfoUsage();
@@ -1913,8 +1900,10 @@ int kramAppScript(vector<const char*>& args)
         system.async_([&, commandAndArgs]() mutable {
             Timer commandTimer;
             if (isVerbose) {
-                KLOGI("Kram", "running %s", str);
+                KLOGI("Kram", "running %s", commandAndArgs.c_str());
             }
+
+            string commandAndArgsCopy = commandAndArgs;
 
             // tokenize the strings
             vector<const char*> args;
@@ -1937,7 +1926,7 @@ int kramAppScript(vector<const char*>& args)
             }
 
             if (errorCode != 0) {
-                KLOGE("Kram", "cmd: failed %s", str);
+                KLOGE("Kram", "cmd: failed %s", commandAndArgsCopy.c_str());
                 errorCounter++;
                 return errorCode;
             }

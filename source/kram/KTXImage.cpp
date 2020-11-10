@@ -351,7 +351,11 @@ public:
 
     uint16_t flags;
 
-    Int2 blockDims() const { return (Int2){blockDimsX, blockDimsY}; }
+    Int2 blockDims() const
+    {
+        Int2 dims = {blockDimsX, blockDimsY};
+        return dims;
+    }
 
     // srgb is reserved for rgb/a 8-bit textures
     bool isSRGB() const { return flags & FLAG_SRGB; }

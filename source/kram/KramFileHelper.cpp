@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
-#if KRAM_MAC || KRAM_LINUX 
+#if KRAM_MAC || KRAM_LINUX
 #include <sys/mman.h>
 #include <unistd.h>
 #else
@@ -59,7 +59,7 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
 
         return false;
     }
-    
+
 #elif KRAM_WIN
     // use different api on Windows
     // TODO: won't have correct suffix, not sure if this call exists either

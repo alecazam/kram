@@ -1,6 +1,6 @@
 #pragma once
 
-#if COMPILE_ATE && KRAM_MAC
+#if COMPILE_ATE
 
 #include <stdint.h>
 
