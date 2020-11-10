@@ -1175,7 +1175,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
                 continue;
             }
 
-            int mipOffset = mipOffsets[mipLevel] + chunk * mipStorageSize;
+            mipOffset = mipOffsets[mipLevel] + chunk * mipStorageSize;
             numDstMipLevelsWritten++;
 
             // average channels per block if requested (mods 8-bit data on a per
@@ -1438,23 +1438,23 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                 srcImageDataEtc[i] = ColorToUnormFloat4(search[i]);
             }
 
-            Etc::Image image(format, (const float*)srcImageDataEtc, w, h, errMetric);
+            Etc::Image imageEtc(format, (const float*)srcImageDataEtc, w, h, errMetric);
 
-            image.SetVerboseOutput(info.isVerbose);
+            imageEtc.SetVerboseOutput(info.isVerbose);
             Etc::Image::EncodingStatus status;
 
             // TODO: have encoder setting to enable multipass
             bool doSinglepass = true;  // || (effort == 100.0f); // problem is 100% quality also runs all passes
             if (doSinglepass) {
                 // single pass iterates each block until done
-                status = image.EncodeSinglepass(effort, outputTexture.data.data());
+                status = imageEtc.EncodeSinglepass(effort, outputTexture.data.data());
             }
             else {
                 // multipass iterates all blocks once, then a percentage of the blocks with highest errors
                 // if that percentage isn't already reached in the first pass.  Below a certain block count
                 // all blocks are processed until done.  So only the largest mips have less quality.
                 float blockPercent = effort;
-                status = image.Encode(blockPercent, effort, outputTexture.data.data());
+                status = imageEtc.Encode(blockPercent, effort, outputTexture.data.data());
             }
 
             // all errors/warnings turned into asserts
