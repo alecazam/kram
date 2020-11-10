@@ -193,6 +193,13 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             }
 #else
             // TODO: revisit with fp16 <-> fp32 function
+            // TODO: AVX saves the day, but need to call these intrinsics.
+            // also Win ARM would need the code above.
+            // http://scc.ustc.edu.cn/zlsc/sugon/intel/compiler_c/main_cls/intref_cls/common/intref_bk_convertpost32_hf.htm
+            // these are the 128-bit ops that do 4, a wider 256-bit op is available
+            // _mm_cvtph_ps() 4 fp16 -> fp32
+            // _mm_cvtps_ph() reverse
+            
             return false;
             
             // treat as float for per channel copies

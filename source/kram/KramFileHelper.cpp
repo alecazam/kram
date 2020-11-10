@@ -8,11 +8,19 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
+// These were for mkstemps
 #if KRAM_MAC || KRAM_LINUX
 #include <sys/mman.h>
 #include <unistd.h>
-#else
-// TODO: need alternative for Windows
+#endif
+
+// Windows doesn't implement mkstemps.
+// The whole C tmpfile setup is so messy.
+// Need both a tmp file and a filename to move it.
+// https://www.di-mgt.com.au/c_function_to_create_temp_file.html
+#define USE_TMPFILEPLUS 1
+#if USE_TMPFILEPLUS
+#include "tmpfileplus/tmpfileplus.h"
 #endif
 
 namespace kram {
@@ -29,8 +37,22 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
     // might want to update to std::filesystem that has possibly abstracted this
     // it's likely the C code doesn't translate to Windows, and std::filesystem
     // has a move operation not found in C calls that can also create intermediate dirs.
-
-#if KRAM_MAC || KRAM_LINUX
+    
+#if USE_TMPFILEPLUS
+    (void)access;
+    
+    char *pathname = nullptr;
+    
+    // TODO: can only pass prefix as second arg, add support for suffix
+    // TODO: can't pass access either, always opened as rw
+    _fp = tmpfileplus(nullptr, "tmp", suffix, &pathname, 1);
+    if (!_fp) {
+        return false;
+    }
+    _filename = pathname;
+    free(pathname);
+    
+#else
     // this string will be modified
     _filename = "/tmp/kramimage-XXXXXX";
     // docs state filename must end with XXXXXX or rename won't occur
@@ -52,20 +74,12 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
 
     // grab the fileptr from the file descriptor
     _fp = fdopen(fd, access);
+    
     if (!_fp) {
         // unlink won't occur in close, so do it here
         unlink(_filename.c_str());
         _filename.clear();
 
-        return false;
-    }
-
-#elif KRAM_WIN
-    // use different api on Windows
-    // TODO: won't have correct suffix, not sure if this call exists either
-    _fp = tmpfile();
-    if (!_fp) {
-        _filename.clear();
         return false;
     }
 #endif
@@ -108,10 +122,12 @@ void FileHelper::close()
 {
     if (_fp) {
         if (_isTmpFile) {
+// tmpfileplus on windows opens file as temporary, since unlink doesn't work
+#if !KRAM_WIN
             // so temp file is auto-deleted on close of _fp
             // if this is done in open, then fd is unlinked from name needed for rename...
             unlink(_filename.c_str());
-
+#endif
             _filename.clear();
             _isTmpFile = false;
         }
