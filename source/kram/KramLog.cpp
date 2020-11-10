@@ -6,6 +6,9 @@
 
 #include <string>
 
+// for Win
+#include <stdarg.h>
+
 namespace kram {
 using namespace std;
 

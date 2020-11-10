@@ -6,9 +6,12 @@
 
 // here's how to mmmap data, but NSData may have another way
 #include <stdio.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
+
+#if KRAM_MAC || KRAM_LINUX
+#include <sys/mman.h>
 #include <unistd.h>
+#endif
 
 MmapHelper::MmapHelper() {}
 
@@ -16,6 +19,11 @@ MmapHelper::~MmapHelper() { close(); }
 
 bool MmapHelper::open(const char *filename)
 {
+    // relay on the file api
+#if KRAM_WIN
+    return false;
+#else
+    
     if (addr) {
         return false;
     }
@@ -50,12 +58,17 @@ bool MmapHelper::open(const char *filename)
         return false;
     }
     return true;
+#endif
 }
 
 void MmapHelper::close()
 {
+#if KRAM_WIN
+    
+#else
     if (addr) {
         munmap((void *)addr, length);
         addr = nullptr;
     }
+#endif
 }

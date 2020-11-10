@@ -20,7 +20,7 @@
 
 #endif
 
-namespace kram {
+namespace simd {
 
 #if USE_NEON
 #define _mm_fixzero_ps(a, b) _mm_and_ps(a, _mm_cmpneq_ps(b, _mm_setzero_ps()))

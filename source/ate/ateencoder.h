@@ -1,6 +1,6 @@
 #pragma once
 
-#if COMPILE_ATE && defined(__APPLE__)
+#if COMPILE_ATE && KRAM_MAC
 
 #include <stdint.h>
 

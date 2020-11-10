@@ -1,6 +1,6 @@
 #import "ateencoder.h"
 
-#if COMPILE_ATE && defined(__APPLE__)
+#if COMPILE_ATE && KRAM_MAC
 
 #include <vector>
 #include "KTXImage.h" // for MyMTLPixelFormat
