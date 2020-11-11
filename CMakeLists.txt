@@ -293,13 +293,11 @@ endif()
 
 if (winOS)
     # turn on most warnings
-    #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
-
-    target_compile_options(${myTargetLib} PRIVATE /W4)
-    target_compile_options(${myTargetApp} PRIVATE /W4)
+    target_compile_options(${myTargetLib} PRIVATE /W3)
+    target_compile_options(${myTargetApp} PRIVATE /W3)
 
     # https://github.com/microsoft/onnxruntime/pull/3373/files/a5648dcb0cc9081d4b092bed12204efb21e8b8dd
-    # stick with AVX since it's more prevalent
+    # stick with AVX since it's more prevalent, and needed for fast fp16 <-> fp32
     target_compile_options(${myTargetLib} PRIVATE /arch:AVX)
     target_compile_options(${myTargetApp} PRIVATE /arch:AVX)
     
