@@ -38,7 +38,7 @@ or
 open kram.xcodeproj
 ```
 
-For Windows, the steps are similar. I tried to fix CMake to build the library into the app directory so it the app is updated.  "Rebuild Solution" if your changes don't take effect, or if breakpoints stop being hit.
+For Windows, the steps are similar. I tried to fix CMake to build the library into the app directory so the app is updated.  "Rebuild Solution" if your changes don't take effect, or if breakpoints stop being hit.
 
 ```
 mkdir build
