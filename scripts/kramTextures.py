@@ -294,11 +294,16 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 	# output to multiple dirs by type
 
 	# eventually pass these in as strings, so script is generic
-	appKram = "../build/Release/kram"
+	# Mac can handle this, but Win want's absolute path (or kram run from PATH)
+	appKram = os.path.abspath("../build/Release/kram")
+	
+	# abspath strips the trailing slash off - ugh
+	srcDirBase = os.path.abspath("../tests/src/")
+	srcDirBase += "/"
 
-	srcDirBase = "../tests/src/"
+	dstDirBase = os.path.abspath("../tests/out/")
+	dstDirBase += "/"
 
-	dstDirBase = "../tests/out/"
 	dstDirForPlatform = dstDirBase + platform + "/"
 	
 	scriptFile = dstDirForPlatform + "kramscript.txt"
@@ -336,7 +341,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 
 	# note sdf and signed data will look odd in Preview.  It's not
 	# really setup for signed data.
-	
+
 	if platform == "ios":
 		# use astc since has more quality settings
 		fmtAlbedo = " -f astc4x4 -srgb -premul"

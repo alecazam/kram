@@ -219,6 +219,12 @@ static FILE *mktempfile_internal(const char *tmpdir, const char *pfx, const char
     
     // this is doubling up the separator, since tmpdir already ends in one
     int addseperator = 0;
+#ifdef _WIN32
+    // Win doesn't end TMP or TEMP with a slash, so it has to be added
+    // but Mac does.
+    addseperator = 1;
+#endif
+    
     const char* separator = "";
     
     lentempname = strlen(tmpdir)  + strlen(pfx) + strlen(randpart) + strlen(sfx);
