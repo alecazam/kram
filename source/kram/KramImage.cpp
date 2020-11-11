@@ -43,7 +43,6 @@ extern thread_local int gAstcenc_UniqueChannelsInPartitioning;
 #include "KramSDFMipper.h"
 #include "KramTimer.h"
 
-
 namespace kram {
 
 using namespace std;
@@ -153,7 +152,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
         case MyMTLPixelFormatR16Float:
         case MyMTLPixelFormatRG16Float:
         case MyMTLPixelFormatRGBA16Float: {
-            int numSrcChannels = blockSize / 2; // 2 = sizeof(_float16)
+            int numSrcChannels = blockSize / 2;  // 2 = sizeof(_float16)
             int numDstChannels = 4;
 
             // Note: clearing unspecified channels to 0000, not 0001
@@ -163,7 +162,6 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                        _pixelsFloat.size() * sizeof(float4));
             }
 
-            
 #if USE_FLOAT16
             // treat as float for per channel copies
             float* dstPixels = (float*)(_pixelsFloat.data());
@@ -199,9 +197,9 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             // these are the 128-bit ops that do 4, a wider 256-bit op is available
             // _mm_cvtph_ps() 4 fp16 -> fp32
             // _mm_cvtps_ph() reverse
-            
+
             return false;
-            
+
             // treat as float for per channel copies
             float* dstPixels = (float*)_pixelsFloat.data();
 
@@ -229,7 +227,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                 }
             }
 #endif
-            
+
             // caller can swizzle
             // caller can compress to BC6H or ASTC-HDR if encoders available
             // some textures could even go to LDR, but would need to tonemap or
@@ -1294,7 +1292,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 #else
                 // TODO: revisit with fp16 <-> fp32 function
                 return false;
-                
+
                 int count = image.blockSize() / 2;
 
                 uint16_t* dst = (uint16_t*)outputTexture.data.data();

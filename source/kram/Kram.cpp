@@ -1719,12 +1719,12 @@ static int kramAppEncode(vector<const char*>& args)
 
     if (success) {
         success = SetupTmpFile(tmpFileHelper, ".ktx");
-        
+
         if (!success) {
             KLOGE("Kram", "encode couldn't generate tmp file for output");
         }
     }
-    
+
     // so now can complete validation knowing hdr vs. ldr input
     // this checks the dst format
     if (success) {
@@ -1883,19 +1883,22 @@ int kramAppScript(vector<const char*>& args)
     // as a global this auto allocates 16 threads, and don't want that unless actually
     // using scripting.  And even then want control over the number of threads.
     task_system system(numJobs);
-    atomic<int> errorCounter;
-
+    atomic<int> errorCounter(0); // doesn't initialze to 0 otherwise
+    int commandCounter = 0;
+    
     while (fp) {
         fgets(str, sizeof(str), fp);
         if (feof(fp)) {
             break;
         }
-
+        
         commandAndArgs = str;
         if (commandAndArgs.empty()) {
             continue;
         }
 
+        commandCounter++;
+        
         if (commandAndArgs.back() == '\n') {
             commandAndArgs.pop_back();
         }
@@ -1942,6 +1945,7 @@ int kramAppScript(vector<const char*>& args)
     }
 
     if (errorCounter > 0) {
+        KLOGE("Kram", "%d/%d failed", int(errorCounter), commandCounter);
         return -1;
     }
 
