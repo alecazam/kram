@@ -13,9 +13,9 @@ Similar to a makefile system, the script sample kramtexture.py uses modstamps to
 
 Kram adds props to the KTX file to store data.  Currently props store Metal and Vulkan formats.  Also props are saved for channel content and post-swizzle.  Loaders, viewers, and shaders can utilize this metadata.
 
-KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  But there are no viewers for that format.
+KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  But there are no viewers for that format.  KTX2 reverses mip ordering smallest to largets, so that streamed textures can display smaller mips progressively.   KTX2 can also supercompress each mip with zstd.  I suppose this could then be unpacked at tiled as needed for sparse texturing.  KTX2 does not store a length field inside the mip data. 
 
-I also have a custom KTXA format.  This likely broke with the prop additions, but Metal cannot load mmap data that isn't aligned to block size.  But KTX stuffs a 4 byte length into the mip data.  KTX2 does not do this.  So by leaving this out (and padding props to 16 byte multiple), then the mips could be directly loaded.  My loader had to copy the mips to a staging MTLBuffer anyways, so it's probably best not to create a new format.  Also sparse textures imply splitting up large mips into tiles, and so neither KTX or KTX2 support that.
+I also have a custom KTXA format.  KTXA likely broke with the prop additions.  Metal cannot load mmap data that isn't aligned to a multiple of the block size (8 or 16 bytes for BC/ASTC/ETC).  But KTX stuffs a 4 byte length into the mip data.  So by leaving the size out (TODO: pad props to a 16 byte multiple), then the mips could be directly loaded.  My loader had to copy the mips to a staging MTLBuffer anyways, so it's probably best not to create a new format.  Also sparse textures imply splitting up large mips into tiles.  Also mmap'ed data on iOS/Android don't count towards jetsam limits, so that imposes some constraints on loaders.
 
 There are several commands supported by kram.
 * encode - encode/decode block formats, mipmaps, fast sdf, premul, srgb, swizzles, LDR and HDR support, 16f/32f
