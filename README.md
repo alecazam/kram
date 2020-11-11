@@ -27,13 +27,14 @@ There are sample scripts.
 
 Kram uses CMake to setup the projects and build.  An executable kram and libkram are generated, but only kram is needed to run.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
 
+For Mac, the build is out-of-source, and can be built from the command line, or debugged from the xcodeproj that is built.  Ninja and Makefiles can also be generated from cmake, but remember to trash the CMakeCache.txt file.
+
 ```
 mkdir build
 cmake .. -G Xcode
+
 cmake --build . --config Release
-```
-If you want to debug from Xcode, then the project is generated from CMake.
-```
+or
 open kram.xcodeproj
 ```
 
@@ -43,12 +44,15 @@ For Windows, the steps are similar. I tried to fix CMake to build the library in
 mkdir build
 cmake .. -G "Visual Studio 15 2017 Win64" 
 or
-cmake .. -G "Visual Studio 16 2019" -A x64    
+cmake .. -G "Visual Studio 16 2019" -A x64
+
 cmake --build . --config Release
+or
 open kram.sln
 ```
 
 There are various CMake settings that control the various encoders.  Each of these adds around 200KB.  I tested with each of these turned off, so code should be isolated.  The project will still show all sources.
+
 * -DATE=ON
 * -DATSCENC=ON
 * -DBCENC=ON
