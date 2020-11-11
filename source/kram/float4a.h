@@ -161,7 +161,7 @@ class float4 {
 public:
     using tType = float32x4_t;
     float4() {}
-    explicit float4(float val) { reg = _mm_set1_ps(val); }
+    explicit float4(float val) { reg = _mm_set1_ps(val); }  // xyzw = val
     explicit float4(tType val) { reg = val; }
     float4(float xx, float yy, float zz, float ww) { reg = _mm_setr_ps(xx, yy, zz, ww); }
     float4(const float4& val) { reg = val.reg; }
@@ -169,9 +169,14 @@ public:
     union {
         tType reg;
 
-        // code tries to avoid using these, since they break using simd registers
+        // avoid using these, since they pull data out of simd registers
         float v[4];
-        float x, y, z, w;
+        struct {
+            float x, y, z, w;
+        }
+
+        // can't add this until vars renamed below
+        //struct { float r, g, b, a; }
     };
 
     // use of these pull data out of simd registers
@@ -209,54 +214,66 @@ public:
 
     friend inline float4 operator*(const float4& a, const float4& b)
     {
-        return float4(a) *= b;
+        float4 aa(a);
+        return aa *= b;
     }
     friend inline float4 operator/(const float4& a, const float4& b)
     {
-        return float4(a) /= b;
+        float4 aa(a);
+        return aa /= b;
     }
     friend inline float4 operator+(const float4& a, const float4& b)
     {
-        return float4(a) += b;
+        float4 aa(a);
+        return aa += b;
     }
     friend inline float4 operator-(const float4& a, const float4& b)
     {
-        return float4(a) -= b;
+        float4 aa(a);
+        return aa -= b;
     }
 
     // scalar ops for right side
     friend float4 operator*(const float4& a, float b)
     {
-        return float4(a) *= float4(b);
+        float4 aa(a);
+        return aa *= float4(b);
     }
     friend float4 operator/(const float4& a, float b)
     {
-        return float4(a) /= float4(b);
+        float4 aa(a);
+        return aa /= float4(b);
     }
     friend float4 operator+(const float4& a, float b)
     {
-        return float4(a) += float4(b);
+        float4 aa(a);
+        return aa += float4(b);
     }
     friend float4 operator-(const float4& a, float b)
     {
-        return float4(a) -= float4(b);
+        float4 aa(a);
+        return aa -= float4(b);
     }
 
     friend inline float4 operator*(float a, const float4& b)
     {
-        return float4(a) *= b;
+        float4 aa(a);
+        return aa *= b;
     }
     friend inline float4 operator/(float a, const float4& b)
     {
-        return float4(a) /= b;
+        float4 aa(a);
+        return aa /= b;
     }
     friend inline float4 operator+(float a, const float4& b)
     {
-        return float4(a) += b;
+        float4 aa(a);
+        return aa += b;
     }
     friend inline float4 operator-(float a, const float4& b)
     {
-        return float4(a) -= b;
+        float4 aa(a);
+        return aa -= b;
     }
 
     // sse ops start here
