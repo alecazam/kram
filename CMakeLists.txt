@@ -51,7 +51,15 @@ endif()
 
 # these don't set correct settings in Xcode, but CMake wants them set
 # can compile as C11, C14, C17.  This opts for lowest setting.
-set(CMAKE_CXX_STANDARD 11)
+if (macOS)
+    set(CMAKE_CXX_STANDARD 11)
+endif()
+
+# VS2017 doesn't have C++ 11, so use C++ 14
+if (winOS)
+    set(CMAKE_CXX_STANDARD 14)
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 

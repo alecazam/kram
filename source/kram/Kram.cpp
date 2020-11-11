@@ -23,6 +23,11 @@
 
 //--------------------------------------
 
+// name change on Win
+#if KRAM_WIN
+#define strtok_r strtok_s
+#endif
+        
 namespace kram {
 
 using namespace std;
@@ -708,10 +713,11 @@ bool kramTestCommand(int testNumber,
         cmd.insert(0, "encode");
 
         // string is modified in this case " " replaced with "\0"
-        char* token = strtok((char*)cmd.c_str(), " ");
-        while (token) {
+        // strtok isn't re-entrant, but strtok_r is
+        char* rest = (char*)cmd.c_str();
+        char* token;
+        while ((token = strtok_r(rest, " ", &rest))) {
             args.push_back(token);
-            token = strtok(NULL, " ");
         }
 
         // turn on verbose output
@@ -1914,7 +1920,7 @@ int kramAppScript(vector<const char*>& args)
             // tokenize the strings
             vector<const char*> args;
             // string is modified in this case " " replaced with "\0"
-            // strtok isn't re-entrant
+            // strtok isn't re-entrant, but strtok_r is
             // https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
             char* rest = (char*)commandAndArgs.c_str();
             char* token;

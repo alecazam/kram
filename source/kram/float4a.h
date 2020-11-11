@@ -173,10 +173,7 @@ public:
         float v[4];
         struct {
             float x, y, z, w;
-        }
-
-        // can't add this until vars renamed below
-        //struct { float r, g, b, a; }
+        };
     };
 
     // use of these pull data out of simd registers

@@ -47,9 +47,11 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
     // But do wan't temporary flag set on Windows by setting keep = 0
     // since unlink doesn't work there.
     int keep = 1;
-#if KRAM_WIN
-    keep = 0;
-#endif
+    
+// this is causing rename to fail, so leave it. TODO: this may leak temp files
+//#if KRAM_WIN
+//    keep = 0;
+//#endif
     
     // Note: can't pass access either, always opened as rw
     _fp = tmpfileplus(nullptr, "tmp", suffix, &pathname, keep);
