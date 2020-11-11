@@ -184,7 +184,7 @@ public:
         return v[index];
     }
 
-    // use these to stay in register (not sure if
+    // use these to stay in register
     inline float4 xvec() { return float4(_mm_splatx_ps(reg)); }
     inline float4 yvec() { return float4(_mm_splaty_ps(reg)); }
     inline float4 zvec() { return float4(_mm_splatz_ps(reg)); }
