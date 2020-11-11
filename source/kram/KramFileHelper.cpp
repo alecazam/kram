@@ -18,7 +18,7 @@
 // The whole C tmpfile setup is so messy.
 // Need both a tmp file and a filename to move it.
 // https://www.di-mgt.com.au/c_function_to_create_temp_file.html
-#define USE_TMPFILEPLUS 1
+#define USE_TMPFILEPLUS KRAM_WIN
 #if USE_TMPFILEPLUS
 #include "tmpfileplus/tmpfileplus.h"
 #endif
@@ -104,7 +104,7 @@ bool FileHelper::renameFile(const char* dstFilename)
     if (!_fp) return false;
     if (_filename.empty()) return false;
 
-#if KRAM_WIN
+#if USE_TMPFILEPLUS
     fclose(_fp);
 
     // windows doesn't remove any existing file, so have to do it explicitly
@@ -153,7 +153,7 @@ void FileHelper::close()
     if (_fp) {
         if (_isTmpFile) {
 // tmpfileplus on windows opens file as temporary, since unlink doesn't work
-#if !KRAM_WIN
+#if !USE_TMPFILEPLUS
             // so temp file is auto-deleted on close of _fp
             // if this is done in open, then fd is unlinked from name needed for rename...
             unlink(_filename.c_str());
