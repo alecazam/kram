@@ -88,7 +88,7 @@ Kram includes the following encoders/decoders:
 
 | Encoder  | Author           | License     | Encodes                     | Decodes | 
 |----------|------------------|-------------|-----------------------------|---------|
-| BCEnc    | Rich Geldrich    | MIT         | BC1,3,4,5,7                 | same    |
+| BCEnc    | Rich Geldreich   | MIT         | BC1,3,4,5,7                 | same    |
 | Squish   | Simon Brown      | MIT         | BC1,3,4,5                   | same    |
 | ATE      | Apple            | no sources  | BC1,4,5,7 ASTC4x4,8x8 LDR   | all LDR |
 | Astcenc  | ARM              | Apache 2.0  | ASTC4x4,5x5,6x6,8x8 LDR/HDR | same    |
