@@ -37,21 +37,29 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
     // might want to update to std::filesystem that has possibly abstracted this
     // it's likely the C code doesn't translate to Windows, and std::filesystem
     // has a move operation not found in C calls that can also create intermediate dirs.
-    
+
 #if USE_TMPFILEPLUS
     (void)access;
-    
-    char *pathname = nullptr;
+
+    char* pathname = nullptr;
+
+    // Don't want unlink happening in tmpfileplus or rename fails.
+    // But do wan't temporary flag set on Windows by setting keep = 0
+    // since unlink doesn't work there.
+    int keep = 1;
+#if KRAM_WIN
+    keep = 0;
+#endif
     
     // Note: can't pass access either, always opened as rw
-    _fp = tmpfileplus(nullptr, "tmp", suffix, &pathname, 1);
+    _fp = tmpfileplus(nullptr, "tmp", suffix, &pathname, keep);
     if (!_fp) {
         return false;
     }
-    
+
     _filename = pathname;
     free(pathname);
-    
+
 #else
     // this string will be modified
     _filename = "/tmp/kramimage-XXXXXX";
@@ -74,7 +82,7 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
 
     // grab the fileptr from the file descriptor
     _fp = fdopen(fd, access);
-    
+
     if (!_fp) {
         // unlink won't occur in close, so do it here
         unlink(_filename.c_str());
@@ -96,13 +104,13 @@ bool FileHelper::renameFile(const char* dstFilename)
 
 #if KRAM_WIN
     fclose(_fp);
-    
+
     // windows doesn't remove any existing file, so have to do it explicitly
     remove(dstFilename);
-    
+
     // now do the rename
     bool success = (rename(_filename.c_str(), dstFilename) == 0);
-    
+
     // so that close doesn't do another fclose()
     _fp = nullptr;
     _isTmpFile = false;
@@ -121,7 +129,7 @@ bool FileHelper::renameFile(const char* dstFilename)
     bool success = (rename(_filename.c_str(), dstFilename) == 0);
 #endif
     // Note: this doesn't change _filename to dstFilename
-    
+
     return success;
 }
 
@@ -133,7 +141,7 @@ bool FileHelper::open(const char* filename, const char* access)
     if (!_fp) {
         return false;
     }
-    
+
     _filename = filename;
     return true;
 }

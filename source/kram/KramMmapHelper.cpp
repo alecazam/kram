@@ -19,14 +19,33 @@ MmapHelper::~MmapHelper() { close(); }
 
 bool MmapHelper::open(const char *filename)
 {
-    // relay on the file api
-#if KRAM_WIN
-    return false;
-#else
-
     if (addr) {
         return false;
     }
+
+    // relay on the file api
+#if KRAM_WIN
+    return false;
+
+    /*
+    https://stackoverflow.com/questions/1880714/createfilemapping-mapviewoffile-how-to-avoid-holding-up-the-system-memory
+     
+    https://www.sublimetext.com/blog/articles/use-mmap-with-care
+    https://docs.microsoft.com/en-us/windows/win32/memory/creating-a-view-within-a-file
+    
+    HANDLE fileHandle = OpenFileMappingA(FILE_MAP_READ, TRUE, filename);
+      DWORD  dwDesiredAccess,
+      BOOL   bInheritHandle,
+      LPCSTR lpName
+    );
+    
+    addr = MapViewOfFile(fileHandle, FILE_MAP_READ, 0, 0, 0);
+    if (!addr) {
+       return false;
+    }
+    */
+
+#else
 
     FILE *fp = fopen(filename, "rb");
     if (!fp) {
