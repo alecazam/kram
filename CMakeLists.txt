@@ -131,6 +131,15 @@ set_target_properties(${myTargetLib} ${myTargetApp} PROPERTIES
     DISABLE_PRECOMPILE_HEADERS ON
 )
 
+# When Win rebuilds library, it doesn't relink app to correct code when you
+# build the app target project.  Breakpoints stop working after any library source edit,
+# and you have to rebuild solution to get the correct code to exectute.  Since 2014.  Try this.
+# And BUILD_ALL never launches properly.
+# https://cmake.org/pipermail/cmake/2014-October/058798.html
+if (winOS)
+    SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR})
+    SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
+endif()
 
 if (macOS)
     # force include instead of precompile

@@ -678,7 +678,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
         else if (isETCFormat(pixelFormat)) {
             // etc via etc2comp
 #if COMPILE_ETCENC
-            Etc::Image::Format format;
+            Etc::Image::Format format = Etc::Image::Format::R11;
 
             switch (pixelFormat) {
                 case MyMTLPixelFormatEAC_R11Unorm:
@@ -1359,7 +1359,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             // uses 70.0
 
             Etc::ErrorMetric errMetric = Etc::ErrorMetric::NUMERIC;
-            Etc::Image::Format format;
+            Etc::Image::Format format = Etc::Image::Format::R11;
 
             // errorMetric is unused for r/rg11 format, it just uses sum(deltaChannel^2),
             // but each channel can be done independently.

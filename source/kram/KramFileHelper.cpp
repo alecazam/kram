@@ -43,12 +43,12 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
     
     char *pathname = nullptr;
     
-    // TODO: can only pass prefix as second arg, add support for suffix
-    // TODO: can't pass access either, always opened as rw
+    // Note: can't pass access either, always opened as rw
     _fp = tmpfileplus(nullptr, "tmp", suffix, &pathname, 1);
     if (!_fp) {
         return false;
     }
+    
     _filename = pathname;
     free(pathname);
     
@@ -94,6 +94,21 @@ bool FileHelper::renameFile(const char* dstFilename)
     if (!_fp) return false;
     if (_filename.empty()) return false;
 
+#if KRAM_WIN
+    fclose(_fp);
+    
+    // windows doesn't remove any existing file, so have to do it explicitly
+    remove(dstFilename);
+    
+    // now do the rename
+    bool success = (rename(_filename.c_str(), dstFilename) == 0);
+    
+    // so that close doesn't do another fclose()
+    _fp = nullptr;
+    _isTmpFile = false;
+    _filename.clear();
+
+#else
     // since we're not closing, need to flush output
     fflush(_fp);
 
@@ -102,8 +117,11 @@ bool FileHelper::renameFile(const char* dstFilename)
 
     // this only works if tmp and filename are on same volume
     // and must have an actual filename to call this, which tmpfile() doesn't supply
+    // this removes any old file present
     bool success = (rename(_filename.c_str(), dstFilename) == 0);
-
+#endif
+    // Note: this doesn't change _filename to dstFilename
+    
     return success;
 }
 
@@ -115,6 +133,8 @@ bool FileHelper::open(const char* filename, const char* access)
     if (!_fp) {
         return false;
     }
+    
+    _filename = filename;
     return true;
 }
 

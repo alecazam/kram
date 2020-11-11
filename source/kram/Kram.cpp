@@ -128,8 +128,7 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
     // first try mmap, and then use file -> buffer
     bool useMmap = true;
     if (!mmapHelper.open(srcFilename.c_str())) {
-        KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
-              srcFilename.c_str());
+        // fallback to opening file if no mmap support or it didn't work
         useMmap = false;
     }
 
@@ -185,8 +184,7 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
     // first try mmap, and then use file -> buffer
     bool useMmap = true;
     if (!mmapHelper.open(srcFilename.c_str())) {
-        KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
-              srcFilename.c_str());
+        // fallback to file system if no mmap or failed
         useMmap = false;
     }
 
@@ -1093,8 +1091,7 @@ static int kramAppInfo(vector<const char*>& args)
         // first try mmap, and then use file -> buffer
         bool useMmap = true;
         if (!srcMmapHelper.open(srcFilename.c_str())) {
-            KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
-                  srcFilename.c_str());
+            // fallback to file system if no mmap or it failed
             useMmap = false;
         }
 
@@ -1135,8 +1132,8 @@ static int kramAppInfo(vector<const char*>& args)
             return -1;
         }
 
-        bool hasColor;
-        bool hasAlpha;
+        bool hasColor = true;
+        bool hasAlpha = true;
         bool hasPalette = state.info_png.color.colortype == LCT_PALETTE;
 
         switch (state.info_png.color.colortype) {
@@ -1720,8 +1717,14 @@ static int kramAppEncode(vector<const char*>& args)
     bool success = SetupSourceImage(srcMmapHelper, srcFileHelper, srcFileBuffer,
                                     srcFilename, srcImage);
 
-    success = success && SetupTmpFile(tmpFileHelper, ".ktx");
-
+    if (success) {
+        success = SetupTmpFile(tmpFileHelper, ".ktx");
+        
+        if (!success) {
+            KLOGE("Kram", "encode couldn't generate tmp file for output");
+        }
+    }
+    
     // so now can complete validation knowing hdr vs. ldr input
     // this checks the dst format
     if (success) {

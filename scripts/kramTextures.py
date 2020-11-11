@@ -334,34 +334,37 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 	# and at 4x4 aren't any smaller than explicit values
 	# prefer etc since it's smaller and higher bit depth (11-bits)
 
+	# note sdf and signed data will look odd in Preview.  It's not
+	# really setup for signed data.
+	
 	if platform == "ios":
 		# use astc since has more quality settings
 		fmtAlbedo = " -f astc4x4 -srgb -premul"
 		fmtNormal = " -f etc2rg -signed -normal"
 		fmtMetalRoughness = " -f etc2rg"
 		fmtMask = " -f etc2r"
-		fmtSDF = " -f etc2r -signed"
+		fmtSDF = " -f etc2r -signed -sdf"
 
 	elif platform == "android":
 		fmtAlbedo = " -f etc2rgba -srgb -premul -optopaque" # or astc
 		fmtNormal = " -f etc2rg -signed -normal"
 		fmtMetalRoughness = " -f etc2rg"
 		fmtMask = " -f etc2r"
-		fmtSDF = " -f etc2r -signed"
+		fmtSDF = " -f etc2r -signed -sdf"
 		
 	elif platform == "mac":
 		fmtAlbedo = " -f bc7 -srgb -premul -optopaque"
 		fmtNormal = " -f bc5 -signed -normal"
 		fmtMetalRoughness = " -f bc5"
 		fmtMask = " -f bc4"
-		fmtSDF = " -f bc4 -signed"
+		fmtSDF = " -f bc4 -signed -sdf"
 		
 	elif platform == "win":
 		fmtAlbedo = " -f bc7 -srgb -premul -optopaque"
 		fmtNormal = " -f bc5 -signed -normal"
 		fmtMetalRoughness = " -f bc5"
 		fmtMask = " -f bc4"
-		fmtSDF = " -f bc4 -signed"
+		fmtSDF = " -f bc4 -signed -sdf"
 
 	else:
 		return 1
