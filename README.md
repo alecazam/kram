@@ -15,6 +15,8 @@ Kram adds props to the KTX file to store data.  Currently props store Metal and 
 
 KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  But there are no viewers for that format.
 
+I also have a custom KTXA format.  This likely broke with the prop additions, but Metal cannot load mmap data that isn't aligned to block size.  But KTX stuffs a 4 byte length into the mip data.  KTX2 does not do this.  So by leaving this out (and padding props to 16 byte multiple), then the mips could be directly loaded.  My loader had to copy the mips to a staging MTLBuffer anyways, so it's probably best not to create a new format.  Also sparse textures imply splitting up large mips into tiles, and so neither KTX or KTX2 support that.
+
 There are several commands supported by kram.
 * encode - encode/decode block formats, mipmaps, fast sdf, premul, srgb, swizzles, LDR and HDR support, 16f/32f
 * decode - can convert any of the encode formats to s/rgba8 ktx files for display 
@@ -248,5 +250,52 @@ Other great encoder wrappers to try.  Many of these require building the app fro
 * ICBC - Ignacio Costano's BC encoder - WML, BC
 * DirectX Texture Tools
 * AMD Compressonator
+
+On Formats
+```
+*ASTC* 
+Android and iOS
+oddball format, but has full 8bit channel endpoints
+No L+A dualplane in HDR 
+No signed format
+ASTC4x4 is same size as R8Unorm explicit format.
+Can change block size across all mips 4x4, 5x5, 6x6, 8x8...
+But harder to store/fit graident or partition to large point clouds
+Can adapt per block to L, LA, RGB, RGBA.
+
+rrr1  - 2 1-byte endpoints
+rrrg  - 2 2-byte endpoints, dual plane possible in LDR
+rg01  - 2 3-byte endpoints, dual plane possible, only 2 channel format in HDR
+rgba1 - 2 3-byte endpoints
+
+*ETC2*
+Android and iOS
+r - 4bpp, 2 11-bit endpoints, unpacks to r16f in texture cache, signed/unsigned
+rg - 8bpp, 2 22-bit endpoints, unpacks to rg16f in texture cache, signed/unsigned
+rgb - 4bpp, similar to ETC1, several permuations that slow encode times
+rgba - 8bpp, has several permuations that slow encode times
+
+*BC*
+Desktop and consoles, Apple M1
+BC1 - 4bpp, 565, 2-bit selector, kram doesn't support 1-bit alpha form
+BC2 - not exposed
+BC3 - 8bpp 565, 2-bit selector, 8-bit alpha, 3-bit selector
+BC4 - 4bpp 2 8-bit endpoints, 3 bit selector, unpacks to r16f in texture cache, signed/unsigned
+BC5 - 8bpp, 2 16-bit endpoints, 3 bit selector, unpacks to rg16f in texture cache, signed/unsigned
+BC6 - 8bpp, not supported yet, rgb16 signed/unsigned
+BC7 - 8bpp, rgba, adaptive, can pack 4 unique colors into 4x4 block via partitioning
+```
+
+
+Normal map formats for 2 channels
+* RG8/16f/32f rg01 (.rg)
+* BC1nm rg01 (.r*a,g post swizzle)
+* BC3nm xgxa (.r*a,g or .ga post swizzle, can use -avg for 2 more channels)
+* BC5nm rg01  .rg
+* ETCrg rg01  .rg
+* ASTCnm gggr .ga
+* ASTCnm rrrg .ga or .ra
+* ASTCrg rg01 .rg (wastes 8x2 bytes to store blue channel, could avg into that slot, dual plane to rba, g)
+
 
 
