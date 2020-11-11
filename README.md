@@ -94,12 +94,13 @@ Optimized encodes by inlining CalcPixelError. 2x faster.
 
 Kram includes additional open-source:
 
-| Library    | Author           | License | Purpose                   |
-|------------|------------------|---------|---------------------------|
-| lodepng    | Lode Vandevenne  | MIT     | png encode/decode         |
-| SSE2Neon   | John W. Ratcliff | MIT     | sse to neon               |
-| heman      | Philip Rideout   | MIT     | parabola EDT for SDF      |
-| TaskSystem | Sean Parent      | MIT     | C++11 work queue          |
+| Library     | Author           | License | Purpose                   |
+|-------------|------------------|---------|---------------------------|
+| lodepng     | Lode Vandevenne  | MIT     | png encode/decode         |
+| SSE2Neon    | John W. Ratcliff | MIT     | sse to neon               |
+| heman       | Philip Rideout   | MIT     | parabola EDT for SDF      |
+| TaskSystem  | Sean Parent      | MIT     | C++11 work queue          |
+| tmpfileplus | David Ireland    | Moz 2.0 | fixes C tmpfile api       |
 
 ```
 lodepng
@@ -114,20 +115,25 @@ SDF altered to support mip generation from bigger distance fields
   
 ```
 Features to complete:
-Tile command for SVT tiling
-Merge command to combine images (similar to ImageMagick)
-Atlas command to atlas to 2D and 2D array textures
-Add GPU encoder (use compute in Metal/Vulkan)
-Add BC6H encoder
-Improve permute in SSE2Neon
-Save prop with args and compare args and modstamp before rebuilding to avoid --force
-Multichannel SDF
-Plumb float4 through to ASTC HDR encoding
+* Tile command for SVT tiling
+* Merge command to combine images (similar to ImageMagick)
+* Atlas command to atlas to 2D and 2D array textures
+* Add GPU encoder (use compute in Metal/Vulkan)
+* Add BC6H encoder
+* Update/simplify permute in SSE2Neon
+* Save prop with args and compare args and modstamp before rebuilding to avoid --force
+* Multichannel SDF
+* Plumb float4 through to ASTC HDR encoding
+* Add mmap for Windows
+* Test Neon support and SSE2Neon
+* PSNR stats off encode + decode
 
 Test Images
-Samples from test files used for the various encoders.
-SDF image taken from EDT that inspired heman.
-collectorbarrel-n/a from Id's old GPU BC1/3 compression article.
+* color_grid from Astcenc samples
+* ColorMap from Apple's sample apps to test premultiplied alpha and srgb.
+* flipper-sdf image taken from EDT paper that inspired heman SDF.
+* collectorbarrel-n/a from Id's old GPU BC1/3 compression article.
+* Toof-a is my own artwork drawn in Figma
 
 ```
 
@@ -214,6 +220,8 @@ Other great encoder wrappers to try.  Many of these require building the app fro
 * Basis Universal (basisu) - WML, ASTC/ETC1, transodes to 4x4 formats
 * KTX Software (toktx, ktx2ktx2, ktxsc) - basis as encode
 * Intel ISPC - WML, BC/ASTC
-* Ignacio Costano's BC encoder ICBC - WML, BC
+* ICBC - Ignacio Costano's BC encoder - WML, BC
+* DirectX Texture Tools
+* AMD Compressonator
 
 
