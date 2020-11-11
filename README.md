@@ -36,7 +36,28 @@ If you want to debug from Xcode, then the project is generated from CMake.
 ```
 open kram.xcodeproj
 ```
-To see how kram works, there is a sample script that applies platform-specific presets based on source filenames.
+
+For Windows, the steps are similar. I tried to fix CMake to build the library into the app directory so it the app is updated.  "Rebuild Solution" if your changes don't take effect, or if breakpoints stop being hit.
+
+```
+mkdir build
+cmake .. -G "Visual Studio 15 2017 Win64" 
+or
+cmake .. -G "Visual Studio 16 2019" -A x64    
+cmake --build . --config Release
+open kram.sln
+```
+
+There are various CMake settings that control the various encoders.  Each of these adds around 200KB.  I tested with each of these turned off, so code should be isolated.  The project will still show all sources.
+* -DATE=ON
+* -DATSCENC=ON
+* -DBCENC=ON
+* -DSQUISH=ON
+* -DATSTCENC=ON
+* -DETCTOOL=ON
+
+To demonstrate how kram works, scripts/kramtextures.py applies platform-specific presets based on source filenames endings.  The first form executes multiple kram processes with each file using a Python ThreadPoolExecutor.  The second generates a script file, and then runs that in a C++ task system inside kram.  The scripting system would allow gpu compute of commands, and more balanced memory and thread usage.
+
 ```
 cd build
 ../scripts/kramTextures.py -p android
@@ -44,7 +65,7 @@ cd build
 ../scripts/kramTextures.py -p mac --force --script
 ```
 
-To test individual encoders.
+To test individual encoders, there are tests cases embedded into kram.
 ```
 cd build
 ./Release/kram -testall
