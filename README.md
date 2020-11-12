@@ -7,9 +7,13 @@ kram focuses on sending data efficiently and precisely to the encoders.  kram ha
 
 Many of the encoder sources can multithread a single image, but that is unused.  kram is designed to batch process one texture per thread via a python script or a C++11 task system inside kram.  These currently both take the same amount of cpu time, but the latter is best if kram ever adds gpu accelerated encoding.
 
-kram encourages the use of lossless and hdr source data.  There are not many choices for lossless data - PNG, EXR, and Tiff to name a few.  Instead, kram can pull in KTX files for 8u/16f/32f data, or 8u from PNG.  Let kram convert source pixels to premultiplied alpha and from srgb to linear, since ordering matters here and kram does this using float4.  LDR and HDR data can come in as horizontal or vertical strips, and these strips can then have mips generated for them.  So cube maps, cube map arrays, 2D arrays, and 1d arrays are all handled the same.
-
 Similar to a makefile system, the script sample kramtexture.py uses modstamps to skip textures that have already been processed.  If the source png is older than the ktx output, then the file is skipped.  Command line options are not yet compared, so if those change then use --force on the python script to rebuild all textures.  Also a crc/hash could be used instead when modstamp isn't sufficient or the same data could come from different folders.
+
+On PNG, KTX, KTX2, KTXA output formats:
+
+PNG is limited to srgb8 and 8u and 16u data.  Most editors can work with this format.  Gimp and Photoshop can maintain 16u data.  There's no provision for mips, or cube, 3d, hdr, or premultiplied alpha.  So content tools really need to move off this format to something better.  
+
+kram encourages the use of lossless and hdr source data.  There are not many choices for lossless data - PNG, EXR, and Tiff to name a few.  Instead, kram can input PNG files with 8u pixels, and KTX files for 8u/16f/32f pixels.  Let kram convert source pixels to premultiplied alpha and from srgb to linear, since ordering matters here and kram does this using float4.  LDR and HDR data can come in as horizontal or vertical strips, and these strips can then have mips generated for them.  So cube maps, cube map arrays, 2D arrays, and 1d arrays are all handled the same.
 
 KTX stores everything with 4 byte alignment.  It's got a simple 64-byte header, props, and then mip data with lengths and padding.  
 
@@ -60,10 +64,9 @@ open kram.sln
 There are various CMake settings that control the various encoders.  Each of these adds around 200KB.  I tested with each of these turned off, so code should be isolated.  The project will still show all sources.
 
 * -DATE=ON
-* -DATSCENC=ON
+* -DASTCENC=ON
 * -DBCENC=ON
 * -DSQUISH=ON
-* -DATSTCENC=ON
 * -DETCTOOL=ON
 
 To demonstrate how kram works, scripts/kramtextures.py applies platform-specific presets based on source filenames endings.  The first form executes multiple kram processes with each file using a Python ThreadPoolExecutor.  The second generates a script file, and then runs that in a C++ task system inside kram.  The scripting system would allow gpu compute of commands, and more balanced memory and thread usage.
@@ -302,4 +305,16 @@ Normal map formats for 2 channels
 * ASTCrg rg01 .rg (wastes 8x2 bytes to store blue channel, could avg into that slot, dual plane to rba, g)
 
 
+Hardware lookup of srgb and premultiplied data.
 
+```
+For LDR data, hardware converts srgb to linear data.  Ideally at higher precision in the texture cache than just 8-bits.  Point, bilinear, trilinear, aniso sampling is then done from that linear data of the 4x4 blocks of the texture cache.
+
+Texturing hardware does not yet support premultiplied alpha.  So premultiplied alpha must be applied to the texture rgb prior to mip generation and prior to encoding.  DXT2 and DXT4 were supposed to be premultiplied, but disappeared as formats.
+
+Kram uses float4 to preserve precision when srgb or premultiplied alpha are specified.  Ideally, the encoder would fit a line to linear endpoints, but all the encoders currently receive non-linear sRGB point clouds for each block.  Also some formats like BC1 really don't have enough endpoint bits to do remap endpoints to srgb after encode.
+
+encode = 8-bit endpoints or less <- (srgbFromLinear(premultiplyAlpha(rgb), a)
+decode = bilerp(linearFromSrgb(rgb,a)) or bilerp(premulLinearFromSrgb(rgb,a)) <- 8 bit endpoints or less
+
+```
