@@ -308,9 +308,9 @@ Normal map formats for 2 channels
 Hardware lookup of srgb and premultiplied data.
 
 ```
-For LDR data, hardware converts srgb to linear data.  Ideally at higher precision in the texture cache than just 8-bits.  Point, bilinear, trilinear, aniso sampling is then done from that linear data of the 4x4 blocks of the texture cache.
+For LDR data, texture units converts srgb to linear data on the way to the texture cache.  In the past, the cache was made of 4x4 blocks.  Point, bilinear, trilinear, aniso sampling is then done from a 4x4 block of linear data.
 
-Texturing hardware does not yet support premultiplied alpha.  So premultiplied alpha must be applied to the texture rgb prior to mip generation and prior to encoding.  DXT2 and DXT4 were supposed to be premultiplied, but disappeared as formats.
+Texturing hardware does not yet support premultiplied alpha.  So premultiplied alpha is applied prior to mip generation and srgb is then reapplied prior to encoding.  DXT2 and DXT4 formats were supposed to store premultiplied endpoints, but disappeared as formats.
 
 Kram uses float4 to preserve precision when srgb or premultiplied alpha are specified.  Ideally, the encoder would fit a line to linear endpoints, but all the encoders currently receive non-linear sRGB point clouds for each block.  Also some formats like BC1 really don't have enough endpoint bits to do remap endpoints to srgb after encode.
 
