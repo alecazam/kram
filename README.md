@@ -322,7 +322,7 @@ Premul breaks many of the common hardware blend modes, so emulate in shader.
 Kram uses float4 to preserve precision when srgb or premul are specified.  
 The encoders encode non-linear srgb point clouds.
 
-encode = rgbFromLinear(rgb, a) or srgbFromPremulLinear(rgb * a, a)
-decode = bilerp(linearFromSrgb(rgb,a)) or bilerp(premulLinearFromSrgb(rgb,a))
+encode = (srgbFromPremulLinear(rgb * a), a)
+decode = bilerp(premulLinearFromSrgb(rgb), a)
 
 ```
