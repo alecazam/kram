@@ -465,8 +465,10 @@ namespace Etc
 						}
                         
                         // pick that if it's the smallest error
-                        if ((float)blockError < m_fError)
+                        if (m_fError > (float)blockError)
 						{
+                            m_fError = (float)blockError;
+                           
 							if (m_isSnorm)
 							{
 								m_redBase = fBase - 128;
@@ -486,8 +488,6 @@ namespace Etc
                                 //m_decodedPixels[uiPixel] = bestPixelRed[uiPixel]; //  / 2047.0f;
 							}
                             
-                            // stop if error reached, not going to get any lower
-                            m_fError = (float)blockError;
                             
                             // compare to tolerance, since reaching 0 is difficult in float
                             if (m_fError <= kErrorTolerance)

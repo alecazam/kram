@@ -990,7 +990,7 @@ namespace Etc
 			fBlockError += afBestPixelErrors[uiPixel];
 		}
 
-		if (fBlockError < m_fError)
+		if (m_fError > fBlockError)
 		{
 			m_fError = fBlockError;
 
