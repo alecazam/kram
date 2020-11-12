@@ -7,13 +7,23 @@ kram focuses on sending data efficiently and precisely to the encoders.  kram ha
 
 Many of the encoder sources can multithread a single image, but that is unused.  kram is designed to batch process one texture per thread via a python script or a C++11 task system inside kram.  These currently both take the same amount of cpu time, but the latter is best if kram ever adds gpu accelerated encoding.
 
-kram encourages the use of lossless and hdr source data.  There are not many choices for lossless data - PNG, EXR, and Tiff to name a few.  Instead, kram can pull in KTX files for 8u/16f/32f data, or 8u from PNG.  Let kram convert source pixels to premultiplied alpha and from srgb to linear, since ordering matters here and kram does this using float4.  LDR and HDR data can come in as horizontal or vertical strips, and these strips can then have mips generated for them.  So cube maps, cube map arrays, 2D arrays, and 1d arrays are all handled the same.
-
 Similar to a makefile system, the script sample kramtexture.py uses modstamps to skip textures that have already been processed.  If the source png is older than the ktx output, then the file is skipped.  Command line options are not yet compared, so if those change then use --force on the python script to rebuild all textures.  Also a crc/hash could be used instead when modstamp isn't sufficient or the same data could come from different folders.
 
-Kram adds props to the KTX file to store data.  Currently props store Metal and Vulkan formats.  Also props are saved for channel content and post-swizzle.  Loaders, viewers, and shaders can utilize this metadata.
+On PNG, KTX, KTX2, KTXA output formats:
 
-KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  But there are no viewers for that format.
+PNG is limited to srgb8 and 8u and 16u data.  Most editors can work with this format.  Gimp and Photoshop can maintain 16u data.  There's no provision for mips, or cube, 3d, hdr, or premultiplied alpha.  So content tools really need to move off this format to something better.  
+
+kram encourages the use of lossless and hdr source data.  There are not many choices for lossless data - PNG, EXR, and Tiff to name a few.  Instead, kram can input PNG files with 8u pixels, and KTX files for 8u/16f/32f pixels.  Let kram convert source pixels to premultiplied alpha and from srgb to linear, since ordering matters here and kram does this using float4.  LDR and HDR data can come in as horizontal or vertical strips, and these strips can then have mips generated for them.  So cube maps, cube map arrays, 2D arrays, and 1d arrays are all handled the same.
+
+KTX stores everything with 4 byte alignment.  It's got a simple 64-byte header, props, and then mip data with lengths and padding.  
+
+Validating and previewing the results is complicated.  KTX has few viewers.  Apple's Preview can open BC and ASTC files on macOS, but not ETC/PVRTC.  And then you can't look at channels or mips, or turn on/off premultiplied alpha, or view signed/unsigned data.  Preview premultiplies PNG images, but KTX files aren't.  Apple's thumbnails don't work for ETC2 or PVRTC data.  Windows thumbnails don't work for KTX at all.  PVRTexToolGUI applies sRGB and premultiplied alpha incorrectly to images, and can't open BC files on Mac, or BC7 files on Windows, or ETC srgb files.  PVRTexToolGUI should fix some of these issues in their next release, but it's almost the end of 2020.
+
+Kram adds props to the KTX file to store data.  Currently props store Metal and Vulkan formats.  This is important since GL's ASTC LDR and HDR formats are the same constant.  Also props are saved for channel content and post-swizzle.  Loaders, viewers, and shaders can utilize this metadata.
+
+KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  But there are no viewers for that format.  KTX2 reverses mip ordering smallest to largest, so that streamed textures can display smaller mips progressively.   KTX2 can also supercompress each mip with zstd.  I suppose this could then be unpacked to tiles for sparse texturing.  KTX2 does not store a length field inside the mip data which keeps consistent alignment. 
+
+I also have a custom KTXA format.  KTXA likely broke with the prop additions.  Metal cannot load mmap data that isn't aligned to a multiple of the block size (8 or 16 bytes for BC/ASTC/ETC).  But KTX stuffs a 4 byte length into the mip data.  So by leaving the size out (TODO: pad props to a 16 byte multiple), then the mips could be directly loaded.  My loader had to copy the mips to a staging MTLBuffer anyways, so it's probably best not to create a new format.  Also sparse textures imply splitting up large mips into tiles.  Also mmap'ed data on iOS/Android don't count towards jetsam limits, so that imposes some constraints on loaders.
 
 There are several commands supported by kram.
 * encode - encode/decode block formats, mipmaps, fast sdf, premul, srgb, swizzles, LDR and HDR support, 16f/32f
@@ -54,10 +64,9 @@ open kram.sln
 There are various CMake settings that control the various encoders.  Each of these adds around 200KB.  I tested with each of these turned off, so code should be isolated.  The project will still show all sources.
 
 * -DATE=ON
-* -DATSCENC=ON
+* -DASTCENC=ON
 * -DBCENC=ON
 * -DSQUISH=ON
-* -DATSTCENC=ON
 * -DETCTOOL=ON
 
 To demonstrate how kram works, scripts/kramtextures.py applies platform-specific presets based on source filenames endings.  The first form executes multiple kram processes with each file using a Python ThreadPoolExecutor.  The second generates a script file, and then runs that in a C++ task system inside kram.  The scripting system would allow gpu compute of commands, and more balanced memory and thread usage.
@@ -82,7 +91,7 @@ Kram includes the following encoders/decoders:
 
 | Encoder  | Author           | License     | Encodes                     | Decodes | 
 |----------|------------------|-------------|-----------------------------|---------|
-| BCEnc    | Rich Geldrich    | MIT         | BC1,3,4,5,7                 | same    |
+| BCEnc    | Rich Geldreich   | MIT         | BC1,3,4,5,7                 | same    |
 | Squish   | Simon Brown      | MIT         | BC1,3,4,5                   | same    |
 | ATE      | Apple            | no sources  | BC1,4,5,7 ASTC4x4,8x8 LDR   | all LDR |
 | Astcenc  | ARM              | Apache 2.0  | ASTC4x4,5x5,6x6,8x8 LDR/HDR | same    |
@@ -249,4 +258,71 @@ Other great encoder wrappers to try.  Many of these require building the app fro
 * DirectX Texture Tools
 * AMD Compressonator
 
+On Formats
+```
+*ASTC* 
+Android and iOS
+oddball format, but has full 8bit channel endpoints
+No L+A dualplane in HDR 
+No signed format
+ASTC4x4 is same size as R8Unorm explicit format.
+Can change block size across all mips 4x4, 5x5, 6x6, 8x8...
+But harder to store/fit graident or partition to large point clouds
+Can adapt per block to L, LA, RGB, RGBA.
 
+rrr1  - 2 1-byte endpoints
+rrrg  - 2 2-byte endpoints, dual plane possible in LDR
+rg01  - 2 3-byte endpoints, dual plane possible, only 2 channel format in HDR
+rgba1 - 2 3-byte endpoints
+
+*ETC2*
+Android and iOS
+r - 4bpp, 2 11-bit endpoints, unpacks to r16f in texture cache, signed/unsigned
+rg - 8bpp, 2 22-bit endpoints, unpacks to rg16f in texture cache, signed/unsigned
+rgb - 4bpp, similar to ETC1, several permuations that slow encode times
+rgba - 8bpp, has several permuations that slow encode times
+
+*BC*
+Desktop and consoles, Apple M1
+BC1 - 4bpp, 565, 2-bit selector, kram doesn't support 1-bit alpha form
+BC2 - not exposed
+BC3 - 8bpp 565, 2-bit selector, 8-bit alpha, 3-bit selector
+BC4 - 4bpp 2 8-bit endpoints, 3 bit selector, unpacks to r16f in texture cache, signed/unsigned
+BC5 - 8bpp, 2 16-bit endpoints, 3 bit selector, unpacks to rg16f in texture cache, signed/unsigned
+BC6 - 8bpp, not supported yet, rgb16 signed/unsigned
+BC7 - 8bpp, rgba, adaptive, can pack 4 unique colors into 4x4 block via partitioning
+```
+
+
+Normal map formats for 2 channels
+* RG8/16f/32f rg01 (.rg)
+* BC1nm rg01 (.r*a,g post swizzle)
+* BC3nm xgxa (.r*a,g or .ga post swizzle, can use -avg for 2 more channels)
+* BC5nm rg01  .rg
+* ETCrg rg01  .rg
+* ASTCnm gggr .ga
+* ASTCnm rrrg .ga or .ra
+* ASTCrg rg01 .rg (wastes 8x2 bytes to store blue channel, could avg into that slot, dual plane to rba, g)
+
+
+Encoding and hardware lookup of srgb and premultiplied data.
+
+```
+Texture units converts srgb to linear data on the way to the texture cache.  
+In the past, the cache was made of 4x4 blocks to match encoded formats.  
+Sampling is then done from that block of linear data.
+
+Texturing hardware does not yet support premultiplied alpha.  
+Kram does premul prior to mip generation.
+Srgb is then re-applied to linear premul data before encoding.
+LDR premul typically implies rgb*a <= a, but this rule can be broken in film.
+Once in premul stay there, dividing out alpha isn't performant or precise.
+Premul breaks many of the common hardware blend modes, so emulate in shader.
+
+Kram uses float4 to preserve precision when srgb or premul are specified.  
+The encoders encode non-linear srgb point clouds.
+
+encode = (srgbFromPremulLinear(rgb * a), a)
+decode = bilerp(premulLinearFromSrgb(rgb), a)
+
+```
