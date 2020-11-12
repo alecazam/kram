@@ -305,16 +305,24 @@ Normal map formats for 2 channels
 * ASTCrg rg01 .rg (wastes 8x2 bytes to store blue channel, could avg into that slot, dual plane to rba, g)
 
 
-Hardware lookup of srgb and premultiplied data.
+Encoding and hardware lookup of srgb and premultiplied data.
 
 ```
-For LDR data, texture units converts srgb to linear data on the way to the texture cache.  In the past, the cache was made of 4x4 blocks.  Point, bilinear, trilinear, aniso sampling is then done from a 4x4 block of linear data.
+Texture units converts srgb to linear data on the way to the texture cache.  
+In the past, the cache was made of 4x4 blocks to match encoded formats.  
+Sampling is then done from that block of linear data.
 
-Texturing hardware does not yet support premultiplied alpha.  So premultiplied alpha is applied prior to mip generation and srgb is then reapplied prior to encoding.  DXT2 and DXT4 formats were supposed to store premultiplied endpoints, but disappeared as formats.
+Texturing hardware does not yet support premultiplied alpha.  
+Kram does premul prior to mip generation.
+Srgb is then re-applied to linear premul data before encoding.
+LDR premul typically implies rgb*a <= a, but this rule can be broken in film.
+Once in premul stay there, dividing out alpha isn't performant or precise.
+Premul breaks many of the common hardware blend modes, so emulate in shader.
 
-Kram uses float4 to preserve precision when srgb or premultiplied alpha are specified.  Ideally, the encoder would fit a line to linear endpoints, but all the encoders currently receive non-linear sRGB point clouds for each block.  Also some formats like BC1 really don't have enough endpoint bits to do remap endpoints to srgb after encode.
+Kram uses float4 to preserve precision when srgb or premul are specified.  
+The encoders encode non-linear srgb point clouds.
 
-encode = 8-bit endpoints or less <- (srgbFromLinear(premultiplyAlpha(rgb), a)
-decode = bilerp(linearFromSrgb(rgb,a)) or bilerp(premulLinearFromSrgb(rgb,a)) <- 8 bit endpoints or less
+encode = rgbFromLinear(rgb, a) or srgbFromPremulLinear(rgb * a, a)
+decode = bilerp(linearFromSrgb(rgb,a)) or bilerp(premulLinearFromSrgb(rgb,a))
 
 ```
