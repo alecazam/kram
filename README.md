@@ -338,18 +338,19 @@ Quick chart on formats
 
 
 Normal map formats for 2 channels
-| Fmt    | pre  | post | planes 
----------|------|-------------
-| RG8    | rg01 | rg   | 2
-| RG16f  | rg01 | rg   | 2
-| RG32f  | rg01 | rg   | 2
-| BC1nm  | rg01 | rg   | 1
-| BC3nm  | xgxr | ag   | 2
-| BC5nm  |rg01  | rg   | 2
-| ETCrg  | rg01 | rg   | 2
-| ASTCnm | gggr | ag   | 2
-| ASTCnm | rrrg | ga   | 2
-| ASTCrg | rg01 | rg   | 2
+
+| Fmt    | pre  | post | pl | size  |
+|--------|------|------|----|-------|
+| RG8    | rg01 | rg   | 2  | 2     |
+| RG16f  | rg01 | rg   | 2  | 4     |
+| RG32f  | rg01 | rg   | 2  | 8     |
+| BC1nm  | rg01 | rg   | 1  | 0.5   |
+| BC3nm  | xgxr | ag   | 2  | 1     |
+| BC5nm  |rg01  | rg   | 2  | 1     |
+| ETCrg  | rg01 | rg   | 2  | 1     |
+| ASTCnm | gggr | ag   | 2  | 1@4x4 |
+| ASTCnm | rrrg | ga   | 2  | 1     |
+| ASTCrg | rg01 | rg   | 2  | 1     |
 
 
 Encoding and hardware lookup of srgb and premultiplied data.
