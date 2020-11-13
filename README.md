@@ -11,7 +11,7 @@ Similar to a makefile system, the script sample kramtexture.py uses modstamps to
 
 On PNG, KTX, KTX2, KTXA output formats:
 
-PNG is limited to srgb8 and 8u and 16u data.  Most editors can work with this format.  Gimp and Photoshop can maintain 16u data.  There's no provision for mips, or cube, 3d, hdr, or premultiplied alpha.  So content tools really need to move off this format to something better.  
+PNG is limited to srgb8 and 8u and 16u data.  Most editors can work with this format.  Gimp and Photoshop can maintain 16u data.  There's no provision for mips, or cube, 3d, hdr, or premultiplied alpha.  Content tools, image editors, browsers really need to replace PNG and DDS with compressed KTX2 for source and output content.  This uses very little space in source control then, and likely more could be done with delta encoding pixels like PNG before compression.   
 
 kram encourages the use of lossless and hdr source data.  There are not many choices for lossless data - PNG, EXR, and Tiff to name a few.  Instead, kram can input PNG files with 8u pixels, and KTX files for 8u/16f/32f pixels.  Let kram convert source pixels to premultiplied alpha and from srgb to linear, since ordering matters here and kram does this using float4.  LDR and HDR data can come in as horizontal or vertical strips, and these strips can then have mips generated for them.  So cube maps, cube map arrays, 2D arrays, and 1d arrays are all handled the same.
 
@@ -94,7 +94,7 @@ Kram includes the following encoders/decoders:
 | BCEnc    | Rich Geldreich   | MIT         | BC1,3,4,5,7                 | same    |
 | Squish   | Simon Brown      | MIT         | BC1,3,4,5                   | same    |
 | ATE      | Apple            | no sources  | BC1,4,5,7 ASTC4x4,8x8 LDR   | all LDR |
-| Astcenc  | ARM              | Apache 2.0  | ASTC4x4,5x5,6x6,8x8 LDR/HDR | same    |
+| Astcenc  | Arm              | Apache 2.0  | ASTC4x4,5x5,6x6,8x8 LDR/HDR | same    |
 | Etc2comp | Google           | MIT         | ETC2r11,rg11,rgb,rgba       | same    |
 | Explicit | Me               | MIT         | r/rg/rgba 8u/16f/32f        | none    |
 
@@ -160,7 +160,9 @@ Features to complete:
 * Plumb float4 through to ASTC HDR encoding
 * Add mmap for Windows
 * Test Neon support and SSE2Neon
+* Run srgb conversion on endpoint data after fitting linear color point cloud
 * PSNR stats off encode + decode
+* Dump block stats on BC6/7 and ASTC to see if texture holds void extent, dual-plane, etc
 
 Test Images
 * color_grid from Astcenc samples
@@ -262,13 +264,21 @@ On Formats
 ```
 *ASTC* 
 Android and iOS
-oddball format, but has full 8bit channel endpoints
-No L+A dualplane in HDR 
+Swizzles unique to format, but can match up with hw swizzles if supported.
+Full 8-bit channel endpoints
+No HDR L+A dualplane, only RGB1
 No signed format
 ASTC4x4 is same size as R8Unorm explicit format.
 Can change block size across all mips 4x4, 5x5, 6x6, 8x8...
-But harder to store/fit graident or partition to large point clouds
-Can adapt per block to L, LA, RGB, RGBA.
+Hard to store/fit endpoints to larger point clouds
+Square format pixel counts ramp up quickly. 16, 25, 36, 64.
+Adapts per block to L, LA, RGB, RGBA.
+High encoder complexity, but getting faster
+No GPU encode/decode.
+Fast ISPC encoder but that doesn't pick best block types
+Fixed 16 byte block size (even for HDR).  
+Optimal storage depends on how much wasted on endpoints
+Can fit more than 2 colors to a 4x4 block
 
 rrr1  - 2 1-byte endpoints
 rrrg  - 2 2-byte endpoints, dual plane possible in LDR
@@ -277,6 +287,13 @@ rgba1 - 2 3-byte endpoints
 
 *ETC2*
 Android and iOS
+No GPU encode/decode
+Slowest encoder due to large iteration space of each block
+High-precision, signed r and rg format.  Can use for normals.
+ETCPack and ETC2Comp are the two choices
+ETC2Comp multipass skips encoding blocks by treating quality as percentage which is dubious
+Kram breaks out quality from block percentage for multipass.
+
 r - 4bpp, 2 11-bit endpoints, unpacks to r16f in texture cache, signed/unsigned
 rg - 8bpp, 2 22-bit endpoints, unpacks to rg16f in texture cache, signed/unsigned
 rgb - 4bpp, similar to ETC1, several permuations that slow encode times
@@ -284,6 +301,11 @@ rgba - 8bpp, has several permuations that slow encode times
 
 *BC*
 Desktop and consoles, Apple M1
+GPU accelerated encoders
+Several encoders to choose from
+Can fit more than 2 unique colors to a 4x4 block with BC7, but no BC1/3
+GPU accelerators 100 to 1000x faster.
+
 BC1 - 4bpp, 565, 2-bit selector, kram doesn't support 1-bit alpha form
 BC2 - not exposed
 BC3 - 8bpp 565, 2-bit selector, 8-bit alpha, 3-bit selector
@@ -291,26 +313,52 @@ BC4 - 4bpp 2 8-bit endpoints, 3 bit selector, unpacks to r16f in texture cache, 
 BC5 - 8bpp, 2 16-bit endpoints, 3 bit selector, unpacks to rg16f in texture cache, signed/unsigned
 BC6 - 8bpp, not supported yet, rgb16 signed/unsigned
 BC7 - 8bpp, rgba, adaptive, can pack 4 unique colors into 4x4 block via partitioning
+
+*Basis* (not in kram)
+Lots of great concepts here
+Written by Rich Geldreich who also did BCenc
+Transcoder format from ETC1s and ASTC like data
+Can reduce storage of redundent blocks across mips
+One format to rule them all
+Encode once
+Only 4x4 block sizes
+ETC1s quality issues from 5-bit channel endpoints, and skipped block orient.
+ASTC doesn't compress and RDO as tightly.
+
 ```
+
+Quick chart on formats
+
+| Fmt   | GPU  | Block Size | Sizes        |
+|-------|------|------------|--------------|
+| BC    | Yes  | Fixed      | 4/8bpp       |
+| ASTC  | No   | Variable   | 2-8bpp @ 8x8 |
+| ETC   | No   | Fixed      | 4/8bpp       |
+| Basis | No   | Fixed      | 2-8bpp       |
 
 
 Normal map formats for 2 channels
-* RG8/16f/32f rg01 (.rg)
-* BC1nm rg01 (.r*a,g post swizzle)
-* BC3nm xgxa (.r*a,g or .ga post swizzle, can use -avg for 2 more channels)
-* BC5nm rg01  .rg
-* ETCrg rg01  .rg
-* ASTCnm gggr .ga
-* ASTCnm rrrg .ga or .ra
-* ASTCrg rg01 .rg (wastes 8x2 bytes to store blue channel, could avg into that slot, dual plane to rba, g)
+| Fmt    | pre  | post | planes 
+---------|------|-------------
+| RG8    | rg01 | rg   | 2
+| RG16f  | rg01 | rg   | 2
+| RG32f  | rg01 | rg   | 2
+| BC1nm  | rg01 | rg   | 1
+| BC3nm  | xgxr | ag   | 2
+| BC5nm  |rg01  | rg   | 2
+| ETCrg  | rg01 | rg   | 2
+| ASTCnm | gggr | ag   | 2
+| ASTCnm | rrrg | ga   | 2
+| ASTCrg | rg01 | rg   | 2
 
 
 Encoding and hardware lookup of srgb and premultiplied data.
 
 ```
-Texture units converts srgb to linear data on the way to the texture cache.  
-In the past, the cache was made of 4x4 blocks to match encoded formats.  
+Texture units convert srgb to linear data on the way to the texture cache.  
+The cache typically stored 4x4 blocks to match encoded formats.  
 Sampling is then done from that block of linear data.
+Ideally the cache would store higher-precision 8-bit source channels.
 
 Texturing hardware does not yet support premultiplied alpha.  
 Kram does premul prior to mip generation.
