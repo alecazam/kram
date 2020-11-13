@@ -25,6 +25,8 @@ KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc
 
 I also have a custom KTXA format.  KTXA likely broke with the prop additions.  Metal cannot load mmap data that isn't aligned to a multiple of the block size (8 or 16 bytes for BC/ASTC/ETC).  But KTX stuffs a 4 byte length into the mip data.  So by leaving the size out (TODO: pad props to a 16 byte multiple), then the mips could be directly loaded.  My loader had to copy the mips to a staging MTLBuffer anyways, so it's probably best not to create a new format.  Also sparse textures imply splitting up large mips into tiles.  Also mmap'ed data on iOS/Android don't count towards jetsam limits, so that imposes some constraints on loaders.
 
+Note that textures and render textures don't necessarily use pixels or encoded blocks in the order that you specify in the KTX file.  Twiddling creates serpentine patterns of pixels/blocks that are platform and hardware dependent.  Hardware often writes to linear for the display system, and reads/writes twiddled layouts.  It's hard for a generic tool like kram to address this.  I recommend that the texture loader always upload ktx blocks to private texture surfaces, and let the API twiddle the data during the copy.  This can sometimes be a source of upload timing differences.
+
 There are several commands supported by kram.
 * encode - encode/decode block formats, mipmaps, fast sdf, premul, srgb, swizzles, LDR and HDR support, 16f/32f
 * decode - can convert any of the encode formats to s/rgba8 ktx files for display 
@@ -162,7 +164,9 @@ Features to complete:
 * Test Neon support and SSE2Neon
 * Run srgb conversion on endpoint data after fitting linear color point cloud
 * PSNR stats off encode + decode
-* Dump block stats on BC6/7 and ASTC to see if texture holds void extent, dual-plane, etc
+* Dump stats on BC6/7 block types, and ASTC void extent, dual-plane, etc
+* Update to new ASCTEnc v2.1 (2x faster)
+* Update to new BC7 enc with more mode support
 
 Test Images
 * color_grid from Astcenc samples
