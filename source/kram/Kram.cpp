@@ -1934,11 +1934,20 @@ int kramAppScript(vector<const char*>& args)
 
     string commandAndArgs;
 
+    Timer scriptTimer;
+    
     // as a global this auto allocates 16 threads, and don't want that unless actually
     // using scripting.  And even then want control over the number of threads.
-    task_system system(numJobs);
     atomic<int> errorCounter(0); // doesn't initialze to 0 otherwise
     int commandCounter = 0;
+     
+    {
+    task_system system(numJobs);
+   
+    // TODO: should really limit threads if less than command count.
+    if (isVerbose) {
+        KLOGI("Kram", "script system started with %d threads", system.num_threads());
+    }
     
     while (fp) {
         fgets(str, sizeof(str), fp);
@@ -1984,7 +1993,7 @@ int kramAppScript(vector<const char*>& args)
                 auto timeElapsed = commandTimer.timeElapsed();
                 if (timeElapsed > 1.0) {
                     // TODO: extract output filename
-                    KLOGI("Kram", "perf: %s %s took %0.3f", command, "file", timeElapsed);
+                    KLOGI("Kram", "perf: %s %s took %0.3fs", command, "file", timeElapsed);
                 }
             }
 
@@ -1997,12 +2006,21 @@ int kramAppScript(vector<const char*>& args)
             return 0;
         });
     }
-
+    }
+    
+    // TODO: may want to wait on semaphore here
+    // otherwise this is returning too early.  There are joins before task system shutsdown.
+    
+    
     if (errorCounter > 0) {
-        KLOGE("Kram", "%d/%d failed", int(errorCounter), commandCounter);
+        KLOGE("Kram", "script commands %d/%d failed", int(errorCounter), commandCounter);
         return -1;
     }
 
+    if (isVerbose) {
+        KLOGI("Kram", "script completed %d commands took %0.3fs", int(errorCounter), scriptTimer.timeElapsed());
+    }
+    
     return 0;
 }
 

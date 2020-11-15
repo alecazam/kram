@@ -87,7 +87,7 @@ public:
 class task_system {
     const unsigned _count;  //  = thread::hardware_concurrency();
     vector<thread> _threads;
-    vector<notification_queue> _q{_count};
+    vector<notification_queue> _q; // {_count};
     atomic<unsigned> _index;  // was = 0
 
     void run(unsigned threadIndex)
@@ -106,14 +106,8 @@ class task_system {
     }
 
 public:
-    task_system(unsigned count = 1) : _count(count)
+    task_system(unsigned count = 1) : _count(std::min(count, thread::hardware_concurrency())), _q{_count}
     {
-        // TODO: limit incoming count
-        //        _count = thread::hardware_concurrency();
-        //        if (count > 0 && _count > count) {
-        //            _count = count;
-        //        }
-        //_q.resize(_count);
         for (unsigned threadIndex = 0; threadIndex != _count; ++threadIndex) {
             _threads.emplace_back([&, threadIndex] { run(threadIndex); });
         }
@@ -125,6 +119,11 @@ public:
         for (auto& e : _threads) e.join();
     }
 
+    int num_threads() const
+    {
+        return _count;
+    }
+    
     template <typename F>
     void async_(F&& f)
     {
