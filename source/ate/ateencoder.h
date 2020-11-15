@@ -16,7 +16,7 @@ public:
     ATEEncoder();
     
     bool isBCSupported() const { return _isBCSupported; }
-    bool isHDRSupportd() const { return _isHDRSupported; }
+    bool isHDRDecodeSupported() const { return _isHDRDecodeSupported; }
     
     bool Encode(int metalPixelFormat, int dstDataSize, int blockDimsY,
         bool hasAlpha, bool weightChannels,
@@ -28,8 +28,11 @@ public:
         int width, int height, const uint8_t* srcData, uint8_t* dstData);
 
 private:
+    // encode and decode
     bool _isBCSupported = false;
-    bool _isHDRSupported = false;
+    
+    // astc hdr is only decode currently, also bc hdr formats didn't decode
+    bool _isHDRDecodeSupported = false;
 };
 
 

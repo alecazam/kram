@@ -71,9 +71,10 @@ if (macOS)
 
     # This must be set before project,
     # sys root is max OS, deployment is min OS
-    # Don't set SYSROOT, so can build universal or not
-    # set(CMAKE_OSX_SYSROOT "macosx11.0")
-    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
+    # If SYSROOT not set, then cmake uses min OS from deployment target.  Ugh.
+    # so have to force SYSROOT to latest SDK.
+    set(CMAKE_OSX_SYSROOT "macosx11.0")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
 
 endif()
 
@@ -264,7 +265,8 @@ target_include_directories(${myTargetLib} PRIVATE
 target_sources(${myTargetLib} PRIVATE ${sources})
 
 target_include_directories(${myTargetApp} PRIVATE
-    "${PROJECT_SOURCE_DIR}/kram/")
+    "${PROJECT_SOURCE_DIR}/source/app/"
+    "${PROJECT_SOURCE_DIR}/source/kram/")
 
 target_sources(${myTargetApp} PRIVATE ${appSources})
 

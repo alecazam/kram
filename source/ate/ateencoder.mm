@@ -11,133 +11,195 @@
 
 namespace kram {
 
+// this is enum without availability
+OS_ENUM( my_at_block_format, unsigned long,
+    my_at_block_format_invalid          = 0,           ///< MTLPixelFormatInvalid
+
+    // v1 formats
+    my_at_block_format_astc_4x4_ldr    ,       ///< MTLPixelFormatASTC_4x4_LDR
+    my_at_block_format_astc_5x4_ldr    ,       ///< MTLPixelFormatASTC_5x4_LDR, decode only
+    my_at_block_format_astc_5x5_ldr    ,       ///< MTLPixelFormatASTC_5x5_LDR, decode only
+    my_at_block_format_astc_6x5_ldr    ,       ///< MTLPixelFormatASTC_6x5_LDR, decode only
+    my_at_block_format_astc_6x6_ldr    ,       ///< MTLPixelFormatASTC_6x6_LDR, decode only
+    my_at_block_format_astc_8x5_ldr    ,       ///< MTLPixelFormatASTC_8x5_LDR, decode only
+    my_at_block_format_astc_8x6_ldr    ,       ///< MTLPixelFormatASTC_8x6_LDR, decode only
+    my_at_block_format_astc_8x8_ldr    ,       ///< MTLPixelFormatASTC_8x8_LDR
+    my_at_block_format_astc_10x5_ldr   ,       ///< MTLPixelFormatASTC_10x5_LDR, decode only
+    my_at_block_format_astc_10x6_ldr   ,       ///< MTLPixelFormatASTC_10x6_LDR, decode only
+    my_at_block_format_astc_10x8_ldr   ,       ///< MTLPixelFormatASTC_10x5_LDR, decode only
+    my_at_block_format_astc_10x10_ldr  ,       ///< MTLPixelFormatASTC_10x10_LDR, decode only
+    my_at_block_format_astc_12x10_ldr  ,       ///< MTLPixelFormatASTC_12x10_LDR, decode only
+    my_at_block_format_astc_12x12_ldr  ,       ///< MTLPixelFormatASTC_12x12_LDR, decode only
+
+    // v2 formats, but only for decode so basically pointless
+    // would have to modify decode to store to float data if these do work
+    my_at_block_format_astc_4x4_hdr     = 17,  ///< MTLPixelFormatASTC_4x4_HDR, decode only
+    my_at_block_format_astc_5x4_hdr    ,       ///< MTLPixelFormatASTC_5x4_HDR, decode only
+    my_at_block_format_astc_5x5_hdr    ,       ///< MTLPixelFormatASTC_5x5_HDR, decode only
+    my_at_block_format_astc_6x5_hdr    ,       ///< MTLPixelFormatASTC_6x5_HDR, decode only
+    my_at_block_format_astc_6x6_hdr    ,       ///< MTLPixelFormatASTC_6x6_HDR, decode only
+    my_at_block_format_astc_8x5_hdr    ,       ///< MTLPixelFormatASTC_8x5_HDR, decode only
+    my_at_block_format_astc_8x6_hdr    ,       ///< MTLPixelFormatASTC_8x6_HDR, decode only
+    my_at_block_format_astc_8x8_hdr    ,       ///< MTLPixelFormatASTC_8x8_HDR, decode only
+    my_at_block_format_astc_10x5_hdr   ,       ///< MTLPixelFormatASTC_10x5_HDR, decode only
+    my_at_block_format_astc_10x6_hdr   ,       ///< MTLPixelFormatASTC_10x6_HDR, decode only
+    my_at_block_format_astc_10x8_hdr   ,       ///< MTLPixelFormatASTC_10x5_HDR, decode only
+    my_at_block_format_astc_10x10_hdr  ,       ///< MTLPixelFormatASTC_10x10_HDR, decode only
+    my_at_block_format_astc_12x10_hdr  ,       ///< MTLPixelFormatASTC_12x10_HDR, decode only
+    my_at_block_format_astc_12x12_hdr  ,       ///< MTLPixelFormatASTC_12x12_HDR, decode only
+  
+    // v2 formats
+    my_at_block_format_bc1              = 33,  ///< MTLPixelFormatBC1_RGBA
+    my_at_block_format_bc2             ,       ///< MTLPixelFormatBC2_RGBA
+    my_at_block_format_bc3             ,       ///< MTLPixelFormatBC3_RGBA - not supported, maybe decode
+    my_at_block_format_bc4             ,       ///< MTLPixelFormatBC4_RUnorm
+    my_at_block_format_bc4s            ,       ///< MTLPixelFormatBC4_RSnorm
+    my_at_block_format_bc5             ,       ///< MTLPixelFormatBC5_RGUnorm
+    my_at_block_format_bc5s            ,       ///< MTLPixelFormatBC5_RGSnorm
+    my_at_block_format_bc6             ,       ///< MTLPixelFormatBC6H_RGBFloat - not supported, maybe decode
+    my_at_block_format_bc6u            ,       ///< MTLPixelFormatBC6H_RGBUFloat  - not supported, maybe decode
+    my_at_block_format_bc7             ,       ///< MTLPixelFormatBC7_RGBAUnorm
+
+    // always last
+    my_at_block_format_count                                          /* CAUTION: value subject to change! */
+);
+
 // this can't take MTLPixelFormat, since ASTC not defined on macOS, and BC not defined on iOS
-inline at_block_format_t pixelToEncoderFormat(MyMTLPixelFormat format) {
- at_block_format_t encoderFormat = at_block_format_invalid;
+inline my_at_block_format_t pixelToEncoderFormat(MyMTLPixelFormat format, bool isBCSupported) {
+    my_at_block_format_t encoderFormat = my_at_block_format_invalid;
  
-    switch(format) {
-        // BC
-        case MyMTLPixelFormatBC1_RGBA:
-        case MyMTLPixelFormatBC1_RGBA_sRGB:
-            encoderFormat = at_block_format_bc1; break;
-        
-        // support this?
-//        case MyMTLPixelFormatBC2_RGBA:
-//        case MyMTLPixelFormatBC2_RGBA_sRGB:
-//            encoderFormat = at_block_format_bc2; break;
-        
-        case MyMTLPixelFormatBC3_RGBA:
-        case MyMTLPixelFormatBC3_RGBA_sRGB:
-            encoderFormat = at_block_format_bc3; break;
-        
-        // Note: remapping unorm inputs to snorm outside of call
-        case MyMTLPixelFormatBC4_RUnorm:
-            encoderFormat = at_block_format_bc4; break;
-        case MyMTLPixelFormatBC4_RSnorm:
-            encoderFormat = at_block_format_bc4s; break;
+    if (isBCSupported) {
+        switch(format) {
+            // BC
+            case MyMTLPixelFormatBC1_RGBA:
+            case MyMTLPixelFormatBC1_RGBA_sRGB:
+                encoderFormat = my_at_block_format_bc1; break;
             
-        case MyMTLPixelFormatBC5_RGUnorm:
-            encoderFormat = at_block_format_bc5; break;
-        case MyMTLPixelFormatBC5_RGSnorm:
-            encoderFormat = at_block_format_bc5s; break;
+            // support this?
+    //        case MyMTLPixelFormatBC2_RGBA:
+    //        case MyMTLPixelFormatBC2_RGBA_sRGB:
+    //            encoderFormat = my_at_block_format_bc2; break;
             
-        // hdr
-        case MyMTLPixelFormatBC6H_RGBUfloat:
-            encoderFormat = at_block_format_bc6u; break;
-        case MyMTLPixelFormatBC6H_RGBFloat:
-            encoderFormat = at_block_format_bc6; break;
-       
-        // ldr - can encode rgb or rgba per block
-        case MyMTLPixelFormatBC7_RGBAUnorm:
-        case MyMTLPixelFormatBC7_RGBAUnorm_sRGB:
-            encoderFormat = at_block_format_bc7; break;
-         
-        // ASTC
-        case MyMTLPixelFormatASTC_4x4_sRGB:
-        case MyMTLPixelFormatASTC_4x4_LDR:
-            encoderFormat = at_block_format_astc_4x4_ldr; break;
-
-// No encoder
-//        case MyMTLPixelFormatASTC_5x5_sRGB:
-//        case MyMTLPixelFormatASTC_5x5_LDR:
-//        case MyMTLPixelFormatASTC_6x6_sRGB:
-//        case MyMTLPixelFormatASTC_6x6_LDR:
+            case MyMTLPixelFormatBC3_RGBA:
+            case MyMTLPixelFormatBC3_RGBA_sRGB:
+                encoderFormat = my_at_block_format_bc3; break;
             
-        case MyMTLPixelFormatASTC_8x8_sRGB:
-        case MyMTLPixelFormatASTC_8x8_LDR:
-            encoderFormat = at_block_format_astc_8x8_ldr; break;
-         
-        default:
-            assert(false); // unsupported format
-         break;
+            // Note: remapping unorm inputs to snorm outside of call
+            case MyMTLPixelFormatBC4_RUnorm:
+                encoderFormat = my_at_block_format_bc4; break;
+            case MyMTLPixelFormatBC4_RSnorm:
+                encoderFormat = my_at_block_format_bc4s; break;
+                
+            case MyMTLPixelFormatBC5_RGUnorm:
+                encoderFormat = my_at_block_format_bc5; break;
+            case MyMTLPixelFormatBC5_RGSnorm:
+                encoderFormat = my_at_block_format_bc5s; break;
+                
+            // hdr
+            case MyMTLPixelFormatBC6H_RGBUfloat:
+                encoderFormat = my_at_block_format_bc6u; break;
+            case MyMTLPixelFormatBC6H_RGBFloat:
+                encoderFormat = my_at_block_format_bc6; break;
+           
+            // ldr - can encode rgb or rgba per block
+            case MyMTLPixelFormatBC7_RGBAUnorm:
+            case MyMTLPixelFormatBC7_RGBAUnorm_sRGB:
+                encoderFormat = my_at_block_format_bc7; break;
+                
+            default:
+             break;
+        }
     }
-
+    
+    if (encoderFormat == my_at_block_format_invalid) {
+        switch(format) {
+            // ASTC
+            case MyMTLPixelFormatASTC_4x4_sRGB:
+            case MyMTLPixelFormatASTC_4x4_LDR:
+                encoderFormat = my_at_block_format_astc_4x4_ldr; break;
+                
+            case MyMTLPixelFormatASTC_8x8_sRGB:
+            case MyMTLPixelFormatASTC_8x8_LDR:
+                encoderFormat = my_at_block_format_astc_8x8_ldr; break;
+             
+            default:
+                break;
+        }
+    }
+    
     return encoderFormat;
 }
 
 // this can't take MTLPixelFormat, since ASTC not defined on macOS, and BC not defined on iOS
-inline at_block_format_t pixelToDecoderFormat(MyMTLPixelFormat format) {
- at_block_format_t encoderFormat = at_block_format_invalid;
+inline my_at_block_format_t pixelToDecoderFormat(MyMTLPixelFormat format, bool isBCSupported) {
+ my_at_block_format_t encoderFormat = my_at_block_format_invalid;
  
     // decoder supports more formats than encoder
     
-    switch(format) {
-        // BC
-        case MyMTLPixelFormatBC1_RGBA:
-        case MyMTLPixelFormatBC1_RGBA_sRGB:
-            encoderFormat = at_block_format_bc1; break;
-        
-        // support this?
-//        case MyMTLPixelFormatBC2_RGBA:
-//        case MyMTLPixelFormatBC2_RGBA_sRGB:
-//            encoderFormat = at_block_format_bc2; break;
-        
-        case MyMTLPixelFormatBC3_RGBA:
-        case MyMTLPixelFormatBC3_RGBA_sRGB:
-            encoderFormat = at_block_format_bc3; break;
-        
-        // Note: remapping unorm inputs to snorm outside of call
-        case MyMTLPixelFormatBC4_RUnorm:
-            encoderFormat = at_block_format_bc4; break;
-        case MyMTLPixelFormatBC4_RSnorm:
-            encoderFormat = at_block_format_bc4s; break;
+    if (isBCSupported) {
+        switch(format) {
+            // BC
+            case MyMTLPixelFormatBC1_RGBA:
+            case MyMTLPixelFormatBC1_RGBA_sRGB:
+                encoderFormat = my_at_block_format_bc1; break;
             
-        case MyMTLPixelFormatBC5_RGUnorm:
-            encoderFormat = at_block_format_bc5; break;
-        case MyMTLPixelFormatBC5_RGSnorm:
-            encoderFormat = at_block_format_bc5s; break;
+    //        case MyMTLPixelFormatBC2_RGBA:
+    //        case MyMTLPixelFormatBC2_RGBA_sRGB:
+    //            encoderFormat = my_at_block_format_bc2; break;
             
-        // hdr
-        case MyMTLPixelFormatBC6H_RGBUfloat:
-            encoderFormat = at_block_format_bc6u; break;
-        case MyMTLPixelFormatBC6H_RGBFloat:
-            encoderFormat = at_block_format_bc6; break;
-       
-        // ldr - can encode rgb or rgba per block
-        case MyMTLPixelFormatBC7_RGBAUnorm:
-        case MyMTLPixelFormatBC7_RGBAUnorm_sRGB:
-            encoderFormat = at_block_format_bc7; break;
-         
-        // ASTC
-        case MyMTLPixelFormatASTC_4x4_sRGB:
-        case MyMTLPixelFormatASTC_4x4_LDR:
-            encoderFormat = at_block_format_astc_4x4_ldr; break;
+            case MyMTLPixelFormatBC3_RGBA:
+            case MyMTLPixelFormatBC3_RGBA_sRGB:
+                encoderFormat = my_at_block_format_bc3; break;
+            
+            // Note: remapping unorm inputs to snorm outside of call
+            case MyMTLPixelFormatBC4_RUnorm:
+                encoderFormat = my_at_block_format_bc4; break;
+            case MyMTLPixelFormatBC4_RSnorm:
+                encoderFormat = my_at_block_format_bc4s; break;
+                
+            case MyMTLPixelFormatBC5_RGUnorm:
+                encoderFormat = my_at_block_format_bc5; break;
+            case MyMTLPixelFormatBC5_RGSnorm:
+                encoderFormat = my_at_block_format_bc5s; break;
+                
+            // hdr
+            case MyMTLPixelFormatBC6H_RGBUfloat:
+                encoderFormat = my_at_block_format_bc6u; break;
+            case MyMTLPixelFormatBC6H_RGBFloat:
+                encoderFormat = my_at_block_format_bc6; break;
+           
+            // ldr - can encode rgb or rgba per block
+            case MyMTLPixelFormatBC7_RGBAUnorm:
+            case MyMTLPixelFormatBC7_RGBAUnorm_sRGB:
+                encoderFormat = my_at_block_format_bc7; break;
+                
+            default:
+             break;
+        }
+    }
+    
+    if (encoderFormat == my_at_block_format_invalid) {
+        switch(format) {
+            // ASTC
+            case MyMTLPixelFormatASTC_4x4_sRGB:
+            case MyMTLPixelFormatASTC_4x4_LDR:
+                encoderFormat = my_at_block_format_astc_4x4_ldr; break;
 
-        case MyMTLPixelFormatASTC_5x5_sRGB:
-        case MyMTLPixelFormatASTC_5x5_LDR:
-            encoderFormat = at_block_format_astc_5x5_ldr; break;
+            case MyMTLPixelFormatASTC_5x5_sRGB:
+            case MyMTLPixelFormatASTC_5x5_LDR:
+                encoderFormat = my_at_block_format_astc_5x5_ldr; break;
 
-        case MyMTLPixelFormatASTC_6x6_sRGB:
-        case MyMTLPixelFormatASTC_6x6_LDR:
-            encoderFormat = at_block_format_astc_6x6_ldr; break;
-            
-        case MyMTLPixelFormatASTC_8x8_sRGB:
-        case MyMTLPixelFormatASTC_8x8_LDR:
-            encoderFormat = at_block_format_astc_8x8_ldr; break;
-         
-        default:
-            assert(false); // unsupported format
-         break;
+            case MyMTLPixelFormatASTC_6x6_sRGB:
+            case MyMTLPixelFormatASTC_6x6_LDR:
+                encoderFormat = my_at_block_format_astc_6x6_ldr; break;
+                
+            case MyMTLPixelFormatASTC_8x8_sRGB:
+            case MyMTLPixelFormatASTC_8x8_LDR:
+                encoderFormat = my_at_block_format_astc_8x8_ldr; break;
+             
+            default:
+             break;
+        }
     }
 
     return encoderFormat;
@@ -163,6 +225,7 @@ ATEEncoder::ATEEncoder() {
     }
     else {
         _isBCSupported = true;
+        _isHDRDecodeSupported = true;
     }
 }
 
@@ -178,8 +241,8 @@ bool ATEEncoder::Encode(int metalPixelFormat, int dstDataSize, int blockDimsY,
         return false;
     }
 
-    at_block_format_t blockFormat = pixelToEncoderFormat((MyMTLPixelFormat)metalPixelFormat);
-    if (blockFormat == at_block_format_invalid) {
+    my_at_block_format_t blockFormat = pixelToEncoderFormat((MyMTLPixelFormat)metalPixelFormat, _isBCSupported);
+    if (blockFormat == my_at_block_format_invalid) {
         KLOGE("ATEEncoder", "encode unsupported format");
         return false;
     }
@@ -205,13 +268,13 @@ bool ATEEncoder::Encode(int metalPixelFormat, int dstDataSize, int blockDimsY,
 //    }
     
     at_alpha_t dstAlphaType = srcAlphaType;
-    if (blockFormat == at_block_format_bc1 ||
-        blockFormat == at_block_format_bc4 ||
-        blockFormat == at_block_format_bc4s ||
-        blockFormat == at_block_format_bc5 ||
-        blockFormat == at_block_format_bc5s ||
-        blockFormat == at_block_format_bc6 ||
-        blockFormat == at_block_format_bc6u)
+    if (blockFormat == my_at_block_format_bc1 ||
+        blockFormat == my_at_block_format_bc4 ||
+        blockFormat == my_at_block_format_bc4s ||
+        blockFormat == my_at_block_format_bc5 ||
+        blockFormat == my_at_block_format_bc5s ||
+        blockFormat == my_at_block_format_bc6 ||
+        blockFormat == my_at_block_format_bc6u)
     {
         dstAlphaType = at_alpha_opaque;
     }
@@ -237,7 +300,7 @@ bool ATEEncoder::Encode(int metalPixelFormat, int dstDataSize, int blockDimsY,
     at_encoder_t encoder = at_encoder_create(
         at_texel_format_rgba8_unorm,
         srcAlphaType,
-        blockFormat,
+        (at_block_format_t)blockFormat,
         dstAlphaType,
         nil // bg color
     );
@@ -291,8 +354,8 @@ bool ATEEncoder::Decode(int metalPixelFormat, int dstDataSize, int blockDimsY,
         return false;
     }
 
-    at_block_format_t blockFormat = pixelToDecoderFormat((MyMTLPixelFormat)metalPixelFormat);
-    if (blockFormat == at_block_format_invalid) {
+    my_at_block_format_t blockFormat = pixelToDecoderFormat((MyMTLPixelFormat)metalPixelFormat, _isBCSupported);
+    if (blockFormat == my_at_block_format_invalid) {
         KLOGE("ATEEncoder", "decode unsupported format");
         return false;
     }
@@ -333,7 +396,7 @@ bool ATEEncoder::Decode(int metalPixelFormat, int dstDataSize, int blockDimsY,
         at_texel_format_rgba8_unorm, // TODO: need float buffer for bc6 and astc hdr
         //at_texel_format_bgra8_unorm, see if this decodes properly rgb channels are wrong on astc4x4 decode, alpha okay
         srcAlphaType,
-        blockFormat,
+        (at_block_format_t)blockFormat,
         dstAlphaType,
         nil // bg color
     );
