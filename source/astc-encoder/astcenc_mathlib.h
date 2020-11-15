@@ -23,17 +23,14 @@
 #ifndef ASTC_MATHLIB_H_INCLUDED
 #define ASTC_MATHLIB_H_INCLUDED
 
+#include <cassert>
 #include <cstdint>
 #include <cmath>
 
-#if ASTCENC_SSE != 0 || ASTCENC_AVX != 0
-	#include <immintrin.h>
-#endif
-
-
-#ifndef M_PI
-	#define M_PI 3.14159265358979323846
-#endif
+// Kram uses SSE2Neon on ARM, so needs intrinsics in use but not the include
+//#if /* USE_SSE && */ (ASTCENC_SSE != 0 || ASTCENC_AVX != 0)
+//	#include <immintrin.h>
+//#endif
 
 /* ============================================================================
   Fast math library; note that many of the higher-order functions in this set
@@ -46,22 +43,12 @@
   to future vectorization.
 ============================================================================ */
 
-// We support scalar versions of many maths functions which use SSE intrinsics
-// as an "optimized" path, using just one lane from the SIMD hardware. In
-// reality these are often slower than standard C due to setup and scheduling
-// overheads, and the fact that we're not offsetting that cost with any actual
-// vectorization.
-//
-// These variants are only included as a means to test that the accuracy of an
-// SSE implementation would be acceptable before refactoring code paths to use
-// an actual vectorized implementation which gets some advantage from SSE. It
-// is therefore expected that the code will go *slower* with this macro
-// set to 1 ...
-#define USE_SCALAR_SSE 0
-
 // These are namespaced to avoid colliding with C standard library functions.
 namespace astc
 {
+
+static const float PI          = 3.14159265358979323846f;
+static const float PI_OVER_TWO = 1.57079632679489661923f;
 
 /**
  * @brief Fast approximation of log2(x)
@@ -77,21 +64,6 @@ namespace astc
 float log2(float val);
 
 /**
- * @brief Fast approximation of atan2.
- *
- * TODO: This implementation is reasonably accurate and a lot faster than the
- * standard library, but quite branch heavy which makes it difficult to
- * vectorize effectively. If we need to vectorize in future, consider using a
- * different approximation algorithm.
- *
- * @param y The proportion of the Y coordinate.
- * @param x The proportion of the X coordinate.
- *
- * @return The approximation of atan2().
- */
-float atan2(float y, float x);
-
-/**
  * @brief SP float absolute value.
  *
  * @param val The value to make absolute.
@@ -100,23 +72,11 @@ float atan2(float y, float x);
  */
 static inline float fabs(float val)
 {
-#if (ASTCENC_SSE >= 20) && USE_SCALAR_SSE
-	static const union {
-		uint32_t u[4];
-		__m128 v;
-	} mask = { { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff } };
-	return _mm_cvtss_f32(_mm_and_ps(_mm_set_ss(val), mask.v));
-#else
 	return std::fabs(val);
-#endif
 }
 
 /**
  * @brief SP float min.
- *
- * Note: GCC versions prior to 7.x assume input arguments to the intrinsics are
- * commutative, which isn't true for NaN handling, so it's best not to rely on
- * argument order unless you are very sure about the compiler ...
  *
  * @param valA The first value to compare.
  * @param valB The second value to compare.
@@ -125,19 +85,11 @@ static inline float fabs(float val)
  */
 static inline float fmin(float p, float q)
 {
-#if (ASTCENC_SSE >= 20) && USE_SCALAR_SSE
-	return _mm_cvtss_f32(_mm_min_ss(_mm_set_ss(p),_mm_set_ss(q)));
-#else
 	return p < q ? p : q;
-#endif
 }
 
 /**
  * @brief SP float max.
- *
- * Note: GCC versions prior to 7.x assume input arguments to the intrinsics are
- * commutative, which isn't true for NaN handling, so it's best not to rely on
- * argument order unless you are very sure about the compiler ...
  *
  * @param valA The first value to compare.
  * @param valB The second value to compare.
@@ -146,11 +98,7 @@ static inline float fmin(float p, float q)
  */
 static inline float fmax(float p, float q)
 {
-#if (ASTCENC_SSE >= 20) && USE_SCALAR_SSE
-    return _mm_cvtss_f32(_mm_max_ss(_mm_set_ss(p),_mm_set_ss(q)));
-#else
-    return q < p ? p : q;
-#endif
+	return q < p ? p : q;
 }
 
 /**
@@ -202,6 +150,27 @@ static inline float clamp255f(float val)
 }
 
 /**
+ * @brief Clamp a value value between mn and mx
+ *
+ * For floats, NaNs are turned into mn.
+ *
+ * @param val The value clamp.
+ * @param mn  The min value (inclusive).
+ * @param mx  The max value (inclusive).
+ *
+ * @return The clamped value.
+ */
+template<typename T>
+inline T clamp(T val, T mn, T mx)
+{
+	// Do not reorder; correct NaN handling relies on the fact that comparison
+	// with NaN returns false and will fall-though to the "min" value.
+	if (val > mx) return mx;
+	if (val > mn) return val;
+	return mn;
+}
+
+/**
  * @brief Clamp a float value between 0.0f and 65504.0f.
  *
  * NaNs are turned into 0.0f.
@@ -242,14 +211,7 @@ static inline int clampi(int val, int low, int high)
  */
 static inline float flt_rte(float val)
 {
-#if (ASTCENC_SSE >= 42)
-	const int flag = _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC;
-	__m128 tmp = _mm_set_ss(val);
-	tmp = _mm_round_ss(tmp, tmp, flag);
-	return _mm_cvtss_f32(tmp);
-#else
 	return std::floor(val + 0.5f);
-#endif
 }
 
 /**
@@ -261,14 +223,7 @@ static inline float flt_rte(float val)
  */
 static inline float flt_rd(float val)
 {
-#if (ASTCENC_SSE >= 42)
-	const int flag = _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC;
-	__m128 tmp = _mm_set_ss(val);
-	tmp = _mm_round_ss(tmp, tmp, flag);
-	return _mm_cvtss_f32(tmp);
-#else
 	return std::floor(val);
-#endif
 }
 
 /**
@@ -280,11 +235,8 @@ static inline float flt_rd(float val)
  */
 static inline int flt2int_rtn(float val)
 {
-#if (ASTCENC_SSE >= 42) && USE_SCALAR_SSE
-	return _mm_cvt_ss2si(_mm_set_ss(val));
-#else
+
 	return (int)(val + 0.5f);
-#endif
 }
 
 /**
@@ -296,11 +248,7 @@ static inline int flt2int_rtn(float val)
  */
 static inline int flt2int_rd(float val)
 {
-#if (ASTCENC_SSE >= 42) && USE_SCALAR_SSE
-	return _mm_cvt_ss2si(_mm_set_ss(val));
-#else
 	return (int)(val);
-#endif
 }
 
 /**
@@ -337,12 +285,7 @@ static inline int popcount(uint64_t p)
  */
 static inline float rsqrt(float val)
 {
-#if (ASTCENC_SSE >= 20) && USE_SCALAR_SSE
-	// FIXME: setting val = 99 causes a crash, which it really shouldn't.
-	return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(val)));
-#else
 	return 1.0f / std::sqrt(val);
-#endif
 }
 
 /**
@@ -354,27 +297,7 @@ static inline float rsqrt(float val)
  */
 static inline float sqrt(float val)
 {
-#if (ASTCENC_SSE >= 20) && USE_SCALAR_SSE
-	return 1.0f * astc::rsqrt(val);
-#else
 	return std::sqrt(val);
-#endif
-}
-
-/**
- * @brief Fast approximation of 1.0 / val.
- *
- * @param val The input value.
- *
- * @return The approximated result.
- */
-static inline float recip(float val)
-{
-#if (ASTCENC_SSE >= 20) && USE_SCALAR_SSE
-	return _mm_cvtss_f32(_mm_rcp_ss(_mm_set_ss(val)));
-#else
-	return 1.0f / val;
-#endif
 }
 
 /**
@@ -428,47 +351,173 @@ uint64_t rand(uint64_t state[2]);
 template <typename T> class vtype2
 {
 public:
-	T x, y;
+	// Data storage
+	T r, g;
+
+	// Default constructor
 	vtype2() {}
-	vtype2(T p, T q)         : x(p),   y(q)   {}
-	vtype2(const vtype2 & p) : x(p.x), y(p.y) {}
-	vtype2 &operator =(const vtype2 &s) {
-		this->x = s.x;
-		this->y = s.y;
+
+	// Initialize from 1 scalar
+	vtype2(T p) : r(p), g(p) {}
+
+	// Initialize from N scalars
+	vtype2(T p, T q) : r(p), g(q) {}
+
+	// Initialize from another vector
+	vtype2(const vtype2 & p) : r(p.r), g(p.g) {}
+
+	// Assignment operator
+	vtype2& operator=(const vtype2 &s) {
+		this->r = s.r;
+		this->g = s.g;
 		return *this;
 	}
 };
+
+// Vector by vector addition
+template <typename T>
+vtype2<T> operator+(vtype2<T> p, vtype2<T> q) {
+	return vtype2<T> { p.r + q.r, p.g + q.g };
+}
+
+// Vector by vector subtraction
+template <typename T>
+vtype2<T> operator-(vtype2<T> p, vtype2<T> q) {
+	return vtype2<T> { p.r - q.r, p.g - q.g };
+}
+
+// Vector by vector multiplication operator
+template <typename T>
+vtype2<T> operator*(vtype2<T> p, vtype2<T> q) {
+	return vtype2<T> { p.r * q.r, p.g * q.g };
+}
+
+// Vector by scalar multiplication operator
+template <typename T>
+vtype2<T> operator*(vtype2<T> p, T q) {
+	return vtype2<T> { p.r * q, p.g * q };
+}
+
+// Scalar by vector multiplication operator
+template <typename T>
+vtype2<T> operator*(T p, vtype2<T> q){
+	return vtype2<T> { p * q.r, p * q.g };
+}
 
 template <typename T> class vtype3
 {
 public:
-	T x, y, z;
+	// Data storage
+	T r, g, b;
+
+	// Default constructor
 	vtype3() {}
-	vtype3(T p, T q, T r)    : x(p),   y(q),   z(r)   {}
-	vtype3(const vtype3 & p) : x(p.x), y(p.y), z(p.z) {}
-	vtype3 &operator =(const vtype3 &s) {
-		this->x = s.x;
-		this->y = s.y;
-		this->z = s.z;
+
+	// Initialize from 1 scalar
+	vtype3(T p) : r(p), g(p), b(p) {}
+
+	// Initialize from N scalars
+	vtype3(T p, T q, T s) : r(p), g(q), b(s) {}
+
+	// Initialize from another vector
+	vtype3(const vtype3 & p) : r(p.r), g(p.g), b(p.b) {}
+
+	// Assignment operator
+	vtype3& operator=(const vtype3 &s) {
+		this->r = s.r;
+		this->g = s.g;
+		this->b = s.b;
 		return *this;
 	}
 };
 
-template <typename T> class vtype4
+// Vector by vector addition
+template <typename T>
+vtype3<T> operator+(vtype3<T> p, vtype3<T> q) {
+	return vtype3<T> { p.r + q.r, p.g + q.g, p.b + q.b };
+}
+
+// Vector by vector subtraction
+template <typename T>
+vtype3<T> operator-(vtype3<T> p, vtype3<T> q) {
+	return vtype3<T> { p.r - q.r, p.g - q.g, p.b - q.b };
+}
+
+// Vector by vector multiplication operator
+template <typename T>
+vtype3<T> operator*(vtype3<T> p, vtype3<T> q) {
+	return vtype3<T> { p.r * q.r, p.g * q.g, p.b * q.b };
+}
+
+// Vector by scalar multiplication operator
+template <typename T>
+vtype3<T> operator*(vtype3<T> p, T q) {
+	return vtype3<T> { p.r * q, p.g * q, p.b * q };
+}
+
+// Scalar by vector multiplication operator
+template <typename T>
+vtype3<T> operator*(T p, vtype3<T> q){
+	return vtype3<T> { p * q.r, p * q.g, p * q.b };
+}
+
+template <typename T> class alignas(16) vtype4
 {
 public:
-	T x, y, z, w;
+	// Data storage
+	T r, g, b, a;
+
+	// Default constructor
 	vtype4() {}
-	vtype4(T p, T q, T r, T s) : x(p),   y(q),   z(r),   w(s)   {}
-	vtype4(const vtype4 & p)   : x(p.x), y(p.y), z(p.z), w(p.w) {}
-	vtype4 &operator =(const vtype4 &s) {
-		this->x = s.x;
-		this->y = s.y;
-		this->z = s.z;
-		this->w = s.w;
+
+	// Initialize from 1 scalar
+	vtype4(T p) : r(p), g(p), b(p), a(p) {}
+
+	// Initialize from N scalars
+	vtype4(T p, T q, T s, T t) : r(p), g(q), b(s), a(t) {}
+
+	// Initialize from another vector
+	vtype4(const vtype4 & p) : r(p.r), g(p.g), b(p.b), a(p.a) {}
+
+	// Assignment operator
+	vtype4& operator=(const vtype4 &s) {
+		this->r = s.r;
+		this->g = s.g;
+		this->b = s.b;
+		this->a = s.a;
 		return *this;
 	}
 };
+
+// Vector by vector addition
+template <typename T>
+vtype4<T> operator+(vtype4<T> p, vtype4<T> q) {
+	return vtype4<T> { p.r + q.r, p.g + q.g, p.b + q.b, p.a + q.a };
+}
+
+// Vector by vector subtraction
+template <typename T>
+vtype4<T> operator-(vtype4<T> p, vtype4<T> q) {
+	return vtype4<T> { p.r - q.r, p.g - q.g, p.b - q.b, p.a - q.a };
+}
+
+// Vector by vector multiplication operator
+template <typename T>
+vtype4<T> operator*(vtype4<T> p, vtype4<T> q) {
+	return vtype4<T> { p.r * q.r, p.g * q.g, p.b * q.b, p.a * q.a };
+}
+
+// Vector by scalar multiplication operator
+template <typename T>
+vtype4<T> operator*(vtype4<T> p, T q) {
+	return vtype4<T> { p.r * q, p.g * q, p.b * q, p.a * q };
+}
+
+// Scalar by vector multiplication operator
+template <typename T>
+vtype4<T> operator*(T p, vtype4<T> q){
+	return vtype4<T> { p * q.r, p * q.g, p * q.b, p * q.a };
+}
 
 typedef vtype2<float>        float2;
 typedef vtype3<float>        float3;
@@ -477,43 +526,37 @@ typedef vtype3<int>          int3;
 typedef vtype4<int>          int4;
 typedef vtype4<unsigned int> uint4;
 
-static inline float2  operator+(float2 p,  float2 q)   { return float2(  p.x + q.x, p.y + q.y ); }
-static inline float3  operator+(float3 p,  float3 q)   { return float3(  p.x + q.x, p.y + q.y, p.z + q.z ); }
-static inline float4  operator+(float4 p,  float4 q)   { return float4(  p.x + q.x, p.y + q.y, p.z + q.z, p.w + q.w ); }
-static inline int4    operator+(int4 p,    int4 q)     { return int4(    p.x + q.x, p.y + q.y, p.z + q.z, p.w + q.w ); }
-static inline uint4   operator+(uint4 p,   uint4 q)    { return uint4(   p.x + q.x, p.y + q.y, p.z + q.z, p.w + q.w ); }
-
-static inline float2  operator-(float2 p,  float2 q)   { return float2(  p.x - q.x, p.y - q.y ); }
-static inline float3  operator-(float3 p,  float3 q)   { return float3(  p.x - q.x, p.y - q.y, p.z - q.z ); }
-static inline float4  operator-(float4 p,  float4 q)   { return float4(  p.x - q.x, p.y - q.y, p.z - q.z, p.w - q.w ); }
-static inline int4    operator-(int4 p,    int4 q)     { return int4(    p.x - q.x, p.y - q.y, p.z - q.z, p.w - q.w ); }
-static inline uint4   operator-(uint4 p,   uint4 q)    { return uint4(   p.x - q.x, p.y - q.y, p.z - q.z, p.w - q.w ); }
-
-static inline float2  operator*(float2 p,  float2 q)   { return float2(  p.x * q.x, p.y * q.y ); }
-static inline float3  operator*(float3 p,  float3 q)   { return float3(  p.x * q.x, p.y * q.y, p.z * q.z ); }
-static inline float4  operator*(float4 p,  float4 q)   { return float4(  p.x * q.x, p.y * q.y, p.z * q.z, p.w * q.w ); }
-static inline int4    operator*(int4 p,    int4 q)     { return int4(    p.x * q.x, p.y * q.y, p.z * q.z, p.w * q.w ); }
-static inline uint4   operator*(uint4 p,   uint4 q)    { return uint4(   p.x * q.x, p.y * q.y, p.z * q.z, p.w * q.w ); }
-
-static inline float2  operator*(float2 p,  float q)    { return float2(  p.x * q, p.y * q ); }
-static inline float3  operator*(float3 p,  float q)    { return float3(  p.x * q, p.y * q, p.z * q ); }
-static inline float4  operator*(float4 p,  float q)    { return float4(  p.x * q, p.y * q, p.z * q, p.w * q ); }
-static inline int4    operator*(int4 p,    int q)      { return int4(    p.x * q, p.y * q, p.z * q, p.w * q ); }
-static inline uint4   operator*(uint4 p,   uint32_t q) { return uint4(   p.x * q, p.y * q, p.z * q, p.w * q ); }
-
-static inline float2  operator*(float p,    float2 q)  { return q * p; }
-static inline float3  operator*(float p,    float3 q)  { return q * p; }
-static inline float4  operator*(float p,    float4 q)  { return q * p; }
-static inline int4    operator*(int p,      int4 q)    { return q * p; }
-static inline uint4   operator*(uint32_t p, uint4 q)   { return q * p; }
-
-static inline float dot(float2 p, float2 q)  { return p.x * q.x + p.y * q.y; }
-static inline float dot(float3 p, float3 q)  { return p.x * q.x + p.y * q.y + p.z * q.z; }
-static inline float dot(float4 p, float4 q)  { return p.x * q.x + p.y * q.y + p.z * q.z + p.w * q.w; }
+static inline float dot(float2 p, float2 q)  { return p.r * q.r + p.g * q.g; }
+static inline float dot(float3 p, float3 q)  { return p.r * q.r + p.g * q.g + p.b * q.b; }
+static inline float dot(float4 p, float4 q)  {
+#if (ASTCENC_SSE >= 42) && (ASTCENC_ISA_INVARIANCE == 0)
+	__m128 pv = _mm_load_ps((float*)&p);
+	__m128 qv = _mm_load_ps((float*)&q);
+	__m128 t  = _mm_dp_ps(pv, qv, 0xFF);
+	return _mm_cvtss_f32(t);
+#else
+	return p.r * q.r + p.g * q.g + p.b * q.b  + p.a * q.a;
+#endif
+}
 
 static inline float2 normalize(float2 p) { return p * astc::rsqrt(dot(p, p)); }
 static inline float3 normalize(float3 p) { return p * astc::rsqrt(dot(p, p)); }
 static inline float4 normalize(float4 p) { return p * astc::rsqrt(dot(p, p)); }
+
+static inline float4 sqrt(float4 p) {
+	float4 r;
+#if ASTCENC_SSE >= 20
+	__m128 pv = _mm_load_ps((float*)&p);
+	__m128 t  = _mm_sqrt_ps(pv);
+	_mm_store_ps((float*)&r, t);
+#else
+	r.r = std::sqrt(p.r);
+	r.g = std::sqrt(p.g);
+	r.b = std::sqrt(p.b);
+	r.a = std::sqrt(p.a);
+#endif
+	return r;
+}
 
 #ifndef MIN
 	#define MIN(x,y) ((x)<(y)?(x):(y))
@@ -522,6 +565,15 @@ static inline float4 normalize(float4 p) { return p * astc::rsqrt(dot(p, p)); }
 #ifndef MAX
 	#define MAX(x,y) ((x)>(y)?(x):(y))
 #endif
+
+// TODO: need to use _mm_min/max_ps
+static inline float4 min(float4 p, float4 q)  {
+    return float4(MIN(p.r, q.r), MIN(p.g, q.g), MIN(p.b, q.b), MIN(p.a, q.a));
+}
+static inline float4 max(float4 p, float4 q)  {
+    return float4(MAX(p.r, q.r), MAX(p.g, q.g), MAX(p.b, q.b), MAX(p.a, q.a));
+}
+
 
 /* ============================================================================
   Softfloat library with fp32 and fp16 conversion functionality.
@@ -566,7 +618,7 @@ float sf16_to_float(sf16);
 /*********************************
   Declaration of line types
 *********************************/
-// parametric line, 2D: The line is given by line = a + b*t.
+// parametric line, 2D: The line is given by line = a + b * t.
 
 struct line2
 {

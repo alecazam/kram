@@ -6,6 +6,11 @@
 
 #include "KramImage.h"
 
+#if COMPILE_ATE
+// encode/decode formats vary with version
+#include "ate/ateencoder.h"
+#endif
+
 namespace kram {
 using namespace std;
 USING_SIMD;
@@ -331,31 +336,29 @@ static const MyMTLPixelFormat kEncodingFormatsBcenc[] =
         MyMTLPixelFormatBC7_RGBAUnorm_sRGB,
 };
 
-static const MyMTLPixelFormat kEncodingFormatsATE[] =
+static const MyMTLPixelFormat kEncodingFormatsATEv1[] =
     {
         // astc support
-        MyMTLPixelFormatASTC_4x4_HDR,
         MyMTLPixelFormatASTC_4x4_LDR,
         MyMTLPixelFormatASTC_4x4_sRGB,
 
-        MyMTLPixelFormatASTC_5x5_HDR,
-        MyMTLPixelFormatASTC_5x5_LDR,
-        MyMTLPixelFormatASTC_5x5_sRGB,
+        MyMTLPixelFormatASTC_8x8_LDR,
+        MyMTLPixelFormatASTC_8x8_sRGB,
+};
 
-        MyMTLPixelFormatASTC_6x6_HDR,
-        MyMTLPixelFormatASTC_6x6_LDR,
-        MyMTLPixelFormatASTC_6x6_sRGB,
 
-        MyMTLPixelFormatASTC_8x8_HDR,
+static const MyMTLPixelFormat kEncodingFormatsATEv2[] =
+    {
+        // astc support
+        MyMTLPixelFormatASTC_4x4_LDR,
+        MyMTLPixelFormatASTC_4x4_sRGB,
+
         MyMTLPixelFormatASTC_8x8_LDR,
         MyMTLPixelFormatASTC_8x8_sRGB,
 
         // bc support
         MyMTLPixelFormatBC1_RGBA,
         MyMTLPixelFormatBC1_RGBA_sRGB,
-
-        MyMTLPixelFormatBC3_RGBA,
-        MyMTLPixelFormatBC3_RGBA_sRGB,
 
         MyMTLPixelFormatBC4_RSnorm,
         MyMTLPixelFormatBC4_RUnorm,
@@ -426,10 +429,16 @@ bool isSupportedFormat(TexEncoder encoder, MyMTLPixelFormat format)
             table = kEncodingFormatsSquish;
             tableSize = countof(kEncodingFormatsSquish);
             break;
-        case kTexEncoderATE:
-            table = kEncodingFormatsATE;
-            tableSize = countof(kEncodingFormatsATE);
+        case kTexEncoderATE: {
+            bool isBCSupported = false;
+#if COMPILE_ATE
+            ATEEncoder encoder;
+            isBCSupported = encoder.isBCSupported();
+#endif
+            table = isBCSupported ? kEncodingFormatsATEv2 : kEncodingFormatsATEv1;
+            tableSize =  isBCSupported ? countof(kEncodingFormatsATEv2) : countof(kEncodingFormatsATEv1);
             break;
+        }
         case kTexEncoderBcenc:
             table = kEncodingFormatsBcenc;
             tableSize = countof(kEncodingFormatsBcenc);
@@ -454,6 +463,80 @@ bool isSupportedFormat(TexEncoder encoder, MyMTLPixelFormat format)
 
     return false;
 }
+
+bool validateFormatAndDecoder(MyMTLTextureType textureType, MyMTLPixelFormat format, TexEncoder& textureEncoder)
+{
+    bool error = false;
+
+    if (format == MyMTLPixelFormatInvalid) {
+        return false;
+    }
+    
+    // TODO: support decode of more types
+    if (textureType != MyMTLTextureType2D) {
+        return false;
+    }
+    
+    // TODO: for now this logic is same as for encode, but ATE can decode more formats than it encodes
+    
+    // enforce the encoder
+    if (textureEncoder == kTexEncoderUnknown) {
+        // for now pick best encoder for each format
+        // note there is a priority to this ordering that may skip better encoders
+        if (isBCFormat(format)) {
+            // prefer BCEnc since it's supposed to be faster and highest quality, but also newest encoder
+            if (textureEncoder == kTexEncoderUnknown && isSupportedFormat(kTexEncoderBcenc, format)) {
+                textureEncoder = kTexEncoderBcenc;
+            }
+
+            // one of the oldest encoders, and easy to follow
+            if (textureEncoder == kTexEncoderUnknown && isSupportedFormat(kTexEncoderSquish, format)) {
+                textureEncoder = kTexEncoderSquish;
+            }
+
+            // macOS/iOS only, so put it last but optimized encoder
+            if (textureEncoder == kTexEncoderUnknown && isSupportedFormat(kTexEncoderATE, format)) {
+                textureEncoder = kTexEncoderATE;
+            }
+        }
+        else if (isETCFormat(format)) {
+            // optimized etc encoder, but can be the slowest due to vast permutation iteration
+            if (textureEncoder == kTexEncoderUnknown && isSupportedFormat(kTexEncoderEtcenc, format)) {
+                textureEncoder = kTexEncoderEtcenc;
+            }
+        }
+        else if (isASTCFormat(format)) {
+            // this encoder is getting faster
+            if (textureEncoder == kTexEncoderUnknown && isSupportedFormat(kTexEncoderAstcenc, format)) {
+                textureEncoder = kTexEncoderAstcenc;
+            }
+
+            // macOS/iOS only, didn't find this using dual-plane like astenc
+            if (textureEncoder == kTexEncoderUnknown && isSupportedFormat(kTexEncoderATE, format)) {
+                textureEncoder = kTexEncoderATE;
+            }
+        }
+        else {
+            // Explicit for 8/16f/32f
+            if (textureEncoder == kTexEncoderUnknown && isSupportedFormat(kTexEncoderExplicit, format)) {
+                textureEncoder = kTexEncoderExplicit;
+            }
+        }
+
+        if (textureEncoder == kTexEncoderUnknown) {
+            error = true;
+        }
+    }
+    else {
+        if (!isSupportedFormat(textureEncoder, format)) {
+            error = true;
+        }
+    }
+
+    return !error;
+
+}
+
 
 bool validateFormatAndEncoder(ImageInfoArgs& infoArgs)
 {
@@ -534,6 +617,7 @@ bool validateFormatAndEncoder(ImageInfoArgs& infoArgs)
 
     return !error;
 }
+
 
 bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
                          vector<Int2>& chunkOffsets, KTXHeader& header,

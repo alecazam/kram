@@ -152,6 +152,9 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
 
 bool validateFormatAndEncoder(ImageInfoArgs& infoArgs);
 
+// decoders sometimes decode more than they encode.  Pick best from available decoders for format.
+bool validateFormatAndDecoder(MyMTLTextureType textureType, MyMTLPixelFormat format, TexEncoder& textureEncoder);
+
 MyMTLTextureType parseTextureType(const char* typeName);
 
 TexEncoder parseEncoder(const char* encoder);

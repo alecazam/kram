@@ -92,17 +92,6 @@
  *     data8[z_coord][y_coord][x_coord * 4 + 2]   // Blue
  *     data8[z_coord][y_coord][x_coord * 4 + 3]   // Alpha
  *
- * If a region-based error heuristic is used for compression, the input image
- * must be padded on all sides by pad_dim texels in x and y dimensions (and z
- * dimensions for 3D images). The padding region must be filled by
- * extrapolating the nearest edge color. The required padding size is given by
- * the following config settings:
- *
- *     max(config.v_rgba_radius, config.a_scale_radius)
- *
- * This can be programatically determined by reading the config containing the
- * values passed into astcenc_context_alloc().
- *
  * Common compressor usage
  * =======================
  *
@@ -212,13 +201,15 @@ enum astcenc_profile {
  * @brief A codec quality preset.
  */
 enum astcenc_preset {
-	/** @brief The fast, lowest quality, search preset. */
-	ASTCENC_PRE_FAST = 0,
+	/** @brief The fastest, lowest quality, search preset. */
+	ASTCENC_PRE_FASTEST = 0,
+	/** @brief The fast search preset. */
+	ASTCENC_PRE_FAST,
 	/** @brief The medium quality search preset. */
 	ASTCENC_PRE_MEDIUM,
 	/** @brief The throrough quality search preset. */
 	ASTCENC_PRE_THOROUGH,
-	/** @brief The exhaustive quality search preset. */
+	/** @brief The exhaustive, highest quality, search preset. */
 	ASTCENC_PRE_EXHAUSTIVE
 };
 
@@ -434,6 +425,13 @@ struct astcenc_config {
 	unsigned int tune_refinement_limit;
 
 	/**
+	 * @brief The number of trial candidates per mode search (-candidatelimit).
+	 *
+	 * Valid values are between 1 and TUNE_MAX_TRIAL_CANDIDATES (default 4).
+	 */
+	unsigned int tune_candidate_limit;
+
+	/**
 	 * @brief The dB threshold for stopping block search (-dblimit).
 	 *
 	 * This option is ineffective for HDR textures.
@@ -470,8 +468,6 @@ struct astcenc_image {
 	unsigned int dim_y;
 	/** @brief The X dimension of the image, in texels. */
 	unsigned int dim_z;
-	/** @brief The border padding dimensions, in texels. */
-	unsigned int dim_pad;
 	/** @brief The data type per channel. */
 	astcenc_type data_type;
 	/** @brief The data; actually of type <t>***. */
@@ -559,7 +555,7 @@ astcenc_error astcenc_compress_image(
 /**
  * @brief Reset the compressor state for a new compression.
  *
- * The caller is responsible for synchronizing threads in the workerthread
+ * The caller is responsible for synchronizing threads in the worker thread
  * pool. This function must only be called when all threads have exited the
  * astcenc_compress_image() function for image N, but before any thread enters
  * it for image N + 1.

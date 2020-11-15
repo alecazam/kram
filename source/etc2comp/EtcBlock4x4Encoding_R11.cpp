@@ -531,12 +531,12 @@ namespace Etc
 			selectorBits |= ((uint64_t)m_redSelectors[uiPixel]) << uiShift;
 		}
 
-		m_pencodingbitsR11->data.selectors0 = selectorBits >> (uint64_t)40;
-		m_pencodingbitsR11->data.selectors1 = selectorBits >> (uint64_t)32;
-		m_pencodingbitsR11->data.selectors2 = selectorBits >> (uint64_t)24;
-		m_pencodingbitsR11->data.selectors3 = selectorBits >> (uint64_t)16;
-		m_pencodingbitsR11->data.selectors4 = selectorBits >> (uint64_t)8;
-		m_pencodingbitsR11->data.selectors5 = selectorBits;        
+		m_pencodingbitsR11->data.selectors0 = uint32_t(selectorBits >> (uint64_t)40);
+		m_pencodingbitsR11->data.selectors1 = uint32_t(selectorBits >> (uint64_t)32);
+		m_pencodingbitsR11->data.selectors2 = uint32_t(selectorBits >> (uint64_t)24);
+		m_pencodingbitsR11->data.selectors3 = uint32_t(selectorBits >> (uint64_t)16);
+		m_pencodingbitsR11->data.selectors4 = uint32_t(selectorBits >> (uint64_t)8);
+		m_pencodingbitsR11->data.selectors5 = uint32_t(selectorBits);
 	}
 
 	// ----------------------------------------------------------------------------------------------------

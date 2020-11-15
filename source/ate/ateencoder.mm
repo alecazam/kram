@@ -145,8 +145,25 @@ inline at_block_format_t pixelToDecoderFormat(MyMTLPixelFormat format) {
 
 ATEEncoder::ATEEncoder() {
     uint32_t version = at_encoder_get_version();
-    (void)version;
-    assert(version >= 0x00030001);
+    
+    // at_block_get_features can get fetures, but that's a v3 availability call
+    //const int kVersion1 = 0x011300; // Astc 4x4/8x8 only, min version with correct ATE, iOS 11, macOS 13
+    const int kVersion2 = 0x020000; // added BC1457, iOS 13, macOS 15,
+    //const int kVersion3 = 0x030001;  // version tested against ios 13.4, macOS 15.4
+    // still no hdr encode/decode
+    
+    if (version < kVersion2) {
+        static bool firstTime = true;
+        if (firstTime) {
+            // The tables of encode/decode may not be correct, or there may be bugs.
+            KLOGW("ATEEncoder", "Ate version %X, but expected >= %X.  Disabling ATE BC encode/decode",
+                  version, kVersion2);
+            firstTime = false;
+        }
+    }
+    else {
+        _isBCSupported = true;
+    }
 }
 
 // from libate and AppleTextureEncoder.h

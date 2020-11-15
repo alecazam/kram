@@ -54,7 +54,7 @@
 #define _CRT_SECURE_NO_WARNINGS 1
 #include <tchar.h>
 
-// For now assume Intel on Win32
+// For now assume Intel on Win
 #define USE_SSE 1
 
 #endif
@@ -121,9 +121,18 @@
 // includes that are usable across all files
 #include "KramLog.h"
 
+// this has every intrinsic header in it
+#if USE_SSE
+// to keep astcenc compiling
+#include <immintrin.h> // AVX1
+#else
+#include "sse2neon.h"
+#endif
+
 #if USE_SIMDLIB
 #include "simd/simd.h"
 #else
 // emulate float4
 #include "float4a.h"
 #endif
+

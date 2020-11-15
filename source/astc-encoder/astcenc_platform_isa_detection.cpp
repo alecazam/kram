@@ -25,6 +25,18 @@
 
 #include "astcenc_internal.h"
 
+int cpu_supports_sse42() {
+    return 1;
+}
+int cpu_supports_popcnt() {
+    return 1;
+}
+// kram only wants avx1 for now
+int cpu_supports_avx2() {
+    return 0;
+}
+
+#if 0
 static int g_cpu_has_sse42 = -1;
 static int g_cpu_has_avx2 = -1;
 static int g_cpu_has_popcnt = -1;
@@ -124,4 +136,5 @@ int cpu_supports_avx2()
 	return g_cpu_has_avx2;
 }
 
+#endif
 #endif

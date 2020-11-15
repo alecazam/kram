@@ -17,13 +17,6 @@
 
 #include "astcenc_mathlib.h"
 
-float3 cross(float3 p, float3 q)
-{
-	return float3(p.y * q.z - p.z * q.y,
-	              p.z * q.x - p.x * q.z,
-	              p.x * q.y - p.y * q.x);
-}
-
 /* Public function, see header file for detailed documentation */
 float astc::log2(float val)
 {
@@ -57,60 +50,6 @@ float astc::log2(float val)
 	          + x * ( 0.160299448987663f
 	          )))))))));
 	return res;
-}
-
-/* Public function, see header file for detailed documentation */
-float astc::atan2(
-	float y,
-	float x
-) {
-	const float PI = (float)M_PI;
-	const float PI_2 = PI / 2.0f;
-
-	// Handle the discontinuity at x == 0
-	if (x == 0.0f)
-	{
-		if (y > 0.0f)
-		{
-			return PI_2;
-		}
-		else if (y == 0.0f)
-		{
-			return 0.0f;
-		}
-		return -PI_2;
-	}
-
-	float z = y / x;
-	float z2 = z * z;
-	if (std::fabs(z) < 1.0f)
-	{
-		float atan = z / (1.0f + (0.28f * z2));
-		if (x < 0.0f)
-		{
-			if (y < 0.0f)
-			{
-				return atan - PI;
-			}
-			else
-			{
-				return atan + PI;
-			}
-		}
-		return atan;
-	}
-	else
-	{
-		float atan = PI_2 - (z / (z2 + 0.28f));
-		if (y < 0.0f)
-		{
-			return atan - PI;
-		}
-		else
-		{
-			return atan;
-		}
-	}
 }
 
 /**

@@ -70,7 +70,7 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
 
     // file opened with 600 permission (rw only for current user)
     // 666 was a security violation.
-    int fd = mkstemps((char*)_filename.data(), strlen(suffix));
+    int fd = mkstemps((char*)_filename.data(), (int)strlen(suffix));
     if (fd == -1) {
         _filename.clear();
         return false;

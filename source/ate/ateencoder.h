@@ -15,6 +15,9 @@ class ATEEncoder {
 public:
     ATEEncoder();
     
+    bool isBCSupported() const { return _isBCSupported; }
+    bool isHDRSupportd() const { return _isHDRSupported; }
+    
     bool Encode(int metalPixelFormat, int dstDataSize, int blockDimsY,
         bool hasAlpha, bool weightChannels,
         bool isVerbose, int quality,
@@ -24,6 +27,9 @@ public:
         bool isVerbose,
         int width, int height, const uint8_t* srcData, uint8_t* dstData);
 
+private:
+    bool _isBCSupported = false;
+    bool _isHDRSupported = false;
 };
 
 

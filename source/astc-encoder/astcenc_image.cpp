@@ -24,20 +24,23 @@
 
 #include "astcenc_internal.h"
 
+// hack in 2d array support for f32 on encode, and u8 on decode
+#define USE_2DARRAY 1
+
 // conversion functions between the LNS representation and the FP16 representation.
-float float_to_lns(float p)
+static float float_to_lns(float p)
 {
 	if (astc::isnan(p) || p <= 1.0f / 67108864.0f)
 	{
 		// underflow or NaN value, return 0.
 		// We count underflow if the input value is smaller than 2^-26.
-		return 0;
+		return 0.0f;
 	}
 
 	if (fabsf(p) >= 65536.0f)
 	{
 		// overflow, return a +INF value
-		return 65535;
+		return 65535.0f;
 	}
 
 	int expo;
@@ -62,11 +65,11 @@ float float_to_lns(float p)
 	else
 		p1 = (p1 + 512.0f) * (4.0f / 5.0f);
 
-	p1 += expo * 2048.0f;
+	p1 += ((float)expo) * 2048.0f;
 	return p1 + 1.0f;
 }
 
-uint16_t lns_to_sf16(uint16_t p)
+static uint16_t lns_to_sf16(uint16_t p)
 {
 	uint16_t mc = p & 0x7FF;
 	uint16_t ec = p >> 11;
@@ -107,15 +110,19 @@ void imageblock_initialize_deriv(
 	int pixelcount,
 	float4* dptr
 ) {
-	const float *fptr = pb->orig_data;
 	for (int i = 0; i < pixelcount; i++)
 	{
 		// compute derivatives for RGB first
 		if (pb->rgb_lns[i])
 		{
-			float r = MAX(fptr[0], 6e-5f);
-			float g = MAX(fptr[1], 6e-5f);
-			float b = MAX(fptr[2], 6e-5f);
+			float3 fdata = float3(pb->data_r[i], pb->data_g[i], pb->data_b[i]);
+			fdata.r = sf16_to_float(lns_to_sf16((uint16_t)fdata.r));
+			fdata.g = sf16_to_float(lns_to_sf16((uint16_t)fdata.g));
+			fdata.b = sf16_to_float(lns_to_sf16((uint16_t)fdata.b));
+
+			float r = MAX(fdata.r, 6e-5f);
+			float g = MAX(fdata.g, 6e-5f);
+			float b = MAX(fdata.b, 6e-5f);
 
 			float rderiv = (float_to_lns(r * 1.05f) - float_to_lns(r)) / (r * 0.05f);
 			float gderiv = (float_to_lns(g * 1.05f) - float_to_lns(g)) / (g * 0.05f);
@@ -150,21 +157,24 @@ void imageblock_initialize_deriv(
 				bderiv = 33554432.0f;
 			}
 
-			dptr->x = rderiv;
-			dptr->y = gderiv;
-			dptr->z = bderiv;
+			dptr->r = rderiv;
+			dptr->g = gderiv;
+			dptr->b = bderiv;
 		}
 		else
 		{
-			dptr->x = 65535.0f;
-			dptr->y = 65535.0f;
-			dptr->z = 65535.0f;
+			dptr->r = 65535.0f;
+			dptr->g = 65535.0f;
+			dptr->b = 65535.0f;
 		}
 
 		// then compute derivatives for Alpha
 		if (pb->alpha_lns[i])
 		{
-			float a = MAX(fptr[3], 6e-5f);
+			float fdata = pb->data_a[i];
+			fdata = sf16_to_float(lns_to_sf16((uint16_t)fdata));
+
+			float a = MAX(fdata, 6e-5f);
 			float aderiv = (float_to_lns(a * 1.05f) - float_to_lns(a)) / (a * 0.05f);
 			// the derivative may not actually take values smaller than 1/32 or larger than 2^25;
 			// if it does, we clamp it.
@@ -177,15 +187,14 @@ void imageblock_initialize_deriv(
 				aderiv = 33554432.0f;
 			}
 
-			dptr->w = aderiv;
+			dptr->a = aderiv;
 		}
 		else
 		{
-			dptr->w = 65535.0f;
+			dptr->a = 65535.0f;
 		}
 
-		fptr += 4;
-		dptr += 1;
+		dptr++;
 	}
 }
 
@@ -194,48 +203,35 @@ void imageblock_initialize_work_from_orig(
 	imageblock* pb,
 	int pixelcount
 ) {
-    
-#define DO_ROUND 0
-#if DO_ROUND
-    #define ROUND(x) roundf(x)
-#else
-    #define ROUND(x) x
-#endif
-    
-    float *fptr = pb->orig_data;
+	pb->origin_texel = float4(pb->data_r[0], pb->data_g[0],
+	                          pb->data_b[0], pb->data_a[0]);
+
 	for (int i = 0; i < pixelcount; i++)
 	{
-		if (pb->rgb_lns[i] && pb->alpha_lns[i])
-		{
-			pb->data_r[i] = float_to_lns(fptr[0]);
-			pb->data_g[i] = float_to_lns(fptr[1]);
-			pb->data_b[i] = float_to_lns(fptr[2]);
-            pb->data_a[i] = float_to_lns(fptr[3]);
-		}
-		else if (!(pb->rgb_lns[i] && pb->alpha_lns[i]))
-		{
-			pb->data_r[i] = ROUND(fptr[0] * 65535.0f);
-			pb->data_g[i] = ROUND(fptr[1] * 65535.0f);
-			pb->data_b[i] = ROUND(fptr[2] * 65535.0f);
-            pb->data_a[i] = ROUND(fptr[3] * 65535.0f);
-		}
-        else if (pb->rgb_lns[i])
-        {
-            pb->data_r[i] = float_to_lns(fptr[0]);
-            pb->data_g[i] = float_to_lns(fptr[1]);
-            pb->data_b[i] = float_to_lns(fptr[2]);
-            pb->data_a[i] = ROUND(fptr[3] * 65535.0f);
-        }
-		else // if (pb->alpha_lns[i])
-		{
-            pb->data_r[i] = ROUND(fptr[0] * 65535.0f);
-            pb->data_g[i] = ROUND(fptr[1] * 65535.0f);
-            pb->data_b[i] = ROUND(fptr[2] * 65535.0f);
-			pb->data_a[i] = float_to_lns(fptr[3]);
-		}
-		
+		float4 inc = float4(pb->data_r[i], pb->data_g[i],
+		                    pb->data_b[i], pb->data_a[i]);
 
-		fptr += 4;
+		if (pb->rgb_lns[i])
+		{
+			pb->data_r[i] = float_to_lns(inc.r);
+			pb->data_g[i] = float_to_lns(inc.g);
+			pb->data_b[i] = float_to_lns(inc.b);
+		}
+		else
+		{
+			pb->data_r[i] = inc.r * 65535.0f;
+			pb->data_g[i] = inc.g * 65535.0f;
+			pb->data_b[i] = inc.b * 65535.0f;
+		}
+
+		if (pb->alpha_lns[i])
+		{
+			pb->data_a[i] = float_to_lns(inc.a);
+		}
+		else
+		{
+			pb->data_a[i] = inc.a * 65535.0f;
+		}
 	}
 }
 
@@ -244,46 +240,32 @@ void imageblock_initialize_orig_from_work(
 	imageblock* pb,
 	int pixelcount
 ) {
-	float *fptr = pb->orig_data;
-
 	for (int i = 0; i < pixelcount; i++)
 	{
-        // float to uint16t, faster to go to int
-        uint16_t r = (uint16_t)pb->data_r[i];
-        uint16_t g = (uint16_t)pb->data_g[i];
-        uint16_t b = (uint16_t)pb->data_b[i];
-        uint16_t a = (uint16_t)pb->data_a[i];
-        
-        if (pb->rgb_lns[i] && pb->alpha_lns[i])
+		float4 inc = float4(pb->data_r[i], pb->data_g[i],
+		                    pb->data_b[i], pb->data_a[i]);
+
+		if (pb->rgb_lns[i])
 		{
-			fptr[0] = sf16_to_float(lns_to_sf16(r));
-			fptr[1] = sf16_to_float(lns_to_sf16(g));
-			fptr[2] = sf16_to_float(lns_to_sf16(b));
-            fptr[3] = sf16_to_float(lns_to_sf16(a));
+			pb->data_r[i] = sf16_to_float(lns_to_sf16((uint16_t)inc.r));
+			pb->data_g[i] = sf16_to_float(lns_to_sf16((uint16_t)inc.g));
+			pb->data_b[i] = sf16_to_float(lns_to_sf16((uint16_t)inc.b));
 		}
-		else if (!(pb->rgb_lns[i] && pb->alpha_lns[i]))
+		else
 		{
-			fptr[0] = sf16_to_float(unorm16_to_sf16(r));
-			fptr[1] = sf16_to_float(unorm16_to_sf16(g));
-			fptr[2] = sf16_to_float(unorm16_to_sf16(b));
-            fptr[3] = sf16_to_float(unorm16_to_sf16(a));
-		}
-        else if (pb->rgb_lns[i])
-		{
-            fptr[0] = sf16_to_float(lns_to_sf16(r));
-            fptr[1] = sf16_to_float(lns_to_sf16(g));
-            fptr[2] = sf16_to_float(lns_to_sf16(b));
-            fptr[3] = sf16_to_float(unorm16_to_sf16(a));
-		}
-		else // if (pb->alpha_lns[i])
-		{
-            fptr[0] = sf16_to_float(unorm16_to_sf16(r));
-            fptr[1] = sf16_to_float(unorm16_to_sf16(g));
-            fptr[2] = sf16_to_float(unorm16_to_sf16(b));
-            fptr[3] = sf16_to_float(lns_to_sf16(a));
+			pb->data_r[i] = sf16_to_float(unorm16_to_sf16((uint16_t)inc.r));
+			pb->data_g[i] = sf16_to_float(unorm16_to_sf16((uint16_t)inc.g));
+			pb->data_b[i] = sf16_to_float(unorm16_to_sf16((uint16_t)inc.b));
 		}
 
-		fptr += 4;
+		if (pb->alpha_lns[i])
+		{
+			pb->data_a[i] = sf16_to_float(lns_to_sf16((uint16_t)inc.a));
+		}
+		else
+		{
+			pb->data_a[i] = sf16_to_float(unorm16_to_sf16((uint16_t)inc.a));
+		}
 	}
 }
 
@@ -299,52 +281,153 @@ void fetch_imageblock(
 	int zpos,
 	astcenc_swizzle swz
 ) {
-#define USE_2D_ARRAY 1
+	int xsize = img.dim_x;
+	int ysize = img.dim_y;
+	int zsize = img.dim_z;
 
-	float *fptr = pb->orig_data;
-	int xsize = img.dim_x + 2 * img.dim_pad;
-	int ysize = img.dim_y + 2 * img.dim_pad;
-#if !USE_2D_ARRAY
-	int zsize = (img.dim_z == 1) ? 1 : img.dim_z + 2 * img.dim_pad;
-#endif
-    
 	pb->xpos = xpos;
 	pb->ypos = ypos;
 	pb->zpos = zpos;
 
-	xpos += img.dim_pad;
-	ypos += img.dim_pad;
-	if (img.dim_z > 1)
-	{
-		zpos += img.dim_pad;
-	}
+	// True if any non-identity swizzle
+	bool needs_swz = (swz.r != ASTCENC_SWZ_R) || (swz.g != ASTCENC_SWZ_G) ||
+	                 (swz.b != ASTCENC_SWZ_B) || (swz.a != ASTCENC_SWZ_A);
 
-	float data[6];
-	data[4] = 0;
-	data[5] = 1;
-
-    bool isSwizzle = swz.r != ASTCENC_SWZ_R || swz.g != ASTCENC_SWZ_G || swz.b != ASTCENC_SWZ_B || swz.a != ASTCENC_SWZ_A;
-  
-
-/*
+	int idx = 0;
 	if (img.data_type == ASTCENC_TYPE_U8)
 	{
-// Note: USE_2D_ARRAY breaks 3D block compression, but iOS hw doesn't support that
-// and encoding already passes slices, faces, etc as 2D textures to this.
-#if USE_2D_ARRAY
-        const uint8_t* data8 = static_cast<const uint8_t*>(img.data);
+		uint8_t data[6];
+		data[ASTCENC_SWZ_0] = 0x00;
+		data[ASTCENC_SWZ_1] = 0xFF;
+
+		uint8_t*** data8 = static_cast<uint8_t***>(img.data);
+		for (int z = 0; z < bsd->zdim; z++)
+		{
+			for (int y = 0; y < bsd->ydim; y++)
+			{
+				for (int x = 0; x < bsd->xdim; x++)
+				{
+					int xi = xpos + x;
+					int yi = ypos + y;
+					int zi = zpos + z;
+					// clamp XY coordinates to the picture.
+					if (xi < 0)
+						xi = 0;
+					if (yi < 0)
+						yi = 0;
+					if (zi < 0)
+						zi = 0;
+					if (xi >= xsize)
+						xi = xsize - 1;
+					if (yi >= ysize)
+						yi = ysize - 1;
+					if (zi >= zsize)
+						zi = zsize - 1;
+
+					int r = data8[zi][yi][4 * xi    ];
+					int g = data8[zi][yi][4 * xi + 1];
+					int b = data8[zi][yi][4 * xi + 2];
+					int a = data8[zi][yi][4 * xi + 3];
+
+					if (needs_swz)
+					{
+						data[ASTCENC_SWZ_R] = r;
+						data[ASTCENC_SWZ_G] = g;
+						data[ASTCENC_SWZ_B] = b;
+						data[ASTCENC_SWZ_A] = a;
+
+						r = data[swz.r];
+						g = data[swz.g];
+						b = data[swz.b];
+						a = data[swz.a];
+					}
+
+					pb->data_r[idx] = r / 255.0f;
+					pb->data_g[idx] = g / 255.0f;
+					pb->data_b[idx] = b / 255.0f;
+					pb->data_a[idx] = a / 255.0f;
+					idx++;
+				}
+			}
+		}
+	}
+	else if (img.data_type == ASTCENC_TYPE_F16)
+	{
+		uint16_t data[6];
+		data[ASTCENC_SWZ_0] = 0x0000;
+		data[ASTCENC_SWZ_1] = 0x3C00;
+
+		uint16_t*** data16 = static_cast<uint16_t***>(img.data);
+		for (int z = 0; z < bsd->zdim; z++)
+		{
+			for (int y = 0; y < bsd->ydim; y++)
+			{
+				for (int x = 0; x < bsd->xdim; x++)
+				{
+					int xi = xpos + x;
+					int yi = ypos + y;
+					int zi = zpos + z;
+					// clamp XY coordinates to the picture.
+					if (xi < 0)
+						xi = 0;
+					if (yi < 0)
+						yi = 0;
+					if (zi < 0)
+						zi = 0;
+					if (xi >= xsize)
+						xi = xsize - 1;
+					if (yi >= ysize)
+						yi = ysize - 1;
+					if (zi >= ysize)
+						zi = zsize - 1;
+
+					int r = data16[zi][yi][4 * xi    ];
+					int g = data16[zi][yi][4 * xi + 1];
+					int b = data16[zi][yi][4 * xi + 2];
+					int a = data16[zi][yi][4 * xi + 3];
+
+					if (needs_swz)
+					{
+						data[ASTCENC_SWZ_R] = r;
+						data[ASTCENC_SWZ_G] = g;
+						data[ASTCENC_SWZ_B] = b;
+						data[ASTCENC_SWZ_A] = a;
+
+						r = data[swz.r];
+						g = data[swz.g];
+						b = data[swz.b];
+						a = data[swz.a];
+					}
+
+					pb->data_r[idx] = MAX(sf16_to_float(r), 1e-8f);
+					pb->data_g[idx] = MAX(sf16_to_float(g), 1e-8f);
+					pb->data_b[idx] = MAX(sf16_to_float(b), 1e-8f);
+					pb->data_a[idx] = MAX(sf16_to_float(a), 1e-8f);
+					idx++;
+				}
+			}
+		}
+	}
+	else // if (img.data_type == ASTCENC_TYPE_F32)
+	{
+		assert(img.data_type == ASTCENC_TYPE_F32);
+
+		float data[6];
+		data[ASTCENC_SWZ_0] = 0.0f;
+		data[ASTCENC_SWZ_1] = 1.0f;
+
+#if USE_2DARRAY
+        float4* data32 = static_cast<float4*>(img.data);
 #else
-		const uint8_t*** data8 = static_cast<const uint8_t***>(img.data);
+		float*** data32 = static_cast<float***>(img.data);
 #endif
 		for (int z = 0; z < bsd->zdim; z++)
 		{
-#if !USE_2D_ARRAY
             int zi = zpos + z;
             if (zi < 0)
                 zi = 0;
-            if (zi >= zsize)
+            if (zi >= ysize)
                 zi = zsize - 1;
-#endif
             
 			for (int y = 0; y < bsd->ydim; y++)
 			{
@@ -356,212 +439,75 @@ void fetch_imageblock(
                 
 				for (int x = 0; x < bsd->xdim; x++)
 				{
-					int xi = xpos + x;
+                    // clamp XY coordinates to the picture.
+                    int xi = xpos + x;
 					if (xi < 0)
 						xi = 0;
 					if (xi >= xsize)
 						xi = xsize - 1;
-                
-#if USE_2D_ARRAY
-                    int px = (yi * xsize + xi) * 4; // 4 channels
-                    
-					float r = (float)data8[px + 0];
-                    float g = (float)data8[px + 1];
-                    float b = (float)data8[px + 2];
-                    float a = (float)data8[px + 3];
-#else
-                    float r = data8[zi][yi][4 * xi];
-                    float g = data8[zi][yi][4 * xi + 1];
-                    float b = data8[zi][yi][4 * xi + 2];
-                    float a = data8[zi][yi][4 * xi + 3];
-#endif
-                    if (isSwizzle) {
-                        data[0] = r / 255.0f;
-                        data[1] = g / 255.0f;
-                        data[2] = b / 255.0f;
-                        data[3] = a / 255.0f;
-
-                        fptr[0] = data[swz.r];
-                        fptr[1] = data[swz.g];
-                        fptr[2] = data[swz.b];
-                        fptr[3] = data[swz.a];
-                        
-                        fptr += 4;
-                    }
-                    else {
-                        fptr[0] = r / 255.0f;
-                        fptr[1] = g / 255.0f;
-                        fptr[2] = b / 255.0f;
-                        fptr[3] = a / 255.0f;
-                        
-                        fptr += 4;
-                    }
-					
-				}
-			}
-		}
-	}
-	else if (img.data_type == ASTCENC_TYPE_F16)
-	{
-#if USE_2D_ARRAY
-		const _Float16* data16f = static_cast<const _Float16*>(img.data);
-#else
-        const _Float16*** data16f = static_cast<const _Float16***>(img.data);
-#endif
-        
-		for (int z = 0; z < bsd->zdim; z++)
-		{
-#if !USE_2D_ARRAY
-            int zi = zpos + z;
-            if (zi < 0)
-                zi = 0;
-            if (zi >= zsize)
-                zi = zsize - 1;
-#endif
-            
-            for (int y = 0; y < bsd->ydim; y++)
-            {
-                int yi = ypos + y;
-                if (yi < 0)
-                    yi = 0;
-                if (yi >= ysize)
-                    yi = ysize - 1;
-                
-                for (int x = 0; x < bsd->xdim; x++)
-                {
-                    int xi = xpos + x;
-                    if (xi < 0)
-                        xi = 0;
-                    if (xi >= xsize)
-                        xi = xsize - 1;
-
-#if USE_2D_ARRAY
-                    int px = (yi * xsize + xi) * 4;
-
-                    // compiler does _Float16 -> float conversion
-                    float rf = (float)data16f[px + 0];
-                    float gf = (float)data16f[px + 1];
-                    float bf = (float)data16f[px + 2];
-                    float af = (float)data16f[px + 3];
-#else
-                    // compiler does _Float16 -> float conversion
-                    float rf = (float)data16f[zi][yi][4 * xi];
-                    float gf = (float)data16f[zi][yi][4 * xi + 1];
-                    float bf = (float)data16f[zi][yi][4 * xi + 2];
-                    float af = (float)data16f[zi][yi][4 * xi + 3];
-#endif
-					// equalize the color components somewhat, and get rid of negative values.
-					rf = MAX(rf, 1e-8f);
-					gf = MAX(gf, 1e-8f);
-					bf = MAX(bf, 1e-8f);
-					af = MAX(af, 1e-8f);
-
-                    if (isSwizzle) {
-                        data[0] = rf;
-                        data[1] = gf;
-                        data[2] = bf;
-                        data[3] = af;
-
-                        fptr[0] = data[swz.r];
-                        fptr[1] = data[swz.g];
-                        fptr[2] = data[swz.b];
-                        fptr[3] = data[swz.a];
-                        fptr += 4;
-                    }
-                    else {
-                        fptr[0] = rf;
-                        fptr[1] = gf;
-                        fptr[2] = bf;
-                        fptr[3] = af;
-                        
-                        fptr += 4;
-                    }
-				}
-			}
-		}
-	}
-    else
- */
-    if (img.data_type == ASTCENC_TYPE_F32)
-    {
-#if USE_2D_ARRAY
-        const float4* data32f = static_cast<const float4*>(img.data);
-#else
-        const float*** data32f = static_cast<const float***>(img.data);
-#endif
-        for (int z = 0; z < bsd->zdim; z++)
-        {
-#if !USE_2D_ARRAY
-            int zi = zpos + z;
-            if (zi < 0)
-                zi = 0;
-            if (zi >= zsize)
-                zi = zsize - 1;
-#endif
-            
-            for (int y = 0; y < bsd->ydim; y++)
-            {
-                int yi = ypos + y;
-                if (yi < 0)
-                    yi = 0;
-                if (yi >= ysize)
-                    yi = ysize - 1;
-                
-                for (int x = 0; x < bsd->xdim; x++)
-                {
-                    int xi = xpos + x;
-                    if (xi < 0)
-                        xi = 0;
-                    if (xi >= xsize)
-                        xi = xsize - 1;
-
-#if USE_2D_ARRAY
+       
+#if USE_2DARRAY
                     int px = (yi * xsize + xi); // * 4;
-                    assert(px >= 0 && px < xsize * ysize);
+                    assert(zi == 0);
+                    assert(px >= 0 && px < (xsize * ysize));
+                    float4 val = data32[px];
+                    //val = max(val float4(1e-8f)); // why can't this 0, the U8 Path does?
                     
-                    float rf = data32f[px].x;
-                    float gf = data32f[px].y;
-                    float bf = data32f[px].z;
-                    float af = data32f[px].w;
-#else
-                    float rf = data32f[zi][yi][4 * xi];
-                    float gf = data32f[zi][yi][4 * xi + 1];
-                    float bf = data32f[zi][yi][4 * xi + 2];
-                    float af = data32f[zi][yi][4 * xi + 3];
-#endif
-                    // equalize the color components somewhat, and get rid of negative values.
-                    rf = MAX(rf, 1e-8f);
-                    gf = MAX(gf, 1e-8f);
-                    bf = MAX(bf, 1e-8f);
-                    af = MAX(af, 1e-8f);
-
-                    if (isSwizzle) {
-                        data[0] = rf;
-                        data[1] = gf;
-                        data[2] = bf;
-                        data[3] = af;
-
-                        fptr[0] = data[swz.r];
-                        fptr[1] = data[swz.g];
-                        fptr[2] = data[swz.b];
-                        fptr[3] = data[swz.a];
-                        fptr += 4;
-                    }
-                    else {
-                        fptr[0] = rf;
-                        fptr[1] = gf;
-                        fptr[2] = bf;
-                        fptr[3] = af;
+                    if (needs_swz)
+                    {
+                        // prob best as a swizzle, and then select in 0/1 elements
+                        // instead of a 6 array lookup which isn't simd compatible.
+                        float r = val.r;
+                        float g = val.g;
+                        float b = val.b;
+                        float a = val.a;
                         
-                        fptr += 4;
+                        data[ASTCENC_SWZ_R] = r;
+                        data[ASTCENC_SWZ_G] = g;
+                        data[ASTCENC_SWZ_B] = b;
+                        data[ASTCENC_SWZ_A] = a;
+
+                        val.r = data[swz.r];
+                        val.g = data[swz.g];
+                        val.b = data[swz.b];
+                        val.a = data[swz.a];
                     }
-                }
-            }
-        }
-    }
-    else {
-        assert(false);
-    }
+                    
+                    // ugh, this pulls out of simd to planar
+                    pb->data_r[idx] = val.r;
+                    pb->data_g[idx] = val.g;
+                    pb->data_b[idx] = val.b;
+                    pb->data_a[idx] = val.a;
+                    
+#else
+					float r = data32[zi][yi][4 * xi    ];
+					float g = data32[zi][yi][4 * xi + 1];
+					float b = data32[zi][yi][4 * xi + 2];
+					float a = data32[zi][yi][4 * xi + 3];
+
+                    if (needs_swz)
+					{
+						data[ASTCENC_SWZ_R] = r;
+						data[ASTCENC_SWZ_G] = g;
+						data[ASTCENC_SWZ_B] = b;
+						data[ASTCENC_SWZ_A] = a;
+
+						r = data[swz.r];
+						g = data[swz.g];
+						b = data[swz.b];
+						a = data[swz.a];
+					}
+    
+					pb->data_r[idx] = MAX(r, 1e-8f);
+					pb->data_g[idx] = MAX(g, 1e-8f);
+					pb->data_b[idx] = MAX(b, 1e-8f);
+					pb->data_a[idx] = MAX(a, 1e-8f);
+#endif
+					idx++;
+				}
+			}
+		}
+	}
 
 	int rgb_lns = (decode_mode == ASTCENC_PRF_HDR) || (decode_mode == ASTCENC_PRF_HDR_RGB_LDR_A);
 	int alpha_lns = decode_mode == ASTCENC_PRF_HDR;
@@ -574,7 +520,7 @@ void fetch_imageblock(
 		pb->nan_texel[i] = 0;
 	}
 
-	imageblock_initialize_work_from_orig(pb,bsd->texel_count);
+	imageblock_initialize_work_from_orig(pb, bsd->texel_count);
 	update_imageblock_flags(pb, bsd->xdim, bsd->ydim, bsd->zdim);
 }
 
@@ -588,26 +534,27 @@ void write_imageblock(
 	int zpos,
 	astcenc_swizzle swz
 ) {
-	const float *fptr = pb->orig_data;
 	const uint8_t *nptr = pb->nan_texel;
 	int xsize = img.dim_x;
 	int ysize = img.dim_y;
 	int zsize = img.dim_z;
 
-    // setup data for swizzle
 	float data[7];
-	data[4] = 0.0f;
-	data[5] = 1.0f;
+	data[ASTCENC_SWZ_0] = 0.0f;
+	data[ASTCENC_SWZ_1] = 1.0f;
 
-    bool doSwizzleN =
-        swz.r == ASTCENC_SWZ_Z ||
-        swz.g == ASTCENC_SWZ_Z ||
-        swz.b == ASTCENC_SWZ_Z ||
-        swz.a == ASTCENC_SWZ_Z;
-        
+	// True if any non-identity swizzle
+	bool needs_swz = (swz.r != ASTCENC_SWZ_R) || (swz.g != ASTCENC_SWZ_G) ||
+	                 (swz.b != ASTCENC_SWZ_B) || (swz.a != ASTCENC_SWZ_A);
+
+	// True if any swizzle uses Z reconstruct
+	bool needs_z = (swz.r == ASTCENC_SWZ_Z) || (swz.g == ASTCENC_SWZ_Z) ||
+	               (swz.b == ASTCENC_SWZ_Z) || (swz.a == ASTCENC_SWZ_Z);
+
+	int idx = 0;
 	if (img.data_type == ASTCENC_TYPE_U8)
 	{
-#if USE_2D_ARRAY
+#if USE_2DARRAY
         uint8_t* data8 = static_cast<uint8_t*>(img.data);
 #else
 		uint8_t*** data8 = static_cast<uint8_t***>(img.data);
@@ -624,102 +571,73 @@ void write_imageblock(
 
 					if (xi >= 0 && yi >= 0 && zi >= 0 && xi < xsize && yi < ysize && zi < zsize)
 					{
-#if USE_2D_ARRAY
-                        int px = (yi * xsize + xi); // * 4;
-                        assert(px >= 0 && px < xsize * ysize);
-#endif
+						int ri, gi, bi, ai;
+
 						if (*nptr)
 						{
-#if USE_2D_ARRAY
-                            data8[px * 4 + 0] = 0xFF;
-                            data8[px * 4 + 1] = 0x00;
-                            data8[px * 4 + 2] = 0xFF;
-                            data8[px * 4 + 3] = 0xFF;
-                            
-#else
-                            // NaN-pixel, but we can't display it. Display purple instead.
-							data8[zi][yi][4 * xi] = 0xFF;
-							data8[zi][yi][4 * xi + 1] = 0x00;
-							data8[zi][yi][4 * xi + 2] = 0xFF;
-							data8[zi][yi][4 * xi + 3] = 0xFF;
-#endif
+							// NaN-pixel, but we can't display it. Display purple instead.
+							ri = 0xFF;
+							gi = 0x00;
+							bi = 0xFF;
+							ai = 0xFF;
+						}
+						else if (needs_swz)
+						{
+							data[ASTCENC_SWZ_R] = pb->data_r[idx];
+							data[ASTCENC_SWZ_G] = pb->data_g[idx];
+							data[ASTCENC_SWZ_B] = pb->data_b[idx];
+							data[ASTCENC_SWZ_A] = pb->data_a[idx];
+
+							if (needs_z)
+							{
+								float xcoord = (data[0] * 2.0f) - 1.0f;
+								float ycoord = (data[3] * 2.0f) - 1.0f;
+								float zcoord = 1.0f - xcoord * xcoord - ycoord * ycoord;
+								if (zcoord < 0.0f)
+								{
+									zcoord = 0.0f;
+								}
+								data[ASTCENC_SWZ_Z] = (astc::sqrt(zcoord) * 0.5f) + 0.5f;
+							}
+
+							ri = astc::flt2int_rtn(MIN(data[swz.r], 1.0f) * 255.0f);
+							gi = astc::flt2int_rtn(MIN(data[swz.g], 1.0f) * 255.0f);
+							bi = astc::flt2int_rtn(MIN(data[swz.b], 1.0f) * 255.0f);
+							ai = astc::flt2int_rtn(MIN(data[swz.a], 1.0f) * 255.0f);
 						}
 						else
 						{
-							data[0] = fptr[0];
-							data[1] = fptr[1];
-							data[2] = fptr[2];
-							data[3] = fptr[3];
-
-                            if (doSwizzleN)
-                            {
-                                // reconstructs z from xy, then into upper 0.5
-                                // assumes swizzled normal in ra (wouldn't work with rg01, or gggr)
-                                float xcoord = (data[0] * 2.0f) - 1.0f;
-                                float ycoord = (data[3] * 2.0f) - 1.0f;
-                                float zcoord = 1.0f - xcoord * xcoord - ycoord * ycoord;
-                                if (zcoord < 0.0f)
-                                {
-                                    zcoord = 0.0f;
-                                }
-                                data[6] = (astc::sqrt(zcoord) * 0.5f) + 0.5f;
-                            }
-                            
-							// clamp to [0,1]
-							if (data[0] > 1.0f)
-							{
-								data[0] = 1.0f;
-							}
-
-							if (data[1] > 1.0f)
-							{
-								data[1] = 1.0f;
-							}
-
-							if (data[2] > 1.0f)
-							{
-								data[2] = 1.0f;
-							}
-
-							if (data[3] > 1.0f)
-							{
-								data[3] = 1.0f;
-							}
-
-							// pack the data
-							int ri = astc::flt2int_rtn(data[swz.r] * 255.0f);
-							int gi = astc::flt2int_rtn(data[swz.g] * 255.0f);
-							int bi = astc::flt2int_rtn(data[swz.b] * 255.0f);
-							int ai = astc::flt2int_rtn(data[swz.a] * 255.0f);
-#if USE_2D_ARRAY
-
-							data8[px * 4 + 0] = ri;
-							data8[px * 4 + 1] = gi;
-							data8[px * 4 + 2] = bi;
-							data8[px * 4 + 3] = ai;
-                            
-#else
-                            data8[zi][yi][4 * xi] = ri;
-                            data8[zi][yi][4 * xi + 1] = gi;
-                            data8[zi][yi][4 * xi + 2] = bi;
-                            data8[zi][yi][4 * xi + 3] = ai;
-#endif
+							ri = astc::flt2int_rtn(MIN(pb->data_r[idx], 1.0f) * 255.0f);
+							gi = astc::flt2int_rtn(MIN(pb->data_g[idx], 1.0f) * 255.0f);
+							bi = astc::flt2int_rtn(MIN(pb->data_b[idx], 1.0f) * 255.0f);
+							ai = astc::flt2int_rtn(MIN(pb->data_a[idx], 1.0f) * 255.0f);
 						}
+#if USE_2DARRAY
+                        int px = (yi * xsize + xi); // * 4;
+                        assert(zi == 0);
+                        assert(px >= 0 && px < (xsize * ysize));
+                        
+                        data8[px * 4 + 0] = ri;
+                        data8[px * 4 + 1] = gi;
+                        data8[px * 4 + 2] = bi;
+                        data8[px * 4 + 3] = ai;
+
+#else
+						data8[zi][yi][4 * xi    ] = ri;
+						data8[zi][yi][4 * xi + 1] = gi;
+						data8[zi][yi][4 * xi + 2] = bi;
+						data8[zi][yi][4 * xi + 3] = ai;
+#endif
 					}
-					fptr += 4;
+					idx++;
 					nptr++;
 				}
 			}
 		}
 	}
-	else // if (img.data_type == ASTCENC_TYPE_F16)
+	else if (img.data_type == ASTCENC_TYPE_F16)
 	{
-		assert(img.data_type == ASTCENC_TYPE_F16);
-#if USE_2D_ARRAY
-		uint16_t* data16 = static_cast<uint16_t*>(img.data);
-#else
-        uint16_t*** data16 = static_cast<uint16_t***>(img.data);
-#endif
+		uint16_t*** data16 = static_cast<uint16_t***>(img.data);
 		for (int z = 0; z < bsd->zdim; z++)
 		{
 			for (int y = 0; y < bsd->ydim; y++)
@@ -732,67 +650,122 @@ void write_imageblock(
 
 					if (xi >= 0 && yi >= 0 && zi >= 0 && xi < xsize && yi < ysize && zi < zsize)
 					{
-#if USE_2D_ARRAY
-                        int px = (yi * xsize + xi); // * 4;
-                        assert(px >= 0 && px < xsize * ysize);
-#endif
+						int ri, gi, bi, ai;
 
-                        if (*nptr)
+						if (*nptr)
 						{
-#if USE_2D_ARRAY
-                            data16[px * 4 + 0] = 0xFFFF;
-                            data16[px * 4 + 1] = 0xFFFF;
-                            data16[px * 4 + 2] = 0xFFFF;
-                            data16[px * 4 + 3] = 0xFFFF;
-                            
-#else
-							data16[zi][yi][4 * xi] = 0xFFFF;
-							data16[zi][yi][4 * xi + 1] = 0xFFFF;
-							data16[zi][yi][4 * xi + 2] = 0xFFFF;
-							data16[zi][yi][4 * xi + 3] = 0xFFFF;
-#endif
+							ri = 0xFFFF;
+							gi = 0xFFFF;
+							bi = 0xFFFF;
+							ai = 0xFFFF;
 						}
+						else if (needs_swz)
+						{
+							data[ASTCENC_SWZ_R] = pb->data_r[idx];
+							data[ASTCENC_SWZ_G] = pb->data_g[idx];
+							data[ASTCENC_SWZ_B] = pb->data_b[idx];
+							data[ASTCENC_SWZ_A] = pb->data_a[idx];
 
+							if (needs_z)
+							{
+								float xN = (data[0] * 2.0f) - 1.0f;
+								float yN = (data[3] * 2.0f) - 1.0f;
+								float zN = 1.0f - xN * xN - yN * yN;
+								if (zN < 0.0f)
+								{
+									zN = 0.0f;
+								}
+								data[ASTCENC_SWZ_Z] = (astc::sqrt(zN) * 0.5f) + 0.5f;
+							}
+
+							ri = float_to_sf16(data[swz.r], SF_NEARESTEVEN);
+							gi = float_to_sf16(data[swz.g], SF_NEARESTEVEN);
+							bi = float_to_sf16(data[swz.b], SF_NEARESTEVEN);
+							ai = float_to_sf16(data[swz.a], SF_NEARESTEVEN);
+						}
 						else
 						{
-							data[0] = fptr[0];
-							data[1] = fptr[1];
-							data[2] = fptr[2];
-							data[3] = fptr[3];
-
-                            if (doSwizzleN)
-                            {
-                                // reconstruct z even if not used in swizzle
-                                // assumes swizzled normal in ra (wouldn't work with rg01, or gggr)
-                                float xN = (data[0] * 2.0f) - 1.0f;
-                                float yN = (data[3] * 2.0f) - 1.0f;
-                                float zN = 1.0f - xN * xN - yN * yN;
-                                if (zN < 0.0f)
-                                {
-                                    zN = 0.0f;
-                                }
-                                data[6] = (astc::sqrt(zN) * 0.5f) + 0.5f;
-                            }
-                            
-							int ri = float_to_sf16(data[swz.r], SF_NEARESTEVEN);
-							int gi = float_to_sf16(data[swz.g], SF_NEARESTEVEN);
-							int bi = float_to_sf16(data[swz.b], SF_NEARESTEVEN);
-							int ai = float_to_sf16(data[swz.a], SF_NEARESTEVEN);
-#if USE_2D_ARRAY
-
-                            data16[px * 4 + 0] = ri;
-                            data16[px * 4 + 1] = gi;
-                            data16[px * 4 + 2] = bi;
-                            data16[px * 4 + 3] = ai;
-#else
-                            data16[zi][yi][4 * xi] = ri;
-							data16[zi][yi][4 * xi + 1] = gi;
-							data16[zi][yi][4 * xi + 2] = bi;
-							data16[zi][yi][4 * xi + 3] = ai;
-#endif
+							ri = float_to_sf16(pb->data_r[idx], SF_NEARESTEVEN);
+							gi = float_to_sf16(pb->data_g[idx], SF_NEARESTEVEN);
+							bi = float_to_sf16(pb->data_b[idx], SF_NEARESTEVEN);
+							ai = float_to_sf16(pb->data_a[idx], SF_NEARESTEVEN);
 						}
+
+						data16[zi][yi][4 * xi    ] = ri;
+						data16[zi][yi][4 * xi + 1] = gi;
+						data16[zi][yi][4 * xi + 2] = bi;
+						data16[zi][yi][4 * xi + 3] = ai;
 					}
-					fptr += 4;
+					idx++;
+					nptr++;
+				}
+			}
+		}
+	}
+	else // if (img.data_type == ASTCENC_TYPE_F32)
+	{
+		assert(img.data_type == ASTCENC_TYPE_F32);
+        
+		float*** data32 = static_cast<float***>(img.data);
+		for (int z = 0; z < bsd->zdim; z++)
+		{
+			for (int y = 0; y < bsd->ydim; y++)
+			{
+				for (int x = 0; x < bsd->xdim; x++)
+				{
+					int xi = xpos + x;
+					int yi = ypos + y;
+					int zi = zpos + z;
+
+					if (xi >= 0 && yi >= 0 && zi >= 0 && xi < xsize && yi < ysize && zi < zsize)
+					{
+						float rf, gf, bf, af;
+
+						if (*nptr)
+						{
+							rf = std::numeric_limits<float>::quiet_NaN();
+							gf = std::numeric_limits<float>::quiet_NaN();
+							bf = std::numeric_limits<float>::quiet_NaN();
+							af = std::numeric_limits<float>::quiet_NaN();
+						}
+						else if (needs_swz)
+						{
+							data[ASTCENC_SWZ_R] = pb->data_r[idx];
+							data[ASTCENC_SWZ_G] = pb->data_g[idx];
+							data[ASTCENC_SWZ_B] = pb->data_b[idx];
+							data[ASTCENC_SWZ_A] = pb->data_a[idx];
+
+							if (needs_z)
+							{
+								float xN = (data[0] * 2.0f) - 1.0f;
+								float yN = (data[3] * 2.0f) - 1.0f;
+								float zN = 1.0f - xN * xN - yN * yN;
+								if (zN < 0.0f)
+								{
+									zN = 0.0f;
+								}
+								data[ASTCENC_SWZ_Z] = (astc::sqrt(zN) * 0.5f) + 0.5f;
+							}
+
+							rf = data[swz.r];
+							gf = data[swz.g];
+							bf = data[swz.b];
+							af = data[swz.a];
+						}
+						else
+						{
+							rf = pb->data_r[idx];
+							gf = pb->data_g[idx];
+							bf = pb->data_b[idx];
+							af = pb->data_a[idx];
+						}
+
+						data32[zi][yi][4 * xi    ] = rf;
+						data32[zi][yi][4 * xi + 1] = gf;
+						data32[zi][yi][4 * xi + 2] = bf;
+						data32[zi][yi][4 * xi + 3] = af;
+					}
+					idx++;
 					nptr++;
 				}
 			}

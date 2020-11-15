@@ -45,11 +45,24 @@
  */
 
 #include "astcenc_internal.h"
+#include "astcenc_vecmathlib.h"
 
 #include <stdio.h>
 #include <cassert>
+#include <cstring>
 
-static const float angular_steppings[44] = {
+#if ASTCENC_SIMD_WIDTH <= 4
+    #define ANGULAR_STEPS 44
+#elif ASTCENC_SIMD_WIDTH == 8
+    // AVX code path loops over these tables 8 elements at a time,
+    // so make sure to have their size a multiple of 8.
+    #define ANGULAR_STEPS 48
+#else
+    #error Unknown SIMD width
+#endif
+static_assert((ANGULAR_STEPS % ASTCENC_SIMD_WIDTH) == 0, "ANGULAR_STEPS should be multiple of ASTCENC_SIMD_WIDTH");
+
+alignas(ASTCENC_VECALIGN) static const float angular_steppings[ANGULAR_STEPS] = {
 	 1.0f, 1.25f, 1.5f, 1.75f,
 
 	 2.0f,  2.5f, 3.0f, 3.5f,
@@ -62,13 +75,19 @@ static const float angular_steppings[44] = {
 	20.0f, 21.0f, 22.0f, 23.0f,
 	24.0f, 25.0f, 26.0f, 27.0f,
 	28.0f, 29.0f, 30.0f, 31.0f,
-	32.0f, 33.0f, 34.0f, 35.0f
+	32.0f, 33.0f, 34.0f, 35.0f,
+#if ANGULAR_STEPS >= 48
+    // This is "redundant" and only used in more-than-4-wide
+    // SIMD code paths, to make the steps table size
+    // be a multiple of SIMD width. Values are replicated
+    // from last entry so that AVX2 and SSE code paths
+    // return the same results.
+    35.0f, 35.0f, 35.0f, 35.0f,
+#endif
 };
 
-#define ANGULAR_STEPS ((int)(sizeof(angular_steppings)/sizeof(angular_steppings[0])))
-
-static float stepsizes[ANGULAR_STEPS];
-static float stepsizes_sqr[ANGULAR_STEPS];
+alignas(ASTCENC_VECALIGN) static float stepsizes[ANGULAR_STEPS];
+alignas(ASTCENC_VECALIGN) static float stepsizes_sqr[ANGULAR_STEPS];
 
 static int max_angular_steps_needed_for_quant_level[13];
 
@@ -76,8 +95,8 @@ static int max_angular_steps_needed_for_quant_level[13];
 // slight quality loss compared to using sin() and cos() directly. Must be 2^N.
 #define SINCOS_STEPS 64
 
-static float sin_table[SINCOS_STEPS][ANGULAR_STEPS];
-static float cos_table[SINCOS_STEPS][ANGULAR_STEPS];
+alignas(ASTCENC_VECALIGN) static float sin_table[SINCOS_STEPS][ANGULAR_STEPS];
+alignas(ASTCENC_VECALIGN) static float cos_table[SINCOS_STEPS][ANGULAR_STEPS];
 
 void prepare_angular_tables()
 {
@@ -89,8 +108,8 @@ void prepare_angular_tables()
 
 		for (int j = 0; j < SINCOS_STEPS; j++)
 		{
-			sin_table[j][i] = static_cast<float>(sinf((2.0f * (float)M_PI / (SINCOS_STEPS - 1.0f)) * angular_steppings[i] * j));
-			cos_table[j][i] = static_cast<float>(cosf((2.0f * (float)M_PI / (SINCOS_STEPS - 1.0f)) * angular_steppings[i] * j));
+			sin_table[j][i] = static_cast<float>(sinf((2.0f * astc::PI / (SINCOS_STEPS - 1.0f)) * angular_steppings[i] * j));
+			cos_table[j][i] = static_cast<float>(cosf((2.0f * astc::PI / (SINCOS_STEPS - 1.0f)) * angular_steppings[i] * j));
 		}
 
 		int p = astc::flt2int_rd(angular_steppings[i]) + 1;
@@ -118,14 +137,10 @@ static void compute_angular_offsets(
 	int max_angular_steps,
 	float* offsets
 ) {
-	float anglesum_x[ANGULAR_STEPS];
-	float anglesum_y[ANGULAR_STEPS];
-
-	for (int i = 0; i < max_angular_steps; i++)
-	{
-		anglesum_x[i] = 0;
-		anglesum_y[i] = 0;
-	}
+	alignas(ASTCENC_VECALIGN) float anglesum_x[ANGULAR_STEPS];
+	alignas(ASTCENC_VECALIGN) float anglesum_y[ANGULAR_STEPS];
+	std::memset(anglesum_x, 0, max_angular_steps*sizeof(anglesum_x[0]));
+	std::memset(anglesum_y, 0, max_angular_steps*sizeof(anglesum_y[0]));
 
 	// compute the angle-sums.
 	for (int i = 0; i < samplecount; i++)
@@ -139,21 +154,25 @@ static void compute_angular_offsets(
 		const float *sinptr = sin_table[isample];
 		const float *cosptr = cos_table[isample];
 
-		for (int j = 0; j < max_angular_steps; j++)
+		vfloat sample_weightv(sample_weight);
+		for (int j = 0; j < max_angular_steps; j += ASTCENC_SIMD_WIDTH) // arrays are multiple of SIMD width (ANGULAR_STEPS), safe to overshoot max
 		{
-			float cp = cosptr[j];
-			float sp = sinptr[j];
-
-			anglesum_x[j] += cp * sample_weight;
-			anglesum_y[j] += sp * sample_weight;
+			vfloat cp = loada(&cosptr[j]);
+			vfloat sp = loada(&sinptr[j]);
+			vfloat ax = loada(&anglesum_x[j]) + cp * sample_weightv;
+			vfloat ay = loada(&anglesum_y[j]) + sp * sample_weightv;
+			store(ax, &anglesum_x[j]);
+			store(ay, &anglesum_y[j]);
 		}
 	}
 
 	// post-process the angle-sums
-	for (int i = 0; i < max_angular_steps; i++)
+	vfloat mult = vfloat(1.0f / (2.0f * astc::PI));
+	for (int i = 0; i < max_angular_steps; i += ASTCENC_SIMD_WIDTH) // arrays are multiple of SIMD width (ANGULAR_STEPS), safe to overshoot max
 	{
-		float angle = astc::atan2(anglesum_y[i], anglesum_x[i]);
-		offsets[i] = angle * (stepsizes[i] * (1.0f / (2.0f * (float)M_PI)));
+		vfloat angle = atan2(loada(&anglesum_y[i]), loada(&anglesum_x[i]));
+		vfloat ofs = angle * (loada(&stepsizes[i]) * mult);
+		store(ofs, &offsets[i]);
 	}
 }
 
@@ -174,147 +193,68 @@ static void compute_lowest_and_highest_weight(
 	float *cut_low_weight_error,
 	float *cut_high_weight_error
 ) {
-// TODO: Add AVX2 version of this; SSE4.2 vectorizes almost perfectly in terms
-// of user-visible speedup. Might need to change the length of max_angular
-// steps to be a multiple of 8 though ...
-#if ASTCENC_SSE >= 42
-	// Arrays are always multiple of 4, so this is safe even if overshoot max
-	for (int sp = 0; sp < max_angular_steps; sp += 4)
+	// Arrays are always multiple of SIMD width (ANGULAR_STEPS), so this is safe even if overshoot max
+	for (int sp = 0; sp < max_angular_steps; sp += ASTCENC_SIMD_WIDTH)
 	{
-		__m128i minidx = _mm_set1_epi32(128);
-		__m128i maxidx = _mm_set1_epi32(-128);
-		__m128 errval = _mm_setzero_ps();
-		__m128 cut_low_weight_err = _mm_setzero_ps();
-		__m128 cut_high_weight_err = _mm_setzero_ps();
-
-		__m128 rcp_stepsize = _mm_load_ps(&angular_steppings[sp]);
-		__m128 offset = _mm_load_ps(&offsets[sp]);
-		__m128 scaled_offset = _mm_mul_ps(rcp_stepsize, offset);
-
-		for (int j = 0; j < samplecount; j++)
+		vint minidx(128);
+		vint maxidx(-128);
+		vfloat errval = vfloat::zero();
+		vfloat cut_low_weight_err = vfloat::zero();
+		vfloat cut_high_weight_err = vfloat::zero();
+		vfloat rcp_stepsize = loada(&angular_steppings[sp]);
+		vfloat offset = loada(&offsets[sp]);
+		vfloat scaled_offset = rcp_stepsize * offset;
+		for (int j = 0; j < samplecount; ++j)
 		{
-			__m128 wt = _mm_load_ps1(&sample_weights[j]);
-			__m128 sval = _mm_mul_ps(_mm_load_ps1(&samples[j]), rcp_stepsize);
-			sval = _mm_sub_ps(sval, scaled_offset);
-			const int flag = _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC;
-			__m128 svalrte = _mm_round_ps(sval, flag);
-			__m128i idxv = _mm_cvtps_epi32(svalrte);
+			vfloat wt = load1a(&sample_weights[j]);
+			vfloat sval = load1a(&samples[j]) * rcp_stepsize - scaled_offset;
+			vfloat svalrte = round(sval);
+			vint idxv = floatToInt(svalrte);
+			vfloat dif = sval - svalrte;
+			vfloat dwt = dif * wt;
+			errval = errval + dwt * dif;
 
-			__m128 dif = _mm_sub_ps(sval, svalrte);
-			__m128 dwt = _mm_mul_ps(dif, wt);
-			errval = _mm_add_ps(errval, _mm_mul_ps(dwt, dif));
+			// Reset tracker on min hit.
+			vmask mask = idxv < minidx;
+			minidx = select(minidx, idxv, mask);
+			cut_low_weight_err = select(cut_low_weight_err, vfloat::zero(), mask);
 
-			__m128i mask;
-			__m128 maskf;
-			__m128 accum;
+			// Accumulate on min hit.
+			mask = idxv == minidx;
+			minidx = select(minidx, idxv, mask);
+			vfloat accum = cut_low_weight_err + wt - vfloat(2.0f) * dwt;
+			cut_low_weight_err = select(cut_low_weight_err, accum, mask);
 
-			/* Reset tracker on min hit. */
-			mask = _mm_cmplt_epi32(idxv, minidx);
-			minidx = _mm_blendv_epi8(minidx, idxv, mask);
-			maskf = _mm_castsi128_ps(mask);
-			cut_low_weight_err = _mm_blendv_ps(cut_low_weight_err, _mm_setzero_ps(), maskf);
+			// Reset tracker on max hit.
+			mask = idxv > maxidx;
+			maxidx = select(maxidx, idxv, mask);
+			cut_high_weight_err = select(cut_high_weight_err, vfloat::zero(), mask);
 
-			/* Accumulate on min hit. */
-			mask = _mm_cmpeq_epi32(idxv, minidx);
-			maskf = _mm_castsi128_ps(mask);
-			accum = _mm_add_ps(cut_low_weight_err, _mm_sub_ps(wt, _mm_mul_ps(_mm_set_ps1(2.0f), dwt)));
-			cut_low_weight_err = _mm_blendv_ps(cut_low_weight_err, accum, maskf);
-
-			/* Reset tracker on max hit. */
-			mask = _mm_cmpgt_epi32(idxv, maxidx);
-			maxidx = _mm_blendv_epi8(maxidx, idxv, mask);
-			maskf = _mm_castsi128_ps(mask);
-			cut_high_weight_err = _mm_blendv_ps(cut_high_weight_err, _mm_setzero_ps(), maskf);
-
-			/* Accumulate on max hit. */
-			mask = _mm_cmpeq_epi32(idxv, maxidx);
-			maskf = _mm_castsi128_ps(mask);
-			accum = _mm_add_ps(cut_high_weight_err, _mm_add_ps(wt, _mm_mul_ps(_mm_set_ps1(2.0f), dwt)));
-			cut_high_weight_err = _mm_blendv_ps(cut_high_weight_err, accum, maskf);
+			// Accumulate on max hit.
+			mask = idxv == maxidx;
+			accum = cut_high_weight_err + wt + vfloat(2.0f) * dwt;
+			cut_high_weight_err = select(cut_high_weight_err, accum, mask);
 		}
 
-		__m128i span = _mm_add_epi32(_mm_sub_epi32(maxidx, minidx), _mm_set1_epi32(1));
-		__m128i spanmin = _mm_set1_epi32(2);
-		span = _mm_max_epi32(span, spanmin);
-		__m128i spanmax = _mm_set1_epi32(max_quantization_steps + 3);
-		span = _mm_min_epi32(span, spanmax);
-
 		// Write out min weight and weight span; clamp span to a usable range
-		_mm_store_si128((__m128i*)&lowest_weight[sp], minidx);
-		_mm_store_si128((__m128i*)&weight_span[sp], span);
+		vint span = maxidx - minidx + vint(1);
+		span = min(span, vint(max_quantization_steps + 3));
+		span = max(span, vint(2));
+		store(minidx, &lowest_weight[sp]);
+		store(span, &weight_span[sp]);
 
 		// The cut_(lowest/highest)_weight_error indicate the error that
 		// results from  forcing samples that should have had the weight value
 		// one step (up/down).
-		__m128 errscale = _mm_load_ps(&stepsizes_sqr[sp]);
-		_mm_store_ps(&error[sp], _mm_mul_ps(errval, errscale));
-		_mm_store_ps(&cut_low_weight_error[sp], _mm_mul_ps(cut_low_weight_err, errscale));
-		_mm_store_ps(&cut_high_weight_error[sp], _mm_mul_ps(cut_high_weight_err, errscale));
+		vfloat errscale = loada(&stepsizes_sqr[sp]);
+		store(errval * errscale, &error[sp]);
+		store(cut_low_weight_err * errscale, &cut_low_weight_error[sp]);
+		store(cut_high_weight_err * errscale, &cut_high_weight_error[sp]);
 	}
-#else
-	for (int sp = 0; sp < max_angular_steps; sp++)
-	{
-		int minidx = 128;
-		int maxidx = -128;
-		float errval = 0.0f;
-		float cut_low_weight_err = 0.0f;
-		float cut_high_weight_err = 0.0f;
-
-		float rcp_stepsize = angular_steppings[sp];
-		float offset = offsets[sp];
-
-		float scaled_offset = rcp_stepsize * offset;
-
-		for (int j = 0; j < samplecount; j++)
-		{
-			float wt = sample_weights[j];
-			float sval = (samples[j] * rcp_stepsize) - scaled_offset;
-			int idxv = astc::flt2int_rtn(sval);
-			float dif = sval - astc::flt2int_rtn(sval);
-			float dwt = dif * wt;
-			errval += dwt * dif;
-
-			if (idxv < minidx)
-			{
-				minidx = idxv;
-				cut_low_weight_err = wt - 2.0f * dwt;
-			}
-			else if (idxv == minidx)
-			{
-				cut_low_weight_err += wt - 2.0f * dwt;
-			}
-
-			if (idxv > maxidx)
-			{
-				maxidx = idxv;
-				cut_high_weight_err = wt + 2.0f * dwt;
-			}
-			else if (idxv == maxidx)
-			{
-				cut_high_weight_err += wt + 2.0f * dwt;
-			}
-		}
-
-		// Write out min weight and weight span; clamp span to a usable range
-		int span = maxidx - minidx + 1;
-		span = MIN(span, max_quantization_steps + 3);
-		span = MAX(span, 2);
-		lowest_weight[sp] = minidx;
-		weight_span[sp] = span;
-
-		// The cut_(lowest/highest)_weight_error indicate the error that
-		// results from  forcing samples that should have had the weight value
-		// one step (up/down).
-		float errscale = stepsizes_sqr[sp];
-		error[sp] = errval * errscale;
-		cut_low_weight_error[sp] = cut_low_weight_err * errscale;
-		cut_high_weight_error[sp] = cut_high_weight_err * errscale;
-	}
-#endif
 }
 
 // main function for running the angular algorithm.
-void compute_angular_endpoints_for_quantization_levels(
+static void compute_angular_endpoints_for_quantization_levels(
 	int samplecount,
 	const float* samples,
 	const float* sample_weights,
@@ -412,7 +352,7 @@ void compute_angular_endpoints_for_quantization_levels(
 		// propagate an error (and move the printf into the CLI).
 		if (bsi < 0)
 		{
-			KLOGW("Astcenc", "WARNING: Unable to find encoding within specified error limit\n");
+			KLOGW("Astcenc", "Unable to find encoding within specified error limit\n");
 			bsi = 0;
 		}
 
@@ -456,15 +396,16 @@ void compute_angular_endpoints_1plane(
 		                                                  decimated_weights + i * MAX_WEIGHTS_PER_BLOCK, quant_mode, low_values[i], high_values[i]);
 	}
 
-	for (int i = 0; i < MAX_WEIGHT_MODES; i++)
+	for (int i = 0, ni = bsd->block_mode_packed_count; i < ni; ++i)
 	{
-		if (bsd->block_modes[i].is_dual_plane != 0 || bsd->block_modes[i].percentile > mode_cutoff)
+		const block_mode& bm = bsd->block_modes_packed[i];
+		if (bm.is_dual_plane != 0 || bm.percentile > mode_cutoff)
 		{
 			continue;
 		}
 
-		int quant_mode = bsd->block_modes[i].quantization_mode;
-		int decim_mode = bsd->block_modes[i].decimation_mode;
+		int quant_mode = bm.quantization_mode;
+		int decim_mode = bm.decimation_mode;
 
 		low_value[i] = low_values[decim_mode][quant_mode];
 		high_value[i] = high_values[decim_mode][quant_mode];
@@ -508,15 +449,16 @@ void compute_angular_endpoints_2planes(
 		                                                  decimated_weights + (2 * i + 1) * MAX_WEIGHTS_PER_BLOCK, quant_mode, low_values2[i], high_values2[i]);
 	}
 
-	for (int i = 0; i < MAX_WEIGHT_MODES; i++)
+	for (int i = 0, ni = bsd->block_mode_packed_count; i < ni; ++i)
 	{
-		if (bsd->block_modes[i].is_dual_plane != 1 || bsd->block_modes[i].percentile > mode_cutoff)
+		const block_mode& bm = bsd->block_modes_packed[i];
+		if (bm.is_dual_plane != 1 || bm.percentile > mode_cutoff)
 		{
 			continue;
 		}
 
-		int quant_mode = bsd->block_modes[i].quantization_mode;
-		int decim_mode = bsd->block_modes[i].decimation_mode;
+		int quant_mode = bm.quantization_mode;
+		int decim_mode = bm.decimation_mode;
 
 		low_value1[i] = low_values1[decim_mode][quant_mode];
 		high_value1[i] = high_values1[decim_mode][quant_mode];

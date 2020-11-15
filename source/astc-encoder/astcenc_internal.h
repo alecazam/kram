@@ -43,10 +43,16 @@
 #error ERROR: ASTCENC_AVX not defined
 #endif
 
+#ifndef ASTCENC_ISA_INVARIANCE
+#error ERROR: ASTCENC_ISA_INVARIANCE not defined
+#endif
+
 #include "astcenc.h"
 #include "astcenc_mathlib.h"
 
-// ASTC parameters
+/* ============================================================================
+  Constants
+============================================================================ */
 #define MAX_TEXELS_PER_BLOCK 216
 #define MAX_WEIGHTS_PER_BLOCK 64
 #define MIN_WEIGHT_BITS_PER_BLOCK 24
@@ -59,14 +65,25 @@
 #define MAX_DECIMATION_MODES 87
 #define MAX_WEIGHT_MODES 2048
 
-// Compile-time tuning parameters
-static const int TUNE_MIN_TEXELS_MODE0_FASTPATH { 25 };
-
 // A high default error value
 static const float ERROR_CALC_DEFAULT { 1e30f };
 
-// uncomment this macro to enable checking for inappropriate NaNs;
-// works on Linux only, and slows down encoding significantly.
+/* ============================================================================
+  Compile-time tuning parameters
+============================================================================ */
+// The max texel count in a block which can try the one partition fast path.
+// Default: enabled for 4x4 and 5x4 blocks.
+static const int TUNE_MAX_TEXELS_MODE0_FASTPATH { 24 };
+
+// The maximum number of candidate encodings returned for each encoding mode.
+// Default: depends on quality preset
+static const int TUNE_MAX_TRIAL_CANDIDATES { 4 };
+
+/* ============================================================================
+  Other configuration parameters
+============================================================================ */
+
+// Uncomment to enable checking for inappropriate NaNs; Linux only, and slow!
 // #define DEBUG_CAPTURE_NAN
 
 /* ============================================================================
@@ -345,8 +362,7 @@ struct block_mode
 	int8_t decimation_mode;
 	int8_t quantization_mode;
 	int8_t is_dual_plane;
-	int8_t permit_encode;
-	int8_t permit_decode;
+	int16_t mode_index;
 	float percentile;
 };
 
@@ -364,7 +380,16 @@ struct block_size_descriptor
 	float decimation_mode_percentile[MAX_DECIMATION_MODES];
 	int permit_encode[MAX_DECIMATION_MODES];
 	const decimation_table *decimation_tables[MAX_DECIMATION_MODES];
-	block_mode block_modes[MAX_WEIGHT_MODES];
+
+	// out of all possible 2048 weight modes, only a subset is
+	// actually valid for the current configuration (e.g. 6x6
+	// 2D LDR has 370 valid modes); the valid ones are packed into
+	// block_modes_packed array.
+	block_mode block_modes_packed[MAX_WEIGHT_MODES];
+	int block_mode_packed_count;
+	// get index of block mode inside the block_modes_packed array,
+	// or -1 if mode is not valid for the current configuration.
+	int16_t block_mode_to_packed[MAX_WEIGHT_MODES];
 
 	// for the k-means bed bitmap partitioning algorithm, we don't
 	// want to consider more than 64 texels; this array specifies
@@ -381,11 +406,11 @@ struct block_size_descriptor
 // on conversions to/from uint8_t (this also allows us to handle HDR textures easily)
 struct imageblock
 {
-	float orig_data[MAX_TEXELS_PER_BLOCK * 4];  // original input data
 	float data_r[MAX_TEXELS_PER_BLOCK];  // the data that we will compress, either linear or LNS (0..65535 in both cases)
 	float data_g[MAX_TEXELS_PER_BLOCK];
 	float data_b[MAX_TEXELS_PER_BLOCK];
 	float data_a[MAX_TEXELS_PER_BLOCK];
+	float4 origin_texel;
 
 	uint8_t rgb_lns[MAX_TEXELS_PER_BLOCK];      // 1 if RGB data are being treated as LNS
 	uint8_t alpha_lns[MAX_TEXELS_PER_BLOCK];    // 1 if Alpha data are being treated as LNS
@@ -460,11 +485,6 @@ struct error_weight_block
 	float texel_weight_a[MAX_TEXELS_PER_BLOCK];
 
 	int contains_zeroweight_texels;
-};
-
-struct error_weight_block_orig
-{
-	float4 error_weights[MAX_TEXELS_PER_BLOCK];
 };
 
 // enumeration of all the quantization methods we support under this format.
@@ -834,10 +854,8 @@ struct pixel_region_variance_args
 	int alpha_kernel_radius;
 	/** The size of the working data to process. */
 	int3 size;
-	/** The position of first src data in the data set. */
-	int3 src_offset;
-	/** The position of first dst data in the data set. */
-	int3 dst_offset;
+	/** The position of first src and dst data in the data set. */
+	int3 offset;
 	/** The working memory buffer. */
 	float4 *work_memory;
 };
@@ -916,11 +934,12 @@ void write_imageblock(
 int imageblock_uses_alpha(
 	const imageblock * pb);
 
-float compute_imageblock_difference(
+float compute_symbolic_block_difference(
+	astcenc_profile decode_mode,
 	const block_size_descriptor* bsd,
-	const imageblock * p1,
-	const imageblock * p2,
-	const error_weight_block * ewb);
+	const symbolic_compressed_block* scb,
+	const imageblock* pb,
+	const error_weight_block *ewb) ;
 
 // ***********************************************************
 // functions pertaining to computing texel weights for a block
@@ -1024,18 +1043,16 @@ struct alignas(ASTCENC_VECALIGN) compress_fixed_partition_buffers
 	endpoints_and_weights ei2;
 	endpoints_and_weights eix1[MAX_DECIMATION_MODES];
 	endpoints_and_weights eix2[MAX_DECIMATION_MODES];
-	float decimated_quantized_weights[2 * MAX_DECIMATION_MODES * MAX_WEIGHTS_PER_BLOCK];
-	float decimated_weights[2 * MAX_DECIMATION_MODES * MAX_WEIGHTS_PER_BLOCK];
-	float flt_quantized_decimated_quantized_weights[2 * MAX_WEIGHT_MODES * MAX_WEIGHTS_PER_BLOCK];
-	uint8_t u8_quantized_decimated_quantized_weights[2 * MAX_WEIGHT_MODES * MAX_WEIGHTS_PER_BLOCK];
+	alignas(ASTCENC_VECALIGN) float decimated_quantized_weights[2 * MAX_DECIMATION_MODES * MAX_WEIGHTS_PER_BLOCK];
+	alignas(ASTCENC_VECALIGN) float decimated_weights[2 * MAX_DECIMATION_MODES * MAX_WEIGHTS_PER_BLOCK];
+	alignas(ASTCENC_VECALIGN) float flt_quantized_decimated_quantized_weights[2 * MAX_WEIGHT_MODES * MAX_WEIGHTS_PER_BLOCK];
+	alignas(ASTCENC_VECALIGN) uint8_t u8_quantized_decimated_quantized_weights[2 * MAX_WEIGHT_MODES * MAX_WEIGHTS_PER_BLOCK];
 };
 
 struct compress_symbolic_block_buffers
 {
 	error_weight_block ewb;
-	error_weight_block_orig ewbo;
-	symbolic_compressed_block tempblocks[4];
-	imageblock temp;
+	symbolic_compressed_block tempblocks[TUNE_MAX_TRIAL_CANDIDATES];
 	compress_fixed_partition_buffers planes;
 };
 
@@ -1057,6 +1074,7 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 	 // bitcounts and errors computed for the various quantization methods
 	const int* qwt_bitcounts,
 	const float* qwt_errors,
+	int tune_candidate_limit,
 	// output data
 	int partition_format_specifiers[4][4],
 	int quantized_weight[4],
@@ -1107,13 +1125,12 @@ void compute_angular_endpoints_2planes(
 
 /* *********************************** high-level encode and decode functions ************************************ */
 
-float compress_symbolic_block(
+void compress_block(
 	const astcenc_context& ctx,
 	const astcenc_image& image,
-	astcenc_profile decode_mode,
-	const block_size_descriptor* bsd,
 	const imageblock* blk,
-	symbolic_compressed_block* scb,
+	symbolic_compressed_block& scb,
+	physical_compressed_block& pcb,
 	compress_symbolic_block_buffers* tmpbuf);
 
 void decompress_symbolic_block(
@@ -1125,21 +1142,18 @@ void decompress_symbolic_block(
 	const symbolic_compressed_block* scb,
 	imageblock* blk);
 
-physical_compressed_block symbolic_to_physical(
-	const block_size_descriptor* bsd,
-	const symbolic_compressed_block* sc);
+void symbolic_to_physical(
+	const block_size_descriptor& bsd,
+	const symbolic_compressed_block& scb,
+	physical_compressed_block& pcb);
 
 void physical_to_symbolic(
-	const block_size_descriptor* bsd,
-	physical_compressed_block pb,
-	symbolic_compressed_block* res);
+	const block_size_descriptor& bsd,
+	const physical_compressed_block& pcb,
+	symbolic_compressed_block& scb);
 
 uint16_t unorm16_to_sf16(
 	uint16_t p);
-
-uint16_t lns_to_sf16(
-	uint16_t p);
-
 
 struct astcenc_context
 {

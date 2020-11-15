@@ -413,12 +413,12 @@ namespace Etc
             ulliSelectorBits |= ((uint64_t)m_auiAlphaSelectors[uiPixel]) << uiShift;
         }
 
-        m_pencodingbitsA8->data.selectors0 = ulliSelectorBits >> 40;
-        m_pencodingbitsA8->data.selectors1 = ulliSelectorBits >> 32;
-        m_pencodingbitsA8->data.selectors2 = ulliSelectorBits >> 24;
-        m_pencodingbitsA8->data.selectors3 = ulliSelectorBits >> 16;
-        m_pencodingbitsA8->data.selectors4 = ulliSelectorBits >> 8;
-        m_pencodingbitsA8->data.selectors5 = ulliSelectorBits;
+        m_pencodingbitsA8->data.selectors0 = uint32_t(ulliSelectorBits >> (uint64_t)40);
+        m_pencodingbitsA8->data.selectors1 = uint32_t(ulliSelectorBits >> (uint64_t)32);
+        m_pencodingbitsA8->data.selectors2 = uint32_t(ulliSelectorBits >> (uint64_t)24);
+        m_pencodingbitsA8->data.selectors3 = uint32_t(ulliSelectorBits >> (uint64_t)16);
+        m_pencodingbitsA8->data.selectors4 = uint32_t(ulliSelectorBits >> (uint64_t)8);
+        m_pencodingbitsA8->data.selectors5 = uint32_t(ulliSelectorBits);
     }
 
 

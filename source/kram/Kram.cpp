@@ -552,6 +552,24 @@ bool kramTestCommand(int testNumber,
 
             break;
 
+        // slow tex to enocde
+        case 4:
+            testNumber = 4;
+            encoder = kTexEncoderATE;
+            cmd +=
+                formatInputAndOutput(testNumber, "color_grid-a.png", MyMTLPixelFormatASTC_4x4_sRGB, encoder);
+            break;
+
+            
+        // slow tex to enocde
+        case 5:
+            testNumber = 5;
+            encoder = kTexEncoderAstcenc;
+            cmd +=
+                formatInputAndOutput(testNumber, "color_grid-a.png", MyMTLPixelFormatASTC_4x4_sRGB, encoder);
+            break;
+
+            
         case 10:
             testNumber = 10;
             encoder = kTexEncoderAstcenc;
@@ -844,7 +862,11 @@ void kramDecodeUsage()
     KLOGI("Kram",
           "Usage: " usageName
           " decode\n"
-          "\t -i/nput .ktx -o/utput .ktx [-swizzle rgba01] [-v]\n"
+          "\t [-swizzle rgba01]\n"
+          "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
+          "\t [-v]\n"
+          "\t -i/nput .ktx\n"
+          "\t -o/utput .ktx\n"
           "\n");
 }
 
@@ -853,7 +875,9 @@ void kramInfoUsage()
     KLOGI("Kram",
           "Usage: " usageName
           " info\n"
-          "\t -i/nput <.png | .ktx> [-o/utput info.txt] [-v]\n"
+          "\t -i/nput <.png | .ktx>\n"
+          "\t [-o/utput info.txt]\n"
+          "\t [-v]\n"
           "\n");
 }
 
@@ -862,7 +886,9 @@ void kramScriptUsage()
     KLOGI("Kram",
           "Usage: " usageName
           " script\n"
-          "\t -i/nput kramscript.txt [-v] [-j/obs numJobs]\n"
+          "\t -i/nput kramscript.txt\n"
+          "\t [-v]\n"
+          "\t [-j/obs numJobs]\n"
           "\n");
 }
 
@@ -1313,7 +1339,8 @@ static int kramAppDecode(vector<const char*>& args)
     bool error = false;
     bool isVerbose = false;
     string swizzleText;
-
+    TexEncoder textureDecoder = kTexEncoderUnknown;
+    
     for (int i = 0; i < argc; ++i) {
         const char* word = args[i];
         if (word[0] != '-') {
@@ -1364,7 +1391,20 @@ static int kramAppDecode(vector<const char*>& args)
             swizzleText = swizzleString;
             continue;
         }
+        // this is really decoder, but keep same argument as encoder
+        else if (isStringEqual(word, "-e") ||
+                 isStringEqual(word, "-encoder")) {
+            ++i;
+            if (i >= argc) {
+                KLOGE("Kram", "encoder arg invalid");
+                error = true;
+                continue;
+            }
 
+            textureDecoder = parseEncoder(args[i]);
+            continue;
+        }
+        
         // probably should be per-command and global verbose
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
@@ -1401,6 +1441,8 @@ static int kramAppDecode(vector<const char*>& args)
         error = true;
     }
 
+     
+        
     if (error) {
         kramDecodeUsage();
         return -1;
@@ -1414,11 +1456,17 @@ static int kramAppDecode(vector<const char*>& args)
 
     bool success = SetupSourceKTX(srcMmapHelper, srcFileHelper, srcFileBuffer,
                                   srcFilename, srcImage);
-
+    
+    // TODO: for hdr decode, may need to walk blocks or ask caller to pass -hdr flag
+    if (!validateFormatAndDecoder(srcImage.textureType, srcImage.pixelFormat, textureDecoder)) {
+        KLOGE("Kram", "format decode only supports ktx output");
+        return -1;
+    }
+    
     success = success && SetupTmpFile(tmpFileHelper, ".ktx");
 
     Image tmpImage;  // just to call decode
-    success = success && tmpImage.decode(srcImage, tmpFileHelper.pointer(), isVerbose, swizzleText);
+    success = success && tmpImage.decode(srcImage, tmpFileHelper.pointer(), textureDecoder, isVerbose, swizzleText);
 
     // rename to dest filepath, note this only occurs if above succeeded
     // so any existing files are left alone on failure.

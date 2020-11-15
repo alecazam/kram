@@ -31,7 +31,7 @@
 
 // hack to improve block generation on L1 and LA encoding
 // TODO: this breaks multithreading if not set to 4.
-extern thread_local int gAstcenc_UniqueChannelsInPartitioning;
+//extern thread_local int gAstcenc_UniqueChannelsInPartitioning;
 #endif
 
 #include <cassert>
@@ -190,18 +190,8 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                 }
             }
 #else
-            // TODO: revisit with fp16 <-> fp32 function
-            // TODO: AVX saves the day, but need to call these intrinsics.
-            // also Win ARM would need the code above.
-            // http://scc.ustc.edu.cn/zlsc/sugon/intel/compiler_c/main_cls/intref_cls/common/intref_bk_convertpost32_hf.htm
-            // these are the 128-bit ops that do 4, a wider 256-bit op is available
-            // _mm_cvtph_ps() 4 fp16 -> fp32
-            // _mm_cvtps_ph() reverse
-
-            return false;
-
             // treat as float for per channel copies
-            float* dstPixels = (float*)_pixelsFloat.data();
+            float4* dstPixels = (float*)float4.data();
 
             const uint16_t* srcPixels =
                 (const uint16_t*)(image.fileData + image.mipLevels[0].offset);
@@ -211,19 +201,10 @@ bool Image::loadImageFromKTX(const KTXImage& image)
 
                 for (int x = 0, xEnd = _width; x < xEnd; ++x) {
                     int srcX = (y0 + x) * numSrcChannels;
-                    int dstX = (y0 + x) * numDstChannels;
-
-                    switch (numSrcChannels) {
-                        // all fallthrough, convert fp16 to fp32 type
-                        case 4:
-                            dstPixels[dstX + 3] = (float)srcPixels[srcX + 3];
-                        case 3:
-                            dstPixels[dstX + 2] = (float)srcPixels[srcX + 2];
-                        case 2:
-                            dstPixels[dstX + 1] = (float)srcPixels[srcX + 1];
-                        case 1:
-                            dstPixels[dstX + 0] = (float)srcPixels[srcX + 0];
-                    }
+                    int dstX = (y0 + x); // * numDstChannels;
+                   
+                    // use AVX to convert
+                    dstPixels[dstX].fromFloat16(&srcPixels[srcX], numSrcChannels]);
                 }
             }
 #endif
@@ -462,7 +443,7 @@ void Image::averageChannelsInBlock(
     }
 }
 
-bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, const string& swizzleText) const
+bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, bool isVerbose, const string& swizzleText) const
 {
     // read existing KTX file into mip offset, then start decoding the blocks
     // and write these to 8u,16f,32f ktx with mips
@@ -497,7 +478,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
 
     vector<uint8_t> propsData;
     dstImage.toPropsData(propsData);
-    dstHeader.bytesOfKeyValueData = propsData.size();
+    dstHeader.bytesOfKeyValueData = uint32_t(propsData.size());
 
     // update the offsets of where mips should lie
     bool skipImageLength = false;
@@ -526,16 +507,18 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
     // could tie use flags to format filter, or encoder settings
     // or may want to disable if decoders don't gen correct output
 #if COMPILE_ATE
-    bool useATE = false;
+    // Encode/decode formats differ depending on library version
+    // but it's likely the fastest decoder.  Only on macOS/iOS.
+    bool useATE = decoder == kTexEncoderATE;
 #endif
 #if COMPILE_SQUISH
-    bool useSquish = true;
+    bool useSquish = decoder == kTexEncoderSquish;
 #endif
 #if COMPILE_BCENC
-    bool useBcenc = true;
+    bool useBcenc = decoder == kTexEncoderBcenc;
 #endif
 #if COMPILE_ASTCENC
-    bool useAstcenc = true;
+    bool useAstcenc = decoder == kTexEncoderAstcenc;
 #endif
 
     for (int i = 0; i < (int)srcImage.header.numberOfMipmapLevels; ++i) {
@@ -560,14 +543,6 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
             if (false) {
                 // just to chain if/else
             }
-#if COMPILE_ATE
-            else if (useATE) {
-                ATEEncoder encoder;
-                success = encoder.Decode(pixelFormat, srcMipLevel.length, srcImage.blockDims().y,
-                                         isVerbose,
-                                         w, h, srcData, outputTexture.data());
-            }
-#endif
 #if COMPILE_BCENC
             else if (useBcenc) {
                 Color* dstPixels = (Color*)outputTexture.data();
@@ -672,6 +647,14 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
                 }
             }
 #endif
+#if COMPILE_ATE
+            else if (useATE) {
+                ATEEncoder encoder;
+                success = encoder.Decode(pixelFormat, (int)srcMipLevel.length, srcImage.blockDims().y,
+                                         isVerbose,
+                                         w, h, srcData, outputTexture.data());
+            }
+#endif
         }
         else if (isETCFormat(pixelFormat)) {
             // etc via etc2comp
@@ -724,16 +707,6 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
             if (false) {
                 // just to chain if/else
             }
-#if COMPILE_ATE
-            else if (useATE) {
-                // this decods all except hdr/bc6
-                ATEEncoder encoder;
-                success = encoder.Decode(pixelFormat, srcMipLevel.length, srcImage.blockDims().y,
-                                         isVerbose,
-                                         w, h, srcData, outputTexture.data());
-            }
-
-#endif
 #if COMPILE_ASTCENC
             else if (useAstcenc) {
                 // decode the mip
@@ -741,11 +714,11 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
                 dstImageASTC.dim_x = w;
                 dstImageASTC.dim_y = h;
                 dstImageASTC.dim_z = 1;  // Not using 3D blocks, not supported on iOS
-                dstImageASTC.dim_pad = 0;
+                //dstImageASTC.dim_pad = 0;
                 dstImageASTC.data_type = ASTCENC_TYPE_U8;
                 dstImageASTC.data = outputTexture.data();
 
-                int srcDataLength = srcMipLevel.length;
+                int srcDataLength = (int)srcMipLevel.length;
                 Int2 blockDims = srcImage.blockDims();
 
                 astcenc_profile profile;
@@ -776,6 +749,15 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, bool isVerbose, cons
                 astcenc_context_free(codec_context);
 
                 success = (error == ASTCENC_SUCCESS);
+            }
+#endif
+#if COMPILE_ATE
+            else if (useATE) {
+                // this decods all except hdr/bc6
+                ATEEncoder encoder;
+                success = encoder.Decode(pixelFormat, (int)srcMipLevel.length, srcImage.blockDims().y,
+                                         isVerbose,
+                                         w, h, srcData, outputTexture.data());
             }
 #endif
         }
@@ -904,7 +886,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     // TODO: ktxImage.addSourceHashProps(0);
 
     image.toPropsData(propsData);
-    header.bytesOfKeyValueData = propsData.size();
+    header.bytesOfKeyValueData = (uint32_t)propsData.size();
 
     //ktxImage.bytesPerBlock = header.blockSize();
     //ktxImage.blockDims = header.blockDims();
@@ -1290,9 +1272,6 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     }
                 }
 #else
-                // TODO: revisit with fp16 <-> fp32 function
-                return false;
-
                 int count = image.blockSize() / 2;
 
                 uint16_t* dst = (uint16_t*)outputTexture.data.data();
@@ -1301,15 +1280,18 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 
                 // assumes we don't need to align r16f rows to 4 bytes
                 for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
+                    uint16_t src16[4];
+                    src[i].toFloat16(src16);
+                    
                     switch (count) {
                         case 4:
-                            dst[count * i + 3] = src[i].w;
+                            dst[count * i + 3] = src16.w;
                         case 3:
-                            dst[count * i + 2] = src[i].z;
+                            dst[count * i + 2] = src16.z;
                         case 2:
-                            dst[count * i + 1] = src[i].y;
+                            dst[count * i + 1] = src16.y;
                         case 1:
-                            dst[count * i + 0] = src[i].x;
+                            dst[count * i + 0] = src16.x;
                     }
                 }
 #endif
@@ -1892,7 +1874,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             srcImage.dim_x = w;
             srcImage.dim_y = h;
             srcImage.dim_z = 1;  // Not using 3D blocks, not supported on iOS
-            srcImage.dim_pad = 0;
+            //srcImage.dim_pad = 0;
 
             vector<const Color*> rows8;
             vector<const float4*> rowsFloat4;
@@ -1941,6 +1923,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             // even enabled dual-plane mode for LA.  Otherwise rgb and rgba blocks
             // are genreated on data that only contains L or LA blocks.
 
+            /*
             bool useUniqueChannels = true;
             if (useUniqueChannels) {
                 gAstcenc_UniqueChannelsInPartitioning = 4;
@@ -1969,7 +1952,13 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             if (useUniqueChannels && gAstcenc_UniqueChannelsInPartitioning != 4) {
                 gAstcenc_UniqueChannelsInPartitioning = 4;
             }
+*/
+            error = astcenc_compress_image(
+                codec_context, srcImage, swizzleEncode,
+                outputTexture.data.data(), mipStorageSize,
+                0);  // threadIndex
 
+            
             // Or should this context only be freed after all mips?
             astcenc_context_free(codec_context);
 

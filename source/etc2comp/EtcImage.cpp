@@ -463,7 +463,7 @@ namespace Etc
             
             // lop off the end of the array where blocks are 0 error or don
             int counter = 0;
-            for (int i = sortedBlocks.size()-1; i >= 0; --i)
+            for (int i = (int)sortedBlocks.size()-1; i >= 0; --i)
             {
                 if (sortedBlocks[i].error == 0.0f)
                 {

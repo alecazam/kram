@@ -22,14 +22,13 @@
  */
 
 #include "astcenc_internal.h"
+#include "astcenc_vecmathlib.h"
+
+#include <assert.h>
 
 /*
    functions to determine, for a given partitioning, which color endpoint formats are the best to use.
  */
-
-// Use this when encoding L and LA to generate better blocks
-// Stored in thread_local since script call can spawn multiple encoders.
-thread_local int gAstcenc_UniqueChannelsInPartitioning = 4;
 
 // for a given partition, compute for every (integer-component-count, quantization-level)
 // the color error.
@@ -74,12 +73,12 @@ static void compute_color_error_for_every_integer_count_and_quantization_level(
 	float4 ep0 = ep->endpt0[partition_index];
 	float4 ep1 = ep->endpt1[partition_index];
 
-	float ep1_min = MIN(MIN(ep1.x, ep1.y), ep1.z);
+	float ep1_min = MIN(MIN(ep1.r, ep1.g), ep1.b);
 	ep1_min = MAX(ep1_min, 0.0f);
 
 	float4 error_weight = error_weightings[partition_index];
 
-	float error_weight_rgbsum = error_weight.x + error_weight.y + error_weight.z;
+	float error_weight_rgbsum = error_weight.r + error_weight.g + error_weight.b;
 
 	float range_upper_limit_rgb = encode_hdr_rgb ? 61440.0f : 65535.0f;
 	float range_upper_limit_alpha = encode_hdr_alpha ? 61440.0f : 65535.0f;
@@ -92,59 +91,61 @@ static void compute_color_error_for_every_integer_count_and_quantization_level(
 	float4 ep0_range_error_low;
 	float4 ep1_range_error_low;
 
-	ep0_range_error_high.x = MAX(0.0f, ep0.x - range_upper_limit_rgb);
-	ep0_range_error_high.y = MAX(0.0f, ep0.y - range_upper_limit_rgb);
-	ep0_range_error_high.z = MAX(0.0f, ep0.z - range_upper_limit_rgb);
-	ep0_range_error_high.w = MAX(0.0f, ep0.w - range_upper_limit_alpha);
-	ep1_range_error_high.x = MAX(0.0f, ep1.x - range_upper_limit_rgb);
-	ep1_range_error_high.y = MAX(0.0f, ep1.y - range_upper_limit_rgb);
-	ep1_range_error_high.z = MAX(0.0f, ep1.z - range_upper_limit_rgb);
-	ep1_range_error_high.w = MAX(0.0f, ep1.w - range_upper_limit_alpha);
+	ep0_range_error_high.r = MAX(0.0f, ep0.r - range_upper_limit_rgb);
+	ep0_range_error_high.g = MAX(0.0f, ep0.g - range_upper_limit_rgb);
+	ep0_range_error_high.b = MAX(0.0f, ep0.b - range_upper_limit_rgb);
+	ep0_range_error_high.a = MAX(0.0f, ep0.a - range_upper_limit_alpha);
 
-	ep0_range_error_low.x = MIN(0.0f, ep0.x);
-	ep0_range_error_low.y = MIN(0.0f, ep0.y);
-	ep0_range_error_low.z = MIN(0.0f, ep0.z);
-	ep0_range_error_low.w = MIN(0.0f, ep0.w);
-	ep1_range_error_low.x = MIN(0.0f, ep1.x);
-	ep1_range_error_low.y = MIN(0.0f, ep1.y);
-	ep1_range_error_low.z = MIN(0.0f, ep1.z);
-	ep1_range_error_low.w = MIN(0.0f, ep1.w);
+	ep1_range_error_high.r = MAX(0.0f, ep1.r - range_upper_limit_rgb);
+	ep1_range_error_high.g = MAX(0.0f, ep1.g - range_upper_limit_rgb);
+	ep1_range_error_high.b = MAX(0.0f, ep1.b - range_upper_limit_rgb);
+	ep1_range_error_high.a = MAX(0.0f, ep1.a - range_upper_limit_alpha);
+
+	ep0_range_error_low.r = MIN(0.0f, ep0.r);
+	ep0_range_error_low.g = MIN(0.0f, ep0.g);
+	ep0_range_error_low.b = MIN(0.0f, ep0.b);
+	ep0_range_error_low.a = MIN(0.0f, ep0.a);
+
+	ep1_range_error_low.r = MIN(0.0f, ep1.r);
+	ep1_range_error_low.g = MIN(0.0f, ep1.g);
+	ep1_range_error_low.b = MIN(0.0f, ep1.b);
+	ep1_range_error_low.a = MIN(0.0f, ep1.a);
 
 	float4 sum_range_error =
 		(ep0_range_error_low * ep0_range_error_low) +
 		(ep1_range_error_low * ep1_range_error_low) +
 		(ep0_range_error_high * ep0_range_error_high) +
 		(ep1_range_error_high * ep1_range_error_high);
-	float rgb_range_error = dot(float3(sum_range_error.x, sum_range_error.y, sum_range_error.z),
-	                            float3(error_weight.x, error_weight.y, error_weight.z)) * 0.5f * partition_size;
-	float alpha_range_error = sum_range_error.w * error_weight.w * 0.5f * partition_size;
+	float rgb_range_error = dot(float3(sum_range_error.r, sum_range_error.g, sum_range_error.b),
+	                            float3(error_weight.r, error_weight.g, error_weight.b)) * 0.5f * partition_size;
+	float alpha_range_error = sum_range_error.a * error_weight.a * 0.5f * partition_size;
 
 	if (encode_hdr_rgb)
 	{
 
 		// collect some statistics
 		float af, cf;
-		if (ep1.x > ep1.y && ep1.x > ep1.z)
+		if (ep1.r > ep1.g && ep1.r > ep1.b)
 		{
-			af = ep1.x;
-			cf = ep1.x - ep0.x;
+			af = ep1.r;
+			cf = ep1.r - ep0.r;
 		}
-		else if (ep1.y > ep1.z)
+		else if (ep1.g > ep1.b)
 		{
-			af = ep1.y;
-			cf = ep1.y - ep0.y;
+			af = ep1.g;
+			cf = ep1.g - ep0.g;
 		}
 		else
 		{
-			af = ep1.z;
-			cf = ep1.z - ep0.z;
+			af = ep1.b;
+			cf = ep1.b - ep0.b;
 		}
 
 		float bf = af - ep1_min;	// estimate of color-component spread in high endpoint color
-		float3 prd = float3(ep1.x, ep1.y, ep1.z) - float3(cf, cf, cf);
-		float3 pdif = prd - float3(ep0.x, ep0.y, ep0.z);
+		float3 prd = float3(ep1.r, ep1.g, ep1.b) - float3(cf, cf, cf);
+		float3 pdif = prd - float3(ep0.r, ep0.g, ep0.b);
 		// estimate of color-component spread in low endpoint color
-		float df = MAX(MAX(fabsf(pdif.x), fabsf(pdif.y)), fabsf(pdif.z));
+		float df = MAX(MAX(fabsf(pdif.r), fabsf(pdif.g)), fabsf(pdif.b));
 
 		int b = (int)bf;
 		int c = (int)cf;
@@ -242,24 +243,23 @@ static void compute_color_error_for_every_integer_count_and_quantization_level(
 		float mode11mult = rgb_error_scales[rgb_mode] * 0.010f;	// empirically determined ....
 
 
-		float lum_high = (ep1.x + ep1.y + ep1.z) * (1.0f / 3.0f);
-		float lum_low = (ep0.x + ep0.y + ep0.z) * (1.0f / 3.0f);
+		float lum_high = (ep1.r + ep1.g + ep1.b) * (1.0f / 3.0f);
+		float lum_low = (ep0.r + ep0.g + ep0.b) * (1.0f / 3.0f);
 		float lumdif = lum_high - lum_low;
 		float mode23mult = lumdif < 960 ? 4.0f : lumdif < 3968 ? 16.0f : 128.0f;
 
 		mode23mult *= 0.0005f;	// empirically determined ....
 
 		// pick among the available HDR endpoint modes
-		for (int i = 0; i < 21; i++)
+		for (int i = 0; i < 8; i++)
 		{
 			best_error[i][3] = 1e30f;
-            best_error[i][2] = 1e30f;
-            best_error[i][1] = 1e30f;
-            best_error[i][0] = 1e30f;
-            
-            format_of_choice[i][3] = encode_hdr_alpha ? FMT_HDR_RGBA : FMT_HDR_RGB_LDR_ALPHA;
+			format_of_choice[i][3] = encode_hdr_alpha ? FMT_HDR_RGBA : FMT_HDR_RGB_LDR_ALPHA;
+			best_error[i][2] = 1e30f;
 			format_of_choice[i][2] = FMT_HDR_RGB;
+			best_error[i][1] = 1e30f;
 			format_of_choice[i][1] = FMT_HDR_RGB_SCALE;
+			best_error[i][0] = 1e30f;
 			format_of_choice[i][0] = FMT_HDR_LUMINANCE_LARGE_RANGE;
 		}
 
@@ -270,48 +270,36 @@ static void compute_color_error_for_every_integer_count_and_quantization_level(
 
 			float base_quant_error = baseline_quant_error[i] * partition_size * 1.0f;
 			float rgb_quantization_error = error_weight_rgbsum * base_quant_error * 2.0f;
-            
-            if (gAstcenc_UniqueChannelsInPartitioning >= 4)
-            {
-                float alpha_quantization_error = error_weight.w * base_quant_error * 2.0f;
-                float rgba_quantization_error = rgb_quantization_error + alpha_quantization_error;
+			float alpha_quantization_error = error_weight.a * base_quant_error * 2.0f;
+			float rgba_quantization_error = rgb_quantization_error + alpha_quantization_error;
 
-                // for 8 integers, we have two encodings: one with HDR alpha and another one
-                // with LDR alpha.
+			// for 8 integers, we have two encodings: one with HDR alpha and another one
+			// with LDR alpha.
 
-                float full_hdr_rgba_error = rgba_quantization_error + rgb_range_error + alpha_range_error;
-                best_error[i][3] = full_hdr_rgba_error;
-                //format_of_choice[i][3] = encode_hdr_alpha ? FMT_HDR_RGBA : FMT_HDR_RGB_LDR_ALPHA;
-            }
-            
-            if (gAstcenc_UniqueChannelsInPartitioning >= 3)
-            {
-                // for 6 integers, we have one HDR-RGB encoding
-                float full_hdr_rgb_error = (rgb_quantization_error * mode11mult) + rgb_range_error + eci->alpha_drop_error;
-                best_error[i][2] = full_hdr_rgb_error;
-                //format_of_choice[i][2] = FMT_HDR_RGB;
-            }
-            
-            if (gAstcenc_UniqueChannelsInPartitioning >= 2)
-            {
-                // for 4 integers, we have one HDR-RGB-Scale encoding
-                float hdr_rgb_scale_error = (rgb_quantization_error * mode7mult) + rgb_range_error + eci->alpha_drop_error + eci->rgb_luma_error;
+			float full_hdr_rgba_error = rgba_quantization_error + rgb_range_error + alpha_range_error;
+			best_error[i][3] = full_hdr_rgba_error;
+			format_of_choice[i][3] = encode_hdr_alpha ? FMT_HDR_RGBA : FMT_HDR_RGB_LDR_ALPHA;
 
-                best_error[i][1] = hdr_rgb_scale_error;
-                //format_of_choice[i][1] = FMT_HDR_RGB_SCALE;
+			// for 6 integers, we have one HDR-RGB encoding
+			float full_hdr_rgb_error = (rgb_quantization_error * mode11mult) + rgb_range_error + eci->alpha_drop_error;
+			best_error[i][2] = full_hdr_rgb_error;
+			format_of_choice[i][2] = FMT_HDR_RGB;
 
-                // LA was left out of the HDR spec, so have to use FMT_HDR_RGB_SCALE
-            }
-            
+			// for 4 integers, we have one HDR-RGB-Scale encoding
+			float hdr_rgb_scale_error = (rgb_quantization_error * mode7mult) + rgb_range_error + eci->alpha_drop_error + eci->rgb_luma_error;
+
+			best_error[i][1] = hdr_rgb_scale_error;
+			format_of_choice[i][1] = FMT_HDR_RGB_SCALE;
+
 			// for 2 integers, we assume luminance-with-large-range
 			float hdr_luminance_error = (rgb_quantization_error * mode23mult) + rgb_range_error + eci->alpha_drop_error + eci->luminance_error;
 			best_error[i][0] = hdr_luminance_error;
-			//format_of_choice[i][0] = FMT_HDR_LUMINANCE_LARGE_RANGE;
+			format_of_choice[i][0] = FMT_HDR_LUMINANCE_LARGE_RANGE;
 		}
 	}
 	else
 	{
-		for (int i = 0; i < 21; i++)
+		for (int i = 0; i < 4; i++)
 		{
 			best_error[i][3] = 1e30f;
 			best_error[i][2] = 1e30f;
@@ -320,42 +308,16 @@ static void compute_color_error_for_every_integer_count_and_quantization_level(
 
 			format_of_choice[i][3] = FMT_RGBA;
 			format_of_choice[i][2] = FMT_RGB;
-			format_of_choice[i][1] = FMT_LUMINANCE_ALPHA;
+			format_of_choice[i][1] = FMT_RGB_SCALE;
 			format_of_choice[i][0] = FMT_LUMINANCE;
 		}
 
-        // Note: here 1 -> L1, 2 -> LA (not rg01).
-        // Handle L1 and LA encoding separately, rgb/a modes won't be picked due to 1e30f best_error initialization
-        for (int i = 4; i < 21; i++)
-        {
-            float base_quant_error = baseline_quant_error[i] * partition_size * 1.0f;
-            float rgb_quantization_error = error_weight_rgbsum * base_quant_error;
-            
-            // handle L1
-            float luminance_error = rgb_quantization_error + eci->alpha_drop_error + eci->luminance_error + rgb_range_error;
-            best_error[i][0] = luminance_error;
-            
-            // handle LA or L1
-            if (gAstcenc_UniqueChannelsInPartitioning >= 2)
-            {
-                float alpha_quantization_error = error_weight.w * base_quant_error;
-                float rgba_quantization_error = rgb_quantization_error + alpha_quantization_error;
-
-                float lum_alpha_error = rgba_quantization_error + eci->luminance_error + rgb_range_error + alpha_range_error;
-
-                best_error[i][1] = lum_alpha_error;
-                //format_of_choice[i][1] = FMT_LUMINANCE_ALPHA;
-            }
-        }
-        
-        // handle RGB/A or LA or L1
-        if (gAstcenc_UniqueChannelsInPartitioning >= 3)
 		// pick among the available LDR endpoint modes
 		for (int i = 4; i < 21; i++)
 		{
 			float base_quant_error = baseline_quant_error[i] * partition_size * 1.0f;
 			float rgb_quantization_error = error_weight_rgbsum * base_quant_error;
-			float alpha_quantization_error = error_weight.w * base_quant_error;
+			float alpha_quantization_error = error_weight.a * base_quant_error;
 			float rgba_quantization_error = rgb_quantization_error + alpha_quantization_error;
 
 			// for 8 integers, the available encodings are:
@@ -375,9 +337,8 @@ static void compute_color_error_for_every_integer_count_and_quantization_level(
 			full_ldr_rgba_error += rgb_range_error + alpha_range_error;
 
 			best_error[i][3] = full_ldr_rgba_error;
-			//format_of_choice[i][3] = FMT_RGBA;
+			format_of_choice[i][3] = FMT_RGBA;
 
-            //-----------------------------------
 			// for 6 integers, we have:
 			// - an LDR-RGB encoding
 			// - an RGBS + Alpha encoding (LDR)
@@ -406,19 +367,30 @@ static void compute_color_error_for_every_integer_count_and_quantization_level(
 			else
 			{
 				best_error[i][2] = full_ldr_rgb_error;
-				//format_of_choice[i][2] = FMT_RGB;
+				format_of_choice[i][2] = FMT_RGB;
 			}
 
-            //-----------------------------------
-            // for 4 integers, we have a Luminance-Alpha encoding and the RGBS encoding
+			// for 4 integers, we have a Luminance-Alpha encoding and the RGBS encoding
 			float ldr_rgbs_error = rgb_quantization_error + eci->alpha_drop_error + eci->rgb_scale_error + rgb_range_error;
-            float lum_alpha_error = best_error[i][1];
+
+			float lum_alpha_error = rgba_quantization_error + eci->luminance_error + rgb_range_error + alpha_range_error;
 
 			if (ldr_rgbs_error < lum_alpha_error)
 			{
 				best_error[i][1] = ldr_rgbs_error;
 				format_of_choice[i][1] = FMT_RGB_SCALE;
 			}
+			else
+			{
+				best_error[i][1] = lum_alpha_error;
+				format_of_choice[i][1] = FMT_LUMINANCE_ALPHA;
+			}
+
+			// for 2 integers, we have a Luminance-encoding and an Alpha-encoding.
+			float luminance_error = rgb_quantization_error + eci->alpha_drop_error + eci->luminance_error + rgb_range_error;
+
+			best_error[i][0] = luminance_error;
+			format_of_choice[i][0] = FMT_LUMINANCE;
 		}
 	}
 }
@@ -787,8 +759,9 @@ static void four_partitions_find_best_combination_for_bitcount(
 	The determine_optimal_set_of_endpoint_formats_to_use() function.
 
 	It identifies, for each mode, which set of color endpoint encodings
-	produces the best overall result. It then reports back which 4 modes
-	look best, along with the ideal color encoding combination for each.
+	produces the best overall result. It then reports back which
+	tune_candidate_limit,  modes look best, along with the ideal color encoding
+	combination for each.
 
 	It takes as input:
 		a partitioning an imageblock,
@@ -796,7 +769,7 @@ static void four_partitions_find_best_combination_for_bitcount(
 		for each mode, the number of bits available for color encoding and the error incurred by quantization.
 		in case of 2 plane of weights, a specifier for which color component to use for the second plane of weights.
 
-	It delivers as output for each of the 4 selected modes:
+	It delivers as output for each of the tune_candidate_limit selected modes:
 		format specifier
 		for each partition
 			quantization level to use
@@ -813,11 +786,12 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 	 // bitcounts and errors computed for the various quantization methods
 	const int* qwt_bitcounts,
 	const float* qwt_errors,
+	int tune_candidate_limit,
 	// output data
-	int partition_format_specifiers[4][4],
-	int quantized_weight[4],
-	int quantization_level[4],
-	int quantization_level_mod[4]
+	int partition_format_specifiers[TUNE_MAX_TRIAL_CANDIDATES][4],
+	int quantized_weight[TUNE_MAX_TRIAL_CANDIDATES],
+	int quantization_level[TUNE_MAX_TRIAL_CANDIDATES],
+	int quantization_level_mod[TUNE_MAX_TRIAL_CANDIDATES]
 ) {
 	int partition_count = pt->partition_count;
 
@@ -845,10 +819,23 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 		    format_of_choice[i]);
 	}
 
-	float errors_of_best_combination[MAX_WEIGHT_MODES];
-	int best_quantization_levels[MAX_WEIGHT_MODES];
+	alignas(ASTCENC_VECALIGN) float errors_of_best_combination[MAX_WEIGHT_MODES];
+	alignas(ASTCENC_VECALIGN) int best_quantization_levels[MAX_WEIGHT_MODES];
 	int best_quantization_levels_mod[MAX_WEIGHT_MODES];
 	int best_ep_formats[MAX_WEIGHT_MODES][4];
+
+#if ASTCENC_SIMD_WIDTH > 1
+	// have to ensure that the "overstep" of the last iteration in the vectorized
+	// loop will contain data that will never be picked as best candidate
+	const int packed_mode_count = bsd->block_mode_packed_count;
+	const int packed_mode_count_simd_up = (packed_mode_count + ASTCENC_SIMD_WIDTH - 1) / ASTCENC_SIMD_WIDTH * ASTCENC_SIMD_WIDTH;
+	for (int i = packed_mode_count; i < packed_mode_count_simd_up; ++i)
+	{
+		errors_of_best_combination[i] = 1e30f;
+		best_quantization_levels[i] = 0;
+		best_quantization_levels_mod[i] = 0;
+	}
+#endif // #if ASTCENC_SIMD_WIDTH > 1
 
 	// code for the case where the block contains 1 partition
 	if (partition_count == 1)
@@ -856,7 +843,7 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 		int best_quantization_level;
 		int best_format;
 		float error_of_best_combination;
-		for (int i = 0; i < MAX_WEIGHT_MODES; i++)
+		for (int i = 0, ni = bsd->block_mode_packed_count; i < ni; ++i)
 		{
 			if (qwt_errors[i] >= 1e29f)
 			{
@@ -890,7 +877,7 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 		    best_error, format_of_choice, combined_best_error, formats_of_choice);
 
 
-		for (int i = 0; i < MAX_WEIGHT_MODES; i++)
+		for (int i = 0, ni = bsd->block_mode_packed_count; i < ni; ++i)
 		{
 			if (qwt_errors[i] >= 1e29f)
 			{
@@ -926,7 +913,7 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 		three_partitions_find_best_combination_for_every_quantization_and_integer_count(
 		    best_error, format_of_choice, combined_best_error, formats_of_choice);
 
-		for (int i = 0; i < MAX_WEIGHT_MODES; i++)
+		for (int i = 0, ni = bsd->block_mode_packed_count; i < ni; ++i)
 		{
 			if (qwt_errors[i] >= 1e29f)
 			{
@@ -963,13 +950,14 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 		four_partitions_find_best_combination_for_every_quantization_and_integer_count(
 		    best_error, format_of_choice, combined_best_error, formats_of_choice);
 
-		for (int i = 0; i < MAX_WEIGHT_MODES; i++)
+		for (int i = 0, ni = bsd->block_mode_packed_count; i < ni; ++i)
 		{
 			if (qwt_errors[i] >= 1e29f)
 			{
 				errors_of_best_combination[i] = 1e30f;
 				continue;
 			}
+
 			four_partitions_find_best_combination_for_bitcount(
 			    combined_best_error, formats_of_choice, qwt_bitcounts[i],
 			    &best_quantization_level, &best_quantization_level_mod,
@@ -987,13 +975,15 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 		}
 	}
 
-	// finally, go through the results and pick the 4 best-looking modes.
-	int best_error_weights[4];
-	for (int i = 0; i < 4; i++)
+	// finally, go through the results and pick the best-looking modes.
+	int best_error_weights[TUNE_MAX_TRIAL_CANDIDATES];
+	for (int i = 0; i < tune_candidate_limit; i++)
 	{
+#if 0
+		// reference; scalar code
 		float best_ep_error = 1e30f;
 		int best_error_index = -1;
-		for (int j = 0; j < MAX_WEIGHT_MODES; j++)
+		for (int j = 0, npack = bsd->block_mode_packed_count; j < npack; ++j)
 		{
 			if (errors_of_best_combination[j] < best_ep_error && best_quantization_levels[j] >= 5)
 			{
@@ -1001,6 +991,34 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 				best_error_index = j;
 			}
 		}
+#else
+		// find best mode, SIMD N-wide way
+		static_assert((MAX_WEIGHT_MODES % ASTCENC_SIMD_WIDTH) == 0, "MAX_WEIGHT_MODES should be multiple of ASTCENC_SIMD_WIDTH");
+		vint vbest_error_index(-1);
+		vfloat vbest_ep_error(1e30f);
+		vint lane_ids = vint::lane_id();
+		for (int j = 0, npack = bsd->block_mode_packed_count; j < npack; j += ASTCENC_SIMD_WIDTH)
+		{
+			vfloat err = vfloat(&errors_of_best_combination[j]);
+			vmask mask1 = err < vbest_ep_error;
+			vmask mask2 = vint(&best_quantization_levels[j]) > vint(4);
+			vmask mask = mask1 & mask2;
+			vbest_ep_error = select(vbest_ep_error, err, mask);
+			vbest_error_index = select(vbest_error_index, lane_ids, mask);
+			lane_ids = lane_ids + vint(ASTCENC_SIMD_WIDTH);
+		}
+
+		// pick final best mode from the SIMD result.
+		// note that if multiple SIMD lanes have "best" score,
+		// we want to pick one with the lowest index, i.e. what
+		// would happen if code was purely scalar.
+		vmask lanes_with_min_error = vbest_ep_error == hmin(vbest_ep_error);
+		// take smallest index from the SIMD lanes that had the best score
+		vbest_error_index = select(vint(0x7fffffff), vbest_error_index, lanes_with_min_error);
+		vbest_error_index = hmin(vbest_error_index);
+		int best_error_index = vbest_error_index.lane(0);
+#endif
+
 		best_error_weights[i] = best_error_index;
 
 		if (best_error_index >= 0)
@@ -1009,12 +1027,13 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 		}
 	}
 
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < tune_candidate_limit; i++)
 	{
 		quantized_weight[i] = best_error_weights[i];
 		if (quantized_weight[i] >= 0)
 		{
 			quantization_level[i] = best_quantization_levels[best_error_weights[i]];
+			assert(quantization_level[i] >= 0 && quantization_level[i] < 21);
 			quantization_level_mod[i] = best_quantization_levels_mod[best_error_weights[i]];
 			for (int j = 0; j < partition_count; j++)
 			{

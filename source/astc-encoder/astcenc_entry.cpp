@@ -249,6 +249,7 @@ static astcenc_error validate_config(
 	config.tune_partition_limit = astc::clampi(config.tune_partition_limit, 1, PARTITION_COUNT);
 	config.tune_block_mode_limit = astc::clampi(config.tune_block_mode_limit, 1, 100);
 	config.tune_refinement_limit = MAX(config.tune_refinement_limit, 1);
+	config.tune_candidate_limit = astc::clampi(config.tune_candidate_limit, 1, TUNE_MAX_TRIAL_CANDIDATES);
 	config.tune_db_limit = MAX(config.tune_db_limit, 0.0f);
 	config.tune_partition_early_out_limit = MAX(config.tune_partition_early_out_limit, 0.0f);
 	config.tune_two_plane_early_out_limit = MAX(config.tune_two_plane_early_out_limit, 0.0f);
@@ -307,10 +308,20 @@ astcenc_error astcenc_config_init(
 	// may replace some of these settings with more use case tuned values
 	switch(preset)
 	{
+	case ASTCENC_PRE_FASTEST:
+		config.tune_partition_limit = 2;
+		config.tune_block_mode_limit = 25;
+		config.tune_refinement_limit = 1;
+		config.tune_candidate_limit = MIN(1, TUNE_MAX_TRIAL_CANDIDATES);
+		config.tune_db_limit = MAX(70 - 35 * ltexels, 53 - 19 * ltexels);
+		config.tune_partition_early_out_limit = 1.0f;
+		config.tune_two_plane_early_out_limit = 0.5f;
+		break;
 	case ASTCENC_PRE_FAST:
 		config.tune_partition_limit = 4;
 		config.tune_block_mode_limit = 50;
 		config.tune_refinement_limit = 1;
+		config.tune_candidate_limit = MIN(2, TUNE_MAX_TRIAL_CANDIDATES);
 		config.tune_db_limit = MAX(85 - 35 * ltexels, 63 - 19 * ltexels);
 		config.tune_partition_early_out_limit = 1.0f;
 		config.tune_two_plane_early_out_limit = 0.5f;
@@ -319,6 +330,7 @@ astcenc_error astcenc_config_init(
 		config.tune_partition_limit = 25;
 		config.tune_block_mode_limit = 75;
 		config.tune_refinement_limit = 2;
+		config.tune_candidate_limit = MIN(2, TUNE_MAX_TRIAL_CANDIDATES);
 		config.tune_db_limit = MAX(95 - 35 * ltexels, 70 - 19 * ltexels);
 		config.tune_partition_early_out_limit = 1.2f;
 		config.tune_two_plane_early_out_limit = 0.75f;
@@ -327,6 +339,7 @@ astcenc_error astcenc_config_init(
 		config.tune_partition_limit = 100;
 		config.tune_block_mode_limit = 95;
 		config.tune_refinement_limit = 4;
+		config.tune_candidate_limit = MIN(3, TUNE_MAX_TRIAL_CANDIDATES);
 		config.tune_db_limit = MAX(105 - 35 * ltexels, 77 - 19 * ltexels);
 		config.tune_partition_early_out_limit = 2.5f;
 		config.tune_two_plane_early_out_limit = 0.95f;
@@ -335,6 +348,7 @@ astcenc_error astcenc_config_init(
 		config.tune_partition_limit = 1024;
 		config.tune_block_mode_limit = 100;
 		config.tune_refinement_limit = 4;
+		config.tune_candidate_limit = MIN(4, TUNE_MAX_TRIAL_CANDIDATES);
 		config.tune_db_limit = 999.0f;
 		config.tune_partition_early_out_limit = 1000.0f;
 		config.tune_two_plane_early_out_limit = 0.99f;
@@ -598,12 +612,14 @@ static void compress_image(
 			int x = rem - (y * row_blocks);
 
 			// Decompress
-			int offset = ((z * yblocks + y) * xblocks + x) * 16;
-			const uint8_t *bp = buffer + offset;
 			fetch_imageblock(decode_mode, image, &pb, bsd, x * block_x, y * block_y, z * block_z, swizzle);
+
+
+			int offset = ((z * yblocks + y) * xblocks + x) * 16;
+			uint8_t *bp = buffer + offset;
+			physical_compressed_block* pcb = reinterpret_cast<physical_compressed_block*>(bp);
 			symbolic_compressed_block scb;
-			compress_symbolic_block(ctx, image, decode_mode, bsd, &pb, &scb, temp_buffers);
-			*(physical_compressed_block*) bp = symbolic_to_physical(bsd, &scb);
+			compress_block(ctx, image, &pb, scb, *pcb, temp_buffers);
 		}
 
 		ctx.manage_compress.complete_task_assignment(count);
@@ -661,8 +677,7 @@ astcenc_error astcenc_compress_image(
 		return ASTCENC_ERR_OUT_OF_MEM;
 	}
 
-	if (image.dim_pad > 0 ||
-	    ctx->config.v_rgb_mean != 0.0f || ctx->config.v_rgb_stdev != 0.0f ||
+	if (ctx->config.v_rgb_mean != 0.0f || ctx->config.v_rgb_stdev != 0.0f ||
 	    ctx->config.v_a_mean != 0.0f || ctx->config.v_a_stdev != 0.0f)
 	{
 		// First thread to enter will do setup, other threads will subsequently
@@ -773,10 +788,13 @@ astcenc_error astcenc_decompress_image(
 				const uint8_t* bp = data + offset;
 				physical_compressed_block pcb = *(physical_compressed_block *) bp;
 				symbolic_compressed_block scb;
-				physical_to_symbolic(context->bsd, pcb, &scb);
+
+				physical_to_symbolic(*context->bsd, pcb, scb);
+
 				decompress_symbolic_block(context->config.profile, context->bsd,
 				                          x * block_x, y * block_y, z * block_z,
 				                          &scb, &pb);
+
 				write_imageblock(image_out, &pb, context->bsd,
 				                 x * block_x, y * block_y, z * block_z, swizzle);
 			}

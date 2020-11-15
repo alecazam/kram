@@ -71,8 +71,8 @@ if (macOS)
 
     # This must be set before project,
     # sys root is max OS, deployment is min OS
-    # needs to be 11.0 for universal, but that's not a choice in Xcode 12
-    set(CMAKE_OSX_SYSROOT "macosx10.15")
+    # Don't set SYSROOT, so can build universal or not
+    # set(CMAKE_OSX_SYSROOT "macosx11.0")
     set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 endif()
@@ -268,14 +268,18 @@ target_include_directories(${myTargetApp} PRIVATE
 
 target_sources(${myTargetApp} PRIVATE ${appSources})
 
-# Needed for asctenc 2.0 in SSE 4.2 mode.  But that is buggy.  No Neon support.
-# -msse4.2 -mpopcnt -DASTCENC_SSE=42 -DASTCENC_AVX=0 -DASTCENC_POPCNT=1 -DASTCENC_VECALIGN=16
-
-# want code to run on ARM and on Intel, and SSE/AVX optimizations aren't extensive in astcenc
+# tied to -msse4.2 -mpopcnt
 target_compile_definitions(${myTargetLib} PRIVATE
-    -DASTCENC_SSE=0 -DASTCENC_AVX=0 -DASTCENC_POPCNT=0 -DASTCENC_VECALIGN=16)
+    -DASTCENC_SSE=42 -DASTCENC_AVX=1 -DASTCENC_POPCNT=0
+    -DASTCENC_VECALIGN=16 -DASTCENC_ISA_INVARIANCE=0)
 target_compile_definitions(${myTargetApp} PRIVATE
-    -DASTCENC_SSE=0 -DASTCENC_AVX=0 -DASTCENC_POPCNT=0 -DASTCENC_VECALIGN=16)
+    -DASTCENC_SSE=42 -DASTCENC_AVX=1 -DASTCENC_POPCNT=0
+    -DASTCENC_VECALIGN=16 -DASTCENC_ISA_INVARIANCE=0)
+
+# to handle min/max with NaN the same way as SSE
+# -DSSE2NEON_PRECISE_MINMAX=1
+# Sse2Neone recommends these, but arch is already arm64
+# -march=armv8-a+fp+simd+crypto+crc
 
 # now can set as defines
 target_compile_definitions(${myTargetLib} PRIVATE

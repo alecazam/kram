@@ -100,11 +100,6 @@ static void brent_kung_prefix_sum(
 	} while (lc_stride > 2);
 }
 
-template<typename T>
-inline T clamp(T value, T mn, T mx) {
-    return (value <= mn) ? mn : ((value >= mx) ? mx : value);
-}
-
 /**
  * @brief Compute averages and variances for a pixel region.
  *
@@ -121,20 +116,16 @@ static void compute_pixel_region_variance(
 	const astcenc_image* img = arg->img;
 	float rgb_power = arg->rgb_power;
 	float alpha_power = arg->alpha_power;
-	//astcenc_swizzle swz = arg->swz;
+	astcenc_swizzle swz = arg->swz;
 	int have_z = arg->have_z;
 
-	int size_x = arg->size.x;
-	int size_y = arg->size.y;
-	int size_z = arg->size.z;
+	int size_x = arg->size.r;
+	int size_y = arg->size.g;
+	int size_z = arg->size.b;
 
-	int src_offset_x = arg->src_offset.x;
-	int src_offset_y = arg->src_offset.y;
-	int src_offset_z = arg->src_offset.z;
-
-	int dst_offset_x = arg->dst_offset.x;
-	int dst_offset_y = arg->dst_offset.y;
-	int dst_offset_z = arg->dst_offset.z;
+	int offset_x = arg->offset.r;
+	int offset_y = arg->offset.g;
+	int offset_z = arg->offset.b;
 
 	int avg_var_kernel_radius = arg->avg_var_kernel_radius;
 	int alpha_kernel_radius = arg->alpha_kernel_radius;
@@ -173,7 +164,6 @@ static void compute_pixel_region_variance(
 	#define VARBUF1(z, y, x) varbuf1[z * zst + y * yst + x]
 	#define VARBUF2(z, y, x) varbuf2[z * zst + y * yst + x]
 
-/*
 	// Load N and N^2 values into the work buffers
 	if (img->data_type == ASTCENC_TYPE_U8)
 	{
@@ -186,14 +176,20 @@ static void compute_pixel_region_variance(
 
 		for (int z = zd_start; z < padsize_z; z++)
 		{
-			int z_src = (z - zd_start) + src_offset_z - kernel_radius_z;
+			int z_src = (z - zd_start) + offset_z - kernel_radius_z;
+			z_src = astc::clamp(z_src, 0, (int)(img->dim_z - 1));
+
 			for (int y = 1; y < padsize_y; y++)
 			{
-				int y_src = (y - 1) + src_offset_y - kernel_radius_xy;
+				int y_src = (y - 1) + offset_y - kernel_radius_xy;
+				y_src = astc::clamp(y_src, 0, (int)(img->dim_y - 1));
+
 				for (int x = 1; x < padsize_x; x++)
 				{
-					int x_src = (x - 1) + src_offset_x - kernel_radius_xy;
-					data[0] = data8[z_src][y_src][4 * x_src + 0];
+					int x_src = (x - 1) + offset_x - kernel_radius_xy;
+					x_src = astc::clamp(x_src, 0, (int)(img->dim_x - 1));
+
+					data[0] = data8[z_src][y_src][4 * x_src    ];
 					data[1] = data8[z_src][y_src][4 * x_src + 1];
 					data[2] = data8[z_src][y_src][4 * x_src + 2];
 					data[3] = data8[z_src][y_src][4 * x_src + 3];
@@ -210,10 +206,10 @@ static void compute_pixel_region_variance(
 
 					if (!are_powers_1)
 					{
-						d.x = powf(MAX(d.x, 1e-6f), rgb_power);
-						d.y = powf(MAX(d.y, 1e-6f), rgb_power);
-						d.z = powf(MAX(d.z, 1e-6f), rgb_power);
-						d.w = powf(MAX(d.w, 1e-6f), alpha_power);
+						d.r = powf(MAX(d.r, 1e-6f), rgb_power);
+						d.g = powf(MAX(d.g, 1e-6f), rgb_power);
+						d.b = powf(MAX(d.b, 1e-6f), rgb_power);
+						d.a = powf(MAX(d.a, 1e-6f), alpha_power);
 					}
 
 					VARBUF1(z, y, x) = d;
@@ -233,15 +229,20 @@ static void compute_pixel_region_variance(
 
 		for (int z = zd_start; z < padsize_z; z++)
 		{
-			int z_src = (z - zd_start) + src_offset_z - kernel_radius_z;
+			int z_src = (z - zd_start) + offset_z - kernel_radius_z;
+			z_src = astc::clamp(z_src, 0, (int)(img->dim_z - 1));
 
 			for (int y = 1; y < padsize_y; y++)
 			{
-				int y_src = (y - 1) + src_offset_y - kernel_radius_xy;
+				int y_src = (y - 1) + offset_y - kernel_radius_xy;
+				y_src = astc::clamp(y_src, 0, (int)(img->dim_y - 1));
+
 				for (int x = 1; x < padsize_x; x++)
 				{
-					int x_src = (x - 1) + src_offset_x - kernel_radius_xy;
-					data[0] = data16[z_src][y_src][4 * x_src];
+					int x_src = (x - 1) + offset_x - kernel_radius_xy;
+					x_src = astc::clamp(x_src, 0, (int)(img->dim_x - 1));
+
+					data[0] = data16[z_src][y_src][4 * x_src    ];
 					data[1] = data16[z_src][y_src][4 * x_src + 1];
 					data[2] = data16[z_src][y_src][4 * x_src + 2];
 					data[3] = data16[z_src][y_src][4 * x_src + 3];
@@ -258,10 +259,10 @@ static void compute_pixel_region_variance(
 
 					if (!are_powers_1)
 					{
-						d.x = powf(MAX(d.x, 1e-6f), rgb_power);
-						d.y = powf(MAX(d.y, 1e-6f), rgb_power);
-						d.z = powf(MAX(d.z, 1e-6f), rgb_power);
-						d.w = powf(MAX(d.w, 1e-6f), alpha_power);
+						d.r = powf(MAX(d.r, 1e-6f), rgb_power);
+						d.g = powf(MAX(d.g, 1e-6f), rgb_power);
+						d.b = powf(MAX(d.b, 1e-6f), rgb_power);
+						d.a = powf(MAX(d.a, 1e-6f), alpha_power);
 					}
 
 					VARBUF1(z, y, x) = d;
@@ -270,77 +271,60 @@ static void compute_pixel_region_variance(
 			}
 		}
 	}
-    else
-*/
-    if (img->data_type == ASTCENC_TYPE_F32)
-    {
-        float4* data32f = static_cast<float4*>(img->data);
+	else // if (img->data_type == ASTCENC_TYPE_F32)
+	{
+		assert(img->data_type == ASTCENC_TYPE_F32);
+		float*** data32 = static_cast<float***>(img->data);
 
-// USE_2D_ARRAY
-        
-        // Swizzle data structure 4 = ZERO, 5 = ONE (in FP16)
-//        uint16_t data[6];
-//        data[ASTCENC_SWZ_0] = 0;
-//        data[ASTCENC_SWZ_1] = 0x3C00;
+		// Swizzle data structure 4 = ZERO, 5 = ONE (in FP16)
+		float data[6];
+		data[ASTCENC_SWZ_0] = 0.0f;
+		data[ASTCENC_SWZ_1] = 1.0f;
 
-        for (int z = zd_start; z < padsize_z; z++)
-        {
-            int z_src = (z - zd_start) + src_offset_z - kernel_radius_z;
+		for (int z = zd_start; z < padsize_z; z++)
+		{
+			int z_src = (z - zd_start) + offset_z - kernel_radius_z;
+			z_src = astc::clamp(z_src, 0, (int)(img->dim_z - 1));
 
-            z_src = clamp(z_src, 0, (int)img->dim_z-1);
-            
-            for (int y = 1; y < padsize_y; y++)
-            {
-                int y_src = (y - 1) + src_offset_y - kernel_radius_xy;
-                
-                y_src = clamp(y_src, 0, (int)img->dim_y-1);
-                
-                for (int x = 1; x < padsize_x; x++)
-                {
-                    int x_src = (x - 1) + src_offset_x - kernel_radius_xy;
-                    
-                    /* Note: not using swizzling
-                    data[0] = data16[z_src][y_src][4 * x_src];
-                    data[1] = data16[z_src][y_src][4 * x_src + 1];
-                    data[2] = data16[z_src][y_src][4 * x_src + 2];
-                    data[3] = data16[z_src][y_src][4 * x_src + 3];
+			for (int y = 1; y < padsize_y; y++)
+			{
+				int y_src = (y - 1) + offset_y - kernel_radius_xy;
+				y_src = astc::clamp(y_src, 0, (int)(img->dim_y - 1));
 
-                    uint16_t r = data[swz.r];
-                    uint16_t g = data[swz.g];
-                    uint16_t b = data[swz.b];
-                    uint16_t a = data[swz.a];
+				for (int x = 1; x < padsize_x; x++)
+				{
+					int x_src = (x - 1) + offset_x - kernel_radius_xy;
+					x_src = astc::clamp(x_src, 0, (int)(img->dim_x - 1));
 
-                    float4 d = float4(sf16_to_float(r),
-                                      sf16_to_float(g),
-                                      sf16_to_float(b),
-                                      sf16_to_float(a));
-                     */
-                    
-                    // this call just reads right off the array
-                    x_src = clamp(x_src, 0, (int)img->dim_x-1);
-                    
-                    float4 d = data32f[y_src * img->dim_x + x_src];
+					data[0] = data32[z_src][y_src][4 * x_src    ];
+					data[1] = data32[z_src][y_src][4 * x_src + 1];
+					data[2] = data32[z_src][y_src][4 * x_src + 2];
+					data[3] = data32[z_src][y_src][4 * x_src + 3];
 
-                    if (!are_powers_1)
-                    {
-                        d.x = powf(MAX(d.x, 1e-6f), rgb_power);
-                        d.y = powf(MAX(d.y, 1e-6f), rgb_power);
-                        d.z = powf(MAX(d.z, 1e-6f), rgb_power);
-                        d.w = powf(MAX(d.w, 1e-6f), alpha_power);
-                    }
+					float r = data[swz.r];
+					float g = data[swz.g];
+					float b = data[swz.b];
+					float a = data[swz.a];
 
-                    VARBUF1(z, y, x) = d;
-                    VARBUF2(z, y, x) = d * d;
-                }
-            }
-        }
-    }
-    else {
-        assert(false);
-    }
+					float4 d = float4(r, g, b, a);
+
+					if (!are_powers_1)
+					{
+						d.r = powf(MAX(d.r, 1e-6f), rgb_power);
+						d.g = powf(MAX(d.g, 1e-6f), rgb_power);
+						d.b = powf(MAX(d.b, 1e-6f), rgb_power);
+						d.a = powf(MAX(d.a, 1e-6f), alpha_power);
+					}
+
+					VARBUF1(z, y, x) = d;
+					VARBUF2(z, y, x) = d * d;
+				}
+			}
+		}
+	}
 
 	// Pad with an extra layer of 0s; this forms the edge of the SAT tables
-	float4 vbz = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	float4 vbz = float4(0.0f);
 	for (int z = 0; z < padsize_z; z++)
 	{
 		for (int y = 0; y < padsize_y; y++)
@@ -437,43 +421,49 @@ static void compute_pixel_region_variance(
 		for (int z = 0; z < size_z; z++)
 		{
 			int z_src = z + kernel_radius_z;
-			int z_dst = z + dst_offset_z;
+			int z_dst = z + offset_z;
+			int z_low  = z_src - alpha_kernel_radius;
+			int z_high = z_src + alpha_kernel_radius + 1;
+
+			astc::clamp(z_src,  0, (int)(img->dim_z - 1));
+			astc::clamp(z_low,  0, (int)(img->dim_z - 1));
+			astc::clamp(z_high, 0, (int)(img->dim_z - 1));
+
+
 			for (int y = 0; y < size_y; y++)
 			{
 				int y_src = y + kernel_radius_xy;
-				int y_dst = y + dst_offset_y;
+				int y_dst = y + offset_y;
+				int y_low  = y_src - alpha_kernel_radius;
+				int y_high = y_src + alpha_kernel_radius + 1;
+
+				astc::clamp(y_src,  0, (int)(img->dim_y - 1));
+				astc::clamp(y_low,  0, (int)(img->dim_y - 1));
+				astc::clamp(y_high, 0, (int)(img->dim_y - 1));
 
 				for (int x = 0; x < size_x; x++)
 				{
 					int x_src = x + kernel_radius_xy;
-					int x_dst = x + dst_offset_x;
-
+					int x_dst = x + offset_x;
 					int x_low  = x_src - alpha_kernel_radius;
 					int x_high = x_src + alpha_kernel_radius + 1;
-					int y_low  = y_src - alpha_kernel_radius;
-					int y_high = y_src + alpha_kernel_radius + 1;
-					int z_low  = z_src - alpha_kernel_radius;
-					int z_high = z_src + alpha_kernel_radius + 1;
+
+					astc::clamp(x_src,  0, (int)(img->dim_x - 1));
+					astc::clamp(x_low,  0, (int)(img->dim_x - 1));
+					astc::clamp(x_high, 0, (int)(img->dim_x - 1));
 
 					// Summed-area table lookups for alpha average
-					float vasum = (  VARBUF1(z_high, y_low,  x_low).w
-					               - VARBUF1(z_high, y_low,  x_high).w
-					               - VARBUF1(z_high, y_high, x_low).w
-					               + VARBUF1(z_high, y_high, x_high).w) -
-					              (  VARBUF1(z_low,  y_low,  x_low).w
-					               - VARBUF1(z_low,  y_low,  x_high).w
-					               - VARBUF1(z_low,  y_high, x_low).w
-					               + VARBUF1(z_low,  y_high, x_high).w);
+					float vasum = (  VARBUF1(z_high, y_low,  x_low).a
+					               - VARBUF1(z_high, y_low,  x_high).a
+					               - VARBUF1(z_high, y_high, x_low).a
+					               + VARBUF1(z_high, y_high, x_high).a) -
+					              (  VARBUF1(z_low,  y_low,  x_low).a
+					               - VARBUF1(z_low,  y_low,  x_high).a
+					               - VARBUF1(z_low,  y_high, x_low).a
+					               + VARBUF1(z_low,  y_high, x_high).a);
 
 					int out_index = z_dst * zdt + y_dst * ydt + x_dst;
 					input_alpha_averages[out_index] = (vasum * alpha_rsamples);
-
-					x_low  = x_src - avg_var_kernel_radius;
-					x_high = x_src + avg_var_kernel_radius + 1;
-					y_low  = y_src - avg_var_kernel_radius;
-					y_high = y_src + avg_var_kernel_radius + 1;
-					z_low  = z_src - avg_var_kernel_radius;
-					z_high = z_src + avg_var_kernel_radius + 1;
 
 					// Summed-area table lookups for RGBA average and variance
 					float4 v1sum = (  VARBUF1(z_high, y_low,  x_low)
@@ -507,54 +497,37 @@ static void compute_pixel_region_variance(
 	}
 	else
 	{
-        // this code was reading outside of the rows/array
-        for (int y = 0; y < size_y; y++)
+		for (int y = 0; y < size_y; y++)
 		{
-            int y_dst = y + dst_offset_y;
-
-            int y_src = y + kernel_radius_xy;
+			int y_src = y + kernel_radius_xy;
+			int y_dst = y + offset_y;
 			int y_low  = y_src - alpha_kernel_radius;
-            int y_high = y_src + alpha_kernel_radius + 1;
+			int y_high = y_src + alpha_kernel_radius + 1;
 
-            // this call just reads right off the array
-            clamp(y_src, 0, (int)img->dim_y-1);
-            clamp(y_low, 0, (int)img->dim_y-1);
-            clamp(y_high, 0, (int)img->dim_y-1);
-            
+			astc::clamp(y_src,  0, (int)(img->dim_y - 1));
+			astc::clamp(y_low,  0, (int)(img->dim_y - 1));
+			astc::clamp(y_high, 0, (int)(img->dim_y - 1));
+
 			for (int x = 0; x < size_x; x++)
 			{
-                int x_dst = x + dst_offset_x;
-
-                int x_src = x + kernel_radius_xy;
+				int x_src = x + kernel_radius_xy;
+				int x_dst = x + offset_x;
 				int x_low  = x_src - alpha_kernel_radius;
 				int x_high = x_src + alpha_kernel_radius + 1;
-				
-                // this call just reads right off the array
-                clamp(x_src, 0, (int)img->dim_x-1);
-                clamp(x_low, 0, (int)img->dim_x-1);
-                clamp(x_high, 0, (int)img->dim_x-1);
-                
+
+				astc::clamp(x_src,  0, (int)(img->dim_x - 1));
+				astc::clamp(x_low,  0, (int)(img->dim_x - 1));
+				astc::clamp(x_high, 0, (int)(img->dim_x - 1));
+
 				// Summed-area table lookups for alpha average
-				float vasum = VARBUF1(0, y_low,  x_low).w
-				            - VARBUF1(0, y_low,  x_high).w
-				            - VARBUF1(0, y_high, x_low).w
-				            + VARBUF1(0, y_high, x_high).w;
+				float vasum = VARBUF1(0, y_low,  x_low).a
+				            - VARBUF1(0, y_low,  x_high).a
+				            - VARBUF1(0, y_high, x_low).a
+				            + VARBUF1(0, y_high, x_high).a;
 
 				int out_index = y_dst * ydt + x_dst;
 				input_alpha_averages[out_index] = (vasum * alpha_rsamples);
 
-                // why is this computing the same numbers again
-//                x_src = x + kernel_radius_xy;
-//				x_low  = x_src - avg_var_kernel_radius;
-//				x_high = x_src + avg_var_kernel_radius + 1;
-//
-//				//y_low  = y_src - avg_var_kernel_radius;
-//				//y_high = y_src + avg_var_kernel_radius + 1;
-//
-//                clamp(x_src, 0, img->dim_x-1));
-//                clamp(x_low, 0, img->dim_x-1));
-//                clamp(x_high, 0, img->dim_x-1));
-                
 				// summed-area table lookups for RGBA average and variance
 				float4 v1sum = VARBUF1(0, y_low,  x_low)
 				             - VARBUF1(0, y_low,  x_high)
@@ -570,8 +543,6 @@ static void compute_pixel_region_variance(
 				float4 avg = v1sum * avg_var_rsamples;
 				input_averages[out_index] = avg;
 
-                assert(!astc::isnan(avg.x));
-               
 				// Compute and emit the actual variance
 				float4 variance = mul2 * v2sum - mul1 * (v1sum * v1sum);
 				input_variances[out_index] = variance;
@@ -587,16 +558,13 @@ void compute_averages_and_variances(
 	pixel_region_variance_args arg = ag.arg;
 	arg.work_memory = new float4[ag.work_memory_size];
 
-	int size_x = ag.img_size.x;
-	int size_y = ag.img_size.y;
-	int size_z = ag.img_size.z;
+	int size_x = ag.img_size.r;
+	int size_y = ag.img_size.g;
+	int size_z = ag.img_size.b;
 
-	int step_x = ag.blk_size.x;
-	int step_y = ag.blk_size.y;
-	int step_z = ag.blk_size.z;
-
-	int padding_xy = arg.img->dim_pad;
-	int padding_z = arg.have_z ? padding_xy : 0;
+	int step_x = ag.blk_size.r;
+	int step_y = ag.blk_size.g;
+	int step_z = ag.blk_size.b;
 
 	int y_tasks = (size_y + step_y - 1) / step_y;
 
@@ -614,19 +582,16 @@ void compute_averages_and_variances(
 		int z = (base / (y_tasks)) * step_z;
 		int y = (base - (z * y_tasks)) * step_y;
 
-		arg.size.z = MIN(step_z, size_z - z);
-		arg.dst_offset.z = z;
-		arg.src_offset.z = z + padding_z;
+		arg.size.b = MIN(step_z, size_z - z);
+		arg.offset.b = z;
 
-		arg.size.y = MIN(step_y, size_y - y);
-		arg.dst_offset.y = y;
-		arg.src_offset.y = y + padding_xy;
+		arg.size.g = MIN(step_y, size_y - y);
+		arg.offset.g = y;
 
 		for (int x = 0; x < size_x; x += step_x)
 		{
-			arg.size.x = MIN(step_x, size_x - x);
-			arg.dst_offset.x = x;
-			arg.src_offset.x = x + padding_xy;
+			arg.size.r = MIN(step_x, size_x - x);
+			arg.offset.r = x;
 			compute_pixel_region_variance(ctx, &arg);
 		}
 
@@ -664,9 +629,8 @@ unsigned int init_compute_averages_and_variances(
 
 	// Perform block-wise averages-and-variances calculations across the image
 	// Initialize fields which are not populated until later
-	arg.size = int3(0, 0, 0);
-	arg.src_offset = int3(0, 0, 0);
-	arg.dst_offset = int3(0, 0, 0);
+	arg.size = int3(0);
+	arg.offset = int3(0);
 	arg.work_memory = nullptr;
 
 	arg.img = &img;

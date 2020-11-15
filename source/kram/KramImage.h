@@ -42,7 +42,7 @@ public:
 
     bool encode(ImageInfo& info, FILE* dstFile) const;
 
-    bool decode(const KTXImage& image, FILE* dstFile, bool isVerbose, const string& swizzleText) const;
+    bool decode(const KTXImage& image, FILE* dstFile, TexEncoder decoder, bool isVerbose, const string& swizzleText) const;
 
     // this is only for 2d images
     bool resizeImage(int wResize, int hResize, bool resizePow2, ImageResizeFilter filter = kImageResizeFilterPoint);

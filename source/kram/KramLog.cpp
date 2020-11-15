@@ -23,7 +23,7 @@ static int vsprintf(string& str, const char* format, va_list args)
 {
     if (strchr(format, '%') == nullptr) {
         str = format;
-        return str.length();
+        return (int)str.length();
     }
 
     // can't reuse args after vsnprintf
@@ -82,13 +82,13 @@ extern int logMessage(const char* group, int logLevel,
         fp = stderr;
 
     // see if newline required
-    int len = strlen(fmt);
+    int len = (int)strlen(fmt);
     bool needsNewline = false;
     if (len >= 1)
         needsNewline = fmt[len - 1] != '\n';
 
     if (needsNewline) {
-        len = strlen(msg);
+        len = (int)strlen(msg);
         if (len >= 1)
             needsNewline = msg[len - 1] != '\n';
     }

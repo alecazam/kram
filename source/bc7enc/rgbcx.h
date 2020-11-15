@@ -3056,11 +3056,13 @@ namespace rgbcx
 			//  2D Least Squares approach from Humus's example, with added inset and optimal rounding.
 			int big_chan = 0, min_chan_val = min_r, max_chan_val = max_r;
 			if ((max_g - min_g) > (max_chan_val - min_chan_val))
-				big_chan = 1, min_chan_val = min_g, max_chan_val = max_g;
-
+            {
+                big_chan = 1; min_chan_val = min_g; max_chan_val = max_g;
+            }
 			if ((max_b - min_b) > (max_chan_val - min_chan_val))
-				big_chan = 2, min_chan_val = min_b, max_chan_val = max_b;
-		
+            {
+                big_chan = 2; min_chan_val = min_b; max_chan_val = max_b;
+            }
 			int sum_xy_r = 0, sum_xy_g = 0, sum_xy_b = 0;
 			vec3F l, h;
 			if (big_chan == 0)
@@ -3068,7 +3070,7 @@ namespace rgbcx
 				for (uint32_t i = 0; i < 16; i++)
 				{
 					const int r = pSrc_pixels[i].r, g = pSrc_pixels[i].g, b = pSrc_pixels[i].b;
-					sum_xy_r += r * r, sum_xy_g += r * g, sum_xy_b += r * b;
+                    sum_xy_r += r * r; sum_xy_g += r * g; sum_xy_b += r * b;
 				}
 
 				int sum_x = total_r;
@@ -3113,7 +3115,7 @@ namespace rgbcx
 				for (uint32_t i = 0; i < 16; i++)
 				{
 					const int r = pSrc_pixels[i].r, g = pSrc_pixels[i].g, b = pSrc_pixels[i].b;
-					sum_xy_r += g * r, sum_xy_g += g * g, sum_xy_b += g * b;
+                    sum_xy_r += g * r; sum_xy_g += g * g; sum_xy_b += g * b;
 				}
 
 				int sum_x = total_g;
@@ -3158,7 +3160,7 @@ namespace rgbcx
 				for (uint32_t i = 0; i < 16; i++)
 				{
 					const int r = pSrc_pixels[i].r, g = pSrc_pixels[i].g, b = pSrc_pixels[i].b;
-					sum_xy_r += b * r, sum_xy_g += b * g, sum_xy_b += b * b;
+                    sum_xy_r += b * r; sum_xy_g += b * g; sum_xy_b += b * b;
 				}
 
 				int sum_x = total_b;
@@ -3465,7 +3467,7 @@ namespace rgbcx
 
 				forbidden_direction = s_adjacent_voxels[i & 15][3] | (i & 16);
 
-				lr = trial_lr, lg = trial_lg, lb = trial_lb, hr = trial_hr, hg = trial_hg, hb = trial_hb;
+                lr = trial_lr; lg = trial_lg; lb = trial_lb; hr = trial_hr; hg = trial_hg; hb = trial_hb;
 
 				memcpy(sels, trial_sels, 16);
 					
@@ -3501,8 +3503,8 @@ namespace rgbcx
 
 		int total_r = fr, total_g = fg, total_b = fb;
 		
-		max_r = fr, max_g = fg, max_b = fb;
-		min_r = fr, min_g = fg, min_b = fb;
+        max_r = fr; max_g = fg; max_b = fb;
+        min_r = fr; min_g = fg; min_b = fb;
 		
 		uint32_t grayscale_flag = (fr == fg) && (fr == fb);
 		uint32_t any_black_pixels = (fr | fg | fb) < 4;
@@ -3519,7 +3521,7 @@ namespace rgbcx
 			total_r += r; total_g += g; total_b += b;
 		}
 
-		avg_r = (total_r + 8) >> 4, avg_g = (total_g + 8) >> 4, avg_b = (total_b + 8) >> 4;
+        avg_r = (total_r + 8) >> 4; avg_g = (total_g + 8) >> 4; avg_b = (total_b + 8) >> 4;
 
 		bc1_encode_results results;
 		results.m_3color = false;
@@ -3528,7 +3530,7 @@ namespace rgbcx
 		int &lr = results.lr, &lg = results.lg, &lb = results.lb, &hr = results.hr, &hg = results.hg, &hb = results.hb;
 		int orig_lr = 0, orig_lg = 0, orig_lb = 0, orig_hr = 0, orig_hg = 0, orig_hb = 0;
 
-		lr = 0, lg = 0, lb = 0, hr = 0, hg = 0, hb = 0;
+        lr = 0; lg = 0; lb = 0; hr = 0; hg = 0; hb = 0;
 								
 		const bool needs_block_error = ((flags & (cEncodeBC1UseLikelyTotalOrderings | cEncodeBC1Use3ColorBlocks | cEncodeBC1UseFullMSEEval | cEncodeBC1EndpointSearchRoundsMask)) != 0) ||
 				(any_black_pixels && ((flags & cEncodeBC1Use3ColorBlocksForBlackPixels) != 0));
@@ -3544,7 +3546,7 @@ namespace rgbcx
 					avg_r, avg_g, avg_b, total_r, total_g, total_b,
 					lr, lg, lb, hr, hg, hb);
 
-			orig_lr = lr, orig_lg = lg, orig_lb = lb, orig_hr = hr, orig_hg = hg, orig_hb = hb;
+            orig_lr = lr; orig_lg = lg; orig_lb = lb; orig_hr = hr; orig_hg = hg; orig_hb = hb;
 
 			bc1_find_sels4_noerr(pSrc_pixels, lr, lg, lb, hr, hg, hb, sels);
 

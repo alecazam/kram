@@ -9,16 +9,18 @@
 // many open source projets skip SIMD, or only do SSE.  This is
 // how to support ARM and Neon from one codebase.  This uses
 // SSE2Neon.h to translate _mm calls to Neon calls
-// TODO: update SSE2Neon to use arm64 permute/shuffle instructions.
 #if !USE_SIMDLIB
 
+// this is also defined in KramConfig.h, but this keeps file independent
 #if USE_NEON
-#include "SSE2Neon.h"
+#include "sse2neon.h"
 #else
-#include <emmintrin.h>
-#include <xmmintrin.h>
-
+//#include <smmintrin.h> // SSE4.1, and includes all before it
+#include <immintrin.h> // AVX
 #endif
+
+// see here for intrinsics and which instruction set they come from
+// https://docs.microsoft.com/en-us/cpp/intrinsics/x64-amd64-intrinsics-list?view=msvc-160
 
 namespace simd {
 
@@ -128,17 +130,23 @@ using tSwizzle = uint32_t;
 #define _mm_splatz_ps(v) _mm_shuffle_ps(v, v, macroSwizzle(2, 2, 2, 2))
 #define _mm_splatw_ps(v) _mm_shuffle_ps(v, v, macroSwizzle(3, 3, 3, 3))
 
-// sse1 version of sse3 op for horizontal add
+// dot product app with horizontal adds, without using _mm_hadd_ps()
 inline float32x4_t _mm_hadd4_ps(const float32x4_t& r)
 {
-    // use for hpadd
-    static const tSwizzle kSwizzleYYZW = macroSwizzle(1, 1, 2, 3);
-    //static const tSwizzle kSwizzleZYZW = macroSwizzle(2,1,2,3);
-    static const tSwizzle kSwizzleWZZW = macroSwizzle(3, 2, 2, 3);
-
-    float32x4_t t = _mm_add_ps(r, _mm_shuffle_ps(r, r, kSwizzleWZZW));  // xy + wz
-    t = _mm_add_ss(t, _mm_shuffle_ps(t, t, kSwizzleYYZW));              // x + y
+#if 0 // SSE1
+//    // use for hpadd
+//    static const tSwizzle kSwizzleYYZW = macroSwizzle(1, 1, 2, 3);
+//    //static const tSwizzle kSwizzleZYZW = macroSwizzle(2,1,2,3);
+//    static const tSwizzle kSwizzleWZZW = macroSwizzle(3, 2, 2, 3);
+//
+//    float32x4_t t = _mm_add_ps(r, _mm_shuffle_ps(r, r, kSwizzleWZZW));  // xy + wz
+//    t = _mm_add_ss(t, _mm_shuffle_ps(t, t, kSwizzleYYZW));              // x + y
+//    return t;
+#else // SSE3
+    float32x4_t t = _mm_hadd_ps(r, r); // xy + wz
+    t = _mm_hadd_ps(t, t); // x + y
     return t;
+#endif
 }
 
 static const uint32_t kSignBitsF32x4i = {0x80000000};
@@ -157,6 +165,7 @@ static const float32x4_t kOnesF32x4 = _mm_set1_ps(1.0f);
 
 // Note float3 should be it's own type, but it should be float4 in size.
 // float2 is harder since on Neon, it supports a float2 data structure.
+// Needs SSE4.1, but that's most of the processors these days.
 class float4 {
 public:
     using tType = float32x4_t;
@@ -173,6 +182,9 @@ public:
         float v[4];
         struct {
             float x, y, z, w;
+        };
+        struct {
+            float r, g, b, a;
         };
     };
 
@@ -192,64 +204,64 @@ public:
     inline float4 zvec() { return float4(_mm_splatz_ps(reg)); }
     inline float4 wvec() { return float4(_mm_splatw_ps(reg)); }
 
-    inline float4& operator*=(float b)
+    inline float4& operator*=(float s)
     {
-        return *this *= float4(b);
+        return *this *= float4(s);
     }
-    inline float4& operator/=(float b)
+    inline float4& operator/=(float s)
     {
-        return *this /= float4(b);
+        return *this /= float4(s);
     }
-    inline float4& operator-=(float b)
+    inline float4& operator-=(float s)
     {
-        return *this -= float4(b);
+        return *this -= float4(s);
     }
-    inline float4& operator+=(float b)
+    inline float4& operator+=(float s)
     {
-        return *this += float4(b);
+        return *this += float4(s);
     }
 
-    friend inline float4 operator*(const float4& a, const float4& b)
+    friend inline float4 operator*(const float4& lhs, const float4& rhs)
     {
-        float4 aa(a);
-        return aa *= b;
+        float4 aa(lhs);
+        return aa *= rhs;
     }
-    friend inline float4 operator/(const float4& a, const float4& b)
+    friend inline float4 operator/(const float4& lhs, const float4& rhs)
     {
-        float4 aa(a);
-        return aa /= b;
+        float4 aa(lhs);
+        return aa /= rhs;
     }
-    friend inline float4 operator+(const float4& a, const float4& b)
+    friend inline float4 operator+(const float4& lhs, const float4& rhs)
     {
-        float4 aa(a);
-        return aa += b;
+        float4 aa(lhs);
+        return aa += rhs;
     }
-    friend inline float4 operator-(const float4& a, const float4& b)
+    friend inline float4 operator-(const float4& lhs, const float4& rhs)
     {
-        float4 aa(a);
-        return aa -= b;
+        float4 aa(lhs);
+        return aa -= rhs;
     }
 
     // scalar ops for right side
-    friend float4 operator*(const float4& a, float b)
+    friend float4 operator*(const float4& vv, float s)
     {
-        float4 aa(a);
-        return aa *= float4(b);
+        float4 aa(vv);
+        return aa *= float4(s);
     }
-    friend float4 operator/(const float4& a, float b)
+    friend float4 operator/(const float4& vv, float s)
     {
-        float4 aa(a);
-        return aa /= float4(b);
+        float4 aa(vv);
+        return aa /= float4(s);
     }
-    friend float4 operator+(const float4& a, float b)
+    friend float4 operator+(const float4& vv, float s)
     {
-        float4 aa(a);
-        return aa += float4(b);
+        float4 aa(vv);
+        return aa += float4(s);
     }
-    friend float4 operator-(const float4& a, float b)
+    friend float4 operator-(const float4& vv, float s)
     {
-        float4 aa(a);
-        return aa -= float4(b);
+        float4 aa(vv);
+        return aa -= float4(s);
     }
 
     friend inline float4 operator*(float a, const float4& b)
@@ -295,76 +307,72 @@ public:
         return *this;
     }
 
-    friend inline float4 min(const float4& a, const float4& b)
+    friend inline float4 min(const float4& lhs, const float4& rhs)
     {
-        return float4(_mm_min_ps(a.reg, b.reg));
+        return float4(_mm_min_ps(lhs.reg, rhs.reg));
     }
-    friend inline float4 max(const float4& a, const float4& b)
+    friend inline float4 max(const float4& lhs, const float4& rhs)
     {
-        return float4(_mm_max_ps(a.reg, b.reg));
+        return float4(_mm_max_ps(lhs.reg, rhs.reg));
     }
 
     // returns 1's and 0's in a float4
-    inline float4 operator==(const float4& b) const { return float4(_mm_pcmpeq_ps(reg, b.reg)); }
-    inline float4 operator!=(const float4& b) const { return float4(_mm_pcmpneq_ps(reg, b.reg)); }
-    inline float4 operator>(const float4& b) const { return float4(_mm_pcmpgt_ps(reg, b.reg)); }
-    inline float4 operator>=(const float4& b) const { return float4(_mm_pcmpge_ps(reg, b.reg)); }
-    inline float4 operator<(const float4& b) const { return float4(_mm_pcmplt_ps(reg, b.reg)); }
-    inline float4 operator<=(const float4& b) const { return float4(_mm_pcmple_ps(reg, b.reg)); }
+    inline float4 operator==(const float4& vv) const { return float4(_mm_pcmpeq_ps(reg, vv.reg)); }
+    inline float4 operator!=(const float4& vv) const { return float4(_mm_pcmpneq_ps(reg, vv.reg)); }
+    inline float4 operator>(const float4& vv) const { return float4(_mm_pcmpgt_ps(reg, vv.reg)); }
+    inline float4 operator>=(const float4& vv) const { return float4(_mm_pcmpge_ps(reg, vv.reg)); }
+    inline float4 operator<(const float4& vv) const { return float4(_mm_pcmplt_ps(reg, vv.reg)); }
+    inline float4 operator<=(const float4& vv) const { return float4(_mm_pcmple_ps(reg, vv.reg)); }
 
-    inline bool equal(const float4& b) const
+    inline bool equal(const float4& vv) const
     {
-        int32_t maskBits = _mm_movemask_ps(_mm_cmpeq_ps(reg, b.reg));
+        int32_t maskBits = _mm_movemask_ps(_mm_cmpeq_ps(reg, vv.reg));
         return maskBits == 15;
     }
 
-    inline bool not_equal(const float4& b) const { return !equal(b); }
+    inline bool not_equal(const float4& vv) const { return !equal(vv); }
 
     // do 4 of these at once
-    friend inline float4 recip(const float4& a)
+    friend inline float4 recip(const float4& vv)
     {
-        return float4(_mm_rcphp_ps(a.reg));
+        return float4(_mm_rcphp_ps(vv.reg));
     }
-    friend inline float4 rsqrt(const float4& a)
+    friend inline float4 rsqrt(const float4& vv)
     {
-        return float4(_mm_rsqrthp_ps(a.reg));
+        return float4(_mm_rsqrthp_ps(vv.reg));
     }
-    friend inline float4 sqrt(const float4& a)
+    friend inline float4 sqrt(const float4& vv)
     {
-        return float4(_mm_sqrthp_ps(a.reg));
-    }
-
-    friend inline float dot(const float4& a, const float4& b)
-    {
-        return float4(_mm_hadd4_ps(_mm_mul_ps(a.reg, b.reg)))[0];
-    }
-    friend inline float lengthSquared(const float4& a)
-    {
-        return sqrtf(dot(a, a));
-    }
-    friend inline float length(const float4& a)
-    {
-        return sqrtf(lengthSquared(a));
+        return float4(_mm_sqrthp_ps(vv.reg));
     }
 
-    // TODO: need simd versions
-    friend inline float4 round(const float4& a)
+    friend inline float length_squared(const float4& vv)
     {
-        return float4(roundf(a.x), roundf(a.y), roundf(a.z), roundf(a.w));
+        return float4(_mm_hadd4_ps(_mm_mul_ps(vv.reg, vv.reg)))[0];
     }
-    friend inline float4 ceil(const float4& a)
+    friend inline float length(const float4& vv)
     {
-        return float4(ceilf(a.x), ceilf(a.y), ceilf(a.z), ceilf(a.w));
+        return float4(_mm_sqrt_ss(_mm_hadd4_ps(_mm_mul_ps(vv.reg, vv.reg))))[0];
     }
-    friend inline float4 floor(const float4& a)
+
+    // sse4.1 ops
+    friend inline float4 round(const float4& vv)
     {
-        return float4(floorf(a.x), floorf(a.y), floorf(a.z), floorf(a.w));
+        return float4(_mm_round_ps(vv.reg, 0x8)); // round to nearest | exc
+    }
+    friend inline float4 ceil(const float4& vv)
+    {
+        return float4(_mm_ceil_ps(vv.reg));
+    }
+    friend inline float4 floor(const float4& vv)
+    {
+        return float4(_mm_floor_ps(vv.reg)); // SSE4.1
     }
 
     // see if any results are 1
-    friend inline bool any(const float4& a)
+    friend inline bool any(const float4& vv)
     {
-        return float4(_mm_hadd4_ps(a.reg))[0] > 0.0f;
+        return float4(_mm_hadd4_ps(vv.reg))[0] > 0.0f;
     }
 
     inline float4 operator-() const
@@ -372,10 +380,45 @@ public:
         return float4(_mm_xor_ps(kSignBitsF32x4, reg));  // -a
     }
 
-    friend inline float4 select(const float4& a, const float4& b, const float4& mask)
+    friend inline float4 select(const float4& lhs, const float4& rhs, const float4& mask)
     {
-        return float4(_mm_or_ps(_mm_andnot_ps(mask.reg, a.reg), _mm_and_ps(mask.reg, b.reg)));  // 0 picks a, 1 picks b
+        return float4(_mm_or_ps(_mm_andnot_ps(mask.reg, lhs.reg), _mm_and_ps(mask.reg, rhs.reg)));  // 0 picks a, 1 picks b
     }
+    
+#if !USE_FLOAT16
+    // Win does not have _Float16 compiler support as of VS2019.  So have to resort to AVX.
+    inline float4 fromFloat16(const uint16_t* fp16, int count = 4) {
+        // note this zero's out any of the exiting values
+        __m128i reg16 = _mm_setzero_si128();
+        
+        // fill low bits of m128i with the 4x fp16 values
+        // fallthrough.  Can't do a loop since imm is harcoded into instruction
+        // TODO: might be faster to load bottom 64-bytes _mm_loadu_epi64 for case 3 and break?
+        switch(count - 1) {
+            case 3: reg16 = _mm_insert_epi16(reg16, fp16[3], 3);
+            case 2: reg16 = _mm_insert_epi16(reg16, fp16[2], 2);
+            case 1: reg16 = _mm_insert_epi16(reg16, fp16[1], 1);
+            case 0: reg16 = _mm_insert_epi16(reg16, fp16[0], 0); break;
+            default: assert(false); break;
+        }
+
+        return float4(_mm_cvtph_ps(reg16, 0)); // 4xfp16 -> 4xfp32, round to nearest-even
+    }
+    
+    inline void toFloat16(uint16_t* fp16, int count = 4) const {
+        __m128i reg16 = _mm_cvtps_ph(reg, 0); // 4xfp32-> 4xfp16,  round to nearest-even
+       
+        // extract low 16-bits out of the 4 values
+        // fallthrough.  Can't do a loop since imm is harcoded into instruction
+        switch(count - 1) {
+            case 3: fp16[3] = _mm_extract_epi16(reg16, 3);
+            case 2: fp16[2] = _mm_extract_epi16(reg16, 2);
+            case 1: fp16[1] = _mm_extract_epi16(reg16, 1);
+            case 0: fp16[0] = _mm_extract_epi16(reg16, 0); break;
+            default: assert(false); break;
+        }
+    }
+#endif
 };
 
 };  // namespace simd
