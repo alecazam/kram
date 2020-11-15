@@ -35,7 +35,10 @@ public:
     bool try_pop(function<void()>& x)
     {
         lock_t lock{_mutex, try_to_lock};
-        if (!lock || _q.empty()) return false;
+        if (!lock || _q.empty())
+        {
+            return false;
+        }
         x = move(_q.front());
         _q.pop_front();
         return true;
@@ -46,7 +49,10 @@ public:
     {
         {
             lock_t lock{_mutex, try_to_lock};
-            if (!lock) return false;
+            if (!lock)
+            {
+                return false;
+            }
             _q.emplace_back(forward<F>(f));
         }
         _ready.notify_one();
@@ -74,8 +80,16 @@ public:
     bool pop(function<void()>& x)
     {
         lock_t lock{_mutex};
-        while (_q.empty() && !_done) _ready.wait(lock);
-        if (_q.empty()) return false;
+        while (_q.empty() && !_done)
+        {
+            _ready.wait(lock); // this is what blocks a given thread to avoid spin loop
+        }
+        
+        // handle done state
+        if (_q.empty())
+        {
+            return false;
+        }
         x = move(_q.front());
         _q.pop_front();
         return true;
@@ -109,16 +123,15 @@ class task_system {
     void run(int threadIndex)
     {
         while (true) {
-            // TODO: this is a spinloop, need signal to wake up thread
-            // when there is more work in the queue, and go to sleep.
-            // There is some waiting in try_pop on a queue mutex.
+            // pop() wait avoids a spinloop.
             
             function<void()> f;
 
             // start with ours, but steal from other queues if nothing found
             // why 32 multiple?
+            int multiple = 4; // 32;
             int numTries = 0;
-            for (int n = 0; n < _count * 32; ++n) {
+            for (int n = 0, nEnd = _count * multiple; n < nEnd; ++n) {
                 numTries++;
                 
                 // break for loop if work found
@@ -128,7 +141,11 @@ class task_system {
                 }
             }
             
+            // numTries is 64 when queues are empty, and typically 1 when queues are full
+            //KLOGD("task_system", "thread %d searched %d tries", threadIndex, numTries);
+            
             // if no task, and nothing to steal, pop own queue if possible
+            // pop blocks until it's queue receives tasks
             if (!f && !_q[threadIndex].pop(f))
             {
                 // shutdown if tasks have all been submitted and queue marked as done.
@@ -142,7 +159,7 @@ class task_system {
                 {
                     KLOGD("task_system", "no work found for %d in %d tries", threadIndex, numTries);
                     
-                    // keep searching, but this is a busy loop
+                    // keep searching
                     continue;
                 }
             }
