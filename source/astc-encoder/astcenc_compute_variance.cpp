@@ -274,8 +274,16 @@ static void compute_pixel_region_variance(
 	else // if (img->data_type == ASTCENC_TYPE_F32)
 	{
 		assert(img->data_type == ASTCENC_TYPE_F32);
-		float*** data32 = static_cast<float***>(img->data);
+#define USE_2DARRAY 1
+#if USE_2DARRAY
+        // True if any non-identity swizzle
+        bool needs_swz = (swz.r != ASTCENC_SWZ_R) || (swz.g != ASTCENC_SWZ_G) ||
+                         (swz.b != ASTCENC_SWZ_B) || (swz.a != ASTCENC_SWZ_A);
 
+        float4* data32 = static_cast<float4*>(img->data);
+#else
+		float*** data32 = static_cast<float***>(img->data);
+#endif
 		// Swizzle data structure 4 = ZERO, 5 = ONE (in FP16)
 		float data[6];
 		data[ASTCENC_SWZ_0] = 0.0f;
@@ -296,17 +304,37 @@ static void compute_pixel_region_variance(
 					int x_src = (x - 1) + offset_x - kernel_radius_xy;
 					x_src = astc::clamp(x_src, 0, (int)(img->dim_x - 1));
 
+#if USE_2DARRAY
+                    assert(z_src == 0);
+                    float4 d = data32[y_src * img->dim_x + x_src];
+                    
+                    if (needs_swz)
+                    {
+                        data[0] = d.r;
+                        data[1] = d.g;
+                        data[2] = d.b;
+                        data[3] = d.a;
+                        
+                        float r = data[swz.r];
+                        float g = data[swz.g];
+                        float b = data[swz.b];
+                        float a = data[swz.a];
+                        
+                        d = float4(r,g,b,a);
+                    }
+#else
 					data[0] = data32[z_src][y_src][4 * x_src    ];
 					data[1] = data32[z_src][y_src][4 * x_src + 1];
 					data[2] = data32[z_src][y_src][4 * x_src + 2];
 					data[3] = data32[z_src][y_src][4 * x_src + 3];
-
+                    
 					float r = data[swz.r];
 					float g = data[swz.g];
 					float b = data[swz.b];
 					float a = data[swz.a];
 
 					float4 d = float4(r, g, b, a);
+#endif
 
 					if (!are_powers_1)
 					{
