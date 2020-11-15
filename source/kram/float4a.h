@@ -402,7 +402,7 @@ public:
             default: assert(false); break;
         }
 
-        return float4(_mm_cvtph_ps(reg16, 0)); // 4xfp16 -> 4xfp32, round to nearest-even
+        return float4(_mm_cvtph_ps(reg16)); // 4xfp16 -> 4xfp32, round to nearest-even
     }
     
     inline void toFloat16(uint16_t* fp16, int count = 4) const {

@@ -191,7 +191,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             }
 #else
             // treat as float for per channel copies
-            float4* dstPixels = (float*)float4.data();
+            float4* dstPixels = _pixelsFloat.data();
 
             const uint16_t* srcPixels =
                 (const uint16_t*)(image.fileData + image.mipLevels[0].offset);
@@ -201,10 +201,10 @@ bool Image::loadImageFromKTX(const KTXImage& image)
 
                 for (int x = 0, xEnd = _width; x < xEnd; ++x) {
                     int srcX = (y0 + x) * numSrcChannels;
-                    int dstX = (y0 + x); // * numDstChannels;
+                    int dstX = (y0 + x);
                    
                     // use AVX to convert
-                    dstPixels[dstX].fromFloat16(&srcPixels[srcX], numSrcChannels]);
+                    dstPixels[dstX].fromFloat16(&srcPixels[srcX], numSrcChannels);
                 }
             }
 #endif
@@ -1285,13 +1285,13 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     
                     switch (count) {
                         case 4:
-                            dst[count * i + 3] = src16.w;
+                            dst[count * i + 3] = src16[3];
                         case 3:
-                            dst[count * i + 2] = src16.z;
+                            dst[count * i + 2] = src16[2];
                         case 2:
-                            dst[count * i + 1] = src16.y;
+                            dst[count * i + 1] = src16[1];
                         case 1:
-                            dst[count * i + 0] = src16.x;
+                            dst[count * i + 0] = src16[0];
                     }
                 }
 #endif
