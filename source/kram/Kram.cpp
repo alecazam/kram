@@ -1938,7 +1938,7 @@ int kramAppScript(vector<const char*>& args)
     
     // as a global this auto allocates 16 threads, and don't want that unless actually
     // using scripting.  And even then want control over the number of threads.
-    atomic<int> errorCounter(0); // doesn't initialze to 0 otherwise
+    atomic<int> errorCounter(0); // doesn't initialize to 0 otherwise
     int commandCounter = 0;
      
     {

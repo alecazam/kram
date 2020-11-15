@@ -53,6 +53,15 @@ public:
         return true;
     }
 
+    // has queue been marked done or not
+    bool is_done() const
+    {
+        unique_lock<mutex> lock{const_cast<mutex&>(_mutex)}; // ugh
+        bool done = _done;
+        return done;
+    }
+    
+    // mark all tasks submitted to queue, and can start to shutdown
     void done()
     {
         {
@@ -85,38 +94,79 @@ public:
 
 /**************************************************************************************************/
 
-class task_system {
-    const unsigned _count;  //  = thread::hardware_concurrency();
-    vector<thread> _threads;
-    vector<notification_queue> _q; // {_count};
-    atomic<unsigned> _index;  // was = 0
+#define NOT_COPYABLE(type) \
+    type(const type&) = delete; \
+    void operator=(const type&) = delete
 
-    void run(unsigned threadIndex)
+class task_system {
+    NOT_COPYABLE(task_system);
+    
+    const int _count;
+    vector<thread> _threads;
+    vector<notification_queue> _q;
+    atomic<int> _index;
+
+    void run(int threadIndex)
     {
         while (true) {
-            // Here threads end when no more work on queue
+            // TODO: this is a spinloop, need signal to wake up thread
+            // when there is more work in the queue, and go to sleep.
+            // There is some waiting in try_pop on a queue mutex.
+            
             function<void()> f;
 
-            for (unsigned n = 0; n != _count * 32; ++n) {
-                if (_q[(threadIndex + n) % _count].try_pop(f)) break;
+            // start with ours, but steal from other queues if nothing found
+            // why 32 multiple?
+            int numTries = 0;
+            for (int n = 0; n < _count * 32; ++n) {
+                numTries++;
+                
+                // break for loop if work found
+                if (_q[(threadIndex + n) % _count].try_pop(f))
+                {
+                    break;
+                }
             }
-            if (!f && !_q[threadIndex].pop(f)) break;
-
+            
+            // if no task, and nothing to steal, pop own queue if possible
+            if (!f && !_q[threadIndex].pop(f))
+            {
+                // shutdown if tasks have all been submitted and queue marked as done.
+                if (_q[threadIndex].is_done())
+                {
+                    KLOGD("task_system", "thread %d shutting down", threadIndex);
+                    
+                    break;
+                }
+                else
+                {
+                    KLOGD("task_system", "no work found for %d in %d tries", threadIndex, numTries);
+                    
+                    // keep searching, but this is a busy loop
+                    continue;
+                }
+            }
+            
+            // do the work
             f();
         }
     }
-
+    
 public:
-    task_system(unsigned count = 1) : _count(std::min(count, thread::hardware_concurrency())), _q{_count}
+    task_system(int count = 1) : _count(std::min(count, (int)thread::hardware_concurrency())), _q{(size_t)_count}, _index(0)
     {
-        for (unsigned threadIndex = 0; threadIndex != _count; ++threadIndex) {
+        // start up the threads
+        for (int threadIndex = 0; threadIndex != _count; ++threadIndex) {
             _threads.emplace_back([&, threadIndex] { run(threadIndex); });
         }
     }
 
     ~task_system()
     {
+        // indicate that all tasks are submitted
         for (auto& e : _q) e.done();
+        
+        // wait until threads are all done, but joining each thread
         for (auto& e : _threads) e.join();
     }
 
@@ -130,10 +180,16 @@ public:
     {
         auto i = _index++;
 
-        for (unsigned n = 0; n != _count; ++n) {
+        // Note: this isn't a balanced distribution of work
+        // but work stealing from other queues in the run() call.
+        
+        // push to the next queue that is available
+        for (int n = 0; n != _count; ++n)
+        {
             if (_q[(i + n) % _count].try_push(forward<F>(f))) return;
         }
 
+        // otherwise just push to the next indexed queue
         _q[i % _count].push(forward<F>(f));
     }
 };
