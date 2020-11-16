@@ -225,10 +225,10 @@ static void compute_pixel_region_variance(
 					data[2] = data8[z_src][y_src][4 * x_src + 2];
 					data[3] = data8[z_src][y_src][4 * x_src + 3];
 
-                    r = data[swz.r];
-                    g = data[swz.g];
-                    b = data[swz.b];
-                    a = data[swz.a];
+                    uint8_t r = data[swz.r];
+                    uint8_t g = data[swz.g];
+                    uint8_t b = data[swz.b];
+                    uint8_t a = data[swz.a];
 #endif
                     // int to float conversion
                     d = float4((float)r, (float)g, (float)b, float(a));

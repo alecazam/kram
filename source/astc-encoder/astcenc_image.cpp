@@ -331,7 +331,7 @@ void fetch_imageblock(
 #if USE_2DARRAY
                     int px = (yi * xsize + xi) * 4;
                     assert(zi == 0);
-                    assert(px >= 0 && px < (xsize * ysize));
+                    assert(px >= 0 && px < (xsize * ysize * 4));
                     
                     int r = data8[px + 0];
                     int g = data8[px + 1];
@@ -627,14 +627,14 @@ void write_imageblock(
 							ai = astc::flt2int_rtn(MIN(pb->data_a[idx], 1.0f) * 255.0f);
 						}
 #if USE_2DARRAY
-                        int px = (yi * xsize + xi); // * 4;
+                        int px = (yi * xsize + xi) * 4;
                         assert(zi == 0);
-                        assert(px >= 0 && px < (xsize * ysize));
+                        assert(px >= 0 && px < (xsize * ysize * 4));
                         
-                        data8[px * 4 + 0] = ri;
-                        data8[px * 4 + 1] = gi;
-                        data8[px * 4 + 2] = bi;
-                        data8[px * 4 + 3] = ai;
+                        data8[px + 0] = ri;
+                        data8[px + 1] = gi;
+                        data8[px + 2] = bi;
+                        data8[px + 3] = ai;
 
 #else
 						data8[zi][yi][4 * xi    ] = ri;

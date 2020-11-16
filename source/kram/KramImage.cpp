@@ -1749,8 +1749,6 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                 channelType = kChannelTypeOneR1;
             }
 
-            astcenc_context* codec_context = nullptr;
-
             astcenc_profile profile;
             profile = info.isSRGB ? ASTCENC_PRF_LDR_SRGB : ASTCENC_PRF_LDR;
             if (info.isHDR) {
@@ -1858,16 +1856,18 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             astcenc_swizzle swizzleEncode = {ASTCENC_SWZ_R, ASTCENC_SWZ_G,
                                              ASTCENC_SWZ_B, ASTCENC_SWZ_A};
 
+            // could this be built once, and reused across all mips
+            astcenc_context* codec_context = nullptr;
             error = astcenc_context_alloc(config, 1, &codec_context);
             if (error != ASTCENC_SUCCESS) {
                 return false;
             }
 
-            // This hack breaks thread-safety, but improves L1 and LA block generating
+#if 0
+            // This hackimproves L1 and LA block generating
             // even enabled dual-plane mode for LA.  Otherwise rgb and rgba blocks
             // are genreated on data that only contains L or LA blocks.
 
-            /*
             bool useUniqueChannels = true;
             if (useUniqueChannels) {
                 gAstcenc_UniqueChannelsInPartitioning = 4;
@@ -1896,11 +1896,12 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             if (useUniqueChannels && gAstcenc_UniqueChannelsInPartitioning != 4) {
                 gAstcenc_UniqueChannelsInPartitioning = 4;
             }
-*/
+#else
             error = astcenc_compress_image(
                 codec_context, srcImage, swizzleEncode,
                 outputTexture.data.data(), mipStorageSize,
                 0);  // threadIndex
+#endif
 
             // Or should this context only be freed after all mips?
             astcenc_context_free(codec_context);
