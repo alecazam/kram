@@ -170,6 +170,10 @@ class float4 {
 public:
     using tType = float32x4_t;
     float4() {}
+    
+    // TODO: problem is that Apple's simd::float4(val) is val,000
+    // have to go through simd_make_float4(val, val, val, val) to get 4 values
+    // This behavior also doesn't match HLSL/GLSL and is an artifact of the comma operator messing things up.
     explicit float4(float val) { reg = _mm_set1_ps(val); }  // xyzw = val
     explicit float4(tType val) { reg = val; }
     float4(float xx, float yy, float zz, float ww) { reg = _mm_setr_ps(xx, yy, zz, ww); }
@@ -221,70 +225,6 @@ public:
         return *this += float4(s);
     }
 
-    friend inline float4 operator*(const float4& lhs, const float4& rhs)
-    {
-        float4 aa(lhs);
-        return aa *= rhs;
-    }
-    friend inline float4 operator/(const float4& lhs, const float4& rhs)
-    {
-        float4 aa(lhs);
-        return aa /= rhs;
-    }
-    friend inline float4 operator+(const float4& lhs, const float4& rhs)
-    {
-        float4 aa(lhs);
-        return aa += rhs;
-    }
-    friend inline float4 operator-(const float4& lhs, const float4& rhs)
-    {
-        float4 aa(lhs);
-        return aa -= rhs;
-    }
-
-    // scalar ops for right side
-    friend float4 operator*(const float4& vv, float s)
-    {
-        float4 aa(vv);
-        return aa *= float4(s);
-    }
-    friend float4 operator/(const float4& vv, float s)
-    {
-        float4 aa(vv);
-        return aa /= float4(s);
-    }
-    friend float4 operator+(const float4& vv, float s)
-    {
-        float4 aa(vv);
-        return aa += float4(s);
-    }
-    friend float4 operator-(const float4& vv, float s)
-    {
-        float4 aa(vv);
-        return aa -= float4(s);
-    }
-
-    friend inline float4 operator*(float a, const float4& b)
-    {
-        float4 aa(a);
-        return aa *= b;
-    }
-    friend inline float4 operator/(float a, const float4& b)
-    {
-        float4 aa(a);
-        return aa /= b;
-    }
-    friend inline float4 operator+(float a, const float4& b)
-    {
-        float4 aa(a);
-        return aa += b;
-    }
-    friend inline float4 operator-(float a, const float4& b)
-    {
-        float4 aa(a);
-        return aa -= b;
-    }
-
     // sse ops start here
     inline float4& operator/=(const float4& b)
     {
@@ -307,14 +247,18 @@ public:
         return *this;
     }
 
-    friend inline float4 min(const float4& lhs, const float4& rhs)
+    inline float4 operator-() const
     {
-        return float4(_mm_min_ps(lhs.reg, rhs.reg));
+        return float4(_mm_xor_ps(kSignBitsF32x4, reg));  // -a
     }
-    friend inline float4 max(const float4& lhs, const float4& rhs)
+    
+    inline bool equal(const float4& vv) const
     {
-        return float4(_mm_max_ps(lhs.reg, rhs.reg));
+        int32_t maskBits = _mm_movemask_ps(_mm_cmpeq_ps(reg, vv.reg));
+        return maskBits == 15;
     }
+
+    inline bool not_equal(const float4& vv) const { return !equal(vv); }
 
     // returns 1's and 0's in a float4
     inline float4 operator==(const float4& vv) const { return float4(_mm_pcmpeq_ps(reg, vv.reg)); }
@@ -324,67 +268,6 @@ public:
     inline float4 operator<(const float4& vv) const { return float4(_mm_pcmplt_ps(reg, vv.reg)); }
     inline float4 operator<=(const float4& vv) const { return float4(_mm_pcmple_ps(reg, vv.reg)); }
 
-    inline bool equal(const float4& vv) const
-    {
-        int32_t maskBits = _mm_movemask_ps(_mm_cmpeq_ps(reg, vv.reg));
-        return maskBits == 15;
-    }
-
-    inline bool not_equal(const float4& vv) const { return !equal(vv); }
-
-    // do 4 of these at once
-    friend inline float4 recip(const float4& vv)
-    {
-        return float4(_mm_rcphp_ps(vv.reg));
-    }
-    friend inline float4 rsqrt(const float4& vv)
-    {
-        return float4(_mm_rsqrthp_ps(vv.reg));
-    }
-    friend inline float4 sqrt(const float4& vv)
-    {
-        return float4(_mm_sqrthp_ps(vv.reg));
-    }
-
-    friend inline float length_squared(const float4& vv)
-    {
-        return float4(_mm_hadd4_ps(_mm_mul_ps(vv.reg, vv.reg)))[0];
-    }
-    friend inline float length(const float4& vv)
-    {
-        return float4(_mm_sqrt_ss(_mm_hadd4_ps(_mm_mul_ps(vv.reg, vv.reg))))[0];
-    }
-
-    // sse4.1 ops
-    friend inline float4 round(const float4& vv)
-    {
-        return float4(_mm_round_ps(vv.reg, 0x8)); // round to nearest | exc
-    }
-    friend inline float4 ceil(const float4& vv)
-    {
-        return float4(_mm_ceil_ps(vv.reg));
-    }
-    friend inline float4 floor(const float4& vv)
-    {
-        return float4(_mm_floor_ps(vv.reg)); // SSE4.1
-    }
-
-    // see if any results are 1
-    friend inline bool any(const float4& vv)
-    {
-        return float4(_mm_hadd4_ps(vv.reg))[0] > 0.0f;
-    }
-
-    inline float4 operator-() const
-    {
-        return float4(_mm_xor_ps(kSignBitsF32x4, reg));  // -a
-    }
-
-    friend inline float4 select(const float4& lhs, const float4& rhs, const float4& mask)
-    {
-        return float4(_mm_or_ps(_mm_andnot_ps(mask.reg, lhs.reg), _mm_and_ps(mask.reg, rhs.reg)));  // 0 picks a, 1 picks b
-    }
-    
 #if !USE_FLOAT16
     // Win does not have _Float16 compiler support as of VS2019.  So have to resort to AVX.
     inline float4 fromFloat16(const uint16_t* fp16, int count = 4) {
@@ -420,6 +303,136 @@ public:
     }
 #endif
 };
+
+inline float4 operator*(const float4& lhs, const float4& rhs)
+{
+    float4 aa(lhs);
+    return aa *= rhs;
+}
+inline float4 operator/(const float4& lhs, const float4& rhs)
+{
+    float4 aa(lhs);
+    return aa /= rhs;
+}
+inline float4 operator+(const float4& lhs, const float4& rhs)
+{
+    float4 aa(lhs);
+    return aa += rhs;
+}
+inline float4 operator-(const float4& lhs, const float4& rhs)
+{
+    float4 aa(lhs);
+    return aa -= rhs;
+}
+
+// scalar ops for right side
+inline float4 operator*(const float4& vv, float s)
+{
+    float4 aa(vv);
+    return aa *= float4(s);
+}
+inline float4 operator/(const float4& vv, float s)
+{
+    float4 aa(vv);
+    return aa /= float4(s);
+}
+inline float4 operator+(const float4& vv, float s)
+{
+    float4 aa(vv);
+    return aa += float4(s);
+}
+inline float4 operator-(const float4& vv, float s)
+{
+    float4 aa(vv);
+    return aa -= float4(s);
+}
+
+inline float4 operator*(float a, const float4& b)
+{
+    float4 aa(a);
+    return aa *= b;
+}
+inline float4 operator/(float a, const float4& b)
+{
+    float4 aa(a);
+    return aa /= b;
+}
+inline float4 operator+(float a, const float4& b)
+{
+    float4 aa(a);
+    return aa += b;
+}
+inline float4 operator-(float a, const float4& b)
+{
+    float4 aa(a);
+    return aa -= b;
+}
+
+inline float4 min(const float4& lhs, const float4& rhs)
+{
+    return float4(_mm_min_ps(lhs.reg, rhs.reg));
+}
+inline float4 max(const float4& lhs, const float4& rhs)
+{
+    return float4(_mm_max_ps(lhs.reg, rhs.reg));
+}
+
+// do 4 of these at once
+inline float4 recip(const float4& vv)
+{
+    return float4(_mm_rcphp_ps(vv.reg));
+}
+inline float4 rsqrt(const float4& vv)
+{
+    return float4(_mm_rsqrthp_ps(vv.reg));
+}
+inline float4 sqrt(const float4& vv)
+{
+    return float4(_mm_sqrthp_ps(vv.reg));
+}
+
+inline float dot(const float4& lhs, const float4& rhs)
+{
+    return float4(_mm_hadd4_ps(_mm_mul_ps(lhs.reg, rhs.reg)))[0];
+}
+inline float length_squared(const float4& vv)
+{
+    return float4(_mm_hadd4_ps(_mm_mul_ps(vv.reg, vv.reg)))[0];
+}
+inline float length(const float4& vv)
+{
+    return float4(_mm_sqrt_ss(_mm_hadd4_ps(_mm_mul_ps(vv.reg, vv.reg))))[0];
+}
+
+// sse4.1 ops
+inline float4 round(const float4& vv)
+{
+    return float4(_mm_round_ps(vv.reg, 0x8)); // round to nearest | exc
+}
+inline float4 ceil(const float4& vv)
+{
+    return float4(_mm_ceil_ps(vv.reg));
+}
+inline float4 floor(const float4& vv)
+{
+    return float4(_mm_floor_ps(vv.reg)); // SSE4.1
+}
+
+// see if any results are 1
+inline bool any(const float4& vv)
+{
+    return float4(_mm_hadd4_ps(vv.reg))[0] > 0.0f;
+}
+
+inline float4 select(const float4& lhs, const float4& rhs, const float4& mask)
+{
+    return float4(_mm_or_ps(_mm_andnot_ps(mask.reg, lhs.reg), _mm_and_ps(mask.reg, rhs.reg)));  // 0 picks a, 1 picks b
+}
+
+inline float4 normalize(const float4& vv)
+{
+    return float4(vv) /= length(vv);
+}
 
 };  // namespace simd
 

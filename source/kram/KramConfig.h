@@ -23,7 +23,8 @@
 #define KRAM_LINUX 0
 #endif
 
-// TODO: add profile
+// TODO: add Profile build (rename RelWithDbgInfo)
+
 #if NDEBUG
 #define KRAM_RELEASE 1
 #define KRAM_DEBUG 0
