@@ -34,6 +34,8 @@
 
 #include <cassert>
 
+#define USE_2DARRAY 1
+
 /**
  * @brief Generate a prefix-sum array using Brent-Kung algorithm.
  *
@@ -164,11 +166,18 @@ static void compute_pixel_region_variance(
 	#define VARBUF1(z, y, x) varbuf1[z * zst + y * yst + x]
 	#define VARBUF2(z, y, x) varbuf2[z * zst + y * yst + x]
 
+    // True if any non-identity swizzle
+    bool needs_swz = (swz.r != ASTCENC_SWZ_R) || (swz.g != ASTCENC_SWZ_G) ||
+                     (swz.b != ASTCENC_SWZ_B) || (swz.a != ASTCENC_SWZ_A);
+
 	// Load N and N^2 values into the work buffers
 	if (img->data_type == ASTCENC_TYPE_U8)
 	{
+#if USE_2DARRAY
+        uint8_t* data8 = static_cast<uint8_t*>(img->data);
+#else
 		uint8_t*** data8 = static_cast<uint8_t***>(img->data);
-
+#endif
 		// Swizzle data structure 4 = ZERO, 5 = ONE
 		uint8_t data[6];
 		data[ASTCENC_SWZ_0] = 0;
@@ -189,20 +198,41 @@ static void compute_pixel_region_variance(
 					int x_src = (x - 1) + offset_x - kernel_radius_xy;
 					x_src = astc::clamp(x_src, 0, (int)(img->dim_x - 1));
 
+                    float4 d;
+#if USE_2DARRAY
+                    int px = (y_src * img->dim_x + x_src) * 4;
+                    
+                    uint8_t r = data8[px + 0];
+                    uint8_t g = data8[px + 1];
+                    uint8_t b = data8[px + 2];
+                    uint8_t a = data8[px + 3];
+                    
+                    if (needs_swz)
+                    {
+                        data[0] = r;
+                        data[1] = g;
+                        data[2] = b;
+                        data[3] = a;
+                        
+                        r = data[swz.r];
+                        g = data[swz.g];
+                        b = data[swz.b];
+                        a = data[swz.a];
+                    }
+#else
 					data[0] = data8[z_src][y_src][4 * x_src    ];
 					data[1] = data8[z_src][y_src][4 * x_src + 1];
 					data[2] = data8[z_src][y_src][4 * x_src + 2];
 					data[3] = data8[z_src][y_src][4 * x_src + 3];
 
-					uint8_t r = data[swz.r];
-					uint8_t g = data[swz.g];
-					uint8_t b = data[swz.b];
-					uint8_t a = data[swz.a];
-
-					float4 d = float4 (r * (1.0f / 255.0f),
-					                   g * (1.0f / 255.0f),
-					                   b * (1.0f / 255.0f),
-					                   a * (1.0f / 255.0f));
+                    r = data[swz.r];
+                    g = data[swz.g];
+                    b = data[swz.b];
+                    a = data[swz.a];
+#endif
+                    // int to float conversion
+                    d = float4((float)r, (float)g, (float)b, float(a));
+                    d = d * (1.0f / 255.0f);
 
 					if (!are_powers_1)
 					{
@@ -220,6 +250,7 @@ static void compute_pixel_region_variance(
 	}
 	else if (img->data_type == ASTCENC_TYPE_F16)
 	{
+// TODO: apply USE_2DARRAY to FP16 inputs
 		uint16_t*** data16 = static_cast<uint16_t***>(img->data);
 
 		// Swizzle data structure 4 = ZERO, 5 = ONE (in FP16)
@@ -274,12 +305,7 @@ static void compute_pixel_region_variance(
 	else // if (img->data_type == ASTCENC_TYPE_F32)
 	{
 		assert(img->data_type == ASTCENC_TYPE_F32);
-#define USE_2DARRAY 1
 #if USE_2DARRAY
-        // True if any non-identity swizzle
-        bool needs_swz = (swz.r != ASTCENC_SWZ_R) || (swz.g != ASTCENC_SWZ_G) ||
-                         (swz.b != ASTCENC_SWZ_B) || (swz.a != ASTCENC_SWZ_A);
-
         float4* data32 = static_cast<float4*>(img->data);
 #else
 		float*** data32 = static_cast<float***>(img->data);

@@ -1876,38 +1876,16 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             srcImage.dim_z = 1;  // Not using 3D blocks, not supported on iOS
             //srcImage.dim_pad = 0;
 
-            vector<const Color*> rows8;
-            vector<const float4*> rowsFloat4;
-
             // data is triple-pointer so it can work with 3d textures, but only
             // have 2d image
+            // hacked the src pixel handling to only do slices, not a 3D texture
             if (info.isHDR) {
-                // hacked the src pixel handling to only do slices, not a 3D texture
                 srcImage.data = (void*)srcPixelDataFloat4;
                 srcImage.data_type = ASTCENC_TYPE_F32;
             }
             else {
-                // DONE: convert all data to fp32, since this code does it faster
-                // otherwise astcenc turns all 8/16f data to 32f before processing.
-                // Also current code without my changes only accepts 8/16f, and not 32F.
-                //srcImage.data = (void*)srcPixelData;
-                //srcImage.data_type = ASTCENC_TYPE_U8;
-
-                if (etcImageFloatData.empty()) {
-                    etcImageFloatData.resize(w * h);
-                }
-
-                // Note: if LDR, could avoid this copy if mip chain already has float
-                // data.  This is currently storing sRGB.
-
-                float4* srcImageDataAtscenc = etcImageFloatData.data();
-                const Color* search = (const Color*)srcPixelData;
-                for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
-                    srcImageDataAtscenc[i] = ColorToUnormFloat4(search[i]);
-                }
-
-                srcImage.data = (void*)srcImageDataAtscenc;
-                srcImage.data_type = ASTCENC_TYPE_F32;
+                srcImage.data = (void*)srcPixelData;
+                srcImage.data_type = ASTCENC_TYPE_U8;
             }
 
             // swizzle not used, already do swizzle

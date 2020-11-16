@@ -300,35 +300,49 @@ void fetch_imageblock(
 		data[ASTCENC_SWZ_0] = 0x00;
 		data[ASTCENC_SWZ_1] = 0xFF;
 
+#if USE_2DARRAY
+        uint8_t* data8 = static_cast<uint8_t*>(img.data);
+#else
 		uint8_t*** data8 = static_cast<uint8_t***>(img.data);
+#endif
 		for (int z = 0; z < bsd->zdim; z++)
 		{
+            int zi = zpos + z;
+            if (zi < 0)
+                zi = 0;
+            if (zi >= zsize)
+                zi = zsize - 1;
+
 			for (int y = 0; y < bsd->ydim; y++)
 			{
+                int yi = ypos + y;
+                if (yi < 0)
+                    yi = 0;
+                if (yi >= ysize)
+                    yi = ysize - 1;
+                
 				for (int x = 0; x < bsd->xdim; x++)
 				{
 					int xi = xpos + x;
-					int yi = ypos + y;
-					int zi = zpos + z;
-					// clamp XY coordinates to the picture.
 					if (xi < 0)
 						xi = 0;
-					if (yi < 0)
-						yi = 0;
-					if (zi < 0)
-						zi = 0;
 					if (xi >= xsize)
 						xi = xsize - 1;
-					if (yi >= ysize)
-						yi = ysize - 1;
-					if (zi >= zsize)
-						zi = zsize - 1;
-
+#if USE_2DARRAY
+                    int px = (yi * xsize + xi) * 4;
+                    assert(zi == 0);
+                    assert(px >= 0 && px < (xsize * ysize));
+                    
+                    int r = data8[px + 0];
+                    int g = data8[px + 1];
+                    int b = data8[px + 2];
+                    int a = data8[px + 3];
+#else
 					int r = data8[zi][yi][4 * xi    ];
 					int g = data8[zi][yi][4 * xi + 1];
 					int b = data8[zi][yi][4 * xi + 2];
 					int a = data8[zi][yi][4 * xi + 3];
-
+#endif
 					if (needs_swz)
 					{
 						data[ASTCENC_SWZ_R] = r;
@@ -451,7 +465,7 @@ void fetch_imageblock(
                     assert(zi == 0);
                     assert(px >= 0 && px < (xsize * ysize));
                     float4 val = data32[px];
-                    //val = max(val float4(1e-8f)); // why can't this 0, the U8 Path does?
+                    val = max(val, float4(1e-8f)); // why can't this 0, the U8 Path does?
                     
                     if (needs_swz)
                     {
