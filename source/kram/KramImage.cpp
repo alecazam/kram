@@ -17,7 +17,7 @@
 #endif
 
 #if COMPILE_BCENC
-// TODO: move to CMake file
+// TODO: move to CMake file?
 #define RGBCX_IMPLEMENTATION 1
 #define RGBCX_USE_SMALLER_TABLES 1
 
@@ -30,7 +30,6 @@
 #include "astc-encoder/astcenc.h"  // astc encoder
 
 // hack to improve block generation on L1 and LA encoding
-// TODO: this breaks multithreading if not set to 4.
 //extern thread_local int gAstcenc_UniqueChannelsInPartitioning;
 #endif
 
@@ -1834,14 +1833,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             //            config.tune_partition_limit =
             //            config.tune_block_mode_limit =
             //            config.a_scale_radius =
-
-            // context alloc will validate config above, for some reason doesn't
-            // allow 0 weights
-            error = astcenc_context_alloc(config, 1, &codec_context);
-            if (error != ASTCENC_SUCCESS) {
-                return false;
-            }
-
+            
             // Note: this can accept fp16 src, but have already converted to
             // float4
             astcenc_image srcImage;
