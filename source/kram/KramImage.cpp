@@ -1008,7 +1008,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
         // used to store chunks of the strip data
         if (isMultichunk) {
             floatImage.resize(w * h);
-            floatImage.data();
+            srcImage.pixelsFloat = floatImage.data();
         }
 
         // run this across all the source data
