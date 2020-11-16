@@ -43,6 +43,26 @@ public:
         _q.pop_front();
         return true;
     }
+    
+    bool pop(function<void()>& x)
+    {
+        lock_t lock{_mutex};
+        while (_q.empty() && !_done)
+        {
+            _ready.wait(lock); // this is what blocks a given thread to avoid spin loop
+        }
+        
+        // handle done state
+        if (_q.empty())
+        {
+            return false;
+        }
+        
+        // return the work while lock is held
+        x = move(_q.front());
+        _q.pop_front();
+        return true;
+    }
 
     template <typename F>
     bool try_push(F&& f)
@@ -59,42 +79,6 @@ public:
         return true;
     }
 
-    // has queue been marked done or not
-    bool is_done() const
-    {
-        unique_lock<mutex> lock{const_cast<mutex&>(_mutex)}; // ugh
-        bool done = _done;
-        return done;
-    }
-    
-    // mark all tasks submitted to queue, and can start to shutdown
-    void done()
-    {
-        {
-            unique_lock<mutex> lock{_mutex};
-            _done = true;
-        }
-        _ready.notify_all();
-    }
-
-    bool pop(function<void()>& x)
-    {
-        lock_t lock{_mutex};
-        while (_q.empty() && !_done)
-        {
-            _ready.wait(lock); // this is what blocks a given thread to avoid spin loop
-        }
-        
-        // handle done state
-        if (_q.empty())
-        {
-            return false;
-        }
-        x = move(_q.front());
-        _q.pop_front();
-        return true;
-    }
-
     template <typename F>
     void push(F&& f)
     {
@@ -102,7 +86,27 @@ public:
             lock_t lock{_mutex};
             _q.emplace_back(forward<F>(f));
         }
+        
+        // allow a waiting pop() to awaken
         _ready.notify_one();
+    }
+    
+    // has queue been marked done or not
+    bool is_done() const
+    {
+        lock_t lock{const_cast<mutex&>(_mutex)}; // ugh
+        bool done_ = _done;
+        return done_;
+    }
+    
+    // mark all tasks submitted to queue, and can start to shutdown
+    void set_done()
+    {
+        {
+            lock_t lock{_mutex};
+            _done = true;
+        }
+        _ready.notify_all();
     }
 };
 
@@ -117,6 +121,8 @@ class task_system {
     
     const int _count;
     vector<thread> _threads;
+    
+    // currently one queue to each thread, but can steal from other queues
     vector<notification_queue> _q;
     atomic<int> _index;
 
@@ -128,7 +134,9 @@ class task_system {
             function<void()> f;
 
             // start with ours, but steal from other queues if nothing found
-            // why 32 multiple?
+            // Note that if threadIndex queue is empty and stays empty
+            // then pop() below will stop using that thread.  But async_ is round-robining
+            // all work across the available queues.
             int multiple = 4; // 32;
             int numTries = 0;
             for (int n = 0, nEnd = _count * multiple; n < nEnd; ++n) {
@@ -142,7 +150,7 @@ class task_system {
             }
             
             // numTries is 64 when queues are empty, and typically 1 when queues are full
-            //KLOGD("task_system", "thread %d searched %d tries", threadIndex, numTries);
+            KLOGD("task_system", "thread %d searched %d tries", threadIndex, numTries);
             
             // if no task, and nothing to steal, pop own queue if possible
             // pop blocks until it's queue receives tasks
@@ -181,7 +189,7 @@ public:
     ~task_system()
     {
         // indicate that all tasks are submitted
-        for (auto& e : _q) e.done();
+        for (auto& e : _q) e.set_done();
         
         // wait until threads are all done, but joining each thread
         for (auto& e : _threads) e.join();
@@ -199,12 +207,14 @@ public:
 
         // Note: this isn't a balanced distribution of work
         // but work stealing from other queues in the run() call.
+        // Doesn't seem like we need to distribute work here.  Work stealing will pull.
         
         // push to the next queue that is available
-        for (int n = 0; n != _count; ++n)
-        {
-            if (_q[(i + n) % _count].try_push(forward<F>(f))) return;
-        }
+        // this was meant to avoid mutex stalls using a try_lock
+//        for (int n = 0; n != _count; ++n)
+//        {
+//            if (_q[(i + n) % _count].try_push(forward<F>(f))) return;
+//        }
 
         // otherwise just push to the next indexed queue
         _q[i % _count].push(forward<F>(f));
