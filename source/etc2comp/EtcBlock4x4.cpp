@@ -187,10 +187,10 @@ namespace Etc
 			{
 				int uiSourcePixelV = m_uiSourceV + y;
 
-				const ColorFloatRGBA *pfrgbaSource = m_pimageSource->GetSourcePixel(uiSourcePixelH, uiSourcePixelV);
+				ColorFloatRGBA pfrgbaSource = m_pimageSource->GetSourcePixel(uiSourcePixelH, uiSourcePixelV);
             
                 ColorFloatRGBA& sourcePixel = m_afrgbaSource[uiPixel];
-                sourcePixel = *pfrgbaSource;
+                sourcePixel = pfrgbaSource;
                 uiPixel++;
             }
         }

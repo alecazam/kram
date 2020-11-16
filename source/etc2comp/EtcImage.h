@@ -61,7 +61,7 @@ namespace Etc
 		};
 
 		// constructor using source image
-		Image(Format a_format, const float *a_pafSourceRGBA,
+		Image(Format a_format, const ColorR8G8B8A8 *a_pafSourceRGBA,
                 unsigned int a_uiSourceWidth, unsigned int a_uiSourceHeight,
 				ErrorMetric a_errormetric);
 
@@ -120,7 +120,7 @@ namespace Etc
 
 		float GetError(void) const;
 
-		inline const ColorFloatRGBA * GetSourcePixel(unsigned int x, unsigned int y) const
+		inline ColorFloatRGBA GetSourcePixel(unsigned int x, unsigned int y) const
 		{
             // clamp on border instead of returning nullptr and NaNs.  Might weight color more.
 			if (x >= m_uiSourceWidth)
@@ -132,7 +132,9 @@ namespace Etc
                 y = m_uiSourceHeight - 1;
             }
 
-			return &m_pafrgbaSource[y * m_uiSourceWidth + x];
+            // Convert to float pixel here.  This keeps input image much smaller.  Only 8-bit data.
+            // But can't encode to R11 or R11G11 with full fp32 inputs.
+			return ColorFloatRGBA::ConvertFromRGBA8(m_pafrgbaSource[y * m_uiSourceWidth + x]);
 		}
 
 		inline Format GetFormat(void) const
@@ -172,7 +174,7 @@ namespace Etc
 		//Image(void);
 		
 		// inputs
-		const ColorFloatRGBA *m_pafrgbaSource;
+		const ColorR8G8B8A8 *m_pafrgbaSource;
 		unsigned int m_uiSourceWidth;
 		unsigned int m_uiSourceHeight;
 		unsigned int m_uiBlockColumns;

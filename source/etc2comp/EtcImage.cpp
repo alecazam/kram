@@ -70,7 +70,7 @@ namespace Etc
 {
 	// ----------------------------------------------------------------------------------------------------
 	// constructor using source image
-	Image::Image(Format a_format, const float *a_pafSourceRGBA, unsigned int a_uiSourceWidth,
+	Image::Image(Format a_format, const ColorR8G8B8A8 *a_pafSourceRGBA, unsigned int a_uiSourceWidth,
 					unsigned int a_uiSourceHeight, 
 					ErrorMetric a_errormetric)
 	{
@@ -100,7 +100,7 @@ namespace Etc
 		m_bVerboseOutput = false;
         
         // this can be nullptr
-        m_pafrgbaSource = (const ColorFloatRGBA *) a_pafSourceRGBA;
+        m_pafrgbaSource = a_pafSourceRGBA;
 	}
 
 	// ----------------------------------------------------------------------------------------------------
@@ -165,8 +165,8 @@ namespace Etc
                             {
                                 int srcYY = srcY + yy;
 
-                                const ColorFloatRGBA *sourcePixel = this->GetSourcePixel(srcXX, srcYY);
-                                sourcePixels[uiPixel++] = *sourcePixel;
+                                ColorFloatRGBA sourcePixel = this->GetSourcePixel(srcXX, srcYY);
+                                sourcePixels[uiPixel++] = sourcePixel;
                             }
                         }
                         
@@ -410,8 +410,8 @@ namespace Etc
                         {
                             int srcYY = 4 * srcY + yy;
 
-                            const ColorFloatRGBA *sourcePixel = this->GetSourcePixel(srcXX, srcYY);
-                            sourcePixels[uiPixel++] = *sourcePixel;
+                            ColorFloatRGBA sourcePixel = this->GetSourcePixel(srcXX, srcYY);
+                            sourcePixels[uiPixel++] = sourcePixel;
                         }
                     }
                     

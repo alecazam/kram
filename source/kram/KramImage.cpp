@@ -993,9 +993,6 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     // strip image into here to then gen mips
     vector<Color> copyImage;
 
-    // etc encoder only takes in float4 data.
-    // TODO: This is huge memory.  8k x 8k x 16b = 1 gb
-    vector<float4> etcImageFloatData;
 
     // So can use simd ops to do conversions, use float4.
     // TODO: this is huge memory.  8k x 8k x 16b = 1 gb
@@ -1173,7 +1170,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
             Timer timer;
             bool success =
-                compressMipLevel(info, image, mipper, etcImageFloatData,
+                compressMipLevel(info, image, mipper,
                                  mipImage, outputTexture, mipStorageSize);
             assert(success);
 
@@ -1207,7 +1204,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 }
 
 bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
-                             Mipper& mipper, vector<float4>& etcImageFloatData,
+                             Mipper& mipper,
                              ImageData& mipImage, TextureData& outputTexture,
                              int mipStorageSize) const
 {
@@ -1396,29 +1393,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     break;
             }
 
-            // DONE: convert incoming srcPixelData back to float to pass into
-            // Image here ick.  Only have linear float in mip buffer, also don't
-            // trust non const pImageData. it's immediately cast to
-            // ColorFloatRGBA so be careful about alignment. Some of the error
-            // metrics are based off math on the float pixels.
-
-            // may need to blockDims, not just use w*h?
-            if (etcImageFloatData.empty()) {
-                etcImageFloatData.resize(w * h);
-            }
-
-            // TODO: can preserve fractional data in mips in R11/G11, so use float on src
-            // and don't just convert LDR mips here.
-            float4* srcImageDataEtc = etcImageFloatData.data();
-            const Color* search = (const Color*)srcPixelData;
-
-            // Note: etc image only takes unorm inputs, but outputs snorm blocks
-            // TODO: use w/h width for regional encodes?
-            for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
-                srcImageDataEtc[i] = ColorToUnormFloat4(search[i]);
-            }
-
-            Etc::Image imageEtc(format, (const float*)srcImageDataEtc, w, h, errMetric);
+            Etc::Image imageEtc(format, (const Etc::ColorR8G8B8A8*)srcPixelData, w, h, errMetric);
 
             imageEtc.SetVerboseOutput(info.isVerbose);
             Etc::Image::EncodingStatus status;

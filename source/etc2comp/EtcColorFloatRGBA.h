@@ -168,6 +168,8 @@ namespace Etc
 			return frgbaLog;
 		}
 
+        
+        
 		inline static ColorFloatRGBA ConvertFromRGBA8(unsigned char a_ucR, 
 			unsigned char a_ucG, unsigned char a_ucB, unsigned char a_ucA)
 		{
@@ -181,6 +183,11 @@ namespace Etc
 			return frgba;
 		}
 
+        inline static ColorFloatRGBA ConvertFromRGBA8(const ColorR8G8B8A8& color)
+        {
+            return ConvertFromRGBA8(color.ucR, color.ucG, color.ucB, color.ucA);
+        }
+        
 		inline static ColorFloatRGBA ConvertFromRGB4(unsigned char a_ucR4,
 														unsigned char a_ucG4,
 														unsigned char a_ucB4)

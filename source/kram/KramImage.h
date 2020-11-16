@@ -68,7 +68,6 @@ private:
     // ugh, reduce the params into this
     bool compressMipLevel(const ImageInfo& info, KTXImage& image,
                           Mipper& mipper,
-                          vector<float4>& etcImageFloatData,
                           ImageData& mipImage, TextureData& outputTexture,
                           int mipStorageSize) const;
 
