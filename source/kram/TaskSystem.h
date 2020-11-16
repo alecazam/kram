@@ -35,29 +35,26 @@ public:
     bool try_pop(function<void()>& x)
     {
         lock_t lock{_mutex, try_to_lock};
-        if (!lock || _q.empty())
-        {
+        if (!lock || _q.empty()) {
             return false;
         }
         x = move(_q.front());
         _q.pop_front();
         return true;
     }
-    
+
     bool pop(function<void()>& x)
     {
         lock_t lock{_mutex};
-        while (_q.empty() && !_done)
-        {
-            _ready.wait(lock); // this is what blocks a given thread to avoid spin loop
+        while (_q.empty() && !_done) {
+            _ready.wait(lock);  // this is what blocks a given thread to avoid spin loop
         }
-        
+
         // handle done state
-        if (_q.empty())
-        {
+        if (_q.empty()) {
             return false;
         }
-        
+
         // return the work while lock is held
         x = move(_q.front());
         _q.pop_front();
@@ -69,8 +66,7 @@ public:
     {
         {
             lock_t lock{_mutex, try_to_lock};
-            if (!lock)
-            {
+            if (!lock) {
                 return false;
             }
             _q.emplace_back(forward<F>(f));
@@ -86,19 +82,19 @@ public:
             lock_t lock{_mutex};
             _q.emplace_back(forward<F>(f));
         }
-        
+
         // allow a waiting pop() to awaken
         _ready.notify_one();
     }
-    
+
     // has queue been marked done or not
     bool is_done() const
     {
-        lock_t lock{const_cast<mutex&>(_mutex)}; // ugh
+        lock_t lock{const_cast<mutex&>(_mutex)};  // ugh
         bool done_ = _done;
         return done_;
     }
-    
+
     // mark all tasks submitted to queue, and can start to shutdown
     void set_done()
     {
@@ -112,16 +108,16 @@ public:
 
 /**************************************************************************************************/
 
-#define NOT_COPYABLE(type) \
+#define NOT_COPYABLE(type)      \
     type(const type&) = delete; \
     void operator=(const type&) = delete
 
 class task_system {
     NOT_COPYABLE(task_system);
-    
+
     const int _count;
     vector<thread> _threads;
-    
+
     // currently one queue to each thread, but can steal from other queues
     vector<notification_queue> _q;
     atomic<int> _index;
@@ -130,53 +126,49 @@ class task_system {
     {
         while (true) {
             // pop() wait avoids a spinloop.
-            
+
             function<void()> f;
 
             // start with ours, but steal from other queues if nothing found
             // Note that if threadIndex queue is empty and stays empty
             // then pop() below will stop using that thread.  But async_ is round-robining
             // all work across the available queues.
-            int multiple = 4; // 32;
+            int multiple = 4;  // 32;
             int numTries = 0;
             for (int n = 0, nEnd = _count * multiple; n < nEnd; ++n) {
                 numTries++;
-                
+
                 // break for loop if work found
-                if (_q[(threadIndex + n) % _count].try_pop(f))
-                {
+                if (_q[(threadIndex + n) % _count].try_pop(f)) {
                     break;
                 }
             }
-            
+
             // numTries is 64 when queues are empty, and typically 1 when queues are full
             KLOGD("task_system", "thread %d searched %d tries", threadIndex, numTries);
-            
+
             // if no task, and nothing to steal, pop own queue if possible
             // pop blocks until it's queue receives tasks
-            if (!f && !_q[threadIndex].pop(f))
-            {
+            if (!f && !_q[threadIndex].pop(f)) {
                 // shutdown if tasks have all been submitted and queue marked as done.
-                if (_q[threadIndex].is_done())
-                {
+                if (_q[threadIndex].is_done()) {
                     KLOGD("task_system", "thread %d shutting down", threadIndex);
-                    
+
                     break;
                 }
-                else
-                {
+                else {
                     KLOGD("task_system", "no work found for %d in %d tries", threadIndex, numTries);
-                    
+
                     // keep searching
                     continue;
                 }
             }
-            
+
             // do the work
             f();
         }
     }
-    
+
 public:
     task_system(int count = 1) : _count(std::min(count, (int)thread::hardware_concurrency())), _q{(size_t)_count}, _index(0)
     {
@@ -190,7 +182,7 @@ public:
     {
         // indicate that all tasks are submitted
         for (auto& e : _q) e.set_done();
-        
+
         // wait until threads are all done, but joining each thread
         for (auto& e : _threads) e.join();
     }
@@ -199,7 +191,7 @@ public:
     {
         return _count;
     }
-    
+
     template <typename F>
     void async_(F&& f)
     {
@@ -208,13 +200,13 @@ public:
         // Note: this isn't a balanced distribution of work
         // but work stealing from other queues in the run() call.
         // Doesn't seem like we need to distribute work here.  Work stealing will pull.
-        
+
         // push to the next queue that is available
         // this was meant to avoid mutex stalls using a try_lock
-//        for (int n = 0; n != _count; ++n)
-//        {
-//            if (_q[(i + n) % _count].try_push(forward<F>(f))) return;
-//        }
+        //        for (int n = 0; n != _count; ++n)
+        //        {
+        //            if (_q[(i + n) % _count].try_push(forward<F>(f))) return;
+        //        }
 
         // otherwise just push to the next indexed queue
         _q[i % _count].push(forward<F>(f));

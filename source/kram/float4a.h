@@ -16,7 +16,7 @@
 #include "sse2neon.h"
 #else
 //#include <smmintrin.h> // SSE4.1, and includes all before it
-#include <immintrin.h> // AVX
+#include <immintrin.h>  // AVX
 #endif
 
 // see here for intrinsics and which instruction set they come from
@@ -133,7 +133,7 @@ using tSwizzle = uint32_t;
 // dot product app with horizontal adds, without using _mm_hadd_ps()
 inline float32x4_t _mm_hadd4_ps(const float32x4_t& r)
 {
-#if 0 // SSE1
+#if 0  // SSE1
 //    // use for hpadd
 //    static const tSwizzle kSwizzleYYZW = macroSwizzle(1, 1, 2, 3);
 //    //static const tSwizzle kSwizzleZYZW = macroSwizzle(2,1,2,3);
@@ -142,9 +142,9 @@ inline float32x4_t _mm_hadd4_ps(const float32x4_t& r)
 //    float32x4_t t = _mm_add_ps(r, _mm_shuffle_ps(r, r, kSwizzleWZZW));  // xy + wz
 //    t = _mm_add_ss(t, _mm_shuffle_ps(t, t, kSwizzleYYZW));              // x + y
 //    return t;
-#else // SSE3
-    float32x4_t t = _mm_hadd_ps(r, r); // xy + wz
-    t = _mm_hadd_ps(t, t); // x + y
+#else  // SSE3
+    float32x4_t t = _mm_hadd_ps(r, r);  // xy + wz
+    t = _mm_hadd_ps(t, t);              // x + y
     return t;
 #endif
 }
@@ -170,7 +170,7 @@ class float4 {
 public:
     using tType = float32x4_t;
     float4() {}
-    
+
     // TODO: problem is that Apple's simd::float4(val) is val,000
     // have to go through simd_make_float4(val, val, val, val) to get 4 values
     // This behavior also doesn't match HLSL/GLSL and is an artifact of the comma operator messing things up.
@@ -251,7 +251,7 @@ public:
     {
         return float4(_mm_xor_ps(kSignBitsF32x4, reg));  // -a
     }
-    
+
     inline bool equal(const float4& vv) const
     {
         int32_t maskBits = _mm_movemask_ps(_mm_cmpeq_ps(reg, vv.reg));
@@ -270,35 +270,51 @@ public:
 
 #if !USE_FLOAT16
     // Win does not have _Float16 compiler support as of VS2019.  So have to resort to AVX.
-    inline float4 fromFloat16(const uint16_t* fp16, int count = 4) {
+    inline float4 fromFloat16(const uint16_t* fp16, int count = 4)
+    {
         // note this zero's out any of the exiting values
         __m128i reg16 = _mm_setzero_si128();
-        
+
         // fill low bits of m128i with the 4x fp16 values
         // fallthrough.  Can't do a loop since imm is harcoded into instruction
         // TODO: might be faster to load bottom 64-bytes _mm_loadu_epi64 for case 3 and break?
-        switch(count - 1) {
-            case 3: reg16 = _mm_insert_epi16(reg16, fp16[3], 3);
-            case 2: reg16 = _mm_insert_epi16(reg16, fp16[2], 2);
-            case 1: reg16 = _mm_insert_epi16(reg16, fp16[1], 1);
-            case 0: reg16 = _mm_insert_epi16(reg16, fp16[0], 0); break;
-            default: assert(false); break;
+        switch (count - 1) {
+            case 3:
+                reg16 = _mm_insert_epi16(reg16, fp16[3], 3);
+            case 2:
+                reg16 = _mm_insert_epi16(reg16, fp16[2], 2);
+            case 1:
+                reg16 = _mm_insert_epi16(reg16, fp16[1], 1);
+            case 0:
+                reg16 = _mm_insert_epi16(reg16, fp16[0], 0);
+                break;
+            default:
+                assert(false);
+                break;
         }
 
-        return float4(_mm_cvtph_ps(reg16)); // 4xfp16 -> 4xfp32, round to nearest-even
+        return float4(_mm_cvtph_ps(reg16));  // 4xfp16 -> 4xfp32, round to nearest-even
     }
-    
-    inline void toFloat16(uint16_t* fp16, int count = 4) const {
-        __m128i reg16 = _mm_cvtps_ph(reg, 0); // 4xfp32-> 4xfp16,  round to nearest-even
-       
+
+    inline void toFloat16(uint16_t* fp16, int count = 4) const
+    {
+        __m128i reg16 = _mm_cvtps_ph(reg, 0);  // 4xfp32-> 4xfp16,  round to nearest-even
+
         // extract low 16-bits out of the 4 values
         // fallthrough.  Can't do a loop since imm is harcoded into instruction
-        switch(count - 1) {
-            case 3: fp16[3] = _mm_extract_epi16(reg16, 3);
-            case 2: fp16[2] = _mm_extract_epi16(reg16, 2);
-            case 1: fp16[1] = _mm_extract_epi16(reg16, 1);
-            case 0: fp16[0] = _mm_extract_epi16(reg16, 0); break;
-            default: assert(false); break;
+        switch (count - 1) {
+            case 3:
+                fp16[3] = _mm_extract_epi16(reg16, 3);
+            case 2:
+                fp16[2] = _mm_extract_epi16(reg16, 2);
+            case 1:
+                fp16[1] = _mm_extract_epi16(reg16, 1);
+            case 0:
+                fp16[0] = _mm_extract_epi16(reg16, 0);
+                break;
+            default:
+                assert(false);
+                break;
         }
     }
 #endif
@@ -407,7 +423,7 @@ inline float length(const float4& vv)
 // sse4.1 ops
 inline float4 round(const float4& vv)
 {
-    return float4(_mm_round_ps(vv.reg, 0x8)); // round to nearest | exc
+    return float4(_mm_round_ps(vv.reg, 0x8));  // round to nearest | exc
 }
 inline float4 ceil(const float4& vv)
 {
@@ -415,7 +431,7 @@ inline float4 ceil(const float4& vv)
 }
 inline float4 floor(const float4& vv)
 {
-    return float4(_mm_floor_ps(vv.reg)); // SSE4.1
+    return float4(_mm_floor_ps(vv.reg));  // SSE4.1
 }
 
 // see if any results are 1

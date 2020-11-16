@@ -346,7 +346,6 @@ static const MyMTLPixelFormat kEncodingFormatsATEv1[] =
         MyMTLPixelFormatASTC_8x8_sRGB,
 };
 
-
 static const MyMTLPixelFormat kEncodingFormatsATEv2[] =
     {
         // astc support
@@ -436,7 +435,7 @@ bool isSupportedFormat(TexEncoder encoder, MyMTLPixelFormat format)
             isBCSupported = encoder.isBCSupported();
 #endif
             table = isBCSupported ? kEncodingFormatsATEv2 : kEncodingFormatsATEv1;
-            tableSize =  isBCSupported ? countof(kEncodingFormatsATEv2) : countof(kEncodingFormatsATEv1);
+            tableSize = isBCSupported ? countof(kEncodingFormatsATEv2) : countof(kEncodingFormatsATEv1);
             break;
         }
         case kTexEncoderBcenc:
@@ -471,14 +470,14 @@ bool validateFormatAndDecoder(MyMTLTextureType textureType, MyMTLPixelFormat for
     if (format == MyMTLPixelFormatInvalid) {
         return false;
     }
-    
+
     // TODO: support decode of more types
     if (textureType != MyMTLTextureType2D) {
         return false;
     }
-    
+
     // TODO: for now this logic is same as for encode, but ATE can decode more formats than it encodes
-    
+
     // enforce the encoder
     if (textureEncoder == kTexEncoderUnknown) {
         // for now pick best encoder for each format
@@ -534,9 +533,7 @@ bool validateFormatAndDecoder(MyMTLTextureType textureType, MyMTLPixelFormat for
     }
 
     return !error;
-
 }
-
 
 bool validateFormatAndEncoder(ImageInfoArgs& infoArgs)
 {
@@ -617,7 +614,6 @@ bool validateFormatAndEncoder(ImageInfoArgs& infoArgs)
 
     return !error;
 }
-
 
 bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
                          vector<Int2>& chunkOffsets, KTXHeader& header,

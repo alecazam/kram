@@ -27,7 +27,7 @@
 #if KRAM_WIN
 #define strtok_r strtok_s
 #endif
-        
+
 namespace kram {
 
 using namespace std;
@@ -560,7 +560,6 @@ bool kramTestCommand(int testNumber,
                 formatInputAndOutput(testNumber, "color_grid-a.png", MyMTLPixelFormatASTC_4x4_sRGB, encoder);
             break;
 
-            
         // slow tex to enocde
         case 5:
             testNumber = 5;
@@ -569,7 +568,6 @@ bool kramTestCommand(int testNumber,
                 formatInputAndOutput(testNumber, "color_grid-a.png", MyMTLPixelFormatASTC_4x4_sRGB, encoder);
             break;
 
-            
         case 10:
             testNumber = 10;
             encoder = kTexEncoderAstcenc;
@@ -1340,7 +1338,7 @@ static int kramAppDecode(vector<const char*>& args)
     bool isVerbose = false;
     string swizzleText;
     TexEncoder textureDecoder = kTexEncoderUnknown;
-    
+
     for (int i = 0; i < argc; ++i) {
         const char* word = args[i];
         if (word[0] != '-') {
@@ -1404,7 +1402,7 @@ static int kramAppDecode(vector<const char*>& args)
             textureDecoder = parseEncoder(args[i]);
             continue;
         }
-        
+
         // probably should be per-command and global verbose
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
@@ -1441,8 +1439,6 @@ static int kramAppDecode(vector<const char*>& args)
         error = true;
     }
 
-     
-        
     if (error) {
         kramDecodeUsage();
         return -1;
@@ -1456,13 +1452,13 @@ static int kramAppDecode(vector<const char*>& args)
 
     bool success = SetupSourceKTX(srcMmapHelper, srcFileHelper, srcFileBuffer,
                                   srcFilename, srcImage);
-    
+
     // TODO: for hdr decode, may need to walk blocks or ask caller to pass -hdr flag
     if (!validateFormatAndDecoder(srcImage.textureType, srcImage.pixelFormat, textureDecoder)) {
         KLOGE("Kram", "format decode only supports ktx output");
         return -1;
     }
-    
+
     success = success && SetupTmpFile(tmpFileHelper, ".ktx");
 
     Image tmpImage;  // just to call decode
@@ -1935,83 +1931,82 @@ int kramAppScript(vector<const char*>& args)
     string commandAndArgs;
 
     Timer scriptTimer;
-    
+
     // as a global this auto allocates 16 threads, and don't want that unless actually
     // using scripting.  And even then want control over the number of threads.
-    atomic<int> errorCounter(0); // doesn't initialize to 0 otherwise
+    atomic<int> errorCounter(0);  // doesn't initialize to 0 otherwise
     int commandCounter = 0;
-     
+
     {
-    task_system system(numJobs);
-   
-    // TODO: should really limit threads if less than command count.
-    if (isVerbose) {
-        KLOGI("Kram", "script system started with %d threads", system.num_threads());
-    }
-    
-    while (fp) {
-        fgets(str, sizeof(str), fp);
-        if (feof(fp)) {
-            break;
-        }
-        
-        commandAndArgs = str;
-        if (commandAndArgs.empty()) {
-            continue;
+        task_system system(numJobs);
+
+        // TODO: should really limit threads if less than command count.
+        if (isVerbose) {
+            KLOGI("Kram", "script system started with %d threads", system.num_threads());
         }
 
-        commandCounter++;
-        
-        if (commandAndArgs.back() == '\n') {
-            commandAndArgs.pop_back();
-        }
-
-        system.async_([&, commandAndArgs]() mutable {
-            Timer commandTimer;
-            if (isVerbose) {
-                KLOGI("Kram", "running %s", commandAndArgs.c_str());
+        while (fp) {
+            fgets(str, sizeof(str), fp);
+            if (feof(fp)) {
+                break;
             }
 
-            string commandAndArgsCopy = commandAndArgs;
-
-            // tokenize the strings
-            vector<const char*> args;
-            // string is modified in this case " " replaced with "\0"
-            // strtok isn't re-entrant, but strtok_r is
-            // https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
-            char* rest = (char*)commandAndArgs.c_str();
-            char* token;
-            while ((token = strtok_r(rest, " ", &rest))) {
-                args.push_back(token);
-                //token = strtok_r(NULL, " ");
+            commandAndArgs = str;
+            if (commandAndArgs.empty()) {
+                continue;
             }
-            const char* command = args[0];
 
-            int errorCode = kramAppCommand(args);
+            commandCounter++;
 
-            if (isVerbose) {
-                auto timeElapsed = commandTimer.timeElapsed();
-                if (timeElapsed > 1.0) {
-                    // TODO: extract output filename
-                    KLOGI("Kram", "perf: %s %s took %0.3fs", command, "file", timeElapsed);
+            if (commandAndArgs.back() == '\n') {
+                commandAndArgs.pop_back();
+            }
+
+            system.async_([&, commandAndArgs]() mutable {
+                Timer commandTimer;
+                if (isVerbose) {
+                    KLOGI("Kram", "running %s", commandAndArgs.c_str());
                 }
-            }
 
-            if (errorCode != 0) {
-                KLOGE("Kram", "cmd: failed %s", commandAndArgsCopy.c_str());
-                errorCounter++;
-                return errorCode;
-            }
+                string commandAndArgsCopy = commandAndArgs;
 
-            return 0;
-        });
+                // tokenize the strings
+                vector<const char*> args;
+                // string is modified in this case " " replaced with "\0"
+                // strtok isn't re-entrant, but strtok_r is
+                // https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
+                char* rest = (char*)commandAndArgs.c_str();
+                char* token;
+                while ((token = strtok_r(rest, " ", &rest))) {
+                    args.push_back(token);
+                    //token = strtok_r(NULL, " ");
+                }
+                const char* command = args[0];
+
+                int errorCode = kramAppCommand(args);
+
+                if (isVerbose) {
+                    auto timeElapsed = commandTimer.timeElapsed();
+                    if (timeElapsed > 1.0) {
+                        // TODO: extract output filename
+                        KLOGI("Kram", "perf: %s %s took %0.3fs", command, "file", timeElapsed);
+                    }
+                }
+
+                if (errorCode != 0) {
+                    KLOGE("Kram", "cmd: failed %s", commandAndArgsCopy.c_str());
+                    errorCounter++;
+                    return errorCode;
+                }
+
+                return 0;
+            });
+        }
     }
-    }
-    
+
     // TODO: may want to wait on semaphore here
     // otherwise this is returning too early.  There are joins before task system shutsdown.
-    
-    
+
     if (errorCounter > 0) {
         KLOGE("Kram", "script commands %d/%d failed", int(errorCounter), commandCounter);
         return -1;
@@ -2020,7 +2015,7 @@ int kramAppScript(vector<const char*>& args)
     if (isVerbose) {
         KLOGI("Kram", "script completed %d commands took %0.3fs", int(errorCounter), scriptTimer.timeElapsed());
     }
-    
+
     return 0;
 }
 

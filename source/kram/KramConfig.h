@@ -125,7 +125,7 @@
 // this has every intrinsic header in it
 #if USE_SSE
 // to keep astcenc compiling
-#include <immintrin.h> // AVX1
+#include <immintrin.h>  // AVX1
 #else
 #include "sse2neon.h"
 #endif
@@ -136,4 +136,3 @@
 // emulate float4
 #include "float4a.h"
 #endif
-

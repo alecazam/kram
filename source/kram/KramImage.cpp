@@ -202,7 +202,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                 for (int x = 0, xEnd = _width; x < xEnd; ++x) {
                     int srcX = (y0 + x) * numSrcChannels;
                     int dstX = (y0 + x);
-                   
+
                     // use AVX to convert
                     dstPixels[dstX].fromFloat16(&srcPixels[srcX], numSrcChannels);
                 }
@@ -993,7 +993,6 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     // strip image into here to then gen mips
     vector<Color> copyImage;
 
-
     // So can use simd ops to do conversions, use float4.
     // TODO: this is huge memory.  8k x 8k x 16b = 1 gb
     vector<float4> floatImage;
@@ -1279,7 +1278,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                 for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
                     uint16_t src16[4];
                     src[i].toFloat16(src16);
-                    
+
                     switch (count) {
                         case 4:
                             dst[count * i + 3] = src16[3];
@@ -1911,7 +1910,6 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                 outputTexture.data.data(), mipStorageSize,
                 0);  // threadIndex
 
-            
             // Or should this context only be freed after all mips?
             astcenc_context_free(codec_context);
 

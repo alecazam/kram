@@ -870,7 +870,7 @@ void KTXImage::toPropsData(vector<uint8_t>& propsData)
 {
     for (const auto& prop : props) {
         uint32_t size = uint32_t(prop.first.length() + 1 +
-                        prop.second.length() + 1);
+                                 prop.second.length() + 1);
         const uint8_t* sizeData = (const uint8_t*)&size;
 
         // add size
