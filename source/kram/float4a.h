@@ -171,9 +171,9 @@ public:
     using tType = float32x4_t;
     float4() {}
 
-    // TODO: problem is that Apple's simd::float4(val) is val,000
+    // TODO: problem is that Apple's simd::float4(val) is val,000, simd::float4(val, 0, 0, 0) is 0 (last element?)
     // have to go through simd_make_float4(val, val, val, val) to get 4 values
-    // This behavior also doesn't match HLSL/GLSL and is an artifact of the comma operator messing things up.
+    // This behavior doesn't match HLSL/GLSL and is an artifact of the comma operator messing things up.
     explicit float4(float val) { reg = _mm_set1_ps(val); }  // xyzw = val
     explicit float4(tType val) { reg = val; }
     float4(float xx, float yy, float zz, float ww) { reg = _mm_setr_ps(xx, yy, zz, ww); }
@@ -195,7 +195,7 @@ public:
     // use of these pull data out of simd registers
     float& operator[](int index)
     {
-        return v[index];
+        return v[index];  // or _mm_extract_ps(reg, index), but imm needs to be hardcoded there
     }
     const float& operator[](int index) const
     {
@@ -267,57 +267,6 @@ public:
     inline float4 operator>=(const float4& vv) const { return float4(_mm_pcmpge_ps(reg, vv.reg)); }
     inline float4 operator<(const float4& vv) const { return float4(_mm_pcmplt_ps(reg, vv.reg)); }
     inline float4 operator<=(const float4& vv) const { return float4(_mm_pcmple_ps(reg, vv.reg)); }
-
-#if !USE_FLOAT16
-    // Win does not have _Float16 compiler support as of VS2019.  So have to resort to AVX.
-    inline float4 fromFloat16(const uint16_t* fp16, int count = 4)
-    {
-        // note this zero's out any of the exiting values
-        __m128i reg16 = _mm_setzero_si128();
-
-        // fill low bits of m128i with the 4x fp16 values
-        // fallthrough.  Can't do a loop since imm is harcoded into instruction
-        // TODO: might be faster to load bottom 64-bytes _mm_loadu_epi64 for case 3 and break?
-        switch (count - 1) {
-            case 3:
-                reg16 = _mm_insert_epi16(reg16, fp16[3], 3);
-            case 2:
-                reg16 = _mm_insert_epi16(reg16, fp16[2], 2);
-            case 1:
-                reg16 = _mm_insert_epi16(reg16, fp16[1], 1);
-            case 0:
-                reg16 = _mm_insert_epi16(reg16, fp16[0], 0);
-                break;
-            default:
-                assert(false);
-                break;
-        }
-
-        return float4(_mm_cvtph_ps(reg16));  // 4xfp16 -> 4xfp32, round to nearest-even
-    }
-
-    inline void toFloat16(uint16_t* fp16, int count = 4) const
-    {
-        __m128i reg16 = _mm_cvtps_ph(reg, 0);  // 4xfp32-> 4xfp16,  round to nearest-even
-
-        // extract low 16-bits out of the 4 values
-        // fallthrough.  Can't do a loop since imm is harcoded into instruction
-        switch (count - 1) {
-            case 3:
-                fp16[3] = _mm_extract_epi16(reg16, 3);
-            case 2:
-                fp16[2] = _mm_extract_epi16(reg16, 2);
-            case 1:
-                fp16[1] = _mm_extract_epi16(reg16, 1);
-            case 0:
-                fp16[0] = _mm_extract_epi16(reg16, 0);
-                break;
-            default:
-                assert(false);
-                break;
-        }
-    }
-#endif
 };
 
 inline float4 operator*(const float4& lhs, const float4& rhs)
@@ -409,15 +358,15 @@ inline float4 sqrt(const float4& vv)
 
 inline float dot(const float4& lhs, const float4& rhs)
 {
-    return float4(_mm_hadd4_ps(_mm_mul_ps(lhs.reg, rhs.reg)))[0];
+    return _mm_extract_ps(_mm_hadd4_ps(_mm_mul_ps(lhs.reg, rhs.reg)), 0);
 }
 inline float length_squared(const float4& vv)
 {
-    return float4(_mm_hadd4_ps(_mm_mul_ps(vv.reg, vv.reg)))[0];
+    return dot(vv, vv);
 }
 inline float length(const float4& vv)
 {
-    return float4(_mm_sqrt_ss(_mm_hadd4_ps(_mm_mul_ps(vv.reg, vv.reg))))[0];
+    return sqrtf(length());
 }
 
 // sse4.1 ops
@@ -437,7 +386,7 @@ inline float4 floor(const float4& vv)
 // see if any results are 1
 inline bool any(const float4& vv)
 {
-    return float4(_mm_hadd4_ps(vv.reg))[0] > 0.0f;
+    return _mm_extract_ps(_mm_hadd4_ps(vv.reg), 0) > 0.0f;
 }
 
 inline float4 select(const float4& lhs, const float4& rhs, const float4& mask)

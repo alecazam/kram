@@ -44,15 +44,8 @@ static inline color_quad_u8 *color_quad_u8_set(color_quad_u8 *pRes, int32_t r, i
 static inline bc7enc_bool color_quad_u8_notequals(const color_quad_u8 *pLHS, const color_quad_u8 *pRHS) { return (pLHS->r != pRHS->r) || (pLHS->g != pRHS->g) || (pLHS->b != pRHS->b) || (pLHS->a != pRHS->a); }
 
 #if USE_SIMD_BCENC
-USING_SIMD;
+using namespace simd;
 using vec4F = float4;
-
-float4 kZero = simd_make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-float4 kOne = simd_make_float4(1.0f, 1.0f, 1.0f, 1.0f);
-
-inline vec4F saturate(const vec4F& v) {
-    return min(max(v, kZero), kOne);
-}
 
 static inline vec4F *vec4F_set_scalar(vec4F *pV, float x) {	*pV = vec4F(x); return pV; }
 static inline vec4F *vec4F_set(vec4F *pV, float x, float y, float z, float w) {	*pV = simd_make_float4(x,y,z,w); return pV; }

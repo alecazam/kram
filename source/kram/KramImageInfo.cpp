@@ -13,7 +13,7 @@
 
 namespace kram {
 using namespace std;
-USING_SIMD;
+using namespace simd;
 
 #define isStringEqual(lhs, rhs) (strcmp(lhs, rhs) == 0)
 

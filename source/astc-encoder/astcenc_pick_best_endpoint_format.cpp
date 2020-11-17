@@ -518,6 +518,9 @@ static void two_partitions_find_best_combination_for_bitcount(
 	*error_of_best_combination = best_integer_count_error;
 	if (ql >= 0)
 	{
+        // make sure this is postive too
+        assert(ql_mod >= 0 && ql_mod < 21);
+        
 		for (int i = 0; i < 2; i++)
 		{
 			best_formats[i] = formats_of_choice[ql][best_integer_count - 2][i];
@@ -624,6 +627,9 @@ static void three_partitions_find_best_combination_for_bitcount(
 	*error_of_best_combination = best_integer_count_error;
 	if (ql >= 0)
 	{
+        // make sure this is postive too
+        assert(ql_mod >= 0 && ql_mod < 21);
+        
 		for (int i = 0; i < 3; i++)
 		{
 			best_formats[i] = formats_of_choice[ql][best_integer_count - 3][i];
@@ -741,6 +747,9 @@ static void four_partitions_find_best_combination_for_bitcount(
 	*error_of_best_combination = best_integer_count_error;
 	if (ql >= 0)
 	{
+        // make sure this is postive too
+        assert(ql_mod >= 0 && ql_mod < 21);
+        
 		for (int i = 0; i < 4; i++)
 		{
 			best_formats[i] = formats_of_choice[ql][best_integer_count - 4][i];
@@ -1029,15 +1038,21 @@ void determine_optimal_set_of_endpoint_formats_to_use(
 
 	for (int i = 0; i < tune_candidate_limit; i++)
 	{
-		quantized_weight[i] = best_error_weights[i];
-		if (quantized_weight[i] >= 0)
+        int weight = best_error_weights[i];
+		quantized_weight[i] = weight;
+		if (weight >= 0)
 		{
-			quantization_level[i] = best_quantization_levels[best_error_weights[i]];
-			assert(quantization_level[i] >= 0 && quantization_level[i] < 21);
-			quantization_level_mod[i] = best_quantization_levels_mod[best_error_weights[i]];
+            int level = best_quantization_levels[weight];
+			int level_mod = best_quantization_levels_mod[weight];
+            
+            assert(level >= 0 && level < 21);
+            assert(level_mod >= 0 && level_mod < 21);
+            
+            quantization_level[i] = level;
+            quantization_level_mod[i] = level_mod;
 			for (int j = 0; j < partition_count; j++)
 			{
-				partition_format_specifiers[i][j] = best_ep_formats[best_error_weights[i]][j];
+				partition_format_specifiers[i][j] = best_ep_formats[weight][j];
 			}
 		}
 	}

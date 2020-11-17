@@ -14,7 +14,7 @@
 namespace kram {
 
 using namespace std;
-USING_SIMD;
+using namespace simd;
 
 class Mipper;
 class KTXHeader;
@@ -88,7 +88,8 @@ private:
 
     // this is the entire strip data, float version can be passed for HDR
     // sources always 4 channels RGBA for 8 and 32f data.  16f promoted to 32f.
-    vector<uint8_t> _pixels;
+    vector<uint8_t> _pixels;  // TODO: change to Color?
+    //vector<half4> _pixelsHalf; // TODO: add support to import fp16
     vector<float4> _pixelsFloat;
 };
 

@@ -145,7 +145,7 @@ class task_system {
             }
 
             // numTries is 64 when queues are empty, and typically 1 when queues are full
-            KLOGD("task_system", "thread %d searched %d tries", threadIndex, numTries);
+            //KLOGD("task_system", "thread %d searched %d tries", threadIndex, numTries);
 
             // if no task, and nothing to steal, pop own queue if possible
             // pop blocks until it's queue receives tasks

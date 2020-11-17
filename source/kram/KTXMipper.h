@@ -9,7 +9,7 @@
 
 namespace kram {
 using namespace std;
-USING_SIMD;
+using namespace simd;
 
 // return whether num is pow2
 bool isPow2(int num);
@@ -36,7 +36,10 @@ inline float4 ColorToSnormFloat4(const Color &value)
 
 class ImageData {
 public:
+    // data can be mipped as 8u, 16f, or 32f.  Prefer smallest size.
+    // half is used when srgb/premultiply is used.  32f is really only for r/rg/rgba32f mips.
     Color *pixels = nullptr;
+    half4 *pixelsHalf = nullptr;    // optional
     float4 *pixelsFloat = nullptr;  // optional
 
     int width = 0;
@@ -70,8 +73,8 @@ public:
     void remapToSignedEndpoint8(uint16_t &endpoint) const;
     void remapToSignedEndpoint88(uint16_t &endpoint) const;
 
-    void initPixelsFloatIfNeeded(ImageData &srcImage, bool doPremultiply,
-                                 vector<float4> &floatImage) const;
+    void initPixelsHalfIfNeeded(ImageData &srcImage, bool doPremultiply,
+                                vector<half4> &halfImage) const;
 
 private:
     void mipmapLevel(ImageData &srcImage, ImageData &dstImage) const;

@@ -45,7 +45,7 @@
 namespace kram {
 
 using namespace std;
-USING_SIMD;
+using namespace simd;
 using namespace heman;
 
 template <typename T>
@@ -161,12 +161,16 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                        _pixelsFloat.size() * sizeof(float4));
             }
 
-#if USE_FLOAT16
             // treat as float for per channel copies
-            float* dstPixels = (float*)(_pixelsFloat.data());
+            float4* dstPixels = _pixelsFloat.data();
 
-            const _Float16* srcPixels =
-                (const _Float16*)(image.fileData + image.mipLevels[0].offset);
+            const half* srcPixels =
+                (const half*)(image.fileData + image.mipLevels[0].offset);
+
+            half4 srcPixel;
+            for (int i = 0; i < 4; ++i) {
+                srcPixel.v[i] = 0;
+            }
 
             for (int y = 0; y < _height; ++y) {
                 int y0 = _height * y;
@@ -175,38 +179,15 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                     int srcX = (y0 + x) * numSrcChannels;
                     int dstX = (y0 + x) * numDstChannels;
 
-                    switch (numSrcChannels) {
-                        // all fallthrough, convert _Float16 to float type
-                        case 4:
-                            dstPixels[dstX + 3] = (float)srcPixels[srcX + 3];
-                        case 3:
-                            dstPixels[dstX + 2] = (float)srcPixels[srcX + 2];
-                        case 2:
-                            dstPixels[dstX + 1] = (float)srcPixels[srcX + 1];
-                        case 1:
-                            dstPixels[dstX + 0] = (float)srcPixels[srcX + 0];
+                    // copy in available alues
+                    for (int i = 0; i < numSrcChannels; ++i) {
+                        srcPixel.v[i] = srcPixels[srcX + i];
                     }
-                }
-            }
-#else
-            // treat as float for per channel copies
-            float4* dstPixels = _pixelsFloat.data();
-
-            const uint16_t* srcPixels =
-                (const uint16_t*)(image.fileData + image.mipLevels[0].offset);
-
-            for (int y = 0; y < _height; ++y) {
-                int y0 = _height * y;
-
-                for (int x = 0, xEnd = _width; x < xEnd; ++x) {
-                    int srcX = (y0 + x) * numSrcChannels;
-                    int dstX = (y0 + x);
 
                     // use AVX to convert
-                    dstPixels[dstX].fromFloat16(&srcPixels[srcX], numSrcChannels);
+                    dstPixels[dstX] = toFloat4(srcPixel);
                 }
             }
-#endif
 
             // caller can swizzle
             // caller can compress to BC6H or ASTC-HDR if encoders available
@@ -993,7 +974,10 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     vector<Color> copyImage;
 
     // So can use simd ops to do conversions, use float4.
-    // TODO: this is huge memory.  8k x 8k x 16b = 1 gb
+    // TODO: but float4 is huge memory.
+    // 8k x 8k x 8b = 500 mb
+    // 8k x 8k x 16b = 1 gb
+    vector<half4> halfImage;
     vector<float4> floatImage;
 
     bool doPremultiply = info.hasAlpha && info.isPremultiplied;
@@ -1031,8 +1015,19 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
         // used to store premul and linear color
         if (info.isSRGB || doPremultiply) {
-            floatImage.resize(w * h);
-            srcImage.pixelsFloat = floatImage.data();
+            halfImage.resize(w * h);
+
+            // so large mips even if clamped with -mipmax allocate to largest mip size (2k x 2k @16 = 64MB)
+            // have to build the mips off that.  srgb and premul is why fp32 is
+            // needed, and need to downsample in linear space.
+
+            //            int size = w * h * sizeof(float4);
+            //            if (size > 16*1024*1024) {
+            //                int bp = 0;
+            //                bp = bp;
+            //            }
+
+            srcImage.pixelsHalf = halfImage.data();
         }
     }
 
@@ -1089,11 +1084,11 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
                 sdfMipper.init(srcImage, info.isVerbose);
             }
             else {
-                // copy and convert to float4 image
+                // copy and convert to half4 or float4 image
                 // srcImage already points to float data, so could modify that
                 // only need doPremultiply at the top mip
-                mipper.initPixelsFloatIfNeeded(srcImage, doPremultiply,
-                                               floatImage);
+                mipper.initPixelsHalfIfNeeded(srcImage, doPremultiply,
+                                              halfImage);
             }
         }
 
@@ -1246,50 +1241,27 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             case MyMTLPixelFormatR16Float:
             case MyMTLPixelFormatRG16Float:
             case MyMTLPixelFormatRGBA16Float: {
-#if USE_FLOAT16
                 int count = image.blockSize() / 2;
 
-                _Float16* dst = (_Float16*)outputTexture.data.data();
+                half* dst = (half*)outputTexture.data.data();
 
                 const float4* src = mipImage.pixelsFloat;
 
                 // assumes we don't need to align r16f rows to 4 bytes
                 for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
-                    switch (count) {
-                        case 4:
-                            dst[count * i + 3] = (_Float16)src[i].w;
-                        case 3:
-                            dst[count * i + 2] = (_Float16)src[i].z;
-                        case 2:
-                            dst[count * i + 1] = (_Float16)src[i].y;
-                        case 1:
-                            dst[count * i + 0] = (_Float16)src[i].x;
-                    }
-                }
-#else
-                int count = image.blockSize() / 2;
-
-                uint16_t* dst = (uint16_t*)outputTexture.data.data();
-
-                const float4* src = mipImage.pixelsFloat;
-
-                // assumes we don't need to align r16f rows to 4 bytes
-                for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
-                    uint16_t src16[4];
-                    src[i].toFloat16(src16);
+                    half4 src16 = toHalf4(src[0]);
 
                     switch (count) {
                         case 4:
-                            dst[count * i + 3] = src16[3];
+                            dst[count * i + 3] = src16.w;
                         case 3:
-                            dst[count * i + 2] = src16[2];
+                            dst[count * i + 2] = src16.z;
                         case 2:
-                            dst[count * i + 1] = src16[1];
+                            dst[count * i + 1] = src16.y;
                         case 1:
-                            dst[count * i + 0] = src16[0];
+                            dst[count * i + 0] = src16.x;
                     }
                 }
-#endif
                 break;
             }
             case MyMTLPixelFormatR32Float:
@@ -1831,7 +1803,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             //            config.tune_partition_limit =
             //            config.tune_block_mode_limit =
             //            config.a_scale_radius =
-            
+
             // Note: this can accept fp16 src, but have already converted to
             // float4
             astcenc_image srcImage;

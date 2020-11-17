@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 
 // These were for mkstemps
-#if KRAM_MAC || KRAM_LINUX
+#if KRAM_MAC || KRAM_IOS || KRAM_LINUX
 #include <sys/mman.h>
 #include <unistd.h>
 #endif

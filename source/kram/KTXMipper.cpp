@@ -9,7 +9,7 @@
 namespace kram {
 
 using namespace std;
-USING_SIMD;
+using namespace simd;
 
 Mipper::Mipper() { initTables(); }
 
@@ -151,8 +151,8 @@ void Mipper::initTables()
 #endif
 }
 
-void Mipper::initPixelsFloatIfNeeded(ImageData& srcImage, bool doPremultiply,
-                                     vector<float4>& floatImage) const
+void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
+                                    vector<half4>& halfImage) const
 {
     int w = srcImage.width;
     int h = srcImage.height;
@@ -160,7 +160,7 @@ void Mipper::initPixelsFloatIfNeeded(ImageData& srcImage, bool doPremultiply,
     // do in-place mips to this if srgb or premul involved
     if (srcImage.isHDR) {
         // don't do all this if data is already float, data should already be in
-        // floatImage
+        // floatImage.  But may need to do premultiply?
         assert(false);
     }
     else if (srcImage.isSRGB) {
@@ -169,14 +169,10 @@ void Mipper::initPixelsFloatIfNeeded(ImageData& srcImage, bool doPremultiply,
             int y0 = y * w;
             for (int x = 0; x < w; x++) {
                 Color& c0 = srcImage.pixels[y0 + x];
-                float4& cFloat = floatImage[y0 + x];
-
-                cFloat =
+                float4 cFloat =
                     {srgbToLinear[c0.r], srgbToLinear[c0.g],
                      srgbToLinear[c0.b], 1.0f};
-                assert(cFloat.x >= 0 && cFloat.x <= 1.0);
 
-                // only have to rewrite src alpha/color if there is alpha
                 if (c0.a != 255) {
                     float alpha = alphaToFloat[c0.a];
 
@@ -184,18 +180,28 @@ void Mipper::initPixelsFloatIfNeeded(ImageData& srcImage, bool doPremultiply,
                         cFloat.w = alpha;
                     }
                     else {
+                        // premul and sets alpha
                         cFloat *= alpha;
-                        assert(cFloat.x >= 0 && cFloat.x <= 1.0);
-
-                        // need to overwrite the color 8-bit color too
-                        // but this writes back to srgb for encoding
-                        float4 cFloatCopy = cFloat;
-                        cFloatCopy.x = linearToSRGBFunc(cFloat.x);
-                        cFloatCopy.y = linearToSRGBFunc(cFloat.y);
-                        cFloatCopy.z = linearToSRGBFunc(cFloat.z);
-
-                        c0 = Unormfloat4ToColor(cFloatCopy);
                     }
+                }
+
+                //                if (!floatImage.empty()) {
+                //                    floatImage[y0 + x] = cFloat;
+                //                }
+                //                else
+                {
+                    halfImage[y0 + x] = toHalf4(cFloat);
+                }
+
+                // only have to rewrite src alpha/color if there is alpha and it's premul
+                if (doPremultiply && c0.a != 255) {
+                    // need to overwrite the color 8-bit color too
+                    // but this writes back to srgb for encoding
+                    cFloat.x = linearToSRGBFunc(cFloat.x);
+                    cFloat.y = linearToSRGBFunc(cFloat.y);
+                    cFloat.z = linearToSRGBFunc(cFloat.z);
+
+                    c0 = Unormfloat4ToColor(cFloat);
                 }
             }
         }
@@ -206,21 +212,26 @@ void Mipper::initPixelsFloatIfNeeded(ImageData& srcImage, bool doPremultiply,
             int y0 = y * w;
             for (int x = 0; x < w; x++) {
                 Color& c0 = srcImage.pixels[y0 + x];
-                float4& cFloat = floatImage[y0 + x];
+                float4 cFloat = {alphaToFloat[c0.r], alphaToFloat[c0.g],
+                                 alphaToFloat[c0.b], 1.0f};
 
-                // premul so mips are built properly, and lookups are correct
-                // annoying no ctor
-                cFloat = {alphaToFloat[c0.r], alphaToFloat[c0.g],
-                          alphaToFloat[c0.b], 1.0f};
-                assert(cFloat.x >= 0 && cFloat.x <= 1.0);
-
-                // only have to rewrite color if there is alpha
+                // premul and sets alpha
                 if (c0.a != 255) {
                     float alpha = alphaToFloat[c0.a];
                     cFloat *= alpha;
-                    assert(cFloat.x >= 0 && cFloat.x <= 1.0);
+                }
 
-                    // need to overwrite the color 8-bit color too
+                //                if (!floatImage.empty()) {
+                //                    floatImage[y0 + x] = cFloat;
+                //                }
+                //                else
+                {
+                    halfImage[y0 + x] = toHalf4(cFloat);
+                }
+
+                // only have to rewrite color if there is alpha
+                if (c0.a != 255) {
+                    // need to overwrite the color 8-bit color w/premul
                     c0 = Unormfloat4ToColor(cFloat);
                 }
             }
@@ -290,10 +301,14 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
 
     // this can receive premul, srgb data
     // the mip chain is linear data only
-    Color* cDst = dstImage.pixels;
+    Color* cDstColor = dstImage.pixels;
+    const Color* srcColor = srcImage.pixels;
 
     float4* cDstFloat = srcImage.pixelsFloat;
-    const float4* srcFloatImage = cDstFloat;
+    const float4* srcFloat = cDstFloat;  // TODO: use dstImage.pixelsFloat, assumes in-place
+
+    half4* cDstHalf = srcImage.pixelsHalf;
+    const half4* srcHalf = cDstHalf;  // TODO: use dstImage.pixelsHalf?
 
     for (int y = 0; y < height; y += 2) {
         int y0 = y;
@@ -310,12 +325,44 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
                 x1 = x;
             }
 
-            if (srcFloatImage) {
-                const float4& c0 = srcFloatImage[y0 + x];
-                const float4& c1 = srcFloatImage[y0 + x1];
+            if (srcHalf) {
+                float4 c0, c1, c2, c3;
+                c0 = toFloat4(srcHalf[y0 + x]);
+                c1 = toFloat4(srcHalf[y0 + x1]);
+                c2 = toFloat4(srcHalf[y1 + x]);
+                c3 = toFloat4(srcHalf[y1 + x1]);
 
-                const float4& c2 = srcFloatImage[y1 + x];
-                const float4& c3 = srcFloatImage[y1 + x1];
+                // mip filter is simple box filter
+                // assumes alpha premultiplied already
+                float4 cFloat = (c0 + c1 + c2 + c3) * 0.25;
+
+                // overwrite float4 image
+                *cDstHalf = toHalf4(cFloat);
+                cDstHalf++;
+
+                // assume hdr pulls from half/float data
+                if (!srcImage.isHDR) {
+                    // convert back to srgb for encode
+                    if (srcImage.isSRGB) {
+                        cFloat.x = linearToSRGBFunc(cFloat.x);
+                        cFloat.y = linearToSRGBFunc(cFloat.y);
+                        cFloat.z = linearToSRGBFunc(cFloat.z);
+                    }
+
+                    // override rgba8u version, since this is what is encoded
+                    Color c = Unormfloat4ToColor(cFloat);
+
+                    // can only skip this if cSrc = cDst
+                    *cDstColor = c;
+                    cDstColor++;
+                }
+            }
+            else if (srcFloat) {
+                const float4& c0 = srcFloat[y0 + x];
+                const float4& c1 = srcFloat[y0 + x1];
+
+                const float4& c2 = srcFloat[y1 + x];
+                const float4& c3 = srcFloat[y1 + x1];
 
                 // mip filter is simple box filter
                 // assumes alpha premultiplied already
@@ -325,11 +372,9 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
                 *cDstFloat = cFloat;
                 cDstFloat++;
 
+                // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
-                    // it's premul linear now, but convert rgb to srgb before
-                    // encode if needed ideally this should be done after
-                    // endpoints picked by encoder but then must find endpoints
-                    // for each compressed block type
+                    // convert back to srgb for encode
                     if (srcImage.isSRGB) {
                         cFloat.x = linearToSRGBFunc(cFloat.x);
                         cFloat.y = linearToSRGBFunc(cFloat.y);
@@ -339,34 +384,29 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
                     // Overwrite the RGBA8u image too (this will go out to
                     // encoder) that means BC/ASTC are linearly fit to
                     // non-linear srgb colors - ick
-                    // TODO: ideally send linear color to endcoder, fit
-                    // endpoints, then remap endpoints to srgb after But it's
-                    // hard to find endpoints, and BC1-3 uses 565.  ASTC uses
-                    // 888 but often stored base+offset.
                     Color c = Unormfloat4ToColor(cFloat);
-                    *cDst = c;
-                    cDst++;
+                    *cDstColor = c;
+                    cDstColor++;
                 }
             }
             else {
                 // faster 8-bit only path for LDR and unmultiplied
-                const Color& c0 = srcImage.pixels[y0 + x];
-                const Color& c1 = srcImage.pixels[y0 + x1];
+                const Color& c0 = srcColor[y0 + x];
+                const Color& c1 = srcColor[y0 + x1];
 
-                const Color& c2 = srcImage.pixels[y1 + x];
-                const Color& c3 = srcImage.pixels[y1 + x1];
+                const Color& c2 = srcColor[y1 + x];
+                const Color& c3 = srcColor[y1 + x1];
 
-                // 8-bit box filter
-                int r = ((int)c0.r + (int)c1.r + (int)c2.r + (int)c3.r + 2) / 4;
-                int g = ((int)c0.g + (int)c1.g + (int)c2.g + (int)c3.g + 2) / 4;
-                int b = ((int)c0.b + (int)c1.b + (int)c2.b + (int)c3.b + 2) / 4;
+                // 8-bit box filter, with +2/4 for rounding
+                int32_t r = ((int32_t)c0.r + (int32_t)c1.r + (int32_t)c2.r + (int32_t)c3.r + 2) / 4;
+                int32_t g = ((int32_t)c0.g + (int32_t)c1.g + (int32_t)c2.g + (int32_t)c3.g + 2) / 4;
+                int32_t b = ((int32_t)c0.b + (int32_t)c1.b + (int32_t)c2.b + (int32_t)c3.b + 2) / 4;
+                int32_t a = ((int32_t)c0.a + (int32_t)c1.a + (int32_t)c2.a + (int32_t)c3.a + 2) / 4;
 
-                int a = ((int)c0.a + (int)c1.a + (int)c2.a + (int)c3.a + 2) / 4;
-
-                // can overwrite memory on linear image
+                // can overwrite memory on linear image, some precision loss, but fast
                 Color c = {(uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a};
-                *cDst = c;
-                cDst++;
+                *cDstColor = c;
+                cDstColor++;
             }
         }
     }

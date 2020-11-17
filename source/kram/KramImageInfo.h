@@ -13,7 +13,7 @@
 namespace kram {
 class Image;
 
-USING_SIMD;
+using namespace simd;
 using namespace std;
 
 // each encoder has it's own set of outputs, can request encoder if overlap
