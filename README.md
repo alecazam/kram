@@ -76,9 +76,9 @@ cd build
 ./Release/kram -testall
 ./Release/kram -test 1002
 
-kram encode -f astc4x4 -srgb -premul -quality 49 -mipmax 1024 -type 2d -i ../tests/src/ColorMap-a.png -o ../tests/out/ios/ColorMap-a.ktx
-kram encode -f etc2rg -signed -normal -quality 49 -mipmax 1024 -type 2d -i ../tests/src/collectorbarrel-n.png -o ../tests/out/ios/collectorbarrel-n.ktx
-kram encode -f etc2r -signed -sdf -quality 49 -mipmax 1024 -type 2d -i ../kram/tests/src/flipper-sdf.png -o ../tests/out/ios/flipper-sdf.ktx
+./Release/kram encode -f astc4x4 -srgb -premul -quality 49 -mipmax 1024 -type 2d -i ../tests/src/ColorMap-a.png -o ../tests/out/ios/ColorMap-a.ktx
+./Release/kram encode -f etc2rg -signed -normal -quality 49 -mipmax 1024 -type 2d -i ../tests/src/collectorbarrel-n.png -o ../tests/out/ios/collectorbarrel-n.ktx
+./Release/kram encode -f etc2r -signed -sdf -quality 49 -mipmax 1024 -type 2d -i ../kram/tests/src/flipper-sdf.png -o ../tests/out/ios/flipper-sdf.ktx
 
 ```
 
