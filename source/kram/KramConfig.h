@@ -229,7 +229,7 @@ inline float4 toFloat4(const half4& vv)
     // https://patchwork.ozlabs.org/project/gcc/patch/559BC75A.1080606@arm.com/
     // https://gcc.gnu.org/onlinedocs/gcc-7.5.0/gcc/Half-Precision.html
     // https://developer.arm.com/documentation/dui0491/i/Using-NEON-Support/Converting-vectors
-    __m128i reg16 = _mm_setzero_ps();
+    __m128i reg16 = _mm_setzero_si128();
 
     // TODO: switch to load low 64-bits, but don't know which one _mm_cvtsi32_si128(&vv.reg); ?
     // want 0 extend here, sse overuses int when really unsigned and zero extended value
