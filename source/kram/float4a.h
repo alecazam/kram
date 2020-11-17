@@ -358,7 +358,7 @@ inline float4 sqrt(const float4& vv)
 
 inline float dot(const float4& lhs, const float4& rhs)
 {
-    return _mm_extract_ps(_mm_hadd4_ps(_mm_mul_ps(lhs.reg, rhs.reg)), 0);
+    return float4(_mm_hadd4_ps(_mm_mul_ps(lhs.reg, rhs.reg)))[0];
 }
 inline float length_squared(const float4& vv)
 {
@@ -366,7 +366,7 @@ inline float length_squared(const float4& vv)
 }
 inline float length(const float4& vv)
 {
-    return sqrtf(length());
+    return sqrtf(length(vv));
 }
 
 // sse4.1 ops
@@ -386,7 +386,7 @@ inline float4 floor(const float4& vv)
 // see if any results are 1
 inline bool any(const float4& vv)
 {
-    return _mm_extract_ps(_mm_hadd4_ps(vv.reg), 0) > 0.0f;
+    return float4(_mm_hadd4_ps(vv.reg))[0] > 0.0f;
 }
 
 inline float4 select(const float4& lhs, const float4& rhs, const float4& mask)
