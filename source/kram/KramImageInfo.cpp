@@ -125,7 +125,7 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
         format = infoArgs.isHDR ? MyMTLPixelFormatASTC_5x5_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_5x5_sRGB : MyMTLPixelFormatASTC_5x5_LDR;
     }
     else if (isStringEqual(formatString, "astc6x6")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_5x5_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_5x5_sRGB : MyMTLPixelFormatASTC_5x5_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_6x6_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_6x6_sRGB : MyMTLPixelFormatASTC_6x6_LDR;
     }
     else if (isStringEqual(formatString, "astc8x8")) {
         format = infoArgs.isHDR ? MyMTLPixelFormatASTC_8x8_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_8x8_sRGB : MyMTLPixelFormatASTC_8x8_LDR;
