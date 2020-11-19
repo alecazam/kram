@@ -33,13 +33,13 @@ int nextPow2(int num)
 
 inline uint8_t floatToUint8(float value)
 {
-    return (uint8_t)roundf(value * 255.1);
+    return (uint8_t)roundf(value * 255.1f);
 }
 
 inline Color Unormfloat4ToColor(float4 value)
 {
     Color c;
-    value = round(value * 255.1);
+    value = round(value * 255.1f);
     c.r = (uint8_t)value.x;
     c.g = (uint8_t)value.y;
     c.b = (uint8_t)value.z;
@@ -50,7 +50,7 @@ inline Color Unormfloat4ToColor(float4 value)
 inline Color Snormfloat4ToColor(float4 value)
 {
     Color c;
-    value = round(127 * value) + float4(127.0);  // or is it 128?
+    value = round(127.0f * value) + float4(127.0f);  // or is it 128? TODO: validatate last ctor sets all values
     c.r = (uint8_t)value.x;
     c.g = (uint8_t)value.y;
     c.b = (uint8_t)value.z;
@@ -60,16 +60,16 @@ inline Color Snormfloat4ToColor(float4 value)
 
 inline float linearToSRGBFunc(float lin)
 {
-    assert(lin >= 0.0 && lin <= 1.0);
-    return (lin < 0.00313066844250063) ? (lin * 12.92)
-                                       : (1.055 * powf(lin, 1.0 / 2.4) - 0.055);
+    assert(lin >= 0.0f && lin <= 1.0f);
+    return (lin < 0.00313066844250063f) ? (lin * 12.92f)
+                                       : (1.055f * powf(lin, 1.0f / 2.4f) - 0.055f);
 }
 
 inline float srgbToLinearFunc(float s)
 {
-    assert(s >= 0.0 && s <= 1.0);
-    return (s < 0.0404482362771082) ? (s / 12.92)
-                                    : powf((s + 0.055) / 1.055, 2.4);
+    assert(s >= 0.0f && s <= 1.0f);
+    return (s < 0.0404482362771082f) ? (s / 12.92f)
+                                    : powf((s + 0.055f) / 1.055f, 2.4f);
 }
 //
 // inline void color565To888(uint16_t endpoint, Color &c) {

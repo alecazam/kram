@@ -862,7 +862,7 @@ void kramDecodeUsage()
           " decode\n"
           "\t [-swizzle rgba01]\n"
           "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
-          "\t [-v]\n"
+          "\t [-v/erbose]\n"
           "\t -i/nput .ktx\n"
           "\t -o/utput .ktx\n"
           "\n");
@@ -875,7 +875,7 @@ void kramInfoUsage()
           " info\n"
           "\t -i/nput <.png | .ktx>\n"
           "\t [-o/utput info.txt]\n"
-          "\t [-v]\n"
+          "\t [-v/erbose]\n"
           "\n");
 }
 
@@ -885,8 +885,9 @@ void kramScriptUsage()
           "Usage: " usageName
           " script\n"
           "\t -i/nput kramscript.txt\n"
-          "\t [-v]\n"
+          "\t [-v/erbose]\n"
           "\t [-j/obs numJobs]\n"
+          "\t [-c/ontinue]\tcontinue on errors\n"
           "\n");
 }
 
@@ -1077,7 +1078,7 @@ static int kramAppInfo(vector<const char*>& args)
             continue;
         }
         else if (isStringEqual(word, "-v") ||
-                 isStringEqual(word, "--verbose")) {
+                 isStringEqual(word, "-verbose")) {
             isVerbose = true;
         }
         else {
@@ -1853,13 +1854,17 @@ static int kramAppEncode(vector<const char*>& args)
 
 int kramAppScript(vector<const char*>& args)
 {
-    string srcFilename;
-    bool isVerbose = false;
-
     int argc = (int)args.size();
 
+    string srcFilename;
+    
+    bool isVerbose = false;
     bool error = false;
+    // this won't stop immediately, but when error occurs, no more tasks will exectue
+    bool isHaltedOnError = true;
+   
     int numJobs = 1;
+    
     for (int i = 0; i < argc; ++i) {
         // check for options
         const char* word = args[i];
@@ -1899,8 +1904,12 @@ int kramAppScript(vector<const char*>& args)
             continue;
         }
         else if (isStringEqual(word, "-v") ||
-                 isStringEqual(word, "--verbose")) {
+                 isStringEqual(word, "-verbose")) {
             isVerbose = true;
+        }
+        else if (isStringEqual(word, "-c") ||
+                 isStringEqual(word, "-continue")) {
+            isHaltedOnError = false;
         }
         else {
             KLOGE("Kram", "unexpected argument \"%s\"\n",
@@ -1989,6 +1998,7 @@ int kramAppScript(vector<const char*>& args)
                     auto timeElapsed = commandTimer.timeElapsed();
                     if (timeElapsed > 1.0) {
                         // TODO: extract output filename
+                        // TODO: task sys passes threadIndex into this, so can report which thread completed work
                         KLOGI("Kram", "perf: %s %s took %0.3fs", command, "file", timeElapsed);
                     }
                 }
@@ -1996,16 +2006,21 @@ int kramAppScript(vector<const char*>& args)
                 if (errorCode != 0) {
                     KLOGE("Kram", "cmd: failed %s", commandAndArgsCopy.c_str());
                     errorCounter++;
+                    
+                    // stop any new tasks when first error occurs
+                    if (isHaltedOnError) {
+                        system.halt();
+                    }
                     return errorCode;
                 }
-
+                
                 return 0;
             });
         }
     }
 
-    // TODO: may want to wait on semaphore here
-    // otherwise this is returning too early.  There are joins before task system shutsdown.
+    // There are joins done at close of scope above before task system shuts down.
+    // This makes sure that return value is accurate if there are errors
 
     if (errorCounter > 0) {
         KLOGE("Kram", "script commands %d/%d failed", int(errorCounter), commandCounter);
@@ -2013,7 +2028,7 @@ int kramAppScript(vector<const char*>& args)
     }
 
     if (isVerbose) {
-        KLOGI("Kram", "script completed %d commands took %0.3fs", int(errorCounter), scriptTimer.timeElapsed());
+        KLOGI("Kram", "script completed %d commands in %0.3fs", commandCounter, scriptTimer.timeElapsed());
     }
 
     return 0;
