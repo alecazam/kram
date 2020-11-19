@@ -2030,7 +2030,7 @@ int kramAppScript(vector<const char*>& args)
     // There's a future system that we could block on instead.
 
     if (errorCounter > 0) {
-        KLOGE("Kram", "script %d commands failed, %d commands skipped", int(errorCounter), int(skippedCounter));
+        KLOGE("Kram", "script %d/%d commands failed", int(errorCounter), commandCounter);
         return -1;
     }
 
