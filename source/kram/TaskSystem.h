@@ -122,8 +122,6 @@ class task_system {
     vector<notification_queue> _q;
     atomic<int> _index;
 
-    bool _halt = false;
-    
     void run(int threadIndex)
     {
         while (true) {
@@ -153,7 +151,7 @@ class task_system {
             // pop blocks until it's queue receives tasks
             if (!f && !_q[threadIndex].pop(f)) {
                 // shutdown if tasks have all been submitted and queue marked as done.
-                if (_q[threadIndex].is_done() || _halt) {
+                if (_q[threadIndex].is_done()) {
                     KLOGD("task_system", "thread %d shutting down", threadIndex);
 
                     break;
@@ -166,11 +164,6 @@ class task_system {
                 }
             }
 
-            // don't start any new work
-            if (_halt) {
-                break;
-            }
-            
             // do the work
             f();
         }
@@ -199,12 +192,6 @@ public:
         return _count;
     }
     
-    // stop any more work, often if error occurred
-    void halt()
-    {
-        _halt = true;
-    }
-
     template <typename F>
     void async_(F&& f)
     {

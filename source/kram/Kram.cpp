@@ -1944,7 +1944,9 @@ int kramAppScript(vector<const char*>& args)
     // as a global this auto allocates 16 threads, and don't want that unless actually
     // using scripting.  And even then want control over the number of threads.
     atomic<int> errorCounter(0);  // doesn't initialize to 0 otherwise
+    atomic<int> skippedCounter(0);
     int commandCounter = 0;
+    
 
     {
         task_system system(numJobs);
@@ -1972,6 +1974,13 @@ int kramAppScript(vector<const char*>& args)
             }
 
             system.async_([&, commandAndArgs]() mutable {
+                
+                // stop any new work when not "continue on error"
+                if (isHaltedOnError && int(errorCounter) > 0) {
+                    skippedCounter++;
+                    return 0; // not really success, just skipping command
+                }
+                
                 Timer commandTimer;
                 if (isVerbose) {
                     KLOGI("Kram", "running %s", commandAndArgs.c_str());
@@ -2006,11 +2015,7 @@ int kramAppScript(vector<const char*>& args)
                 if (errorCode != 0) {
                     KLOGE("Kram", "cmd: failed %s", commandAndArgsCopy.c_str());
                     errorCounter++;
-                    
-                    // stop any new tasks when first error occurs
-                    if (isHaltedOnError) {
-                        system.halt();
-                    }
+            
                     return errorCode;
                 }
                 
@@ -2020,10 +2025,12 @@ int kramAppScript(vector<const char*>& args)
     }
 
     // There are joins done at close of scope above before task system shuts down.
-    // This makes sure that return value is accurate if there are errors
+    // This makes sure that return value is accurate if there are errors.  Most task
+    // systems don't have this, and shutting down the entire task system isn't ideal.
+    // There's a future system that we could block on instead.
 
     if (errorCounter > 0) {
-        KLOGE("Kram", "script commands %d/%d failed", int(errorCounter), commandCounter);
+        KLOGE("Kram", "script %d commands failed, %d commands skipped", int(errorCounter), int(skippedCounter));
         return -1;
     }
 
