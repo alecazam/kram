@@ -11,6 +11,10 @@
 #if KRAM_MAC || KRAM_IOS || KRAM_LINUX
 #include <sys/mman.h>
 #include <unistd.h>
+#elif KRAM_WIN
+// portable mmap implementation, but only using on Win
+// TODO: this indicates that it leaks a CreateFileMapping handle, since it wanted to keep same mmap/munmap api
+#include "win_mmap.h"
 #endif
 
 MmapHelper::MmapHelper() {}
@@ -22,30 +26,6 @@ bool MmapHelper::open(const char *filename)
     if (addr) {
         return false;
     }
-
-    // relay on the file api
-#if KRAM_WIN
-    return false;
-
-    /*
-    https://stackoverflow.com/questions/1880714/createfilemapping-mapviewoffile-how-to-avoid-holding-up-the-system-memory
-     
-    https://www.sublimetext.com/blog/articles/use-mmap-with-care
-    https://docs.microsoft.com/en-us/windows/win32/memory/creating-a-view-within-a-file
-    
-    HANDLE fileHandle = OpenFileMappingA(FILE_MAP_READ, TRUE, filename);
-      DWORD  dwDesiredAccess,
-      BOOL   bInheritHandle,
-      LPCSTR lpName
-    );
-    
-    addr = MapViewOfFile(fileHandle, FILE_MAP_READ, 0, 0, 0);
-    if (!addr) {
-       return false;
-    }
-    */
-
-#else
 
     FILE *fp = fopen(filename, "rb");
     if (!fp) {
@@ -77,17 +57,12 @@ bool MmapHelper::open(const char *filename)
         return false;
     }
     return true;
-#endif
 }
 
 void MmapHelper::close()
 {
-#if KRAM_WIN
-
-#else
     if (addr) {
         munmap((void *)addr, length);
         addr = nullptr;
     }
-#endif
 }
