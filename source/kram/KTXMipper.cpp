@@ -62,14 +62,14 @@ inline float linearToSRGBFunc(float lin)
 {
     assert(lin >= 0.0f && lin <= 1.0f);
     return (lin < 0.00313066844250063f) ? (lin * 12.92f)
-                                       : (1.055f * powf(lin, 1.0f / 2.4f) - 0.055f);
+                                        : (1.055f * powf(lin, 1.0f / 2.4f) - 0.055f);
 }
 
 inline float srgbToLinearFunc(float s)
 {
     assert(s >= 0.0f && s <= 1.0f);
     return (s < 0.0404482362771082f) ? (s / 12.92f)
-                                    : powf((s + 0.055f) / 1.055f, 2.4f);
+                                     : powf((s + 0.055f) / 1.055f, 2.4f);
 }
 //
 // inline void color565To888(uint16_t endpoint, Color &c) {
@@ -287,8 +287,13 @@ void Mipper::remapToSignedEndpoint8(uint16_t& endpoint) const
 
 void Mipper::mipmap(ImageData& srcImage, ImageData& dstImage) const
 {
+#if ROUNDMIPSDOWN
+    dstImage.width = std::max(1, dstImage.width / 2);
+    dstImage.height = std::max(1, dstImage.height / 2);
+#else
     dstImage.width = (srcImage.width + 1) / 2;
     dstImage.height = (srcImage.height + 1) / 2;
+#endif
 
     // this assumes that we can read mip-1 from srcImage
     mipmapLevel(srcImage, dstImage);

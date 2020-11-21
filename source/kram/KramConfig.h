@@ -181,7 +181,7 @@ public:
     // use of these pull data out of simd registers
     half& operator[](int index)
     {
-        return v[index];  
+        return v[index];
     }
     const half& operator[](int index) const
     {
@@ -197,6 +197,13 @@ public:
 // emulate float4
 #include "float4a.h"
 #endif
+
+// D3D hobbled non-pow2 mips by only supporting round down, not round up
+// So then OpenGL followed that.  And then Metal followd OpenGL.
+// Round up adds an extra mip level to the chain, but results in much better filtering.
+// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_non_power_of_two.txt
+// http://download.nvidia.com/developer/Papers/2005/NP2_Mipmapping/NP2_Mipmap_Creation.pdf
+#define ROUNDMIPSDOWN 1
 
 namespace simd {
 inline float4 saturate(const float4& v)

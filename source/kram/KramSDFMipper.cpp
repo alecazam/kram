@@ -8,6 +8,7 @@
 
 namespace kram {
 using namespace heman;
+using namespace std;
 
 void SDFMipper::init(ImageData& srcImage, bool isVerbose_)
 {
@@ -54,8 +55,13 @@ void SDFMipper::mipmap(ImageData& dstImage, int mipLevel)
     int h = srcBitmapImage.height;
 
     for (int i = 0; i < mipLevel; ++i) {
+#if ROUNDMIPSDOWN
+        w = std::max(1, w / 2);
+        h = std::max(1, h / 2);
+#else
         w = (w + 1) / 2;
         h = (h + 1) / 2;
+#endif
     }
 
     dstImage.width = w;

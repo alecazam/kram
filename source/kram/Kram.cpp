@@ -1857,14 +1857,14 @@ int kramAppScript(vector<const char*>& args)
     int argc = (int)args.size();
 
     string srcFilename;
-    
+
     bool isVerbose = false;
     bool error = false;
     // this won't stop immediately, but when error occurs, no more tasks will exectue
     bool isHaltedOnError = true;
-   
+
     int numJobs = 1;
-    
+
     for (int i = 0; i < argc; ++i) {
         // check for options
         const char* word = args[i];
@@ -1946,7 +1946,6 @@ int kramAppScript(vector<const char*>& args)
     atomic<int> errorCounter(0);  // doesn't initialize to 0 otherwise
     atomic<int> skippedCounter(0);
     int commandCounter = 0;
-    
 
     {
         task_system system(numJobs);
@@ -1957,6 +1956,7 @@ int kramAppScript(vector<const char*>& args)
         }
 
         while (fp) {
+            // serially read commands out of the script
             fgets(str, sizeof(str), fp);
             if (feof(fp)) {
                 break;
@@ -1973,14 +1973,19 @@ int kramAppScript(vector<const char*>& args)
                 commandAndArgs.pop_back();
             }
 
+            // async execute the command across the provided threads
+            // this works for symmetric an asymmetric cores.  Work
+            // stealing will happen on low perf cores that can't keep up.
+            // Could peek at src images to determine dimensions and mem
+            // usage estimates.  But then would need hard/easy queues.
+
             system.async_([&, commandAndArgs]() mutable {
-                
                 // stop any new work when not "continue on error"
                 if (isHaltedOnError && int(errorCounter) > 0) {
                     skippedCounter++;
-                    return 0; // not really success, just skipping command
+                    return 0;  // not really success, just skipping command
                 }
-                
+
                 Timer commandTimer;
                 if (isVerbose) {
                     KLOGI("Kram", "running %s", commandAndArgs.c_str());
@@ -2015,10 +2020,10 @@ int kramAppScript(vector<const char*>& args)
                 if (errorCode != 0) {
                     KLOGE("Kram", "cmd: failed %s", commandAndArgsCopy.c_str());
                     errorCounter++;
-            
+
                     return errorCode;
                 }
-                
+
                 return 0;
             });
         }

@@ -995,8 +995,15 @@ bool KTXImage::initMipLevels(bool vaidateLengthFromRead)
             }
         }
 
+        //  https://computergraphics.stackexchange.com/questions/1441/how-does-mip-mapping-work-with-non-power-of-2-textures
+
+#if ROUNDMIPSDOWN
+        w = max(1, w / 2);
+        h = max(1, h / 2);
+#else
         w = (w + 1) / 2;
         h = (h + 1) / 2;
+#endif
     }
 
     return true;

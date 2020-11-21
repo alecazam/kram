@@ -303,9 +303,13 @@ void Image::computeMipStorage(const KTXImage& image, int w, int h,
         }
 
         do {
+#if ROUNDMIPSDOWN
+            w = std::max(1, w / 2);
+            h = std::max(1, h / 2);
+#else
             w = (w + 1) / 2;
             h = (h + 1) / 2;
-
+#endif
             keepMip =
                 (w >= mipMinSize && w <= mipMaxSize) &&
                 (h >= mipMinSize && h <= mipMaxSize);
@@ -763,8 +767,13 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
         fwrite(outputTexture.data(), dstMipLevel.length, 1, dstFile);
 
         // next mip level
+#if ROUNDMIPSDOWN
+        w = std::max(1, w / 2);
+        h = std::max(1, h / 2);
+#else
         w = (w + 1) / 2;
         h = (h + 1) / 2;
+#endif
     }
 
     return success;
@@ -940,8 +949,13 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
             header.pixelHeight = h;
             break;
         }
+#if ROUNDMIPSDOWN
+        w = std::max(1, w / 2);
+        h = std::max(1, h / 2);
+#else
         w = (w + 1) / 2;
         h = (h + 1) / 2;
+#endif
     }
 
     // ----------------------------------------------------
