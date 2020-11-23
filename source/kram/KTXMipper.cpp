@@ -288,8 +288,8 @@ void Mipper::remapToSignedEndpoint8(uint16_t& endpoint) const
 void Mipper::mipmap(ImageData& srcImage, ImageData& dstImage) const
 {
 #if ROUNDMIPSDOWN
-    dstImage.width = std::max(1, dstImage.width / 2);
-    dstImage.height = std::max(1, dstImage.height / 2);
+    dstImage.width = std::max(1, srcImage.width / 2);
+    dstImage.height = std::max(1, srcImage.height / 2);
 #else
     dstImage.width = (srcImage.width + 1) / 2;
     dstImage.height = (srcImage.height + 1) / 2;
