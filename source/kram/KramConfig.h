@@ -33,7 +33,7 @@
 
 // TODO: add Profile build (rename RelWithDbgInfo)
 
-#if NDEBUG
+#ifdef NDEBUG
 #define KRAM_RELEASE 1
 #define KRAM_DEBUG 0
 #else

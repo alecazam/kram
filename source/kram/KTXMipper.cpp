@@ -139,7 +139,7 @@ void Mipper::initTables()
     //}
 
     // just test code
-#ifndef NDEBUG
+#if KRAM_DEBUG
     {
         float lin = 0.5;
         lin = srgbToLinearFunc(linearToSRGBFunc(lin));

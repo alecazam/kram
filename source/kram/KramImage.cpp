@@ -821,6 +821,84 @@ bool Image::resizeImage(int wResize, int hResize, bool resizePow2, ImageResizeFi
     return true;
 }
 
+// TODO: to hook this up, read 16u png into pixelsFlat, then gen an 8-bit normal xy
+// from that.  This is more like SDF where a single height is used.
+void Image::heightToNormals(float scale) {
+    int w = _width;
+    int h = _height;
+
+    // TODO: hook these up, but needs src != dst or copy
+    bool isWrapY = false;
+    bool isWrapX = false;
+    
+    // 2.0 is distance betwen +1 and -1
+    float scaleX = scale/2.0;
+    float scaleY = scale/2.0;
+    
+    // src/dst the same here
+    // may need to copy a row/column of pixels for wrap
+    const float4* srcPixels = _pixelsFloat.data();
+    float4* dstPixels = (float4*)_pixelsFloat.data();
+    
+    for (int y = 0; y < h; ++y) {
+        int y0 = y;
+        int ym = y - 1;
+        int yp = y + 1;
+    
+        if (isWrapY) {
+            ym = (ym + h) % h;
+            yp = (yp) % h;
+        }
+        else {
+            // clamp
+            if (ym < 0) ym = 0;
+            if (yp > (h-1)) yp = h-1;
+        }
+        
+        y0 *= w;
+        ym *= w;
+        yp *= w;
+        
+        for (int x = 0; x < w; ++x) {
+            int x0 = x;
+            int xm = x-1;
+            int xp = x+1;
+            
+            if (isWrapX) {
+                xm = (xm + w) % w;
+                xp = (xp) % w;
+            }
+            else {
+                // clamp
+                if (xm < 0) xm = 0;
+                if (xp > (w-1)) xp = w-1;
+            }
+            
+            // cross pattern
+            // height channel is in x
+            float cN = srcPixels[ym + x0].x;
+            float cS = srcPixels[yp + x0].x;
+            float cE = srcPixels[y0 + xp].x;
+            float cW = srcPixels[y0 + xm].x;
+            
+            // up is N, so this is rhcs
+            float dx = (cE - cW) * scaleX;
+            float dy = (cN - cS) * scaleY;
+            
+            float len = sqrtf(dx * dx + dy * dy + 1.0f);
+            
+            dx /= len;
+            dy /= len;
+            
+            // write out the result
+            float4& dstPixel = dstPixels[y0 + x];
+            
+            dstPixel.x = dx;
+            dstPixel.y = dy;
+        }
+    }
+}
+
 bool Image::encode(ImageInfo& info, FILE* dstFile) const
 {
     KTXImage image;
@@ -846,8 +924,6 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     image.pixelFormat = info.pixelFormat;
     image.textureType = info.textureType;
 
-    // convert props into a data blob that can be written out
-    vector<uint8_t> propsData;
     image.addFormatProps();
 
     // TODO: caller should really set post swizzle
@@ -861,19 +937,36 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
     image.addSwizzleProps(info.swizzleText.c_str(), postSwizzleText.c_str());
 
-    // TODO: caller should really set this
+    // TODO: caller should really set this, channels and address/filter
+    // three letter codes for the channel names so viewer/game can interpret them
     if (info.isNormal) {
         image.addChannelProps("Nrm.x,Nrm.y,X,X");
     }
     else if (info.isSRGB) {
-        image.addChannelProps("Alb.ra,Alb.ga,Alb.ba,Alb.a");
+        // !hasAlpha doesn't change the channel designation
+        if (info.isPremultiplied) {
+            image.addChannelProps("Alb.ra,Alb.ga,Alb.ba,Alb.a");
+        }
+        else {
+            image.addChannelProps("Alb.r,Alb.g,Alb.b,Alb.a");
+        }
     }
+    
+    // TODO: texture encode can depend on wrap vs. clamp state (f.e. normal map gen, sdf)
+    // and formsts like PVRTC must know wrap/clamp before encode
+    // address: Wrap, Clamp, MirrorWrap, MirrorClamp, BorderClamp, BorderClamp0
+    // filter: Point, Linear, None (Mip only), TODO: what about Aniso (Mip only + level?)
+    //   min/maxLOD too for which range of mips to use, atlas should stop before entries merge
+    image.addAddressProps("Wrap,Wrap,X"); // uvw
+    image.addFilterProps("Linear,Linear,Linear"); // min,mag,mip
 
     // This is hash of source png/ktx file (use xxhash32 or crc32)
     // can quickly check header if multiple copies of same source w/diff names.
     // May also need to store command line args in a prop to reject duplicate processing
     // TODO: ktxImage.addSourceHashProps(0);
 
+    // convert props into a data blob that can be written out
+    vector<uint8_t> propsData;
     image.toPropsData(propsData);
     header.bytesOfKeyValueData = (uint32_t)propsData.size();
 
@@ -988,7 +1081,8 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     vector<Color> copyImage;
 
     // So can use simd ops to do conversions, use float4.
-    // TODO: but float4 is huge memory.
+    // using half4 for mips of ldr data to cut memory in half
+    // processing large textures nees lots of memory for src image
     // 8k x 8k x 8b = 500 mb
     // 8k x 8k x 16b = 1 gb
     vector<half4> halfImage;

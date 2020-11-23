@@ -76,6 +76,9 @@ private:
                                 const KTXImage& image, ImageData& srcImage,
                                 vector<Color>& tmpImage) const;
 
+    // convert x field to normals
+    void heightToNormals(float scale);
+    
 private:
     // pixel size of image
     int _width = 0;

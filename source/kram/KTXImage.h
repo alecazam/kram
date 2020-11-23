@@ -195,6 +195,8 @@ public:
     void addSwizzleProps(const char* swizzleTextPre, const char* swizzleTexPost);
     void addSourceHashProps(uint32_t sourceHash);
     void addChannelProps(const char* channelContent);
+    void addAddressProps(const char* addressContent);
+    void addFilterProps(const char* filterContent);
 
     // block data depends on format
     int blockSize() const;

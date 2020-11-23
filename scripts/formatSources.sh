@@ -4,6 +4,8 @@
 # eventually replace with git hook.  This script only runs on Posix.
 
 pushd ../source/kram
-clang-format -style=file -i *.cpp
-clang-format -style=file -i *.h
+clang-format -style=file -i Kram*.cpp
+clang-format -style=file -i Kram*.h
+clang-format -style=file -i KTX*.cpp
+clang-format -style=file -i KTX*.h
 popd

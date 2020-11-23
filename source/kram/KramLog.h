@@ -21,10 +21,12 @@ extern int logMessage(const char* group, int logLevel,
                       const char* fmt, ...);
 
 // verify leaves conditional code in the build
-#ifdef NDEBUG
-#define verify(x) (x)
+#if KRAM_DEBUG
+#define KASSERT(x) assert(x)
+#define KVERIFY(x) KASSERT(x)
 #else
-#define verify(x) assert(x)
+#define KASSERT(x)
+#define KVERIFY(x) (x)
 #endif
 
 #define KLOGD(group, fmt, ...) logMessage(group, kram::LogLevelDebug, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)

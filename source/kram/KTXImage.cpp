@@ -21,6 +21,8 @@ const char* kPropPreswizzle = "KramPreswizzle";
 const char* kPropPostswizzle = "KramPostswizzle";
 const char* kPropSourceHash = "KramSourceHash";
 const char* kPropChannels = "KramChannels";
+const char* kPropAddress = "KramAddress";
+const char* kPropFilter = "KramFilter";
 
 using namespace std;
 
@@ -839,6 +841,15 @@ void KTXImage::addSourceHashProps(uint32_t sourceHash)
 
         addProp(kPropSourceHash, propValue.c_str());
     }
+}
+
+void KTXImage::addAddressProps(const char* addressContent)
+{
+    addProp(kPropAddress, addressContent);
+}
+void KTXImage::addFilterProps(const char* filterContent)
+{
+    addProp(kPropFilter, filterContent);
 }
 
 void KTXImage::addChannelProps(const char* channelContent)
