@@ -5,6 +5,7 @@
 #include "KTXMipper.h"
 
 #include <cassert>
+#include <algorithm>
 
 namespace kram {
 
