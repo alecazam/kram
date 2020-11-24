@@ -170,7 +170,7 @@ SDF altered to support mip generation from bigger distance fields
 * Update to new BC7 enc with more mode support
 
 ### Test Images
-* color_grid from Astcenc samples
+* color_grid from ktx/ktx2 samples
 * ColorMap from Apple's sample apps to test premultiplied alpha and srgb.
 * flipper-sdf image taken from EDT paper that inspired heman SDF.
 * collectorbarrel-n/a from Id's old GPU BC1/3 compression article.
@@ -345,18 +345,18 @@ ASTC doesn't compress and RDO as tightly.
 
 ### Normal map formats for 2 channels
 
-| Fmt    | pre  | post | pl | size  |
-|--------|------|------|----|-------|
-| RG8    | rg01 | rg   | 2  | 2     |
-| RG16f  | rg01 | rg   | 2  | 4     |
-| RG32f  | rg01 | rg   | 2  | 8     |
-| BC1nm  | rg01 | rg   | 1  | 0.5   |
-| BC3nm  | xgxr | ag   | 2  | 1     |
-| BC5nm  |rg01  | rg   | 2  | 1     |
-| ETCrg  | rg01 | rg   | 2  | 1     |
-| ASTCnm | gggr | ag   | 2  | 1@4x4 |
-| ASTCnm | rrrg | ga   | 2  | 1     |
-| ASTCrg | rg01 | rg   | 2  | 1     |
+| Fmt    | pre  | post | pl | size  | comment                      | endpoints |
+|--------|------|------|----|-------|------------------------------|-----------|
+| RG8    | rg01 | rg   | 2  | 2     |                              |  8:e      |
+| RG16f  | rg01 | rg   | 2  | 4     |                              | 16f:e     |
+| RG32f  | rg01 | rg   | 2  | 8     |                              | 32f:e     |
+| BC1nm  | rg01 | rg   | 1  | 0.5   | used by Capcom w/BC3nm       | 56:2      |
+| BC3nm  | xgxr | ag   | 2  | 1     | can store block constant rb  |  6:2, 8:3 |
+| BC5nm  | rg01 | rg   | 2  | 1     | rg16f in cache               |  8:3      |
+| ETCrg  | rg01 | rg   | 2  | 1     | 11-bit, rg16f in cache       |  11:3     |
+| ASTCnm | gggr | ag   | 2  | 1@4x4 | swizzle more like BC3nm      |  8:3      |
+| ASTCnm | rrrg | ga   | 2  | 1     |                              |  8:3      |
+| ASTCrg | rg01 | rg   | 2  | 1     | 2 bytes for b=0, rba + g     |  8:3      |
 
 ### On memory handling in Kram:
 
