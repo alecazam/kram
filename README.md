@@ -361,6 +361,7 @@ ASTC doesn't compress and RDO as tightly.
 
 With the exception of PVRTC, the block encoded formats support non-power-of-two mipmaps.  But very little literature talks about how mips are calculated.  D3D first used round-down mips, GL followed suit, and Metal/Vulkan followed suit.  Round down cuts out a mip level, and does a floor of the mip levels.   Round-up mips generally have a better mapping to the upper with a simple box filter.  Kram hasn't adjusted it's box filter to adjust for this yet, but there are links into the code to articles about how to better weight pixels.  The kram box filter is correct for power-of-two mipgen, but should be improved for these cases.
 
+```
 Round Down
 3px  a      b      c
 1px       a+b+c
@@ -369,6 +370,7 @@ Round Up
 3px  a      b      c
 2px    a+b     b+c 
 1px      a+b+c
+```
 
 ### On memory handling in Kram:
 
