@@ -162,7 +162,6 @@ SDF altered to support mip generation from bigger distance fields
 * Save prop with args and compare args and modstamp before rebuilding to avoid --force
 * Multichannel SDF
 * Plumb half4 and float4 through to ASTC HDR encoding.  Sending 8u.
-* Add mmap for Windows
 * Test Neon support and SSE2Neon
 * Run srgb conversion on endpoint data after fitting linear color point cloud
 * PSNR stats off encode + decode
@@ -347,16 +346,29 @@ ASTC doesn't compress and RDO as tightly.
 
 | Fmt    | pre  | post | pl | size  | comment                      | endpoints |
 |--------|------|------|----|-------|------------------------------|-----------|
-| RG8    | rg01 | rg   | 2  | 2     |                              |  8:e      |
+| RG8    | rg01 | rg   | 2  | 2     |                              |   8:e     |
 | RG16f  | rg01 | rg   | 2  | 4     |                              | 16f:e     |
 | RG32f  | rg01 | rg   | 2  | 8     |                              | 32f:e     |
 | BC1nm  | rg01 | rg   | 1  | 0.5   | used by Capcom w/BC3nm       | 56:2      |
 | BC3nm  | xgxr | ag   | 2  | 1     | can store block constant rb  |  6:2, 8:3 |
-| BC5nm  | rg01 | rg   | 2  | 1     | rg16f in cache               |  8:3      |
-| ETCrg  | rg01 | rg   | 2  | 1     | 11-bit, rg16f in cache       |  11:3     |
+| BC5nm  | rg01 | rg   | 2  | 1     | signed, rg16f in cache       |  8:3      |
+| ETCrg  | rg01 | rg   | 2  | 1     | rg11n, signed, rg16f in cache|  11:3     |
 | ASTCnm | gggr | ag   | 2  | 1@4x4 | swizzle more like BC3nm      |  8:3      |
 | ASTCnm | rrrg | ga   | 2  | 1     |                              |  8:3      |
 | ASTCrg | rg01 | rg   | 2  | 1     | 2 bytes for b=0, rba + g     |  8:3      |
+
+### On mip calculations and non-power-of-two textures
+
+With the exception of PVRTC, the block encoded formats support non-power-of-two mipmaps.  But very little literature talks about how mips are calculated.  D3D first used round-down mips, GL followed suit, and Metal/Vulkan followed suit.  Round down cuts out a mip level, and does a floor of the mip levels.   Round-up mips generally have a better mapping to the upper with a simple box filter.  Kram hasn't adjusted it's box filter to adjust for this yet, but there are links into the code to articles about how to better weight pixels.  The kram box filter is correct for power-of-two mipgen, but should be improved for these cases.
+
+Round Down
+3px  a      b      c
+1px       a+b+c
+
+Round Up
+3px  a      b      c
+2px    a+b     b+c 
+1px      a+b+c
 
 ### On memory handling in Kram:
 
