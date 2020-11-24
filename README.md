@@ -132,24 +132,32 @@ Reduced memory by 4x and passing down rgba8u instead of rgba32f.  Converted to 3
 ### Open Source  Usage
 Kram includes additional open-source:
 
-| Library     | Author           | License | Purpose                   |
-|-------------|------------------|---------|---------------------------|
-| lodepng     | Lode Vandevenne  | MIT     | png encode/decode         |
-| SSE2Neon    | John W. Ratcliff | MIT     | sse to neon               |
-| heman       | Philip Rideout   | MIT     | parabola EDT for SDF      |
-| TaskSystem  | Sean Parent      | MIT     | C++11 work queue          |
-| tmpfileplus | David Ireland    | Moz 2.0 | fixes C tmpfile api       |
+| Library        | Author           | License | Purpose                   |
+|----------------|------------------|---------|---------------------------|
+| lodepng        | Lode Vandevenne  | MIT     | png encode/decode         |
+| SSE2Neon       | John W. Ratcliff | MIT     | sse to neon               |
+| heman          | Philip Rideout   | MIT     | parabola EDT for SDF      |
+| TaskSystem     | Sean Parent      | MIT     | C++11 work queue          |
+| tmpfileplus    | David Ireland    | Moz 2.0 | fixes C tmpfile api       |
+| mmap universal | Mike Frysinger   | Pub     | mmap on Windows           |
 
 ```
 lodepng
 Altered header paths.
 
 SSE2Neon
-Needs updated to new arm64 permute instructions.
+Updated to newer arm64 permute instructions.
 
 heman 
-SDF altered to support mip generation from bigger distance fields
+SDF altered to support mip generation from bigger distance fields.
    This requires srcWidth x dstHeight floats.
+   
+TaskSystem
+Altered to allow control over number of threads.
+Commented out future system until needed.
+
+mmap
+This matches mmap api, but leaks a file mapping handle.
   
 ```
 
