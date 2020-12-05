@@ -59,8 +59,19 @@ There are various CMake settings that control the various encoders.  Each of the
 
 To demonstrate how kram works, scripts/kramtextures.py applies platform-specific presets based on source filenames endings.  The first form executes multiple kram processes with each file using a Python ThreadPoolExecutor.  The second generates a script file, and then runs that in a C++ task system inside kram.  The scripting system would allow gpu compute of commands, and more balanced memory and thread usage.
 
+
 ```
 cd build
+
+# this will install "click" and other python package dependencies
+macOS
+pip3 install -r ../scripts/requirements.txt
+
+Win
+python3.exe -m pip install -U pip
+python3.exe -m pip install -r ../scripts/requirements.txt
+
+# these scripts process all the platforms on 8 threads
 ../scripts/kramTextures.py --jobs 8 -p android 
 ../scripts/kramTextures.py --jobs 8 -p ios --script
 ../scripts/kramTextures.py --jobs 8 -p mac --script --force 
