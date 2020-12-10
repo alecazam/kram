@@ -57,10 +57,10 @@ namespace Etc
     {
     public:
 
-        unsigned char ucR;
-        unsigned char ucG;
-        unsigned char ucB;
-        unsigned char ucA;
+        uint8_t ucR;
+        uint8_t ucG;
+        uint8_t ucB;
+        uint8_t ucA;
 
     };
 
@@ -101,7 +101,7 @@ namespace Etc
             return frgba;
         }
 
-        // doesn't operate on alpha
+        // scalar ops don't apply to alpha
 		inline ColorFloatRGBA operator+(float a_f) const
 		{
 			ColorFloatRGBA frgba;
@@ -112,14 +112,14 @@ namespace Etc
 			return frgba;
 		}
 
-        // doesn't operate on alpha
-		inline ColorFloatRGBA operator-(float a_f) const
+        // scalar ops don't apply to alpha
+        inline ColorFloatRGBA operator-(float a_f) const
 		{
             return *this + (-a_f);
 		}
 
 		
-        // doesn't operate on alpha
+        // scalar ops don't apply to alpha
 		inline ColorFloatRGBA operator*(float a_f) const
 		{
             return ScaleRGB(a_f);
@@ -128,9 +128,9 @@ namespace Etc
 		inline ColorFloatRGBA ScaleRGB(float a_f) const
 		{
 			ColorFloatRGBA frgba;
-			frgba.fR = a_f * fR;
-			frgba.fG = a_f * fG;
-			frgba.fB = a_f * fB;
+			frgba.fR = fR * a_f;
+            frgba.fG = fG * a_f;
+            frgba.fB = fB * a_f;
 			frgba.fA = fA;
 
 			return frgba;
@@ -142,7 +142,8 @@ namespace Etc
 			frgba.fR = roundf(fR);
 			frgba.fG = roundf(fG);
 			frgba.fB = roundf(fB);
-
+            frgba.fA = fA; // was missing in original
+            
 			return frgba;
 		}
 
@@ -168,10 +169,8 @@ namespace Etc
 			return frgbaLog;
 		}
 
-        
-        
-		inline static ColorFloatRGBA ConvertFromRGBA8(unsigned char a_ucR, 
-			unsigned char a_ucG, unsigned char a_ucB, unsigned char a_ucA)
+		inline static ColorFloatRGBA ConvertFromRGBA8(uint8_t a_ucR,
+			uint8_t a_ucG, uint8_t a_ucB, uint8_t a_ucA)
 		{
 			ColorFloatRGBA frgba;
 
@@ -188,77 +187,52 @@ namespace Etc
             return ConvertFromRGBA8(color.ucR, color.ucG, color.ucB, color.ucA);
         }
         
-		inline static ColorFloatRGBA ConvertFromRGB4(unsigned char a_ucR4,
-														unsigned char a_ucG4,
-														unsigned char a_ucB4)
+		inline static ColorFloatRGBA ConvertFromRGB4(uint8_t a_ucR4,
+														uint8_t a_ucG4,
+														uint8_t a_ucB4, uint8_t a_ucA = 255)
 		{
-			ColorFloatRGBA frgba;
+			uint8_t ucR8 = (uint8_t)((a_ucR4 << 4) + a_ucR4);
+			uint8_t ucG8 = (uint8_t)((a_ucG4 << 4) + a_ucG4);
+			uint8_t ucB8 = (uint8_t)((a_ucB4 << 4) + a_ucB4);
 
-			unsigned char ucR8 = (unsigned char)((a_ucR4 << 4) + a_ucR4);
-			unsigned char ucG8 = (unsigned char)((a_ucG4 << 4) + a_ucG4);
-			unsigned char ucB8 = (unsigned char)((a_ucB4 << 4) + a_ucB4);
-
-			frgba.fR = (float)ucR8 / 255.0f;
-			frgba.fG = (float)ucG8 / 255.0f;
-			frgba.fB = (float)ucB8 / 255.0f;
-			frgba.fA = 1.0f;
-
-			return frgba;
+            return ConvertFromRGBA8(ucR8, ucG8, ucB8, a_ucA);
 		}
 
-		inline static ColorFloatRGBA ConvertFromRGB5(unsigned char a_ucR5,
-			unsigned char a_ucG5,
-			unsigned char a_ucB5)
+		inline static ColorFloatRGBA ConvertFromRGB5(uint8_t a_ucR5,
+			uint8_t a_ucG5,
+			uint8_t a_ucB5, uint8_t a_ucA = 255)
 		{
-			ColorFloatRGBA frgba;
+			uint8_t ucR8 = (uint8_t)((a_ucR5 << 3) + (a_ucR5 >> 2));
+			uint8_t ucG8 = (uint8_t)((a_ucG5 << 3) + (a_ucG5 >> 2));
+			uint8_t ucB8 = (uint8_t)((a_ucB5 << 3) + (a_ucB5 >> 2));
 
-			unsigned char ucR8 = (unsigned char)((a_ucR5 << 3) + (a_ucR5 >> 2));
-			unsigned char ucG8 = (unsigned char)((a_ucG5 << 3) + (a_ucG5 >> 2));
-			unsigned char ucB8 = (unsigned char)((a_ucB5 << 3) + (a_ucB5 >> 2));
-
-			frgba.fR = (float)ucR8 / 255.0f;
-			frgba.fG = (float)ucG8 / 255.0f;
-			frgba.fB = (float)ucB8 / 255.0f;
-			frgba.fA = 1.0f;
-
-			return frgba;
+            return ConvertFromRGBA8(ucR8, ucG8, ucB8, a_ucA);
 		}
 
-		inline static ColorFloatRGBA ConvertFromR6G7B6(unsigned char a_ucR6,
-			unsigned char a_ucG7,
-			unsigned char a_ucB6)
+		inline static ColorFloatRGBA ConvertFromR6G7B6(uint8_t a_ucR6,
+			uint8_t a_ucG7,
+			uint8_t a_ucB6, uint8_t a_ucA = 255)
 		{
-			ColorFloatRGBA frgba;
+			uint8_t ucR8 = (uint8_t)((a_ucR6 << 2) + (a_ucR6 >> 4));
+			uint8_t ucG8 = (uint8_t)((a_ucG7 << 1) + (a_ucG7 >> 6));
+			uint8_t ucB8 = (uint8_t)((a_ucB6 << 2) + (a_ucB6 >> 4));
 
-			unsigned char ucR8 = (unsigned char)((a_ucR6 << 2) + (a_ucR6 >> 4));
-			unsigned char ucG8 = (unsigned char)((a_ucG7 << 1) + (a_ucG7 >> 6));
-			unsigned char ucB8 = (unsigned char)((a_ucB6 << 2) + (a_ucB6 >> 4));
-
-			frgba.fR = (float)ucR8 / 255.0f;
-			frgba.fG = (float)ucG8 / 255.0f;
-			frgba.fB = (float)ucB8 / 255.0f;
-			frgba.fA = 1.0f;
-
-			return frgba;
+            return ConvertFromRGBA8(ucR8, ucG8, ucB8, a_ucA);
 		}
 
 		// quantize to 4 bits, expand to 8 bits
 		inline ColorFloatRGBA QuantizeR4G4B4(void) const
 		{
-			ColorFloatRGBA frgba = *this;
+			ColorFloatRGBA frgba = ClampRGB();
 
 			// quantize to 4 bits
-			frgba = frgba.ClampRGB().ScaleRGB(15.0f).RoundRGB();
-			unsigned int uiR4 = (unsigned int)frgba.fR;
-			unsigned int uiG4 = (unsigned int)frgba.fG;
-			unsigned int uiB4 = (unsigned int)frgba.fB;
+			frgba = frgba.ScaleRGB(15.0f).RoundRGB();
+			uint32_t uiR4 = (uint32_t)frgba.fR;
+            uint32_t uiG4 = (uint32_t)frgba.fG;
+            uint32_t uiB4 = (uint32_t)frgba.fB;
 
-			// expand to 8 bits
-			frgba.fR = (float) ((uiR4 << 4) + uiR4);
-			frgba.fG = (float) ((uiG4 << 4) + uiG4);
-			frgba.fB = (float) ((uiB4 << 4) + uiB4);
-
-			frgba = frgba.ScaleRGB(1.0f/255.0f);
+            frgba = ConvertFromRGB4(uiR4, uiG4, uiB4);
+            frgba.fA = fA;
 
 			return frgba;
 		}
@@ -266,51 +240,38 @@ namespace Etc
 		// quantize to 5 bits, expand to 8 bits
 		inline ColorFloatRGBA QuantizeR5G5B5(void) const
 		{
-			ColorFloatRGBA frgba = *this;
+			ColorFloatRGBA frgba = ClampRGBA();
 
 			// quantize to 5 bits
-			frgba = frgba.ClampRGB().ScaleRGB(31.0f).RoundRGB();
-			unsigned int uiR5 = (unsigned int)frgba.fR;
-			unsigned int uiG5 = (unsigned int)frgba.fG;
-			unsigned int uiB5 = (unsigned int)frgba.fB;
+			frgba = frgba.ScaleRGB(31.0f).RoundRGB();
+            uint32_t uiR5 = (uint32_t)frgba.fR;
+            uint32_t uiG5 = (uint32_t)frgba.fG;
+            uint32_t uiB5 = (uint32_t)frgba.fB;
 
-			// expand to 8 bits
-			frgba.fR = (float)((uiR5 << 3) + (uiR5 >> 2));
-			frgba.fG = (float)((uiG5 << 3) + (uiG5 >> 2));
-			frgba.fB = (float)((uiB5 << 3) + (uiB5 >> 2));
-
-			frgba = frgba.ScaleRGB(1.0f / 255.0f);
-
+            frgba = ConvertFromRGB5(uiR5, uiG5, uiB5);
+            frgba.fA = fA;
 			return frgba;
 		}
 
 		// quantize to 6/7/6 bits, expand to 8 bits
 		inline ColorFloatRGBA QuantizeR6G7B6(void) const
 		{
-			ColorFloatRGBA frgba = *this;
+			ColorFloatRGBA frgba = ClampRGBA();
 
 			// quantize to 6/7/6 bits
-			ColorFloatRGBA frgba6 = frgba.ClampRGB().ScaleRGB(63.0f).RoundRGB();
-			ColorFloatRGBA frgba7 = frgba.ClampRGB().ScaleRGB(127.0f).RoundRGB();
-			unsigned int uiR6 = (unsigned int)frgba6.fR;
-			unsigned int uiG7 = (unsigned int)frgba7.fG;
-			unsigned int uiB6 = (unsigned int)frgba6.fB;
+			uint32_t uiR6 = (uint32_t)frgba.IntRed(63.0f);
+            uint32_t uiG7 = (uint32_t)frgba.IntGreen(127.0f);
+            uint32_t uiB6 = (uint32_t)frgba.IntBlue(63.0f);
 
-			// expand to 8 bits
-			frgba.fR = (float)((uiR6 << 2) + (uiR6 >> 4));
-			frgba.fG = (float)((uiG7 << 1) + (uiG7 >> 6));
-			frgba.fB = (float)((uiB6 << 2) + (uiB6 >> 4));
-
-			frgba = frgba.ScaleRGB(1.0f / 255.0f);
-
+            frgba = ConvertFromR6G7B6(uiR6, uiG7, uiB6);
+            frgba.fA = fA;
+            
 			return frgba;
 		}
 
 		inline ColorFloatRGBA ClampRGB(void) const
 		{
-            ColorFloatRGBA frgba = ClampRGBA();
-            frgba.fA = fA;
-			return frgba;
+            return ClampRGBA();
 		}
 
 		inline ColorFloatRGBA ClampRGBA(void) const

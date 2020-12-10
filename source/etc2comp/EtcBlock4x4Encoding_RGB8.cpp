@@ -24,6 +24,9 @@ Block4x4Encoding_ETC1 encodes the ETC1 subset of RGB8.
 
 */
 
+// TODO: add isGray opimizations where rgb are iterated once for a single radius
+// instead of as individual channels.
+
 #include "EtcConfig.h"
 #include "EtcBlock4x4Encoding_RGB8.h"
 
@@ -248,7 +251,7 @@ namespace Etc
 			}
                 
 			TryTAndH(0);
-			break;
+            break;
 
 		case 1:
 			Block4x4Encoding_ETC1::TryDifferential(m_boolMostLikelyFlip, 1, 0, 0);
@@ -578,6 +581,8 @@ namespace Etc
 			iMaxBlue2 = 15;
 		}
 
+        bool isGray = m_errormetric == GRAY || m_pblockParent->HasColorPixels();
+        
 		for (unsigned int uiDistance = 0; uiDistance < TH_DISTANCES; uiDistance++)
 		{
 			encodingTry.m_uiCW1 = uiDistance;
@@ -591,6 +596,11 @@ namespace Etc
 				{
 					for (int iBlue2 = iMinBlue2; iBlue2 <= iMaxBlue2; iBlue2++)
 					{
+                        if (isGray && (iRed2 != iGreen2 || iRed2 != iBlue2))
+                        {
+                            continue;
+                        }
+                        
 						for (unsigned int uiBaseColorSwaps = 0; uiBaseColorSwaps < 2; uiBaseColorSwaps++)
 						{
 							if (uiBaseColorSwaps == 0)
@@ -642,6 +652,11 @@ namespace Etc
 				{
 					for (int iBlue1 = iMinBlue1; iBlue1 <= iMaxBlue1; iBlue1++)
 					{
+                        if (isGray && (iRed1 != iGreen1 || iRed1 != iBlue1))
+                        {
+                            continue;
+                        }
+                        
 						for (unsigned int uiBaseColorSwaps = 0; uiBaseColorSwaps < 2; uiBaseColorSwaps++)
 						{
 							if (uiBaseColorSwaps == 0)
@@ -843,6 +858,8 @@ namespace Etc
 			iMaxBlue2 = 15;
 		}
 
+        bool isGray = m_errormetric == GRAY || m_pblockParent->HasColorPixels();
+        
 		for (unsigned int uiDistance = 0; uiDistance < TH_DISTANCES; uiDistance++)
 		{
 			encodingTry.m_uiCW1 = uiDistance;
@@ -854,6 +871,11 @@ namespace Etc
 				{
 					for (int iBlue1 = iMinBlue1; iBlue1 <= iMaxBlue1; iBlue1++)
 					{
+                        if (isGray && (iRed1 != iGreen1 || iRed1 != iBlue1))
+                        {
+                            continue;
+                        }
+                        
 						encodingTry.m_frgbaColor1 = ColorFloatRGBA::ConvertFromRGB4((unsigned char)iRed1, (unsigned char)iGreen1, (unsigned char)iBlue1);
 						encodingTry.m_frgbaColor2 = m_frgbaOriginalColor2_TAndH;
 
@@ -900,6 +922,11 @@ namespace Etc
 				{
 					for (int iBlue2 = iMinBlue2; iBlue2 <= iMaxBlue2; iBlue2++)
 					{
+                        if (isGray && (iRed2 != iGreen2 || iRed2 != iBlue2))
+                        {
+                            continue;
+                        }
+                        
 						encodingTry.m_frgbaColor1 = m_frgbaOriginalColor1_TAndH;
 						encodingTry.m_frgbaColor2 = ColorFloatRGBA::ConvertFromRGB4((unsigned char)iRed2, (unsigned char)iGreen2, (unsigned char)iBlue2);
 

@@ -184,7 +184,7 @@ namespace Etc
 		private:
 
 		void CalculateSourceAverages(void);
-
+        void InitETC1();
 	};
 
 } // namespace Etc

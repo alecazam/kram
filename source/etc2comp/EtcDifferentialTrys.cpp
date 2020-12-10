@@ -165,6 +165,7 @@ namespace Etc
 		m_uiRadius = a_uiRadius;
 
 		m_uiTrys = 0;
+        m_ptryBest = nullptr;
 
 	}
 

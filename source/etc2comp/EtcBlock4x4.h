@@ -101,6 +101,12 @@ namespace Etc
 		{
 			return m_boolPunchThroughPixels;
 		}
+        
+        // gray vs. color
+        inline bool HasColorPixels(void) const
+        {
+            return m_hasColorPixels;
+        }
 
 	private:
         Block4x4Encoding* NewEncoderIfNeeded(Image::Format format);
@@ -116,7 +122,8 @@ namespace Etc
 
 		SourceAlphaMix		m_sourcealphamix;
 		bool				m_boolPunchThroughPixels;	// RGB8A1 or SRGB8A1 with any pixels with alpha < 0.5
-
+        bool                m_hasColorPixels;
+        
 		Block4x4Encoding	*m_pencoding;
 
 	};

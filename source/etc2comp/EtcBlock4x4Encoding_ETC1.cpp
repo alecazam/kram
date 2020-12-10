@@ -73,28 +73,39 @@ namespace Etc
 	//
 	Block4x4Encoding_ETC1::Block4x4Encoding_ETC1(void)
 	{
-		m_mode = MODE_ETC1;
-		m_boolDiff = false;
-		m_boolFlip = false;
-		m_frgbaColor1 = ColorFloatRGBA();
-		m_frgbaColor2 = ColorFloatRGBA();
-		m_uiCW1 = 0;
-		m_uiCW2 = 0;
-		for (int uiPixel = 0; uiPixel < PIXELS; uiPixel++)
-		{
-			m_auiSelectors[uiPixel] = 0;
-			//m_afDecodedAlphas[uiPixel] = 1.0f;
-		}
-
-		m_boolMostLikelyFlip = false;
-
-		m_fError = -1.0f;
-		m_fError1 = -1.0f;
-		m_fError2 = -1.0f;
-		m_boolSeverelyBentDifferentialColors = false;
+        InitETC1();
 	}
 
 	 Block4x4Encoding_ETC1::~Block4x4Encoding_ETC1(void) {}
+
+    void Block4x4Encoding_ETC1::InitETC1()
+    {
+        m_mode = MODE_ETC1;
+        m_boolDiff = false;
+        m_boolFlip = false;
+        m_frgbaColor1 = ColorFloatRGBA();
+        m_frgbaColor2 = ColorFloatRGBA();
+        m_uiCW1 = 0;
+        m_uiCW2 = 0;
+        for (int uiPixel = 0; uiPixel < PIXELS; uiPixel++)
+        {
+            m_auiSelectors[uiPixel] = 0;
+            //m_afDecodedAlphas[uiPixel] = 1.0f;
+        }
+
+        // these aren't initialized
+        m_frgbaSourceAverageLeft = ColorFloatRGBA();
+        m_frgbaSourceAverageRight = ColorFloatRGBA();
+        m_frgbaSourceAverageTop = ColorFloatRGBA();
+        m_frgbaSourceAverageBottom = ColorFloatRGBA();
+        
+        m_boolMostLikelyFlip = false;
+
+        m_fError = -1.0f;
+        m_fError1 = -1.0f;
+        m_fError2 = -1.0f;
+        m_boolSeverelyBentDifferentialColors = false;
+    }
 
 	// ----------------------------------------------------------------------------------------------------
 	// initialization prior to encoding
@@ -108,8 +119,9 @@ namespace Etc
 												unsigned char *a_paucEncodingBits, ErrorMetric a_errormetric)
 	{
 
-        // call ctpr
-        Block4x4Encoding_ETC1();
+        // call ctor doesn't work, so call InitETC1
+        //Block4x4Encoding_ETC1();
+        InitETC1();
         
         Block4x4Encoding::Init(a_pblockParent, a_pafrgbaSource, a_errormetric, 0);
 
@@ -130,7 +142,9 @@ namespace Etc
 														ErrorMetric a_errormetric,
                                                         uint16_t iterationCount)
 	{
-
+        // this can't hurt
+        InitETC1();
+        
 		Block4x4Encoding::Init(a_pblockParent, a_pafrgbaSource, a_errormetric, iterationCount);
 		m_fError = -1.0f;
 
@@ -400,6 +414,12 @@ namespace Etc
 			m_frgbaSourceAverageRight = (frgbaSumUR + frgbaSumLR) * 0.125f;
 			m_frgbaSourceAverageTop = (frgbaSumUL + frgbaSumUR) * 0.125f;
 			m_frgbaSourceAverageBottom = (frgbaSumLL + frgbaSumLR) * 0.125f;
+            
+            // * doesn't multiply fA above, it calls ScaleRGB, so a = 8
+            m_frgbaSourceAverageLeft.fA = 1.0f;
+            m_frgbaSourceAverageRight.fA = 1.0f;
+            m_frgbaSourceAverageTop.fA = 1.0f;
+            m_frgbaSourceAverageBottom.fA = 1.0f;
 		}
 //		else
 //		{
@@ -688,20 +708,38 @@ namespace Etc
 		float fBestTryError = FLT_MAX;
 
 		a_phalf->m_uiTrys = 0;
-		for (int iRed = a_phalf->m_iRed - (int)a_phalf->m_uiRadius; 
-				iRed <= a_phalf->m_iRed + (int)a_phalf->m_uiRadius;
+        
+        int radius = (int)a_phalf->m_uiRadius;
+        int radiusGB = radius;
+        
+        // Only iterate one color on all grayscale, otherwise this picks a red color when
+        // encoding grayscale images, since it stops on an early iteration of red.
+        
+        // TODO: Why is grayscale image stopping on a early red radius iteration?
+        // Maybe error equal, but this doesn't prefer 0 radius result on equality.
+        // Can happen if metric isn't gray, so fix this.
+        
+        bool isGray = m_errormetric == GRAY || m_pblockParent->HasColorPixels();
+        if (isGray)
+        {
+            // drop out green/blue iteration
+            radiusGB = 0;
+        }
+        
+		for (int iRed = a_phalf->m_iRed - radius;
+				iRed <= a_phalf->m_iRed + radius;
 				iRed++)
 		{
 			assert(iRed >= 0 && iRed <= 31);
 
-			for (int iGreen = a_phalf->m_iGreen - (int)a_phalf->m_uiRadius;
-					iGreen <= a_phalf->m_iGreen + (int)a_phalf->m_uiRadius;
+			for (int iGreen = a_phalf->m_iGreen - radiusGB;
+					iGreen <= a_phalf->m_iGreen + radiusGB;
 					iGreen++)
 			{
 				assert(iGreen >= 0 && iGreen <= 31);
 
-				for (int iBlue = a_phalf->m_iBlue - (int)a_phalf->m_uiRadius;
-						iBlue <= a_phalf->m_iBlue + (int)a_phalf->m_uiRadius;
+				for (int iBlue = a_phalf->m_iBlue - radiusGB;
+						iBlue <= a_phalf->m_iBlue + radiusGB;
 						iBlue++)
 				{
 					assert(iBlue >= 0 && iBlue <= 31);
@@ -709,11 +747,21 @@ namespace Etc
 					DifferentialTrys::Try *ptry = &a_phalf->m_atry[a_phalf->m_uiTrys];
 					assert(ptry < &a_phalf->m_atry[DifferentialTrys::Half::MAX_TRYS]);
 
-					ptry->m_iRed = iRed;
-					ptry->m_iGreen = iGreen;
-					ptry->m_iBlue = iBlue;
+					if (isGray)
+                    {
+                        ptry->m_iRed = iRed;
+                        ptry->m_iGreen = iRed;
+                        ptry->m_iBlue = iRed;
+                    }
+                    else
+                    {
+                        ptry->m_iRed = iRed;
+                        ptry->m_iGreen = iGreen;
+                        ptry->m_iBlue = iBlue;
+                    }
+                    
 					ptry->m_fError = FLT_MAX;
-					ColorFloatRGBA frgbaColor = ColorFloatRGBA::ConvertFromRGB5((unsigned char)iRed, (unsigned char)iGreen, (unsigned char)iBlue);
+					ColorFloatRGBA frgbaColor = ColorFloatRGBA::ConvertFromRGB5((unsigned char)ptry->m_iRed, (unsigned char)ptry->m_iGreen, (unsigned char)ptry->m_iBlue);
 
 					// try each CW
 					for (unsigned int uiCW = 0; uiCW < CW_RANGES; uiCW++)
@@ -735,7 +783,6 @@ namespace Etc
 						{
                             int srcPixelIndex = a_phalf->m_pauiPixelMapping[uiPixel];
                             
-//							const ColorFloatRGBA *pfrgbaSourcePixel = &m_pafrgbaSource[a_phalf->m_pauiPixelMapping[uiPixel]];
 							ColorFloatRGBA frgbaDecodedPixel;
 
 							for (unsigned int uiSelector = 0; uiSelector < SELECTORS; uiSelector++)
@@ -880,20 +927,32 @@ namespace Etc
 		float fBestTryError = FLT_MAX;
 
 		a_phalf->m_uiTrys = 0;
-		for (int iRed = a_phalf->m_iRed - (int)a_phalf->m_uiRadius;
-			iRed <= a_phalf->m_iRed + (int)a_phalf->m_uiRadius;
+        
+        int radius = (int)a_phalf->m_uiRadius;
+        int radiusGB = radius;
+        
+        // only iterate one color on grayscale
+        // Note: this won't work for color images with gray blocks
+        bool isGray = m_errormetric == GRAY || m_pblockParent->HasColorPixels();;
+        if (isGray)
+        {
+            radiusGB = 0;
+        }
+        
+		for (int iRed = a_phalf->m_iRed - radius;
+			iRed <= a_phalf->m_iRed + radius;
 			iRed++)
 		{
 			assert(iRed >= 0 && iRed <= 15);
 
-			for (int iGreen = a_phalf->m_iGreen - (int)a_phalf->m_uiRadius;
-				iGreen <= a_phalf->m_iGreen + (int)a_phalf->m_uiRadius;
+			for (int iGreen = a_phalf->m_iGreen - radiusGB;
+				iGreen <= a_phalf->m_iGreen + radiusGB;
 				iGreen++)
 			{
 				assert(iGreen >= 0 && iGreen <= 15);
 
-				for (int iBlue = a_phalf->m_iBlue - (int)a_phalf->m_uiRadius;
-					iBlue <= a_phalf->m_iBlue + (int)a_phalf->m_uiRadius;
+				for (int iBlue = a_phalf->m_iBlue - radiusGB;
+					iBlue <= a_phalf->m_iBlue + radiusGB;
 					iBlue++)
 				{
 					assert(iBlue >= 0 && iBlue <= 15);
@@ -901,11 +960,21 @@ namespace Etc
 					IndividualTrys::Try *ptry = &a_phalf->m_atry[a_phalf->m_uiTrys];
 					assert(ptry < &a_phalf->m_atry[IndividualTrys::Half::MAX_TRYS]);
 
-					ptry->m_iRed = iRed;
-					ptry->m_iGreen = iGreen;
-					ptry->m_iBlue = iBlue;
+					if (isGray)
+                    {
+                        ptry->m_iRed = iRed;
+                        ptry->m_iGreen = iRed;
+                        ptry->m_iBlue = iRed;
+                    }
+                    else
+                    {
+                        ptry->m_iRed = iRed;
+                        ptry->m_iGreen = iGreen;
+                        ptry->m_iBlue = iBlue;
+                    }
+                    
 					ptry->m_fError = FLT_MAX;
-					ColorFloatRGBA frgbaColor = ColorFloatRGBA::ConvertFromRGB4((unsigned char)iRed, (unsigned char)iGreen, (unsigned char)iBlue);
+					ColorFloatRGBA frgbaColor = ColorFloatRGBA::ConvertFromRGB4((unsigned char)ptry->m_iRed, (unsigned char)ptry->m_iGreen, (unsigned char)ptry->m_iBlue);
 
 					// try each CW
 					for (unsigned int uiCW = 0; uiCW < CW_RANGES; uiCW++)
