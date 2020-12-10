@@ -40,7 +40,7 @@ bool MmapHelper::open(const char *filename)
     }
     length = sb.st_size;
 
-    // stop padding out to page size, or done then don't add to length, or will walk to far in memory
+    // stop padding out to page size, or do but then don't add to length, or will walk to far in memory
     // all remaining page data will be zero, but still want length to reflect actual length of file
     // need Windows equilvent of getpagesize() call before putting this back.
     //
@@ -55,9 +55,10 @@ bool MmapHelper::open(const char *filename)
     //    }
     //#endif
 
+    // this needs to be MAP_SHARED or Metal can't reference with NoCopy
     addr =
-        (const uint8_t *)mmap(nullptr, length, PROT_READ, MAP_PRIVATE, fd, 0);
-    fclose(fp);  // mmap keeps pages alive now
+        (const uint8_t *)mmap(nullptr, length, PROT_READ, MAP_SHARED, fd, 0);
+    fclose(fp);  // mmap keeps pages alive until munmap
 
     if (addr == MAP_FAILED) {
         return false;
