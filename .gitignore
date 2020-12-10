@@ -1,3 +1,6 @@
+# ignore cmake build data
+build/
+
 # Prerequisites
 *.d
 
