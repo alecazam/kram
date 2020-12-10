@@ -743,6 +743,7 @@ bool KTXImage::open(const uint8_t* imageData, int imageDataLength,
     const string& metalFormat = getProp(kPropMetalFormat);
     if (!metalFormat.empty()) {
         if (sscanf(metalFormat.c_str(), "%d", &pixelFormat) != 1) {
+            KLOGE("kram", "pixelFormat not parsed from prop");
             return false;
         }
 
@@ -929,18 +930,19 @@ bool KTXImage::initMipLevels(bool vaidateLengthFromRead)
 
     for (int i = 0; i < numMips; ++i) {
         size_t dataSize = mipLevelSize(w, h);
-        ;
+        
         // compute dataSize from header data
 
         if (!skipImageLength) {
             // read data size
-            // 4-byte dataSize throws off alignment of mips to block size
+            // 4-byte dataSize throws off alignment of mips to block size on most formats
             // would need to pad after this by block size
 
             // validate that no weird size to image
             if (vaidateLengthFromRead) {
-                int fileDataSize = *(const uint32_t*)mips;
-                if (fileDataSize != (int)dataSize) {
+                int mipDataSize = *(const uint32_t*)mips;
+                if (mipDataSize != (int)dataSize) {
+                    KLOGE("kram", "mip %d size mismatch %d %d", i, (int)mipDataSize, (int)dataSize);
                     return false;
                 }
             }
