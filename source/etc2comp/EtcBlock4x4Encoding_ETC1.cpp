@@ -719,7 +719,7 @@ namespace Etc
         // Maybe error equal, but this doesn't prefer 0 radius result on equality.
         // Can happen if metric isn't gray, so fix this.
         
-        bool isGray = m_errormetric == GRAY || m_pblockParent->HasColorPixels();
+        bool isGray = m_errormetric == GRAY || !m_pblockParent->HasColorPixels();
         if (isGray)
         {
             // drop out green/blue iteration
@@ -933,7 +933,7 @@ namespace Etc
         
         // only iterate one color on grayscale
         // Note: this won't work for color images with gray blocks
-        bool isGray = m_errormetric == GRAY || m_pblockParent->HasColorPixels();;
+        bool isGray = m_errormetric == GRAY || !m_pblockParent->HasColorPixels();
         if (isGray)
         {
             radiusGB = 0;

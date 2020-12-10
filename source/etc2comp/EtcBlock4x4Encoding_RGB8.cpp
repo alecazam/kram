@@ -581,7 +581,7 @@ namespace Etc
 			iMaxBlue2 = 15;
 		}
 
-        bool isGray = m_errormetric == GRAY || m_pblockParent->HasColorPixels();
+        bool isGray = m_errormetric == GRAY || !m_pblockParent->HasColorPixels();
         
 		for (unsigned int uiDistance = 0; uiDistance < TH_DISTANCES; uiDistance++)
 		{
@@ -858,7 +858,7 @@ namespace Etc
 			iMaxBlue2 = 15;
 		}
 
-        bool isGray = m_errormetric == GRAY || m_pblockParent->HasColorPixels();
+        bool isGray = m_errormetric == GRAY || !m_pblockParent->HasColorPixels();
         
 		for (unsigned int uiDistance = 0; uiDistance < TH_DISTANCES; uiDistance++)
 		{
