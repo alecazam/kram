@@ -71,7 +71,7 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
     // file opened with 600 permission (rw only for current user)
     // 666 was a security violation.
     int fd = mkstemps((char*)_filename.data(), (int)strlen(suffix));
-    if (fd == -1) {
+    if (fd < 0) {
         _filename.clear();
         return false;
     }
@@ -150,25 +150,31 @@ bool FileHelper::open(const char* filename, const char* access)
 
 void FileHelper::close()
 {
-    if (_fp) {
-        if (_isTmpFile) {
+    if (!_fp) {
+        return;
+    }
+    
+    if (_isTmpFile) {
 // tmpfileplus on windows opens file as temporary, since unlink doesn't work
 #if !USE_TMPFILEPLUS
-            // so temp file is auto-deleted on close of _fp
-            // if this is done in open, then fd is unlinked from name needed for rename...
-            unlink(_filename.c_str());
+        // so temp file is auto-deleted on close of _fp
+        // if this is done in open, then fd is unlinked from name needed for rename...
+        unlink(_filename.c_str());
 #endif
-            _filename.clear();
-            _isTmpFile = false;
-        }
-
-        fclose(_fp);
-        _fp = nullptr;
+        _filename.clear();
+        _isTmpFile = false;
     }
+
+    fclose(_fp);
+    _fp = nullptr;
 }
 
 int FileHelper::size() const
 {
+    if (!_fp) {
+        return -1;
+    }
+    
     int fd = fileno(_fp);
 
     struct stat stats;

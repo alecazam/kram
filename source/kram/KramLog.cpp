@@ -64,7 +64,7 @@ extern int logMessage(const char* group, int logLevel,
 
     va_list args;
     va_start(args, fmt);
-    if (strstr(fmt, "%") == 0) {
+    if (strstr(fmt, "%") == nullptr) {
         msg = fmt;
     }
     else {

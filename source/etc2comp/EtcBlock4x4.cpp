@@ -52,19 +52,7 @@ namespace Etc
 	//
 	Block4x4::Block4x4(void)
 	{
-		m_pimageSource = nullptr;
-        m_pencoding = nullptr;
-
-		m_uiSourceH = 0;
-		m_uiSourceV = 0;
-
-		m_sourcealphamix = SourceAlphaMix::UNKNOWN;
-		//m_boolBorderPixels = false;
-		m_boolPunchThroughPixels = false;
-        m_hasColorPixels = false;
-        
-		//m_errormetric = ErrorMetric::NUMERIC;
-
+        Init();
 	}
 	Block4x4::~Block4x4()
 	{
@@ -77,6 +65,21 @@ namespace Etc
 		}
 	}
     
+    void Block4x4::Init() {
+        m_pimageSource = nullptr;
+        m_pencoding = nullptr;
+
+        m_uiSourceH = 0;
+        m_uiSourceV = 0;
+
+        m_sourcealphamix = SourceAlphaMix::UNKNOWN;
+        //m_boolBorderPixels = false;
+        m_boolPunchThroughPixels = false;
+        m_hasColorPixels = false;
+
+        //m_errormetric = ErrorMetric::NUMERIC;
+    }
+
     Block4x4Encoding* Block4x4::NewEncoderIfNeeded(Image::Format format)
     {
         Block4x4Encoding* p_encoding = m_pencoding;
@@ -120,7 +123,7 @@ namespace Etc
         ErrorMetric errorMetric = a_pimageSource->GetErrorMetric();
         
         m_pencoding = nullptr;
-        Block4x4();
+        Block4x4::Init();
         
         m_pimageSource = a_pimageSource;
         
@@ -156,7 +159,7 @@ namespace Etc
         
         //delete m_pencoding;
         m_pencoding = nullptr;
-        Block4x4();
+        Block4x4::Init();
 
 		m_pimageSource = a_pimageSource;
         
@@ -165,9 +168,15 @@ namespace Etc
 		//m_errormetric = errorMetric;
         m_pencoding = p_encoding;
 
-		SetSourcePixels();
+        if (m_pimageSource->HasSourcePixels()) {
+            SetSourcePixels();
 
-		m_pencoding->Decode(this, a_paucEncodingBits, m_afrgbaSource, errorMetric, iterationCount);
+            m_pencoding->Decode(this, a_paucEncodingBits, m_afrgbaSource, errorMetric, iterationCount);
+        }
+        else {
+            // pure decode
+            m_pencoding->Decode(this, a_paucEncodingBits, nullptr, errorMetric, iterationCount);
+        }
 
 	}
 	

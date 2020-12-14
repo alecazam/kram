@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "KramConfig.h"
+
 #include <string>
 #include <vector>
 
@@ -255,6 +257,7 @@ bool isASTCFormat(MyMTLPixelFormat format);
 
 Int2 blockDimsOfFormat(MyMTLPixelFormat format);
 int blockSizeOfFormat(MyMTLPixelFormat format);
+int numChannelsOfFormat(MyMTLPixelFormat format);
 
 int metalType(MyMTLPixelFormat format);  // real MTLPixelFormat
 const char* metalTypeName(MyMTLPixelFormat format);

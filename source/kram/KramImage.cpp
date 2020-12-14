@@ -42,6 +42,10 @@
 #include "KramSDFMipper.h"
 #include "KramTimer.h"
 
+#if KRAM_MAC || KRAM_LINUX
+#include <sys/errno.h>
+#endif
+
 namespace kram {
 
 using namespace std;
@@ -452,14 +456,11 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     dstImage.fileDataLength = 0;
 
     KTXHeader& dstHeader = dstImage.header;
-    auto dstPixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm : MTLPixelFormatRGBA8Unorm_sRGB;
+    auto dstPixelFormat = isSrgb ? MTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
     dstHeader.initFormatGL(dstPixelFormat);
     dstImage.pixelFormat = dstPixelFormat;
-
-    //dstImage.bytesPerBlock = dstHeader.blockSize();
-    //dstImage.blockDims = dstHeader.blockDims();
-    //int blockSize = dstImage.blockSize();
-
+    dstImage.addFormatProps(); // update format prop
+    
     vector<uint8_t> propsData;
     dstImage.toPropsData(propsData);
     dstHeader.bytesOfKeyValueData = uint32_t(propsData.size());
@@ -478,10 +479,18 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     bool success = false;
 
     // write the header out
-    fwrite(&dstHeader, sizeof(dstHeader), 1, dstFile);
+    size_t writtenBytes = fwrite(&dstHeader, 1, sizeof(dstHeader), dstFile);
+    if (writtenBytes != sizeof(dstHeader)) {
+        fprintf(stderr, "%s\n", strerror(errno));
+            
+        return false;
+    }
 
     // write out the props
-    fwrite(propsData.data(), propsData.size(), 1, dstFile);
+    writtenBytes = fwrite(propsData.data(), 1, propsData.size(), dstFile);
+    if (writtenBytes != propsData.size()) {
+        return false;
+    }
 
     // TODO: more work on handling snorm -> unorm conversions ?
 
@@ -546,6 +555,8 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                         // decode into temp 4x4 pixels
                         Color pixels[blockDim * blockDim];
 
+                        success = true;
+                        
                         switch (pixelFormat) {
                             case MyMTLPixelFormatBC1_RGBA:
                             case MyMTLPixelFormatBC1_RGBA_sRGB:
@@ -577,6 +588,10 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                                 break;
                         }
 
+                        if (!success) {
+                            return false;
+                        }
+                        
                         // copy temp pixels to outputTexture
                         for (int by = 0; by < blockDim; ++by) {
                             int yy = y + by;
@@ -601,6 +616,8 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
             else if (useSquish) {
                 squish::TexFormat format = squish::kBC1;
 
+                success = true;
+                
                 switch (pixelFormat) {
                     case MyMTLPixelFormatBC1_RGBA:
                     case MyMTLPixelFormatBC1_RGBA_sRGB:
@@ -645,6 +662,8 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
 #if COMPILE_ETCENC
             Etc::Image::Format format = Etc::Image::Format::R11;
 
+            success = true;
+            
             switch (pixelFormat) {
                 case MyMTLPixelFormatEAC_R11Unorm:
                     format = Etc::Image::Format::R11;
@@ -708,8 +727,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                 astcenc_profile profile;
                 profile = ASTCENC_PRF_LDR;  // isSrgb ? ASTCENC_PRF_LDR_SRGB : ASTCENC_PRF_LDR;
                 if (isHDR) {
-                    profile =
-                        ASTCENC_PRF_HDR;  // TODO: also ASTCENC_PRF_HDR_RGB_LDR_A
+                    profile = ASTCENC_PRF_HDR;  // TODO: also ASTCENC_PRF_HDR_RGB_LDR_A
                 }
 
                 astcenc_config config;
@@ -725,8 +743,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                     return false;
                 }
                 // no swizzle
-                astcenc_swizzle swizzleDecode = {ASTCENC_SWZ_R, ASTCENC_SWZ_G,
-                                                 ASTCENC_SWZ_B, ASTCENC_SWZ_A};
+                astcenc_swizzle swizzleDecode = {ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A};
 
                 error = astcenc_decompress_image(codec_context, srcData, srcDataLength, dstImageASTC, swizzleDecode);
 
@@ -763,8 +780,19 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
         }
 
         // write the mips out to the file, and code above can then decode into the same buffer
-        fseek(dstFile, dstMipLevel.offset, SEEK_SET);  // from begin
-        fwrite(outputTexture.data(), dstMipLevel.length, 1, dstFile);
+        // This isn't correct for cubes, arrays, and other types.  The mip length is only written out once for all mips.
+        fseek(dstFile, dstMipLevel.offset-4, SEEK_SET);  // from begin
+        
+        uint32_t mipSize = dstMipLevel.length;
+        writtenBytes = fwrite(&mipSize, 1, sizeof(uint32_t), dstFile);
+        if (writtenBytes != sizeof(uint32_t)) {
+            return false;
+        }
+        
+        writtenBytes = fwrite(outputTexture.data(), 1, dstMipLevel.length, dstFile);
+        if (writtenBytes != dstMipLevel.length) {
+            return false;
+        }
 
         // next mip level
 #if ROUNDMIPSDOWN
@@ -1145,11 +1173,17 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     SDFMipper sdfMipper;
 
     // write the header out
-    fwrite(&header, sizeof(header), 1, dstFile);
+    size_t writtenBytes = fwrite(&header, 1, sizeof(header), dstFile);
+    if (writtenBytes != sizeof(header)) {
+        return false;
+    }
 
     // write out the props
-    fwrite(propsData.data(), propsData.size(), 1, dstFile);
-
+    writtenBytes = fwrite(propsData.data(), 1, propsData.size(), dstFile);
+    if (writtenBytes != propsData.size()) {
+        return false;
+    }
+    
     for (int chunk = 0; chunk < (int)chunkOffsets.size(); ++chunk) {
         // this needs to append before chunkOffset copy below
         w = modifiedWidth;
@@ -1287,7 +1321,10 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
                 fseek(dstFile, mipOffset - imageLengthSizeof,
                       SEEK_SET);  // from begin
-                fwrite(&mipStorageSize, imageLengthSizeof, 1, dstFile);
+                writtenBytes = fwrite(&mipStorageSize, 1, imageLengthSizeof, dstFile);
+                if (writtenBytes != (size_t)imageLengthSizeof) {
+                    return false;
+                }
             }
             else {
                 // TODO: Might get rid of this, and go to ktx2, can't look at
@@ -1298,7 +1335,10 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
                 fseek(dstFile, mipOffset, SEEK_SET);  // from begin
             }
 
-            fwrite(outputTexture.data.data(), mipStorageSize, 1, dstFile);
+            writtenBytes = fwrite(outputTexture.data.data(), 1, mipStorageSize, dstFile);
+            if (writtenBytes != mipStorageSize) {
+                return false;
+            }
         }
     }
     return true;

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "KramConfig.h"
+
 // This is only meant to emulate float4 when lib not available
 // (f.e. win or linux) but may move off simd lib to this.  So
 // many open source projets skip SIMD, or only do SSE.  This is

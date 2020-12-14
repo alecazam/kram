@@ -110,6 +110,7 @@ namespace Etc
 
 	private:
         Block4x4Encoding* NewEncoderIfNeeded(Image::Format format);
+        void Init();
         
 		void SetSourcePixels(void);
 

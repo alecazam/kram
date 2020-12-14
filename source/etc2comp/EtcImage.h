@@ -120,6 +120,11 @@ namespace Etc
 
 		float GetError(void) const;
 
+        inline bool HasSourcePixels() const
+        {
+            return m_pafrgbaSource != nullptr;
+        }
+        
 		inline ColorFloatRGBA GetSourcePixel(unsigned int x, unsigned int y) const
 		{
             // clamp on border instead of returning nullptr and NaNs.  Might weight color more.

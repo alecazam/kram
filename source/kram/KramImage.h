@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "KramConfig.h"
+
 #include <string>
 #include <vector>
 

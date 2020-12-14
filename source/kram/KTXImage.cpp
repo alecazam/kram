@@ -537,6 +537,12 @@ int blockSizeOfFormat(MyMTLPixelFormat format)
     return it.blockSize;
 }
 
+int numChannelsOfFormat(MyMTLPixelFormat format)
+{
+    const auto& it = formatInfo(format);
+    return it.numChannels;
+}
+
 int metalType(MyMTLPixelFormat format)
 {
     const auto& it = formatInfo(format);
@@ -573,6 +579,10 @@ int glType(MyMTLPixelFormat format)
     return it.glType;
 }
 
+
+
+
+
 // https://docs.unity3d.com/ScriptReference/Experimental.Rendering.GraphicsFormat.html
 // Unity only handles 4,5,6,8,10,12 square block dimensions
 
@@ -585,6 +595,8 @@ int KTXImage::mipLevelSize(int width_, int height_) const
 
 int KTXImage::blockCount(int width_, int height_) const
 {
+    assert(width_ >= 1 && height_ >= 1);
+    
     Int2 dims = blockDims();
 
     width_ = (width_ + dims.x - 1) / dims.x;

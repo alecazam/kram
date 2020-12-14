@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "KramConfig.h"
+
 #include <cassert>
 #include <string>
 

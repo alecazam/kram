@@ -184,9 +184,12 @@ namespace Etc
         {
             m_fError = 0.0f;
 
-            for (int uiPixel = 0; uiPixel < (int)PIXELS; uiPixel++)
+            if (m_pafrgbaSource)
             {
-                m_fError += CalcPixelError(m_afrgbaDecodedColors[uiPixel], uiPixel);
+                for (int uiPixel = 0; uiPixel < (int)PIXELS; uiPixel++)
+                {
+                    m_fError += CalcPixelError(m_afrgbaDecodedColors[uiPixel], uiPixel);
+                }
             }
         }
         

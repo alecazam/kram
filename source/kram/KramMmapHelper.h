@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "KramConfig.h"
+
 #include <stddef.h>
 #include <stdint.h>
 

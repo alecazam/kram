@@ -587,7 +587,7 @@ namespace Etc
                         
                         const ColorFloatRGBA& color = dstPixels[x * 4 + y]; // Note: pixel lookup transpose here
                 
-                        ColorR8G8B8A8& dst = dstPixels8[yd * m_uiSourceHeight + xd];
+                        ColorR8G8B8A8& dst = dstPixels8[yd * m_uiSourceWidth + xd];
                         dst.ucR = (uint8_t)color.IntRed(255.0f);
                         dst.ucG = (uint8_t)color.IntGreen(255.0f);
                         dst.ucB = (uint8_t)color.IntBlue(255.0f);
