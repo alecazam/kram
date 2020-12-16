@@ -1304,7 +1304,26 @@ static int kramAppInfo(vector<const char*>& args)
             info += propText;
         }
 
-        // dump mips/dims, but this can be a lot of data on arrays
+        // TODO: expand to more mip types
+        if (textureType == MyMTLTextureType2D && isVerbose) {
+            // dump mips/dims, but this can be a lot of data on arrays
+            int mipLevel = 0;
+            int w = srcImage.width;
+            int h = srcImage.height;
+            
+            for (const auto& mip : srcImage.mipLevels) {
+                sprintf(tmp,
+                        "mipd: %dx%d\n"
+                        "mipn: %d\n"
+                        "mips: %zu\n"
+                        "mipo: %zu\n",
+                        w, h, mipLevel++, mip.length, mip.offset);
+                info += tmp;
+                
+                // drop a mip level
+                mipDown(w, h);
+            }
+        }
     }
     // now write the string to output (always appends for scripting purposes, so caller must wipe output file)
     FILE* fp = stdout;
