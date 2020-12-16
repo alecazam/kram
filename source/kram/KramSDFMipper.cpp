@@ -55,14 +55,9 @@ void SDFMipper::mipmap(ImageData& dstImage, int mipLevel)
     int w = srcBitmapImage.width;
     int h = srcBitmapImage.height;
 
+    // can use shift with mip down, but this iterates
     for (int i = 0; i < mipLevel; ++i) {
-#if ROUNDMIPSDOWN
-        w = std::max(1, w / 2);
-        h = std::max(1, h / 2);
-#else
-        w = (w + 1) / 2;
-        h = (h + 1) / 2;
-#endif
+        mipDown(w, h);
     }
 
     dstImage.width = w;

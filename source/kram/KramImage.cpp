@@ -307,13 +307,8 @@ void Image::computeMipStorage(const KTXImage& image, int w, int h,
         }
 
         do {
-#if ROUNDMIPSDOWN
-            w = std::max(1, w / 2);
-            h = std::max(1, h / 2);
-#else
-            w = (w + 1) / 2;
-            h = (h + 1) / 2;
-#endif
+            mipDown(w, h);
+            
             keepMip =
                 (w >= mipMinSize && w <= mipMaxSize) &&
                 (h >= mipMinSize && h <= mipMaxSize);
@@ -795,13 +790,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
         }
 
         // next mip level
-#if ROUNDMIPSDOWN
-        w = std::max(1, w / 2);
-        h = std::max(1, h / 2);
-#else
-        w = (w + 1) / 2;
-        h = (h + 1) / 2;
-#endif
+        mipDown(w, h);
     }
 
     return success;
@@ -1070,13 +1059,8 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
             header.pixelHeight = h;
             break;
         }
-#if ROUNDMIPSDOWN
-        w = std::max(1, w / 2);
-        h = std::max(1, h / 2);
-#else
-        w = (w + 1) / 2;
-        h = (h + 1) / 2;
-#endif
+        
+        mipDown(w, h);
     }
 
     // ----------------------------------------------------
@@ -1361,7 +1345,8 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
         switch (info.pixelFormat) {
             case MyMTLPixelFormatR8Unorm:
             case MyMTLPixelFormatRG8Unorm:
-            case MyMTLPixelFormatRGBA8Unorm: {
+            case MyMTLPixelFormatRGBA8Unorm:
+            case MTLPixelFormatRGBA8Unorm_sRGB: {
                 int count = image.blockSize() / 1;
 
                 uint8_t* dst = (uint8_t*)outputTexture.data.data();

@@ -288,13 +288,10 @@ void Mipper::remapToSignedEndpoint8(uint16_t& endpoint) const
 
 void Mipper::mipmap(ImageData& srcImage, ImageData& dstImage) const
 {
-#if ROUNDMIPSDOWN
-    dstImage.width = std::max(1, srcImage.width / 2);
-    dstImage.height = std::max(1, srcImage.height / 2);
-#else
-    dstImage.width = (srcImage.width + 1) / 2;
-    dstImage.height = (srcImage.height + 1) / 2;
-#endif
+    dstImage.width = srcImage.width;
+    dstImage.height = srcImage.height;
+    
+    mipDown(dstImage.width, dstImage.height);
 
     // this assumes that we can read mip-1 from srcImage
     mipmapLevel(srcImage, dstImage);
@@ -315,8 +312,26 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
 
     half4* cDstHalf = srcImage.pixelsHalf;
     const half4* srcHalf = cDstHalf;  // TODO: use dstImage.pixelsHalf?
-
+    int dstIndex = 0;
+    
+// To see the downsampled mip dimensions enable this
+//    int wDst = width;
+//    int hDst = height;
+//    mipDown(wDst, hDst);
+    
+    // 535 produces 267.5 -> 267, last pixel in an odd width or height is skipped
+    // this code was incrementing too often at the end
+    bool isOddX = width & 1;
+    bool isOddY = height & 1;
+    
     for (int y = 0; y < height; y += 2) {
+        // last y row is skipped if odd, this causes a shift
+        if (isOddY) {
+            if (y == (height-1)) {
+                break;
+            }
+        }
+        
         int y0 = y;
         int y1 = y + 1;
         if (y1 == height) {
@@ -324,8 +339,15 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
         }
         y0 *= width;
         y1 *= width;
-
+        
         for (int x = 0; x < width; x += 2) {
+            // last x column is skipped if odd, this causes a shift
+            if (isOddX) {
+                if (x == (width-1)) {
+                    break;
+                }
+            }
+            
             int x1 = x + 1;
             if (x1 == width) {
                 x1 = x;
@@ -343,9 +365,8 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
                 float4 cFloat = (c0 + c1 + c2 + c3) * 0.25;
 
                 // overwrite float4 image
-                *cDstHalf = toHalf4(cFloat);
-                cDstHalf++;
-
+                cDstHalf[dstIndex] = toHalf4(cFloat);
+                
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
@@ -359,8 +380,7 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
                     Color c = Unormfloat4ToColor(cFloat);
 
                     // can only skip this if cSrc = cDst
-                    *cDstColor = c;
-                    cDstColor++;
+                    cDstColor[dstIndex] = c;
                 }
             }
             else if (srcFloat) {
@@ -375,9 +395,8 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
                 float4 cFloat = (c0 + c1 + c2 + c3) * 0.25;
 
                 // overwrite float4 image
-                *cDstFloat = cFloat;
-                cDstFloat++;
-
+                cDstFloat[dstIndex] = cFloat;
+                
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
@@ -391,8 +410,7 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
                     // encoder) that means BC/ASTC are linearly fit to
                     // non-linear srgb colors - ick
                     Color c = Unormfloat4ToColor(cFloat);
-                    *cDstColor = c;
-                    cDstColor++;
+                    cDstColor[dstIndex] = c;
                 }
             }
             else {
@@ -411,9 +429,10 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
 
                 // can overwrite memory on linear image, some precision loss, but fast
                 Color c = {(uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a};
-                *cDstColor = c;
-                cDstColor++;
+                cDstColor[dstIndex] = c;
             }
+            
+            dstIndex++;
         }
     }
 }
