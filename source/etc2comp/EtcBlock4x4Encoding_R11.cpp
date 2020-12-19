@@ -183,11 +183,11 @@ namespace Etc
         
         if (m_isSnorm)
         {
-            m_redBase = (int16_t)m_pencodingbitsR11->data.base + 128;
+            m_redBase = (int8_t)m_pencodingbitsR11->data.base + 128;
         }
         else
         {
-            m_redBase = (uint16_t)m_pencodingbitsR11->data.base;
+            m_redBase = (uint8_t)m_pencodingbitsR11->data.base;
         }
                         
         m_redMultiplier = m_pencodingbitsR11->data.multiplier;
@@ -242,11 +242,11 @@ namespace Etc
         
         if (m_isSnorm)
         {
-            m_redBase = (int16_t)m_pencodingbitsR11->data.base + 128;
+            m_redBase = (int8_t)m_pencodingbitsR11->data.base + 128;
         }
         else
         {
-            m_redBase = (uint16_t)m_pencodingbitsR11->data.base;
+            m_redBase = (uint8_t)m_pencodingbitsR11->data.base;
         }
                         
         m_redMultiplier = m_pencodingbitsR11->data.multiplier;
