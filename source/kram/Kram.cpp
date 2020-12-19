@@ -114,7 +114,7 @@ bool LoadPng(const uint8_t* data, int dataSize, Image& sourceImage)
 
 bool SetupTmpFile(FileHelper& tmpFileHelper, const char* suffix)
 {
-    return tmpFileHelper.openTemporaryFile(suffix, "wb");
+    return tmpFileHelper.openTemporaryFile(suffix, "w+b");
 }
 
 bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
@@ -161,9 +161,11 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
         // read entire png into memory
         int size = fileHelper.size();
         fileBuffer.resize(size);
-        FILE* fp = fileHelper.pointer();
-        fread(fileBuffer.data(), 1, size, fp);
-
+    
+        if (!fileHelper.read(fileBuffer.data(), size)) {
+            return false;
+        }
+        
         if (isKTX) {
             if (!LoadKtx(fileBuffer.data(), (int)fileBuffer.size(),
                          sourceImage)) {
@@ -210,9 +212,10 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
         // read entire ktx into memory
         int size = fileHelper.size();
         fileBuffer.resize(size);
-        FILE* fp = fileHelper.pointer();
-        fread(fileBuffer.data(), 1, size, fp);
-
+        if (!fileHelper.read(fileBuffer.data(), size)) {
+            return false;
+        }
+    
         if (!sourceImage.open(fileBuffer.data(), (int)fileBuffer.size(), skipImageLength)) {
             return false;
         }
@@ -1141,8 +1144,9 @@ static int kramAppInfo(vector<const char*>& args)
             // even though really just want to peek at header
             int size = srcFileHelper.size();
             srcFileBuffer.resize(size);
-            FILE* fp = srcFileHelper.pointer();
-            fread(srcFileBuffer.data(), 1, size, fp);
+            if (!srcFileHelper.read(srcFileBuffer.data(), size)) {
+                return -1;
+            }
 
             data = srcFileBuffer.data();
             dataSize = (int)srcFileBuffer.size();
@@ -1486,7 +1490,7 @@ static int kramAppDecode(vector<const char*>& args)
 
     // rename to dest filepath, note this only occurs if above succeeded
     // so any existing files are left alone on failure.
-    success = success && tmpFileHelper.renameFile(dstFilename.c_str());
+    success = success && tmpFileHelper.copyTemporaryFileTo(dstFilename.c_str());
 
     return success ? 0 : -1;
 }
@@ -1859,7 +1863,7 @@ static int kramAppEncode(vector<const char*>& args)
         // rename to dest filepath, note this only occurs if above succeeded
         // so any existing files are left alone on failure.
         if (success) {
-            success = tmpFileHelper.renameFile(dstFilename.c_str());
+            success = tmpFileHelper.copyTemporaryFileTo(dstFilename.c_str());
 
             if (!success) {
                 KLOGE("Kram", "rename of temp file failed");

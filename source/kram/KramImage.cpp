@@ -38,6 +38,7 @@
 #include <string>
 
 #include "KTXImage.h"
+#include "KramFileHelper.h"
 #include "KTXMipper.h"
 #include "KramSDFMipper.h"
 #include "KramTimer.h"
@@ -45,6 +46,7 @@
 #if KRAM_MAC || KRAM_LINUX
 #include <sys/errno.h>
 #endif
+
 
 namespace kram {
 
@@ -474,16 +476,12 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     bool success = false;
 
     // write the header out
-    size_t writtenBytes = fwrite(&dstHeader, 1, sizeof(dstHeader), dstFile);
-    if (writtenBytes != sizeof(dstHeader)) {
-        fprintf(stderr, "%s\n", strerror(errno));
-            
+    if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&dstHeader, sizeof(dstHeader))) {
         return false;
     }
-
+    
     // write out the props
-    writtenBytes = fwrite(propsData.data(), 1, propsData.size(), dstFile);
-    if (writtenBytes != propsData.size()) {
+    if (!FileHelper::writeBytes(dstFile, propsData.data(), propsData.size())) {
         return false;
     }
 
@@ -779,13 +777,10 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
         fseek(dstFile, dstMipLevel.offset-4, SEEK_SET);  // from begin
         
         uint32_t mipSize = dstMipLevel.length;
-        writtenBytes = fwrite(&mipSize, 1, sizeof(uint32_t), dstFile);
-        if (writtenBytes != sizeof(uint32_t)) {
+        if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&mipSize, sizeof(mipSize))) {
             return false;
         }
-        
-        writtenBytes = fwrite(outputTexture.data(), 1, dstMipLevel.length, dstFile);
-        if (writtenBytes != dstMipLevel.length) {
+        if (!FileHelper::writeBytes(dstFile, outputTexture.data(), dstMipLevel.length)) {
             return false;
         }
 
@@ -1157,14 +1152,12 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     SDFMipper sdfMipper;
 
     // write the header out
-    size_t writtenBytes = fwrite(&header, 1, sizeof(header), dstFile);
-    if (writtenBytes != sizeof(header)) {
+    if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&header, sizeof(header))) {
         return false;
     }
 
     // write out the props
-    writtenBytes = fwrite(propsData.data(), 1, propsData.size(), dstFile);
-    if (writtenBytes != propsData.size()) {
+    if (!FileHelper::writeBytes(dstFile, propsData.data(), propsData.size())) {
         return false;
     }
     
@@ -1301,12 +1294,13 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
             // now write out the compressed data in dxt.data to KTX levels
             if (!info.skipImageLength) {
-                int imageLengthSizeof = sizeof(uint32_t);
-
-                fseek(dstFile, mipOffset - imageLengthSizeof,
+                int mipStorageSizeOf = sizeof(mipStorageSize);
+                assert(mipStorageSizeOf == 4);
+                
+                fseek(dstFile, mipOffset - mipStorageSizeOf,
                       SEEK_SET);  // from begin
-                writtenBytes = fwrite(&mipStorageSize, 1, imageLengthSizeof, dstFile);
-                if (writtenBytes != (size_t)imageLengthSizeof) {
+                
+                if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&mipStorageSize, mipStorageSizeOf)) {
                     return false;
                 }
             }
@@ -1319,8 +1313,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
                 fseek(dstFile, mipOffset, SEEK_SET);  // from begin
             }
 
-            writtenBytes = fwrite(outputTexture.data.data(), 1, mipStorageSize, dstFile);
-            if (writtenBytes != mipStorageSize) {
+            if (!FileHelper::writeBytes(dstFile, outputTexture.data.data(), mipStorageSize)) {
                 return false;
             }
         }

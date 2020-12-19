@@ -28,7 +28,7 @@ public:
 
     // mainly for tmp files, file can be closed, but this does rename of tmp file.
     // may fail if tmp file and dst are different volumes.
-    bool renameFile(const char* dstFilename);
+    bool copyTemporaryFileTo(const char* dstFilename);
 
     void close();
 
@@ -36,6 +36,14 @@ public:
 
     FILE* pointer() { return _fp; }
 
+    // safe calls that test bytes read/written
+    bool read(uint8_t* data, int dataSize);
+    bool write(const uint8_t* data, int dataSize);
+    
+    // if caller only has FILE* then can use these
+    static bool readBytes(FILE* fp, uint8_t* data, int dataSize);
+    static bool writeBytes(FILE* fp, const uint8_t* data, int dataSize);
+    
 private:
     FILE* _fp = nullptr;
     string _filename;
