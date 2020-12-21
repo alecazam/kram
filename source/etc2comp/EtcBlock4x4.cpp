@@ -75,7 +75,7 @@ namespace Etc
         m_sourcealphamix = SourceAlphaMix::UNKNOWN;
         //m_boolBorderPixels = false;
         m_boolPunchThroughPixels = false;
-        m_hasColorPixels = false;
+        m_hasColorPixels = true;
 
         //m_errormetric = ErrorMetric::NUMERIC;
     }
@@ -207,7 +207,7 @@ namespace Etc
         
         //----------------------------------------
          
-        m_hasColorPixels = true;
+        m_hasColorPixels = false;
         for (uiPixel = 0; uiPixel < 16; ++uiPixel)
         {
             ColorFloatRGBA& sourcePixel = m_afrgbaSource[uiPixel];
@@ -215,7 +215,7 @@ namespace Etc
             // this is doing fp equality
             if (sourcePixel.fR != sourcePixel.fG || sourcePixel.fR != sourcePixel.fB)
             {
-                m_hasColorPixels = false;
+                m_hasColorPixels = true;
                 break;
             }
         }
