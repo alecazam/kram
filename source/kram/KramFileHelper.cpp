@@ -16,6 +16,9 @@
 #if KRAM_MAC || KRAM_IOS || KRAM_LINUX
 #include <unistd.h> // for getpagesize()
 #endif
+#if KRAM_WIN
+#include <windows.h> // for GetNativeSystemInfo()
+#endif
 
 namespace kram {
 using namespace std;
@@ -77,10 +80,12 @@ bool FileHelper::writeBytes(FILE* fp, const uint8_t* data, int dataSize) {
 size_t FileHelper::pagesize() {
     static size_t pagesize = 0;
     if (pagesize == 0) {
-#if KRAM_MAC || KRAM_IOS
+#if KRAM_MAC || KRAM_IOS || KRAM_LINUX
         pagesize = getpagesize();
 #elif KRAM_WIN
-        pagesize = GetNativeSystemInfo().dwPageSize;
+        SYSTEM_INFO systemInfo;
+        GetNativeSystemInfo(&systemInfo);
+        pagesize = systemInfo.dwPageSize;
 #else
         pagesize = 4*1024; // how to determine on Win/Linux
 #endif
