@@ -453,7 +453,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     dstImage.fileDataLength = 0;
 
     KTXHeader& dstHeader = dstImage.header;
-    auto dstPixelFormat = isSrgb ? MTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+    auto dstPixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
     dstHeader.initFormatGL(dstPixelFormat);
     dstImage.pixelFormat = dstPixelFormat;
     dstImage.addFormatProps(); // update format prop
@@ -1339,7 +1339,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             case MyMTLPixelFormatR8Unorm:
             case MyMTLPixelFormatRG8Unorm:
             case MyMTLPixelFormatRGBA8Unorm:
-            case MTLPixelFormatRGBA8Unorm_sRGB: {
+            case MyMTLPixelFormatRGBA8Unorm_sRGB: {
                 int count = image.blockSize() / 1;
 
                 uint8_t* dst = (uint8_t*)outputTexture.data.data();

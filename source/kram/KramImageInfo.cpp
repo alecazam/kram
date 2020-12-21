@@ -139,7 +139,7 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
         format = MyMTLPixelFormatRG8Unorm;
     }
     else if (isStringEqual(formatString, "rgba8")) {  // for rgb/rgba
-        format = infoArgs.isSRGB ? MTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+        format = infoArgs.isSRGB ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
     }
 
     else if (isStringEqual(formatString, "r16f")) {
@@ -392,7 +392,7 @@ static const MyMTLPixelFormat kEncodingFormatsExplicit[] =
         MyMTLPixelFormatRG8Unorm,
         MyMTLPixelFormatRGBA8Unorm,
 
-        MTLPixelFormatRGBA8Unorm_sRGB,
+        MyMTLPixelFormatRGBA8Unorm_sRGB,
 
         MyMTLPixelFormatR16Float,
         MyMTLPixelFormatRG16Float,

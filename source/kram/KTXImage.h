@@ -82,13 +82,13 @@ enum MyMTLPixelFormat {
     MyMTLPixelFormatRGBA8Unorm = 70,
 
     // TODO: support these
-    // MTLPixelFormatR8Unorm_sRGB = 11,
-    // MTLPixelFormatRG8Unorm_sRGB= 31,
-    MTLPixelFormatRGBA8Unorm_sRGB = 71,
+    // MyMTLPixelFormatR8Unorm_sRGB = 11,
+    // MyMTLPixelFormatRG8Unorm_sRGB= 31,
+    MyMTLPixelFormatRGBA8Unorm_sRGB = 71,
 
-    // MTLPixelFormatR8Snorm      = 12,
-    // MTLPixelFormatRG8Snorm     = 32,
-    // MTLPixelFormatRGBA8Snorm      = 72,
+    // MyMTLPixelFormatR8Snorm      = 12,
+    // MyMTLPixelFormatRG8Snorm     = 32,
+    // MyMTLPixelFormatRGBA8Snorm      = 72,
 
     // TODO: also BGRA8Unorm types?
 

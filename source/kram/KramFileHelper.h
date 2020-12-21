@@ -44,6 +44,8 @@ public:
     static bool readBytes(FILE* fp, uint8_t* data, int dataSize);
     static bool writeBytes(FILE* fp, const uint8_t* data, int dataSize);
     
+    static size_t pagesize();
+    
 private:
     FILE* _fp = nullptr;
     string _filename;

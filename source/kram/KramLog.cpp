@@ -52,6 +52,28 @@ int sprintf(string& str, const char* format, ...)
     return len;
 }
 
+bool startsWith(const char *str, const string &substring) {
+    return strncmp(str, substring.c_str(), substring.size()) == 0;
+}
+
+// https://stackoverflow.com/questions/874134/find-out-if-string-ends-with-another-string-in-c
+bool endsWith(const string& value, const string& ending)
+{
+    if (ending.size() > value.size()) {
+        return false;
+    }
+    return equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
+bool endsWithExtension(const char *str, const string &substring) {
+    const char *search = strrchr(str, '.');
+    if (search == NULL ) {
+        return false;
+    }
+    
+    return strcmp(search, substring.c_str()) == 0;
+}
+
 extern int logMessage(const char* group, int logLevel,
                       const char* file, int line, const char* func,
                       const char* fmt, ...)

@@ -13,6 +13,10 @@
 
 #include <vector>
 
+#if KRAM_MAC || KRAM_IOS || KRAM_LINUX
+#include <unistd.h> // for getpagesize()
+#endif
+
 namespace kram {
 using namespace std;
 
@@ -70,6 +74,20 @@ bool FileHelper::writeBytes(FILE* fp, const uint8_t* data, int dataSize) {
     return true;
 }
 
+size_t FileHelper::pagesize() {
+    static size_t pagesize = 0;
+    if (pagesize == 0) {
+#if KRAM_MAC || KRAM_IOS
+        pagesize = getpagesize();
+#elif KRAM_WIN
+        pagesize = GetNativeSystemInfo().dwPageSize;
+#else
+        pagesize = 4*1024; // how to determine on Win/Linux
+#endif
+    }
+    return pagesize;
+}
+
 bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
 {
     if (!_fp) return false;
@@ -115,6 +133,8 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
     
     return true;
 }
+
+
 
 /* This code was original attempt to move file, but it interfered with unlink of the file
     since a closed file was needed for rename() and many many other issues.

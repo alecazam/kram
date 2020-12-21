@@ -32,15 +32,6 @@ namespace kram {
 
 using namespace std;
 
-// https://stackoverflow.com/questions/874134/find-out-if-string-ends-with-another-string-in-c
-inline bool ends_with(const string& value, const string& ending)
-{
-    if (ending.size() > value.size()) {
-        return false;
-    }
-    return equal(ending.rbegin(), ending.rend(), value.rbegin());
-}
-
 bool LoadKtx(const uint8_t* data, int dataSize, Image& sourceImage)
 {
     KTXImage image;
@@ -121,8 +112,8 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
                       vector<uint8_t>& fileBuffer,
                       const string& srcFilename, Image& sourceImage)
 {
-    bool isKTX = ends_with(srcFilename, ".ktx");
-    bool isPNG = ends_with(srcFilename, ".png");
+    bool isKTX = endsWith(srcFilename, ".ktx");
+    bool isPNG = endsWith(srcFilename, ".png");
 
     if (!(isKTX || isPNG)) {
         KLOGE("Kram", "File input \"%s\" isn't a png or ktx file.\n",
@@ -1096,8 +1087,8 @@ static int kramAppInfo(vector<const char*>& args)
         error = true;
     }
 
-    bool isPNG = ends_with(srcFilename, ".png");
-    bool isKTX = ends_with(srcFilename, ".ktx");
+    bool isPNG = endsWith(srcFilename, ".png");
+    bool isKTX = endsWith(srcFilename, ".ktx");
 
     if (!(isPNG || isKTX)) {
         KLOGE("Kram", "info only supports png and ktx inputs");
@@ -1449,14 +1440,14 @@ static int kramAppDecode(vector<const char*>& args)
         error = true;
     }
 
-    bool isKTX = ends_with(srcFilename, ".ktx");
+    bool isKTX = endsWith(srcFilename, ".ktx");
 
     if (!isKTX) {
         KLOGE("Kram", "decode only supports ktx input");
         error = true;
     }
 
-    isKTX = ends_with(dstFilename, ".ktx");
+    isKTX = endsWith(dstFilename, ".ktx");
 
     if (!isKTX) {
         KLOGE("Kram", "decode only supports ktx output");
@@ -1754,18 +1745,18 @@ static int kramAppEncode(vector<const char*>& args)
         error = true;
     }
 
-    bool isKTX = ends_with(srcFilename, ".ktx");
-    bool isPNG = ends_with(srcFilename, ".png");
+    bool isKTX = endsWith(srcFilename, ".ktx");
+    bool isPNG = endsWith(srcFilename, ".png");
 
     if (!(isPNG || isKTX)) {
         KLOGE("Kram", "encode only supports png and ktx input");
         error = true;
     }
 
-    isKTX = ends_with(dstFilename, ".ktx");
-    bool isKTXA = ends_with(dstFilename, ".ktxa");
+    bool isDstKTX = endsWith(dstFilename, ".ktx");
+    bool isDstKTXA = endsWith(dstFilename, ".ktxa");
 
-    if (!(isKTX || isKTXA)) {
+    if (!(isDstKTX || isDstKTXA)) {
         KLOGE("Kram", "encode only supports ktx and ktxa output");
         error = true;
     }

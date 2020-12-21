@@ -40,14 +40,15 @@ bool MmapHelper::open(const char *filename)
     }
     length = sb.st_size;
 
-    // stop padding out to page size, or do but then don't add to length, or will walk to far in memory
+    // Stop padding out to page size, or do but then don't add to length, or will walk too far in memory
     // all remaining page data will be zero, but still want length to reflect actual length of file
-    // need Windows equilvent of getpagesize() call before putting this back.
+    // need Windows equilvent of getpagesize() call before putting this back.  This was to use
+    // with MTLBuffer no copy which has a strict page alignment requirement on start and size.
     //
     //#if KRAM_MAC || KRAM_LINUX || KRAM_IOS
     //    // pad it out to the page size (this can be 4k or 16k)
     //    // need this alignment, or it can't be converted to a MTLBuffer
-    //    size_t pageSize = getpagesize();
+    //    size_t pageSize = FileHelper::pagesize();
     //
     //    size_t padding = (pageSize - 1) - (length + (pageSize - 1)) % pageSize;
     //    if (padding > 0) {
