@@ -871,6 +871,7 @@ namespace Etc
 				{
 					for (int iBlue1 = iMinBlue1; iBlue1 <= iMaxBlue1; iBlue1++)
 					{
+                        // gray only iterates red
                         if (isGray && (iRed1 != iGreen1 || iRed1 != iBlue1))
                         {
                             continue;
@@ -922,6 +923,7 @@ namespace Etc
 				{
 					for (int iBlue2 = iMinBlue2; iBlue2 <= iMaxBlue2; iBlue2++)
 					{
+                        // gray only iterates red
                         if (isGray && (iRed2 != iGreen2 || iRed2 != iBlue2))
                         {
                             continue;
@@ -1090,22 +1092,25 @@ namespace Etc
 	bool Block4x4Encoding_RGB8::TwiddlePlanar(void)
 	{
 		bool boolImprovement = false;
-
+        bool isGray = m_errormetric == GRAY || !m_pblockParent->HasColorPixels();
+        
 		while (TwiddlePlanarR())
 		{
 			boolImprovement = true;
 		}
 
-		while (TwiddlePlanarG())
-		{
-			boolImprovement = true;
-		}
+        if (!isGray) {
+            while (TwiddlePlanarG())
+            {
+                boolImprovement = true;
+            }
 
-		while (TwiddlePlanarB())
-		{
-			boolImprovement = true;
-		}
-
+            while (TwiddlePlanarB())
+            {
+                boolImprovement = true;
+            }
+        }
+        
 		return boolImprovement;
 	}
 
