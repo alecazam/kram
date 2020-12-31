@@ -440,24 +440,26 @@ namespace Etc
 			for (unsigned int uiPixel = 0; uiPixel < PIXELS; uiPixel++)
 			{
 				// don't count transparent pixels
-				if (m_pafrgbaSource[uiPixel].fA == 0.0f)
-				{
-					continue;
-				}
+                // Can't do this, use premul to weight the colors before they are encoded
+                float alpha = 1.0f; // m_pafrgbaSource[uiPixel].fA;
+//				if (alpha == 0.0f)
+//				{
+//					continue;
+//				}
 
 				float fGrayDistance2ToColor1 = CalcGrayDistance2(m_pafrgbaSource[uiPixel], m_frgbaOriginalColor1_TAndH);
 				float fGrayDistance2ToColor2 = CalcGrayDistance2(m_pafrgbaSource[uiPixel], m_frgbaOriginalColor2_TAndH);
 
-				ColorFloatRGBA frgbaAlphaWeightedSource = m_pafrgbaSource[uiPixel] * m_pafrgbaSource[uiPixel].fA;
+				ColorFloatRGBA frgbaAlphaWeightedSource = m_pafrgbaSource[uiPixel] * alpha;
 					
 				if (fGrayDistance2ToColor1 <= fGrayDistance2ToColor2)
 				{
-					fPixelsCloserToColor1 += m_pafrgbaSource[uiPixel].fA;
+					fPixelsCloserToColor1 += alpha;
 					frgbSumPixelsCloserToColor1 = frgbSumPixelsCloserToColor1 + frgbaAlphaWeightedSource;
 				}
 				else
 				{
-					fPixelsCloserToColor2 += m_pafrgbaSource[uiPixel].fA;
+					fPixelsCloserToColor2 += alpha;
 					frgbSumPixelsCloserToColor2 = frgbSumPixelsCloserToColor2 + frgbaAlphaWeightedSource;
 				}
 			}
