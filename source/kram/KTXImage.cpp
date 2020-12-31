@@ -579,6 +579,67 @@ int glType(MyMTLPixelFormat format)
     return it.glType;
 }
 
+MyMTLPixelFormat toggleSrgbFormat(MyMTLPixelFormat format) {
+    switch(format) {
+        // bc
+        case MyMTLPixelFormatBC1_RGBA:
+            return MyMTLPixelFormatBC1_RGBA_sRGB;
+        case MyMTLPixelFormatBC1_RGBA_sRGB:
+            return MyMTLPixelFormatBC1_RGBA;
+            
+        case MyMTLPixelFormatBC3_RGBA:
+            return MyMTLPixelFormatBC3_RGBA_sRGB;
+        case MyMTLPixelFormatBC3_RGBA_sRGB:
+            return MyMTLPixelFormatBC3_RGBA;
+            
+        case MyMTLPixelFormatBC7_RGBAUnorm:
+            return MyMTLPixelFormatBC7_RGBAUnorm_sRGB;
+        case MyMTLPixelFormatBC7_RGBAUnorm_sRGB:
+            return MyMTLPixelFormatBC7_RGBAUnorm;
+            
+        // astc
+        case MyMTLPixelFormatASTC_4x4_sRGB:
+            return MyMTLPixelFormatASTC_4x4_LDR;
+        case MyMTLPixelFormatASTC_4x4_LDR:
+            return MyMTLPixelFormatASTC_4x4_sRGB;
+            
+        case MyMTLPixelFormatASTC_5x5_sRGB:
+            return MyMTLPixelFormatASTC_5x5_LDR;
+        case MyMTLPixelFormatASTC_5x5_LDR:
+            return MyMTLPixelFormatASTC_5x5_sRGB;
+            
+        case MyMTLPixelFormatASTC_6x6_sRGB:
+            return MyMTLPixelFormatASTC_6x6_LDR;
+        case MyMTLPixelFormatASTC_6x6_LDR:
+            return MyMTLPixelFormatASTC_6x6_sRGB;
+            
+        case MyMTLPixelFormatASTC_8x8_sRGB:
+            return MyMTLPixelFormatASTC_8x8_LDR;
+        case MyMTLPixelFormatASTC_8x8_LDR:
+            return MyMTLPixelFormatASTC_8x8_sRGB;
+            
+        // etc
+        case MyMTLPixelFormatETC2_RGB8:
+            return MyMTLPixelFormatETC2_RGB8_sRGB;
+        case MyMTLPixelFormatETC2_RGB8_sRGB:
+            return MyMTLPixelFormatETC2_RGB8;
+        case MyMTLPixelFormatEAC_RGBA8:
+            return MyMTLPixelFormatEAC_RGBA8_sRGB;
+        case MyMTLPixelFormatEAC_RGBA8_sRGB:
+            return MyMTLPixelFormatEAC_RGBA8;
+            
+        // explicit
+        case MyMTLPixelFormatRGBA8Unorm:
+            return MyMTLPixelFormatRGBA8Unorm_sRGB;
+        case MyMTLPixelFormatRGBA8Unorm_sRGB:
+            return MyMTLPixelFormatRGBA8Unorm;
+            
+        default:
+            break;
+    }
+    
+    return MyMTLPixelFormatInvalid;
+}
 
 
 

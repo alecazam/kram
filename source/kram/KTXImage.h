@@ -267,4 +267,7 @@ const char* glTypeName(MyMTLPixelFormat format);
 int glType(MyMTLPixelFormat format);
 const char* textureTypeName(MyMTLTextureType textureType);
 
+// find a corresponding srgb/non-srgb format for a given format
+MyMTLPixelFormat toggleSrgbFormat(MyMTLPixelFormat format);
+
 }  // namespace kram

@@ -1099,6 +1099,35 @@ static int kramAppInfo(vector<const char*>& args)
         kramInfoUsage();
         return -1;
     }
+    
+    string info = kramInfoToString(srcFilename, isVerbose);
+    if (info.empty()) {
+        return -1;
+    }
+    
+    // now write the string to output (always appends for scripting purposes, so caller must wipe output file)
+    FILE* fp = stdout;
+
+    FileHelper dstFileHelper;
+    if (!dstFilename.empty()) {
+        if (!dstFileHelper.open(dstFilename.c_str(), "w+")) {
+            KLOGE("Kram", "info couldn't open output file");
+            return -1;
+        }
+
+        fp = dstFileHelper.pointer();
+    }
+
+    fprintf(fp, "%s", info.c_str());
+
+    return 0;
+}
+
+// this is the main chunk of info generation, can be called without writing result to stdio
+string kramInfoToString(const string& srcFilename, bool isVerbose) {
+        
+    bool isPNG = endsWith(srcFilename, ".png");
+    bool isKTX = endsWith(srcFilename, ".ktx");
 
     MmapHelper srcMmapHelper;
     FileHelper srcFileHelper;
@@ -1128,7 +1157,7 @@ static int kramAppInfo(vector<const char*>& args)
             if (!srcFileHelper.open(srcFilename.c_str(), "rb")) {
                 KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
                       srcFilename.c_str());
-                return -1;
+                return "";
             }
 
             // read entire png into memory
@@ -1136,7 +1165,7 @@ static int kramAppInfo(vector<const char*>& args)
             int size = srcFileHelper.size();
             srcFileBuffer.resize(size);
             if (!srcFileHelper.read(srcFileBuffer.data(), size)) {
-                return -1;
+                return "";
             }
 
             data = srcFileBuffer.data();
@@ -1155,7 +1184,7 @@ static int kramAppInfo(vector<const char*>& args)
         errorLode = lodepng_inspect(&width, &height, &state, data, dataSize);
         if (errorLode != 0) {
             KLOGE("Kram", "info couldn't open png file");
-            return -1;
+            return "";
         }
 
         bool hasColor = true;
@@ -1233,7 +1262,7 @@ static int kramAppInfo(vector<const char*>& args)
                                       srcFilename, srcImage);
         if (!success) {
             KLOGE("Kram", "info couldn't open ktx file");
-            return -1;
+            return "";
         }
 
         // for now driving everything off metal type, but should switch to neutral
@@ -1310,7 +1339,7 @@ static int kramAppInfo(vector<const char*>& args)
                 sprintf(tmp,
                         "mipd: %dx%d\n"
                         "mipn: %d\n"
-                        "mips: %zu\n"
+                        "mipl: %zu\n"
                         "mipo: %zu\n",
                         w, h, mipLevel++, mip.length, mip.offset);
                 info += tmp;
@@ -1320,22 +1349,8 @@ static int kramAppInfo(vector<const char*>& args)
             }
         }
     }
-    // now write the string to output (always appends for scripting purposes, so caller must wipe output file)
-    FILE* fp = stdout;
-
-    FileHelper dstFileHelper;
-    if (!dstFilename.empty()) {
-        if (!dstFileHelper.open(dstFilename.c_str(), "w+")) {
-            KLOGE("Kram", "info couldn't open output file");
-            return -1;
-        }
-
-        fp = dstFileHelper.pointer();
-    }
-
-    fprintf(fp, "%s", info.c_str());
-
-    return 0;
+   
+    return info;
 }
 
 static int kramAppDecode(vector<const char*>& args)
