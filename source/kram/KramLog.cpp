@@ -52,7 +52,8 @@ int sprintf(string& str, const char* format, ...)
     return len;
 }
 
-bool startsWith(const char *str, const string &substring) {
+bool startsWith(const char* str, const string& substring)
+{
     return strncmp(str, substring.c_str(), substring.size()) == 0;
 }
 
@@ -65,12 +66,13 @@ bool endsWith(const string& value, const string& ending)
     return equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
-bool endsWithExtension(const char *str, const string &substring) {
-    const char *search = strrchr(str, '.');
-    if (search == NULL ) {
+bool endsWithExtension(const char* str, const string& substring)
+{
+    const char* search = strrchr(str, '.');
+    if (search == NULL) {
         return false;
     }
-    
+
     return strcmp(search, substring.c_str()) == 0;
 }
 

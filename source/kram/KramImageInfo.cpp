@@ -619,13 +619,16 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
                          vector<Int2>& chunkOffsets, KTXHeader& header,
                          bool& doMipmaps)
 {
+    // TODO: add error messages to false cases to help with generating
+    // TODO: support non-pow2 cubemaps and cubemap arrays?
+
     if (textureType == MyMTLTextureTypeCube) {
         header.numberOfFaces = 6;
 
         // validate
         if (w > h) {
             // horizontal strip
-            if ((w != 6 * h) || !isPow2(w)) {
+            if ((w != 6 * h) || !isPow2(h)) {
                 return false;
             }
             w = h;
@@ -690,19 +693,27 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
     }
     else if (textureType == MyMTLTextureType3D) {
         if (w > h) {
-            header.pixelDepth = w / h;
-            w = w / h;
+            int numSlices = w / h;
+            header.pixelDepth = numSlices;
+            if (w != (int)(h * numSlices)) {
+                return false;
+            }
+            w = h;  // assume square
 
-            for (int i = 0; i < (int)header.pixelDepth; ++i) {
+            for (int i = 0; i < (int)numSlices; ++i) {
                 Int2 chunkOffset = {w * i, 0};
                 chunkOffsets.push_back(chunkOffset);
             }
         }
         else {
-            header.pixelDepth = h / w;
-            h = h / w;
+            int numSlices = h / w;
+            header.pixelDepth = numSlices;
+            if (h != (int)(w * numSlices)) {
+                return false;
+            }
+            h = w;  // assume square
 
-            for (int i = 0; i < (int)header.pixelDepth; ++i) {
+            for (int i = 0; i < (int)numSlices; ++i) {
                 Int2 chunkOffset = {0, h * i};
                 chunkOffsets.push_back(chunkOffset);
             }
@@ -735,7 +746,7 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
                 return false;
             }
 
-            w = h;
+            w = h;  // assume square
             for (int i = 0; i < (int)header.numberOfArrayElements; ++i) {
                 Int2 chunkOffset = {w * i, 0};
                 chunkOffsets.push_back(chunkOffset);
@@ -747,7 +758,7 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
                 return false;
             }
 
-            h = w;
+            h = w;  // assume square
             for (int i = 0; i < (int)header.numberOfArrayElements; ++i) {
                 Int2 chunkOffset = {0, h * i};
                 chunkOffsets.push_back(chunkOffset);
@@ -1012,7 +1023,7 @@ void ImageInfo::optimizeFormat()
             pixelFormat = MyMTLPixelFormatBC1_RGBA;
         }
 
-        if (pixelFormat == MyMTLPixelFormatBC7_RGBAUnorm_sRGB) {
+        else if (pixelFormat == MyMTLPixelFormatBC7_RGBAUnorm_sRGB) {
             pixelFormat = MyMTLPixelFormatBC1_RGBA_sRGB;
         }
         else if (pixelFormat == MyMTLPixelFormatBC7_RGBAUnorm) {

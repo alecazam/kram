@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include "KramConfig.h"
-
 #include <vector>
 
+#include "KramConfig.h"
 #include "heman/hedistance.h"
 
 namespace kram {

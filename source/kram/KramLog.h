@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "KramConfig.h"
-
 #include <cassert>
 #include <string>
+
+#include "KramConfig.h"
 
 namespace kram {
 
@@ -40,8 +40,8 @@ extern int logMessage(const char* group, int logLevel,
 using namespace std;
 int sprintf(string& str, const char* format, ...);
 
-bool startsWith(const char *str, const string &substring);
-bool endsWithExtension(const char *str, const string &substring);
+bool startsWith(const char* str, const string& substring);
+bool endsWithExtension(const char* str, const string& substring);
 
 // https://stackoverflow.com/questions/874134/find-out-if-string-ends-with-another-string-in-c
 bool endsWith(const string& value, const string& ending);

@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "KramConfig.h"
-
 #include <stddef.h>
 #include <stdint.h>
 
 #include <string>
+
+#include "KramConfig.h"
 
 namespace kram {
 using namespace std;
@@ -39,13 +39,13 @@ public:
     // safe calls that test bytes read/written
     bool read(uint8_t* data, int dataSize);
     bool write(const uint8_t* data, int dataSize);
-    
+
     // if caller only has FILE* then can use these
     static bool readBytes(FILE* fp, uint8_t* data, int dataSize);
     static bool writeBytes(FILE* fp, const uint8_t* data, int dataSize);
-    
+
     static size_t pagesize();
-    
+
 private:
     FILE* _fp = nullptr;
     string _filename;

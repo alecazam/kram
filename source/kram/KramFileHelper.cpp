@@ -9,15 +9,15 @@
 #include <sys/stat.h>
 
 // Use this for consistent tmp file handling
-#include "tmpfileplus/tmpfileplus.h"
-
 #include <vector>
 
+#include "tmpfileplus/tmpfileplus.h"
+
 #if KRAM_MAC || KRAM_IOS || KRAM_LINUX
-#include <unistd.h> // for getpagesize()
+#include <unistd.h>  // for getpagesize()
 #endif
 #if KRAM_WIN
-#include <windows.h> // for GetNativeSystemInfo()
+#include <windows.h>  // for GetNativeSystemInfo()
 #endif
 
 namespace kram {
@@ -51,33 +51,38 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
     _isTmpFile = true;
     _filename = pathname;
     free(pathname);
-    
+
     return true;
 }
 
-bool FileHelper::read(uint8_t* data, int dataSize) {
+bool FileHelper::read(uint8_t* data, int dataSize)
+{
     return FileHelper::readBytes(_fp, data, dataSize);
 }
-bool FileHelper::write(const uint8_t* data, int dataSize) {
+bool FileHelper::write(const uint8_t* data, int dataSize)
+{
     return FileHelper::writeBytes(_fp, data, dataSize);
 }
 
-bool FileHelper::readBytes(FILE* fp, uint8_t* data, int dataSize) {
+bool FileHelper::readBytes(FILE* fp, uint8_t* data, int dataSize)
+{
     size_t elementsRead = fread(data, 1, dataSize, fp);
     if (elementsRead != (size_t)dataSize) {
         return false;
     }
     return true;
 }
-bool FileHelper::writeBytes(FILE* fp, const uint8_t* data, int dataSize) {
-    size_t elementsRead = fwrite(data, 1, dataSize, fp);
-    if (elementsRead != (size_t)dataSize) {
+bool FileHelper::writeBytes(FILE* fp, const uint8_t* data, int dataSize)
+{
+    size_t elementsWritten = fwrite(data, 1, dataSize, fp);
+    if (elementsWritten != (size_t)dataSize) {
         return false;
     }
     return true;
 }
 
-size_t FileHelper::pagesize() {
+size_t FileHelper::pagesize()
+{
     static size_t pagesize = 0;
     if (pagesize == 0) {
 #if KRAM_MAC || KRAM_IOS || KRAM_LINUX
@@ -87,7 +92,7 @@ size_t FileHelper::pagesize() {
         GetNativeSystemInfo(&systemInfo);
         pagesize = systemInfo.dwPageSize;
 #else
-        pagesize = 4*1024; // how to determine on Win/Linux
+        pagesize = 4 * 1024;  // how to determine on Win/Linux?
 #endif
     }
     return pagesize;
@@ -100,46 +105,53 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
 
     // since we're not closing, need to flush output
     fflush(_fp);
+
+    int size_ = size();
+    if (size_ < 0) {
+        return false;
+    }
     
-    // TODO: copy in smaller buffered chunks, but potential for half copied file
-    // this reads the entire file in requiring more memory
-    size_t size_ = size();
+    // DONE: copy in smaller buffered chunks
+    int maxBufferSize = 256*1024;
+    int bufferSize = min(size_, maxBufferSize);
     vector<uint8_t> tmpBuf;
-    tmpBuf.resize(size_);
-    
+    tmpBuf.resize(bufferSize);
+
     // rewind to the beginning
     rewind(_fp);
-    
+
     // Note: was trying to use rename and moveTemporaryFileTo to save a copy
     // but it needs a filename and unlink breaks that for auto-delete of temp file
     // and rename behaves completely differently on Win vs. Mac despite being stdio - ugh.
     // and rename breaks on Mac copying cross volume when tmp/file live on different volumes
-    
-    if (!read(tmpBuf.data(), size_)) {
-        return false;
-    }
-    
+
     // need to fopen file on potentially other volume,
     // then buffer copy the contents over to the over drive
     // temp file will automatically be destroyed with in close() call
     // but can copy it as many times as needed.
-    
+
     FileHelper dstHelper;
     if (!dstHelper.open(dstFilename, "w+b")) {
         return false;
     }
-    if (!dstHelper.write(tmpBuf.data(), size_)) {
-        dstHelper.close();
+    
+    int bytesRemaining = size_;
+    while(bytesRemaining > 0) {
+        int bytesToRead = min(bufferSize, bytesRemaining);
+        bytesRemaining -= bytesToRead;
         
-        // don't leave a partially written file
-        remove(dstFilename);
-        return false;
+        if (!read(tmpBuf.data(), bytesToRead) ||
+            !dstHelper.write(tmpBuf.data(), bytesToRead)) {
+            dstHelper.close();
+
+            // don't leave a partially written file
+            remove(dstFilename);
+            return false;
+        }
     }
     
     return true;
 }
-
-
 
 /* This code was original attempt to move file, but it interfered with unlink of the file
     since a closed file was needed for rename() and many many other issues.
@@ -237,10 +249,10 @@ void FileHelper::close()
     if (!_fp) {
         return;
     }
-    
+
     // temp files are auto-deleted on fclose, since they've been "keep" is 0
     fclose(_fp);
-    
+
     _isTmpFile = false;
     _fp = nullptr;
 }
@@ -248,17 +260,17 @@ void FileHelper::close()
 int FileHelper::size() const
 {
     if (!_fp) {
-        return -1;
+        return -1; // not ideal if passed to unsigned size_t
     }
-    
+
     // otherwise fstat won't extract the size
     fflush(_fp);
-    
+
     int fd = fileno(_fp);
 
     struct stat stats;
     if (fstat(fd, &stats) < 0) {
-        return -1;
+        return -1;  // not ideal if passed to unsigned size_t
     }
     return (int)stats.st_size;
 }

@@ -152,11 +152,11 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
         // read entire png into memory
         int size = fileHelper.size();
         fileBuffer.resize(size);
-    
+
         if (!fileHelper.read(fileBuffer.data(), size)) {
             return false;
         }
-        
+
         if (isKTX) {
             if (!LoadKtx(fileBuffer.data(), (int)fileBuffer.size(),
                          sourceImage)) {
@@ -206,7 +206,7 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
         if (!fileHelper.read(fileBuffer.data(), size)) {
             return false;
         }
-    
+
         if (!sourceImage.open(fileBuffer.data(), (int)fileBuffer.size(), skipImageLength)) {
             return false;
         }
@@ -1099,12 +1099,12 @@ static int kramAppInfo(vector<const char*>& args)
         kramInfoUsage();
         return -1;
     }
-    
+
     string info = kramInfoToString(srcFilename, isVerbose);
     if (info.empty()) {
         return -1;
     }
-    
+
     // now write the string to output (always appends for scripting purposes, so caller must wipe output file)
     FILE* fp = stdout;
 
@@ -1124,8 +1124,8 @@ static int kramAppInfo(vector<const char*>& args)
 }
 
 // this is the main chunk of info generation, can be called without writing result to stdio
-string kramInfoToString(const string& srcFilename, bool isVerbose) {
-        
+string kramInfoToString(const string& srcFilename, bool isVerbose)
+{
     bool isPNG = endsWith(srcFilename, ".png");
     bool isKTX = endsWith(srcFilename, ".ktx");
 
@@ -1334,7 +1334,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose) {
             int mipLevel = 0;
             int w = srcImage.width;
             int h = srcImage.height;
-            
+
             for (const auto& mip : srcImage.mipLevels) {
                 sprintf(tmp,
                         "mipd: %dx%d\n"
@@ -1343,13 +1343,13 @@ string kramInfoToString(const string& srcFilename, bool isVerbose) {
                         "mipo: %zu\n",
                         w, h, mipLevel++, mip.length, mip.offset);
                 info += tmp;
-                
+
                 // drop a mip level
                 mipDown(w, h);
             }
         }
     }
-   
+
     return info;
 }
 

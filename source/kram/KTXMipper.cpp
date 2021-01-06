@@ -4,8 +4,8 @@
 
 #include "KTXMipper.h"
 
-#include <cassert>
 #include <algorithm>
+#include <cassert>
 
 namespace kram {
 
@@ -85,7 +85,7 @@ inline float srgbToLinearFunc(float s)
 
 void Mipper::initTables()
 {
-    // normalied [0,1]
+    // normalized [0,1]
 
     // https://entropymine.com/imageworsener/srgbformula/
     // https://stackoverflow.com/questions/34472375/linear-to-srgb-conversion
@@ -263,14 +263,14 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
 //    //std::swap(endpoint8[0], endpoint8[1]);
 //}
 
-int8_t signedConvertUint8(uint8_t x)
+inline int8_t signedConvertUint8(uint8_t x)
 {
     // split into +/- values
     int xx = (int)x - 128;
     return (int8_t)xx;
 }
 
-void Mipper::remapToSignedEndpoint88(uint16_t& endpoint) const
+void remapToSignedBCEndpoint88(uint16_t& endpoint)
 {
     uint8_t e0val = endpoint & 0xFF;
     uint8_t e1val = (endpoint >> 8) & 0xFF;
@@ -281,23 +281,18 @@ void Mipper::remapToSignedEndpoint88(uint16_t& endpoint) const
     endpoint = (*(const uint8_t*)&e0) | ((*(const uint8_t*)&e1) << 8);
 }
 
-void Mipper::remapToSignedEndpoint8(uint16_t& endpoint) const
-{
-    remapToSignedEndpoint88(endpoint);
-}
-
-void Mipper::mipmap(ImageData& srcImage, ImageData& dstImage) const
+void Mipper::mipmap(const ImageData& srcImage, ImageData& dstImage) const
 {
     dstImage.width = srcImage.width;
     dstImage.height = srcImage.height;
-    
+
     mipDown(dstImage.width, dstImage.height);
 
     // this assumes that we can read mip-1 from srcImage
     mipmapLevel(srcImage, dstImage);
 }
 
-void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
+void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
 {
     int width = srcImage.width;
     int height = srcImage.height;
@@ -307,31 +302,34 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
     Color* cDstColor = dstImage.pixels;
     const Color* srcColor = srcImage.pixels;
 
-    float4* cDstFloat = srcImage.pixelsFloat;
-    const float4* srcFloat = cDstFloat;  // TODO: use dstImage.pixelsFloat, assumes in-place
+    float4* cDstFloat = dstImage.pixelsFloat;
+    const float4* srcFloat = srcImage.pixelsFloat;
 
-    half4* cDstHalf = srcImage.pixelsHalf;
-    const half4* srcHalf = cDstHalf;  // TODO: use dstImage.pixelsHalf?
+    half4* cDstHalf = dstImage.pixelsHalf;
+    const half4* srcHalf = srcImage.pixelsHalf;
+    
+    // Note the ptrs above may point to same memory
+    
     int dstIndex = 0;
-    
-// To see the downsampled mip dimensions enable this
-//    int wDst = width;
-//    int hDst = height;
-//    mipDown(wDst, hDst);
-    
+
+    // To see the downsampled mip dimensions enable this
+    //    int wDst = width;
+    //    int hDst = height;
+    //    mipDown(wDst, hDst);
+
     // 535 produces 267.5 -> 267, last pixel in an odd width or height is skipped
     // this code was incrementing too often at the end
     bool isOddX = width & 1;
     bool isOddY = height & 1;
-    
+
     for (int y = 0; y < height; y += 2) {
         // last y row is skipped if odd, this causes a shift
         if (isOddY) {
-            if (y == (height-1)) {
+            if (y == (height - 1)) {
                 break;
             }
         }
-        
+
         int y0 = y;
         int y1 = y + 1;
         if (y1 == height) {
@@ -339,15 +337,15 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
         }
         y0 *= width;
         y1 *= width;
-        
+
         for (int x = 0; x < width; x += 2) {
             // last x column is skipped if odd, this causes a shift
             if (isOddX) {
-                if (x == (width-1)) {
+                if (x == (width - 1)) {
                     break;
                 }
             }
-            
+
             int x1 = x + 1;
             if (x1 == width) {
                 x1 = x;
@@ -366,7 +364,7 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
 
                 // overwrite float4 image
                 cDstHalf[dstIndex] = toHalf4(cFloat);
-                
+
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
@@ -396,7 +394,7 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
 
                 // overwrite float4 image
                 cDstFloat[dstIndex] = cFloat;
-                
+
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
@@ -431,7 +429,7 @@ void Mipper::mipmapLevel(ImageData& srcImage, ImageData& dstImage) const
                 Color c = {(uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a};
                 cDstColor[dstIndex] = c;
             }
-            
+
             dstIndex++;
         }
     }

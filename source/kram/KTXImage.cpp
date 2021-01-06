@@ -579,45 +579,46 @@ int glType(MyMTLPixelFormat format)
     return it.glType;
 }
 
-MyMTLPixelFormat toggleSrgbFormat(MyMTLPixelFormat format) {
-    switch(format) {
+MyMTLPixelFormat toggleSrgbFormat(MyMTLPixelFormat format)
+{
+    switch (format) {
         // bc
         case MyMTLPixelFormatBC1_RGBA:
             return MyMTLPixelFormatBC1_RGBA_sRGB;
         case MyMTLPixelFormatBC1_RGBA_sRGB:
             return MyMTLPixelFormatBC1_RGBA;
-            
+
         case MyMTLPixelFormatBC3_RGBA:
             return MyMTLPixelFormatBC3_RGBA_sRGB;
         case MyMTLPixelFormatBC3_RGBA_sRGB:
             return MyMTLPixelFormatBC3_RGBA;
-            
+
         case MyMTLPixelFormatBC7_RGBAUnorm:
             return MyMTLPixelFormatBC7_RGBAUnorm_sRGB;
         case MyMTLPixelFormatBC7_RGBAUnorm_sRGB:
             return MyMTLPixelFormatBC7_RGBAUnorm;
-            
+
         // astc
         case MyMTLPixelFormatASTC_4x4_sRGB:
             return MyMTLPixelFormatASTC_4x4_LDR;
         case MyMTLPixelFormatASTC_4x4_LDR:
             return MyMTLPixelFormatASTC_4x4_sRGB;
-            
+
         case MyMTLPixelFormatASTC_5x5_sRGB:
             return MyMTLPixelFormatASTC_5x5_LDR;
         case MyMTLPixelFormatASTC_5x5_LDR:
             return MyMTLPixelFormatASTC_5x5_sRGB;
-            
+
         case MyMTLPixelFormatASTC_6x6_sRGB:
             return MyMTLPixelFormatASTC_6x6_LDR;
         case MyMTLPixelFormatASTC_6x6_LDR:
             return MyMTLPixelFormatASTC_6x6_sRGB;
-            
+
         case MyMTLPixelFormatASTC_8x8_sRGB:
             return MyMTLPixelFormatASTC_8x8_LDR;
         case MyMTLPixelFormatASTC_8x8_LDR:
             return MyMTLPixelFormatASTC_8x8_sRGB;
-            
+
         // etc
         case MyMTLPixelFormatETC2_RGB8:
             return MyMTLPixelFormatETC2_RGB8_sRGB;
@@ -627,28 +628,29 @@ MyMTLPixelFormat toggleSrgbFormat(MyMTLPixelFormat format) {
             return MyMTLPixelFormatEAC_RGBA8_sRGB;
         case MyMTLPixelFormatEAC_RGBA8_sRGB:
             return MyMTLPixelFormatEAC_RGBA8;
-            
+
         // explicit
         case MyMTLPixelFormatRGBA8Unorm:
             return MyMTLPixelFormatRGBA8Unorm_sRGB;
         case MyMTLPixelFormatRGBA8Unorm_sRGB:
             return MyMTLPixelFormatRGBA8Unorm;
-            
+
         default:
             break;
     }
-    
+
     return MyMTLPixelFormatInvalid;
 }
-
-
-
 
 // https://docs.unity3d.com/ScriptReference/Experimental.Rendering.GraphicsFormat.html
 // Unity only handles 4,5,6,8,10,12 square block dimensions
 
 int KTXImage::mipLevelSize(int width_, int height_) const
 {
+    // TODO: ktx has 4 byte row alignment, fix that in calcs and code
+    // data isn't fully packed on explicit formats like r8, rg8, r16f.
+    // That affects iterating through pixel count.
+
     int count = blockCount(width_, height_);
     int size = blockSize();
     return count * size;
@@ -657,7 +659,7 @@ int KTXImage::mipLevelSize(int width_, int height_) const
 int KTXImage::blockCount(int width_, int height_) const
 {
     assert(width_ >= 1 && height_ >= 1);
-    
+
     Int2 dims = blockDims();
 
     width_ = (width_ + dims.x - 1) / dims.x;
@@ -739,7 +741,8 @@ int KTXHeader::totalMipLevels() const
 int KTXHeader::totalChunks() const
 {
     return std::max(1, (int)numberOfArrayElements) *
-           std::max(1, (int)numberOfFaces) * std::max(1, (int)pixelDepth);
+           std::max(1, (int)numberOfFaces) *
+           std::max(1, (int)pixelDepth);
 }
 
 int KTXImage::totalMipLevels() const
@@ -976,34 +979,33 @@ void KTXImage::toPropsData(vector<uint8_t>& propsData)
         }
     }
 
-    // TODO: this needs to padd to 16-bytes, so may need a prop for that
+    // TODO: this needs to pad to 16-bytes, so may need a prop for that
 }
 
-bool KTXImage::initMipLevels(bool vaidateLengthFromRead)
+bool KTXImage::initMipLevels(bool validateLevelSizeFromRead)
 {
-    const uint8_t* mips = (const uint8_t*)fileData + sizeof(KTXHeader) +
-                          header.bytesOfKeyValueData;
-
     // largest mips are first in file
     int numMips = max(1, (int)header.numberOfMipmapLevels);
     int numArrays = max(1, (int)header.numberOfArrayElements);
     int numFaces = max(1, (int)header.numberOfFaces);
     int numSlices = max(1, (int)depth);
 
-    int totalMipLevels = header.totalMipLevels();
+    //int totalMipLevels = header.totalMipLevels();
 
-    mipLevels.reserve(totalMipLevels);
+    mipLevels.reserve(numMips);
     mipLevels.clear();
 
     size_t totalDataSize = sizeof(KTXHeader) + header.bytesOfKeyValueData;
-    size_t blockSize = this->blockSize();
+    //size_t blockSize = this->blockSize();
 
     int w = width;
     int h = height;
 
     for (int i = 0; i < numMips; ++i) {
         size_t dataSize = mipLevelSize(w, h);
-        
+
+        int levelSize = dataSize * (numArrays * numFaces * numSlices);
+
         // compute dataSize from header data
 
         if (!skipImageLength) {
@@ -1012,74 +1014,91 @@ bool KTXImage::initMipLevels(bool vaidateLengthFromRead)
             // would need to pad after this by block size
 
             // validate that no weird size to image
-            if (vaidateLengthFromRead) {
-                int mipDataSize = *(const uint32_t*)mips;
-                if (mipDataSize != (int)dataSize) {
-                    KLOGE("kram", "mip %d size mismatch %d %d", i, (int)mipDataSize, (int)dataSize);
+            if (validateLevelSizeFromRead) {
+                const uint8_t* levelSizeField = (const uint8_t*)fileData + totalDataSize;
+
+                int levelSizeFromRead = *(const uint32_t*)levelSizeField;
+                // cube only stores size of one face, ugh
+                if (textureType == MyMTLTextureTypeCube) {
+                    levelSizeFromRead *= 6;
+                }
+
+                if (levelSizeFromRead != (int)levelSize) {
+                    KLOGE("kram", "mip %d levelSize mismatch %d %d", i, (int)levelSizeFromRead, (int)levelSize);
                     return false;
                 }
             }
 
             // advance past the length
-            mips += sizeof(uint32_t);
             totalDataSize += sizeof(uint32_t);
         }
 
-        for (int array = 0; array < numArrays; ++array) {
-            for (int face = 0; face < numFaces; ++face) {
-                for (int slice = 0; slice < numSlices; ++slice) {
-                    const uint8_t* srcImageData = mips;
-                    mips += dataSize;
-                    totalDataSize += dataSize;
+        size_t offset = totalDataSize;
 
-                    // assumes all images are in same mmap file, so can just
-                    // alias the offset these offsets need to be at a multiple
-                    // of the block size
-                    size_t offset = srcImageData - fileData;
-                    KTXImageLevel level = {offset, dataSize};
-                    mipLevels.push_back(level);
+        // level holds single texture size not level size, but offset reflects level start
+        KTXImageLevel level = {offset, dataSize};
+        mipLevels.push_back(level);
 
-                    if (skipImageLength) {
-                        if ((offset & (blockSize - 1)) != 0) {
-                            return false;
-                        }
-                    }
+        totalDataSize += levelSize;
 
-                    // TODO: pad to 4 on 1/2/3 byte formats
-                    // but make sure if this is on every mip or not
-                }
+        // TODO: remove code below, since padding really isn't used with 4-byte alignment of rowBytes
+        //mips += levelSize;
 
-                // cube padding to 4 byte alignment
-                if (textureType == MyMTLTextureTypeCube) {
-                    size_t padding =
-                        3 - ((dataSize + 3) % 4);  // 0, 1, 2, 3 -> 0, 3, 2, 1
-                    if (padding > 0) {
-                        mips += padding;
-                        totalDataSize += padding;
-                    }
+        //        for (int array = 0; array < numArrays; ++array) {
+        //            for (int face = 0; face < numFaces; ++face) {
+        //                for (int slice = 0; slice < numSlices; ++slice) {
+        //                    const uint8_t* srcImageData = mips;
+        //                    mips += dataSize;
+        //                    totalDataSize += dataSize;
+        //
+        //                    // assumes all images are in same mmap file, so can just
+        //                    // alias the offset these offsets need to be at a multiple
+        //                    // of the block size
+        //                    size_t offset = srcImageData - fileData;
+        //                    KTXImageLevel level = {offset, dataSize};
+        //                    mipLevels.push_back(level);
+        //
+        //                    if (skipImageLength) {
+        //                        if ((offset & (blockSize - 1)) != 0) {
+        //                            return false;
+        //                        }
+        //                    }
+        //
+        //                    // TODO: pad to 4 on 1/2/3 byte formats
+        //                    // but make sure if this is on every mip or not
+        //                }
+        //
+        ////                // cube padding to 4 byte alignment
+        ////                if (textureType == MyMTLTextureTypeCube) {
+        ////                    size_t padding =
+        ////                        3 - ((dataSize + 3) % 4);  // 0, 1, 2, 3 -> 0, 3, 2, 1
+        ////                    if (padding > 0) {
+        ////                        mips += padding;
+        ////                        totalDataSize += padding;
+        ////                    }
+        ////
+        ////                    if (skipImageLength) {
+        ////                        if (padding != 0) {
+        ////                            return false;
+        ////                        }
+        ////                    }
+        ////                }
+        //            }
+        //        }
 
-                    if (skipImageLength) {
-                        if (padding != 0) {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-
-        // mip padding to 4 byte alignment
-        size_t padding =
-            3 - ((totalDataSize + 3) % 4);  // 0, 1, 2, 3 -> 0, 3, 2, 1
-        if (padding > 0) {
-            mips += padding;
-            totalDataSize += padding;
-        }
-
-        if (skipImageLength) {
-            if (padding != 0) {
-                return false;
-            }
-        }
+        //        // mip padding to 4 byte alignment
+        //        size_t padding =
+        //            3 - ((totalDataSize + 3) % 4);  // 0, 1, 2, 3 -> 0, 3, 2, 1
+        //        if (padding > 0) {
+        //            mips += padding;
+        //            totalDataSize += padding;
+        //        }
+        //
+        //        if (skipImageLength) {
+        //            if (padding != 0) {
+        //                return false;
+        //            }
+        //        }
 
         //  https://computergraphics.stackexchange.com/questions/1441/how-does-mip-mapping-work-with-non-power-of-2-textures
 

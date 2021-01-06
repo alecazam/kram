@@ -205,11 +205,12 @@ public:
 // http://download.nvidia.com/developer/Papers/2005/NP2_Mipmapping/NP2_Mipmap_Creation.pdf
 #define ROUNDMIPSDOWN 1
 
-inline void mipDown(int& w, int& h) {
+inline void mipDown(int& w, int& h)
+{
 #if ROUNDMIPSDOWN
     w = w / 2;
     h = h / 2;
-    
+
     if (w < 1) w = 1;
     if (h < 1) h = 1;
 #else

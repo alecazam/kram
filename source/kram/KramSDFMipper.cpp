@@ -4,8 +4,9 @@
 
 #include "KramSDFMipper.h"
 
-#include "KTXMipper.h"
 #include <algorithm>
+
+#include "KTXMipper.h"
 
 namespace kram {
 using namespace heman;

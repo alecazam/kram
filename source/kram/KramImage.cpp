@@ -38,15 +38,14 @@
 #include <string>
 
 #include "KTXImage.h"
-#include "KramFileHelper.h"
 #include "KTXMipper.h"
+#include "KramFileHelper.h"
 #include "KramSDFMipper.h"
 #include "KramTimer.h"
 
 #if KRAM_MAC || KRAM_LINUX
 #include <sys/errno.h>
 #endif
-
 
 namespace kram {
 
@@ -310,7 +309,7 @@ void Image::computeMipStorage(const KTXImage& image, int w, int h,
 
         do {
             mipDown(w, h);
-            
+
             keepMip =
                 (w >= mipMinSize && w <= mipMaxSize) &&
                 (h >= mipMinSize && h <= mipMaxSize);
@@ -329,7 +328,7 @@ void Image::computeMipStorage(const KTXImage& image, int w, int h,
             numMipLevels++;
         } while (w > 1 || h > 1);
 
-        // adjust the dxt storage area to the first exported mip
+        // adjust the pixel storage area to the first/largest exported mip
         for (auto mipStorageSize : mipStorageSizes) {
             if (mipStorageSize != 0) {
                 storageSize = mipStorageSize;
@@ -456,8 +455,8 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     auto dstPixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
     dstHeader.initFormatGL(dstPixelFormat);
     dstImage.pixelFormat = dstPixelFormat;
-    dstImage.addFormatProps(); // update format prop
-    
+    dstImage.addFormatProps();  // update format prop
+
     vector<uint8_t> propsData;
     dstImage.toPropsData(propsData);
     dstHeader.bytesOfKeyValueData = uint32_t(propsData.size());
@@ -479,7 +478,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&dstHeader, sizeof(dstHeader))) {
         return false;
     }
-    
+
     // write out the props
     if (!FileHelper::writeBytes(dstFile, propsData.data(), propsData.size())) {
         return false;
@@ -549,7 +548,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                         Color pixels[blockDim * blockDim];
 
                         success = true;
-                        
+
                         switch (pixelFormat) {
                             case MyMTLPixelFormatBC1_RGBA:
                             case MyMTLPixelFormatBC1_RGBA_sRGB:
@@ -584,7 +583,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                         if (!success) {
                             return false;
                         }
-                        
+
                         // copy temp pixels to outputTexture
                         for (int by = 0; by < blockDim; ++by) {
                             int yy = y + by;
@@ -610,7 +609,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                 squish::TexFormat format = squish::kBC1;
 
                 success = true;
-                
+
                 switch (pixelFormat) {
                     case MyMTLPixelFormatBC1_RGBA:
                     case MyMTLPixelFormatBC1_RGBA_sRGB:
@@ -656,7 +655,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
             Etc::Image::Format format = Etc::Image::Format::R11;
 
             success = true;
-            
+
             switch (pixelFormat) {
                 case MyMTLPixelFormatEAC_R11Unorm:
                     format = Etc::Image::Format::R11;
@@ -774,8 +773,9 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
 
         // write the mips out to the file, and code above can then decode into the same buffer
         // This isn't correct for cubes, arrays, and other types.  The mip length is only written out once for all mips.
-        fseek(dstFile, dstMipLevel.offset-4, SEEK_SET);  // from begin
-        
+        fseek(dstFile, dstMipLevel.offset - 4, SEEK_SET);  // from begin
+
+        // TODO: fix this to write levelSize for non-2D formats
         uint32_t mipSize = dstMipLevel.length;
         if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&mipSize, sizeof(mipSize))) {
             return false;
@@ -835,28 +835,29 @@ bool Image::resizeImage(int wResize, int hResize, bool resizePow2, ImageResizeFi
 
 // TODO: to hook this up, read 16u png into pixelsFlat, then gen an 8-bit normal xy
 // from that.  This is more like SDF where a single height is used.
-void Image::heightToNormals(float scale) {
+void Image::heightToNormals(float scale)
+{
     int w = _width;
     int h = _height;
 
     // TODO: hook these up, but needs src != dst or copy
     bool isWrapY = false;
     bool isWrapX = false;
-    
+
     // 2.0 is distance betwen +1 and -1
-    float scaleX = scale/2.0;
-    float scaleY = scale/2.0;
-    
+    float scaleX = scale / 2.0;
+    float scaleY = scale / 2.0;
+
     // src/dst the same here
     // may need to copy a row/column of pixels for wrap
     const float4* srcPixels = _pixelsFloat.data();
     float4* dstPixels = (float4*)_pixelsFloat.data();
-    
+
     for (int y = 0; y < h; ++y) {
         int y0 = y;
         int ym = y - 1;
         int yp = y + 1;
-    
+
         if (isWrapY) {
             ym = (ym + h) % h;
             yp = (yp) % h;
@@ -864,18 +865,18 @@ void Image::heightToNormals(float scale) {
         else {
             // clamp
             if (ym < 0) ym = 0;
-            if (yp > (h-1)) yp = h-1;
+            if (yp > (h - 1)) yp = h - 1;
         }
-        
+
         y0 *= w;
         ym *= w;
         yp *= w;
-        
+
         for (int x = 0; x < w; ++x) {
             int x0 = x;
-            int xm = x-1;
-            int xp = x+1;
-            
+            int xm = x - 1;
+            int xp = x + 1;
+
             if (isWrapX) {
                 xm = (xm + w) % w;
                 xp = (xp) % w;
@@ -883,28 +884,28 @@ void Image::heightToNormals(float scale) {
             else {
                 // clamp
                 if (xm < 0) xm = 0;
-                if (xp > (w-1)) xp = w-1;
+                if (xp > (w - 1)) xp = w - 1;
             }
-            
+
             // cross pattern
             // height channel is in x
             float cN = srcPixels[ym + x0].x;
             float cS = srcPixels[yp + x0].x;
             float cE = srcPixels[y0 + xp].x;
             float cW = srcPixels[y0 + xm].x;
-            
+
             // up is N, so this is rhcs
             float dx = (cE - cW) * scaleX;
             float dy = (cN - cS) * scaleY;
-            
+
             float len = sqrtf(dx * dx + dy * dy + 1.0f);
-            
+
             dx /= len;
             dy /= len;
-            
+
             // write out the result
             float4& dstPixel = dstPixels[y0 + x];
-            
+
             dstPixel.x = dx;
             dstPixel.y = dy;
         }
@@ -963,14 +964,14 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
             image.addChannelProps("Alb.r,Alb.g,Alb.b,Alb.a");
         }
     }
-    
+
     // TODO: texture encode can depend on wrap vs. clamp state (f.e. normal map gen, sdf)
     // and formsts like PVRTC must know wrap/clamp before encode
     // address: Wrap, Clamp, MirrorWrap, MirrorClamp, BorderClamp, BorderClamp0
     // filter: Point, Linear, None (Mip only), TODO: what about Aniso (Mip only + level?)
     //   min/maxLOD too for which range of mips to use, atlas should stop before entries merge
-    image.addAddressProps("Wrap,Wrap,X"); // uvw
-    image.addFilterProps("Linear,Linear,Linear"); // min,mag,mip
+    image.addAddressProps("Wrap,Wrap,X");          // uvw
+    image.addFilterProps("Linear,Linear,Linear");  // min,mag,mip
 
     // This is hash of source png/ktx file (use xxhash32 or crc32)
     // can quickly check header if multiple copies of same source w/diff names.
@@ -1012,35 +1013,41 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
             continue;
         }
 
+        // 4 byte length of mip level is written out, this totally throws off block alignment
+        // this is size of one mip not the array of mips of that size
         if (!info.skipImageLength) {
-            int imageLengthSizeof = sizeof(uint32_t);
-            mipOffset += imageLengthSizeof;
+            int levelSizeOf = sizeof(uint32_t);
+            mipOffset += levelSizeOf;
         }
 
         // start of the mips
         mipOffsets.push_back(mipOffset);
 
+        // ktx requires 4 byte alignment to rows of pixels (affext r8, rg8, r16f)
+        // it's not enough to fix alignment below, so this needs fixed in mipStorage calc.
+        int numPadding = 3 - ((mipStorageSize + 3) % 4);
+        assert(numPadding == 0);
+
         // add 4 byte alignment into the mipOffset computations.
         // This is only needed on explicit formats no already a multiple of 4
         // and only on mip sizes that would not result in a multiple of 4.
-        int numPadding = 3 - ((mipStorageSize + 3) % 4);
-        if (numPadding > 0) {
-            if (info.pixelFormat == MyMTLPixelFormatR8Unorm) {
-                // 1-3
-            }
-            else if (info.pixelFormat == MyMTLPixelFormatRG8Unorm) {
-                assert(numPadding == 2);
-            }
-            else if (info.pixelFormat == MyMTLPixelFormatR16Float) {
-                assert(numPadding == 2);
-            }
-            else {
-                assert(false);
-            }
-        }
+        //        if (numPadding > 0) {
+        //            if (info.pixelFormat == MyMTLPixelFormatR8Unorm) {
+        //                // 1-3
+        //            }
+        //            else if (info.pixelFormat == MyMTLPixelFormatRG8Unorm) {
+        //                assert(numPadding == 2);
+        //            }
+        //            else if (info.pixelFormat == MyMTLPixelFormatR16Float) {
+        //                assert(numPadding == 2);
+        //            }
+        //            else {
+        //                assert(false);
+        //            }
+        //        }
 
         // next row of mips are offset
-        mipOffset += mipStorageSize * header.totalChunks() + numPadding;
+        mipOffset += mipStorageSize * header.totalChunks();  //  + numPadding;
     }
 
     //----------------------------------------------
@@ -1054,9 +1061,14 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
             header.pixelHeight = h;
             break;
         }
-        
+
         mipDown(w, h);
     }
+
+    // update image to match
+    image.width = header.pixelWidth;
+    image.height = header.pixelHeight;
+    image.depth = header.pixelDepth;
 
     // ----------------------------------------------------
 
@@ -1100,12 +1112,14 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
     if (info.isHDR) {
         // here the source is float
-        srcImage.pixelsFloat = (float4*)_pixelsFloat.data();
 
         // used to store chunks of the strip data
         if (isMultichunk) {
             floatImage.resize(w * h);
             srcImage.pixelsFloat = floatImage.data();
+        }
+        else {
+            srcImage.pixelsFloat = (float4*)_pixelsFloat.data();
         }
 
         // run this across all the source data
@@ -1120,12 +1134,13 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
         }
     }
     else {
-        srcImage.pixels = (Color*)_pixels.data();
-
         // used to store chunks of the strip data
         if (isMultichunk) {
             copyImage.resize(w * h);
             srcImage.pixels = copyImage.data();
+        }
+        else {
+            srcImage.pixels = (Color*)_pixels.data();
         }
 
         // used to store premul and linear color
@@ -1160,20 +1175,26 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     if (!FileHelper::writeBytes(dstFile, propsData.data(), propsData.size())) {
         return false;
     }
-    
+
     for (int chunk = 0; chunk < (int)chunkOffsets.size(); ++chunk) {
         // this needs to append before chunkOffset copy below
         w = modifiedWidth;
         h = modifiedHeight;
 
-        // copy image over
+        // copy a chunk at a time, mip that if needed, and then move to next chunk
         Int2 chunkOffset = chunkOffsets[chunk];
 
+        // reset these dimensions, or the mip mapping drops them to 1x1
+        srcImage.width = w;
+        srcImage.height = h;
+        
         if (info.isHDR) {
             if (isMultichunk) {
                 const float4* srcPixels = (const float4*)_pixelsFloat.data();
                 for (int y = 0; y < h; ++y) {
                     int y0 = y * w;
+                    
+                    // offset into original strip/atlas
                     int yOffset = (y + chunkOffset.y) * _width + chunkOffset.x;
 
                     for (int x = 0; x < w; ++x) {
@@ -1189,6 +1210,8 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
                 const Color* srcPixels = (const Color*)_pixels.data();
                 for (int y = 0; y < h; ++y) {
                     int y0 = y * w;
+                    
+                    // offset into original strip/atlas
                     int yOffset = (y + chunkOffset.y) * _width + chunkOffset.x;
 
                     for (int x = 0; x < w; ++x) {
@@ -1264,11 +1287,14 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
                 continue;
             }
 
+            // mipOffsets are start of first chunk of a given mip size
             mipOffset = mipOffsets[mipLevel] + chunk * mipStorageSize;
             numDstMipLevelsWritten++;
 
-            // average channels per block if requested (mods 8-bit data on a per
-            // block basis)
+            // just to check that each mip has a unique offset
+            //KLOGI("Image", "chunk:%d %d\n", chunk, mipOffset);
+
+            // average channels per block if requested (mods 8-bit data on a per block basis)
             ImageData mipImage = dstImage;
 
             if (!info.averageChannels.empty()) {
@@ -1282,7 +1308,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
             Timer timer;
             bool success =
-                compressMipLevel(info, image, mipper,
+                compressMipLevel(info, image,
                                  mipImage, outputTexture, mipStorageSize);
             assert(success);
 
@@ -1292,26 +1318,35 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
                 }
             }
 
-            // now write out the compressed data in dxt.data to KTX levels
-            if (!info.skipImageLength) {
-                int mipStorageSizeOf = sizeof(mipStorageSize);
-                assert(mipStorageSizeOf == 4);
-                
-                fseek(dstFile, mipOffset - mipStorageSizeOf,
-                      SEEK_SET);  // from begin
-                
-                if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&mipStorageSize, mipStorageSizeOf)) {
+            // Write out the mip size on chunk0, all other mips are this size since not supercompressed.
+            // This throws off block alignment so have option to skip for ktxa files.  I guess 3d textures
+            // and arrays can then load entire level in a single call.
+            if (chunk == 0 && !info.skipImageLength) {
+                // some clarification on what imageSize means, but best to look at ktx codebase itself
+                // https://github.com/BinomialLLC/basis_universal/issues/40
+
+                // this contains all bytes at a mipLOD but not any padding
+                uint32_t levelSize = (int)chunkOffsets.size() * mipStorageSize;
+
+                // this is size of one face for non-array cubes
+                if (info.textureType == MyMTLTextureTypeCube) {
+                    levelSize = mipStorageSize;
+                }
+
+                int levelSizeOf = sizeof(levelSize);
+                assert(levelSizeOf == 4);
+
+                fseek(dstFile, mipOffset - levelSizeOf, SEEK_SET);  // from begin
+
+                if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&levelSize, levelSizeOf)) {
                     return false;
                 }
             }
-            else {
-                // TODO: Might get rid of this, and go to ktx2, can't look at
-                // ktxa in any tools then copy mips out of ktx2 into a giant
-                // megatexture of the archive chopping up blocks into 256x256
-                // tiles?
 
-                fseek(dstFile, mipOffset, SEEK_SET);  // from begin
-            }
+            fseek(dstFile, mipOffset, SEEK_SET);  // from begin
+
+            // Note that default ktx alignment is 4, so r8u, r16f mips need to be padded out to 4 bytes
+            // may need to write these out row by row, and let fseek pad the rows to 4.
 
             if (!FileHelper::writeBytes(dstFile, outputTexture.data.data(), mipStorageSize)) {
                 return false;
@@ -1321,8 +1356,8 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     return true;
 }
 
+// TODO: try to elim KTXImage passed into this
 bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
-                             Mipper& mipper,
                              ImageData& mipImage, TextureData& outputTexture,
                              int mipStorageSize) const
 {
@@ -1781,14 +1816,14 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 
                 if (info.pixelFormat == MyMTLPixelFormatBC4_RSnorm) {
                     // 2 8-bit endpoints
-                    mipper.remapToSignedEndpoint8(*e0);
+                    remapToSignedBCEndpoint88(*e0);
                 }
                 else if (info.pixelFormat == MyMTLPixelFormatBC5_RGSnorm) {
                     e1 = &blockPtr[4];
 
                     // 4 8-bit endpoints
-                    mipper.remapToSignedEndpoint88(*e0);
-                    mipper.remapToSignedEndpoint88(*e1);
+                    remapToSignedBCEndpoint88(*e0);
+                    remapToSignedBCEndpoint88(*e1);
                 }
 
                 // one encoding recommendation is not to specify -128 as

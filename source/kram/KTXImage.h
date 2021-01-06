@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "KramConfig.h"
-
 #include <string>
 #include <vector>
+
+#include "KramConfig.h"
 
 namespace kram {
 
@@ -156,6 +156,7 @@ public:
     uint32_t bytesOfKeyValueData = 0;
 
 public:
+    //
     int totalMipLevels() const;
     int totalChunks() const;
 
@@ -185,7 +186,7 @@ public:
               bool skipImageLength);
 
     void initProps();
-    bool initMipLevels(bool validateLengthOnRead);
+    bool initMipLevels(bool validateLevelSizeFromRead);
 
     // props handling
     void toPropsData(vector<uint8_t>& propsData);

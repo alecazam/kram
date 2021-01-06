@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "KramConfig.h"
-
 #include <cstdint>
 #include <vector>
+
+#include "KramConfig.h"
 
 namespace kram {
 using namespace std;
@@ -36,6 +36,9 @@ inline float4 ColorToSnormFloat4(const Color &value)
     return (c - float4(128.0f)) / 255.0f;
 }
 
+// for signed bc4/5, remap the endpoints after unorm fit
+void remapToSignedBCEndpoint88(uint16_t &endpoint);
+
 class ImageData {
 public:
     // data can be mipped as 8u, 16f, or 32f.  Prefer smallest size.
@@ -56,30 +59,18 @@ public:
     float srgbToLinear[256];
     float alphaToFloat[256];
 
-    // uint8_t linearPremulTosrgbPremul[256][256];
-
-    // uint8_t linearToSrgb5[32];
-    // uint8_t linearToSrgb6[64];
-
     Mipper();
 
     void initTables();
 
     // drop by 1 mip level by box filter
-    void mipmap(ImageData &srcImage, ImageData &dstImage) const;
-
-    // remap endpoints and apply lin -> srgb
-    void remapToSrgbEndpoint565(uint16_t &endpoint) const;
-
-    // for signed bc4/5, remap the endpoints after unorm fit
-    void remapToSignedEndpoint8(uint16_t &endpoint) const;
-    void remapToSignedEndpoint88(uint16_t &endpoint) const;
+    void mipmap(const ImageData &srcImage, ImageData &dstImage) const;
 
     void initPixelsHalfIfNeeded(ImageData &srcImage, bool doPremultiply,
                                 vector<half4> &halfImage) const;
 
 private:
-    void mipmapLevel(ImageData &srcImage, ImageData &dstImage) const;
+    void mipmapLevel(const ImageData &srcImage, ImageData &dstImage) const;
 };
 
 }  // namespace kram

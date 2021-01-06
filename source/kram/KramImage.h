@@ -4,13 +4,12 @@
 
 #pragma once
 
-#include "KramConfig.h"
-
 #include <string>
 #include <vector>
 
 #include "KTXImage.h"  // for MyMTLTextureType
 #include "KTXMipper.h"
+#include "KramConfig.h"
 #include "KramImageInfo.h"
 
 namespace kram {
@@ -69,7 +68,6 @@ private:
 
     // ugh, reduce the params into this
     bool compressMipLevel(const ImageInfo& info, KTXImage& image,
-                          Mipper& mipper,
                           ImageData& mipImage, TextureData& outputTexture,
                           int mipStorageSize) const;
 
@@ -80,7 +78,7 @@ private:
 
     // convert x field to normals
     void heightToNormals(float scale);
-    
+
 private:
     // pixel size of image
     int _width = 0;
