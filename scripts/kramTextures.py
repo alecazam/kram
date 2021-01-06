@@ -169,7 +169,7 @@ class TextureProcessor:
 
 		switcher = {
 			TextureType.Tex2D: " -type 2d",
-			TextureType.Tex3D: " -type 3d",
+			TextureType.Tex3D: " -type 3d -mipnone", # mips unsupported
 			TextureType.Cube: " -type cube",
 			
 			TextureType.Tex1DArray: " -type 1darray",
