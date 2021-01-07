@@ -1218,20 +1218,24 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         string tmp;
         sprintf(tmp,
                 "file: %s\n"
-                "size: %d\n",
+                "size: %d\n"
+                "sizm: %0.3f MB\n",
                 srcFilename.c_str(),
-                dataSize);
+                dataSize,
+                dataSize / (1024.0f * 1024.0f));
         info += tmp;
 
         sprintf(tmp,
                 "type: %s\n"
                 "dims: %dx%d\n"
+                "dimm: %0.3f MP\n"
                 "bitd: %d\n"
                 "colr: %s\n"
                 "alph: %s\n"
                 "palt: %s\n",
                 textureTypeName(MyMTLTextureType2D),
                 width, height,
+                width * height / (1000.0f * 1000.0f),
                 state.info_png.color.bitdepth,
                 hasColor ? "y" : "n",
                 hasAlpha ? "y" : "n",
@@ -1271,11 +1275,27 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         string tmp;
         sprintf(tmp,
                 "file: %s\n"
-                "size: %d\n",
+                "size: %d\n"
+                "sizm: %0.3f MB\n",
                 srcFilename.c_str(),
-                srcImage.fileDataLength);
+                srcImage.fileDataLength,
+                srcImage.fileDataLength / (1024.0f * 1024.0f));
         info += tmp;
 
+        int pixelMultiplier =
+            std::max(1, srcImage.depth) *
+            std::max(1, (int)srcImage.header.numberOfArrayElements) *
+            std::max(1, (int)srcImage.header.numberOfFaces);
+        
+        float numPixels = srcImage.width * srcImage.height;
+        numPixels *= (float)pixelMultiplier;
+        
+        if (srcImage.header.numberOfMipmapLevels > 1) {
+            numPixels *= 4.0 / 3.0f; // estimate for now
+        }
+        
+        numPixels /= (1000.0f * 1000.0f);
+        
         auto textureType = srcImage.header.metalTextureType();
         switch (textureType) {
             case MyMTLTextureType1DArray:
@@ -1286,18 +1306,22 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
                 sprintf(tmp,
                         "type: %s\n"
                         "dims: %dx%d\n"
+                        "dimm: %0.3f MP\n"
                         "mips: %d\n",
                         textureTypeName(srcImage.header.metalTextureType()),
                         srcImage.width, srcImage.height,
+                        numPixels,
                         srcImage.header.numberOfMipmapLevels);
                 break;
             case MyMTLTextureType3D:
                 sprintf(tmp,
                         "type: %s\n"
                         "dims: %dx%dx%d\n"
+                        "dimm: %0.3f MP\n"
                         "mips: %d\n",
                         textureTypeName(srcImage.header.metalTextureType()),
                         srcImage.width, srcImage.height, srcImage.depth,
+                        numPixels,
                         srcImage.header.numberOfMipmapLevels);
                 break;
         }
