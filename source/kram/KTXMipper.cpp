@@ -72,6 +72,18 @@ inline float srgbToLinearFunc(float s)
     return (s < 0.0404482362771082f) ? (s / 12.92f)
                                      : powf((s + 0.055f) / 1.055f, 2.4f);
 }
+
+float4 linearToSRGB(float4 lin) {
+    lin = saturate(lin);
+    
+    return simd_make_float4(
+        linearToSRGBFunc(lin.x),
+        linearToSRGBFunc(lin.y),
+        linearToSRGBFunc(lin.z),
+        lin.w
+    );
+}
+
 //
 // inline void color565To888(uint16_t endpoint, Color &c) {
 //    uint16_t red = (endpoint >> 11)  & 31;

@@ -39,6 +39,8 @@ inline float4 ColorToSnormFloat4(const Color &value)
 // for signed bc4/5, remap the endpoints after unorm fit
 void remapToSignedBCEndpoint88(uint16_t &endpoint);
 
+float4 linearToSRGB(float4 lin);
+
 class ImageData {
 public:
     // data can be mipped as 8u, 16f, or 32f.  Prefer smallest size.

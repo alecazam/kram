@@ -32,7 +32,7 @@ namespace squish {
 // -----------------------------------------------------------------------------
 
 //! Typedef a quantity that is a single unsigned byte.
-typedef unsigned char u8;
+typedef uint8_t u8;
 
 // -----------------------------------------------------------------------------
 

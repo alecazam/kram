@@ -1219,10 +1219,11 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         sprintf(tmp,
                 "file: %s\n"
                 "size: %d\n"
-                "sizm: %0.3f MB\n",
+                "sizm: %0.3f %s\n",
                 srcFilename.c_str(),
                 dataSize,
-                dataSize / (1024.0f * 1024.0f));
+                dataSize / (1024.0f * 1024.0f),
+                (dataSize > (512 * 1024)) ? "MB" : "KB");
         info += tmp;
 
         sprintf(tmp,
@@ -1272,14 +1273,17 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         // for now driving everything off metal type, but should switch to neutral
         MyMTLPixelFormat metalFormat = srcImage.pixelFormat;
 
+        int dataSize = srcImage.fileDataLength;
+        
         string tmp;
         sprintf(tmp,
                 "file: %s\n"
                 "size: %d\n"
-                "sizm: %0.3f MB\n",
+                "sizm: %0.3f %s\n",
                 srcFilename.c_str(),
-                srcImage.fileDataLength,
-                srcImage.fileDataLength / (1024.0f * 1024.0f));
+                dataSize,
+                dataSize / (1024.0f * 1024.0f),
+                (dataSize > (512 * 1024)) ? "MB" : "KB");
         info += tmp;
 
         int pixelMultiplier =
