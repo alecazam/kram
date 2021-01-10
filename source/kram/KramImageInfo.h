@@ -162,4 +162,6 @@ TexEncoder parseEncoder(const char* encoder);
 
 bool isEncoderAvailable(TexEncoder encoder);
 
+const char* encoderName(TexEncoder encoder);
+
 }  // namespace kram

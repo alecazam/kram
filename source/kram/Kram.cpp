@@ -1216,14 +1216,15 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         }
 
         string tmp;
+        bool isMB = (dataSize > (512 * 1024));
         sprintf(tmp,
                 "file: %s\n"
                 "size: %d\n"
                 "sizm: %0.3f %s\n",
                 srcFilename.c_str(),
                 dataSize,
-                dataSize / (1024.0f * 1024.0f),
-                (dataSize > (512 * 1024)) ? "MB" : "KB");
+                isMB ? dataSize / (1024.0f * 1024.0f) : dataSize / 1024.0f,
+                isMB ? "MB" : "KB");
         info += tmp;
 
         sprintf(tmp,
@@ -1276,14 +1277,15 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         int dataSize = srcImage.fileDataLength;
         
         string tmp;
+        bool isMB = (dataSize > (512 * 1024));
         sprintf(tmp,
                 "file: %s\n"
                 "size: %d\n"
                 "sizm: %0.3f %s\n",
                 srcFilename.c_str(),
                 dataSize,
-                dataSize / (1024.0f * 1024.0f),
-                (dataSize > (512 * 1024)) ? "MB" : "KB");
+                isMB ? dataSize / (1024.0f * 1024.0f) : dataSize / 1024.0f,
+                isMB ? "MB" : "KB");
         info += tmp;
 
         int pixelMultiplier =
@@ -1519,6 +1521,13 @@ static int kramAppDecode(vector<const char*>& args)
 
     success = success && SetupTmpFile(tmpFileHelper, ".ktx");
 
+    if (success && isVerbose) {
+        KLOGI("Kram", "Decoding %s to %s with %s\n",
+              textureTypeName(srcImage.textureType),
+              metalTypeName(srcImage.pixelFormat),
+              encoderName(textureDecoder));
+    }
+    
     Image tmpImage;  // just to call decode
     success = success && tmpImage.decode(srcImage, tmpFileHelper.pointer(), textureDecoder, isVerbose, swizzleText);
 
@@ -1886,6 +1895,13 @@ static int kramAppEncode(vector<const char*>& args)
             }
         }
 
+        if (info.isVerbose) {
+            KLOGI("Kram", "Encoding %s to %s with %s\n",
+                  textureTypeName(info.textureType),
+                  metalTypeName(info.pixelFormat),
+                  encoderName(info.textureEncoder));
+        }
+        
         if (success) {
             success = srcImage.encode(info, tmpFileHelper.pointer());
 

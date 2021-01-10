@@ -320,6 +320,9 @@ static const MyMTLPixelFormat kEncodingFormatsSquish[] =
 
 static const MyMTLPixelFormat kEncodingFormatsBcenc[] =
     {
+        // Note: This is causing pink constant block artifacts in Toof-a,
+        // -optopaque case was hitting this, where BC7 reduced to BC1.
+        // Squish BC1 doesn't look much better. BC7 looks perfect on that file.
         MyMTLPixelFormatBC1_RGBA,
         MyMTLPixelFormatBC1_RGBA_sRGB,
 
@@ -1088,6 +1091,7 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
     }
 
     // this cuts storage of ETC2rgba and BC3/BC7 images to half size if hasAlpha is false
+    // But BC1 565 and 2-bit endpoints are no match for BC7, and bc7enc's BC1 is introducing artifacts into Toof-a.
     optimizeFormat();
 
     // this implies color is stored in rgb
@@ -1136,6 +1140,19 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
             KLOGE("ImageInfo", "Averaging only works on specific formats\n");
             averageChannels.clear();
         }
+    }
+}
+
+const char* encoderName(TexEncoder encoder)
+{
+    switch(encoder) {
+        case kTexEncoderUnknown: return "Unknown"; break;
+        case kTexEncoderExplicit: return "Explicit"; break;
+        case kTexEncoderATE: return "ATE"; break;
+        case kTexEncoderSquish: return "Squish"; break;
+        case kTexEncoderBcenc: return "Bcenc"; break;
+        case kTexEncoderEtcenc: return "Etcenc"; break;
+        case kTexEncoderAstcenc: return "Astcenc"; break;
     }
 }
 

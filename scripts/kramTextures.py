@@ -358,14 +358,19 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 		fmtSDF = " -f etc2r -signed -sdf"
 		
 	elif platform == "mac":
-		fmtAlbedo = " -f bc7 -srgb -premul -optopaque"
+		# bc1 on Toof has purple, green, yellow artifacts with bc7enc, and has more banding
+		# and a lot of weird blocky artifacts, look into bc1 encoder.  
+		# Squish BC1 has more blocky artifacts, but not random color artifacts.
+		fmtAlbedo = " -f bc7 -srgb -premul" # + " -optopaque"
 		fmtNormal = " -f bc5 -signed -normal"
 		fmtMetalRoughness = " -f bc5"
 		fmtMask = " -f bc4"
 		fmtSDF = " -f bc4 -signed -sdf"
 		
 	elif platform == "win":
-		fmtAlbedo = " -f bc7 -srgb -premul -optopaque"
+		# bc1 on Toof has purple, green, yellow artifacts with bc7enc, and has more banding
+		# and a lot of weird blocky artifacts, look into bc1 encoder
+		fmtAlbedo = " -f bc7 -srgb -premul" # + " -optopaque"
 		fmtNormal = " -f bc5 -signed -normal"
 		fmtMetalRoughness = " -f bc5"
 		fmtMask = " -f bc4"

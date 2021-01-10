@@ -23,8 +23,8 @@ class TextureData;
 
 enum ImageResizeFilter {
     kImageResizeFilterPoint,
-    kImageResizeFilterLinear,
-    kImageResizeFilterLanczos3
+    //kImageResizeFilterLinear,
+    //kImageResizeFilterLanczos3, Mitchell, Kaiser, etc,
 };
 
 //---------------------------

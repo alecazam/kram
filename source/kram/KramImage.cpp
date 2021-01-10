@@ -451,6 +451,12 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     
     // changing format, so update props
     auto dstPixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+    
+    // DONE: Support ASTC and BC7 HDR decode to RGBA16F here
+    if (isHdrFormat(srcImage.pixelFormat)) {
+        dstPixelFormat = MyMTLPixelFormatRGBA16Float;
+    }
+    
     dstHeader.initFormatGL(dstPixelFormat);
     dstImage.pixelFormat = dstPixelFormat;
     dstImage.addFormatProps();  // update format prop
@@ -992,9 +998,23 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     // address: Wrap, Clamp, MirrorWrap, MirrorClamp, BorderClamp, BorderClamp0
     // filter: Point, Linear, None (Mip only), TODO: what about Aniso (Mip only + level?)
     //   min/maxLOD too for which range of mips to use, atlas should stop before entries merge
-    image.addAddressProps("Wrap,Wrap,X");          // uvw
-    image.addFilterProps("Linear,Linear,Linear");  // min,mag,mip
-
+    if (image.textureType == MyMTLTextureType1DArray) {
+        image.addAddressProps("Rep,X,X");
+    }
+    else if (image.textureType == MyMTLTextureType3D) {
+        image.addAddressProps("Rep,Rep,Rep");
+    }
+    else {
+        image.addAddressProps("Rep,Rep,X");
+    }
+    
+    if (info.doMipmaps) {
+        image.addFilterProps("Lin,Lin,Lin");  // min,mag,mip
+    }
+    else {
+        image.addFilterProps("Lin,Lin,X");  // min,mag,mip
+    }
+   
     // This is hash of source png/ktx file (use xxhash32 or crc32)
     // can quickly check header if multiple copies of same source w/diff names.
     // May also need to store command line args in a prop to reject duplicate processing
@@ -1341,7 +1361,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
             if (success) {
                 if (info.isVerbose) {
-                    KLOGI("EtcComp", "Compressed mipLevel %dx%d in %0.3fs\n", w, h, timer.timeElapsed());
+                    KLOGI("Image", "Compressed mipLevel %dx%d in %0.3fs\n", w, h, timer.timeElapsed());
                 }
             }
 
