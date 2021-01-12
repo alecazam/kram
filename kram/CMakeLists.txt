@@ -1,26 +1,20 @@
-cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
+#cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
 
 #-----------------------------------------------------
 # kram 
 
-# this can go before project?
-set(APP_VERSION 0.9.0)
-
 # now setup the app project, and link to libkram
 set(myTargetApp kram)
 
-project(${myTargetApp} LANGUAGES C CXX)
+project(
+    ${myTargetApp}
+    VERSION 0.9.0
+    LANGUAGES C CXX
+)
 
 # **** this the executable target ****, for a CLI App
 add_executable(${myTargetApp})
 
-# this works on vs and xcode
-# set_target_properties(${myTargetApp} PROPERTIES
-#     USE_FOLDERS ON
-#     CONFIGURATION_TYPES "Debug;Release"
-#     BUILD_TYPE Release
-# )
-    
 #-----------------------------------------------------
     
 if (APPLE)

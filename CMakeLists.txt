@@ -13,27 +13,36 @@ endif()
 
 #-----------------------------------------------------
 
-# suppress ZERO_CHECK project
-set(CMAKE_SUPPRESS_REGENERATION true)
-
-# This must be set before project,
-# sys root is max OS, deployment is min OS
+# SYSROOT must be set before project,
+# SYSROOT is max OS, deployment is min OS on Apple.
 # If SYSROOT not set, then cmake uses min OS from deployment target.  Ugh.
 # so have to force SYSROOT to latest SDK.
-set(CMAKE_OSX_SYSROOT "macosx11.0")
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
+# Want to set 11.0 here, but Xcode 12.3 ships with 11.1, etc.
+# So then cmake breaks when it cannot find the C compiler, etc.
+# Setting macosx to take the latest greatest sdk.
+
+# don't change these to set_property(GLOBAL) or set_target_properties, the need to be set prior to project
+# and only seem to work if set() is used to force the global value.
+
+# suppress ZERO_CHECK project
+set(CMAKE_SUPPRESS_REGENERATION true)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 
-# for universal builds on macOS for Intel and Apple Silicon
-# https://gitlab.kitware.com/cmake/cmake/-/merge_requests/5589
+# Xcode 12.2 ships with macosx11.0, but 12.3 ships with macosx11.1
+# cmake on 12.3 completely breaks when this is set and can't find c compilers.
+set(CMAKE_OSX_SYSROOT macosx11.0)
+# set(CMAKE_OSX_SYSROOT macos)  # this doesn't work
+
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
 set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
 
-# these are carried across the builds
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 set(CMAKE_BUILD_TYPE Release)
+
+set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
 
 #-----------------------------------------------------
 
@@ -42,22 +51,26 @@ set(myTargetWorkspace kramWorkspace)
 project(${myTargetWorkspace} LANGUAGES C CXX)
 
 # the kram static library libkram which should build on iOS/Android/Mac/Win
-add_subdirectory(source)
+# this doesn't set a project, but maybe it should
+add_subdirectory(libkram)
 
 # the CLI app for Mac/Win that can build content for other platforms, uses libkram
-add_subdirectory(source/app)
+add_subdirectory(kram)
 
 # the viewer is only written for macOS Intel/ARM currently, uses libkram
 if (APPLE)
-    add_subdirectory(source/viewer)
+    add_subdirectory(kramv)
 endif()
 
 #-----------------------------------------------------
 
-# ALL_BUILD can't execute an app, so change the startup project to something runnable
-# either this or kramv
-set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
+set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
 
+install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
+install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
+if (APPLE)
+	install(TARGETS kramv BUNDLE DESTINATION ${BIN_DIR})
+endif()
 
 
 

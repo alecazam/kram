@@ -6,14 +6,15 @@ cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
 #-----------------------------------------------------
 # kramv
 
-# this can go before project?
-set(APP_VERSION 0.9.0)
-
 # now setup the app project, and link to libkram
 set(myTargetApp kramv)
 
 # the mac build has ObjC++
-project(${myTargetApp} LANGUAGES C CXX OBJCXX)
+project(
+    ${myTargetApp}
+    VERSION 0.9.0
+    LANGUAGES C CXX OBJCXX
+)
 
 #------------------
 

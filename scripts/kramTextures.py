@@ -295,7 +295,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 
 	# eventually pass these in as strings, so script is generic
 	# Mac can handle this, but Win want's absolute path (or kram run from PATH)
-	appKram = os.path.abspath("../build/Release/kram")
+	appKram = os.path.abspath("../bin/kram")
 	
 	# abspath strips the trailing slash off - ugh
 	srcDirBase = os.path.abspath("../tests/src/")

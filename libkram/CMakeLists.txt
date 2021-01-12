@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
+#cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
 
 #-----------------------------------------------------
 
@@ -53,34 +53,37 @@ set_target_properties(${myTargetLib} PROPERTIES
     DISABLE_PRECOMPILE_HEADERS ON
 )
 
+# add_library doesn't establish a project, so still pointing at root CMake
+set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/libkram)
+
 file(GLOB_RECURSE libSources CONFIGURE_DEPENDS 
-	"${PROJECT_SOURCE_DIR}/source/astc-encoder/*.cpp"
-	"${PROJECT_SOURCE_DIR}/source/astc-encoder/*.h"
+	"${SOURCE_DIR}/astc-encoder/*.cpp"
+	"${SOURCE_DIR}/astc-encoder/*.h"
 
-    # ATE is Apple specific (ios + macOS)
-    "${PROJECT_SOURCE_DIR}/source/ate/*.mm"
-    "${PROJECT_SOURCE_DIR}/source/ate/*.h"
+    # ATE is Apple specifi+ macOS)
+    "${SOURCE_DIR}/ate/*.mm"
+    "${SOURCE_DIR}/ate/*.h"
 
-    "${PROJECT_SOURCE_DIR}/source/bc7enc/*.cpp"
-    "${PROJECT_SOURCE_DIR}/source/bc7enc/*.h"
+    "${SOURCE_DIR}/bc7enc/*.cpp"
+    "${SOURCE_DIR}/bc7enc/*.h"
 
-    "${PROJECT_SOURCE_DIR}/source/etc2comp/*.cpp"
-    "${PROJECT_SOURCE_DIR}/source/etc2comp/*.h"
+    "${SOURCE_DIR}/etc2comp/*.cpp"
+    "${SOURCE_DIR}/etc2comp/*.h"
 
-    "${PROJECT_SOURCE_DIR}/source/heman/*.cpp"
-    "${PROJECT_SOURCE_DIR}/source/heman/*.h"
+    "${SOURCE_DIR}/heman/*.cpp"
+    "${SOURCE_DIR}/heman/*.h"
 
-    "${PROJECT_SOURCE_DIR}/source/kram/*.cpp"
-    "${PROJECT_SOURCE_DIR}/source/kram/*.h"
+    "${SOURCE_DIR}/kram/*.cpp"
+    "${SOURCE_DIR}/kram/*.h"
 
-    "${PROJECT_SOURCE_DIR}/source/lodepng/*.cpp"
-    "${PROJECT_SOURCE_DIR}/source/lodepng/*.h"
+    "${SOURCE_DIR}/lodepng/*.cpp"
+    "${SOURCE_DIR}/lodepng/*.h"
 
-    "${PROJECT_SOURCE_DIR}/source/squish/*.cpp"
-    "${PROJECT_SOURCE_DIR}/source/squish/*.h"
+    "${SOURCE_DIR}/squish/*.cpp"
+    "${SOURCE_DIR}/squish/*.h"
 
-    "${PROJECT_SOURCE_DIR}/source/tmpfileplus/*.cpp"
-    "${PROJECT_SOURCE_DIR}/source/tmpfileplus/*.h"
+    "${SOURCE_DIR}/tmpfileplus/*.cpp"
+    "${SOURCE_DIR}/tmpfileplus/*.h"
 )
 
 # no objc on winOS
@@ -103,19 +106,19 @@ list(FILTER libSources EXCLUDE REGEX ".astcenccli_toplevel_help.cpp$")
 list(FILTER libSources EXCLUDE REGEX ".astcenccli_toplevel.cpp$")
 
 # this will preserve hierarchy of sources in a build project
-source_group(TREE "${PROJECT_SOURCE_DIR}/source" PREFIX "source" FILES ${libSources})
+source_group(TREE "${SOURCE_DIR}" PREFIX "source" FILES ${libSources})
 
 target_include_directories(${myTargetLib} PUBLIC
-    "${PROJECT_SOURCE_DIR}/source/kram/"
+    "${SOURCE_DIR}/kram/"
 )
 
 target_include_directories(${myTargetLib} PRIVATE
-    "${PROJECT_SOURCE_DIR}/source/"
-    #"${PROJECT_SOURCE_DIR}/source/kram/"
-    #"${PROJECT_SOURCE_DIR}/source/squish/"
-    #"${PROJECT_SOURCE_DIR}/source/lodepng"
-    "${PROJECT_SOURCE_DIR}/source/astc-encoder/"
-    "${PROJECT_SOURCE_DIR}/source/etc2comp/"
+    "${SOURCE_DIR}/"
+    #"${SOURCE_DIR}/kram/"
+    #"${SOURCE_DIR}/squish/"
+    #"${SOURCE_DIR}/lodepng"
+    "${SOURCE_DIR}/astc-encoder/"
+    "${SOURCE_DIR}/etc2comp/"
     )
  
 # only add sources to the library
