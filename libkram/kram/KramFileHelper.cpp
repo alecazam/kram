@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 
 // Use this for consistent tmp file handling
+#include <algorithm> // for min
 #include <vector>
 
 #include "tmpfileplus/tmpfileplus.h"

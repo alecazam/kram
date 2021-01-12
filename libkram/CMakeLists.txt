@@ -87,7 +87,7 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
 )
 
 # no objc on winOS
-if (winOS)
+if (WIN32)
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.mm$")
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.h$")
 endif()
