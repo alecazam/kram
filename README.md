@@ -1,5 +1,11 @@
-# kram
-Encode/decode/info to and from PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.
+# kram, kram.exe
+Small wrapper to libkram.  Encode/decode/info PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.  Compiles for iOS, macOS, winOS.
+
+# libkram.a, kram.lib
+C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS, macOS, winOS.
+
+# kramv.app
+Viewer for PNG/KTX supported files from kram.  800KB in size.  ObjC++ and uses libkram to decode unsupported formats, Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  Compiles for macOS Intel/Apple Silicon.  No dmg yet, just drop onto /Applications folder, and then run scripts/fixfinder.sh to flush LaunchServices (see below).
 
 ### About
 kram is a wrapper to several popular encoders.  Most encoders have sources, and have been optimized to use very little memory and generate high quality encodings at all settings.  All kram encoders are currently cpu-based.  Some of these encoders use SSE but not Neon, and I'd like to fix that.  kram was built to be small and used as a library or app.  It's also designed for mobile and desktop use.  The final size with all encoders is under 1MB, and disabling each encoder chops off around 200KB down to a final 200KB app size via dead-code stripping.  The code should compile with C++11 or higher.
@@ -23,7 +29,9 @@ cmake .. -G Xcode
 
 cmake --build . --config Release
 or
-open kram.xcodeproj
+open kramWorkspace.xcodeproj
+or
+cmake --install ../bin --config Release
 ```
 
 For Windows, the steps are similar. I tried to fix CMake to build the library into the app directory so the app is updated.  "Rebuild Solution" if your changes don't take effect, or if breakpoints stop being hit.
@@ -36,7 +44,10 @@ cmake .. -G "Visual Studio 16 2019" -A x64
 
 cmake --build . --config Release
 or
-open kram.sln
+open kramWorkspace.sln
+or
+# not sure if install works on Win
+cmake --install ../bin --config Release
 ```
 
 There are various CMake settings that control the various encoders.  Each of these adds around 200KB.  I tested with each of these turned off, so code should be isolated.  The project will still show all sources.
@@ -56,6 +67,7 @@ There are various CMake settings that control the various encoders.  Each of the
 ### Sample Scripts
 * kramTextures.py  - python3 example that recursively walks directories and calls kram, or accumulates command and runs as a script
 * formatSources.sh - zsh script to run clang_format on the kram source directory (excludes open source)
+* fixfinder.sh - after updating /Applications, this flushes any cached copy of kram.app from LaunchServices
 
 To demonstrate how kram works, scripts/kramtextures.py applies platform-specific presets based on source filenames endings.  The first form executes multiple kram processes with each file using a Python ThreadPoolExecutor.  The second generates a script file, and then runs that in a C++ task system inside kram.  The scripting system would allow gpu compute of commands, and more balanced memory and thread usage.
 
