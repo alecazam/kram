@@ -317,14 +317,15 @@ float4 DrawPixels(
         }
         
         // signed data already convrted to unorm above, so compare to 0.5
+        // adding some slop here so that flat areas don't flood the visual with red
         else if (uniforms.debugMode == DebugModePosX) {
             // two channels here, would need to color each channel
-            if (c.r >= 0.5) {
+            if (c.r >= 0.5 + 0.05) {
                 isHighlighted = true;
             }
         }
         else if (uniforms.debugMode == DebugModePosY) {
-            if (c.g > 0.5) {
+            if (c.g > 0.5 + 0.05) {
                 isHighlighted = true;
             }
         }

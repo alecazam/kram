@@ -1,6 +1,12 @@
 # ignore cmake build data
 build/
 
+# ignore bin folder where install products go
+bin/
+
+# ignore zip files
+*.zip
+
 # Prerequisites
 *.d
 

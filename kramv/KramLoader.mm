@@ -192,7 +192,9 @@ static int numberOfMipmapLevels(const Image& image) {
                 bytesPerRow:bytesPerRow];
     
     // have to schedule this inside main loop
-    _isMipgenNeeded = YES;
+    if (image.header.numberOfMipmapLevels > 1) {
+        _isMipgenNeeded = YES;
+    }
     
     return texture;
 }

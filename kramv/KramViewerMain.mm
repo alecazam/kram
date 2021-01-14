@@ -526,39 +526,46 @@ static void printChannels(string& tmp, const string& label, float4 c, int numCha
         
         // TODO: more criteria here, can have 2 channel PBR metal-roughness
         // also have 4 channel normals where zw store other data.
-        bool isNormal2Channel = numChannels == 2;
-        if (isNormal2Channel) {
-            numChannels = 3;
-            
+        bool isNormal = gShowSettings.isNormal;
+        bool isFloat = isHdr;
+        
+        if (isNormal) {
             float x = c.x;
             float y = c.y;
             
+            // unorm -> snorm
             if (!isSigned) {
                 x = x * 2.0f - 1.0f;
                 y = y * 2.0f - 1.0f;
             }
             
-            c.z = sqrt(1.0f - std::min(x * x + y * y, 1.0f));
+            // this is always postive on tan-space normals
+            // assuming we're not viewing world normals
+            float z = sqrt(1.0f - std::min(x * x + y * y, 1.0f));
             
-            // back to unorm
-            if (!isSigned) {
-                c.z = c.z * 0.5f + 0.5f;
-            }
+            // print the underlying color (some nmaps are xy in 4 channels)
+            string tmp;
+            printChannels(tmp, "c: ", c, numChannels, isFloat, isSigned);
+            text += tmp;
             
-            // should we indicate z channel is reconstruct?
-        }
-        
-        // TODO: write some print helpers based on float4 and length
-        bool isFloat = isHdr;
-        string tmp;
-        printChannels(tmp, "l: ", c, numChannels, isFloat, isSigned);
-        text += tmp;
-        
-        if (isSrgb) {
-            printChannels(tmp, "s: ", s, numChannels, isFloat, isSigned);
+            // print direction
+            float4 d = simd_make_float4(x,y,z,0.0f);
+            isFloat = true;
+            printChannels(tmp, "d: ", d, 3, isFloat, isSigned);
             text += tmp;
         }
-    
+        else {
+            // DONE: write some print helpers based on float4 and length
+            string tmp;
+            printChannels(tmp, "l: ", c, numChannels, isFloat, isSigned);
+            text += tmp;
+            
+            if (isSrgb) {
+                printChannels(tmp, "s: ", s, numChannels, isFloat, isSigned);
+                text += tmp;
+            }
+        }
+        
         [self setEyedropperText:text.c_str()];
 
         // TODO: range display of pixels is useful, only showing pixels that fall
@@ -567,7 +574,7 @@ static void printChannels(string& tmp, const string& label, float4 c, int numCha
         
         // TOOD: display histogram from compute, bin into buffer counts of pixels
         
-        // TODO: stop clobbering hud text, need another set of labels
+        // DONE: stop clobbering hud text, need another set of labels
         // and a zoom preview of the pixels under the cursor.
         // Otherwise, can't really see the underlying color.
         
@@ -700,7 +707,7 @@ void advanceDebugMode(bool isShiftKeyDown) {
     // for 3 and for channel textures could skip these with more info about image (hasColor)
     // if (gShowSettings.debugMode == DebugModeGray && !hasColor) advanceDebugMode(isShiftKeyDown);
     
-    bool isNormal = numChannels == 2; // TODO: better criteria on this
+    bool isNormal = gShowSettings.isNormal;
     
     // for normals show directions
     if (gShowSettings.debugMode == DebugModePosX && !isNormal) {

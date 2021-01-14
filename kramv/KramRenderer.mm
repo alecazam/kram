@@ -630,7 +630,8 @@ using namespace simd;
         }
     }
     
-    uniforms.debugMode = gShowSettings.debugMode;
+    // no debug mode when preview kicks on, make it possible to toggle back and forth more easily
+    uniforms.debugMode = gShowSettings.isPreview ? DebugModeNone : gShowSettings.debugMode;
     uniforms.channels = gShowSettings.channels;
 
     // translate
@@ -714,7 +715,7 @@ using namespace simd;
     
     // also use to readback pixels
     // also use for async texture upload
-    bool needsBlit = _loader.isMipgenNeeded;
+    bool needsBlit = _loader.isMipgenNeeded && _colorMap.mipmapLevelCount > 1;
     if (needsBlit) {
         id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
         blitEncoder.label = @"MyBlitEncoder";
