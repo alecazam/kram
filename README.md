@@ -52,6 +52,37 @@ Shift-/F advance face
 Shift-/M advance mip
 ```
 
+### Limitations
+
+Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram as currently implemented.
+
+```
+Filtering - only point filtering in kram
+
+1D array - no mip support due to hardware
+3D textures - no mip support, uses ASTC 2d slice encode used by Metal/Android, not exotic ASTC 3d format
+    
+BC/ETC2/ASTC - supposedly WebGL requires pow2, and some implementation need top multiple of 4 for BC/ETC2
+
+BC1 - artifacts from limits of format, use BC7 w/2x memory
+BC2 - blocked
+BC6H - unsupported, no decode
+
+ETC2_RGB8A1 - disabled, broken
+
+ASTC HDR - encoder uses 8-bit source image, need 16f/32f passed to encoder
+
+R/RG/RGBA 8/16F/32F - use ktx2ktx2 and ktx2sc KTX2 to supercompress, use as source formats
+R8/RG8/R16F - input/output not aligned to 4 bytes to match KTX spec
+
+Basis - unsupported, will come with KTX2 support, can't encode KTX to Basis supercompression via ktx2sc, can transcode from UASTC/ETC1S at runtime, RDO
+Crunch - unsupported, has RDO, predecessor to Basis, Unity provides a release of this
+
+KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips
+KTX2 - unsupported, no viewers, mips flipped from KTX, need to get working in kram and viewer, has compressed mips
+
+```
+
 ### Building
 Kram uses CMake to setup the projects and build.  An kramv.app, executable kram, and libkram are generated, but kramv.app and kram are stand-alone since they include libkram.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
 
