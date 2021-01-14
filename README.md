@@ -25,6 +25,7 @@ Compute shaders are used to display a single pixel sample from the gpu texture. 
 
 In non-preview mode, point sampling is used to show exact pixel values of a single mip, array, and face.  Debug modes provide pixel analysis.  KramLoader shows synchronous cpu upload to a private Metal texture.  Pinch zoom and panning tries to keep the image from onscreen, and zoom is to the cursor so navigating feels intuitive.
 
+```
 Formats - R/RG/RGBA 8/16F/32F, BC/ETC2/ASTC
 Container Types - KTX, PNG
 Content Types - Albedo, Normal, SDF
@@ -47,6 +48,7 @@ Shift-L - reload, but at 1x
 Shift-/Y advance array
 Shift-/F advance face
 Shift-/M advance mip
+```
 
 ### Building
 Kram uses CMake to setup the projects and build.  An kramv.app, executable kram, and libkram are generated, but kramv.app and kram are stand-alone since they include libkram.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
