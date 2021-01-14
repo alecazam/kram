@@ -1,11 +1,11 @@
 # kram, kram.exe
-Small wrapper to libkram.  Encode/decode/info PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.  Compiles for iOS, macOS, winOS.
+Small wrapper to libkram for CLI tool.  Encode/decode/info PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.  Compiles for iOS, macOS, winOS.
 
 # libkram.a, kram.lib
 C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS, macOS, winOS.
 
 # kramv.app
-Viewer for PNG/KTX supported files from kram.  800KB in size.  ObjC++ and uses libkram to decode unsupported formats, Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  Compiles for macOS Intel/Apple Silicon.  No dmg yet, just drop onto /Applications folder, and then run scripts/fixfinder.sh to flush LaunchServices (see below).
+Viewer for PNG/KTX supported files from kram.  530KB in size.  ObjC++ and uses libkram to decode unsupported formats, Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  Compiles for macOS Intel/Apple Silicon.  No dmg yet, just drop onto /Applications folder, and then run scripts/fixfinder.sh to flush LaunchServices (see below).
 
 ### About
 kram is a wrapper to several popular encoders.  Most encoders have sources, and have been optimized to use very little memory and generate high quality encodings at all settings.  All kram encoders are currently cpu-based.  Some of these encoders use SSE but not Neon, and I'd like to fix that.  kram was built to be small and used as a library or app.  It's also designed for mobile and desktop use.  The final size with all encoders is under 1MB, and disabling each encoder chops off around 200KB down to a final 200KB app size via dead-code stripping.  The code should compile with C++11 or higher.
