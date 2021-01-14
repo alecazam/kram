@@ -38,12 +38,13 @@ Shift-/D - toggle block/pixel grid, must be zoomed-in to see it
 Shift-/E - advance debug mode, this is texture content specific
 H - toggle hud
 I - show texture info in overlay
+W - toggle repeat filter, scales uv from [0,1] to [0,2]
 
 R/G/B/A - show channel in isolation
 P - toggle shader premul, the shader performs this after sampling but for point sampling it is correct
 S - toggle signed/unsigned
 
-Shift-/0 - refit the image
+Shift-/0 - refit the current mip image to 1x, or fit view.  Smaller mips will appear at size with Shift-0.
 L - reload from disk if changed, zoom to fit
 Shift-L - reload, but at 1x
 
@@ -57,7 +58,8 @@ Shift-/M advance mip
 Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram as currently implemented.
 
 ```
-Filtering - only point filtering in kram
+Rescale Filtering - 1x1 point filter
+Mip filtering - 2x2 box filter that's reasonable for pow2, but not ideal for non-pow2 mips, done in linear space using half4 storage, in-place to save mem
 
 1D array - no mip support due to hardware
 3D textures - no mip support, uses ASTC 2d slice encode used by Metal/Android, not exotic ASTC 3d format
