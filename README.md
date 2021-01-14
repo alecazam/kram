@@ -55,7 +55,7 @@ Shift-/M advance mip
 
 ### Limitations
 
-Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram as currently implemented.  There is a lot that works, and BC1-BC3 should be retired along with all of ETC2.  There are better formats, and hardware has move to ASTC, and back to BC.  WebGL is still often stuck with older formats for lack of extensions.   Basis is one way to transcode at runtime to available GPU capabilities, but I suggest basisu or toktx to generate that until KTX2 support is added to kram.
+Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram as currently implemented.  There is a lot that works, and BC1-BC3 should be retired along with all of ETC2.  There are better formats, and hardware has moved to ASTC, and then recently back to BC.  WebGL is still often stuck with older formats for lack of extensions.  These formats are still too big without further re-ordering endpoints/selectors and compressing the enire texture compressing mips.  Basis is one way to compress to storage and transcode at runtime to available GPU capabilities, but I suggest basisu or toktx to generate that until KTX2 support is added to kram.
 
 ```
 Rescale Filtering - 1x1 point filter
@@ -79,10 +79,10 @@ ASTC HDR - encoder uses 8-bit source image, need 16f/32f passed to encoder, no h
 R/RG/RGBA 8/16F/32F - use ktx2ktx2 and ktx2sc KTX2 to supercompress, use as source formats
 R8/RG8/R16F - input/output not aligned to 4 bytes to match KTX spec
 
-Basis - unsupported, will come with KTX2 support, can't encode KTX to Basis supercompression via ktx2sc, can transcode from UASTC/ETC1S at runtime, RDO
+Basis - unsupported, will come with KTX2 support, can transcode from UASTC/ETC1S at runtime, RDO
 Crunch - unsupported, has RDO, predecessor to Basis, Unity provides a release of this
 
-KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, metadata/props aren't standardized and only ascii prop support so easy to dump out
+KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, metadata/props aren't standardized and only ascii prop support so easy to dump out, convert to ktx2 with ktx2ktx2 for some texture types, can only supercompress to zstd not Basis using ktx2ktx2 + ktxsc
 KTX2 - unsupported, no viewers, mips flipped from KTX, need to get working in kram and viewer, has compressed mips
 
 ```
