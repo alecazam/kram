@@ -55,7 +55,7 @@ Shift-/M advance mip
 
 ### Limitations
 
-Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram as currently implemented.
+Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram as currently implemented.  There is a lot that works, and BC1-BC3 should be retired along with all of ETC2.  There are better formats, and hardware has move to ASTC, and back to BC.  WebGL is still often stuck with older formats for lack of extensions.   Basis is one way to transcode at runtime to available GPU capabilities, but I suggest basisu or toktx to generate that until KTX2 support is added to kram.
 
 ```
 Rescale Filtering - 1x1 point filter
@@ -66,11 +66,12 @@ Mip filtering - 2x2 box filter that's reasonable for pow2, but not ideal for non
     
 BC/ETC2/ASTC - supposedly WebGL requires pow2, and some implementation need top multiple of 4 for BC/ETC2
 
-BC1 - artifacts from limits of format, use BC7 w/2x memory
+BC1 - artifacts from limits of format, artifacts from encoder, use BC7 w/2x memory
+BC1 w/alpha - blocked
 BC2 - blocked
 BC6H - unsupported, no decode
 
-ETC2_RGB8A1 - disabled, broken
+ETC2_RGB8A1 - disabled, broken in ETC2 optimizations
 
 ASTC HDR - encoder uses 8-bit source image, need 16f/32f passed to encoder
 
