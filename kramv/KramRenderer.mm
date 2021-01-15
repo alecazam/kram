@@ -365,7 +365,7 @@ using namespace simd;
 {
     /// Load assets into metal objects
 
-    NSError *error;
+    NSError *error = nil;
 
     MTKMeshBufferAllocator *metalAllocator = [[MTKMeshBufferAllocator alloc]
                                               initWithDevice: _device];
