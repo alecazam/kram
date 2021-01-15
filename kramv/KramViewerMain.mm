@@ -295,13 +295,19 @@ NSArray<NSString*>* pasteboardTypes = @[
     
     bool isFirstGesture = _zoomGesture.state == NSGestureRecognizerStateBegan;
     
+    static float _originalZoom = 1.0f;
+    
     float zoom = _zoomGesture.magnification;
     if (isFirstGesture) {
         _zoomGesture.magnification = 1.0f;
         zoom = _showSettings->zoom;
     }
+    else if (zoom * _originalZoom < 0.1f) {
+        // can go negative otherwise
+        zoom = 0.1f / _originalZoom;
+        _zoomGesture.magnification = zoom;
+    }
     
-    static float _originalZoom;
     static float _validMagnification;
     
     //-------------------------------------
@@ -383,8 +389,13 @@ NSArray<NSString*>* pasteboardTypes = @[
         _showSettings->panY = newPan.y;
         
         if (doPrintPanZoom) {
-            KLOGI("kramv", "Zoom %.3f, pan %.3f,%.3f",
-                  _showSettings->zoom, _showSettings->panX, _showSettings->panY);
+            string text;
+            sprintf(text,
+                "Pan %.3f,%.3f\n"
+                "Zoom %.2fx\n",
+                _showSettings->panX, _showSettings->panY,
+                _showSettings->zoom);
+            [self setHudText:text.c_str()];
         }
         
         [self updateEyedropper];
@@ -646,7 +657,13 @@ NSArray<NSString*>* pasteboardTypes = @[
     }
     
     if (doPrintPanZoom) {
-        KLOGI("kramv", "Pan %.3f,%.3f", panX, panY);
+        string text;
+        sprintf(text,
+            "Pan %.3f,%.3f\n"
+            "Zoom %.2fx\n",
+            _showSettings->panX, _showSettings->panY,
+            _showSettings->zoom);
+        [self setHudText:text.c_str()];
     }
     
     if (_showSettings->panX != panX ||
@@ -770,12 +787,19 @@ NSArray<NSString*>* pasteboardTypes = @[
             _showSettings->panX = 0.0f;
             _showSettings->panY = 0.0f;
             
+            text = "Scale Image\n";
             if (doPrintPanZoom) {
-                KLOGI("kramv", "Zoom %.3f, pan %.3f,%.3f", _showSettings->zoom, _showSettings->panX, _showSettings->panY);
+                string tmp;
+                sprintf(tmp,
+                        "Pan %.3f,%.3f\n"
+                        "Zoom %.2fx\n",
+                    _showSettings->panX, _showSettings->panY,
+                    _showSettings->zoom);
+                text += tmp;
             }
             
             isChanged = true;
-            text = "Scale Image";
+            
             break;
         }
         // reload key (also a quick way to reset the settings)
@@ -787,12 +811,18 @@ NSArray<NSString*>* pasteboardTypes = @[
                 _showSettings->zoom = 1.0f;
             }
             
+            text = "Reload Image";
             if (doPrintPanZoom) {
-                KLOGI("kramv", "Zoom %.3f, pan %.3f,%.3f", _showSettings->zoom, _showSettings->panX, _showSettings->panY);
+                string tmp;
+                sprintf(tmp,
+                        "Pan %.3f,%.3f\n"
+                        "Zoom %.2fx\n",
+                    _showSettings->panX, _showSettings->panY,
+                    _showSettings->zoom);
+                text += tmp;
             }
             
             isChanged = true;
-            text = "Reload Image";
             break;
             
         // P already used for premul
