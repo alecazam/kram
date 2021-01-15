@@ -21,6 +21,7 @@
 #include "KramLog.h"
 #include "KTXMipper.h"
 #include "KramImage.h"
+#include "KramViewerBase.h"
 
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;
@@ -155,6 +156,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     NSTextField* _hudLabel;
     NSTextField* _hudLabel2;
     vector<string> _textSlots;
+    ShowSettings* _showSettings;
 }
 
 - (void)awakeFromNib
@@ -185,9 +187,11 @@ NSArray<NSString*>* pasteboardTypes = @[
 - (instancetype)initWithCoder:(NSCoder*)coder {
     self = [super initWithCoder:coder];
     
+    _showSettings = new ShowSettings;
+    
     self.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
     
-    self.clearDepth = gShowSettings.isReverseZ ? 0.0f : 1.0f;
+    self.clearDepth = _showSettings->isReverseZ ? 0.0f : 1.0f;
     
     // only re-render when changes are made
     // Note: this breaks ability to gpu capture, since display link not running.
@@ -212,6 +216,10 @@ NSArray<NSString*>* pasteboardTypes = @[
     return self;
 }
 
+- (nonnull ShowSettings*)showSettings {
+    return _showSettings;
+}
+
 - (NSTextField*)_addHud:(BOOL)isShadow
 {
     // add a label for the hud
@@ -228,7 +236,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     label.cell.scrollable = NO;
     label.cell.wraps = NO;
 
-    label.hidden = !gShowSettings.isHudShown;
+    label.hidden = !_showSettings->isHudShown;
     //label.font = NSFont.systemFont(ofSize: NSFont.systemFontSize(for: label.controlSize))
 
     // UILabel has shadowColor/shadowOffset but NSTextField doesn't
@@ -242,19 +250,19 @@ NSArray<NSString*>* pasteboardTypes = @[
     
     
     Renderer* renderer = (Renderer*)self.delegate;
-    float4x4 projectionViewModelMatrix = [renderer computeImageTransform:gShowSettings.panX panY:gShowSettings.panY zoom:gShowSettings.zoom];
+    float4x4 projectionViewModelMatrix = [renderer computeImageTransform:_showSettings->panX panY:_showSettings->panY zoom:_showSettings->zoom];
 
     // convert to clip space, or else need to apply additional viewport transform
-    float halfX = gShowSettings.viewSizeX * 0.5f;
-    float halfY = gShowSettings.viewSizeY * 0.5f;
+    float halfX = _showSettings->viewSizeX * 0.5f;
+    float halfY = _showSettings->viewSizeY * 0.5f;
 
     // sometimes get viewSizeX that's scaled by retina, and other times not.
     // account for contentScaleFactor (viewSizeX is 2x bigger than cursorX on retina display)
     // now passing down drawableSize instead of view.bounds.size
-    halfX /= (float)gShowSettings.viewContentScaleFactor;
-    halfY /= (float)gShowSettings.viewContentScaleFactor;
+    halfX /= (float)_showSettings->viewContentScaleFactor;
+    halfY /= (float)_showSettings->viewContentScaleFactor;
 
-    NSPoint point = NSMakePoint(gShowSettings.cursorX, gShowSettings.cursorY);
+    NSPoint point = NSMakePoint(_showSettings->cursorX, _showSettings->cursorY);
     NSPoint clipPoint;
     clipPoint.x = (point.x - halfX) / halfX;
     clipPoint.y = -(point.y - halfY) / halfY;
@@ -274,8 +282,8 @@ NSArray<NSString*>* pasteboardTypes = @[
     // No checkson this zoom
     // old - newPosition from the zoom
     
-    newPan.x = gShowSettings.panX - (gShowSettings.zoom  - newZoom) * gShowSettings.imageBoundsX * pixel.x;
-    newPan.y = gShowSettings.panY + (gShowSettings.zoom  - newZoom) * gShowSettings.imageBoundsY * pixel.y;
+    newPan.x = _showSettings->panX - (_showSettings->zoom  - newZoom) * _showSettings->imageBoundsX * pixel.x;
+    newPan.y = _showSettings->panY + (_showSettings->zoom  - newZoom) * _showSettings->imageBoundsY * pixel.y;
 }
 
 - (void)handleGesture:(NSGestureRecognizer *)gestureRecognizer
@@ -285,28 +293,30 @@ NSArray<NSString*>* pasteboardTypes = @[
         return;
     }
     
-    float zoom;
+    bool isFirstGesture = _zoomGesture.state == NSGestureRecognizerStateBegan;
+    
+    float zoom = _zoomGesture.magnification;
+    if (isFirstGesture) {
+        _zoomGesture.magnification = 1.0f;
+        zoom = _showSettings->zoom;
+    }
     
     static float _originalZoom;
     static float _validMagnification;
     
+    //-------------------------------------
+    
     // https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/handling_uikit_gestures/handling_pinch_gestures?language=objc
     // need to sync up the zoom when action begins or zoom will jump
-    if (_zoomGesture.state == NSGestureRecognizerStateBegan) {
-        _zoomGesture.magnification = 1.0f;
+    if (isFirstGesture) {
         _validMagnification = 1.0f;
-        
-        _originalZoom = gShowSettings.zoom;
-        
-        zoom = gShowSettings.zoom;
-        
+        _originalZoom = zoom;
     }
     else {
-        zoom = _zoomGesture.magnification;
-        
         // try expontental (this causes a jump, comparison avoids an initial jump
         //zoom = powf(zoom, 1.05f);
         
+        // doing multiply instead of equals here, also does exponential zom
         zoom *= _originalZoom;
     }
     
@@ -317,7 +327,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     float4 topRightCorner = simd_make_float4(0.5, 0.5f, 0.0f, 1.0f);
     
     Renderer* renderer = (Renderer*)self.delegate;
-    float4x4 newMatrix = [renderer computeImageTransform:gShowSettings.panX panY:gShowSettings.panY zoom:zoom];
+    float4x4 newMatrix = [renderer computeImageTransform:_showSettings->panX panY:_showSettings->panY zoom:zoom];
 
     // don't allow panning the entire image off the view boundary
     // transform the upper left and bottom right corner of the image
@@ -332,22 +342,22 @@ NSArray<NSString*>* pasteboardTypes = @[
     CGRect imageRect = CGRectMake(pt0.x, pt0.y, pt1.x - pt0.x, pt1.y - pt0.y);
     CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
    
-    float visibleWidth = imageRect.size.width * gShowSettings.viewSizeX / gShowSettings.viewContentScaleFactor;
-    float visibleHeight = imageRect.size.height * gShowSettings.viewSizeY / gShowSettings.viewContentScaleFactor;
+    float visibleWidth = imageRect.size.width * _showSettings->viewSizeX / _showSettings->viewContentScaleFactor;
+    float visibleHeight = imageRect.size.height * _showSettings->viewSizeY / _showSettings->viewContentScaleFactor;
     
     // don't allow image to get too big
     // take into account zoomFit, or need to limit zoomFit and have smaller images be smaller on screen
-    float maxZoom = std::max(128.0f, gShowSettings.zoomFit);
+    float maxZoom = std::max(128.0f, _showSettings->zoomFit);
     
-    if ((visibleWidth > maxZoom * (gShowSettings.imageBoundsX + 2)) ||
-        (visibleHeight > maxZoom * (gShowSettings.imageBoundsY + 2))) {
+    if ((visibleWidth > maxZoom * (_showSettings->imageBoundsX + 2)) ||
+        (visibleHeight > maxZoom * (_showSettings->imageBoundsY + 2))) {
         _zoomGesture.magnification = _validMagnification;
         return;
     }
     
     // don't allow image to get too small
-    if ((visibleWidth < std::min((int)gShowSettings.imageBoundsX, 4)) ||
-        (visibleHeight < std::min((int)gShowSettings.imageBoundsY, 4))) {
+    if ((visibleWidth < std::min((int32_t)_showSettings->imageBoundsX, 4)) ||
+        (visibleHeight < std::min((int32_t)_showSettings->imageBoundsY, 4))) {
         _zoomGesture.magnification = _validMagnification;
         return;
     }
@@ -358,7 +368,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     }
     
     
-    if (gShowSettings.zoom != zoom) {
+    if (_showSettings->zoom != zoom) {
         // DONE: zoom also changes the pan to zoom about the cursor, otherwise zoom feels wrong.
         // now adjust the pan so that cursor text stays locked under (zoom to cursor)
         float2 newPan;
@@ -367,14 +377,14 @@ NSArray<NSString*>* pasteboardTypes = @[
         // store this
         _validMagnification = _zoomGesture.magnification;
         
-        gShowSettings.zoom = zoom;
+        _showSettings->zoom = zoom;
         
-        gShowSettings.panX = newPan.x;
-        gShowSettings.panY = newPan.y;
+        _showSettings->panX = newPan.x;
+        _showSettings->panY = newPan.y;
         
         if (doPrintPanZoom) {
             KLOGI("kramv", "Zoom %.3f, pan %.3f,%.3f",
-                  gShowSettings.zoom, gShowSettings.panX, gShowSettings.panY);
+                  _showSettings->zoom, _showSettings->panX, _showSettings->panY);
         }
         
         [self updateEyedropper];
@@ -382,28 +392,6 @@ NSArray<NSString*>* pasteboardTypes = @[
     }
 }
 
-static void printChannels(string& tmp, const string& label, float4 c, int numChannels, bool isFloat, bool isSigned)
-{
-    if (isFloat || isSigned) {
-        switch(numChannels) {
-            case 1: sprintf(tmp, "%s%.3f\n", label.c_str(), c.r); break;
-            case 2: sprintf(tmp, "%s%.3f, %.3f\n", label.c_str(), c.r, c.g); break;
-            case 3: sprintf(tmp, "%s%.3f, %.3f, %.3f\n", label.c_str(), c.r, c.g, c.b); break;
-            case 4: sprintf(tmp, "%s%.3f, %.3f, %.3f, %.3f\n", label.c_str(), c.r, c.g, c.b, c.a); break;
-        }
-    }
-    else {
-        // unorm data, 8-bit values displayed
-        c *= 255.1f;
-        
-        switch(numChannels) {
-            case 1: sprintf(tmp, "%s%.0f\n", label.c_str(), c.r); break;
-            case 2: sprintf(tmp, "%s%.0f, %.0f\n", label.c_str(), c.r, c.g); break;
-            case 3: sprintf(tmp, "%s%.0f, %.0f, %.0f\n", label.c_str(), c.r, c.g, c.b); break;
-            case 4: sprintf(tmp, "%s%.0f, %.0f, %.0f, %.0f\n", label.c_str(), c.r, c.g, c.b, c.a); break;
-        }
-    }
-}
 
 - (void)mouseMoved:(NSEvent*)event
 {
@@ -413,38 +401,38 @@ static void printChannels(string& tmp, const string& label, float4 c, int numCha
     NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
     
     // this needs to change if view is resized, but will likely receive mouseMoved events
-    gShowSettings.cursorX = (int)point.x;
-    gShowSettings.cursorY = (int)point.y;
+    _showSettings->cursorX = (int32_t)point.x;
+    _showSettings->cursorY = (int32_t)point.y;
     
     // should really do this in draw call, since moved messeage come in so quickly
     [self updateEyedropper];
 }
 
 - (void)updateEyedropper {
-    if ((!gShowSettings.isHudShown)) {
+    if ((!_showSettings->isHudShown)) {
         return;
     }
     
-    if (gShowSettings.imageBoundsX == 0) {
+    if (_showSettings->imageBoundsX == 0) {
         // TODO: this return will leave old hud text up
         return;
     }
     
     // don't wait on renderer to update this matrix
     Renderer* renderer = (Renderer*)self.delegate;
-    float4x4 projectionViewModelMatrix = [renderer computeImageTransform:gShowSettings.panX panY:gShowSettings.panY zoom:gShowSettings.zoom];
+    float4x4 projectionViewModelMatrix = [renderer computeImageTransform:_showSettings->panX panY:_showSettings->panY zoom:_showSettings->zoom];
 
     // convert to clip space, or else need to apply additional viewport transform
-    float halfX = gShowSettings.viewSizeX * 0.5f;
-    float halfY = gShowSettings.viewSizeY * 0.5f;
+    float halfX = _showSettings->viewSizeX * 0.5f;
+    float halfY = _showSettings->viewSizeY * 0.5f;
     
     // sometimes get viewSizeX that's scaled by retina, and other times not.
     // account for contentScaleFactor (viewSizeX is 2x bigger than cursorX on retina display)
     // now passing down drawableSize instead of view.bounds.size
-    halfX /= (float)gShowSettings.viewContentScaleFactor;
-    halfY /= (float)gShowSettings.viewContentScaleFactor;
+    halfX /= (float)_showSettings->viewContentScaleFactor;
+    halfY /= (float)_showSettings->viewContentScaleFactor;
     
-    NSPoint point = NSMakePoint(gShowSettings.cursorX, gShowSettings.cursorY);
+    NSPoint point = NSMakePoint(_showSettings->cursorX, _showSettings->cursorY);
     NSPoint clipPoint;
     clipPoint.x = (point.x - halfX) / halfX;
     clipPoint.y = -(point.y - halfY) / halfY;
@@ -466,8 +454,8 @@ static void printChannels(string& tmp, const string& label, float4 c, int numCha
     pixel.y *= 0.999f;
     
     // pixels are 0 based
-    pixel.x *= gShowSettings.imageBoundsX;
-    pixel.y *= gShowSettings.imageBoundsY;
+    pixel.x *= _showSettings->imageBoundsX;
+    pixel.y *= _showSettings->imageBoundsY;
 
     // TODO: clearing out the last px visited makes it hard to gather data
     // put value on clipboard, or allow click to lock the displayed pixel and value.
@@ -475,58 +463,58 @@ static void printChannels(string& tmp, const string& label, float4 c, int numCha
     string text;
     
     // only display pixel if over image
-    if (pixel.x < 0.0f || pixel.x >= (float)gShowSettings.imageBoundsX) {
-        sprintf(text, "canvas: %d %d\n", (int)pixel.x, (int)pixel.y);
-        [self setEyedropperText:text.c_str()];
+    if (pixel.x < 0.0f || pixel.x >= (float)_showSettings->imageBoundsX) {
+        sprintf(text, "canvas: %d %d\n", (int32_t)pixel.x, (int32_t)pixel.y);
+        [self setEyedropperText:text.c_str()]; // ick
         return;
     }
-    if (pixel.y < 0.0f || pixel.y >= (float)gShowSettings.imageBoundsY) {
+    if (pixel.y < 0.0f || pixel.y >= (float)_showSettings->imageBoundsY) {
         
         // was blanking out, but was going blank on color_grid-a when over zoomed in image
         // maybe not enough precision with float.
-        sprintf(text, "canvas: %d %d\n", (int)pixel.x, (int)pixel.y);
+        sprintf(text, "canvas: %d %d\n", (int32_t)pixel.x, (int32_t)pixel.y);
         [self setEyedropperText:text.c_str()];
         return;
     }
 
     // Note: fromView: nil returns isFlipped coordinate, fromView:self flips it back.
 
-    int newX = (int)pixel.x;
-    int newY = (int)pixel.y;
+    int32_t newX = (int32_t)pixel.x;
+    int32_t newY = (int32_t)pixel.y;
     
-    if (gShowSettings.textureLookupX != newX ||
-        gShowSettings.textureLookupY != newY)
+    if (_showSettings->textureLookupX != newX ||
+        _showSettings->textureLookupY != newY)
     {
         // Note: this only samples from the original texture via compute shaders
         // so preview mode pixel colors are not conveyed.  But can see underlying data driving preview.
         
-        MyMTLPixelFormat format = (MyMTLPixelFormat)gShowSettings.originalFormat;
+        MyMTLPixelFormat format = (MyMTLPixelFormat)_showSettings->originalFormat;
         
         // DONE: use these to format the text
         bool isSrgb = isSrgbFormat(format);
         bool isSigned = isSignedFormat(format);
         bool isHdr = isHdrFormat(format);
-        int numChannels = gShowSettings.numChannels;
+        int32_t numChannels = _showSettings->numChannels;
         
         // %.0f rounds the value, but want truncation
-        gShowSettings.textureLookupX = newX;
-        gShowSettings.textureLookupY = newY;
+        _showSettings->textureLookupX = newX;
+        _showSettings->textureLookupY = newY;
         
         // this will be out of sync with gpu eval, so may want to only display px from returned lookup
         // this will always be a linear color
-        float4 c = gShowSettings.textureResult;
+        float4 c = _showSettings->textureResult;
         
         // this saturates the value, so don't use for extended srgb
         float4 s = linearToSRGB(c);
         
-        int x = gShowSettings.textureResultX;
-        int y = gShowSettings.textureResultY;
+        int32_t x = _showSettings->textureResultX;
+        int32_t y = _showSettings->textureResultY;
         
         sprintf(text, "px:%d %d\n", x, y);
         
         // TODO: more criteria here, can have 2 channel PBR metal-roughness
         // also have 4 channel normals where zw store other data.
-        bool isNormal = gShowSettings.isNormal;
+        bool isNormal = _showSettings->isNormal;
         bool isFloat = isHdr;
         
         if (isNormal) {
@@ -625,15 +613,17 @@ static void printChannels(string& tmp, const string& label, float4 c, int numCha
 //        //wheelY *= 0.1;
 //    }
 
+    //---------------------------------------
+    
     // pan
     wheelY = -wheelY;
     wheelX = -wheelX;
 
-    float panX = gShowSettings.panX + wheelX;
-    float panY = gShowSettings.panY + wheelY;
+    float panX = _showSettings->panX + wheelX;
+    float panY = _showSettings->panY + wheelY;
     
     Renderer* renderer = (Renderer*)self.delegate;
-    float4x4 projectionViewModelMatrix = [renderer computeImageTransform:panX panY:panY zoom:gShowSettings.zoom];
+    float4x4 projectionViewModelMatrix = [renderer computeImageTransform:panX panY:panY zoom:_showSettings->zoom];
 
     // don't allow panning the entire image off the view boundary
     // transform the upper left and bottom right corner or the image
@@ -659,74 +649,25 @@ static void printChannels(string& tmp, const string& label, float4 c, int numCha
         KLOGI("kramv", "Pan %.3f,%.3f", panX, panY);
     }
     
-    if (gShowSettings.panX != panX ||
-        gShowSettings.panY != panY)
+    if (_showSettings->panX != panX ||
+        _showSettings->panY != panY)
     {
-        gShowSettings.panX = panX;
-        gShowSettings.panY = panY;
+        _showSettings->panX = panX;
+        _showSettings->panY = panY;
         
         [self updateEyedropper];
         self.needsDisplay = YES;
     }
 }
 
-void advanceDebugMode(bool isShiftKeyDown) {
-    int numEnums = DebugModeCount;
-    if (isShiftKeyDown) {
-        gShowSettings.debugMode = (DebugMode)(((int)gShowSettings.debugMode - 1 + numEnums) % numEnums);
-    }
-    else {
-        gShowSettings.debugMode = (DebugMode)(((int)gShowSettings.debugMode + 1) % numEnums);
-    }
-    
-    MyMTLPixelFormat format = (MyMTLPixelFormat)gShowSettings.originalFormat;
-    bool isHdr = isHdrFormat(format);
-    int numChannels = gShowSettings.numChannels;
-    
-    // DONE: work on skipping some of these based on image
-    bool isAlpha = isAlphaFormat(format);
-    bool isColor = isColorFormat(format);
-    
-    if (gShowSettings.debugMode == DebugModeTransparent && (numChannels <= 3 || !isAlpha)) {
-        advanceDebugMode(isShiftKeyDown);
-    }
-    
-    // 2 channel textures don't really color or grayscale pixels
-    if (gShowSettings.debugMode == DebugModeColor && (numChannels <= 2 || !isColor)) {
-        advanceDebugMode(isShiftKeyDown);
-    }
-    
-    if (gShowSettings.debugMode == DebugModeGray && numChannels <= 2) {
-        advanceDebugMode(isShiftKeyDown);
-    }
-    
-    if (gShowSettings.debugMode == DebugModeHDR && !isHdr) {
-        advanceDebugMode(isShiftKeyDown);
-    }
-    
-    // for 3 and for channel textures could skip these with more info about image (hasColor)
-    // if (gShowSettings.debugMode == DebugModeGray && !hasColor) advanceDebugMode(isShiftKeyDown);
-    
-    bool isNormal = gShowSettings.isNormal;
-    
-    // for normals show directions
-    if (gShowSettings.debugMode == DebugModePosX && !isNormal) {
-        advanceDebugMode(isShiftKeyDown);
-    }
-    if (gShowSettings.debugMode == DebugModePosY && !isNormal) {
-        advanceDebugMode(isShiftKeyDown);
-    }
-    
-    // TODO: have a clipping mode against a variable range too, only show pixels within that range
-    // to help isolate problem pixels.  Useful for depth, and have auto-range scaling for it and hdr.
-    // make sure to ignore 0 or 1 for clear color of farPlane.
-    
-}
+
+// TODO: convert to C++ actions, and then call into Base holding all this
+// move pan/zoom logic too.  Then use that as start of Win32 kramv.
 
 - (void)keyDown:(NSEvent *)theEvent
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
-    TextureChannels& channels = gShowSettings.channels;
+    TextureChannels& channels = _showSettings->channels;
     bool isChanged = false;
     
     // TODO: fix isChanged to only be set when value changes
@@ -783,9 +724,9 @@ void advanceDebugMode(bool isShiftKeyDown) {
             break;
             
         case Key::E: {
-            advanceDebugMode(isShiftKeyDown);
+            _showSettings->advanceDebugMode(isShiftKeyDown);
             
-            switch(gShowSettings.debugMode) {
+            switch(_showSettings->debugMode) {
                 case DebugModeNone: text = "Debug Off"; break;
                 case DebugModeTransparent: text = "Debug Transparent"; break;
                 case DebugModeColor: text = "Debug Color"; break;
@@ -800,6 +741,7 @@ void advanceDebugMode(bool isShiftKeyDown) {
         }
         case Key::Slash: // has ? mark above it
             // display the chars for now
+            // TODO: show shift keys
             text = "RGBA, Hud,L-reload,O-preview,0-fit,E-debug\n"
                    "Checker,D-grid,Info\n"
                    "W-wrap,Premul,N-signed\n"
@@ -814,22 +756,22 @@ void advanceDebugMode(bool isShiftKeyDown) {
             }
             else {
                 // fit to topmost image
-                zoom = gShowSettings.zoomFit;
+                zoom = _showSettings->zoomFit;
             }
             
             // This zoom needs to be checked against zoom limits
             // there's a cap on the zoom multiplier.
             // This is reducing zoom which expands the image.
-            zoom *= 1.0f / (1 << gShowSettings.mipLOD);
+            zoom *= 1.0f / (1 << _showSettings->mipLOD);
             
             // even if zoom same, still do this since it resets the pan
-            gShowSettings.zoom = zoom;
+            _showSettings->zoom = zoom;
             
-            gShowSettings.panX = 0.0f;
-            gShowSettings.panY = 0.0f;
+            _showSettings->panX = 0.0f;
+            _showSettings->panY = 0.0f;
             
             if (doPrintPanZoom) {
-                KLOGI("kramv", "Zoom %.3f, pan %.3f,%.3f", gShowSettings.zoom, gShowSettings.panX, gShowSettings.panY);
+                KLOGI("kramv", "Zoom %.3f, pan %.3f,%.3f", _showSettings->zoom, _showSettings->panX, _showSettings->panY);
             }
             
             isChanged = true;
@@ -842,11 +784,11 @@ void advanceDebugMode(bool isShiftKeyDown) {
             
             // reload at actual size
             if (isShiftKeyDown) {
-                gShowSettings.zoom = 1.0f;
+                _showSettings->zoom = 1.0f;
             }
             
             if (doPrintPanZoom) {
-                KLOGI("kramv", "Zoom %.3f, pan %.3f,%.3f", gShowSettings.zoom, gShowSettings.panX, gShowSettings.panY);
+                KLOGI("kramv", "Zoom %.3f, pan %.3f,%.3f", _showSettings->zoom, _showSettings->panX, _showSettings->panY);
             }
             
             isChanged = true;
@@ -855,10 +797,10 @@ void advanceDebugMode(bool isShiftKeyDown) {
             
         // P already used for premul
         case Key::O:
-            gShowSettings.isPreview = !gShowSettings.isPreview;
+            _showSettings->isPreview = !_showSettings->isPreview;
             isChanged = true;
             text = "Preview ";
-            text += gShowSettings.isPreview ? "On" : "Off";
+            text += _showSettings->isPreview ? "On" : "Off";
             break;
             
         // TODO: might switch c to channel cycle, so could just hit that
@@ -868,29 +810,29 @@ void advanceDebugMode(bool isShiftKeyDown) {
     
         // toggle checkerboard for transparency
         case Key::C:
-            gShowSettings.isCheckerboardShown = !gShowSettings.isCheckerboardShown;
+            _showSettings->isCheckerboardShown = !_showSettings->isCheckerboardShown;
             isChanged = true;
             text = "Checker ";
-            text += gShowSettings.isCheckerboardShown ? "On" : "Off";
+            text += _showSettings->isCheckerboardShown ? "On" : "Off";
             break;
         
         // toggle pixel grid when magnified above 1 pixel, can happen from mipmap changes too
         case Key::D:
             // TODO: display how many blocks there are
-            if (isShiftKeyDown && gShowSettings.blockX > 1) {
+            if (isShiftKeyDown && _showSettings->blockX > 1) {
                 // if block size is 1, then this shouldn't toggle
-                gShowSettings.isBlockGridShown = !gShowSettings.isBlockGridShown;
-                gShowSettings.isPixelGridShown = false;
+                _showSettings->isBlockGridShown = !_showSettings->isBlockGridShown;
+                _showSettings->isPixelGridShown = false;
                 sprintf(text, "Block Grid %dx%d %s",
-                        gShowSettings.blockX, gShowSettings.blockY,
-                        gShowSettings.isBlockGridShown ? "On" : "Off");
+                        _showSettings->blockX, _showSettings->blockY,
+                        _showSettings->isBlockGridShown ? "On" : "Off");
             }
             else {
                
-                gShowSettings.isPixelGridShown = !gShowSettings.isPixelGridShown;
-                gShowSettings.isBlockGridShown = false;
+                _showSettings->isPixelGridShown = !_showSettings->isPixelGridShown;
+                _showSettings->isBlockGridShown = false;
                 text = "Pixel Grid ";
-                text += gShowSettings.isPixelGridShown ? "On" : "Off";
+                text += _showSettings->isPixelGridShown ? "On" : "Off";
             }
         
             isChanged = true;
@@ -900,69 +842,69 @@ void advanceDebugMode(bool isShiftKeyDown) {
         // toggle hud that shows name and pixel value under the cursor
         // this may require calling setNeedsDisplay on the UILabel as cursor moves
         case Key::H:
-            gShowSettings.isHudShown = !gShowSettings.isHudShown;
-            _hudLabel.hidden = !gShowSettings.isHudShown;
-            _hudLabel2.hidden = !gShowSettings.isHudShown;
+            _showSettings->isHudShown = !_showSettings->isHudShown;
+            _hudLabel.hidden = !_showSettings->isHudShown;
+            _hudLabel2.hidden = !_showSettings->isHudShown;
             //isChanged = true;
             text = "Hud ";
-            text += gShowSettings.isHudShown ? "On" : "Off";
+            text += _showSettings->isHudShown ? "On" : "Off";
             break;
             
         // info on the texture, could request info from lib, but would want to cache that info
         case Key::I:
-            if (gShowSettings.isHudShown) {
-                sprintf(text, "%s", gShowSettings.imageInfo.c_str());
+            if (_showSettings->isHudShown) {
+                sprintf(text, "%s", _showSettings->imageInfo.c_str());
             }
             break;
         
         // toggle wrap/clamp
         case Key::W:
             // TODO: cycle through all possible modes (clamp, repeat, mirror-once, mirror-repeat, ...)
-            gShowSettings.isWrap = !gShowSettings.isWrap;
+            _showSettings->isWrap = !_showSettings->isWrap;
             isChanged = true;
             text = "Wrap ";
-            text += gShowSettings.isWrap ? "On" : "Off";
+            text += _showSettings->isWrap ? "On" : "Off";
             break;
             
         // toggle signed vs. unsigned
         case Key::N:
-            gShowSettings.isSigned = !gShowSettings.isSigned;
+            _showSettings->isSigned = !_showSettings->isSigned;
             isChanged = true;
             text = "Signed ";
-            text += gShowSettings.isSigned ? "On" : "Off";
+            text += _showSettings->isSigned ? "On" : "Off";
             break;
             
         // toggle premul alpha vs. unmul
         case Key::P:
-            gShowSettings.isPremul = !gShowSettings.isPremul;
+            _showSettings->isPremul = !_showSettings->isPremul;
             isChanged = true;
             text = "Premul ";
-            text += gShowSettings.isPremul ? "On" : "Off";
+            text += _showSettings->isPremul ? "On" : "Off";
             break;
             
             
         // mip up/down
         case Key::M:
             if (isShiftKeyDown) {
-                gShowSettings.mipLOD = MAX(gShowSettings.mipLOD - 1, 0);
+                _showSettings->mipLOD = MAX(_showSettings->mipLOD - 1, 0);
             }
             else {
-                gShowSettings.mipLOD = MIN(gShowSettings.mipLOD + 1, gShowSettings.maxLOD - 1);
+                _showSettings->mipLOD = MIN(_showSettings->mipLOD + 1, _showSettings->maxLOD - 1);
             }
-            sprintf(text, "Mip %d/%d", gShowSettings.mipLOD, gShowSettings.maxLOD);
+            sprintf(text, "Mip %d/%d", _showSettings->mipLOD, _showSettings->maxLOD);
             isChanged = true;
             break;
            
         case Key::F:
             // cube or cube array, but hit s to pick cubearray
-            if (gShowSettings.faceCount) {
+            if (_showSettings->faceCount) {
                 if (isShiftKeyDown) {
-                    gShowSettings.faceNumber = MAX(gShowSettings.faceNumber - 1, 0);
+                    _showSettings->faceNumber = MAX(_showSettings->faceNumber - 1, 0);
                 }
                 else {
-                    gShowSettings.faceNumber = MIN(gShowSettings.faceNumber + 1, gShowSettings.faceCount - 1);
+                    _showSettings->faceNumber = MIN(_showSettings->faceNumber + 1, _showSettings->faceCount - 1);
                 }
-                sprintf(text, "Face %d/%d", gShowSettings.faceNumber, gShowSettings.faceCount);
+                sprintf(text, "Face %d/%d", _showSettings->faceNumber, _showSettings->faceCount);
                 isChanged = true;
             }
             break;
@@ -970,25 +912,25 @@ void advanceDebugMode(bool isShiftKeyDown) {
         
         case Key::Y:
             // slice
-            if (gShowSettings.sliceCount > 1) {
+            if (_showSettings->sliceCount > 1) {
                 if (isShiftKeyDown) {
-                    gShowSettings.sliceNumber = MAX(gShowSettings.sliceNumber - 1, 0);
+                    _showSettings->sliceNumber = MAX(_showSettings->sliceNumber - 1, 0);
                 }
                 else {
-                    gShowSettings.sliceNumber = MIN(gShowSettings.sliceNumber + 1, gShowSettings.sliceCount - 1);
+                    _showSettings->sliceNumber = MIN(_showSettings->sliceNumber + 1, _showSettings->sliceCount - 1);
                 }
-                sprintf(text, "Slice %d/%d", gShowSettings.sliceNumber, gShowSettings.sliceCount);
+                sprintf(text, "Slice %d/%d", _showSettings->sliceNumber, _showSettings->sliceCount);
                 isChanged = true;
             }
             // array
-            else if (gShowSettings.arrayCount > 1) {
+            else if (_showSettings->arrayCount > 1) {
                 if (isShiftKeyDown) {
-                    gShowSettings.arrayNumber = MAX(gShowSettings.arrayNumber - 1, 0);
+                    _showSettings->arrayNumber = MAX(_showSettings->arrayNumber - 1, 0);
                 }
                 else {
-                    gShowSettings.arrayNumber = MIN(gShowSettings.arrayNumber + 1, gShowSettings.arrayCount - 1);
+                    _showSettings->arrayNumber = MIN(_showSettings->arrayNumber + 1, _showSettings->arrayCount - 1);
                 }
-                sprintf(text, "Array %d/%d", gShowSettings.arrayNumber, gShowSettings.arrayCount);
+                sprintf(text, "Array %d/%d", _showSettings->arrayNumber, _showSettings->arrayCount);
                 isChanged = true;
             }
             break;
@@ -997,10 +939,10 @@ void advanceDebugMode(bool isShiftKeyDown) {
         // thought it might be useful if image used srgb and shouldn't.  f.e. on PNG where
         // srgb flag is always set, even when it's not indended.
 //        case Key::S:
-//            gShowSettings.isSRGBShown = !gShowSettings.isSRGBShown;
+//            _showSettings->isSRGBShown = !_showSettings->isSRGBShown;
 //
 //            text = "Srgb ";
-//            text += gShowSettings.isSRGBShown ? "On" : "Off";
+//            text += _showSettings->isSRGBShown ? "On" : "Off";
 //
 //            isChanged = true;
 //            break;
@@ -1182,7 +1124,7 @@ void advanceDebugMode(bool isShiftKeyDown) {
         return;
     }
 
-    _renderer = [[Renderer alloc] initWithMetalKitView:_view];
+    _renderer = [[Renderer alloc] initWithMetalKitView:_view settings:_view.showSettings];
 
     // original sample code was sending down _view.bounds.size, but need drawableSize
     // this was causing all sorts of inconsistencies

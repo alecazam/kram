@@ -381,13 +381,19 @@ public:
 
 //using tFormatTable = unordered_map<MyMTLPixelFormat, KTXFormatInfo>;
 
-static unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo> gFormatTable;
+static unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo>* gFormatTable = nullptr;
 
-bool initFormats()
+static bool initFormatsIfNeeded()
 {
+    if (gFormatTable) {
+        return true;
+    }
+    
+    gFormatTable = new unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo>();
+    
 // the following table could be included multiple ties to build switch statements, but instead use a hashmap
 #define KTX_FORMAT(fmt, metalType, vulkanType, glType, glBase, x, y, blockSize, numChannels, flags) \
-    gFormatTable[(uint32_t)metalType] = KTXFormatInfo(                                              \
+    (*gFormatTable)[(uint32_t)metalType] = KTXFormatInfo(                                              \
         #metalType, #vulkanType, #glType,                                                           \
         metalType, vulkanType, glType, glBase,                                                      \
         x, y, blockSize, numChannels, (flags));
@@ -460,14 +466,16 @@ bool initFormats()
     return true;
 }
 
-static bool gPreInitFormats = initFormats();
+//static bool gPreInitFormats = initFormats();
 
 //---------------------------------------------------------
 
 const KTXFormatInfo& formatInfo(MyMTLPixelFormat format)
 {
-    const auto& it = gFormatTable.find(format);
-    assert(it != gFormatTable.end());
+    initFormatsIfNeeded();
+    
+    const auto& it = gFormatTable->find(format);
+    assert(it != gFormatTable->end());
     return it->second;
 }
 
@@ -681,7 +689,7 @@ int KTXImage::blockSize() const
 
 MyMTLPixelFormat KTXHeader::metalFormat() const
 {
-    for (const auto& it : gFormatTable) {
+    for (const auto& it : *gFormatTable) {
         // this isn't 1:1, since ASTC_HDR aren't unique types, prefer ldr type
         const KTXFormatInfo& info = it.second;
         if (info.glType == glInternalFormat && !(info.isASTC() && info.isHDR())) {

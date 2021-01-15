@@ -22,7 +22,7 @@
 @interface KramLoader : NSObject
 
 // from mem, caller must keep data alive
-- (nullable id<MTLTexture>)loadTextureFromData:(nonnull const uint8_t *)imageData imageDataLength:(int)imageDataLength originalFormat:(nullable MTLPixelFormat*)originalFormat;
+- (nullable id<MTLTexture>)loadTextureFromData:(nonnull const uint8_t *)imageData imageDataLength:(int32_t)imageDataLength originalFormat:(nullable MTLPixelFormat*)originalFormat;
 
 // from mem, if NSData then caller must keep data alive until blit
 - (nullable id<MTLTexture>)loadTextureFromData:(nonnull NSData*)imageData originalFormat:(nullable MTLPixelFormat*)originalFormat;

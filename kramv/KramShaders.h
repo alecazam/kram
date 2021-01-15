@@ -50,33 +50,35 @@ typedef NS_ENUM(int32_t, SamplerIndex)
     SamplerIndexColor = 0,
 };
 
-typedef NS_ENUM(int32_t, TextureChannels)
+// keep in sync with enum TextureChannels
+typedef NS_ENUM(int32_t, ShaderTextureChannels)
 {
-    ModeRGBA = 0,
+    ShModeRGBA = 0,
     
-    ModeR001 = 1,
-    Mode0G01 = 2,
-    Mode00B1 = 3,
+    ShModeR001 = 1,
+    ShMode0G01 = 2,
+    ShMode00B1 = 3,
     
     // see grayscale channels
-    ModeRRR1 = 5,
-    ModeGGG1 = 6,
-    ModeBBB1 = 7,
-    ModeAAA1 = 8,
+    ShModeRRR1 = 5,
+    ShModeGGG1 = 6,
+    ShModeBBB1 = 7,
+    ShModeAAA1 = 8,
 };
 
-typedef NS_ENUM(int32_t, DebugMode)
+// keep in sync with enum DebugMode
+typedef NS_ENUM(int32_t, ShaderDebugMode)
 {
-    DebugModeNone = 0,
-    DebugModeTransparent = 1,
-    DebugModeColor = 2,
-    DebugModeGray = 3,
-    DebugModeHDR = 4,
+    ShDebugModeNone = 0,
+    ShDebugModeTransparent = 1,
+    ShDebugModeColor = 2,
+    ShDebugModeGray = 3,
+    ShDebugModeHDR = 4,
     
-    DebugModePosX = 5,
-    DebugModePosY = 6,
+    ShDebugModePosX = 5,
+    ShDebugModePosY = 6,
     
-    DebugModeCount
+    ShDebugModeCount
 };
 
 // TODO: placement of these elements in the struct breaks transfer
@@ -107,9 +109,9 @@ struct Uniforms
     uint32_t gridY;
     
     // can look at pixels that meet criteria of the debugMode
-    uint32_t debugMode;
+    ShaderDebugMode debugMode;
     
-    TextureChannels channels; // mask
+    ShaderTextureChannels channels; // mask
 };
 
 struct UniformsCS

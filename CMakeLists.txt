@@ -33,7 +33,7 @@ set(CMAKE_CXX_EXTENSIONS NO)
 
 # Xcode 12.2 ships with macosx11.0, but 12.3 ships with macosx11.1
 # cmake on 12.3 completely breaks when this is set and can't find c compilers.
-set(CMAKE_OSX_SYSROOT macosx11.0)
+# set(CMAKE_OSX_SYSROOT macosx11.0)
 # set(CMAKE_OSX_SYSROOT macos)  # this doesn't work
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)

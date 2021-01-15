@@ -93,6 +93,12 @@ set_target_properties(${myTargetApp} PROPERTIES
     XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS ${PROJECT_SOURCE_DIR}/viewer.entitlements
     XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES"
     XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+    
+    # use the AssetCatalog for icons
+    XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
+    
+    # TODO: not sure how to set this, nothing online either ?
+    # MACOSX_BUNDLE_APP_CATEGORY "Developer Tools"
 )
 
 target_compile_options(${myTargetApp} PRIVATE -W -Wall)

@@ -20,10 +20,9 @@
 
 #include "KTXImage.h"
 #include "Kram.h"
+#include "KramViewerBase.h"
 
 static const NSUInteger MaxBuffersInFlight = 3;
-
-ShowSettings gShowSettings;
 
 using namespace kram;
 using namespace simd;
@@ -80,13 +79,17 @@ using namespace simd;
     
     string _lastFilename;
     double _lastTimestamp;
+    
+    ShowSettings* _showSettings;
 }
 
--(nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view
+-(nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view settings:(nonnull ShowSettings*)settings
 {
     self = [super init];
     if(self)
     {
+        _showSettings = settings;
+        
         _device = view.device;
         _lastTimestamp = 0.0;
         
@@ -170,11 +173,11 @@ using namespace simd;
     //-----------------------
    
     MTLDepthStencilDescriptor *depthStateDesc = [[MTLDepthStencilDescriptor alloc] init];
-    depthStateDesc.depthCompareFunction = gShowSettings.isReverseZ ? MTLCompareFunctionGreaterEqual : MTLCompareFunctionLessEqual;
+    depthStateDesc.depthCompareFunction = _showSettings->isReverseZ ? MTLCompareFunctionGreaterEqual : MTLCompareFunctionLessEqual;
     depthStateDesc.depthWriteEnabled = YES;
     _depthStateFull = [_device newDepthStencilStateWithDescriptor:depthStateDesc];
 
-    depthStateDesc.depthCompareFunction = gShowSettings.isReverseZ ? MTLCompareFunctionGreaterEqual : MTLCompareFunctionLessEqual;
+    depthStateDesc.depthCompareFunction = _showSettings->isReverseZ ? MTLCompareFunctionGreaterEqual : MTLCompareFunctionLessEqual;
     depthStateDesc.depthWriteEnabled = NO;
     _depthStateNone = [_device newDepthStencilStateWithDescriptor:depthStateDesc];
     
@@ -413,7 +416,7 @@ using namespace simd;
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
     MyMTLPixelFormat format;
-    MyMTLPixelFormat originalFormat = (MyMTLPixelFormat)gShowSettings.originalFormat;
+    MyMTLPixelFormat originalFormat = _showSettings->originalFormat;
     
     id<MTLTexture> texture;
     
@@ -429,13 +432,13 @@ using namespace simd;
         
         format = (MyMTLPixelFormat)texture.pixelFormat;
         originalFormat = (MyMTLPixelFormat)originalFormatMTL;
-        gShowSettings.originalFormat = originalFormatMTL;
+        _showSettings->originalFormat = originalFormat;
         
         _lastFilename = fullFilename;
         _lastTimestamp = timestamp;
         
         bool isVerbose = false;
-        gShowSettings.imageInfo = kramInfoToString(fullFilename, isVerbose);
+        _showSettings->imageInfo = kramInfoToString(fullFilename, isVerbose);
         
         // use MTLView to handle toggle of srgb read state (writes are still lin -> srgb framebuffer)
         //_colorMapView = nil;
@@ -450,26 +453,26 @@ using namespace simd;
 //        }
         
         Int2 blockDims = blockDimsOfFormat(originalFormat);
-        gShowSettings.blockX = blockDims.x;
-        gShowSettings.blockY = blockDims.y;
+        _showSettings->blockX = blockDims.x;
+        _showSettings->blockY = blockDims.y;
     }
     
     texture = _colorMap;
     
     format = (MyMTLPixelFormat)texture.pixelFormat;
-    originalFormat = (MyMTLPixelFormat)gShowSettings.originalFormat;
+    originalFormat = _showSettings->originalFormat;
     
     // based on original or transcode?
-    gShowSettings.isSigned = isSignedFormat(format);
+    _showSettings->isSigned = isSignedFormat(format);
     
-    //gShowSettings.isSRGBShown = true;
+    //_showSettings->isSRGBShown = true;
     
     // need a way to get at KTXImage, but would need to keep mmap alive
     // this doesn't handle normals that are ASTC, so need more data from loader
     string filename = [[url.path lowercaseString] UTF8String];
 
     // could cycle between rrr1 and r001.
-    int numChannels = numChannelsOfFormat(originalFormat);
+    int32_t numChannels = numChannelsOfFormat(originalFormat);
     
     // set title to filename, chop this to just file+ext, not directory
     string filenameShort = filename;
@@ -496,60 +499,60 @@ using namespace simd;
         isAlbedo = true;
     }
     
-    gShowSettings.isNormal = isNormal;
-    gShowSettings.isSDF = isSDF;
+    _showSettings->isNormal = isNormal;
+    _showSettings->isSDF = isSDF;
     
     // textures are already premul, so don't need to premul in shader
     // should really have 3 modes, unmul, default, premul
-    gShowSettings.isPremul = false;
+    _showSettings->isPremul = false;
     if (isAlbedo && endsWithExtension(filename.c_str(), ".png")) {
-        gShowSettings.isPremul = true; // convert to premul in shader, so can see other channels
+        _showSettings->isPremul = true; // convert to premul in shader, so can see other channels
     }
         
     if (isNormal || isSDF) {
-        gShowSettings.isPremul = false;
+        _showSettings->isPremul = false;
     }
         
-    gShowSettings.numChannels = numChannels;
+    _showSettings->numChannels = numChannels;
     
     // TODO: identify if texture holds normal data from the props
     // have too many 4 channel normals that shouldn't swizzle like this
     // kramTextures.py is using etc2rg on iOS for now, and not astc.
     
-    gShowSettings.isSwizzleAGToRG = false;
+    _showSettings->isSwizzleAGToRG = false;
 
 //    if (isASTCFormat(originalFormat) && isNormal) {
 //        // channels after = "ag01"
-//        gShowSettings.isSwizzleAGToRG = true;
+//        _showSettings->isSwizzleAGToRG = true;
 //    }
         
     // then can manipulate this after loading
-    gShowSettings.mipLOD = 0;
-    gShowSettings.faceNumber = 0;
-    gShowSettings.arrayNumber = 0;
-    gShowSettings.sliceNumber = 0;
+    _showSettings->mipLOD = 0;
+    _showSettings->faceNumber = 0;
+    _showSettings->arrayNumber = 0;
+    _showSettings->sliceNumber = 0;
     
     // can derive these from texture queries
-    gShowSettings.maxLOD = (int)texture.mipmapLevelCount;
-    gShowSettings.faceCount = (texture.textureType == MTLTextureTypeCube ||
+    _showSettings->maxLOD = (int32_t)texture.mipmapLevelCount;
+    _showSettings->faceCount = (texture.textureType == MTLTextureTypeCube ||
                                texture.textureType == MTLTextureTypeCubeArray) ? 6 : 0;
-    gShowSettings.arrayCount = (int)texture.arrayLength;
-    gShowSettings.sliceCount = (int)texture.depth;
+    _showSettings->arrayCount = (int32_t)texture.arrayLength;
+    _showSettings->sliceCount = (int32_t)texture.depth;
     
-    gShowSettings.channels = TextureChannels::ModeRGBA;
+    _showSettings->channels = TextureChannels::ModeRGBA;
     
-    gShowSettings.imageBoundsX = (int)texture.width;
-    gShowSettings.imageBoundsY = (int)texture.height;
+    _showSettings->imageBoundsX = (int32_t)texture.width;
+    _showSettings->imageBoundsY = (int32_t)texture.height;
     
     [self updateViewTransforms];
     
     // this controls viewMatrix (global to all visible textures)
-    gShowSettings.panX = 0.0f;
-    gShowSettings.panY = 0.0f;
+    _showSettings->panX = 0.0f;
+    _showSettings->panY = 0.0f;
     
-    gShowSettings.zoom = gShowSettings.zoomFit;
+    _showSettings->zoom = _showSettings->zoomFit;
     
-    gShowSettings.debugMode = DebugModeNone;
+    _showSettings->debugMode = DebugMode::DebugModeNone;
     
     // have one of these for each texture added to the viewer
     float scaleX = MAX(1, texture.width);
@@ -588,15 +591,15 @@ using namespace simd;
 
     Uniforms& uniforms = *(Uniforms*)_dynamicUniformBuffer[_uniformBufferIndex].contents;
 
-    uniforms.mipLOD = gShowSettings.mipLOD;
+    uniforms.mipLOD = _showSettings->mipLOD;
     
-    uniforms.isNormal = gShowSettings.isNormal;
-    uniforms.isPremul = gShowSettings.isPremul;
-    uniforms.isSigned = gShowSettings.isSigned;
-    uniforms.isSwizzleAGToRG = gShowSettings.isSwizzleAGToRG;
+    uniforms.isNormal = _showSettings->isNormal;
+    uniforms.isPremul = _showSettings->isPremul;
+    uniforms.isSigned = _showSettings->isSigned;
+    uniforms.isSwizzleAGToRG = _showSettings->isSwizzleAGToRG;
     
-    uniforms.isSDF = gShowSettings.isSDF;
-    uniforms.numChannels = gShowSettings.numChannels;
+    uniforms.isSDF = _showSettings->isSDF;
+    uniforms.numChannels = _showSettings->numChannels;
     
     MyMTLTextureType textureType = MyMTLTextureType2D;
     MyMTLPixelFormat textureFormat = MyMTLPixelFormatInvalid;
@@ -605,40 +608,40 @@ using namespace simd;
         textureFormat = (MyMTLPixelFormat)_colorMap.pixelFormat;
     }
     
-    uniforms.isCheckerboardShown = gShowSettings.isCheckerboardShown;
+    uniforms.isCheckerboardShown = _showSettings->isCheckerboardShown;
     bool canWrap = true;
     if (textureType == MyMTLTextureTypeCube || textureType == MyMTLTextureTypeCubeArray) {
         canWrap = false;
     }
     
-    uniforms.isWrap = canWrap ? gShowSettings.isWrap : false;
+    uniforms.isWrap = canWrap ? _showSettings->isWrap : false;
     
-    uniforms.isPreview = gShowSettings.isPreview;
+    uniforms.isPreview = _showSettings->isPreview;
     
     uniforms.gridX = 0;
     uniforms.gridY = 0;
     
-    if (gShowSettings.isPixelGridShown) {
+    if (_showSettings->isPixelGridShown) {
         uniforms.gridX = 1;
         uniforms.gridY = 1;
     }
-    else if (gShowSettings.isBlockGridShown) {
+    else if (_showSettings->isBlockGridShown) {
         
-        if (gShowSettings.blockX > 1) {
-            uniforms.gridX = gShowSettings.blockX;
-            uniforms.gridY = gShowSettings.blockY;
+        if (_showSettings->blockX > 1) {
+            uniforms.gridX = _showSettings->blockX;
+            uniforms.gridY = _showSettings->blockY;
         }
     }
     
     // no debug mode when preview kicks on, make it possible to toggle back and forth more easily
-    uniforms.debugMode = gShowSettings.isPreview ? DebugModeNone : gShowSettings.debugMode;
-    uniforms.channels = gShowSettings.channels;
+    uniforms.debugMode = _showSettings->isPreview ? ShaderDebugMode::ShDebugModeNone : (ShaderDebugMode)_showSettings->debugMode;
+    uniforms.channels = (ShaderTextureChannels)_showSettings->channels;
 
     // translate
-    float4x4 panTransform = matrix4x4_translation(-gShowSettings.panX, gShowSettings.panY, 0.0);
+    float4x4 panTransform = matrix4x4_translation(-_showSettings->panX, _showSettings->panY, 0.0);
     
     // scale
-    _viewMatrix = float4x4(simd_make_float4(gShowSettings.zoom, gShowSettings.zoom, 1.0f, 1.0f));
+    _viewMatrix = float4x4(simd_make_float4(_showSettings->zoom, _showSettings->zoom, 1.0f, 1.0f));
     _viewMatrix = panTransform * _viewMatrix;
     
     // viewMatrix should typically be the inverse
@@ -652,7 +655,7 @@ using namespace simd;
     uniforms.modelMatrix = _modelMatrix;
     
     // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
-    gShowSettings.projectionViewModelMatrix = projectionViewMatrix * _modelMatrix;
+    _showSettings->projectionViewModelMatrix = projectionViewMatrix * _modelMatrix;
     
     uniforms.arrayOrSlice = 0;
     uniforms.face  = 0;
@@ -663,21 +666,21 @@ using namespace simd;
             // nothing
             break;
         case MyMTLTextureType3D:
-            uniforms.arrayOrSlice = gShowSettings.sliceNumber;
+            uniforms.arrayOrSlice = _showSettings->sliceNumber;
             break;
         case MyMTLTextureTypeCube:
-            uniforms.face = gShowSettings.faceNumber;
+            uniforms.face = _showSettings->faceNumber;
             break;
             
         case MyMTLTextureTypeCubeArray:
-            uniforms.face = gShowSettings.faceNumber;
-            uniforms.arrayOrSlice = gShowSettings.arrayNumber;
+            uniforms.face = _showSettings->faceNumber;
+            uniforms.arrayOrSlice = _showSettings->arrayNumber;
             break;
         case MyMTLTextureType2DArray:
-            uniforms.arrayOrSlice = gShowSettings.arrayNumber;
+            uniforms.arrayOrSlice = _showSettings->arrayNumber;
             break;
         case MyMTLTextureType1DArray:
-            uniforms.arrayOrSlice = gShowSettings.arrayNumber;
+            uniforms.arrayOrSlice = _showSettings->arrayNumber;
             break;
         
         default:
@@ -825,22 +828,22 @@ using namespace simd;
                                  atIndex:BufferIndexUniforms];
 
         
-        if (gShowSettings.isPreview) {
+        if (_showSettings->isPreview) {
             // use exisiting lod, and mip
-            [renderEncoder setFragmentSamplerState:(canWrap && gShowSettings.isWrap) ? _colorMapSamplerBilinearWrap : _colorMapSamplerBilinearClamp
+            [renderEncoder setFragmentSamplerState:(canWrap && _showSettings->isWrap) ? _colorMapSamplerBilinearWrap : _colorMapSamplerBilinearClamp
                                   atIndex:SamplerIndexColor];
         }
         else {
             // force lod, and don't mip
-            [renderEncoder setFragmentSamplerState:(canWrap && gShowSettings.isWrap) ? _colorMapSamplerWrap : _colorMapSamplerClamp
-                                  lodMinClamp:gShowSettings.mipLOD
-                                  lodMaxClamp:gShowSettings.mipLOD + 1
+            [renderEncoder setFragmentSamplerState:(canWrap && _showSettings->isWrap) ? _colorMapSamplerWrap : _colorMapSamplerClamp
+                                  lodMinClamp:_showSettings->mipLOD
+                                  lodMaxClamp:_showSettings->mipLOD + 1
                                   atIndex:SamplerIndexColor];
         }
 
         // allow toggling on/off srgb, but any autogen mips on png have already done srgb reads
         id<MTLTexture> texture = _colorMap;
-//        if ((!gShowSettings.isSRGBShown) && _colorMapView) {
+//        if ((!_showSettings->isSRGBShown) && _colorMapView) {
 //            texture = _colorMapView;
 //        }
         
@@ -881,8 +884,8 @@ using namespace simd;
     id <MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
     commandBuffer.label = @"MyCommand";
 
-    int textureLookupX = gShowSettings.textureLookupX;
-    int textureLookupY = gShowSettings.textureLookupY;
+    int32_t textureLookupX = _showSettings->textureLookupX;
+    int32_t textureLookupY = _showSettings->textureLookupY;
     
     [self drawSamples:commandBuffer lookupX:textureLookupX lookupY:textureLookupY];
     
@@ -907,9 +910,9 @@ using namespace simd;
         [texture getBytes:&data bytesPerRow:16 fromRegion:region mipmapLevel:0];
         
         // return the value at the sample
-        gShowSettings.textureResult = data;
-        gShowSettings.textureResultX = textureLookupX;
-        gShowSettings.textureResultY = textureLookupY;
+        _showSettings->textureResult = data;
+        _showSettings->textureResultX = textureLookupX;
+        _showSettings->textureResultY = textureLookupY;
         
         //printf("Color %f %f %f %f\n", data.x, data.y, data.z, data.w);
     }];
@@ -918,7 +921,7 @@ using namespace simd;
 }
 
 
-- (void)drawSamples:(id<MTLCommandBuffer>)commandBuffer lookupX:(int)lookupX lookupY:(int)lookupY {
+- (void)drawSamples:(id<MTLCommandBuffer>)commandBuffer lookupX:(int32_t)lookupX lookupY:(int32_t)lookupY {
     
     // Final pass rendering code here
     id<MTLComputeCommandEncoder> renderEncoder = [commandBuffer computeCommandEncoder];
@@ -930,12 +933,12 @@ using namespace simd;
     uniforms.uv.x = lookupX;
     uniforms.uv.y = lookupY;
     
-    uniforms.face = gShowSettings.faceNumber;
-    uniforms.arrayOrSlice = gShowSettings.arrayNumber;
-    if (gShowSettings.sliceNumber) {
-        uniforms.arrayOrSlice = gShowSettings.sliceNumber;
+    uniforms.face = _showSettings->faceNumber;
+    uniforms.arrayOrSlice = _showSettings->arrayNumber;
+    if (_showSettings->sliceNumber) {
+        uniforms.arrayOrSlice = _showSettings->sliceNumber;
     }
-    uniforms.mipLOD = gShowSettings.mipLOD;
+    uniforms.mipLOD = _showSettings->mipLOD;
     
     // run compute here, don't need a shape
     switch(_colorMap.textureType) {
@@ -985,13 +988,13 @@ using namespace simd;
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
     /// Respond to drawable size or orientation changes here
-    gShowSettings.viewSizeX = size.width;
-    gShowSettings.viewSizeY = size.height;
+    _showSettings->viewSizeX = size.width;
+    _showSettings->viewSizeY = size.height;
     
     // TODO: only set this when size changes, but for now keep setting here and adjust zoom
     CGFloat framebufferScale = view.window.screen.backingScaleFactor ? view.window.screen.backingScaleFactor : NSScreen.mainScreen.backingScaleFactor;
     
-    gShowSettings.viewContentScaleFactor = framebufferScale;
+    _showSettings->viewContentScaleFactor = framebufferScale;
     
     [self updateViewTransforms];
 }
@@ -1000,94 +1003,16 @@ using namespace simd;
     
     //float aspect = size.width / (float)size.height;
     //_projectionMatrix = perspective_rhs(45.0f * (M_PI / 180.0f), aspect, 0.1f, 100.0f);
-    _projectionMatrix = orthographic_rhs(gShowSettings.viewSizeX, gShowSettings.viewSizeY, 0.1f, 100.0f);
+    _projectionMatrix = orthographic_rhs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f, 100.0f, _showSettings->isReverseZ);
     
     // DONE: adjust zoom to fit the entire image to the window
-    gShowSettings.zoomFit = MIN((float)gShowSettings.viewSizeX,  (float)gShowSettings.viewSizeY) /
-        MAX(1, MAX((float)gShowSettings.imageBoundsX, (float)gShowSettings.imageBoundsY));
+    _showSettings->zoomFit = MIN((float)_showSettings->viewSizeX,  (float)_showSettings->viewSizeY) /
+        MAX(1, MAX((float)_showSettings->imageBoundsX, (float)_showSettings->imageBoundsY));
     
     // already using drawableSize which includes scale
     // TODO: remove contentScaleFactor of view, this can be 1.0 to 2.0f
     // why does this always report 2x even when I change monitor res.
-    //gShowSettings.zoomFit /= gShowSettings.viewContentScaleFactor;
-}
-
-// TODO: replace all this math
-
-#pragma mark Matrix Math Utilities
-
-float4x4 matrix4x4_translation(float tx, float ty, float tz)
-{
-    float4x4 m = {
-        (float4){ 1,   0,  0,  0 },
-        (float4){ 0,   1,  0,  0 },
-        (float4){ 0,   0,  1,  0 },
-        (float4){ tx, ty, tz,  1 }
-    };
-    return m;
-}
-
-//static float4x4 matrix4x4_rotation(float radians, vector_float3 axis)
-//{
-//    axis = vector_normalize(axis);
-//    float ct = cosf(radians);
-//    float st = sinf(radians);
-//    float ci = 1 - ct;
-//    float x = axis.x, y = axis.y, z = axis.z;
-//
-//    float4x4 m = {
-//        (float4){ ct + x * x * ci,     y * x * ci + z * st, z * x * ci - y * st, 0},
-//        (float4){ x * y * ci - z * st,     ct + y * y * ci, z * y * ci + x * st, 0},
-//        (float4){ x * z * ci + y * st, y * z * ci - x * st,     ct + z * z * ci, 0},
-//        (float4){                   0,                   0,                   0, 1}
-//    };
-//    return m;
-//}
-//
-//float4x4 perspective_rhs(float fovyRadians, float aspect, float nearZ, float farZ)
-//{
-//    float ys = 1 / tanf(fovyRadians * 0.5);
-//    float xs = ys / aspect;
-//    float zs = farZ / (nearZ - farZ);
-//
-//    TODO: handle isReverseZ if add option to draw with perspective
-//    float4x4 m = {
-//        (float4){ xs,   0,          0,  0 },
-//        (float4){  0,  ys,          0,  0 },
-//        (float4){  0,   0,         zs, -1 },
-//        (float4){  0,   0, nearZ * zs,  0 }
-//    };
-//    return m;
-//}
-
-float4x4 orthographic_rhs(float width, float height, float nearZ, float farZ)
-{
-    //float aspectRatio = width / height;
-    float xs = 2.0f/width;
-    float ys = 2.0f/height;
-    
-    float xoff = 0.0f; // -0.5f * width;
-    float yoff = 0.0f; // -0.5f * height;
-    
-    float dz = -(farZ - nearZ);
-    float zs = 1.0f / dz;
-    
-    float m22 = zs;
-    float m23 = zs * nearZ;
-
-    // revZ, can't use infiniteZ with ortho view
-    if (gShowSettings.isReverseZ) {
-        m22 = -m22;
-        m23 = 1.0f - m23;
-    }
-    
-    float4x4 m = {
-        (float4){ xs,   0,      0,  0 },
-        (float4){  0,   ys,     0,  0 },
-        (float4){ 0,     0,     m22, 0 },
-        (float4){ xoff, yoff,    m23,  1 }
-    };
-    return m;
+    //_showSettings->zoomFit /= _showSettings->viewContentScaleFactor;
 }
 
 

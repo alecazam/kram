@@ -170,7 +170,7 @@ class task_system {
     }
 
 public:
-    task_system(int count = 1) : _count(std::min(count, (int)thread::hardware_concurrency())), _q{(size_t)_count}, _index(0)
+    task_system(int count = 1) : _count(std::min(count, (int32_t)thread::hardware_concurrency())), _q{(size_t)_count}, _index(0)
     {
         // start up the threads
         for (int threadIndex = 0; threadIndex != _count; ++threadIndex) {

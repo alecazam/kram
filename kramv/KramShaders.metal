@@ -255,16 +255,16 @@ float4 DrawPixels(
     // would be nice to be able to keep this set on each channel independently.
     switch(uniforms.channels)
     {
-        case ModeRGBA: break;
-        case ModeR001: c = float4(c.r,0,0,1); break;
-        case Mode0G01: c = float4(0,c.g,0,1); break;
-        case Mode00B1: c = float4(0,0,c.b,1); break;
+        case ShModeRGBA: break;
+        case ShModeR001: c = float4(c.r,0,0,1); break;
+        case ShMode0G01: c = float4(0,c.g,0,1); break;
+        case ShMode00B1: c = float4(0,0,c.b,1); break;
             
-        case ModeRRR1: c = float4(c.rrr,1); break;
-        case ModeGGG1: c = float4(c.ggg,1); break;
-        case ModeBBB1: c = float4(c.bbb,1); break;
+        case ShModeRRR1: c = float4(c.rrr,1); break;
+        case ShModeGGG1: c = float4(c.ggg,1); break;
+        case ShModeBBB1: c = float4(c.bbb,1); break;
             
-        case ModeAAA1: c = float4(c.aaa,1); break;
+        case ShModeAAA1: c = float4(c.aaa,1); break;
     }
     
     // be able to pinch-zoom into/back from the image
@@ -290,27 +290,27 @@ float4 DrawPixels(
 
     
     
-    if (uniforms.debugMode != DebugModeNone && c.a != 0.0f) {
+    if (uniforms.debugMode != ShDebugModeNone && c.a != 0.0f) {
         
         bool isHighlighted = false;
-        if (uniforms.debugMode == DebugModeTransparent) {
+        if (uniforms.debugMode == ShDebugModeTransparent) {
             if (c.a < 1.0) {
                 isHighlighted = true;
             }
         }
-        else if (uniforms.debugMode == DebugModeColor) {
+        else if (uniforms.debugMode == ShDebugModeColor) {
             // with 565 formats, all pixels with light up
             if (c.r != c.g || c.r != c.b) {
                 isHighlighted = true;
             }
         }
-        else if (uniforms.debugMode == DebugModeGray) {
+        else if (uniforms.debugMode == ShDebugModeGray) {
             // with 565 formats, all pixels with light up
             if (c.r == c.g && c.r == c.b) {
                 isHighlighted = true;
             }
         }
-        else if (uniforms.debugMode == DebugModeHDR) {
+        else if (uniforms.debugMode == ShDebugModeHDR) {
             if (any(c.rgb < float3(0.0)) || any(c.rgb < float3(0.0)) ) {
                 isHighlighted = true;
             }
@@ -318,13 +318,13 @@ float4 DrawPixels(
         
         // signed data already convrted to unorm above, so compare to 0.5
         // adding some slop here so that flat areas don't flood the visual with red
-        else if (uniforms.debugMode == DebugModePosX) {
+        else if (uniforms.debugMode == ShDebugModePosX) {
             // two channels here, would need to color each channel
             if (c.r >= 0.5 + 0.05) {
                 isHighlighted = true;
             }
         }
-        else if (uniforms.debugMode == DebugModePosY) {
+        else if (uniforms.debugMode == ShDebugModePosY) {
             if (c.g > 0.5 + 0.05) {
                 isHighlighted = true;
             }

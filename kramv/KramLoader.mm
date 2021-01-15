@@ -38,7 +38,7 @@ using namespace simd;
 
 - (nullable id<MTLTexture>)loadTextureFromData:(nonnull NSData*)imageData originalFormat:(nullable MTLPixelFormat*)originalFormat {
     
-    return [self loadTextureFromData:(const uint8_t*)imageData.bytes imageDataLength:(int)imageData.length originalFormat:originalFormat];
+    return [self loadTextureFromData:(const uint8_t*)imageData.bytes imageDataLength:(int32_t)imageData.length originalFormat:originalFormat];
 }
 
 // for macOS/win Intel need to decode astc/etc
@@ -100,7 +100,7 @@ using namespace simd;
             return NO;
         }
         
-        if (!image.open(data.data(), (int)size, skipImageLength)) { // doesn't fail
+        if (!image.open(data.data(), (int32_t)size, skipImageLength)) { // doesn't fail
             return NO;
         }
     }
@@ -110,7 +110,7 @@ using namespace simd;
 }
     
 
-- (nullable id<MTLTexture>)loadTextureFromData:(nonnull const uint8_t *)imageData imageDataLength:(int)imageDataLength originalFormat:(nullable MTLPixelFormat*)originalFormat
+- (nullable id<MTLTexture>)loadTextureFromData:(nonnull const uint8_t *)imageData imageDataLength:(int32_t)imageDataLength originalFormat:(nullable MTLPixelFormat*)originalFormat
 {
     bool skipImageLength = false; // useBlit; // Note: can cpu upload ktxa mips too, so pass this down
     
@@ -131,12 +131,12 @@ using namespace simd;
     return [self loadTextureFromImage:image];
 }
 
-static int numberOfMipmapLevels(const Image& image) {
-    int w = image.width();
-    int h = image.height();
-    int maxDim = MAX(w,h);
+static int32_t numberOfMipmapLevels(const Image& image) {
+    int32_t w = image.width();
+    int32_t h = image.height();
+    int32_t maxDim = MAX(w,h);
     
-    int numberOfMips = 1;
+    int32_t numberOfMips = 1;
     while (maxDim > 1) {
         numberOfMips++;
         maxDim = maxDim >> 1;
@@ -144,7 +144,7 @@ static int numberOfMipmapLevels(const Image& image) {
     return numberOfMips;
 }
     
-- (nullable id<MTLTexture>)loadTextureFromPNGData:(const uint8_t*)data dataSize:(int)dataSize isSRGB:(BOOL)isSRGB originalFormat:(nullable MTLPixelFormat*)originalFormat
+- (nullable id<MTLTexture>)loadTextureFromPNGData:(const uint8_t*)data dataSize:(int32_t)dataSize isSRGB:(BOOL)isSRGB originalFormat:(nullable MTLPixelFormat*)originalFormat
 {
     // can only load 8u and 16u from png, no hdr formats, no premul either, no props
     Image sourceImage;
@@ -177,14 +177,14 @@ static int numberOfMipmapLevels(const Image& image) {
     }
     
     // cpu copy the bytes from the data object into the texture
-    int sliceOrArrayOrFace = 0;
+    int32_t sliceOrArrayOrFace = 0;
     
     const MTLRegion region = {
         { 0, 0, (NSUInteger)sliceOrArrayOrFace }, // MTLOrigin
         { static_cast<NSUInteger>(image.width), static_cast<NSUInteger>(image.height), 1 }  // MTLSize
     };
     
-    int bytesPerRow = 4 * sourceImage.width();
+    int32_t bytesPerRow = 4 * sourceImage.width();
     
     [texture replaceRegion:region
                 mipmapLevel:0
@@ -246,11 +246,11 @@ static int numberOfMipmapLevels(const Image& image) {
         // TODO: use a MTLView to enable srgb or not, then can load and guess the srgb status
         // at a higher level, and also toggle on/off srgb conversion in the shader.
         
-        return [self loadTextureFromPNGData:mmapHelper.addr dataSize:(int)mmapHelper.length isSRGB:isSRGB originalFormat:originalFormat];
+        return [self loadTextureFromPNGData:mmapHelper.addr dataSize:(int32_t)mmapHelper.length isSRGB:isSRGB originalFormat:originalFormat];
     }
     
     // route all data through the version that copies or does sync upload
-    return [self loadTextureFromData:mmapHelper.addr imageDataLength:(int)mmapHelper.length originalFormat:originalFormat];
+    return [self loadTextureFromData:mmapHelper.addr imageDataLength:(int32_t)mmapHelper.length originalFormat:originalFormat];
 }
 
 - (id<MTLTexture>)createTexture:(KTXImage&)image {
@@ -306,13 +306,13 @@ static int numberOfMipmapLevels(const Image& image) {
     // TODO: about aligning to 4k for base + length
     // http://metalkit.org/2017/05/26/working-with-memory-in-metal-part-2.html
     
-    int w = image.width;
-    int h = image.height;
+    int32_t w = image.width;
+    int32_t h = image.height;
     
-    int numMips     = MAX(1, image.header.numberOfMipmapLevels);
-    int numArrays   = MAX(1, image.header.numberOfArrayElements);
-    int numFaces    = MAX(1, image.header.numberOfFaces);
-    int numSlices   = MAX(1, image.depth);
+    int32_t numMips     = MAX(1, image.header.numberOfMipmapLevels);
+    int32_t numArrays   = MAX(1, image.header.numberOfArrayElements);
+    int32_t numFaces    = MAX(1, image.header.numberOfFaces);
+    int32_t numSlices   = MAX(1, image.depth);
     
     Int2 blockDims = image.blockDims();
     
@@ -328,7 +328,7 @@ static int numberOfMipmapLevels(const Image& image) {
             for (int face = 0; face < numFaces; ++face) {
                 for (int slice = 0; slice < numSlices; ++slice) {
     
-                    int bytesPerRow = 0;
+                    int32_t bytesPerRow = 0;
                     
                     // 1D/1DArray textures set bytesPerRow to 0
                     if ((MTLTextureType)image.textureType != MTLTextureType1D &&
@@ -337,14 +337,14 @@ static int numberOfMipmapLevels(const Image& image) {
                         // for compressed, bytesPerRow needs to be multiple of block size
                         // so divide by the number of blocks making up the height
                         //int xBlocks = ((w + blockDims.x - 1) / blockDims.x);
-                        int yBlocks = ((h + blockDims.y - 1) / blockDims.y);
+                        int32_t yBlocks = ((h + blockDims.y - 1) / blockDims.y);
                         
                         // Calculate the number of bytes per row in the image.
                         // for compressed images this is xBlocks * blockSize
-                        bytesPerRow = (int)mipLevel.length / yBlocks;
+                        bytesPerRow = (int32_t)mipLevel.length / yBlocks;
                     }
                     
-                    int sliceOrArrayOrFace;
+                    int32_t sliceOrArrayOrFace;
                                     
                     if (image.header.numberOfArrayElements > 0) {
                         // can be 1d, 2d, or cube array
@@ -362,9 +362,9 @@ static int numberOfMipmapLevels(const Image& image) {
                     }
                     
                     // this is size of one face/slice/texture, not the levels size
-                    int mipStorageSize = (int)mipLevel.length;
+                    int32_t mipStorageSize = (int32_t)mipLevel.length;
                     
-                    int mipOffset = (int)mipLevel.offset + sliceOrArrayOrFace * mipStorageSize;
+                    int32_t mipOffset = (int32_t)mipLevel.offset + sliceOrArrayOrFace * mipStorageSize;
                     // offset into the level
                     const uint8_t *srcBytes = image.fileData + mipOffset;
             
