@@ -1,11 +1,11 @@
 # kram, kram.exe
-Small wrapper to libkram for CLI tool.  Encode/decode/info PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.  Compiles for iOS, macOS, winOS.
+C++11 main to libkram to create CLI tool.  Encode/decode/info PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.  Runs on iOS/macOS/winOS.
 
 # libkram.a, kram.lib
-C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS, macOS, winOS.
+C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS (ARM), macOS (ARM/Intel), winOS (Intel).
 
 # kramv.app
-Viewer for PNG/KTX supported files from kram.  530KB in size.  ObjC++ and uses libkram to decode unsupported formats, Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  Compiles for macOS Intel/Apple Silicon.  No dmg yet, just drop onto /Applications folder, and then run scripts/fixfinder.sh to flush LaunchServices (see below).
+ObjC++ Viewer for PNG/KTX supported files from kram.  530KB in size.  Uses Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  No dmg yet, just drop onto /Applications folder, and then run scripts/fixfinder.sh to flush LaunchServices (see below).  Runs on macOS (ARM/Intel).
 
 ### About kram
 kram is a wrapper to several popular encoders.  Most encoders have sources, and have been optimized to use very little memory and generate high quality encodings at all settings.  All kram encoders are currently cpu-based.  Some of these encoders use SSE but not Neon, and I'd like to fix that.  kram was built to be small and used as a library or app.  It's also designed for mobile and desktop use.  The final size with all encoders is under 1MB, and disabling each encoder chops off around 200KB down to a final 200KB app size via dead-code stripping.  The code should compile with C++11 or higher.
@@ -58,6 +58,8 @@ Shift-/M advance mip
 Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram as currently implemented.  There is a lot that works, and BC1-BC3 should be retired along with all of ETC2.  There are better formats, and hardware has moved to ASTC, and then recently back to BC.  WebGL is still often stuck with older formats for lack of extensions.  These formats are still too big without further re-ordering endpoints/selectors and compressing the enire texture compressing mips.  Basis is one way to compress to storage and transcode at runtime to available GPU capabilities, but I suggest basisu or toktx to generate that until KTX2 support is added to kram.
 
 ```
+GPU - none of the encoders use the GPU, so cpu threading and multi-process is used
+
 Rescale Filtering - 1x1 point filter
 Mip filtering - 2x2 box filter that's reasonable for pow2, but not ideal for non-pow2 mips, done in linear space using half4 storage, in-place to save mem
 
@@ -69,7 +71,7 @@ BC/ETC2/ASTC - supposedly WebGL requires pow2, and some implementation need top 
 BC1 - artifacts from limits of format, artifacts from encoder, use BC7 w/2x memory
 BC1 w/alpha - blocked
 BC2 - blocked
-BC6H - unsupported, no decode
+BC6H - unsupported, no decode either, need to pull BCH encode/decode and pass 8u/16f/32f data
 
 ETC2_RGB8A1 - disabled, broken in ETC2 optimizations
 
@@ -77,7 +79,7 @@ ASTC LDR - rrr1, rrrg/gggr, rgb1, rgba must be followed to avoid endpoint storag
 ASTC HDR - encoder uses 8-bit source image, need 16f/32f passed to encoder, no hw L+A mode
 
 R/RG/RGBA 8/16F/32F - use ktx2ktx2 and ktx2sc KTX2 to supercompress, use as source formats
-R8/RG8/R16F - input/output not aligned to 4 bytes to match KTX spec
+R8/RG8/R16F - input/output rowBytes not aligned to 4 bytes to match KTX spec, code changes needed
 
 Basis - unsupported, will come with KTX2 support, can transcode from UASTC/ETC1S at runtime, RDO
 Crunch - unsupported, has RDO, predecessor to Basis, Unity provides a release of this
@@ -88,7 +90,7 @@ KTX2 - unsupported, no viewers, mips flipped from KTX, need to get working in kr
 ```
 
 ### Building
-Kram uses CMake to setup the projects and build.  An kramv.app, executable kram, and libkram are generated, but kramv.app and kram are stand-alone since they include libkram.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
+Kram uses CMake to setup the projects and build.  kramv.app, kram, and libkram are generated, but kramv.app and kram are stand-alone.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
 
 For Mac, the build is out-of-source, and can be built from the command line, or debugged from the xcodeproj that is built.  Ninja and Makefiles can also be generated from cmake, but remember to trash the CMakeCache.txt file.
 
@@ -269,12 +271,29 @@ This matches mmap api, but leaks a file mapping handle.
 * Update to new BC7 enc with more mode support
 
 ### Test Images
-* color_grid from ktx/ktx2 samples
-* ColorMap from Apple's sample apps to test premultiplied alpha and srgb.
+
+Some of these images like collectorbarrel-a and Toof.a look grayscale but are not. 
+Some of the encoders turn these non-opaque, and generate alpha of 254/255.
+
+* color_grid-a from ktx/ktx2 samples
+* ColorMap-a from Apple's sample apps to test premultiplied alpha and srgb.
 * flipper-sdf image taken from EDT paper that inspired heman SDF.
 * collectorbarrel-n/a from Id's old GPU BC1/3 compression article.
 * Toof-a is my own artwork drawn in Figma
 
+### Timings for test suite
+
+These are basic timings running kram encoding for all the specific platform test cases using kramTexture.py 
+Impressive that M1 wins on the Android test case by over 2x, and is close in the others.
+
+Date: 1/16/21
+2020 M1 13" Macbook Air, 3.4Ghz, 4+4 core M1
+2018 16" Macbook Pro, 2.3Ghz, 8/16 core i9
+
+| Sys | macOS  | iOS    | Android | 
+|-----|-----------------|---------|
+| M1  | 0.643s | 4.603s |  6.441s |  
+| i9  | 0.970s | 3.339s | 14.617s |
 
 ### Syntax
 ```
