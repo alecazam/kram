@@ -261,17 +261,19 @@ This matches mmap api, but leaks a file mapping handle.
 ### Features to complete:
 * Tile command for SVT tiling
 * Merge command to combine images (similar to ImageMagick)
-* Atlas command to atlas to 2D and 2D array textures
+* Atlas command to atlas to 2D and 2D array textures.  Display names, show bounds of atlases.
+* 3D chart flattening.
+* Motion vector direction analysis.
+* Split view comparison rendering.  Move horizontal slider like ShaderToy.
 * Add GPU encoder (use compute in Metal/Vulkan)
 * Add BC6H encoder
 * Save prop with args and compare args and modstamp before rebuilding to avoid --force
 * Multichannel SDF
-* Plumb half4 and float4 through to ASTC HDR encoding.  Sending 8u.
+* Plumb half4/float4 through to ASTC HDR encoding.  Sending 8u.
 * Test Neon support and SSE2Neon
 * Run srgb conversion on endpoint data after fitting linear color point cloud
 * PSNR stats off encode + decode
 * Dump stats on BC6/7 block types, and ASTC void extent, dual-plane, etc
-* Update to new BC7 enc with more mode support
 
 ### Test Images
 
@@ -289,9 +291,9 @@ Some of the encoders turn these non-opaque, and generate alpha of 254/255.
 These are basic timings running kram encoding for all the specific platform test cases using kramTexture.py 
 Impressive that M1 wins on the Android test case by over 2x, and is close in the others.
 
-Date: 1/16/21
-2020 M1 13" Macbook Air, 3.4Ghz, 4+4 core M1
-2018 16" Macbook Pro, 2.3Ghz, 8/16 core i9
+* Date: 1/16/21
+* 2020 M1 13" Macbook Air, 3.4Ghz, 4+4 core M1
+* 2018 16" Macbook Pro, 2.3Ghz, 8/16 core i9
 
 | Sys | macOS  | iOS    | Android | 
 |-----|--------|--------|---------|
@@ -341,7 +343,6 @@ OPTIONS
 	-encoder etcenc	etc2[r,rg,rgb,rgba]
 	-encoder explicit	r|rg|rgba[8|16f|32f]
 
-	-mipalign	Align mip levels with .ktxa output 
 	-mipnone	Don't build mips even if pow2 dimensions
 	-mipmin size	Only output mips >= size px
 	-mipmax size	Only output mips <= size px
@@ -525,8 +526,8 @@ Metal cannot load mmap mip data that isn't aligned to a multiple of the block si
 
 Note that textures and render textures don't necessarily use pixels or encoded blocks in the order that you specify in the KTX file.  Twiddling creates serpentine patterns of pixels/blocks that are platform and hardware dependent.  Hardware often writes to linear for the display system, and reads/writes twiddled layouts.  It's hard for a generic tool like kram to address this.  I recommend that the texture loader always upload ktx blocks to private texture surfaces, and let the API twiddle the data during the copy.  This can sometimes be a source of upload timing differences.
 
-KTX mmap -> Copy Level to Shared Buffer -> Blit Level to Private Tex
-KTX2 mmap -> Decompress Level to Shared Buffer -> Blit Level To Private Tex
+* KTX mmap -> Copy Level to Shared Buffer -> Blit Level to Private Tex
+* KTX2 mmap -> Decompress Level to Shared Buffer -> Blit Level To Private Tex
 
 With sparse texture, the above becomes more involved since only parts of the decompressed level are uploaded.  KTX2 is still the ideal choice, since textures are considerably smaller 2-10x and can be mmap-ed directly from the bundle.
 
@@ -534,21 +535,14 @@ With sparse texture, the above becomes more involved since only parts of the dec
 
 ```
 Texture units convert srgb to linear data on the way to the texture cache.  
-The texture cache typically stores 4x4 blocks to match encoded formats.  
-Sampling is then done from that block of linear data.
-Ideally the cache stores >8-bit linear channels.
+The texture cache typically stores 4x4 block to match encoded formats.  
+Sampling is then done from that block of linear data with higher precision.
 
 Texturing hardware does not yet support premultiplied alpha.  
 Kram does premul prior to mip generation.
 Srgb is then re-applied to linear premul data before encoding.
-LDR premul typically implies rgb*a <= a, but this rule can be broken in film.
-Once in premul stay there, dividing out alpha isn't performant or precise.
-Premul breaks many of the common hardware blend modes, so emulate in shader.
 
-Kram uses float4 to preserve precision when srgb or premul are specified.  
-The encoders encode non-linear srgb point clouds.
-
-encode = (srgbFromPremulLinear(rgb * a), a)
-decode = bilerp(premulLinearFromSrgb(rgb), a)
+Kram uses half4/float4 to preserve precision when srgb or premul are specified.  
+The encoders all have to encode non-linear srgb point clouds, which isn't correct.
 
 ```
