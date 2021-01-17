@@ -1038,7 +1038,7 @@ NSArray<NSString*>* pasteboardTypes = @[
             return NO;
         }
     }
-    else if (endsWithExtension(filename, ".ktx")) {
+    else if (endsWithExtension(filename, ".ktx") || endsWithExtension(filename, ".ktx2")) {
         Renderer* renderer = (Renderer*)self.delegate;
         if (![renderer loadTexture:url]) {
             return NO;

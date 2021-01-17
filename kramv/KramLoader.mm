@@ -45,7 +45,7 @@ using namespace simd;
 // on macOS/arm, the M1 supports all 3 encode formats
 #define DO_DECODE TARGET_CPU_X86_64
 
-- (BOOL)decodeImageIfNeeded:(KTXImage&)image data:(vector<uint8_t>&)data skipImageLength:(bool)skipImageLength
+- (BOOL)decodeImageIfNeeded:(KTXImage&)image data:(vector<uint8_t>&)data
 {
 #if DO_DECODE
     MyMTLPixelFormat format = image.pixelFormat;
@@ -100,7 +100,7 @@ using namespace simd;
             return NO;
         }
         
-        if (!image.open(data.data(), (int32_t)size, skipImageLength)) { // doesn't fail
+        if (!image.open(data.data(), (int32_t)size)) { // doesn't fail
             return NO;
         }
     }
@@ -112,10 +112,8 @@ using namespace simd;
 
 - (nullable id<MTLTexture>)loadTextureFromData:(nonnull const uint8_t *)imageData imageDataLength:(int32_t)imageDataLength originalFormat:(nullable MTLPixelFormat*)originalFormat
 {
-    bool skipImageLength = false; // useBlit; // Note: can cpu upload ktxa mips too, so pass this down
-    
     KTXImage image;
-    if (!image.open(imageData, imageDataLength, skipImageLength)) {
+    if (!image.open(imageData, imageDataLength)) {
         return nil;
     }
     
@@ -124,7 +122,7 @@ using namespace simd;
     }
     
     vector<uint8_t> data;
-    if (![self decodeImageIfNeeded:image data:data skipImageLength:skipImageLength]) {
+    if (![self decodeImageIfNeeded:image data:data]) {
         return nil;
     }
     

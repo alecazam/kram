@@ -15,7 +15,6 @@ void ShowSettings::advanceDebugMode(bool isShiftKeyDown) {
     
     MyMTLPixelFormat format = (MyMTLPixelFormat)originalFormat;
     bool isHdr = isHdrFormat(format);
-    int32_t numChannels = numChannels;
     
     // DONE: work on skipping some of these based on image
     bool isAlpha = isAlphaFormat(format);

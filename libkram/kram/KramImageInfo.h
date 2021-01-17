@@ -51,7 +51,7 @@ public:
 
     int quality = 49;  // may want float
 
-    bool skipImageLength = false;
+    //bool skipImageLength = false;
     bool doMipmaps = true;  // default to mips on
     bool isVerbose = false;
     bool doSDF = false;
@@ -113,7 +113,7 @@ public:
     bool isPremultiplied = false;  // don't premul
     bool isHDR = false;
 
-    bool skipImageLength = false;  // gen ktxa
+    //bool skipImageLength = false;  // gen ktxa
     bool doSDF = false;
     bool doMipmaps = false;
     bool optimizeFormatForOpaque = false;

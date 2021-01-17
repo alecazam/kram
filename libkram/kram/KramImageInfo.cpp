@@ -969,7 +969,7 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     isNormal = args.isNormal;
 
     doSDF = args.doSDF;
-    skipImageLength = args.skipImageLength;
+    //skipImageLength = args.skipImageLength;
 
     // mips
     doMipmaps = args.doMipmaps;

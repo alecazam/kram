@@ -466,8 +466,8 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     dstHeader.bytesOfKeyValueData = uint32_t(propsData.size());
 
     // update the offsets of where mips should lie
-    bool skipImageLength = false;
-    dstImage.skipImageLength = skipImageLength;
+    //bool skipImageLength = false;
+    //dstImage.skipImageLength = skipImageLength;
 
     if (!dstImage.initMipLevels(false)) {
         return false;
@@ -1057,10 +1057,10 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
         // 4 byte length of mip level is written out, this totally throws off block alignment
         // this is size of one mip not the array of mips of that size
-        if (!info.skipImageLength) {
+        //if (!info.skipImageLength) {
             int levelSizeOf = sizeof(uint32_t);
             mipOffset += levelSizeOf;
-        }
+        //}
 
         // start of the mips
         mipOffsets.push_back(mipOffset);
@@ -1368,7 +1368,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
             // Write out the mip size on chunk0, all other mips are this size since not supercompressed.
             // This throws off block alignment so have option to skip for ktxa files.  I guess 3d textures
             // and arrays can then load entire level in a single call.
-            if (chunk == 0 && !info.skipImageLength) {
+            if (chunk == 0) {
                 // some clarification on what imageSize means, but best to look at ktx codebase itself
                 // https://github.com/BinomialLLC/basis_universal/issues/40
 

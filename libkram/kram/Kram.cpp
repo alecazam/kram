@@ -35,7 +35,7 @@ using namespace std;
 bool LoadKtx(const uint8_t* data, int dataSize, Image& sourceImage)
 {
     KTXImage image;
-    if (!image.open(data, dataSize, false)) {
+    if (!image.open(data, dataSize)) {
         return false;
     }
 
@@ -112,11 +112,11 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
                       vector<uint8_t>& fileBuffer,
                       const string& srcFilename, Image& sourceImage)
 {
-    bool isKTX = endsWith(srcFilename, ".ktx");
+    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
     bool isPNG = endsWith(srcFilename, ".png");
 
     if (!(isKTX || isPNG)) {
-        KLOGE("Kram", "File input \"%s\" isn't a png or ktx file.\n",
+        KLOGE("Kram", "File input \"%s\" isn't a png, ktx, ktx2 file.\n",
               srcFilename.c_str());
         return false;
     }
@@ -186,10 +186,8 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
         useMmap = false;
     }
 
-    bool skipImageLength = false;  // tied to ktxa
-
     if (useMmap) {
-        if (!sourceImage.open(mmapHelper.addr, (int)mmapHelper.length, skipImageLength)) {
+        if (!sourceImage.open(mmapHelper.addr, (int)mmapHelper.length)) {
             return false;
         }
     }
@@ -207,7 +205,7 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
             return false;
         }
 
-        if (!sourceImage.open(fileBuffer.data(), (int)fileBuffer.size(), skipImageLength)) {
+        if (!sourceImage.open(fileBuffer.data(), (int)fileBuffer.size())) {
             return false;
         }
     }
@@ -899,7 +897,8 @@ void kramEncodeUsage()
           "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
           "\t [-resize (16x32 | pow2)]\n"
           "\n"
-          "\t [-mipalign] [-mipnone]\n"
+          //"\t [-mipalign] [-mipnone]\n"
+          "\t [-mipnone]\n"
           "\t [-mipmin size] [-mipmax size]\n"
           "\n"
           "\t [-swizzle rg01]\n"
@@ -1088,10 +1087,10 @@ static int kramAppInfo(vector<const char*>& args)
     }
 
     bool isPNG = endsWith(srcFilename, ".png");
-    bool isKTX = endsWith(srcFilename, ".ktx");
+    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
 
     if (!(isPNG || isKTX)) {
-        KLOGE("Kram", "info only supports png and ktx inputs");
+        KLOGE("Kram", "info only supports png, ktx, ktx2 inputs");
         error = true;
     }
 
@@ -1127,7 +1126,7 @@ static int kramAppInfo(vector<const char*>& args)
 string kramInfoToString(const string& srcFilename, bool isVerbose)
 {
     bool isPNG = endsWith(srcFilename, ".png");
-    bool isKTX = endsWith(srcFilename, ".ktx");
+    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
 
     MmapHelper srcMmapHelper;
     FileHelper srcFileHelper;
@@ -1288,10 +1287,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
                 isMB ? "MB" : "KB");
         info += tmp;
 
-        int pixelMultiplier =
-            std::max(1, srcImage.depth) *
-            std::max(1, (int)srcImage.header.numberOfArrayElements) *
-            std::max(1, (int)srcImage.header.numberOfFaces);
+        int pixelMultiplier = srcImage.totalChunks();
         
         float numPixels = srcImage.width * srcImage.height;
         numPixels *= (float)pixelMultiplier;
@@ -1485,10 +1481,10 @@ static int kramAppDecode(vector<const char*>& args)
         error = true;
     }
 
-    bool isKTX = endsWith(srcFilename, ".ktx");
+    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
 
     if (!isKTX) {
-        KLOGE("Kram", "decode only supports ktx input");
+        KLOGE("Kram", "decode only supports ktx and ktx2 input");
         error = true;
     }
 
@@ -1597,11 +1593,11 @@ static int kramAppEncode(vector<const char*>& args)
             infoArgs.doMipmaps = false;
             continue;
         }
-        else if (isStringEqual(word, "-mipalign")) {
-            // pad start of each mip to pixel/block size of format
-            infoArgs.skipImageLength = true;
-            continue;
-        }
+//        else if (isStringEqual(word, "-mipalign")) {
+//            // pad start of each mip to pixel/block size of format
+//            infoArgs.skipImageLength = true;
+//            continue;
+//        }
 
         else if (isStringEqual(word, "-e") ||
                  isStringEqual(word, "-encoder")) {
@@ -1679,11 +1675,11 @@ static int kramAppEncode(vector<const char*>& args)
             // TODO: if args ends with /, then output to that dir
             dstFilename = args[i];
 
-            // see if it's a ktxa file
-            if (dstFilename.back() == 'a' ||
-                dstFilename.back() == 'A') {
-                infoArgs.skipImageLength = true;
-            }
+//            // see if it's a ktxa file
+//            if (dstFilename.back() == 'a' ||
+//                dstFilename.back() == 'A') {
+//                infoArgs.skipImageLength = true;
+//            }
             continue;
         }
         else if (isStringEqual(word, "-input") ||
@@ -1797,19 +1793,18 @@ static int kramAppEncode(vector<const char*>& args)
         error = true;
     }
 
-    bool isKTX = endsWith(srcFilename, ".ktx");
+    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
     bool isPNG = endsWith(srcFilename, ".png");
 
     if (!(isPNG || isKTX)) {
-        KLOGE("Kram", "encode only supports png and ktx input");
+        KLOGE("Kram", "encode only supports png, ktx, ktx2 input");
         error = true;
     }
 
     bool isDstKTX = endsWith(dstFilename, ".ktx");
-    bool isDstKTXA = endsWith(dstFilename, ".ktxa");
-
-    if (!(isDstKTX || isDstKTXA)) {
-        KLOGE("Kram", "encode only supports ktx and ktxa output");
+   
+    if (!isDstKTX) {
+        KLOGE("Kram", "encode only supports ktx output");
         error = true;
     }
 

@@ -44,6 +44,9 @@ class TextureProcessor:
 
 	appKram = ""
 
+	appKtx2 = ""
+	appKtx2sc = ""
+	
 	# preset formats for a given platform
 	textureFormats = []
 
@@ -133,13 +136,14 @@ class TextureProcessor:
 		# skip unrecognized extensions in the folder
 		srcRoot, srcExtension = os.path.splitext(srcPath)
 		srcExtension = srcExtension.lower()
-		if not (srcExtension == ".png" or srcExtension == ".ktx"):
+		if not (srcExtension == ".png" or srcExtension == ".ktx" or srcExtension == ".ktx2"):
 			if not srcPath.endswith(".DS_Store"):
 				print("skipping unknown extension on file {0}".format(srcPath))
 			return 0
 		
 		srcFilename = os.path.basename(srcRoot) # just the name no ext
 
+		# this only exports to ktx, post process will convert to ktx2
 		ext = ".ktx"
 		dstName = srcFilename + ext
 		dstFile = dstDir + dstName
@@ -196,6 +200,16 @@ class TextureProcessor:
 			timer += time.perf_counter()
 			if timer > slowTextureTime:
 				print("perf: encode {0} took {1:.3f}s".format(dstName, timer))
+
+			# convert ktx -> ktx2, and zstd supercompress the mips, kram can read these and decompress
+			# for now, this is only possible when not scripted
+			# could read these in kram, and then execute them, or write these to another file
+			# and then execute that if script file suceeds
+			if self.appKtx2:
+				ktx2Filename = dstFile + "2"
+				result = self.spawn(self.appKtx2 + " -f -o " + ktx2Filename + " " + dstFile)
+				if result == 0:
+					result = self.spawn(self.appKtx2sc + " -zcmp 3 " + ktx2Filename)
 
 		return result
 
@@ -290,13 +304,27 @@ class TextureProcessor:
 @click.option('-j', '--jobs', default=64, help="max physical cores to use")
 @click.option('--force', is_flag=True, help="force rebuild ignoring modstamps")
 @click.option('--script', is_flag=True, help="generate kram script and execute that")
-def processTextures(platform, container, verbose, quality, jobs, force, script):
+@click.option('--ktx2', is_flag=True, help="generate ktx2 files from ktx output")
+def processTextures(platform, container, verbose, quality, jobs, force, script, ktx2):
 	# output to multiple dirs by type
 
 	# eventually pass these in as strings, so script is generic
 	# Mac can handle this, but Win want's absolute path (or kram run from PATH)
-	appKram = os.path.abspath("../bin/kram")
+	binDir = "../bin/"
+	appKram = os.path.abspath(binDir + "kram")
 	
+	# can convert ktx -> ktx2 files with zstd supercompression
+	# caller must have ktx2ktx2 and ktx2sc in path build from https://github.com/KhronosGroup/KTX-Software
+	if ktx2:
+		script = False
+
+	if ktx2:
+		appKtx2 = "ktx2ktx2"
+		appKtx2sc ="ktxsc"
+	else:
+		appKtx2 = ""
+		appKtx2sc = ""
+
 	# abspath strips the trailing slash off - ugh
 	srcDirBase = os.path.abspath("../tests/src/")
 	srcDirBase += "/"
@@ -308,7 +336,6 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 	
 	scriptFile = dstDirForPlatform + "kramscript.txt"
 	
-
 	# can process multiple src folders, and skip some
 	srcDirs = [""]
 
@@ -406,6 +433,9 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 	result = 0
 		
 	processor = TextureProcessor(platform, appKram, maxCores, force, script, scriptFile, formats)
+	if ktx2:
+		processor.appKtx2 = appKtx2
+		processor.appKtx2sc = appKtx2sc
 
 	for srcDir in srcDirs:
 		dstDir = dstDirForPlatform + srcDir
