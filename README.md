@@ -27,7 +27,7 @@ In non-preview mode, point sampling in a pixel shader is used to show exact pixe
 
 ```
 Formats - R/RG/RGBA 8/16F/32F, BC/ETC2/ASTC
-Container Types - KTX, PNG
+Container Types - KTX, KTX2, PNG
 Content Types - Albedo, Normal, SDF
 Debug modes - transparent, color, gray, +x, +y
 Texture Types - 1darray (no mips), 2d, 2darray, 3d (no mips), cube, cube array
@@ -81,11 +81,14 @@ ASTC HDR - encoder uses 8-bit source image, need 16f/32f passed to encoder, no h
 R/RG/RGBA 8/16F/32F - use ktx2ktx2 and ktx2sc KTX2 to supercompress, use as source formats
 R8/RG8/R16F - input/output rowBytes not aligned to 4 bytes to match KTX spec, code changes needed
 
-Basis - unsupported, will come with KTX2 support, can transcode from UASTC/ETC1S at runtime, RDO
-Crunch - unsupported, has RDO, predecessor to Basis, Unity provides a release of this
+PVRTC - unsupported, no open-source encoders, requires pow2 size
 
-KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, metadata/props aren't standardized and only ascii prop support so easy to dump out, convert to ktx2 with ktx2ktx2 for some texture types, can only supercompress to zstd not Basis using ktx2ktx2 + ktxsc
-KTX2 - unsupported, no viewers, mips flipped from KTX, need to get working in kram and viewer, has compressed mips
+Containers
+PVR/DDS/Basis/Crunch - unsupoorted 
+
+KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, metadata/props aren't standardized and only ascii prop support so easy to dump out
+
+KTX2 - works in kram and viewer, has aligned compressed levels of mips, libkram only supports None/Zstd supercompression, only read no write support, write by converting ktx -> ktx2 with ktx2ktx2 + ktxsc (see kramTexture.py --ktx2 option)
 
 ```
 
