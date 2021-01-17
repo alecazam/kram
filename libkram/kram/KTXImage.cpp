@@ -846,21 +846,22 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength)
         return false;
     }
     
+    // check for ktx2
     if (memcmp(imageData, kKTX2Identifier, sizeof(kKTX2Identifier)) == 0) {
         return openKTX2(imageData, imageDataLength);
     }
     
+    // check for ktx1
+    if (memcmp(imageData, kKTXIdentifier, sizeof(kKTXIdentifier)) != 0) {
+        return false;
+    }
+   
     //skipImageLength = skipImageLength_;
     
     // since KTX1 doesn't have compressed mips, can alias the file data directly
     fileData = imageData;
     fileDataLength = imageDataLength;
 
-    // identifier not detected
-    if (memcmp(imageData, kKTXIdentifier, sizeof(kKTXIdentifier)) != 0) {
-        return false;
-    }
-        
     // copy out the header, TODO: should make sure bytes exist
     header = *(const KTXHeader*)fileData;
 

@@ -46,7 +46,8 @@ class TextureProcessor:
 
 	appKtx2 = ""
 	appKtx2sc = ""
-	
+	appKtx2check = ""
+
 	# preset formats for a given platform
 	textureFormats = []
 
@@ -207,9 +208,26 @@ class TextureProcessor:
 			# and then execute that if script file suceeds
 			if self.appKtx2:
 				ktx2Filename = dstFile + "2"
+				
+				# create the ktx2
 				result = self.spawn(self.appKtx2 + " -f -o " + ktx2Filename + " " + dstFile)
-				if result == 0:
-					result = self.spawn(self.appKtx2sc + " -zcmp 3 " + ktx2Filename)
+				
+				# too bad this can't check ktx1...
+				if self.appKtx2check != "" and result == 0:
+					result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
+
+				# can only zstd compress block encoded files, but can do BasisLZ on 
+				#   explicit files.
+
+				# overwrite it with supercompressed version
+				if self.appKtx2sc != "" and result == 0:
+					result = self.spawn(self.appKtx2sc + " --zcmp 3 --threads 1 " + ktx2Filename)
+
+					# result = self.spawn(self.appKtx2sc + " --uastc 2 --uastc_rdo_q 1.0 --threads 1 " + ktx2Filename)
+
+				# double check supercompressed version, may not be necessary
+				if self.appKtx2check != "" and result == 0:
+					result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
 
 		return result
 
@@ -305,7 +323,8 @@ class TextureProcessor:
 @click.option('--force', is_flag=True, help="force rebuild ignoring modstamps")
 @click.option('--script', is_flag=True, help="generate kram script and execute that")
 @click.option('--ktx2', is_flag=True, help="generate ktx2 files from ktx output")
-def processTextures(platform, container, verbose, quality, jobs, force, script, ktx2):
+@click.option('--check', is_flag=True, help="check ktx2 files as generated")
+def processTextures(platform, container, verbose, quality, jobs, force, script, ktx2, check):
 	# output to multiple dirs by type
 
 	# eventually pass these in as strings, so script is generic
@@ -313,18 +332,22 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 	binDir = "../bin/"
 	appKram = os.path.abspath(binDir + "kram")
 	
+	appKtx2 = ""
+	appKtx2sc = ""
+	appKtx2check = ""
+
 	# can convert ktx -> ktx2 files with zstd supercompression
 	# caller must have ktx2ktx2 and ktx2sc in path build from https://github.com/KhronosGroup/KTX-Software
+
 	if ktx2:
 		script = False
 
-	if ktx2:
 		appKtx2 = "ktx2ktx2"
 		appKtx2sc ="ktxsc"
-	else:
-		appKtx2 = ""
-		appKtx2sc = ""
 
+		if check:
+			appKtx2check = "ktx2check"
+	
 	# abspath strips the trailing slash off - ugh
 	srcDirBase = os.path.abspath("../tests/src/")
 	srcDirBase += "/"
@@ -436,6 +459,8 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 	if ktx2:
 		processor.appKtx2 = appKtx2
 		processor.appKtx2sc = appKtx2sc
+		processor.appKtx2check = appKtx2check
+
 
 	for srcDir in srcDirs:
 		dstDir = dstDirForPlatform + srcDir
