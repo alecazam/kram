@@ -4,6 +4,9 @@ build/
 # ignore bin folder where install products go
 bin/
 
+# ignore out folder, test results go here
+out/
+
 # ignore zip files
 *.zip
 
