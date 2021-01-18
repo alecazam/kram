@@ -18,33 +18,18 @@ project(
 
 #------------------
 
-file(GLOB_RECURSE appSources CONFIGURE_DEPENDS
-    "${PROJECT_SOURCE_DIR}/*.cpp"
-    "${PROJECT_SOURCE_DIR}/*.mm"
-    "${PROJECT_SOURCE_DIR}/*.h"
-)
 
-file(GLOB_RECURSE metalSources CONFIGURE_DEPENDS
-    "${PROJECT_SOURCE_DIR}/*.metal"
-)    
 
 #------------------
 
 # **** this the executable target ****, GUI App
-add_executable(${myTargetApp} MACOSX_BUNDLE ${appSources})
+add_executable(${myTargetApp})
 
 #-----------------------------------------------------
 
 target_include_directories(${myTargetApp} PRIVATE
     "${PROJECT_SOURCE_DIR}"
 )
-
-# this works on vs and xcode
-# set_target_properties(${myTargetApp} PROPERTIES 
-#     USE_FOLDERS ON
-#     CONFIGURATION_TYPES "Debug;Release"
-#     BUILD_TYPE Release
-# )
 
 #-----------------------------------------------------
     
@@ -58,6 +43,8 @@ target_link_libraries(${myTargetApp}
     "-framework MetalKit" 
     "-framework ModelIO"
 )
+    
+
 
 set_target_properties(${myTargetApp} PROPERTIES
     # Note: match this up with CXX version
@@ -86,9 +73,6 @@ set_target_properties(${myTargetApp} PROPERTIES
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.ba.kramv"
     MACOSX_BUNDLE_GUI_IDENTIFIER "com.ba.kramv"
     
-    MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/Info.plist
-    XCODE_ATTRIBUTE_INFOPLIST_PREPROCESS YES
-        
     # for now "sign to run locally", or entitlements can't be bundled
     XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS ${PROJECT_SOURCE_DIR}/viewer.entitlements
     XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES"
@@ -103,18 +87,49 @@ set_target_properties(${myTargetApp} PROPERTIES
 
 target_compile_options(${myTargetApp} PRIVATE -W -Wall)
 
+#--------------
+# sources
+file(GLOB_RECURSE appSources CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/*.cpp"
+    "${PROJECT_SOURCE_DIR}/*.mm"
+    "${PROJECT_SOURCE_DIR}/*.h"
+)
+
+source_group(TREE "${PROJECT_SOURCE_DIR}" PREFIX "source" FILES ${appSources})
+
+target_sources(${myTargetApp} PRIVATE
+    ${appSources})
+
+
+#--------------
+# shaders
+
+file(GLOB_RECURSE shaderSources CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/*.metal"
+)
+
+source_group(TREE "${PROJECT_SOURCE_DIR}" PREFIX "shaders" FILES ${shaderSources})
+
 target_sources(${myTargetApp} PRIVATE 
+    ${shaderSources})
+
+set_source_files_properties(${shaderSources} PROPERTIES
+    LANGUAGE METAL)
+
+
+#--------------
+# resources
+
+set_target_properties(${myTargetApp} PROPERTIES
+  MACOSX_BUNDLE TRUE
+  MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/Info.plist
+)
+
+target_sources(${myTargetApp} PRIVATE
     Assets.xcassets Base.lproj/Main.storyboard Info.plist viewer.entitlements)
 
 # only these 2 resources are copied into the Resource, the other two are signed
 set_source_files_properties(Assets.xcassets Base.lproj/Main.storyboard PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources
 )
-
-target_sources(${myTargetApp} PRIVATE 
-    ${metalSources})
-
-set_source_files_properties(${metalSources} PROPERTIES 
-    LANGUAGE METAL)
-
 

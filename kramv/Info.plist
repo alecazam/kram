@@ -19,8 +19,6 @@
 			<array>
 				<string>org.khronos.ktx</string>
 			</array>
-			<key>NSDocumentClass</key>
-			<string></string>
 		</dict>
 		<dict>
 			<key>CFBundleTypeIconSystemGenerated</key>
@@ -35,8 +33,18 @@
 			<array>
 				<string>public.png</string>
 			</array>
-			<key>NSDocumentClass</key>
-			<string></string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>KTX2</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.ktx2</string>
+			</array>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
