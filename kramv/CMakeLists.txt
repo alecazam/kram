@@ -120,16 +120,21 @@ set_source_files_properties(${shaderSources} PROPERTIES
 #--------------
 # resources
 
+    
+#configure_file(Info.plist.in ${PROJECT_SOURCE_DIR}/Info.plist)
+#configure_file(InfoPlist.strings.in ${PROJECT_SOURCE_DIR}/InfoPlist.strings)
+
 set_target_properties(${myTargetApp} PROPERTIES
-  MACOSX_BUNDLE TRUE
-  MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/Info.plist
+    MACOSX_BUNDLE TRUE
+    MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/Info.plist
+    XCODE_ATTRIBUTE_INFOPLIST_FILE ${PROJECT_SOURCE_DIR}/Info.plist
 )
 
 target_sources(${myTargetApp} PRIVATE
-    Assets.xcassets Base.lproj/Main.storyboard Info.plist viewer.entitlements)
+    Assets.xcassets Base.lproj/Main.storyboard ${PROJECT_SOURCE_DIR}/Info.plist ${PROJECT_SOURCE_DIR}/viewer.entitlements)
 
 # only these 2 resources are copied into the Resource, the other two are signed
 set_source_files_properties(Assets.xcassets Base.lproj/Main.storyboard PROPERTIES
-    MACOSX_PACKAGE_LOCATION Resources
+    MACOSX_PACKAGE_LOCATION resources
 )
 
