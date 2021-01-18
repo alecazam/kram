@@ -656,21 +656,21 @@ NSArray<NSString*>* pasteboardTypes = @[
         return;
     }
     
-    if (doPrintPanZoom) {
-        string text;
-        sprintf(text,
-            "Pan %.3f,%.3f\n"
-            "Zoom %.2fx\n",
-            _showSettings->panX, _showSettings->panY,
-            _showSettings->zoom);
-        [self setHudText:text.c_str()];
-    }
-    
     if (_showSettings->panX != panX ||
         _showSettings->panY != panY)
     {
         _showSettings->panX = panX;
         _showSettings->panY = panY;
+        
+        if (doPrintPanZoom) {
+            string text;
+            sprintf(text,
+                "Pan %.3f,%.3f\n"
+                "Zoom %.2fx\n",
+                _showSettings->panX, _showSettings->panY,
+                _showSettings->zoom);
+            [self setHudText:text.c_str()];
+        }
         
         [self updateEyedropper];
         self.needsDisplay = YES;
@@ -759,10 +759,11 @@ NSArray<NSString*>* pasteboardTypes = @[
         case Key::Slash: // has ? mark above it
             // display the chars for now
             // TODO: show shift keys
-            text = "RGBA, Hud,L-reload,O-preview,0-fit,E-debug\n"
-                   "Checker,D-grid,Info\n"
-                   "W-wrap,Premul,N-signed\n"
-                   "Mip,Face,Y-array/slice";
+            text = "⇧RGBA, O-preview, ⇧E-debug\n"
+                   "Hud, ⇧L-reload, ⇧0-fit\n"
+                   "Checker, ⇧D-block/px grid, Info\n"
+                   "W-wrap, Premul, N-signed\n"
+                   "⇧Mip, ⇧Face, ⇧Y-array/slice";
             break;
             
         case Key::Zero: { // scale and reset pan
