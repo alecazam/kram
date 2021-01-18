@@ -444,6 +444,11 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     // setup dstImage
     KTXImage dstImage;
     dstImage = srcImage;  // copy src (name-value pairs copied too)
+    
+    // important otherwise offsets are wrong if src is ktx2
+    if (srcImage.skipImageLength) {
+        dstImage.skipImageLength = false;
+    }
     dstImage.fileData = nullptr;
     dstImage.fileDataLength = 0;
 
@@ -464,10 +469,6 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     vector<uint8_t> propsData;
     dstImage.toPropsData(propsData);
     dstHeader.bytesOfKeyValueData = uint32_t(propsData.size());
-
-    // update the offsets of where mips should lie
-    //bool skipImageLength = false;
-    //dstImage.skipImageLength = skipImageLength;
 
     if (!dstImage.initMipLevels(false)) {
         return false;
@@ -510,9 +511,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
 
     // DONE: walk chunks here and seek to src and dst offsets in conversion
     // make sure to walk chunks in the exact same order they are written, array then face, or slice
-    int numChunks = std::max((int)srcImage.header.numberOfFaces, 1) *
-                    std::max((int)srcImage.header.numberOfArrayElements, 1) *
-                    std::max((int)srcImage.header.pixelDepth, 1);
+    int numChunks = srcImage.totalChunks();
     
     int w = srcImage.width;
     int h = srcImage.height;
@@ -790,17 +789,17 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
             // This isn't correct for cubes, arrays, and other types.  The mip length is only written out once for all mips.
             int dstMipOffset = dstMipLevel.offset + chunk * dstMipLevel.length;
             
-            if (chunk == 0) {
-                uint32_t mipSize = dstMipLevel.length;
+            if (chunk == 0 && !dstImage.skipImageLength) {
+                uint32_t levelSize = dstMipLevel.length;
                 
                 // cubes write the face size, not the levels size, ugh
                 if (srcImage.textureType != MyMTLTextureTypeCube) {
-                    mipSize *= numChunks;
+                    levelSize *= numChunks;
                 }
                 
-                fseek(dstFile, dstMipOffset - sizeof(mipSize), SEEK_SET);  // from begin
+                fseek(dstFile, dstMipOffset - sizeof(levelSize), SEEK_SET);  // from begin
 
-                if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&mipSize, sizeof(mipSize))) {
+                if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&levelSize, sizeof(levelSize))) {
                     return false;
                 }
             }

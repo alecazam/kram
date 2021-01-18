@@ -75,6 +75,7 @@ using namespace simd;
         if (!imageDecode.decode(image, decodedTmpFile.pointer(), kTexEncoderAstcenc, false, "")) {
             return NO;
         }
+    
         useDecode = true;
     }
     
@@ -100,6 +101,7 @@ using namespace simd;
             return NO;
         }
         
+        image.skipImageLength = false;
         if (!image.open(data.data(), (int32_t)size)) { // doesn't fail
             return NO;
         }

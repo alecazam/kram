@@ -1033,10 +1033,10 @@ void KTXImage::toPropsData(vector<uint8_t>& propsData)
         propsData.insert(propsData.end(), value, value + prop.second.length() + 1);
 
         // padding to 4 byte multiple
-        uint32_t padding = 3 - ((size + 3) % 4);
-        if (padding) {
+        uint32_t numPadding = 3 - ((size + 3) % 4);
+        if (numPadding) {
             uint8_t paddingData[4] = {0, 0, 0, 0};
-            propsData.insert(propsData.end(), paddingData, paddingData + padding);
+            propsData.insert(propsData.end(), paddingData, paddingData + numPadding);
         }
     }
 
@@ -1416,7 +1416,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
                 }
                 case KTX2SupercompressionBasisLZ:
                     // TODO: this one really needs KTX-software branch
-                    // also loader has option to transcodeo to various formats
+                    // also loader has option to transcode to various formats
                     break;
                     
                 case KTX2SupercompressionZlib:

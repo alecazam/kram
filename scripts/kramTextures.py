@@ -114,11 +114,11 @@ class TextureProcessor:
 		elif ("-cube" in name):
 			kind = TextureType.Cube
 		
-		elif ("-array1d" in name):
+		elif ("-1darray" in name):
 			kind = TextureType.Tex1DArray
-		elif ("-array2d" in name):
+		elif ("-2darray" in name):
 			kind = TextureType.Tex2DArray
-		elif ("-arraycube" in name):
+		elif ("-cubearray" in name):
 			kind = TextureType.CubeArray
 			
 		return kind
