@@ -381,7 +381,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                         
                         // cpu copy the bytes from the data object into the texture
                         MTLRegion region = {
-                            { 0, 0, (NSUInteger)sliceOrArrayOrFace }, // MTLOrigin
+                            { 0, 0, 0 }, // MTLOrigin
                             { (NSUInteger)w,  (NSUInteger)h, 1 }  // MTLSize
                         };
                         
@@ -389,15 +389,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                         // otherwise too many replaceRegion calls.   Data is already packed by mip.
                         
                         if (is1DArray) {
-                            MTLRegion region1d = {
-                                { 0, 0, 0 }, // MTLOrigin
-                                { (NSUInteger)w, 1, 1 }  // MTLSize
-                            };
-                            
-                            // TODO: should really upload this all array levels in one call
-                            // any mips would be half the non-1 dimension (so X)
-                            
-                            [texture replaceRegion:region1d
+                            [texture replaceRegion:region
                                         mipmapLevel:mipLevelNumber
                                             slice:sliceOrArrayOrFace
                                           withBytes:srcBytes
@@ -405,8 +397,6 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                                         bytesPerImage:0];
                         }
                         else if (isCubemap) {
-                            region.origin.z = 0;
-                            
                             [texture replaceRegion:region
                                         mipmapLevel:mipLevelNumber
                                             slice:sliceOrArrayOrFace
@@ -415,16 +405,16 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                                         bytesPerImage:0];
                         }
                         else if (is3D) {
+                            region.origin.z = sliceOrArrayOrFace;
                             
                             [texture replaceRegion:region
                                         mipmapLevel:mipLevelNumber
-                                             slice:0 // for 3d
+                                             slice:0
                                           withBytes:srcBytes
                                         bytesPerRow:bytesPerRow
                                      bytesPerImage:mipStorageSize]; // only for 3d
                         }
                         else if (is2DArray) {
-
                             [texture replaceRegion:region
                                         mipmapLevel:mipLevelNumber
                                              slice:array
@@ -432,7 +422,6 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                                         bytesPerRow:bytesPerRow
                                      bytesPerImage:0];
                         }
-                        
                         else {
 
                             [texture replaceRegion:region
