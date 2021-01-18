@@ -15,15 +15,15 @@ namespace kram {
 using namespace std;
 
 // TODO: install assert handler to intercept, and also add a verify (assert that leaves source in)
-//void __assert(const char *expression, const char *file, int line) {
+//void __assert(const char *expression, const char *file, int32_t line) {
 //
 //}
 
-static int vsprintf(string& str, const char* format, va_list args)
+static int32_t vsprintf(string& str, const char* format, va_list args)
 {
     if (strchr(format, '%') == nullptr) {
         str = format;
-        return (int)str.length();
+        return (int32_t)str.length();
     }
 
     // can't reuse args after vsnprintf
@@ -31,7 +31,7 @@ static int vsprintf(string& str, const char* format, va_list args)
     va_copy(argsCopy, args);
 
     // format once to get length (without NULL at end)
-    int len = vsnprintf(NULL, 0, format, argsCopy);
+    int32_t len = vsnprintf(NULL, 0, format, argsCopy);
 
     if (len > 0) {
         // resize and format again into string
@@ -42,11 +42,11 @@ static int vsprintf(string& str, const char* format, va_list args)
     return len;
 }
 
-int sprintf(string& str, const char* format, ...)
+int32_t sprintf(string& str, const char* format, ...)
 {
     va_list args;
     va_start(args, format);
-    int len = vsprintf(str, format, args);
+    int32_t len = vsprintf(str, format, args);
     va_end(args);
 
     return len;
@@ -76,8 +76,8 @@ bool endsWithExtension(const char* str, const string& substring)
     return strcmp(search, substring.c_str()) == 0;
 }
 
-extern int logMessage(const char* group, int logLevel,
-                      const char* file, int line, const char* func,
+extern int32_t logMessage(const char* group, int32_t logLevel,
+                      const char* file, int32_t line, const char* func,
                       const char* fmt, ...)
 {
     // TOOD: add any filtering up here
@@ -106,13 +106,13 @@ extern int logMessage(const char* group, int logLevel,
         fp = stderr;
 
     // see if newline required
-    int len = (int)strlen(fmt);
+    int32_t len = (int32_t)strlen(fmt);
     bool needsNewline = false;
     if (len >= 1)
         needsNewline = fmt[len - 1] != '\n';
 
     if (needsNewline) {
-        len = (int)strlen(msg);
+        len = (int32_t)strlen(msg);
         if (len >= 1)
             needsNewline = msg[len - 1] != '\n';
     }

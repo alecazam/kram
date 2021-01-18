@@ -14,18 +14,18 @@ using namespace simd;
 
 Mipper::Mipper() { initTables(); }
 
-bool isPow2(int num)
+bool isPow2(int32_t num)
 {
     // exclude 0
     return (num > 0) && ((num & (num - 1)) == 0);
 }
 
-int nextPow2(int num)
+int32_t nextPow2(int32_t num)
 {
     if (isPow2(num))
         return num;
 
-    int powerOfTwo = 1;
+    int32_t powerOfTwo = 1;
     while (powerOfTwo < num)
         powerOfTwo <<= 1;
 
@@ -101,7 +101,7 @@ void Mipper::initTables()
 
     // https://entropymine.com/imageworsener/srgbformula/
     // https://stackoverflow.com/questions/34472375/linear-to-srgb-conversion
-    for (int i = 0; i < 256; ++i) {
+    for (int32_t i = 0; i < 256; ++i) {
         float s = i / 255.0;
         float lin = s;
         alphaToFloat[i] = lin;
@@ -121,12 +121,12 @@ void Mipper::initTables()
     //   out of the 32
     //    float extra = 0.0; // 0.5/255.0;
     //
-    //    for (int i = 0; i < 32; ++i) {
+    //    for (int32_t i = 0; i < 32; ++i) {
     //        float lin = (i + extra) / 31.0;
     //        uint8_t value = (floatToUint8(linearToSRGBFunc(lin)) >> 3) & 31;
     //        linearToSrgb5[i] = value;
     //    }
-    //    for (int i = 0; i < 64; ++i) {
+    //    for (int32_t i = 0; i < 64; ++i) {
     //        float lin = (i + extra) / 63.0;
     //        uint8_t value = (floatToUint8(linearToSRGBFunc(lin)) >> 2) & 63;
     //        linearToSrgb6[i] = value;
@@ -139,8 +139,8 @@ void Mipper::initTables()
     // srgb -> linear, then premul, then re-encode
     // tables are 64k each, simd math is probably faster to compute
 
-    // for (int a = 0; a < 256; ++a) {
-    //        for (int i = 0; i < 256; ++i) {
+    // for (int32_t a = 0; a < 256; ++a) {
+    //        for (int32_t i = 0; i < 256; ++i) {
     //            float s = srgbToLinear[i];
     //            srgbToLinearPremul[i] = s;
     //
@@ -167,8 +167,8 @@ void Mipper::initTables()
 void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
                                     vector<half4>& halfImage) const
 {
-    int w = srcImage.width;
-    int h = srcImage.height;
+    int32_t w = srcImage.width;
+    int32_t h = srcImage.height;
 
     // do in-place mips to this if srgb or premul involved
     if (srcImage.isHDR) {
@@ -178,9 +178,9 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
     }
     else if (srcImage.isSRGB) {
         // this does srgb and premul conversion
-        for (int y = 0; y < h; y++) {
-            int y0 = y * w;
-            for (int x = 0; x < w; x++) {
+        for (int32_t y = 0; y < h; y++) {
+            int32_t y0 = y * w;
+            for (int32_t x = 0; x < w; x++) {
                 Color& c0 = srcImage.pixels[y0 + x];
                 float4 cFloat =
                     {srgbToLinear[c0.r], srgbToLinear[c0.g],
@@ -221,9 +221,9 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
     }
     else if (doPremultiply) {
         // do premul conversion
-        for (int y = 0; y < h; y++) {
-            int y0 = y * w;
-            for (int x = 0; x < w; x++) {
+        for (int32_t y = 0; y < h; y++) {
+            int32_t y0 = y * w;
+            for (int32_t x = 0; x < w; x++) {
                 Color& c0 = srcImage.pixels[y0 + x];
                 float4 cFloat = {alphaToFloat[c0.r], alphaToFloat[c0.g],
                                  alphaToFloat[c0.b], 1.0f};
@@ -278,7 +278,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
 inline int8_t signedConvertUint8(uint8_t x)
 {
     // split into +/- values
-    int xx = (int)x - 128;
+    int32_t xx = (int32_t)x - 128;
     return (int8_t)xx;
 }
 
@@ -306,8 +306,8 @@ void Mipper::mipmap(const ImageData& srcImage, ImageData& dstImage) const
 
 void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
 {
-    int width = srcImage.width;
-    int height = srcImage.height;
+    int32_t width = srcImage.width;
+    int32_t height = srcImage.height;
 
     // this can receive premul, srgb data
     // the mip chain is linear data only
@@ -322,11 +322,11 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
     
     // Note the ptrs above may point to same memory
     
-    int dstIndex = 0;
+    int32_t dstIndex = 0;
 
     // To see the downsampled mip dimensions enable this
-    //    int wDst = width;
-    //    int hDst = height;
+    //    int32_t wDst = width;
+    //    int32_t hDst = height;
     //    mipDown(wDst, hDst);
 
     // 535 produces 267.5 -> 267, last pixel in an odd width or height is skipped
@@ -334,7 +334,7 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
     bool isOddX = width & 1;
     bool isOddY = height & 1;
 
-    for (int y = 0; y < height; y += 2) {
+    for (int32_t y = 0; y < height; y += 2) {
         // last y row is skipped if odd, this causes a shift
         if (isOddY) {
             if (y == (height - 1)) {
@@ -342,15 +342,15 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
             }
         }
 
-        int y0 = y;
-        int y1 = y + 1;
+        int32_t y0 = y;
+        int32_t y1 = y + 1;
         if (y1 == height) {
             y1 = y;
         }
         y0 *= width;
         y1 *= width;
 
-        for (int x = 0; x < width; x += 2) {
+        for (int32_t x = 0; x < width; x += 2) {
             // last x column is skipped if odd, this causes a shift
             if (isOddX) {
                 if (x == (width - 1)) {
@@ -358,7 +358,7 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
                 }
             }
 
-            int x1 = x + 1;
+            int32_t x1 = x + 1;
             if (x1 == width) {
                 x1 = x;
             }

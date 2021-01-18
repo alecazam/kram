@@ -115,14 +115,14 @@ public:
 class task_system {
     NOT_COPYABLE(task_system);
 
-    const int _count;
+    const int32_t _count;
     vector<thread> _threads;
 
     // currently one queue to each thread, but can steal from other queues
     vector<notification_queue> _q;
-    atomic<int> _index;
+    atomic<int32_t> _index;
 
-    void run(int threadIndex)
+    void run(int32_t threadIndex)
     {
         while (true) {
             // pop() wait avoids a spinloop.
@@ -133,9 +133,9 @@ class task_system {
             // Note that if threadIndex queue is empty and stays empty
             // then pop() below will stop using that thread.  But async_ is round-robining
             // all work across the available queues.
-            int multiple = 4;  // 32;
-            int numTries = 0;
-            for (int n = 0, nEnd = _count * multiple; n < nEnd; ++n) {
+            int32_t multiple = 4;  // 32;
+            int32_t numTries = 0;
+            for (int32_t n = 0, nEnd = _count * multiple; n < nEnd; ++n) {
                 numTries++;
 
                 // break for loop if work found
@@ -170,10 +170,10 @@ class task_system {
     }
 
 public:
-    task_system(int count = 1) : _count(std::min(count, (int32_t)thread::hardware_concurrency())), _q{(size_t)_count}, _index(0)
+    task_system(int32_t count = 1) : _count(std::min(count, (int32_t)thread::hardware_concurrency())), _q{(size_t)_count}, _index(0)
     {
         // start up the threads
-        for (int threadIndex = 0; threadIndex != _count; ++threadIndex) {
+        for (int32_t threadIndex = 0; threadIndex != _count; ++threadIndex) {
             _threads.emplace_back([&, threadIndex] { run(threadIndex); });
         }
     }
@@ -187,7 +187,7 @@ public:
         for (auto& e : _threads) e.join();
     }
 
-    int num_threads() const
+    int32_t num_threads() const
     {
         return _count;
     }
@@ -203,7 +203,7 @@ public:
 
         // push to the next queue that is available
         // this was meant to avoid mutex stalls using a try_lock
-        //        for (int n = 0; n != _count; ++n)
+        //        for (int32_t n = 0; n != _count; ++n)
         //        {
         //            if (_q[(i + n) % _count].try_push(forward<F>(f))) return;
         //        }
@@ -358,7 +358,7 @@ public:
 
 /**************************************************************************************************/
 
-//int main() {
+//int32_t main() {
 //    future<cpp_int> x = async([]{ return fibonacci<cpp_int>(100); });
 //
 //    future<cpp_int> y = x.then([](const cpp_int& x){ return cpp_int(x * 2); });

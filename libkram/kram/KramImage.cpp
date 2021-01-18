@@ -30,7 +30,7 @@
 #include "astc-encoder/astcenc.h"  // astc encoder
 
 // hack to improve block generation on L1 and LA encoding
-//extern thread_local int gAstcenc_UniqueChannelsInPartitioning;
+//extern thread_local int32_t gAstcenc_UniqueChannelsInPartitioning;
 #endif
 
 #include <cassert>
@@ -55,17 +55,17 @@ using namespace simd;
 using namespace heman;
 
 template <typename T>
-void pointFilterImage(int w, int h, const T* srcImage,
-                      int dstW, int dstH, T* dstImage)
+void pointFilterImage(int32_t w, int32_t h, const T* srcImage,
+                      int32_t dstW, int32_t dstH, T* dstImage)
 {
     float scaleX = (float)w / dstW;
     float scaleY = (float)h / dstH;
 
-    for (int y = 0; y < dstH; ++y) {
-        int ySrc = (int)floorf((float)y * scaleY);
+    for (int32_t y = 0; y < dstH; ++y) {
+        int32_t ySrc = (int32_t)floorf((float)y * scaleY);
 
-        for (int x = 0; x < dstW; ++x) {
-            int xSrc = (int)floorf((float)x * scaleX);
+        for (int32_t x = 0; x < dstW; ++x) {
+            int32_t xSrc = (int32_t)floorf((float)x * scaleX);
 
             dstImage[y * dstW + x] = srcImage[ySrc * w + xSrc];
         }
@@ -75,9 +75,9 @@ void pointFilterImage(int w, int h, const T* srcImage,
 /// Rrepresents output data
 class TextureData {
 public:
-    int width;
-    int height;
-    //int format;
+    int32_t width;
+    int32_t height;
+    //int32_t format;
     vector<uint8_t> data;
 };
 
@@ -107,7 +107,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
     // so can call through to blockSize
     KTXHeader header;
     header.initFormatGL(image.pixelFormat);
-    int blockSize = image.blockSize();
+    int32_t blockSize = image.blockSize();
 
     _hasColor = isColorFormat(image.pixelFormat);
     _hasAlpha = isAlphaFormat(image.pixelFormat);
@@ -119,8 +119,8 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             const uint8_t* srcPixels =
                 image.fileData + image.mipLevels[0].offset;
 
-            int numSrcChannels = blockSize / sizeof(uint8_t);
-            int numDstChannels = 4;
+            int32_t numSrcChannels = blockSize / sizeof(uint8_t);
+            int32_t numDstChannels = 4;
 
             // Note: clearing unspecified channels to 0000, not 0001
             _pixels.resize(4 * _width * _height);
@@ -128,12 +128,12 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                 memset(_pixels.data(), 0, _pixels.size());
             }
 
-            for (int y = 0; y < _height; ++y) {
-                int y0 = _height * y;
+            for (int32_t y = 0; y < _height; ++y) {
+                int32_t y0 = _height * y;
 
-                for (int x = 0, xEnd = _width; x < xEnd; ++x) {
-                    int srcX = (y0 + x) * numSrcChannels;
-                    int dstX = (y0 + x) * numDstChannels;
+                for (int32_t x = 0, xEnd = _width; x < xEnd; ++x) {
+                    int32_t srcX = (y0 + x) * numSrcChannels;
+                    int32_t dstX = (y0 + x) * numDstChannels;
 
                     switch (numSrcChannels) {
                         // all fallthrough
@@ -157,8 +157,8 @@ bool Image::loadImageFromKTX(const KTXImage& image)
         case MyMTLPixelFormatR16Float:
         case MyMTLPixelFormatRG16Float:
         case MyMTLPixelFormatRGBA16Float: {
-            int numSrcChannels = blockSize / 2;  // 2 = sizeof(_float16)
-            int numDstChannels = 4;
+            int32_t numSrcChannels = blockSize / 2;  // 2 = sizeof(_float16)
+            int32_t numDstChannels = 4;
 
             // Note: clearing unspecified channels to 0000, not 0001
             _pixelsFloat.resize(_width * _height);
@@ -174,19 +174,19 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                 (const half*)(image.fileData + image.mipLevels[0].offset);
 
             half4 srcPixel;
-            for (int i = 0; i < 4; ++i) {
+            for (int32_t i = 0; i < 4; ++i) {
                 srcPixel.v[i] = 0;
             }
 
-            for (int y = 0; y < _height; ++y) {
-                int y0 = _height * y;
+            for (int32_t y = 0; y < _height; ++y) {
+                int32_t y0 = _height * y;
 
-                for (int x = 0, xEnd = _width; x < xEnd; ++x) {
-                    int srcX = (y0 + x) * numSrcChannels;
-                    int dstX = (y0 + x) * numDstChannels;
+                for (int32_t x = 0, xEnd = _width; x < xEnd; ++x) {
+                    int32_t srcX = (y0 + x) * numSrcChannels;
+                    int32_t dstX = (y0 + x) * numDstChannels;
 
                     // copy in available alues
-                    for (int i = 0; i < numSrcChannels; ++i) {
+                    for (int32_t i = 0; i < numSrcChannels; ++i) {
                         srcPixel.v[i] = srcPixels[srcX + i];
                     }
 
@@ -209,8 +209,8 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             const float* srcPixels =
                 (const float*)(image.fileData + image.mipLevels[0].offset);
 
-            int numSrcChannels = blockSize / sizeof(float);
-            int numDstChannels = 4;
+            int32_t numSrcChannels = blockSize / sizeof(float);
+            int32_t numDstChannels = 4;
 
             // Note: clearing unspecified channels to 0000, not 0001
             _pixelsFloat.resize(_width * _height);
@@ -222,12 +222,12 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             // treat as float for per channel copies
             float* dstPixels = (float*)(_pixelsFloat.data());
 
-            for (int y = 0; y < _height; ++y) {
-                int y0 = _height * y;
+            for (int32_t y = 0; y < _height; ++y) {
+                int32_t y0 = _height * y;
 
-                for (int x = 0, xEnd = _width; x < xEnd; ++x) {
-                    int srcX = (y0 + x) * numSrcChannels;
-                    int dstX = (y0 + x) * numDstChannels;
+                for (int32_t x = 0, xEnd = _width; x < xEnd; ++x) {
+                    int32_t srcX = (y0 + x) * numSrcChannels;
+                    int32_t dstX = (y0 + x) * numDstChannels;
 
                     switch (numSrcChannels) {
                         // all fallthrough
@@ -258,8 +258,8 @@ bool Image::loadImageFromKTX(const KTXImage& image)
     return true;
 }
 
-bool Image::loadImageFromPixels(const vector<uint8_t>& pixels, int width,
-                                int height, bool hasColor, bool hasAlpha)
+bool Image::loadImageFromPixels(const vector<uint8_t>& pixels, int32_t width,
+                                int32_t height, bool hasColor, bool hasAlpha)
 {
     // copy the data into a contiguous array
     _width = width;
@@ -272,23 +272,23 @@ bool Image::loadImageFromPixels(const vector<uint8_t>& pixels, int width,
 
     // always assumes 4 rgba8 channels
     // _pixels.resize(4 * _width * _height);
-    assert((int)pixels.size() == (width * height * 4));
+    assert((int32_t)pixels.size() == (width * height * 4));
     _pixels = pixels;
 
     return true;
 }
 
-void Image::computeMipStorage(const KTXImage& image, int w, int h,
-                              bool doMipmaps, int mipMinSize, int mipMaxSize,
-                              int& storageSize, int& storageSizeTotal,
-                              vector<int>& mipStorageSizes,
-                              int& numDstMipLevels, int& numMipLevels) const
+void Image::computeMipStorage(const KTXImage& image, int32_t w, int32_t h,
+                              bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize,
+                              int32_t& storageSize, int32_t& storageSizeTotal,
+                              vector<int32_t>& mipStorageSizes,
+                              int32_t& numDstMipLevels, int32_t& numMipLevels) const
 {
     bool canMipmap = true;  // isPow2(w) && isPow2(h); // DONE: removed pow2 requirement, mip gen handles non-pow2
 
     bool needsDownsample = (w > mipMaxSize || h > mipMaxSize);
 
-    int maxMipLevels = 16;  // 64K x 64K
+    int32_t maxMipLevels = 16;  // 64K x 64K
     if ((!doMipmaps) && needsDownsample) {
         maxMipLevels = 1;
     }
@@ -316,7 +316,7 @@ void Image::computeMipStorage(const KTXImage& image, int w, int h,
                 (h >= mipMinSize && h <= mipMaxSize);
 
             if (keepMip && (numDstMipLevels < maxMipLevels)) {
-                int mipStorageSize = image.mipLevelSize(w, h);
+                int32_t mipStorageSize = image.mipLevelSize(w, h);
                 mipStorageSizes.push_back(mipStorageSize);
                 storageSizeTotal += mipStorageSize;
                 numDstMipLevels++;
@@ -355,8 +355,8 @@ void Image::averageChannelsInBlock(
     const char* averageChannels, const KTXImage& image, ImageData& srcImage,
     vector<Color>& tmpImageData8) const  // otherwise, it's BlueAlpha averaging
 {
-    int w = srcImage.width;
-    int h = srcImage.height;
+    int32_t w = srcImage.width;
+    int32_t h = srcImage.height;
 
     // DONE: switch to mask, then can average b on astc4x4, code averages all
     // channels, then apply mask on writes back over the pixel.
@@ -375,22 +375,22 @@ void Image::averageChannelsInBlock(
     Int2 blockDims = image.blockDims();
     tmpImageData8.resize(w * h);
 
-    for (int yy = 0; yy < h; yy += blockDims.y) {
-        for (int xx = 0; xx < w; xx += blockDims.x) {
+    for (int32_t yy = 0; yy < h; yy += blockDims.y) {
+        for (int32_t xx = 0; xx < w; xx += blockDims.x) {
             // compute clamped blockDims
             Int2 clampedBlockDims;
             clampedBlockDims.x = std::min(w - xx, blockDims.x);
             clampedBlockDims.y = std::min(h - yy, blockDims.y);
 
             // average red, blue
-            int red32 = 0;
-            int green32 = 0;
-            int blue32 = 0;
-            int alpha32 = 0;
+            int32_t red32 = 0;
+            int32_t green32 = 0;
+            int32_t blue32 = 0;
+            int32_t alpha32 = 0;
 
-            for (int y = 0; y < clampedBlockDims.y; ++y) {
-                int y0 = yy + y;
-                for (int x = xx, xEnd = xx + clampedBlockDims.x; x < xEnd;
+            for (int32_t y = 0; y < clampedBlockDims.y; ++y) {
+                int32_t y0 = yy + y;
+                for (int32_t x = xx, xEnd = xx + clampedBlockDims.x; x < xEnd;
                      ++x) {
                     red32 += srcImage.pixels[y0 + x].r;
                     green32 += srcImage.pixels[y0 + x].g;
@@ -399,7 +399,7 @@ void Image::averageChannelsInBlock(
                 }
             }
 
-            int numBlockPixelsClamped = clampedBlockDims.x * clampedBlockDims.y;
+            int32_t numBlockPixelsClamped = clampedBlockDims.x * clampedBlockDims.y;
             uint8_t red =
                 (red32 + numBlockPixelsClamped / 2) / numBlockPixelsClamped;
             uint8_t green =
@@ -410,9 +410,9 @@ void Image::averageChannelsInBlock(
                 (alpha32 + numBlockPixelsClamped / 2) / numBlockPixelsClamped;
 
             // copy over the red/blue chennsl
-            for (int y = 0; y < clampedBlockDims.y; ++y) {
-                int y0 = yy + y;
-                for (int x = xx, xEnd = xx + clampedBlockDims.x; x < xEnd;
+            for (int32_t y = 0; y < clampedBlockDims.y; ++y) {
+                int32_t y0 = yy + y;
+                for (int32_t x = xx, xEnd = xx + clampedBlockDims.x; x < xEnd;
                      ++x) {
                     // replace red/blue with average of block
                     Color c = srcImage.pixels[y0 + x];
@@ -469,16 +469,22 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     vector<uint8_t> propsData;
     dstImage.toPropsData(propsData);
     dstHeader.bytesOfKeyValueData = uint32_t(propsData.size());
-
     if (!dstImage.initMipLevels(false)) {
         return false;
     }
-
     
     bool success = false;
 
+    // 1d textures need to write out 0 width
+    KTXHeader headerCopy = dstHeader;
+    
+    if (dstImage.textureType == MyMTLTextureType1DArray) {
+        headerCopy.pixelHeight = 0;
+        headerCopy.pixelDepth = 0;
+    }
+    
     // write the header out
-    if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&dstHeader, sizeof(dstHeader))) {
+    if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&headerCopy, sizeof(headerCopy))) {
         return false;
     }
 
@@ -511,16 +517,16 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
 
     // DONE: walk chunks here and seek to src and dst offsets in conversion
     // make sure to walk chunks in the exact same order they are written, array then face, or slice
-    int numChunks = srcImage.totalChunks();
+    int32_t numChunks = srcImage.totalChunks();
     
-    int w = srcImage.width;
-    int h = srcImage.height;
+    int32_t w = srcImage.width;
+    int32_t h = srcImage.height;
 
-    for (int chunk = 0; chunk < numChunks; ++chunk) {
+    for (int32_t chunk = 0; chunk < numChunks; ++chunk) {
         w = srcImage.width;
         h = srcImage.height;
         
-        for (int i = 0; i < (int)srcImage.header.numberOfMipmapLevels; ++i) {
+        for (int32_t i = 0; i < (int32_t)srcImage.header.numberOfMipmapLevels; ++i) {
             const KTXImageLevel& dstMipLevel = dstImage.mipLevels[i];
             outputTexture.resize(dstMipLevel.length);
 
@@ -546,16 +552,16 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                 else if (useBcenc) {
                     Color* dstPixels = (Color*)outputTexture.data();
 
-                    const int blockDim = 4;
-                    int blocks_x = (w + blockDim - 1) / blockDim;
-                    //int blocks_y = (h + blockDim - 1) / blockDim;
-                    int blockSize = blockSizeOfFormat(pixelFormat);
+                    const int32_t blockDim = 4;
+                    int32_t blocks_x = (w + blockDim - 1) / blockDim;
+                    //int32_t blocks_y = (h + blockDim - 1) / blockDim;
+                    int32_t blockSize = blockSizeOfFormat(pixelFormat);
 
-                    for (int y = 0; y < h; y += blockDim) {
-                        for (int x = 0; x < w; x += blockDim) {
-                            int bbx = x / blockDim;
-                            int bby = y / blockDim;
-                            int bb0 = bby * blocks_x + bbx;
+                    for (int32_t y = 0; y < h; y += blockDim) {
+                        for (int32_t x = 0; x < w; x += blockDim) {
+                            int32_t bbx = x / blockDim;
+                            int32_t bby = y / blockDim;
+                            int32_t bb0 = bby * blocks_x + bbx;
                             const uint8_t* srcBlock = &srcData[bb0 * blockSize];
 
                             // decode into temp 4x4 pixels
@@ -599,14 +605,14 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                             }
 
                             // copy temp pixels to outputTexture
-                            for (int by = 0; by < blockDim; ++by) {
-                                int yy = y + by;
+                            for (int32_t by = 0; by < blockDim; ++by) {
+                                int32_t yy = y + by;
                                 if (yy >= h) {
                                     break;
                                 }
 
-                                for (int bx = 0; bx < blockDim; ++bx) {
-                                    int xx = x + bx;
+                                for (int32_t bx = 0; bx < blockDim; ++bx) {
+                                    int32_t xx = x + bx;
                                     if (xx >= w) {
                                         break;  // go to next y above
                                     }
@@ -657,7 +663,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     #if COMPILE_ATE
                 else if (useATE) {
                     ATEEncoder encoder;
-                    success = encoder.Decode(pixelFormat, (int)srcMipLevel.length, srcImage.blockDims().y,
+                    success = encoder.Decode(pixelFormat, (int32_t)srcMipLevel.length, srcImage.blockDims().y,
                                              isVerbose,
                                              w, h, srcData, outputTexture.data());
                 }
@@ -727,7 +733,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                     dstImageASTC.data_type = ASTCENC_TYPE_U8;
                     dstImageASTC.data = outputTexture.data();
 
-                    int srcDataLength = (int)srcMipLevel.length;
+                    int32_t srcDataLength = (int32_t)srcMipLevel.length;
                     Int2 blockDims = srcImage.blockDims();
 
                     astcenc_profile profile;
@@ -762,7 +768,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
                 else if (useATE) {
                     // this decods all except hdr/bc6
                     ATEEncoder encoder;
-                    success = encoder.Decode(pixelFormat, (int)srcMipLevel.length, srcImage.blockDims().y,
+                    success = encoder.Decode(pixelFormat, (int32_t)srcMipLevel.length, srcImage.blockDims().y,
                                              isVerbose,
                                              w, h, srcData, outputTexture.data());
                 }
@@ -787,7 +793,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
 
             // write the mips out to the file, and code above can then decode into the same buffer
             // This isn't correct for cubes, arrays, and other types.  The mip length is only written out once for all mips.
-            int dstMipOffset = dstMipLevel.offset + chunk * dstMipLevel.length;
+            int32_t dstMipOffset = dstMipLevel.offset + chunk * dstMipLevel.length;
             
             if (chunk == 0 && !dstImage.skipImageLength) {
                 uint32_t levelSize = dstMipLevel.length;
@@ -818,7 +824,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     return success;
 }
 
-bool Image::resizeImage(int wResize, int hResize, bool resizePow2, ImageResizeFilter /* filter */)
+bool Image::resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, ImageResizeFilter /* filter */)
 {
     if (resizePow2) {
         if (isPow2(_width) && isPow2(_height)) {
@@ -864,8 +870,8 @@ bool Image::resizeImage(int wResize, int hResize, bool resizePow2, ImageResizeFi
 // from that.  This is more like SDF where a single height is used.
 void Image::heightToNormals(float scale)
 {
-    int w = _width;
-    int h = _height;
+    int32_t w = _width;
+    int32_t h = _height;
 
     // TODO: hook these up, but needs src != dst or copy
     bool isWrapY = false;
@@ -880,10 +886,10 @@ void Image::heightToNormals(float scale)
     const float4* srcPixels = _pixelsFloat.data();
     float4* dstPixels = (float4*)_pixelsFloat.data();
 
-    for (int y = 0; y < h; ++y) {
-        int y0 = y;
-        int ym = y - 1;
-        int yp = y + 1;
+    for (int32_t y = 0; y < h; ++y) {
+        int32_t y0 = y;
+        int32_t ym = y - 1;
+        int32_t yp = y + 1;
 
         if (isWrapY) {
             ym = (ym + h) % h;
@@ -899,10 +905,10 @@ void Image::heightToNormals(float scale)
         ym *= w;
         yp *= w;
 
-        for (int x = 0; x < w; ++x) {
-            int x0 = x;
-            int xm = x - 1;
-            int xp = x + 1;
+        for (int32_t x = 0; x < w; ++x) {
+            int32_t x0 = x;
+            int32_t xm = x - 1;
+            int32_t xp = x + 1;
 
             if (isWrapX) {
                 xm = (xm + w) % w;
@@ -946,8 +952,8 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
     vector<Int2> chunkOffsets;
 
-    int w = _width;
-    int h = _height;
+    int32_t w = _width;
+    int32_t h = _height;
 
     if (!validateTextureType(info.textureType, w, h, chunkOffsets, header,
                              info.doMipmaps)) {
@@ -955,8 +961,8 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     }
 
     // cube and array this is the size of one face/slice
-    const int modifiedWidth = w;
-    const int modifiedHeight = h;
+    const int32_t modifiedWidth = w;
+    const int32_t modifiedHeight = h;
 
     // work out how much memory we need to load
     header.initFormatGL(info.pixelFormat);
@@ -1027,16 +1033,16 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     //ktxImage.bytesPerBlock = header.blockSize();
     //ktxImage.blockDims = header.blockDims();
 
-    int storageSize = image.mipLevelSize(w, h);
+    int32_t storageSize = image.mipLevelSize(w, h);
 
     // how much to store to store biggest level of ktx (will in-place mip to
     // this)
-    int storageSizeTotal = storageSize;
+    int32_t storageSizeTotal = storageSize;
 
-    vector<int> mipOffsets;
-    vector<int> mipStorageSizes;
-    int numDstMipLevels = 0;
-    int numMipLevels = 0;
+    vector<int32_t> mipOffsets;
+    vector<int32_t> mipStorageSizes;
+    int32_t numDstMipLevels = 0;
+    int32_t numMipLevels = 0;
 
     // header only holds pixelFormat, but can generate block info from that
     computeMipStorage(image, w, h,  // pixelFormat,
@@ -1045,10 +1051,10 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
                       numDstMipLevels, numMipLevels);
 
     // now compute the mip base offsets
-    int mipOffset = sizeof(KTXHeader) + header.bytesOfKeyValueData;
+    int32_t mipOffset = sizeof(KTXHeader) + header.bytesOfKeyValueData;
 
-    for (int i = 0; i < numMipLevels; ++i) {
-        int mipStorageSize = mipStorageSizes[i];
+    for (int32_t i = 0; i < numMipLevels; ++i) {
+        int32_t mipStorageSize = mipStorageSizes[i];
         if (mipStorageSize == 0) {
             mipOffsets.push_back(0);
             continue;
@@ -1057,7 +1063,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
         // 4 byte length of mip level is written out, this totally throws off block alignment
         // this is size of one mip not the array of mips of that size
         //if (!info.skipImageLength) {
-            int levelSizeOf = sizeof(uint32_t);
+            int32_t levelSizeOf = sizeof(uint32_t);
             mipOffset += levelSizeOf;
         //}
 
@@ -1066,7 +1072,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
         // ktx requires 4 byte alignment to rows of pixels (affext r8, rg8, r16f)
         // it's not enough to fix alignment below, so this needs fixed in mipStorage calc.
-        int numPadding = 3 - ((mipStorageSize + 3) % 4);
+        int32_t numPadding = 3 - ((mipStorageSize + 3) % 4);
         if (numPadding != 0) {
             // TODO: add error, need to pad rows not just stick pad at end
             // this can happen on mips with formats below that don't align to 4 byte boundaries
@@ -1197,9 +1203,9 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
             // have to build the mips off that.  srgb and premul is why fp32 is
             // needed, and need to downsample in linear space.
 
-            //            int size = w * h * sizeof(float4);
+            //            int32_t size = w * h * sizeof(float4);
             //            if (size > 16*1024*1024) {
-            //                int bp = 0;
+            //                int32_t bp = 0;
             //                bp = bp;
             //            }
 
@@ -1213,7 +1219,12 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     SDFMipper sdfMipper;
 
     // write the header out
-    if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&header, sizeof(header))) {
+    KTXHeader headerCopy = header;
+    if (image.textureType == MyMTLTextureType1DArray) {
+        headerCopy.pixelHeight = 0;
+        headerCopy.pixelDepth = 0;
+    }
+    if (!FileHelper::writeBytes(dstFile, (const uint8_t*)&headerCopy, sizeof(headerCopy))) {
         return false;
     }
 
@@ -1222,7 +1233,7 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
         return false;
     }
 
-    for (int chunk = 0; chunk < (int)chunkOffsets.size(); ++chunk) {
+    for (int32_t chunk = 0; chunk < (int32_t)chunkOffsets.size(); ++chunk) {
         // this needs to append before chunkOffset copy below
         w = modifiedWidth;
         h = modifiedHeight;
@@ -1237,13 +1248,13 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
         if (info.isHDR) {
             if (isMultichunk) {
                 const float4* srcPixels = (const float4*)_pixelsFloat.data();
-                for (int y = 0; y < h; ++y) {
-                    int y0 = y * w;
+                for (int32_t y = 0; y < h; ++y) {
+                    int32_t y0 = y * w;
                     
                     // offset into original strip/atlas
-                    int yOffset = (y + chunkOffset.y) * _width + chunkOffset.x;
+                    int32_t yOffset = (y + chunkOffset.y) * _width + chunkOffset.x;
 
-                    for (int x = 0; x < w; ++x) {
+                    for (int32_t x = 0; x < w; ++x) {
                         float4 c0 = srcPixels[yOffset + x];
                         float4& d0 = floatImage[y0 + x];
                         d0 = c0;
@@ -1254,13 +1265,13 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
         else {
             if (isMultichunk) {
                 const Color* srcPixels = (const Color*)_pixels.data();
-                for (int y = 0; y < h; ++y) {
-                    int y0 = y * w;
+                for (int32_t y = 0; y < h; ++y) {
+                    int32_t y0 = y * w;
                     
                     // offset into original strip/atlas
-                    int yOffset = (y + chunkOffset.y) * _width + chunkOffset.x;
+                    int32_t yOffset = (y + chunkOffset.y) * _width + chunkOffset.x;
 
-                    for (int x = 0; x < w; ++x) {
+                    for (int32_t x = 0; x < w; ++x) {
                         Color c0 = srcPixels[yOffset + x];
                         Color& d0 = copyImage[y0 + x];
                         d0 = c0;
@@ -1288,8 +1299,8 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
         // build mips for the chunk, dropping mips as needed, but downsampling
         // from available image
 
-        int numDstMipLevelsWritten = 0;
-        for (int mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
+        int32_t numDstMipLevelsWritten = 0;
+        for (int32_t mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
             // no need to mip futher
             if (numDstMipLevelsWritten >= numDstMipLevels) {
                 break;
@@ -1372,14 +1383,14 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
                 // https://github.com/BinomialLLC/basis_universal/issues/40
 
                 // this contains all bytes at a mipLOD but not any padding
-                uint32_t levelSize = (int)chunkOffsets.size() * mipStorageSize;
+                uint32_t levelSize = (int32_t)chunkOffsets.size() * mipStorageSize;
 
                 // this is size of one face for non-array cubes
                 if (info.textureType == MyMTLTextureTypeCube) {
                     levelSize = mipStorageSize;
                 }
 
-                int levelSizeOf = sizeof(levelSize);
+                int32_t levelSizeOf = sizeof(levelSize);
                 assert(levelSizeOf == 4);
 
                 fseek(dstFile, mipOffset - levelSizeOf, SEEK_SET);  // from begin
@@ -1405,14 +1416,14 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 // TODO: try to elim KTXImage passed into this
 bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                              ImageData& mipImage, TextureData& outputTexture,
-                             int mipStorageSize) const
+                             int32_t mipStorageSize) const
 {
-    int w = mipImage.width;
+    int32_t w = mipImage.width;
 
     const Color* srcPixelData = mipImage.pixels;
     const float4* srcPixelDataFloat4 = mipImage.pixelsFloat;
 
-    int h = mipImage.height;
+    int32_t h = mipImage.height;
     ;
 
     if (info.isExplicit) {
@@ -1421,7 +1432,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             case MyMTLPixelFormatRG8Unorm:
             case MyMTLPixelFormatRGBA8Unorm:
             case MyMTLPixelFormatRGBA8Unorm_sRGB: {
-                int count = image.blockSize() / 1;
+                int32_t count = image.blockSize() / 1;
 
                 uint8_t* dst = (uint8_t*)outputTexture.data.data();
 
@@ -1429,7 +1440,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                 const Color* src = srcPixelData;
 
                 // assumes we don't need to align r/rg rows to 4 bytes
-                for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
+                for (int32_t i = 0, iEnd = w * h; i < iEnd; ++i) {
                     switch (count) {
                         case 4:
                             dst[count * i + 3] = src[i].a;
@@ -1448,14 +1459,14 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             case MyMTLPixelFormatR16Float:
             case MyMTLPixelFormatRG16Float:
             case MyMTLPixelFormatRGBA16Float: {
-                int count = image.blockSize() / 2;
+                int32_t count = image.blockSize() / 2;
 
                 half* dst = (half*)outputTexture.data.data();
 
                 const float4* src = mipImage.pixelsFloat;
 
                 // assumes we don't need to align r16f rows to 4 bytes
-                for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
+                for (int32_t i = 0, iEnd = w * h; i < iEnd; ++i) {
                     half4 src16 = toHalf4(src[0]);
 
                     switch (count) {
@@ -1474,13 +1485,13 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             case MyMTLPixelFormatR32Float:
             case MyMTLPixelFormatRG32Float:
             case MyMTLPixelFormatRGBA32Float: {
-                int count = image.blockSize() / 4;
+                int32_t count = image.blockSize() / 4;
 
                 float* dst = (float*)outputTexture.data.data();
 
                 const float4* src = mipImage.pixelsFloat;
 
-                for (int i = 0, iEnd = w * h; i < iEnd; ++i) {
+                for (int32_t i = 0, iEnd = w * h; i < iEnd; ++i) {
                     switch (count) {
                         case 4:
                             dst[count * i + 3] = src[i].w;
@@ -1508,7 +1519,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             // only have 8-bit data above in srcPixelData, not full float data
             // at this point why can't encoders take that.  They shouldn't
             // require Float4.
-            float effort = (int)info.quality;
+            float effort = (int32_t)info.quality;
             // NOTE: have qualty control, RG11 runs all after 50.  Unity
             // uses 70.0
 
@@ -1678,23 +1689,23 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 
             uint8_t* dstData = (uint8_t*)outputTexture.data.data();
 
-            const int blockDim = 4;
-            int blocks_x = (w + blockDim - 1) / blockDim;
-            //int blocks_y = (h + blockDim - 1) / blockDim;
-            int blockSize = image.blockSize();
-            for (int y = 0; y < h; y += blockDim) {
-                for (int x = 0; x < w; x += blockDim) {
+            const int32_t blockDim = 4;
+            int32_t blocks_x = (w + blockDim - 1) / blockDim;
+            //int32_t blocks_y = (h + blockDim - 1) / blockDim;
+            int32_t blockSize = image.blockSize();
+            for (int32_t y = 0; y < h; y += blockDim) {
+                for (int32_t x = 0; x < w; x += blockDim) {
                     // Have to copy to temp block, since encode doesn't test w/h edges
                     // copy src to 4x4 clamping the edge pixels
                     // TODO: do clamped edge pixels get weighted more then on non-multiple of 4 images ?
                     Color srcPixelCopyAsBlock[blockDim * blockDim];
-                    for (int by = 0; by < blockDim; ++by) {
-                        int yy = y + by;
+                    for (int32_t by = 0; by < blockDim; ++by) {
+                        int32_t yy = y + by;
                         if (yy >= h) {
                             yy = h - 1;
                         }
-                        for (int bx = 0; bx < blockDim; ++bx) {
-                            int xx = x + bx;
+                        for (int32_t bx = 0; bx < blockDim; ++bx) {
+                            int32_t xx = x + bx;
                             if (xx >= w) {
                                 xx = w - 1;
                             }
@@ -1705,9 +1716,9 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 
                     const uint8_t* srcPixelCopy = (const uint8_t*)(srcPixelCopyAsBlock);
 
-                    int bx = x / blockDim;
-                    int by = y / blockDim;
-                    int b0 = by * blocks_x + bx;
+                    int32_t bx = x / blockDim;
+                    int32_t by = y / blockDim;
+                    int32_t b0 = by * blocks_x + bx;
                     uint8_t* dstBlock = &dstData[b0 * blockSize];
 
                     switch (info.pixelFormat) {
@@ -1773,7 +1784,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 
             ATEEncoder encoder;
             success = encoder.Encode(
-                (int)metalType(pixelFormatRemap), image.mipLevelSize(w, h), image.blockDims().y,
+                (int32_t)metalType(pixelFormatRemap), image.mipLevelSize(w, h), image.blockDims().y,
                 info.hasAlpha,
                 info.isColorWeighted, info.isVerbose, info.quality, w, h,
                 (const uint8_t*)srcPixelData, outputTexture.data.data());
@@ -1792,7 +1803,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             const float* weights =
                 info.isColorWeighted ? &perceptualWeights[0] : noWeights;
 
-            int flags = 0;
+            int32_t flags = 0;
 
             if (info.quality <= 10)
                 flags = squish::kColourRangeFit;  // fast but inferior, only uses corner of color cube
@@ -1847,14 +1858,14 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
         // have to remap endpoints to signed values (-1,1) to (0,127) for
         // (0,1) and (-128,-127,0) for (-1,0)/                        else
         if (success && info.isSigned && doRemapSnormEndpoints) {
-            int numBlocks = image.blockCount(w, h);
-            int blockSize = image.blockSize();
+            int32_t numBlocks = image.blockCount(w, h);
+            int32_t blockSize = image.blockSize();
 
-            int blockSize16 = blockSize / sizeof(uint16_t);
+            int32_t blockSize16 = blockSize / sizeof(uint16_t);
 
             uint16_t* blockPtr = (uint16_t*)outputTexture.data.data();
 
-            for (int i = 0; i < numBlocks; ++i) {
+            for (int32_t i = 0; i < numBlocks; ++i) {
                 uint16_t* e0;
                 uint16_t* e1;
 
@@ -1887,7 +1898,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
         if (info.useATE) {
             ATEEncoder encoder;
             bool success = encoder.Encode(
-                (int)metalType(info.pixelFormat), image.mipLevelSize(w, h), image.blockDims().y,
+                (int32_t)metalType(info.pixelFormat), image.mipLevelSize(w, h), image.blockDims().y,
                 info.hasAlpha,
                 info.isColorWeighted, info.isVerbose, info.quality, w, h,
                 (const uint8_t*)srcPixelData, outputTexture.data.data());
@@ -1939,7 +1950,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             Int2 blockDims = image.blockDims();
 
             // setup flags
-            unsigned int flags = 0;
+            uint32_t flags = 0;
 
             if (channelType == kChannelTypeTwoNormalAG) {
                 flags |= ASTCENC_FLG_MAP_NORMAL;  // weights r and a channels only in error calc
@@ -2045,7 +2056,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 #if 0
             // This hackimproves L1 and LA block generating
             // even enabled dual-plane mode for LA.  Otherwise rgb and rgba blocks
-            // are genreated on data that only contains L or LA blocks.
+            // are generated on data that only contains L or LA blocks.
 
             bool useUniqueChannels = true;
             if (useUniqueChannels) {

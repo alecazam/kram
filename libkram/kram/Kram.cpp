@@ -32,7 +32,7 @@ namespace kram {
 
 using namespace std;
 
-bool LoadKtx(const uint8_t* data, int dataSize, Image& sourceImage)
+bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
 {
     KTXImage image;
     if (!image.open(data, dataSize)) {
@@ -45,11 +45,11 @@ bool LoadKtx(const uint8_t* data, int dataSize, Image& sourceImage)
     return sourceImage.loadImageFromKTX(image);
 }
 
-bool LoadPng(const uint8_t* data, int dataSize, Image& sourceImage)
+bool LoadPng(const uint8_t* data, size_t dataSize, Image& sourceImage)
 {
-    unsigned int width = 0;
-    unsigned int height = 0;
-    unsigned int errorLode = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t errorLode = 0;
 
     // can identify 16unorm data for heightmaps via this call
     LodePNGState state;
@@ -130,13 +130,13 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
 
     if (useMmap) {
         if (isKTX) {  // really want endsWidth
-            if (!LoadKtx(mmapHelper.addr, (int)mmapHelper.length,
+            if (!LoadKtx(mmapHelper.addr, mmapHelper.length,
                          sourceImage)) {
                 return false;  // error
             }
         }
         else if (isPNG) {
-            if (!LoadPng(mmapHelper.addr, (int)mmapHelper.length,
+            if (!LoadPng(mmapHelper.addr, mmapHelper.length,
                          sourceImage)) {
                 return false;  // error
             }
@@ -150,7 +150,7 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
         }
 
         // read entire png into memory
-        int size = fileHelper.size();
+        size_t size = fileHelper.size();
         fileBuffer.resize(size);
 
         if (!fileHelper.read(fileBuffer.data(), size)) {
@@ -158,13 +158,13 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
         }
 
         if (isKTX) {
-            if (!LoadKtx(fileBuffer.data(), (int)fileBuffer.size(),
+            if (!LoadKtx(fileBuffer.data(), fileBuffer.size(),
                          sourceImage)) {
                 return false;  // error
             }
         }
         else if (isPNG) {
-            if (!LoadPng(fileBuffer.data(), (int)fileHelper.size(),
+            if (!LoadPng(fileBuffer.data(), fileHelper.size(),
                          sourceImage)) {
                 return false;  // error
             }
@@ -187,7 +187,7 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
     }
 
     if (useMmap) {
-        if (!sourceImage.open(mmapHelper.addr, (int)mmapHelper.length)) {
+        if (!sourceImage.open(mmapHelper.addr, mmapHelper.length)) {
             return false;
         }
     }
@@ -199,13 +199,13 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
         }
 
         // read entire ktx into memory
-        int size = fileHelper.size();
+        size_t size = fileHelper.size();
         fileBuffer.resize(size);
         if (!fileHelper.read(fileBuffer.data(), size)) {
             return false;
         }
 
-        if (!sourceImage.open(fileBuffer.data(), (int)fileBuffer.size())) {
+        if (!sourceImage.open(fileBuffer.data(), (int32_t)fileBuffer.size())) {
             return false;
         }
     }
@@ -222,11 +222,11 @@ constexpr size_t countof(T const (&)[N]) noexcept
 
 #define isStringEqual(lhs, rhs) (strcmp(lhs, rhs) == 0)
 
-static int kramAppEncode(vector<const char*>& args);
-static int kramAppDecode(vector<const char*>& args);
-static int kramAppInfo(vector<const char*>& args);
+static int32_t kramAppEncode(vector<const char*>& args);
+static int32_t kramAppDecode(vector<const char*>& args);
+static int32_t kramAppInfo(vector<const char*>& args);
 
-static int kramAppCommand(vector<const char*>& args);
+static int32_t kramAppCommand(vector<const char*>& args);
 
 static const char* formatFormat(MyMTLPixelFormat format)
 {
@@ -384,7 +384,7 @@ static const char* formatFormat(MyMTLPixelFormat format)
     return fmt;
 }
 
-string formatInputAndOutput(int testNumber, const char* srcFilename, MyMTLPixelFormat format, TexEncoder encoder, bool isNotPremul = false)
+string formatInputAndOutput(int32_t testNumber, const char* srcFilename, MyMTLPixelFormat format, TexEncoder encoder, bool isNotPremul = false)
 {
     // TODO: may want to split output, also call Images for OSX to show dimensions
     const char* dstDirBC = "bc-";
@@ -492,7 +492,7 @@ string formatInputAndOutput(int testNumber, const char* srcFilename, MyMTLPixelF
     return cmd;
 }
 
-bool kramTestCommand(int testNumber,
+bool kramTestCommand(int32_t testNumber,
                      vector<const char*>& args, string& cmd)
 {
     // wipe out the args, and use the ones below
@@ -739,17 +739,17 @@ bool kramTestCommand(int testNumber,
 
 static void setupTestArgs(vector<const char*>& args)
 {
-    int testNumber = 0;
+    int32_t testNumber = 0;
 
-    int argc = (int)args.size();
+    int32_t argc = (int32_t)args.size();
 
-    int errorCode = 0;
+    int32_t errorCode = 0;
     bool isTest = false;
 
     string cmd;
     vector<const char*> argsTest;
 
-    for (int i = 0; i < argc; ++i) {
+    for (int32_t i = 0; i < argc; ++i) {
         char const* word = args[i];
 
         if (isStringEqual(word, "-test")) {
@@ -784,7 +784,7 @@ static void setupTestArgs(vector<const char*>& args)
         else if (isStringEqual(word, "-testall")) {
             isTest = true;
 
-            int allTests[] = {
+            int32_t allTests[] = {
                 // astcenc is slow, etcenc is too
                 10,
                 11,
@@ -807,7 +807,7 @@ static void setupTestArgs(vector<const char*>& args)
                 3004,
             };
 
-            for (int j = 0, jEnd = countof(allTests); j < jEnd; ++j) {
+            for (int32_t j = 0, jEnd = countof(allTests); j < jEnd; ++j) {
                 testNumber = allTests[j];
                 if (!kramTestCommand(testNumber, argsTest, cmd)) {
                     KLOGE("Kram", "Test %d not found\n", testNumber);
@@ -1029,16 +1029,16 @@ void kramUsage()
     kramScriptUsage();
 }
 
-static int kramAppInfo(vector<const char*>& args)
+static int32_t kramAppInfo(vector<const char*>& args)
 {
     string srcFilename;
     string dstFilename;
 
-    int argc = (int)args.size();
+    int32_t argc = (int32_t)args.size();
     bool isVerbose = false;
 
     bool error = false;
-    for (int i = 0; i < argc; ++i) {
+    for (int32_t i = 0; i < argc; ++i) {
         const char* word = args[i];
         if (word[0] != '-') {
             KLOGE("Kram", "unexpected argument \"%s\"\n",
@@ -1139,7 +1139,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         // This was taken out of SetupSourceImage, dont want to decode PNG yet
         // just peek tha the header.
         const uint8_t* data = nullptr;
-        int dataSize = 0;
+        int32_t dataSize = 0;
 
         // first try mmap, and then use file -> buffer
         bool useMmap = true;
@@ -1150,7 +1150,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
         if (useMmap) {
             data = srcMmapHelper.addr;
-            dataSize = (int)srcMmapHelper.length;
+            dataSize = (int32_t)srcMmapHelper.length;
         }
         else {
             if (!srcFileHelper.open(srcFilename.c_str(), "rb")) {
@@ -1161,20 +1161,20 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
             // read entire png into memory
             // even though really just want to peek at header
-            int size = srcFileHelper.size();
+            int32_t size = srcFileHelper.size();
             srcFileBuffer.resize(size);
             if (!srcFileHelper.read(srcFileBuffer.data(), size)) {
                 return "";
             }
 
             data = srcFileBuffer.data();
-            dataSize = (int)srcFileBuffer.size();
+            dataSize = (int32_t)srcFileBuffer.size();
         }
 
         // vector<uint8_t> pixels;
-        unsigned int width = 0;
-        unsigned int height = 0;
-        unsigned int errorLode = 0;
+        uint32_t width = 0;
+        uint32_t height = 0;
+        uint32_t errorLode = 0;
 
         // can identify 16unorm data for heightmaps via this call
         LodePNGState state;
@@ -1250,8 +1250,8 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
             sprintf(tmp,
                     "ppix: %d\n"
                     "ppiy: %d\n",
-                    (int)(state.info_png.phys_x * metersToInches),
-                    (int)(state.info_png.phys_y * metersToInches));
+                    (int32_t)(state.info_png.phys_x * metersToInches),
+                    (int32_t)(state.info_png.phys_y * metersToInches));
             info += tmp;
         }
 
@@ -1273,7 +1273,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         // for now driving everything off metal type, but should switch to neutral
         MyMTLPixelFormat metalFormat = srcImage.pixelFormat;
 
-        int dataSize = srcImage.fileDataLength;
+        int32_t dataSize = srcImage.fileDataLength;
         
         string tmp;
         bool isMB = (dataSize > (512 * 1024));
@@ -1287,7 +1287,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
                 isMB ? "MB" : "KB");
         info += tmp;
 
-        int pixelMultiplier = srcImage.totalChunks();
+        int32_t pixelMultiplier = srcImage.totalChunks();
         
         float numPixels = srcImage.width * srcImage.height;
         numPixels *= (float)pixelMultiplier;
@@ -1332,7 +1332,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         // print out the array
         if (srcImage.header.numberOfArrayElements > 1) {
             sprintf(tmp,
-                    "arry: %%d\n",
+                    "arry: %d\n",
                     srcImage.header.numberOfArrayElements);
 
             info += tmp;
@@ -1357,9 +1357,9 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         // TODO: expand to more mip types
         if (textureType == MyMTLTextureType2D && isVerbose) {
             // dump mips/dims, but this can be a lot of data on arrays
-            int mipLevel = 0;
-            int w = srcImage.width;
-            int h = srcImage.height;
+            int32_t mipLevel = 0;
+            int32_t w = srcImage.width;
+            int32_t h = srcImage.height;
 
             for (const auto& mip : srcImage.mipLevels) {
                 sprintf(tmp,
@@ -1379,7 +1379,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
     return info;
 }
 
-static int kramAppDecode(vector<const char*>& args)
+static int32_t kramAppDecode(vector<const char*>& args)
 {
     // decode and write out to ktx file for now
     // all mips, or no mips, can preserve name-value pairs in original
@@ -1388,14 +1388,14 @@ static int kramAppDecode(vector<const char*>& args)
     string srcFilename;
     string dstFilename;
 
-    int argc = (int)args.size();
+    int32_t argc = (int32_t)args.size();
 
     bool error = false;
     bool isVerbose = false;
     string swizzleText;
     TexEncoder textureDecoder = kTexEncoderUnknown;
 
-    for (int i = 0; i < argc; ++i) {
+    for (int32_t i = 0; i < argc; ++i) {
         const char* word = args[i];
         if (word[0] != '-') {
             KLOGE("Kram", "unexpected argument \"%s\"\n",
@@ -1534,7 +1534,7 @@ static int kramAppDecode(vector<const char*>& args)
     return success ? 0 : -1;
 }
 
-static int kramAppEncode(vector<const char*>& args)
+static int32_t kramAppEncode(vector<const char*>& args)
 {
     // parse the command-line
     string srcFilename;
@@ -1543,10 +1543,10 @@ static int kramAppEncode(vector<const char*>& args)
 
     ImageInfoArgs infoArgs;
 
-    int argc = (int)args.size();
+    int32_t argc = (int32_t)args.size();
 
     bool error = false;
-    for (int i = 0; i < argc; ++i) {
+    for (int32_t i = 0; i < argc; ++i) {
         // check for options
         const char* word = args[i];
         if (word[0] != '-') {
@@ -1765,8 +1765,8 @@ static int kramAppEncode(vector<const char*>& args)
     }
 
     // parse and convert resize string
-    int wResize = 0;
-    int hResize = 0;
+    int32_t wResize = 0;
+    int32_t hResize = 0;
     bool resizePow2 = false;
 
     if (!resizeString.empty()) {
@@ -1920,9 +1920,9 @@ static int kramAppEncode(vector<const char*>& args)
     return success ? 0 : -1;
 }
 
-int kramAppScript(vector<const char*>& args)
+int32_t kramAppScript(vector<const char*>& args)
 {
-    int argc = (int)args.size();
+    int32_t argc = (int32_t)args.size();
 
     string srcFilename;
 
@@ -1931,9 +1931,9 @@ int kramAppScript(vector<const char*>& args)
     // this won't stop immediately, but when error occurs, no more tasks will exectue
     bool isHaltedOnError = true;
 
-    int numJobs = 1;
+    int32_t numJobs = 1;
 
-    for (int i = 0; i < argc; ++i) {
+    for (int32_t i = 0; i < argc; ++i) {
         // check for options
         const char* word = args[i];
         if (word[0] != '-') {
@@ -2011,9 +2011,9 @@ int kramAppScript(vector<const char*>& args)
 
     // as a global this auto allocates 16 threads, and don't want that unless actually
     // using scripting.  And even then want control over the number of threads.
-    atomic<int> errorCounter(0);  // doesn't initialize to 0 otherwise
-    atomic<int> skippedCounter(0);
-    int commandCounter = 0;
+    atomic<int32_t> errorCounter(0);  // doesn't initialize to 0 otherwise
+    atomic<int32_t> skippedCounter(0);
+    int32_t commandCounter = 0;
 
     {
         task_system system(numJobs);
@@ -2049,7 +2049,7 @@ int kramAppScript(vector<const char*>& args)
 
             system.async_([&, commandAndArgs]() mutable {
                 // stop any new work when not "continue on error"
-                if (isHaltedOnError && int(errorCounter) > 0) {
+                if (isHaltedOnError && int32_t(errorCounter) > 0) {
                     skippedCounter++;
                     return 0;  // not really success, just skipping command
                 }
@@ -2074,7 +2074,7 @@ int kramAppScript(vector<const char*>& args)
                 }
                 const char* command = args[0];
 
-                int errorCode = kramAppCommand(args);
+                int32_t errorCode = kramAppCommand(args);
 
                 if (isVerbose) {
                     auto timeElapsed = commandTimer.timeElapsed();
@@ -2103,7 +2103,7 @@ int kramAppScript(vector<const char*>& args)
     // There's a future system that we could block on instead.
 
     if (errorCounter > 0) {
-        KLOGE("Kram", "script %d/%d commands failed", int(errorCounter), commandCounter);
+        KLOGE("Kram", "script %d/%d commands failed", int32_t(errorCounter), commandCounter);
         return -1;
     }
 
@@ -2147,7 +2147,7 @@ CommandType parseCommandType(const char* command)
     return commandType;
 }
 
-int kramAppCommand(vector<const char*>& args)
+int32_t kramAppCommand(vector<const char*>& args)
 {
     // make sure next arg is a valid command type
     CommandType commandType = kCommandTypeUnknown;
@@ -2181,12 +2181,12 @@ int kramAppCommand(vector<const char*>& args)
 }
 
 // processes a test or single command
-int kramAppMain(int argc, char* argv[])
+int32_t kramAppMain(int32_t argc, char* argv[])
 {
     // copy into args, so setupTestArgs can completely replace them
     vector<const char*> args;
 
-    for (int i = 0; i < argc; ++i) {
+    for (int32_t i = 0; i < argc; ++i) {
         // skip first arg if contains the app name
         if (i == 0 && (strstr(argv[i], appName) != nullptr)) {
             continue;

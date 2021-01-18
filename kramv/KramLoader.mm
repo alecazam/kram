@@ -382,17 +382,22 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                         // cpu copy the bytes from the data object into the texture
                         MTLRegion region = {
                             { 0, 0, (NSUInteger)sliceOrArrayOrFace }, // MTLOrigin
-                            { static_cast<NSUInteger>(w), static_cast<NSUInteger>(h), 1 }  // MTLSize
+                            { (NSUInteger)w,  (NSUInteger)h, 1 }  // MTLSize
                         };
                         
                         // TODO: revist how loading is done to load entire levels
                         // otherwise too many replaceRegion calls.   Data is already packed by mip.
                         
                         if (is1DArray) {
+                            MTLRegion region1d = {
+                                { 0, 0, 0 }, // MTLOrigin
+                                { (NSUInteger)w, 1, 1 }  // MTLSize
+                            };
+                            
                             // TODO: should really upload this all array levels in one call
                             // any mips would be half the non-1 dimension (so X)
                             
-                            [texture replaceRegion:region
+                            [texture replaceRegion:region1d
                                         mipmapLevel:mipLevelNumber
                                             slice:sliceOrArrayOrFace
                                           withBytes:srcBytes

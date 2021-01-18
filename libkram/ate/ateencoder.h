@@ -18,14 +18,14 @@ public:
     bool isBCSupported() const { return _isBCSupported; }
     bool isHDRDecodeSupported() const { return _isHDRDecodeSupported; }
     
-    bool Encode(int metalPixelFormat, int dstDataSize, int blockDimsY,
+    bool Encode(uint32_t metalPixelFormat, size_t dstDataSize, int32_t blockDimsY,
         bool hasAlpha, bool weightChannels,
-        bool isVerbose, int quality,
-        int width, int height, const uint8_t* srcData, uint8_t* dstData);
+        bool isVerbose, int32_t quality,
+        int32_t width, int32_t height, const uint8_t* srcData, uint8_t* dstData);
     
-    bool Decode(int metalPixelFormat, int dstDataSize, int blockDimsY,
+    bool Decode(uint32_t metalPixelFormat, size_t dstDataSize, int32_t blockDimsY,
         bool isVerbose,
-        int width, int height, const uint8_t* srcData, uint8_t* dstData);
+        int32_t width, int32_t height, const uint8_t* srcData, uint8_t* dstData);
 
 private:
     // encode and decode

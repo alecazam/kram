@@ -195,11 +195,11 @@ public:
     };
 
     // use of these pull data out of simd registers
-    float& operator[](int index)
+    float& operator[](int32_t index)
     {
         return v[index];  // or _mm_extract_ps(reg, index), but imm needs to be hardcoded there
     }
-    const float& operator[](int index) const
+    const float& operator[](int32_t index) const
     {
         return v[index];
     }

@@ -209,9 +209,9 @@ ATEEncoder::ATEEncoder() {
     uint32_t version = at_encoder_get_version();
     
     // at_block_get_features can get fetures, but that's a v3 availability call
-    //const int kVersion1 = 0x011300; // Astc 4x4/8x8 only, min version with correct ATE, iOS 11, macOS 13
-    const int kVersion2 = 0x020000; // added BC1457, iOS 13, macOS 15,
-    //const int kVersion3 = 0x030001;  // version tested against ios 13.4, macOS 15.4
+    //const int32_t kVersion1 = 0x011300; // Astc 4x4/8x8 only, min version with correct ATE, iOS 11, macOS 13
+    const int32_t kVersion2 = 0x020000; // added BC1457, iOS 13, macOS 15,
+    //const int32_t kVersion3 = 0x030001;  // version tested against ios 13.4, macOS 15.4
     // still no hdr encode/decode
     
     if (version < kVersion2) {
@@ -230,10 +230,10 @@ ATEEncoder::ATEEncoder() {
 }
 
 // from libate and AppleTextureEncoder.h
-bool ATEEncoder::Encode(int metalPixelFormat, int dstDataSize, int blockDimsY,
+bool ATEEncoder::Encode(uint32_t metalPixelFormat, size_t dstDataSize, int32_t blockDimsY,
                           bool hasAlpha, bool weightChannels,
-                          bool isVerbose, int quality,
-                          int width, int height, const uint8_t* srcData, uint8_t* dstData)
+                          bool isVerbose, int32_t quality,
+                          int32_t width, int32_t height, const uint8_t* srcData, uint8_t* dstData)
 {
     // blocks must be 16-byte aligned (what about 8 byte formats?)
     if (((uintptr_t)dstData & 15) != 0) {
@@ -344,9 +344,9 @@ bool ATEEncoder::Encode(int metalPixelFormat, int dstDataSize, int blockDimsY,
     return success;
 }
 
-bool ATEEncoder::Decode(int metalPixelFormat, int dstDataSize, int blockDimsY, 
+bool ATEEncoder::Decode(uint32_t metalPixelFormat, size_t dstDataSize, int32_t blockDimsY,
                         /* bool isSrgb, */ bool isVerbose,
-                        int width, int height, const uint8_t* srcData, uint8_t* dstData)
+                        int32_t width, int32_t height, const uint8_t* srcData, uint8_t* dstData)
 {
     // blocks must be aligned to 16 bytes
     if (((uintptr_t)srcData & 15) != 0) {
