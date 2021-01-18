@@ -288,26 +288,26 @@ Some of the encoders turn these non-opaque, and generate alpha of 254/255.
 
 ### Timings for test suite
 
-* These are basic timings running kram encoding for all the specific platform test cases using kramTexture.py 
-* Impressive that M1 wins on the Android test case by over 2x, and is close in the others.
+These are basic timings running kram encoding for all the specific platform test cases using kramTexture.py 
+Impressive that M1 wins on the Android test case by over 2x, and is close in the others.
 
 * Date: 1/16/21
-* 2020 M1 13" Macbook Air, 3.4Ghz, 4+4 core M1
-* 2018 16" Macbook Pro, 2.3Ghz, 8/16 core i9
+* 2020 M1 13" Macbook Air, 3.4Ghz, 4+4 core M1, 8GB
+* 2019 16" Macbook Pro, 2.3Ghz, 8/16 core i9, 16GB
 
-* Timings
-* Basis supercompress via ktxsc is long with UASTC + RDO
+Timings
+* Any - Basis supercompress via ktxsc is long with UASTC + RDO
 
 | Sys  | macOS  | iOS    | Android | Any    |
 |------|--------|--------|---------|--------|
 | M1   | 0.643s | 4.603s |  6.441s |        |
 | i9   | 0.970s | 3.339s | 14.617s | 75.0s  |
 
-* Bundle Sizes
+Bundle Sizes
 * KTX is compressed before archiving 
 * KTX2 is simply stored in archive
-* Basis supercompress via ktxsc is large as UASTC + RDO
-*   data is swizzled away on 1 and 2 channel formats
+* Any - Basis supercompress via ktxsc is large as UASTC + RDO
+**   data is swizzled away on 1 and 2 channel formats
 
 | Sys  | macOS  | iOS    | Android | Any    |
 |------|--------|--------|---------|--------|
