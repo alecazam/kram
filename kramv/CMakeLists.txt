@@ -18,18 +18,8 @@ project(
 
 #------------------
 
-
-
-#------------------
-
 # **** this the executable target ****, GUI App
 add_executable(${myTargetApp})
-
-#-----------------------------------------------------
-
-target_include_directories(${myTargetApp} PRIVATE
-    "${PROJECT_SOURCE_DIR}"
-)
 
 #-----------------------------------------------------
     
@@ -44,8 +34,6 @@ target_link_libraries(${myTargetApp}
     "-framework ModelIO"
 )
     
-
-
 set_target_properties(${myTargetApp} PROPERTIES
     # Note: match this up with CXX version
     # c++11 min
@@ -100,6 +88,9 @@ source_group(TREE "${PROJECT_SOURCE_DIR}" PREFIX "source" FILES ${appSources})
 target_sources(${myTargetApp} PRIVATE
     ${appSources})
 
+target_include_directories(${myTargetApp} PRIVATE
+    "${PROJECT_SOURCE_DIR}"
+)
 
 #--------------
 # shaders
@@ -120,10 +111,11 @@ set_source_files_properties(${shaderSources} PROPERTIES
 #--------------
 # resources
 
-    
+# this might be one way to override the template
 #configure_file(Info.plist.in ${PROJECT_SOURCE_DIR}/Info.plist)
 #configure_file(InfoPlist.strings.in ${PROJECT_SOURCE_DIR}/InfoPlist.strings)
 
+# for some reason the template gens an Info.plist even though we override it
 set_target_properties(${myTargetApp} PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/Info.plist
@@ -131,7 +123,7 @@ set_target_properties(${myTargetApp} PROPERTIES
 )
 
 target_sources(${myTargetApp} PRIVATE
-    Assets.xcassets Base.lproj/Main.storyboard ${PROJECT_SOURCE_DIR}/Info.plist ${PROJECT_SOURCE_DIR}/viewer.entitlements)
+        ${PROJECT_SOURCE_DIR}/Assets.xcassets ${PROJECT_SOURCE_DIR}/Base.lproj/Main.storyboard ${PROJECT_SOURCE_DIR}/Info.plist ${PROJECT_SOURCE_DIR}/viewer.entitlements)
 
 # only these 2 resources are copied into the Resource, the other two are signed
 set_source_files_properties(Assets.xcassets Base.lproj/Main.storyboard PROPERTIES
