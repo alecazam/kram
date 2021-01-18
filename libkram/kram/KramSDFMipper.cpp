@@ -20,8 +20,8 @@ void SDFMipper::init(ImageData& srcImage, bool isVerbose_)
     maxD = 0.0;
     isVerbose = isVerbose_;
 
-    int w = srcImage.width;
-    int h = srcImage.height;
+    int32_t w = srcImage.width;
+    int32_t h = srcImage.height;
 
     srcBitmap.resize(w * h);
 
@@ -29,9 +29,9 @@ void SDFMipper::init(ImageData& srcImage, bool isVerbose_)
     const Color* pixels = srcImage.pixels;               // 4 bytes
     uint8_t* dstImageData = (uint8_t*)srcBitmap.data();  // 1 byte
 
-    for (int y = 0; y < h; y++) {
-        int y0 = y * w;
-        for (int x = 0; x < w; x++) {
+    for (int32_t y = 0; y < h; y++) {
+        int32_t y0 = y * w;
+        for (int32_t x = 0; x < w; x++) {
             const Color& c0 = pixels[y0 + x];
             uint8_t& cBitmap = dstImageData[y0 + x];
 
@@ -51,13 +51,13 @@ void SDFMipper::init(ImageData& srcImage, bool isVerbose_)
     // large image sources
 }
 
-void SDFMipper::mipmap(ImageData& dstImage, int mipLevel)
+void SDFMipper::mipmap(ImageData& dstImage, int32_t mipLevel)
 {
-    int w = srcBitmapImage.width;
-    int h = srcBitmapImage.height;
+    int32_t w = srcBitmapImage.width;
+    int32_t h = srcBitmapImage.height;
 
     // can use shift with mip down, but this iterates
-    for (int i = 0; i < mipLevel; ++i) {
+    for (int32_t i = 0; i < mipLevel; ++i) {
         mipDown(w, h);
     }
 
@@ -75,9 +75,9 @@ void SDFMipper::mipmap(ImageData& dstImage, int mipLevel)
 
     const uint8_t* srcImageData = (const uint8_t*)pixels;  // 1 byte
 
-    for (int y = h - 1; y >= 0; y--) {
-        int y0 = y * w;
-        for (int x = w - 1; x >= 0; x--) {
+    for (int32_t y = h - 1; y >= 0; y--) {
+        int32_t y0 = y * w;
+        for (int32_t x = w - 1; x >= 0; x--) {
             Color& c0 = pixels[y0 + x];
             uint8_t cSDF = srcImageData[y0 + x];
 

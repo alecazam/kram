@@ -46,12 +46,12 @@ public:
     MyMTLPixelFormat pixelFormat = MyMTLPixelFormatInvalid;
     string formatString = "";  // will convert to pixelFormat
 
-    int mipMinSize = 1;
-    int mipMaxSize = 32 * 1024;
+    int32_t mipMinSize = 1;
+    int32_t mipMaxSize = 32 * 1024;
 
-    int quality = 49;  // may want float
+    int32_t quality = 49;  // may want float
 
-    bool skipImageLength = false;
+    //bool skipImageLength = false;
     bool doMipmaps = true;  // default to mips on
     bool isVerbose = false;
     bool doSDF = false;
@@ -80,16 +80,16 @@ public:
 
     // swizzles are run first, this is done in-place
     // this makea input pixels non-const.
-    static void swizzleTextureHDR(int w, int h, float4* srcPixelsFloat_,
+    static void swizzleTextureHDR(int32_t w, int32_t h, float4* srcPixelsFloat_,
                                   const char* swizzleText);
-    static void swizzleTextureLDR(int w, int h, Color* srcPixels_,
+    static void swizzleTextureLDR(int32_t w, int32_t h, Color* srcPixels_,
                                   const char* swizzleText);
 
 private:
     // this walks pixels for hasColor and hasAlpha if not already set to false
-    void updateImageTraitsHDR(int w, int h,
+    void updateImageTraitsHDR(int32_t w, int32_t h,
                               const float4* srcPixelsFloat_);
-    void updateImageTraitsLDR(int w, int h, const Color* srcPixels_);
+    void updateImageTraitsLDR(int32_t w, int32_t h, const Color* srcPixels_);
 
     void optimizeFormat();
 
@@ -113,7 +113,7 @@ public:
     bool isPremultiplied = false;  // don't premul
     bool isHDR = false;
 
-    bool skipImageLength = false;  // gen ktxa
+    //bool skipImageLength = false;  // gen ktxa
     bool doSDF = false;
     bool doMipmaps = false;
     bool optimizeFormatForOpaque = false;
@@ -137,17 +137,17 @@ public:
     bool useEtcenc = false;
     bool useExplicit = false;
 
-    int quality = 49;
+    int32_t quality = 49;
 
-    int mipMinSize = 1;
-    int mipMaxSize = 32 * 1024;
+    int32_t mipMinSize = 1;
+    int32_t mipMaxSize = 32 * 1024;
 };
 
 bool isSwizzleValid(const char* swizzle);
 
 bool isChannelValid(const char* channels);
 
-bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
+bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
                          vector<Int2>& chunkOffsets, KTXHeader& header,
                          bool& doMipmaps);
 

@@ -30,9 +30,9 @@ namespace heman
 {
 // 1 channel grayscale bitmap, really only need 1 bit per pixel on src, and 8-bits on dst
 struct my_image {
-    int width;
-    int height;
-    int numChannels;
+    int32_t width;
+    int32_t height;
+    int32_t numChannels;
     uint8_t* data;
 };
 

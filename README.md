@@ -1,11 +1,11 @@
 # kram, kram.exe
-Small wrapper to libkram for CLI tool.  Encode/decode/info PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.  Compiles for iOS, macOS, winOS.
+C++11 main to libkram to create CLI tool.  Encode/decode/info PNG/KTX files with LDR/HDR and BC/ASTC/ETC2.  Runs on iOS/macOS/winOS.
 
 # libkram.a, kram.lib
-C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS, macOS, winOS.
+C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS (ARM), macOS (ARM/Intel), winOS (Intel).
 
 # kramv.app
-Viewer for PNG/KTX supported files from kram.  530KB in size.  ObjC++ and uses libkram to decode unsupported formats, Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  Compiles for macOS Intel/Apple Silicon.  No dmg yet, just drop onto /Applications folder, and then run scripts/fixfinder.sh to flush LaunchServices (see below).
+ObjC++ Viewer for PNG/KTX supported files from kram.  530KB in size.  Uses Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  No dmg yet, just drop onto /Applications folder, and then run scripts/fixfinder.sh to flush LaunchServices (see below).  Runs on macOS (ARM/Intel).
 
 ### About kram
 kram is a wrapper to several popular encoders.  Most encoders have sources, and have been optimized to use very little memory and generate high quality encodings at all settings.  All kram encoders are currently cpu-based.  Some of these encoders use SSE but not Neon, and I'd like to fix that.  kram was built to be small and used as a library or app.  It's also designed for mobile and desktop use.  The final size with all encoders is under 1MB, and disabling each encoder chops off around 200KB down to a final 200KB app size via dead-code stripping.  The code should compile with C++11 or higher.
@@ -27,7 +27,7 @@ In non-preview mode, point sampling in a pixel shader is used to show exact pixe
 
 ```
 Formats - R/RG/RGBA 8/16F/32F, BC/ETC2/ASTC
-Container Types - KTX, PNG
+Container Types - KTX, KTX2, PNG
 Content Types - Albedo, Normal, SDF
 Debug modes - transparent, color, gray, +x, +y
 Texture Types - 1darray (no mips), 2d, 2darray, 3d (no mips), cube, cube array
@@ -58,6 +58,8 @@ Shift-/M advance mip
 Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram as currently implemented.  There is a lot that works, and BC1-BC3 should be retired along with all of ETC2.  There are better formats, and hardware has moved to ASTC, and then recently back to BC.  WebGL is still often stuck with older formats for lack of extensions.  These formats are still too big without further re-ordering endpoints/selectors and compressing the enire texture compressing mips.  Basis is one way to compress to storage and transcode at runtime to available GPU capabilities, but I suggest basisu or toktx to generate that until KTX2 support is added to kram.
 
 ```
+GPU - none of the encoders use the GPU, so cpu threading and multi-process is used
+
 Rescale Filtering - 1x1 point filter
 Mip filtering - 2x2 box filter that's reasonable for pow2, but not ideal for non-pow2 mips, done in linear space using half4 storage, in-place to save mem
 
@@ -69,7 +71,7 @@ BC/ETC2/ASTC - supposedly WebGL requires pow2, and some implementation need top 
 BC1 - artifacts from limits of format, artifacts from encoder, use BC7 w/2x memory
 BC1 w/alpha - blocked
 BC2 - blocked
-BC6H - unsupported, no decode
+BC6H - unsupported, no decode either, need to pull BCH encode/decode and pass 8u/16f/32f data
 
 ETC2_RGB8A1 - disabled, broken in ETC2 optimizations
 
@@ -77,18 +79,21 @@ ASTC LDR - rrr1, rrrg/gggr, rgb1, rgba must be followed to avoid endpoint storag
 ASTC HDR - encoder uses 8-bit source image, need 16f/32f passed to encoder, no hw L+A mode
 
 R/RG/RGBA 8/16F/32F - use ktx2ktx2 and ktx2sc KTX2 to supercompress, use as source formats
-R8/RG8/R16F - input/output not aligned to 4 bytes to match KTX spec
+R8/RG8/R16F - input/output rowBytes not aligned to 4 bytes to match KTX spec, code changes needed
 
-Basis - unsupported, will come with KTX2 support, can transcode from UASTC/ETC1S at runtime, RDO
-Crunch - unsupported, has RDO, predecessor to Basis, Unity provides a release of this
+PVRTC - unsupported, no open-source encoders, requires pow2 size
 
-KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, metadata/props aren't standardized and only ascii prop support so easy to dump out, convert to ktx2 with ktx2ktx2 for some texture types, can only supercompress to zstd not Basis using ktx2ktx2 + ktxsc
-KTX2 - unsupported, no viewers, mips flipped from KTX, need to get working in kram and viewer, has compressed mips
+Containers
+PVR/DDS/Basis/Crunch - unsupoorted 
+
+KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, metadata/props aren't standardized and only ascii prop support so easy to dump out
+
+KTX2 - works in kram and viewer, has aligned compressed levels of mips, libkram only supports None/Zstd supercompression, only read no write support, write by converting ktx -> ktx2 with ktx2ktx2 + ktxsc (see kramTexture.py --ktx2 option)
 
 ```
 
 ### Building
-Kram uses CMake to setup the projects and build.  An kramv.app, executable kram, and libkram are generated, but kramv.app and kram are stand-alone since they include libkram.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
+Kram uses CMake to setup the projects and build.  kramv.app, kram, and libkram are generated, but kramv.app and kram are stand-alone.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
 
 For Mac, the build is out-of-source, and can be built from the command line, or debugged from the xcodeproj that is built.  Ninja and Makefiles can also be generated from cmake, but remember to trash the CMakeCache.txt file.
 
@@ -153,7 +158,7 @@ python3.exe -m pip install -U pip
 python3.exe -m pip install -r ../scripts/requirements.txt
 
 # these scripts process all the platforms on 8 threads
-../scripts/kramTextures.py --jobs 8 -p android 
+../scripts/kramTextures.py --jobs 8 -p android --ktx2
 ../scripts/kramTextures.py --jobs 8 -p ios --script
 ../scripts/kramTextures.py --jobs 8 -p mac --script --force 
 ../scripts/kramTextures.py --jobs 8 -p win --script --force
@@ -256,24 +261,59 @@ This matches mmap api, but leaks a file mapping handle.
 ### Features to complete:
 * Tile command for SVT tiling
 * Merge command to combine images (similar to ImageMagick)
-* Atlas command to atlas to 2D and 2D array textures
+* Atlas command to atlas to 2D and 2D array textures.  Display names, show bounds of atlases.
+* 3D chart flattening.
+* Motion vector direction analysis.
+* Split view comparison rendering.  Move horizontal slider like ShaderToy.
 * Add GPU encoder (use compute in Metal/Vulkan)
 * Add BC6H encoder
 * Save prop with args and compare args and modstamp before rebuilding to avoid --force
 * Multichannel SDF
-* Plumb half4 and float4 through to ASTC HDR encoding.  Sending 8u.
+* Plumb half4/float4 through to ASTC HDR encoding.  Sending 8u.
 * Test Neon support and SSE2Neon
 * Run srgb conversion on endpoint data after fitting linear color point cloud
 * PSNR stats off encode + decode
 * Dump stats on BC6/7 block types, and ASTC void extent, dual-plane, etc
-* Update to new BC7 enc with more mode support
 
 ### Test Images
-* color_grid from ktx/ktx2 samples
-* ColorMap from Apple's sample apps to test premultiplied alpha and srgb.
+
+Some of these images like collectorbarrel-a and Toof.a look grayscale but are not. 
+Some of the encoders turn these non-opaque, and generate alpha of 254/255.
+
+* color_grid-a from ktx/ktx2 samples
+* ColorMap-a from Apple's sample apps to test premultiplied alpha and srgb.
 * flipper-sdf image taken from EDT paper that inspired heman SDF.
 * collectorbarrel-n/a from Id's old GPU BC1/3 compression article.
 * Toof-a is my own artwork drawn in Figma
+
+### Timings for test suite
+
+These are basic timings running kram encoding for all the specific platform test cases using kramTexture.py 
+Impressive that M1 wins on the Android test case by over 2x, and is close in the others.
+
+* Date: 1/16/21
+* 2020 M1 13" Macbook Air, 3.4Ghz, 4+4 core M1, 8GB
+* 2019 16" Macbook Pro, 2.3Ghz, 8/16 core i9, 16GB
+
+Timings
+* Any - Basis supercompress via ktxsc is long with UASTC + RDO
+
+| Sys  | macOS  | iOS    | Android | Any    |
+|------|--------|--------|---------|--------|
+| M1   | 0.643s | 4.603s |  6.441s |        |
+| i9   | 0.970s | 3.339s | 14.617s | 75.0s  |
+
+Bundle Sizes
+* KTX is compressed before archiving 
+* KTX2 is simply stored in archive
+* Any - Basis supercompress via ktxsc is large as UASTC + RDO
+**   data is swizzled away on 1 and 2 channel formats
+
+| Sys  | macOS  | iOS    | Android | Any    |
+|------|--------|--------|---------|--------|
+| PNG  | 745K   |        |         |        |
+| KTX  | 669K   | 683K   | 359K    |   -    |
+| KTX2 | 653K   | 665K   | 371K    | 3800K  |
 
 
 ### Syntax
@@ -319,7 +359,6 @@ OPTIONS
 	-encoder etcenc	etc2[r,rg,rgb,rgba]
 	-encoder explicit	r|rg|rgba[8|16f|32f]
 
-	-mipalign	Align mip levels with .ktxa output 
 	-mipnone	Don't build mips even if pow2 dimensions
 	-mipmin size	Only output mips >= size px
 	-mipmax size	Only output mips <= size px
@@ -485,43 +524,41 @@ The rgba8u image and half4 image are stored for mips.  1gb can be used to proces
 | 4096^2 | 16   |  64   |  128   |  256   |
 | 8192^2 | 64   |  256  |  512   |  1024  |
 
-### On PNG, KTX, KTX2, KTXA output formats:
+### On lossless PNG, KTX, KTX2 output formats:
 
-PNG is limited to srgb8 and 8u and 16u data.  Most editors can work with this format.  Gimp and Photoshop can maintain 16u data.  There's no provision for mips, or cube, 3d, hdr, or premultiplied alpha.  Content tools, image editors, browsers really need to replace PNG and DDS with compressed KTX2 for source and output content.  This uses very little space in source control then, and likely more could be done with delta encoding pixels like PNG before compression.   
+PNG is limited to srgb8u/8u/16u data.  Most editors can work with this format.  Gimp and Photoshop can maintain 16u data.  There's no provision for mips, or cube, 3d, hdr, or premultiplied alpha.  And most tools always set png as sRGB data.  Content tools, image editors, browsers really need to replace PNG and DDS with compressed KTX2 for source and output content. 
 
-kram encourages the use of lossless and hdr source data.  There are not many choices for lossless data - PNG, EXR, and Tiff to name a few.  Instead, kram can input PNG files with 8u pixels, and KTX files for 8u/16f/32f pixels.  Let kram convert source pixels to premultiplied alpha and from srgb to linear, since ordering matters here and kram does this using float4.  LDR and HDR data can come in as horizontal or vertical strips, and these strips can then have mips generated for them.  So cube maps, cube map arrays, 2D arrays, and 1d arrays are all handled the same.
+kram encourages the use of lossless and hdr source data.  There are not many choices for lossless data - PNG, EXR, and Tiff to name a few.  Instead, kram can input PNG files with 8u pixels, and KTX/2 files for 8u/16f/32f pixels.  Let kram convert source pixels to premultiplied alpha and from srgb to linear, since ordering matters here and kram does this using half4/float4.  LDR and HDR data can come in as horizontal or vertical strips, and these strips can then have mips generated for them.  So cube maps, cube map arrays, 2D arrays, and 1d arrays are all handled the same.
 
-KTX stores everything with 4 byte alignment.  It's got a simple 64-byte header, props, and then mip data with lengths and padding.  
+KTX is a well-designed format, and KTX2 continues that tradition.  It was also faily easy to convert between these formats.  Once mips are decoded, KTX2 looks very much like KTX.
 
-Validating and previewing the results is complicated.  KTX has few viewers.  Apple's Preview can open BC and ASTC files on macOS, but not ETC/PVRTC.  And then you can't look at channels or mips, or turn on/off premultiplied alpha, or view signed/unsigned data.  Preview premultiplies PNG images, but KTX files aren't.  Apple's thumbnails don't work for ETC2 or PVRTC data.  Windows thumbnails don't work for KTX at all.  PVRTexToolGUI applies sRGB and premultiplied alpha incorrectly to images, and can't open BC files on Mac, or BC7 files on Windows, or ETC srgb files.  PVRTexToolGUI should fix some of these issues in their next release, but it's almost the end of 2020.
+Visually validating and previewing the results is complicated.  KTX/2 have few viewers, hence the need for kramv.  Apple's Preview can open BC and ASTC files on macOS, but not ETC/PVRTC.  And then you can't look at channels or mips, or turn on/off premultiplied alpha, or view signed/unsigned data.  Preview premultiplies PNG images, but KTX files aren't.  Apple's thumbnails don't work for ETC2 or PVRTC data in KTX files.  Windows thumbnails don't work for KTX at all.  PVRTexToolGUI 2020R2 applies sRGB incorrectly to images, and can't open BC4/5/7 files on Mac.  
 
-Kram adds props to the KTX file to store data.  Currently props store Metal and Vulkan formats.  This is important since GL's ASTC LDR and HDR formats are the same constant.  Also props are saved for channel content and post-swizzle.  Loaders, viewers, and shaders can utilize this metadata.
+Kram adds props to KTX/2 file to store data.  Currently props store Metal and Vulkan formats.  This is important since GL's ASTC LDR and HDR formats are the same constant.  Also props are saved for channel content and post-swizzle.  Loaders, viewers, and shaders can utilize this metadata.
 
-KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  But there are no viewers for that format.  KTX2 reverses mip ordering smallest to largest, so that streamed textures can display smaller mips progressively.   KTX2 can also supercompress each mip with zstd.  I suppose this could then be unpacked to tiles for sparse texturing.  KTX2 does not store a length field inside the mip data which keeps consistent alignment. 
+KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  KTX2 reverses mip ordering smallest to largest, so that streamed textures can display smaller mips before they finish fully streaming.  KTX2 can also supercompress each mip with zstd and Basis for transcode.  I suppose this could then be unpacked to tiles for sparse texturing.  KTX2 does not store a length field inside the mip data which keeps consistent alignment. 
 
-I also have a custom KTXA format.  KTXA likely broke with the prop additions.  Metal cannot load mmap data that isn't aligned to a multiple of the block size (8 or 16 bytes for BC/ASTC/ETC).  But KTX stuffs a 4 byte length into the mip data.  So by leaving the size out (TODO: pad props to a 16 byte multiple), then the mips could be directly loaded.  My loader had to copy the mips to a staging MTLBuffer anyways, so it's probably best not to create a new format.  Also sparse textures imply splitting up large mips into tiles.  Also mmap'ed data on iOS/Android don't count towards jetsam limits, so that imposes some constraints on loaders.
+Metal cannot load mmap mip data that isn't aligned to a multiple of the block size (8 or 16 bytes for BC/ASTC/ETC).  KTX adds a 4 byte length into the mip data that breaks alignment, but KTX2 fortunately skips that.  But KTX2 typically compresses the levels and needs decode/transcode to send to the GPU.
 
 Note that textures and render textures don't necessarily use pixels or encoded blocks in the order that you specify in the KTX file.  Twiddling creates serpentine patterns of pixels/blocks that are platform and hardware dependent.  Hardware often writes to linear for the display system, and reads/writes twiddled layouts.  It's hard for a generic tool like kram to address this.  I recommend that the texture loader always upload ktx blocks to private texture surfaces, and let the API twiddle the data during the copy.  This can sometimes be a source of upload timing differences.
+
+* KTX mmap -> Copy Level to Shared Buffer -> Blit Level to Private Tex
+* KTX2 mmap -> Decompress Level to Shared Buffer -> Blit Level To Private Tex
+
+With sparse texture, the above becomes more involved since only parts of the decompressed level are uploaded.  KTX2 is still the ideal choice, since textures are considerably smaller 2-10x and can be mmap-ed directly from the bundle.
 
 ### Encoding and hardware lookup of srgb and premultiplied data.
 
 ```
 Texture units convert srgb to linear data on the way to the texture cache.  
-The texture cache typically stores 4x4 blocks to match encoded formats.  
-Sampling is then done from that block of linear data.
-Ideally the cache stores >8-bit linear channels.
+The texture cache typically stores 4x4 block to match encoded formats.  
+Sampling is then done from that block of linear data with higher precision.
 
 Texturing hardware does not yet support premultiplied alpha.  
 Kram does premul prior to mip generation.
 Srgb is then re-applied to linear premul data before encoding.
-LDR premul typically implies rgb*a <= a, but this rule can be broken in film.
-Once in premul stay there, dividing out alpha isn't performant or precise.
-Premul breaks many of the common hardware blend modes, so emulate in shader.
 
-Kram uses float4 to preserve precision when srgb or premul are specified.  
-The encoders encode non-linear srgb point clouds.
-
-encode = (srgbFromPremulLinear(rgb * a), a)
-decode = bilerp(premulLinearFromSrgb(rgb), a)
+Kram uses half4/float4 to preserve precision when srgb or premul are specified.  
+The encoders all have to encode non-linear srgb point clouds, which isn't correct.
 
 ```

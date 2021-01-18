@@ -31,7 +31,7 @@ bool MmapHelper::open(const char *filename)
     if (!fp) {
         return false;
     }
-    int fd = fileno(fp);
+    int32_t fd = fileno(fp);
 
     struct stat sb;
     if (fstat(fd, &sb) == -1) {

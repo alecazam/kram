@@ -14,10 +14,10 @@ using namespace std;
 using namespace simd;
 
 // return whether num is pow2
-bool isPow2(int num);
+bool isPow2(int32_t num);
 
 // find pow2 > num if not already pow2
-int nextPow2(int num);
+int32_t nextPow2(int32_t num);
 
 struct Color {
     uint8_t r, g, b, a;
@@ -49,8 +49,8 @@ public:
     half4 *pixelsHalf = nullptr;    // optional
     float4 *pixelsFloat = nullptr;  // optional
 
-    int width = 0;
-    int height = 0;
+    int32_t width = 0;
+    int32_t height = 0;
 
     bool isSRGB = false;
     bool isHDR = false;  // only updates pixelsFloat

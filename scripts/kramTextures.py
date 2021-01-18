@@ -44,6 +44,11 @@ class TextureProcessor:
 
 	appKram = ""
 
+	appKtx2 = ""
+	appKtx2sc = ""
+	appKtx2check = ""
+	doUastc = False
+
 	# preset formats for a given platform
 	textureFormats = []
 
@@ -110,11 +115,11 @@ class TextureProcessor:
 		elif ("-cube" in name):
 			kind = TextureType.Cube
 		
-		elif ("-array1d" in name):
+		elif ("-1darray" in name):
 			kind = TextureType.Tex1DArray
-		elif ("-array2d" in name):
+		elif ("-2darray" in name):
 			kind = TextureType.Tex2DArray
-		elif ("-arraycube" in name):
+		elif ("-cubearray" in name):
 			kind = TextureType.CubeArray
 			
 		return kind
@@ -133,13 +138,14 @@ class TextureProcessor:
 		# skip unrecognized extensions in the folder
 		srcRoot, srcExtension = os.path.splitext(srcPath)
 		srcExtension = srcExtension.lower()
-		if not (srcExtension == ".png" or srcExtension == ".ktx"):
+		if not (srcExtension == ".png" or srcExtension == ".ktx" or srcExtension == ".ktx2"):
 			if not srcPath.endswith(".DS_Store"):
 				print("skipping unknown extension on file {0}".format(srcPath))
 			return 0
 		
 		srcFilename = os.path.basename(srcRoot) # just the name no ext
 
+		# this only exports to ktx, post process will convert to ktx2
 		ext = ".ktx"
 		dstName = srcFilename + ext
 		dstFile = dstDir + dstName
@@ -196,6 +202,37 @@ class TextureProcessor:
 			timer += time.perf_counter()
 			if timer > slowTextureTime:
 				print("perf: encode {0} took {1:.3f}s".format(dstName, timer))
+
+			# TODO: split this off into another modstamp testing pass, and only do work if ktx is older than ktx2
+			# convert ktx -> ktx2, and zstd supercompress the mips, kram can read these and decompress
+			# for now, this is only possible when not scripted
+			# could read these in kram, and then execute them, or write these to another file
+			# and then execute that if script file suceeds
+			if self.appKtx2:
+				ktx2Filename = dstFile + "2"
+				
+				# create the ktx2
+				result = self.spawn(self.appKtx2 + " -f -o " + ktx2Filename + " " + dstFile)
+				
+				# too bad this can't check ktx1...
+				if self.appKtx2check != "" and result == 0:
+					result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
+
+				# can only zstd compress block encoded files, but can do BasisLZ on 
+				#   explicit files.
+
+				# overwrite it with supercompressed version
+				# basis uastc supercompress - only if content isn't already block encoded, TODO: kramv and loader cannot read this
+				# zstd supercompress - works on everything, kramv and loader can read this
+				if self.appKtx2sc != "" and result == 0:
+					if self.doUastc:
+						result = self.spawn(self.appKtx2sc + " --uastc 2 --uastc_rdo_q 1.0 --threads 1 " + ktx2Filename)
+					else:
+						result = self.spawn(self.appKtx2sc + " --zcmp 3 --threads 1 " + ktx2Filename)
+
+				# double check supercompressed version, may not be necessary
+				if self.appKtx2check != "" and result == 0:
+					result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
 
 		return result
 
@@ -283,19 +320,43 @@ class TextureProcessor:
 		return 0
 
 @click.command()
-@click.option('-p', '--platform', type=click.Choice(['ios', 'mac', 'win', 'android']), required=True, help="build platform")
+@click.option('-p', '--platform', type=click.Choice(['ios', 'mac', 'win', 'android', 'any']), required=True, help="build platform")
 @click.option('-c', '--container', type=click.Choice(['ktx', 'ktxa']), default="ktx", help="container type")
 @click.option('-v', '--verbose', is_flag=True, help="verbose output")
 @click.option('-q', '--quality', default=49, type=click.IntRange(0, 100), help="quality affects encode speed")
 @click.option('-j', '--jobs', default=64, help="max physical cores to use")
 @click.option('--force', is_flag=True, help="force rebuild ignoring modstamps")
 @click.option('--script', is_flag=True, help="generate kram script and execute that")
-def processTextures(platform, container, verbose, quality, jobs, force, script):
+@click.option('--ktx2', is_flag=True, help="generate ktx2 files from ktx output")
+@click.option('--check', is_flag=True, help="check ktx2 files as generated")
+@click.option('--bundle', is_flag=True, help="bundle files by updating a zip file")
+def processTextures(platform, container, verbose, quality, jobs, force, script, ktx2, check, bundle):
 	# output to multiple dirs by type
 
 	# eventually pass these in as strings, so script is generic
 	# Mac can handle this, but Win want's absolute path (or kram run from PATH)
-	appKram = os.path.abspath("../bin/kram")
+	binDir = "../bin/"
+	appKram = os.path.abspath(binDir + "kram")
+	
+	appKtx2 = ""
+	appKtx2sc = ""
+	appKtx2check = ""
+	doUastc = False
+
+	# can convert ktx -> ktx2 files with zstd and Basis supercompression
+	# caller must have ktx2ktx2 and ktx2sc in path build from https://github.com/KhronosGroup/KTX-Software
+	if platform == "any":
+		ktx2 = True
+		doUastc = True
+
+	if ktx2:
+		script = False
+
+		appKtx2 = "ktx2ktx2"
+		appKtx2sc ="ktxsc"
+
+		if check:
+			appKtx2check = "ktx2check"
 	
 	# abspath strips the trailing slash off - ugh
 	srcDirBase = os.path.abspath("../tests/src/")
@@ -308,7 +369,6 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 	
 	scriptFile = dstDirForPlatform + "kramscript.txt"
 	
-
 	# can process multiple src folders, and skip some
 	srcDirs = [""]
 
@@ -317,7 +377,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 	#------------------------------------------
 	# TODO: allow multiple platforms to be built in one call
 
-	# TODO: need a script per file with more info than just the filename
+	# Note: need a script per file with more info than just the filename
 	# to really set kind and other data.  This is just a simple example script.
 
 	# TODO: need way to combine channels from multiple textures into one
@@ -376,6 +436,15 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 		fmtMask = " -f bc4"
 		fmtSDF = " -f bc4 -signed -sdf"
 
+	elif platform == "any":
+		# output to s/rgba8u, then run through ktxsc to go to BasisLZ
+		# no signed formats, but probably can transcode to one
+		fmtAlbedo = " -f rgba8 -srgb -premul" # + " -optopaque"
+		fmtNormal = " -f rgba8 -swizzle rg01 -normal"
+		fmtMetalRoughness = " -f rgba8 -swizzle r0001"
+		fmtMask = " -f rgba8 -swizzle r001"
+		fmtSDF = " -f rgba8 -swizzle r000 -sdf"
+
 	else:
 		return 1
 
@@ -399,6 +468,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 	formats = [fmt + moreArgs for fmt in formats]
 	
 	#------------------------------------------
+	# Encoding
 
 	timer = 0.0
 	timer -= time.perf_counter()
@@ -406,6 +476,11 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 	result = 0
 		
 	processor = TextureProcessor(platform, appKram, maxCores, force, script, scriptFile, formats)
+	if ktx2:
+		processor.appKtx2 = appKtx2
+		processor.appKtx2sc = appKtx2sc
+		processor.appKtx2check = appKtx2check
+		processor.doUastc = doUastc
 
 	for srcDir in srcDirs:
 		dstDir = dstDirForPlatform + srcDir
@@ -419,6 +494,27 @@ def processTextures(platform, container, verbose, quality, jobs, force, script):
 
 	timer += time.perf_counter()
 	print("took total {0:.3f}s".format(timer))
+
+	#------------------------------------------
+	# Bundling
+	
+	if bundle:
+		# TODO: build an asset catalog for app slicing and ODR on iOS/macOS, Android has similar
+	
+		# either store ktx2 or compress ktx in updating a zip with the data
+		if ktx2:
+			dstBundle = dstDirForPlatform + "bundle-" + platform + "-ktx2" + ".zip"
+			command = "find {0} -name '*.ktx2' | zip -u -0 -@ {1}".format(dstDirForPlatform, dstBundle)
+		else:
+			dstBundle = dstDirForPlatform + "bundle-" + platform + "-ktx" + ".zip"
+			command = "find {0} -name '*.ktx' | zip -u -@ {1}".format(dstDirForPlatform, dstBundle)
+
+		print("running " + command)
+
+		retval = subprocess.call(command, shell=True)
+		if retval != 0:
+			print("cmd: failed " + command)
+			return 1
 
 	return result
 

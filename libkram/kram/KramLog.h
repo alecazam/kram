@@ -18,8 +18,8 @@ enum LogLevel {
     LogLevelError = 3,
 };
 
-extern int logMessage(const char* group, int logLevel,
-                      const char* file, int line, const char* func,
+extern int32_t logMessage(const char* group, int32_t logLevel,
+                      const char* file, int32_t line, const char* func,
                       const char* fmt, ...);
 
 // verify leaves conditional code in the build
@@ -38,7 +38,7 @@ extern int logMessage(const char* group, int logLevel,
 
 // TODO: move to Strings.h
 using namespace std;
-int sprintf(string& str, const char* format, ...);
+int32_t sprintf(string& str, const char* format, ...);
 
 bool startsWith(const char* str, const string& substring);
 bool endsWithExtension(const char* str, const string& substring);

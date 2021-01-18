@@ -84,6 +84,8 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
 
     "${SOURCE_DIR}/tmpfileplus/*.cpp"
     "${SOURCE_DIR}/tmpfileplus/*.h"
+    
+    "${SOURCE_DIR}/zstd/zstddeclib.cpp"
 )
 
 # no objc on winOS
@@ -119,6 +121,7 @@ target_include_directories(${myTargetLib} PRIVATE
     #"${SOURCE_DIR}/lodepng"
     "${SOURCE_DIR}/astc-encoder/"
     "${SOURCE_DIR}/etc2comp/"
+    "${SOURCE_DIR}/zstd/"
     )
  
 # only add sources to the library

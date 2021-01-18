@@ -129,12 +129,9 @@ public:
     // As such, this doesn't have much functionality, other than to hold the header.
 
     // 64-byte header
-    uint8_t identifier[12] = {
-        0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31,
-        0xBB, 0x0D, 0x0A, 0x1A, 0x0A
-        //'«', 'K', 'T', 'X',
-        //' ', '1', '1', '»',
-        //'\r', '\n', '\x1A', '\n'
+    uint8_t identifier[12] = { // same is kKTXIdentifier
+        0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
+        //'«', 'K', 'T', 'X', ' ', '1', '1', '»', '\r', '\n', '\x1A', '\n'
     };
 
     uint32_t endianness = 0x04030201;
@@ -156,10 +153,10 @@ public:
     uint32_t bytesOfKeyValueData = 0;
 
 public:
-    //
-    int totalMipLevels() const;
-    int totalChunks() const;
+    // depth * faces * array
+    uint32_t totalChunks() const;
 
+    // this has gaps in the mapping for ASTC HDR
     void initFormatGL(MyMTLPixelFormat pixelFormat);
 
     MyMTLTextureType metalTextureType() const;
@@ -170,11 +167,11 @@ public:
 
 //---------------------------------------------
 
-// Offset and size of a single mip in the kTXImage
+// This is one entire level of mipLevels.
 class KTXImageLevel {
 public:
-    size_t offset;
-    size_t length;
+    uint64_t offset; // numChunks * length
+    uint64_t length; // size of a single mip
 };
 
 // Since can't add anything to KTXHeader without throwing off KTXHeader size,
@@ -182,9 +179,8 @@ public:
 class KTXImage {
 public:
     // this calls init calls
-    bool open(const uint8_t* imageData, int imageDataLength,
-              bool skipImageLength);
-
+    bool open(const uint8_t* imageData, size_t imageDataLength);
+    
     void initProps();
     bool initMipLevels(bool validateLevelSizeFromRead);
 
@@ -202,34 +198,32 @@ public:
     void addFilterProps(const char* filterContent);
 
     // block data depends on format
-    int blockSize() const;
+    uint32_t blockSize() const;
     Int2 blockDims() const;
-    int blockCount(int width_, int height_) const;
+    uint32_t blockCount(uint32_t width_, uint32_t height_) const;
 
     // mip data depends on format
-    int mipLevelSize(int width_, int height_) const;
-    int totalMipLevels() const;
-    int totalChunks() const;
+    uint32_t mipLevelSize(uint32_t width_, uint32_t height_) const;
+    //int totalMipLevels() const;
+    uint32_t totalChunks() const;
 
+private:
+    bool openKTX2(const uint8_t* imageData, size_t imageDataLength);
+
+    // ktx2 mips are uncompressed to convert back to ktx1, but without the image offset
+    vector<uint8_t> imageDataFromKTX2;
+    
 public:  // TODO: bury this
     MyMTLTextureType textureType = MyMTLTextureType2D;
     MyMTLPixelFormat pixelFormat = MyMTLPixelFormatInvalid;
 
     // copied out of header, but also may be 1 instead of 0
     // also these can be modified, and often are non-zero even if header is
-    int width;
-    int height;
-    int depth;
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth;
 
-    //    int numberOfArrayElements;
-    //    int numberOfMipmapLevels;
-    //    int numberOfFaces;
-
-    // can be derived from format
-    //int bytesPerBlock;
-    //Int2 blockDims;
-
-    // for ktxa
+    // for ktxa and ktx2
     bool skipImageLength = false;
 
     KTXHeader header;  // copy of KTXHeader, so can be modified and then written back
@@ -240,7 +234,7 @@ public:  // TODO: bury this
     vector<KTXImageLevel> mipLevels;  // offsets into fileData
 
     // this only holds data for mipLevels
-    int fileDataLength;
+    size_t fileDataLength;
     const uint8_t* fileData;  // mmap data
 };
 
@@ -257,15 +251,23 @@ bool isETCFormat(MyMTLPixelFormat format);
 bool isASTCFormat(MyMTLPixelFormat format);
 
 Int2 blockDimsOfFormat(MyMTLPixelFormat format);
-int blockSizeOfFormat(MyMTLPixelFormat format);
-int numChannelsOfFormat(MyMTLPixelFormat format);
+uint32_t blockSizeOfFormat(MyMTLPixelFormat format);
+uint32_t numChannelsOfFormat(MyMTLPixelFormat format);
 
-int metalType(MyMTLPixelFormat format);  // real MTLPixelFormat
+// metal
+uint32_t metalType(MyMTLPixelFormat format);  // really MTLPixelFormat
 const char* metalTypeName(MyMTLPixelFormat format);
+
+// vuklan
 const char* vulkanTypeName(MyMTLPixelFormat format);
-int vulkanType(MyMTLPixelFormat format);  // really VKFormat
+uint32_t vulkanType(MyMTLPixelFormat format);  // really VKFormat
+MyMTLPixelFormat vulkanToMetalFormat(uint32_t format); // really VKFormat
+
+// gl
 const char* glTypeName(MyMTLPixelFormat format);
-int glType(MyMTLPixelFormat format);
+uint32_t glType(MyMTLPixelFormat format);
+MyMTLPixelFormat glToMetalFormat(uint32_t format);
+
 const char* textureTypeName(MyMTLTextureType textureType);
 
 // find a corresponding srgb/non-srgb format for a given format

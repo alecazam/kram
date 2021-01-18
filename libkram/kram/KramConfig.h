@@ -179,11 +179,11 @@ public:
 
     // no real ops here, althought Neon does have sevearal
     // use of these pull data out of simd registers
-    half& operator[](int index)
+    half& operator[](int32_t index)
     {
         return v[index];
     }
-    const half& operator[](int index) const
+    const half& operator[](int32_t index) const
     {
         return v[index];
     }
@@ -205,7 +205,7 @@ public:
 // http://download.nvidia.com/developer/Papers/2005/NP2_Mipmapping/NP2_Mipmap_Creation.pdf
 #define ROUNDMIPSDOWN 1
 
-inline void mipDown(int& w, int& h)
+inline void mipDown(int32_t& w, int32_t& h)
 {
 #if ROUNDMIPSDOWN
     w = w / 2;
@@ -253,7 +253,7 @@ inline float4 toFloat4(const half4& vv)
     __m128i reg16 = _mm_setzero_si128();
 
     // TODO: switch to load low 64-bits, but don't know which one _mm_cvtsi32_si128(&vv.reg); ?
-    // want 0 extend here, sse overuses int when really unsigned and zero extended value
+    // want 0 extend here, sse overuses int32_t when really unsigned and zero extended value
     reg16 = _mm_insert_epi16(reg16, vv[0], 0);
     reg16 = _mm_insert_epi16(reg16, vv[1], 1);
     reg16 = _mm_insert_epi16(reg16, vv[2], 2);

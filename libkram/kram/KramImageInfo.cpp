@@ -166,12 +166,12 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
 }
 
 struct SwizzleIndex {
-    int index[4];
+    int32_t index[4];
 };
 
-int toSwizzleIndex(char swizzle, int xChannel)
+int32_t toSwizzleIndex(char swizzle, int32_t xChannel)
 {
-    int index = -16;
+    int32_t index = -16;
     switch (swizzle) {
         case 'r':
             index = 0;
@@ -217,7 +217,7 @@ bool isSwizzleValid(const char* swizzleText)
         return false;
     }
     SwizzleIndex swizzle = toSwizzleIndex(swizzleText);
-    for (int i = 0; i < 4; ++i) {
+    for (int32_t i = 0; i < 4; ++i) {
         if (swizzle.index[i] == -16) {
             return false;
         }
@@ -231,8 +231,8 @@ bool isChannelValid(const char* channelText)
         return false;
     }
     // rxbx would be a valid channel mask, or xxbx
-    for (int i = 0; i < 4; ++i) {
-        int index = toSwizzleIndex(channelText[i], i);
+    for (int32_t i = 0; i < 4; ++i) {
+        int32_t index = toSwizzleIndex(channelText[i], i);
         if (index != i) {
             return false;
         }
@@ -420,7 +420,7 @@ bool isSupportedFormat(TexEncoder encoder, MyMTLPixelFormat format)
     }
 
     const MyMTLPixelFormat* table = nullptr;
-    int tableSize = 0;
+    int32_t tableSize = 0;
 
     switch (encoder) {
         case kTexEncoderAstcenc:
@@ -457,7 +457,7 @@ bool isSupportedFormat(TexEncoder encoder, MyMTLPixelFormat format)
             break;
     }
 
-    for (int i = 0; i < tableSize; ++i) {
+    for (int32_t i = 0; i < tableSize; ++i) {
         if (table[i] == format) {
             return true;
         }
@@ -618,7 +618,7 @@ bool validateFormatAndEncoder(ImageInfoArgs& infoArgs)
     return !error;
 }
 
-bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
+bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
                          vector<Int2>& chunkOffsets, KTXHeader& header,
                          bool& doMipmaps)
 {
@@ -636,7 +636,7 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
             }
             w = h;
 
-            for (int i = 0; i < (int)header.numberOfFaces; ++i) {
+            for (int32_t i = 0; i < (int32_t)header.numberOfFaces; ++i) {
                 Int2 chunkOffset = {w * i, 0};
                 chunkOffsets.push_back(chunkOffset);
             }
@@ -648,7 +648,7 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
             }
             h = w;
 
-            for (int i = 0; i < (int)header.numberOfFaces; ++i) {
+            for (int32_t i = 0; i < (int32_t)header.numberOfFaces; ++i) {
                 Int2 chunkOffset = {0, h * i};
                 chunkOffsets.push_back(chunkOffset);
             }
@@ -663,14 +663,14 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
             // horizontal strip
             header.numberOfArrayElements = w / (6 * h);
 
-            if ((w != (int)(6 * h * header.numberOfArrayElements)) ||
+            if ((w != (int32_t)(6 * h * header.numberOfArrayElements)) ||
                 !isPow2(h)) {
                 return false;
             }
             w = h;
 
-            for (int i = 0;
-                 i < (int)(header.numberOfFaces * header.numberOfArrayElements);
+            for (int32_t i = 0;
+                 i < (int32_t)(header.numberOfFaces * header.numberOfArrayElements);
                  ++i) {
                 Int2 chunkOffset = {w * i, 0};
                 chunkOffsets.push_back(chunkOffset);
@@ -680,14 +680,14 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
             // vertical strip
             header.numberOfArrayElements = h / (6 * w);
 
-            if ((h != (int)(6 * w * header.numberOfArrayElements)) ||
+            if ((h != (int32_t)(6 * w * header.numberOfArrayElements)) ||
                 !isPow2(w)) {
                 return false;
             }
             h = w;
 
-            for (int i = 0;
-                 i < (int)(header.numberOfFaces * header.numberOfArrayElements);
+            for (int32_t i = 0;
+                 i < (int32_t)(header.numberOfFaces * header.numberOfArrayElements);
                  ++i) {
                 Int2 chunkOffset = {0, h * i};
                 chunkOffsets.push_back(chunkOffset);
@@ -696,27 +696,27 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
     }
     else if (textureType == MyMTLTextureType3D) {
         if (w > h) {
-            int numSlices = w / h;
+            int32_t numSlices = w / h;
             header.pixelDepth = numSlices;
-            if (w != (int)(h * numSlices)) {
+            if (w != (int32_t)(h * numSlices)) {
                 return false;
             }
             w = h;  // assume square
 
-            for (int i = 0; i < (int)numSlices; ++i) {
+            for (int32_t i = 0; i < (int32_t)numSlices; ++i) {
                 Int2 chunkOffset = {w * i, 0};
                 chunkOffsets.push_back(chunkOffset);
             }
         }
         else {
-            int numSlices = h / w;
+            int32_t numSlices = h / w;
             header.pixelDepth = numSlices;
-            if (h != (int)(w * numSlices)) {
+            if (h != (int32_t)(w * numSlices)) {
                 return false;
             }
             h = w;  // assume square
 
-            for (int i = 0; i < (int)numSlices; ++i) {
+            for (int32_t i = 0; i < (int32_t)numSlices; ++i) {
                 Int2 chunkOffset = {0, h * i};
                 chunkOffsets.push_back(chunkOffset);
             }
@@ -736,7 +736,7 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
         h = 1;
 
         // all strips are horizontal, and array goes vertical
-        for (int i = 0; i < (int)header.numberOfArrayElements; ++i) {
+        for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
             Int2 chunkOffset = {0, h * i};
             chunkOffsets.push_back(chunkOffset);
         }
@@ -745,24 +745,24 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
         if (w > h) {
             // horizontal strip
             header.numberOfArrayElements = w / h;
-            if (w != (int)(h * header.numberOfArrayElements)) {
+            if (w != (int32_t)(h * header.numberOfArrayElements)) {
                 return false;
             }
 
             w = h;  // assume square
-            for (int i = 0; i < (int)header.numberOfArrayElements; ++i) {
+            for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
                 Int2 chunkOffset = {w * i, 0};
                 chunkOffsets.push_back(chunkOffset);
             }
         }
         else {
             header.numberOfArrayElements = h / w;
-            if (h != (int)(w * header.numberOfArrayElements)) {
+            if (h != (int32_t)(w * header.numberOfArrayElements)) {
                 return false;
             }
 
             h = w;  // assume square
-            for (int i = 0; i < (int)header.numberOfArrayElements; ++i) {
+            for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
                 Int2 chunkOffset = {0, h * i};
                 chunkOffsets.push_back(chunkOffset);
             }
@@ -777,7 +777,7 @@ bool validateTextureType(MyMTLTextureType textureType, int& w, int& h,
 }
 
 // const member function, but it can change the srcPixels.
-void ImageInfo::swizzleTextureHDR(int w, int h, float4* srcPixelsFloat_,
+void ImageInfo::swizzleTextureHDR(int32_t w, int32_t h, float4* srcPixelsFloat_,
                                   const char* swizzleText)
 {
     // set any channels that are constant
@@ -789,17 +789,17 @@ void ImageInfo::swizzleTextureHDR(int w, int h, float4* srcPixelsFloat_,
     }
 
     float4 c = {0, 0, 0, 0};
-    for (int i = 0; i < 4; ++i) {
+    for (int32_t i = 0; i < 4; ++i) {
         if (swizzle.index[i] == -1) {
             c[i] = 1.0f;
         }
     }
 
     float4* srcPixelsFloat = (float4*)srcPixelsFloat_;
-    for (int y = 0; y < h; ++y) {
-        int y0 = y * w;
+    for (int32_t y = 0; y < h; ++y) {
+        int32_t y0 = y * w;
 
-        for (int x = 0; x < w; ++x) {
+        for (int32_t x = 0; x < w; ++x) {
             float4& c0 = srcPixelsFloat[y0 + x];
             const float4& ci = c0;
 
@@ -823,7 +823,7 @@ void ImageInfo::swizzleTextureHDR(int w, int h, float4* srcPixelsFloat_,
     }
 }
 
-void ImageInfo::swizzleTextureLDR(int w, int h, Color* srcPixels_,
+void ImageInfo::swizzleTextureLDR(int32_t w, int32_t h, Color* srcPixels_,
                                   const char* swizzleText_)
 {
     // set any channels that are constant
@@ -836,17 +836,17 @@ void ImageInfo::swizzleTextureLDR(int w, int h, Color* srcPixels_,
 
     // fixup any negative swizzle indices (constant values)
     Color c = {0, 0, 0, 0};
-    for (int i = 0; i < 4; ++i) {
+    for (int32_t i = 0; i < 4; ++i) {
         if (swizzle.index[i] == -1) {
             (&c.r)[i] = 255;
         }
     }
 
     Color* srcPixels = (Color*)srcPixels_;
-    for (int y = 0; y < h; ++y) {
-        int y0 = y * w;
+    for (int32_t y = 0; y < h; ++y) {
+        int32_t y0 = y * w;
 
-        for (int x = 0; x < w; ++x) {
+        for (int32_t x = 0; x < w; ++x) {
             Color& c0 = srcPixels[y0 + x];
             const uint8_t* ci = &c0.r;
 
@@ -872,7 +872,7 @@ void ImageInfo::swizzleTextureLDR(int w, int h, Color* srcPixels_,
 
 //-------------------------
 
-void ImageInfo::updateImageTraitsHDR(int w, int h, const float4* srcPixels)
+void ImageInfo::updateImageTraitsHDR(int32_t w, int32_t h, const float4* srcPixels)
 {
     if (srcPixels == nullptr) {
         return;
@@ -883,10 +883,10 @@ void ImageInfo::updateImageTraitsHDR(int w, int h, const float4* srcPixels)
         hasColor = false;
 
         // stop on first color pixel
-        for (int y = 0; y < h && !hasColor; ++y) {
-            int y0 = y * w;
+        for (int32_t y = 0; y < h && !hasColor; ++y) {
+            int32_t y0 = y * w;
 
-            for (int x = 0; x < w; ++x) {
+            for (int32_t x = 0; x < w; ++x) {
                 const float4& c0 = srcPixels[y0 + x];
 
                 if (c0.x != c0.y || c0.x != c0.z) {
@@ -902,10 +902,10 @@ void ImageInfo::updateImageTraitsHDR(int w, int h, const float4* srcPixels)
         hasAlpha = false;
 
         // stop on first non 255 alpha
-        for (int y = 0; y < h && !hasAlpha; ++y) {
-            int y0 = y * w;
+        for (int32_t y = 0; y < h && !hasAlpha; ++y) {
+            int32_t y0 = y * w;
 
-            for (int x = 0; x < w; ++x) {
+            for (int32_t x = 0; x < w; ++x) {
                 const float4& c0 = srcPixels[y0 + x];
                 if (c0.w != 1.0f) {
                     hasAlpha = true;
@@ -916,7 +916,7 @@ void ImageInfo::updateImageTraitsHDR(int w, int h, const float4* srcPixels)
     }
 }
 
-void ImageInfo::updateImageTraitsLDR(int w, int h, const Color* srcPixels)
+void ImageInfo::updateImageTraitsLDR(int32_t w, int32_t h, const Color* srcPixels)
 {
     if (srcPixels == nullptr) {
         return;
@@ -927,10 +927,10 @@ void ImageInfo::updateImageTraitsLDR(int w, int h, const Color* srcPixels)
         hasColor = false;
 
         // stop on first color pixel
-        for (int y = 0; y < h && !hasColor; ++y) {
-            int y0 = y * w;
+        for (int32_t y = 0; y < h && !hasColor; ++y) {
+            int32_t y0 = y * w;
 
-            for (int x = 0; x < w; ++x) {
+            for (int32_t x = 0; x < w; ++x) {
                 const Color& c0 = srcPixels[y0 + x];
 
                 if (c0.r != c0.g || c0.r != c0.b) {
@@ -946,10 +946,10 @@ void ImageInfo::updateImageTraitsLDR(int w, int h, const Color* srcPixels)
         hasAlpha = false;
 
         // stop on first non 255 alpha
-        for (int y = 0; y < h && !hasAlpha; ++y) {
-            int y0 = y * w;
+        for (int32_t y = 0; y < h && !hasAlpha; ++y) {
+            int32_t y0 = y * w;
 
-            for (int x = 0; x < w; ++x) {
+            for (int32_t x = 0; x < w; ++x) {
                 const Color& c0 = srcPixels[y0 + x];
                 if (c0.a != 255) {
                     hasAlpha = true;
@@ -969,7 +969,7 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     isNormal = args.isNormal;
 
     doSDF = args.doSDF;
-    skipImageLength = args.skipImageLength;
+    //skipImageLength = args.skipImageLength;
 
     // mips
     doMipmaps = args.doMipmaps;
@@ -1045,8 +1045,8 @@ void ImageInfo::optimizeFormat()
 void ImageInfo::initWithSourceImage(Image& sourceImage)
 {
     // can only determine this after reading in the source texture
-    int w = sourceImage.width();
-    int h = sourceImage.height();
+    int32_t w = sourceImage.width();
+    int32_t h = sourceImage.height();
     Color* srcPixels = (Color*)sourceImage.pixels();
     float4* srcPixelsFloat = (float4*)sourceImage.pixelsFloat();
 

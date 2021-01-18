@@ -36,8 +36,8 @@ public:
     Image();
 
     // these 3 calls for Encode
-    bool loadImageFromPixels(const vector<uint8_t>& pixels, int width,
-                             int height, bool hasColor, bool hasAlpha);
+    bool loadImageFromPixels(const vector<uint8_t>& pixels, int32_t width,
+                             int32_t height, bool hasColor, bool hasAlpha);
 
     bool loadImageFromKTX(const KTXImage& image);
 
@@ -46,11 +46,11 @@ public:
     bool decode(const KTXImage& image, FILE* dstFile, TexEncoder decoder, bool isVerbose, const string& swizzleText) const;
 
     // this is only for 2d images
-    bool resizeImage(int wResize, int hResize, bool resizePow2, ImageResizeFilter filter = kImageResizeFilterPoint);
+    bool resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, ImageResizeFilter filter = kImageResizeFilterPoint);
 
     // return state
-    int width() const { return _width; }
-    int height() const { return _height; }
+    int32_t width() const { return _width; }
+    int32_t height() const { return _height; }
 
     const uint8_t* pixels() const { return _pixels.data(); }
     const float4* pixelsFloat() const { return _pixelsFloat.data(); }
@@ -60,16 +60,16 @@ public:
 
 private:
     // compute how big mips will be
-    void computeMipStorage(const KTXImage& image, int w, int h,
-                           bool doMipmaps, int mipMinSize, int mipMaxSize,
-                           int& storageSize, int& storageSizeTotal,
-                           vector<int>& mipStorageSizes,
-                           int& numDstMipLevels, int& numMipLevels) const;
+    void computeMipStorage(const KTXImage& image, int32_t w, int32_t h,
+                           bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize,
+                           int32_t& storageSize, int32_t& storageSizeTotal,
+                           vector<int32_t>& mipStorageSizes,
+                           int32_t& numDstMipLevels, int32_t& numMipLevels) const;
 
     // ugh, reduce the params into this
     bool compressMipLevel(const ImageInfo& info, KTXImage& image,
                           ImageData& mipImage, TextureData& outputTexture,
-                          int mipStorageSize) const;
+                          int32_t mipStorageSize) const;
 
     // can pass in which channels to average
     void averageChannelsInBlock(const char* averageChannels,
@@ -81,8 +81,8 @@ private:
 
 private:
     // pixel size of image
-    int _width = 0;
-    int _height = 0;
+    int32_t _width = 0;
+    int32_t _height = 0;
 
     // this is whether png/ktx source image  format was L or LA or A or RGB
     // if unknown then set to true, and the pixel walk will set to false

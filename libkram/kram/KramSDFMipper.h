@@ -17,7 +17,7 @@ class ImageData;
 class SDFMipper {
 public:
     void init(ImageData& srcImage, bool isVerbose = false);
-    void mipmap(ImageData& dstImage, int mipLevel);
+    void mipmap(ImageData& dstImage, int32_t mipLevel);
 
 private:
     // Note: 120 is slightly less than 2 pixels contributing to a 255 grayscale

@@ -84,13 +84,13 @@ THE SOFTWARE.
 namespace heman {
     
 struct heman_image {
-    int width;
-    int height;
-    int nbands;
+    int32_t width;
+    int32_t height;
+    int32_t nbands;
     float* data;
 };
 
-static heman_image* heman_image_create(int width, int height, int nbands)
+static heman_image* heman_image_create(int32_t width, int32_t height, int32_t nbands)
 {
     heman_image* img = (heman_image*)malloc(sizeof(heman_image));
     img->width = width;
@@ -132,7 +132,7 @@ const float INF = 1E20;
 // The advantage is this can be stored in integer values, but this does parabolic lookup.
 // Also since EDT is done as a separable filter, it completes very quickly in O(N) of two passes.
 static void squared_edt(
-    const float* f, float* d, float* z, int* w, int numSrcSamples, int numDstSamples)
+    const float* f, float* d, float* z, int32_t* w, int32_t numSrcSamples, int32_t numDstSamples)
 {
     // hull vertices
     w[0] = 0;
@@ -141,8 +141,8 @@ static void squared_edt(
     z[0] = -INF;
     z[1] = +INF;
     
-    for (int k = 0, q = 1; q < numSrcSamples; ++q) {
-        int wk = w[k];
+    for (int32_t k = 0, q = 1; q < numSrcSamples; ++q) {
+        int32_t wk = w[k];
         float s;
         
         s = ((f[q] - f[wk]) + (float)(SQR(q) - SQR(wk))) / (float)(2 * (q - wk));
@@ -171,7 +171,7 @@ static void squared_edt(
     bool isResampling = numSrcSamples > numDstSamples;
     float conversion = (numSrcSamples / (float)numDstSamples);
     
-    for (int k = 0, q = 0; q < numDstSamples; ++q) {
+    for (int32_t k = 0, q = 0; q < numDstSamples; ++q) {
         float qSrc = (float)q;
         // convert q in dstSamples into sample in srcSamples
         if (isResampling) {
@@ -182,7 +182,7 @@ static void squared_edt(
         while (z[k + 1] < qSrc) {
             ++k;
         }
-        int wk = w[k];
+        int32_t wk = w[k];
         d[q] = f[wk] + (float)SQR(qSrc - (float)wk);
         
         // above is adding intersection height to existing sample
@@ -192,35 +192,35 @@ static void squared_edt(
 
 // this runs a vertical sedt, then a horizontal sedt, then to edt
 // downsamples in the process
-static void transform_to_distance(heman_image* temp, const my_image* src, int dstHeight, bool isPositive)
+static void transform_to_distance(heman_image* temp, const my_image* src, int32_t dstHeight, bool isPositive)
 {
-    int srcWidth = src->width;
-    int srcHeight = src->height;
+    int32_t srcWidth = src->width;
+    int32_t srcHeight = src->height;
     
-    int dstWidth = temp->width;
+    int32_t dstWidth = temp->width;
     
     assert(srcWidth >= dstWidth && srcHeight >= dstHeight);
     
     // these can all just be strip buffers per thread, but only one thread
     // these were originall turned into 2d arrays for omp
-    int maxDim = MAX(srcWidth, srcHeight);
+    int32_t maxDim = MAX(srcWidth, srcHeight);
     float* f = NEW(float, maxDim);
     float* d = NEW(float, maxDim);
     float* z = NEW(float, maxDim+1); // padded by 1
-    int* w = NEW(int, maxDim);
+    int32_t* w = NEW(int32_t, maxDim);
 
     // process rows
-    for (int y = 0; y < srcHeight; ++y) {
+    for (int32_t y = 0; y < srcHeight; ++y) {
         const uint8_t* s = src->data + y * srcWidth;
         
         // load data into the rows, this is because tmp width is dstWidth, not srcWidth
         if (isPositive) {
-            for (int x = 0; x < srcWidth; ++x) {
+            for (int32_t x = 0; x < srcWidth; ++x) {
                 f[x] = s[x] ? INF : 0;
             }
         }
         else {
-            for (int x = 0; x < srcWidth; ++x) {
+            for (int32_t x = 0; x < srcWidth; ++x) {
                 f[x] = s[x] ? 0 : INF;
             }
         }
@@ -230,16 +230,16 @@ static void transform_to_distance(heman_image* temp, const my_image* src, int ds
         squared_edt(f, d, z, w, srcWidth, dstWidth);
         
         float* t = temp->data + y * dstWidth;
-        for (int x = 0; x < dstWidth; ++x) {
+        for (int32_t x = 0; x < dstWidth; ++x) {
             t[x] = d[x];
         }
     }
     
     // process columns
-    for (int x = 0; x < dstWidth; ++x) {
+    for (int32_t x = 0; x < dstWidth; ++x) {
         float* t = temp->data + x;
         
-        for (int y = 0; y < srcHeight; ++y) {
+        for (int32_t y = 0; y < srcHeight; ++y) {
             f[y] = t[y * dstWidth];
         }
         
@@ -247,7 +247,7 @@ static void transform_to_distance(heman_image* temp, const my_image* src, int ds
         // this is only pulling from closest parabola, not bilerping
         squared_edt(f, d, z, w, srcHeight, dstHeight);
         
-        for (int y = 0; y < dstHeight; ++y) {
+        for (int32_t y = 0; y < dstHeight; ++y) {
             t[y * dstWidth] = sqrtf(d[y]); // back to distance
         }
     }
@@ -266,8 +266,8 @@ void heman_distance_create_sdf(const my_image* src, my_image* dst, float& maxD, 
     
     //assert(src->width == dst->width && src->height == dst->height);
     
-    int dstWidth = dst->width;
-    int dstHeight = dst->height;
+    int32_t dstWidth = dst->width;
+    int32_t dstHeight = dst->height;
     
     // This can downsample a much larger bitmap, but requires two big float buffers.
     // Horizontal is downsampled first, so w > h is ideal, but most incoming textures are square pow2.
@@ -286,11 +286,11 @@ void heman_distance_create_sdf(const my_image* src, my_image* dst, float& maxD, 
         // now find signed distance, and store back into positive array
         float minV = 0.0f, maxV = 0.0f;
         
-        for (int y = 0; y < dstHeight; ++y) {
+        for (int32_t y = 0; y < dstHeight; ++y) {
             const float* pp = positive->data + y * dstWidth;
             const float* nn = negative->data + y * dstWidth;
            
-            for (int x = 0; x < dstWidth; ++x) {
+            for (int32_t x = 0; x < dstWidth; ++x) {
                 float v = pp[x] - nn[x];
                 if (v > maxV) {
                     maxV = v;
@@ -303,7 +303,7 @@ void heman_distance_create_sdf(const my_image* src, my_image* dst, float& maxD, 
         
         // want to scale all mips the same, so only update maxD for the first mip level
         float absMaxV = ceilf(MAX(fabs(minV), maxV));
-        int scaling = 0; // clamp to maxD
+        int32_t scaling = 0; // clamp to maxD
         
         maxD = 127.0f;
         
@@ -349,12 +349,12 @@ void heman_distance_create_sdf(const my_image* src, my_image* dst, float& maxD, 
     // the distances of downsampled are scaled into largest size mip
     // so any scaling should apply to them all.
     
-    for (int y = 0; y < dstHeight; ++y) {
+    for (int32_t y = 0; y < dstHeight; ++y) {
         uint8_t* d = dst->data + y * dstWidth;
         const float* pp = positive->data + y * dstWidth;
         const float* nn = negative->data + y * dstWidth;
        
-        for (int x = 0; x < dstWidth; ++x) {
+        for (int32_t x = 0; x < dstWidth; ++x) {
             float v = pp[x] - nn[x];
            
             if (v > maxD) {
