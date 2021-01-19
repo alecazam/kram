@@ -61,7 +61,8 @@ Texture processing is complex and there be dragons.  Just be aware of some of th
 GPU - none of the encoders use the GPU, so cpu threading and multi-process is used
 
 Rescale Filtering - 1x1 point filter
-Mip filtering - 2x2 box filter that's reasonable for pow2, but not ideal for non-pow2 mips, done in linear space using half4 storage, in-place to save mem
+Mip filtering - 2x2 box filter that's reasonable for pow2, but not ideal for non-pow2 mips, 
+  done in linear space using half4 storage, in-place to save mem
 
 1D array - no mip support due to hardware
 3D textures - no mip support, uses ASTC 2d slice encode used by Metal/Android, not exotic ASTC 3d format
@@ -86,9 +87,12 @@ PVRTC - unsupported, no open-source encoders, requires pow2 size
 Containers
 PVR/DDS/Basis/Crunch - unsupoorted 
 
-KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, metadata/props aren't standardized and only ascii prop support so easy to dump out
+KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, 
+  metadata/props aren't standardized and only ascii prop support so easy to dump out
 
-KTX2 - works in kram and viewer, has aligned compressed levels of mips, libkram only supports None/Zstd supercompression, only read no write support, write by converting ktx -> ktx2 with ktx2ktx2 + ktxsc (see kramTexture.py --ktx2 option)
+KTX2 - works in kram and viewer, has aligned compressed levels of mips, 
+  libkram only supports None/Zstd supercompression, only read no write support, 
+  write by converting ktx -> ktx2 with ktx2ktx2 + ktxsc (see kramTexture.py --ktx2 option)
 
 ```
 
@@ -157,18 +161,22 @@ Win
 python3.exe -m pip install -U pip
 python3.exe -m pip install -r ../scripts/requirements.txt
 
-# these scripts process all the platforms on 8 threads
-../scripts/kramTextures.py -p android --bundle
+# this uses 8 processes, and bundles the results to a zip file
+../scripts/kramTextures.py --jobs 8 -p android --bundle
+
+# this writes out a script of all commands and runs on threads in a single process
 ../scripts/kramTextures.py --jobs 8 -p ios --script
 ../scripts/kramTextures.py --jobs 8 -p mac --script --force 
 ../scripts/kramTextures.py --jobs 8 -p win --script --force 
 
-# if ktxsc and ktx2ktx2 are found in the path, then these scripts generate ktx2 output, and then bundle them into a zip
+# To move towards supercompressed ktx2 files, the following flags convert ktx output to ktx2
+
+# if ktxsc and ktx2ktx2 are present in the path, then these scripts generate ktx2 output, and then bundle them into a zip
 ../scripts/kramTextures.py -p any --ktx2 --bundle
 ../scripts/kramTextures.py -p android --ktx2 --bundle --check
 
-# this runs tests across all platforms
-../scripts/kramTest.sh 
+# if ktxsc and ktx2ktx2 are present in the path, this runs kramTextures across all platforms, requires ktx2ktx2
+../scripts/kramTests.sh 
 
 ```
 
@@ -312,15 +320,17 @@ Timings
 
 Bundle Sizes
 * KTX is compressed before archiving 
-* KTX2 is simply stored in archive
-* Any - Basis supercompress via ktxsc is large as UASTC + RDO
-**   data is swizzled away on 1 and 2 channel formats
+* KTX2 is simply stored in archive (except UASTC)
+* Any - Basis supercompress via ktxsc is large as UASTC + RDO, 
+*   requires KTX-like Zip of entire UASTC file which defeats backing store
 
-| Sys  | macOS  | iOS    | Android | Any    |
-|------|--------|--------|---------|--------|
-| PNG  | 745K   |        |         |        |
-| KTX  | 669K   | 683K   | 359K    |   -    |
-| KTX2 | 653K   | 665K   | 371K    | 3800K  |
+| Sys    | macOS   | iOS      | Android | Any        |
+|--------|---------|----------|---------|------------|
+| PNG    | 460K    |          |         |            |
+| KTX    | 507K    | 517K     | 281K    |            |
+| KTX2   | 481K    | 495K     | 288K    | 3400K/471K | 
+| Format | BC4/5/7 | ASTC/ETC | ETC2    | BasisLZ    |
+| Compr. | zstd    | zstd     | zstd    | zlib       |
 
 
 ### Syntax
@@ -336,7 +346,7 @@ Usage: kram encode
 	 [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]
 	 [-resize (16x32 | pow2)]
 
-	 [-mipalign] [-mipnone]
+	 [-mipnone]
 	 [-mipmin size] [-mipmax size]
 
 	 [-swizzle rg01]
