@@ -513,9 +513,10 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 
 		print("running " + command)
 
+		# find or zip return number of file count, so have to check < 0
 		retval = subprocess.call(command, shell=True)
-		if retval != 0:
-			print("cmd: failed " + command)
+		if retval < 0:
+			print("cmd: failed '" + command + "' with value " + str(retval))
 			return 1
 
 	return result
