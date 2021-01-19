@@ -319,18 +319,16 @@ Timings
 | i9   | 0.970s | 3.339s | 14.617s | 75.0s  |
 
 Bundle Sizes
-* KTX is compressed before archiving 
-* KTX2 is simply stored in archive (except UASTC)
-* Any - Basis supercompress via ktxsc is large as UASTC + RDO, 
-*   requires KTX-like Zip of entire UASTC file which defeats backing store
+* KTX file is compressed before archiving, but decompress entire file to disk to mmap
+* KTX2/Basis is simply stored in archive, mips already zstd compressed, can mmap as compressed backing store
 
-| Sys    | macOS   | iOS      | Android | Any        |
-|--------|---------|----------|---------|------------|
-| PNG    | 460K    |          |         |            |
-| KTX    | 507K    | 517K     | 281K    |            |
-| KTX2   | 481K    | 495K     | 288K    | 3400K/471K | 
-| Format | BC4/5/7 | ASTC/ETC | ETC2    | BasisLZ    |
-| Compr. | zstd    | zstd     | zstd    | zlib       |
+| Sys    | macOS   | iOS      | Android | Any         |
+|--------|---------|----------|---------|-------------|
+| PNG    | 460K    |          |         |             |
+| KTX    | 507K    | 517K     | 281K    |             |
+| KTX2   | 481K    | 495K     | 288K    | 471K        | 
+| Format | BC4/5/7 | ASTC/ETC | ETC2    | Basis-UASTC |
+| Compr. | zstd    | zstd     | zstd    | RDO+zstd    |
 
 
 ### Syntax
