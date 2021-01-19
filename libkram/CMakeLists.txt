@@ -16,7 +16,7 @@ set(COMPILE_ETCENC 0)
 set(COMPILE_SQUISH 0)
 set(COMPILE_ASTCENC 0)
 
-if (ATE)
+if (ATE AND APPLE)
     set(COMPILE_ATE 1)
 endif()
 
