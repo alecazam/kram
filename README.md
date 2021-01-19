@@ -61,7 +61,8 @@ Texture processing is complex and there be dragons.  Just be aware of some of th
 GPU - none of the encoders use the GPU, so cpu threading and multi-process is used
 
 Rescale Filtering - 1x1 point filter
-Mip filtering - 2x2 box filter that's reasonable for pow2, but not ideal for non-pow2 mips, done in linear space using half4 storage, in-place to save mem
+Mip filtering - 2x2 box filter that's reasonable for pow2, but not ideal for non-pow2 mips, 
+  done in linear space using half4 storage, in-place to save mem
 
 1D array - no mip support due to hardware
 3D textures - no mip support, uses ASTC 2d slice encode used by Metal/Android, not exotic ASTC 3d format
@@ -86,9 +87,12 @@ PVRTC - unsupported, no open-source encoders, requires pow2 size
 Containers
 PVR/DDS/Basis/Crunch - unsupoorted 
 
-KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, metadata/props aren't standardized and only ascii prop support so easy to dump out
+KTX - breaks loads of mips with 4 byte length offset at the start of each level of mips, 
+  metadata/props aren't standardized and only ascii prop support so easy to dump out
 
-KTX2 - works in kram and viewer, has aligned compressed levels of mips, libkram only supports None/Zstd supercompression, only read no write support, write by converting ktx -> ktx2 with ktx2ktx2 + ktxsc (see kramTexture.py --ktx2 option)
+KTX2 - works in kram and viewer, has aligned compressed levels of mips, 
+  libkram only supports None/Zstd supercompression, only read no write support, 
+  write by converting ktx -> ktx2 with ktx2ktx2 + ktxsc (see kramTexture.py --ktx2 option)
 
 ```
 
@@ -318,7 +322,7 @@ Bundle Sizes
 * KTX is compressed before archiving 
 * KTX2 is simply stored in archive (except UASTC)
 * Any - Basis supercompress via ktxsc is large as UASTC + RDO, 
-**  requires KTX-like Zip of entire UASTC file which defeats backing store
+*   requires KTX-like Zip of entire UASTC file which defeats backing store
 
 | Sys    | macOS   | iOS      | Android | Any        |
 |--------|---------|----------|---------|------------|
