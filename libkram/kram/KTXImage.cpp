@@ -1298,6 +1298,13 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
     
     if (header2.supercompressionScheme != KTX2SupercompressionNone &&
         header2.supercompressionScheme != KTX2SupercompressionZstd) {
+        KLOGE("kram", "Unknown supercompression %d", header2.supercompressionScheme);
+        return false;
+    }
+    
+    // This typically means UASTC encoding + zstd supercompression, and code doesn't handle that below yet
+    if (header2.vkFormat == 0) {
+        KLOGE("kram", "Basis encode not yet supported");
         return false;
     }
     

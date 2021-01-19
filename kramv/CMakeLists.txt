@@ -123,10 +123,15 @@ set_target_properties(${myTargetApp} PROPERTIES
 )
 
 target_sources(${myTargetApp} PRIVATE
-        ${PROJECT_SOURCE_DIR}/Assets.xcassets ${PROJECT_SOURCE_DIR}/Base.lproj/Main.storyboard ${PROJECT_SOURCE_DIR}/Info.plist ${PROJECT_SOURCE_DIR}/viewer.entitlements)
+    Assets.xcassets
+    Base.lproj/Main.storyboard
+    Info.plist
+    viewer.entitlements
+)
 
 # only these 2 resources are copied into the Resource, the other two are signed
+# Can't lowercase Resources or files don't go to correct place
 set_source_files_properties(Assets.xcassets Base.lproj/Main.storyboard PROPERTIES
-    MACOSX_PACKAGE_LOCATION resources
+    MACOSX_PACKAGE_LOCATION Resources
 )
 
