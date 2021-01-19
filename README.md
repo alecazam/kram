@@ -336,7 +336,7 @@ Usage: kram encode
 	 [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]
 	 [-resize (16x32 | pow2)]
 
-	 [-mipalign] [-mipnone]
+	 [-mipnone]
 	 [-mipmin size] [-mipmax size]
 
 	 [-swizzle rg01]
