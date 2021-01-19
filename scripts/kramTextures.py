@@ -165,7 +165,7 @@ class TextureProcessor:
 		#if content == TextureContent.Unknown:
 		#	fmt += " -mipnone"
 
-		# TODO: handle more texture types (cube, array, etc).  Use naming convention for that.
+		# DONE: handle more texture types (cube, array, etc).  Use naming convention for that.
 		# split these up off name + strip textures, can figure out most of atlasing from that and pow2.
 		# if it's an altas containing smaller tiles in rows, then may need to supply tile size/count
 		# and possibly horizontal vs. vertical atlasing.  Count more general since it applies even after dropping mips.
@@ -178,7 +178,9 @@ class TextureProcessor:
 			TextureType.Tex3D: " -type 3d -mipnone", # mips unsupported
 			TextureType.Cube: " -type cube",
 			
-			TextureType.Tex1DArray: " -type 1darray",
+			# 1d array - no compression or mips, on M1 fails with compression, but not on Intel/AMD, use 2d array instead
+			# will likely strip this as a supported type
+			TextureType.Tex1DArray: " -type 1darray -mipnone -f rgba8",
 			TextureType.Tex2DArray: " -type 2darray",
 			TextureType.CubeArray: " -type cubearray",
 		}
@@ -441,9 +443,9 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		# no signed formats, but probably can transcode to one
 		fmtAlbedo = " -f rgba8 -srgb -premul" # + " -optopaque"
 		fmtNormal = " -f rgba8 -swizzle rg01 -normal"
-		fmtMetalRoughness = " -f rgba8 -swizzle r0001"
+		fmtMetalRoughness = " -f rgba8 -swizzle r001"
 		fmtMask = " -f rgba8 -swizzle r001"
-		fmtSDF = " -f rgba8 -swizzle r000 -sdf"
+		fmtSDF = " -f rgba8 -swizzle r001 -sdf"
 
 	else:
 		return 1
