@@ -157,18 +157,22 @@ Win
 python3.exe -m pip install -U pip
 python3.exe -m pip install -r ../scripts/requirements.txt
 
-# these scripts process all the platforms on 8 threads
-../scripts/kramTextures.py -p android --bundle
+# this uses 8 processes, and bundles the results to a zip file
+../scripts/kramTextures.py --jobs 8 -p android --bundle
+
+# this writes out a script of all commands and runs on threads in a single process
 ../scripts/kramTextures.py --jobs 8 -p ios --script
 ../scripts/kramTextures.py --jobs 8 -p mac --script --force 
 ../scripts/kramTextures.py --jobs 8 -p win --script --force 
 
-# if ktxsc and ktx2ktx2 are found in the path, then these scripts generate ktx2 output, and then bundle them into a zip
+# To move towards supercompressed ktx2 files, the following flags convert ktx output to ktx2
+
+# if ktxsc and ktx2ktx2 are present in the path, then these scripts generate ktx2 output, and then bundle them into a zip
 ../scripts/kramTextures.py -p any --ktx2 --bundle
 ../scripts/kramTextures.py -p android --ktx2 --bundle --check
 
-# this runs tests across all platforms
-../scripts/kramTest.sh 
+# if ktxsc and ktx2ktx2 are present in the path, this runs kramTextures across all platforms, requires ktx2ktx2
+../scripts/kramTests.sh 
 
 ```
 
