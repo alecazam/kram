@@ -316,15 +316,17 @@ Timings
 
 Bundle Sizes
 * KTX is compressed before archiving 
-* KTX2 is simply stored in archive
-* Any - Basis supercompress via ktxsc is large as UASTC + RDO
-**   data is swizzled away on 1 and 2 channel formats
+* KTX2 is simply stored in archive (except UASTC)
+* Any - Basis supercompress via ktxsc is large as UASTC + RDO, 
+**  requires KTX-like Zip of entire UASTC file which defeats backing store
 
-| Sys  | macOS  | iOS    | Android | Any    |
-|------|--------|--------|---------|--------|
-| PNG  | 745K   |        |         |        |
-| KTX  | 669K   | 683K   | 359K    |   -    |
-| KTX2 | 653K   | 665K   | 371K    | 3800K  |
+| Sys    | macOS   | iOS      | Android | Any        |
+|--------|---------|----------|---------|------------|
+| PNG    | 460K    |          |         |            |
+| KTX    | 507K    | 517K     | 281K    |            |
+| KTX2   | 481K    | 495K     | 288K    | 3400K/471K | 
+| Format | BC4/5/7 | ASTC/ETC | ETC2    | BasisLZ    |
+| Compr. | zstd    | zstd     | zstd    | zlib       |
 
 
 ### Syntax
