@@ -228,7 +228,7 @@ class TextureProcessor:
 				# zstd supercompress - works on everything, kramv and loader can read this
 				if self.appKtx2sc != "" and result == 0:
 					if self.doUastc:
-						result = self.spawn(self.appKtx2sc + " --uastc 2 --uastc_rdo_q 1.0 --threads 1 " + ktx2Filename)
+						result = self.spawn(self.appKtx2sc + " --uastc 2 --uastc_rdo_q 1.0 --zcmp 3 --threads 1 " + ktx2Filename)
 					else:
 						result = self.spawn(self.appKtx2sc + " --zcmp 3 --threads 1 " + ktx2Filename)
 
@@ -516,7 +516,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		# DONE: need to push/popDir but basically strip the full path before files are zipped.
 		#  want find to generate files from within the out/platform directory.
 		os.chdir(dstDirForPlatform)
-		
+
 		# find or zip return number of file count, so have to check < 0
 		retval = subprocess.call(command, shell=True)
 		if retval < 0:
