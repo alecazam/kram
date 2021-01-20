@@ -62,9 +62,8 @@ set_target_properties(${myTargetApp} PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER "com.ba.kramv"
     
     # for now "sign to run locally", or entitlements can't be bundled
-    XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS ${PROJECT_SOURCE_DIR}/viewer.entitlements
     XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES"
-    XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+    XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "-"
     
     # use the AssetCatalog for icons
     XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
@@ -120,13 +119,14 @@ set_target_properties(${myTargetApp} PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/Info.plist
     XCODE_ATTRIBUTE_INFOPLIST_FILE ${PROJECT_SOURCE_DIR}/Info.plist
+    XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS ${PROJECT_SOURCE_DIR}/viewer.entitlements
 )
 
 target_sources(${myTargetApp} PRIVATE
     Assets.xcassets
     Base.lproj/Main.storyboard
     Info.plist
-    viewer.entitlements
+    kramv.entitlements
 )
 
 # only these 2 resources are copied into the Resource, the other two are signed
