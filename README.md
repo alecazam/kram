@@ -55,7 +55,7 @@ Shift-/M advance mip
 
 ### Limitations
 
-Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram as currently implemented.  There is a lot that works, and BC1-BC3 should be retired along with all of ETC2.  There are better formats, and hardware has moved to ASTC, and then recently back to BC 4-7.  WebGL is still often stuck with older formats for lack of extensions.  These formats are still too big without further re-ordering endpoints/selectors and compressing the enire texture compressing mips.  I added a platform called "any" to see textures using BasisLZ in KTX2.
+Texture processing is complex and there be dragons.  Just be aware of some of the limitations of kram and encoding.  Lossy compression can only solve so much.  ASTC and BC4-7 are newer formats, but all formats have time and quality tradeoffs.  And encoder quality and issues remain.  WebGL is still often stuck with older formats due to lack of implemented extensions.  And all formats need endpoints/selectors reordering and zstd compression that KTX2 offers.  I added a platform called "any" to with KTX2 holding UASTC+zstd and also ETC2/ASTC/BC+zstd.  The scripts bundle up textures in an archive, but these should go to resource packs and asset catalogs which get signed and can have ODR applied.
 
 ```
 GPU - none of the encoders use the GPU, so cpu threading and multi-process is used
@@ -95,6 +95,31 @@ KTX2 - works in kram and viewer, has aligned compressed levels of mips,
   write by converting ktx -> ktx2 with ktx2ktx2 + ktxsc (see kramTexture.py --ktx2 option)
 
 ```
+
+### An example pipeline
+
+At build:
+
+* Lossless 8u/16F/32F KTX2 sources 2D, 2D, cube, and 2D atlas textures with zstd mips.  Editing these in Photoshop/Gimp is still an issue.
+* Need to stop basing pipelines around PNG.  This is a limited source format, but supported by editor.s
+* Textures should be higher resolution, and checked into source control (git-lfs or p4).  
+* Some sort of scripting to supply encoder preset index for textures. 
+
+* Drop mips and encode to KTX using kram using the encoder preset
+* Build 2D array or 2D atalas assets and name/uv locations for those assets.
+* Convert KTX to KTX2 via ktx2ktx2 + ktx2sc as lossy encoded ETC2/BC/ASTC+zstd or UASTC+zstd 
+* Bundle into an Asset Catalog (macOS/iOS), or resource pack (Android) for slicing and on-demand resource loading
+
+At runtime:
+
+* Mmap load all KTX2 textures read-only into memory using KramLoader.  This is the backing-store.
+* Decode smaller faces/slices/array and their mips and upload to staging buffer and then gpu transfer/twiddle to private texture. 
+* For example, can upload all lower mips in 1/3rd the space and skip all the top mips.  Textures without mips cannot do this.
+
+* Use sparse texturing hardware or readback to indicate what mips are accessed by the hardware.
+* Purge top mips of large unused textures, but keep the bottom mips.
+* Upload top mips as needed and memory allows.
+
 
 ### Building
 Kram uses CMake to setup the projects and build.  kramv.app, kram, and libkram are generated, but kramv.app and kram are stand-alone.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
