@@ -98,16 +98,17 @@ KTX2 - works in kram and viewer, has aligned compressed levels of mips,
 
 ### An example pipeline
 
+```
 At build:
 
 * Lossless 8u/16F/32F KTX2 sources 2D, 2D, cube, and 2D atlas textures with zstd mips.  Editing these in Photoshop/Gimp is still an issue.
-* Need to stop basing pipelines around PNG.  This is a limited source format, but supported by editor.s
+* Need to stop basing pipelines around PNG.  This is a limited source format, but supported by editors.
 * Textures should be higher resolution, and checked into source control (git-lfs or p4).  
 * Some sort of scripting to supply encoder preset index for textures. 
 
 * Drop mips and encode to KTX using kram using the encoder preset
 * Build 2D array or 2D atalas assets and name/uv locations for those assets.
-* Convert KTX to KTX2 via ktx2ktx2 + ktx2sc as lossy encoded ETC2/BC/ASTC+zstd or UASTC+zstd 
+* Convert KTX to KTX2 via ktx2ktx2 + ktx2sc as lossy encoded ETC2/BC/ASTC+zstd or UASTC+rdo+zstd
 * Bundle into an Asset Catalog (macOS/iOS), or resource pack (Android) for slicing and on-demand resource loading
 
 At runtime:
@@ -119,7 +120,7 @@ At runtime:
 * Use sparse texturing hardware or readback to indicate what mips are accessed by the hardware.
 * Purge top mips of large unused textures, but keep the bottom mips.
 * Upload top mips as needed and memory allows.
-
+```
 
 ### Building
 Kram uses CMake to setup the projects and build.  kramv.app, kram, and libkram are generated, but kramv.app and kram are stand-alone.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
