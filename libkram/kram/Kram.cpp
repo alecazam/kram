@@ -1245,15 +1245,15 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
         // optional block with ppi
         // TODO: inspect doesn't parse this block, only decode call does
-        if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
-            float metersToInches = 39.37;
-            sprintf(tmp,
-                    "ppix: %d\n"
-                    "ppiy: %d\n",
-                    (int32_t)(state.info_png.phys_x * metersToInches),
-                    (int32_t)(state.info_png.phys_y * metersToInches));
-            info += tmp;
-        }
+//        if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
+//            float metersToInches = 39.37;
+//            sprintf(tmp,
+//                    "ppix: %d\n"
+//                    "ppiy: %d\n",
+//                    (int32_t)(state.info_png.phys_x * metersToInches),
+//                    (int32_t)(state.info_png.phys_y * metersToInches));
+//            info += tmp;
+//        }
 
         // TODO: also bkgd blocks.
         // TODO: sRGB, cHRM, gAMA and other colorspace blocks aren't supported by lodepng,
@@ -1893,7 +1893,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
         if (info.isVerbose) {
             KLOGI("Kram", "Encoding %s to %s with %s\n",
                   textureTypeName(info.textureType),
-                  metalTypeName(info.pixelFormat),
+                  formatTypeName(info.pixelFormat),
                   encoderName(info.textureEncoder));
         }
         

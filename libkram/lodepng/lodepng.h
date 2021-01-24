@@ -30,6 +30,11 @@ freely, subject to the following restrictions:
 
 extern const char* LODEPNG_VERSION_STRING;
 
+// TODO: move to Cmake
+#define LODEPNG_NO_COMPILE_ENCODER
+#define LODEPNG_NO_COMPILE_DISK
+#define LODEPNG_NO_COMPILE_ANCILLARY_CHUNKS
+
 /*
 The following #defines are used to create code sections. They can be disabled
 to disable code sections, which can give faster compile time and smaller binary.

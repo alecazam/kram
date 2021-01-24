@@ -254,6 +254,8 @@ Int2 blockDimsOfFormat(MyMTLPixelFormat format);
 uint32_t blockSizeOfFormat(MyMTLPixelFormat format);
 uint32_t numChannelsOfFormat(MyMTLPixelFormat format);
 
+const char* formatTypeName(MyMTLPixelFormat format);
+
 // metal
 uint32_t metalType(MyMTLPixelFormat format);  // really MTLPixelFormat
 const char* metalTypeName(MyMTLPixelFormat format);

@@ -326,6 +326,7 @@ public:
     KTXFormatInfo() {}
 
     KTXFormatInfo(
+        const char* formatName_,
         const char* metalName_,
         const char* vulkanName_,
         const char* glName_,
@@ -343,6 +344,7 @@ public:
 
         KTXFormatFlags flags_)
     {
+        formatName = formatName_;
         metalName = metalName_;
         vulkanName = vulkanName_;
         glName = glName_;
@@ -361,6 +363,7 @@ public:
         flags = flags_;
     }
 
+    const char* formatName;
     const char* metalName;
     const char* vulkanName;
     const char* glName;
@@ -418,16 +421,16 @@ static bool initFormatsIfNeeded()
     
 // the following table could be included multiple ties to build switch statements, but instead use a hashmap
 #define KTX_FORMAT(fmt, metalType, vulkanType, glType, glBase, x, y, blockSize, numChannels, flags) \
-    (*gFormatTable)[(uint32_t)metalType] = KTXFormatInfo(                                              \
-        #metalType, #vulkanType, #glType,                                                           \
+    (*gFormatTable)[(uint32_t)metalType] = KTXFormatInfo(                                           \
+        #fmt, #metalType, #vulkanType, #glType,                                                     \
         metalType, vulkanType, glType, glBase,                                                      \
         x, y, blockSize, numChannels, (flags));
 
     KTX_FORMAT(Invalid, MyMTLPixelFormatInvalid, VK_FORMAT_UNDEFINED, GL_FORMAT_UNKNOWN, GL_RGBA, 1, 1, 0, 0, 0)
 
     // BC
-    KTX_FORMAT(BC1rgb, MyMTLPixelFormatBC1_RGBA, VK_FORMAT_BC1_RGB_UNORM_BLOCK, GL_COMPRESSED_RGB_S3TC_DXT1_EXT, GL_RGB, 4, 4, 8, 3, FLAG_ENC_BC)
-    KTX_FORMAT(BC1rgbs, MyMTLPixelFormatBC1_RGBA_sRGB, VK_FORMAT_BC1_RGB_SRGB_BLOCK, GL_COMPRESSED_SRGB_S3TC_DXT1_EXT, GL_SRGB, 4, 4, 8, 3, FLAG_ENC_BC | FLAG_SRGB)
+    KTX_FORMAT(BC1, MyMTLPixelFormatBC1_RGBA, VK_FORMAT_BC1_RGB_UNORM_BLOCK, GL_COMPRESSED_RGB_S3TC_DXT1_EXT, GL_RGB, 4, 4, 8, 3, FLAG_ENC_BC)
+    KTX_FORMAT(BC1s, MyMTLPixelFormatBC1_RGBA_sRGB, VK_FORMAT_BC1_RGB_SRGB_BLOCK, GL_COMPRESSED_SRGB_S3TC_DXT1_EXT, GL_SRGB, 4, 4, 8, 3, FLAG_ENC_BC | FLAG_SRGB)
 
     KTX_FORMAT(BC3, MyMTLPixelFormatBC3_RGBA, VK_FORMAT_BC3_UNORM_BLOCK, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, GL_RGBA, 4, 4, 16, 4, FLAG_ENC_BC)
     KTX_FORMAT(BC3s, MyMTLPixelFormatBC3_RGBA_sRGB, VK_FORMAT_BC3_SRGB_BLOCK, GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT, GL_SRGB_ALPHA, 4, 4, 16, 4, FLAG_ENC_BC | FLAG_SRGB)
@@ -585,7 +588,13 @@ uint32_t metalType(MyMTLPixelFormat format)
 const char* metalTypeName(MyMTLPixelFormat format)
 {
     const auto& it = formatInfo(format);
-    return it.metalName + 2;  // skip the "My" part
+    return it.metalName + 2; // strlen("My"); 
+}
+
+const char* formatTypeName(MyMTLPixelFormat format)
+{
+    const auto& it = formatInfo(format);
+    return it.formatName;
 }
 
 const char* vulkanTypeName(MyMTLPixelFormat format)
@@ -1405,6 +1414,9 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
             const auto& level1 = mipLevels[i];
             size_t dstDataSize = level1.length * numChunks;
             uint8_t* dstData = (uint8_t*)fileData + level1.offset; // can const_cast, since class owns data
+            
+            // TODO: use basis transcoder (single file) for Basis UASTC here, then don't need libktx yet
+            // wont work for BasisLZ (which is ETC1S).
             
             switch(header2.supercompressionScheme) {
                 case KTX2SupercompressionZstd: {
