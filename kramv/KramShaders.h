@@ -25,9 +25,12 @@
 
 typedef NS_ENUM(int32_t, BufferIndex)
 {
-    BufferIndexMeshPositions = 0,
-    BufferIndexMeshGenerics  = 1,
+    // mesh
+    BufferIndexMeshPositions = 0, // pos
+    BufferIndexMeshUV0       = 1, // uv
+    
     BufferIndexUniforms      = 2,
+    BufferIndexUniformsLevel = 3,
     
     // for compute
     BufferIndexUniformsCS = 0,
@@ -99,10 +102,6 @@ struct Uniforms
     bool isPreview;
     
     uint32_t numChannels;
-    uint32_t mipLOD;
-    
-    uint32_t face;
-    uint32_t arrayOrSlice;
     
     // control the pixel grid dimensions, can be block size, or pixel size
     uint32_t gridX;
@@ -114,9 +113,19 @@ struct Uniforms
     ShaderTextureChannels channels; // mask
 };
 
+// uploaded separately, so multiple mips, faces, array can be drawn to the screen at one time
+// although modelMatrix offset changes.  Could store offset in here.
+struct UniformsLevel {
+    uint32_t mipLOD;
+    uint32_t face;
+    uint32_t arrayOrSlice;
+};
+
+// This is all tied to a single level sample
 struct UniformsCS
 {
     simd::uint2 uv;
+    
     uint32_t arrayOrSlice;
     uint32_t face;
     uint32_t mipLOD;

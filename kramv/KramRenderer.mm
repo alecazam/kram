@@ -158,15 +158,15 @@ using namespace simd;
 
     _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].format = MTLVertexFormatFloat2;
     _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].offset = 0;
-    _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].bufferIndex = BufferIndexMeshGenerics;
+    _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].bufferIndex = BufferIndexMeshUV0;
 
     _mtlVertexDescriptor.layouts[BufferIndexMeshPositions].stride = 12;
     //_mtlVertexDescriptor.layouts[BufferIndexMeshPositions].stepRate = 1;
     //_mtlVertexDescriptor.layouts[BufferIndexMeshPositions].stepFunction = MTLVertexStepFunctionPerVertex;
 
-    _mtlVertexDescriptor.layouts[BufferIndexMeshGenerics].stride = 8;
-    //_mtlVertexDescriptor.layouts[BufferIndexMeshGenerics].stepRate = 1;
-    //_mtlVertexDescriptor.layouts[BufferIndexMeshGenerics].stepFunction = MTLVertexStepFunctionPerVertex;
+    _mtlVertexDescriptor.layouts[BufferIndexMeshUV0].stride = 8;
+    //_mtlVertexDescriptor.layouts[BufferIndexMeshUV0].stepRate = 1;
+    //_mtlVertexDescriptor.layouts[BufferIndexMeshUV0].stepFunction = MTLVertexStepFunctionPerVertex;
 
     [self _createRenderPipelines:view];
     
@@ -591,7 +591,7 @@ using namespace simd;
 
     Uniforms& uniforms = *(Uniforms*)_dynamicUniformBuffer[_uniformBufferIndex].contents;
 
-    uniforms.mipLOD = _showSettings->mipLOD;
+   // uniforms.mipLOD = _showSettings->mipLOD;
     
     uniforms.isNormal = _showSettings->isNormal;
     uniforms.isPremul = _showSettings->isPremul;
@@ -657,8 +657,22 @@ using namespace simd;
     // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
     _showSettings->projectionViewModelMatrix = projectionViewMatrix * _modelMatrix;
     
+   
+    
+    //_rotation += .01;
+}
+
+- (void)_setUniformsLevel:(UniformsLevel&)uniforms mipLOD:(int32_t)mipLOD
+{
+    uniforms.mipLOD = mipLOD;
+    
     uniforms.arrayOrSlice = 0;
     uniforms.face  = 0;
+
+    MyMTLTextureType textureType = MyMTLTextureType2D;
+    if (_colorMap) {
+        textureType = (MyMTLTextureType)_colorMap.textureType;
+    }
     
     // TODO: set texture specific uniforms, but using single _colorMap for now
     switch(textureType) {
@@ -686,10 +700,7 @@ using namespace simd;
         default:
             break;
     }
-    
-    //_rotation += .01;
 }
-
 
 - (void)drawInMTKView:(nonnull MTKView *)view
 {
@@ -828,35 +839,77 @@ using namespace simd;
                                  atIndex:BufferIndexUniforms];
 
         
-        if (_showSettings->isPreview) {
-            // use exisiting lod, and mip
-            [renderEncoder setFragmentSamplerState:(canWrap && _showSettings->isWrap) ? _colorMapSamplerBilinearWrap : _colorMapSamplerBilinearClamp
-                                  atIndex:SamplerIndexColor];
-        }
-        else {
-            // force lod, and don't mip
-            [renderEncoder setFragmentSamplerState:(canWrap && _showSettings->isWrap) ? _colorMapSamplerWrap : _colorMapSamplerClamp
-                                  lodMinClamp:_showSettings->mipLOD
-                                  lodMaxClamp:_showSettings->mipLOD + 1
-                                  atIndex:SamplerIndexColor];
-        }
-
-        // allow toggling on/off srgb, but any autogen mips on png have already done srgb reads
+        // set the texture up
         id<MTLTexture> texture = _colorMap;
-//        if ((!_showSettings->isSRGBShown) && _colorMapView) {
-//            texture = _colorMapView;
-//        }
-        
         [renderEncoder setFragmentTexture:texture
                                   atIndex:TextureIndexColor];
 
-        for(MTKSubmesh *submesh in _mesh.submeshes)
-        {
-            [renderEncoder drawIndexedPrimitives:submesh.primitiveType
-                                      indexCount:submesh.indexCount
-                                       indexType:submesh.indexType
-                                     indexBuffer:submesh.indexBuffer.buffer
-                               indexBufferOffset:submesh.indexBuffer.offset];
+        
+        
+        UniformsLevel uniformsLevel;
+        
+        
+        if (_showSettings->isPreview) {
+            // upload this on each face drawn, since want to be able to draw all mips/levels at once
+            [self _setUniformsLevel:uniformsLevel mipLOD:_showSettings->mipLOD];
+            
+            [renderEncoder setVertexBytes:&uniformsLevel
+                                    length:sizeof(uniformsLevel)
+                                   atIndex:BufferIndexUniformsLevel];
+
+            [renderEncoder setFragmentBytes:&uniformsLevel
+                                      length:sizeof(uniformsLevel)
+                                     atIndex:BufferIndexUniformsLevel];
+            
+            // use exisiting lod, and mip
+            [renderEncoder setFragmentSamplerState:
+                                  (canWrap && _showSettings->isWrap) ? _colorMapSamplerBilinearWrap : _colorMapSamplerBilinearClamp
+                                  atIndex:SamplerIndexColor];
+            
+            for(MTKSubmesh *submesh in _mesh.submeshes)
+            {
+                [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                          indexCount:submesh.indexCount
+                                           indexType:submesh.indexType
+                                         indexBuffer:submesh.indexBuffer.buffer
+                                   indexBufferOffset:submesh.indexBuffer.offset];
+            }
+            
+        }
+        else {
+            int32_t mip = _showSettings->mipLOD;
+            
+            // upload this on each face drawn, since want to be able to draw all mips/levels at once
+            [self _setUniformsLevel:uniformsLevel mipLOD:mip];
+            
+            [renderEncoder setVertexBytes:&uniformsLevel
+                                    length:sizeof(uniformsLevel)
+                                   atIndex:BufferIndexUniformsLevel];
+
+            [renderEncoder setFragmentBytes:&uniformsLevel
+                                      length:sizeof(uniformsLevel)
+                                     atIndex:BufferIndexUniformsLevel];
+            
+            // force lod, and don't mip
+            [renderEncoder setFragmentSamplerState:
+                                  (canWrap && _showSettings->isWrap) ? _colorMapSamplerWrap : _colorMapSamplerClamp
+                                  lodMinClamp:mip
+                                  lodMaxClamp:mip + 1
+                                  atIndex:SamplerIndexColor];
+        
+
+            // TODO: since this isn't a preview, have mode to display all faces and mips on on screen
+            // faces and arrays and slices go across in a row,
+            // and mips are displayed down from each of those in a column
+            
+            for(MTKSubmesh *submesh in _mesh.submeshes)
+            {
+                [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                          indexCount:submesh.indexCount
+                                           indexType:submesh.indexType
+                                         indexBuffer:submesh.indexBuffer.buffer
+                                   indexBufferOffset:submesh.indexBuffer.offset];
+            }
         }
     }
     

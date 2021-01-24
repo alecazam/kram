@@ -20,8 +20,10 @@ struct ColorInOut
     float3 worldPos;
 };
 
-ColorInOut DrawImageFunc(Vertex in [[stage_in]],
-                        constant Uniforms & uniforms)
+ColorInOut DrawImageFunc(
+    Vertex in [[stage_in]],
+    constant Uniforms& uniforms
+)
 {
     ColorInOut out;
 
@@ -42,14 +44,20 @@ ColorInOut DrawImageFunc(Vertex in [[stage_in]],
     return out;
 }
 
-vertex ColorInOut DrawImageVS(Vertex in [[stage_in]],
-                               constant Uniforms & uniforms [[ buffer(BufferIndexUniforms) ]])
+vertex ColorInOut DrawImageVS(
+    Vertex in [[stage_in]],
+    constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]]
+)
 {
     return DrawImageFunc(in, uniforms);
 }
 
-vertex ColorInOut DrawCubeVS(Vertex in [[stage_in]],
-                               constant Uniforms & uniforms [[ buffer(BufferIndexUniforms) ]])
+vertex ColorInOut DrawCubeVS(
+     Vertex in [[stage_in]],
+     constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]]
+)
 {
     ColorInOut out = DrawImageFunc(in, uniforms);
     
@@ -59,7 +67,7 @@ vertex ColorInOut DrawCubeVS(Vertex in [[stage_in]],
     uvw.z = 1.0;
     
     // switch to the face
-    switch(uniforms.face) {
+    switch(uniformsLevel.face) {
         case 0: // x
             uvw = uvw.zyx;
             uvw.zy *= -1; // to match original cube image
@@ -102,19 +110,20 @@ vertex ColorInOut DrawCubeVS(Vertex in [[stage_in]],
 
 vertex ColorInOut DrawVolumeVS(
     Vertex in [[stage_in]],
-    constant Uniforms & uniforms [[ buffer(BufferIndexUniforms) ]]
+    constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]]
 )
 {
     ColorInOut out = DrawImageFunc(in, uniforms);
     
     // this is normalized in ps by dividing by depth-1
-    out.texCoordXYZ.z = uniforms.arrayOrSlice;
+    out.texCoordXYZ.z = uniformsLevel.arrayOrSlice;
     return out;
 }
 
 float4 DrawPixels(
     ColorInOut in [[stage_in]],
-    constant Uniforms & uniforms,
+    constant Uniforms& uniforms,
     float4 c,
     float2 textureSize
 )
@@ -372,14 +381,15 @@ float4 DrawPixels(
 
 fragment float4 Draw1DArrayPS(
     ColorInOut in [[stage_in]],
-    constant Uniforms & uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
     texture1d_array<float> colorMap [[ texture(TextureIndexColor) ]])
 {
-    float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.x, uniforms.arrayOrSlice);
+    float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.x, uniformsLevel.arrayOrSlice);
     
     // here are the pixel dimensions of the lod
-    // uint lod = uniforms.mipLOD;
+    // uint lod = uniformsLevel.mipLOD;
     // mips not supported on 1D textures according to Metal spec.
     
     float2 textureSize = float2(colorMap.get_width(0), 1);
@@ -390,14 +400,16 @@ fragment float4 Draw1DArrayPS(
 
 fragment float4 DrawImagePS(
     ColorInOut in [[stage_in]],
-    constant Uniforms & uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
-    texture2d<float> colorMap [[ texture(TextureIndexColor) ]])
+    texture2d<float> colorMap [[ texture(TextureIndexColor) ]]
+)
 {
     float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.xy);
     
     // here are the pixel dimensions of the lod
-    uint lod = uniforms.mipLOD;
+    uint lod = uniformsLevel.mipLOD;
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
@@ -406,14 +418,16 @@ fragment float4 DrawImagePS(
 
 fragment float4 DrawImageArrayPS(
     ColorInOut in [[stage_in]],
-    constant Uniforms & uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
-    texture2d_array<float> colorMap [[ texture(TextureIndexColor) ]])
+    texture2d_array<float> colorMap [[ texture(TextureIndexColor) ]]
+)
 {
-    float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.xy, uniforms.arrayOrSlice);
+    float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.xy, uniformsLevel.arrayOrSlice);
     
     // here are the pixel dimensions of the lod
-    uint lod = uniforms.mipLOD;
+    uint lod = uniformsLevel.mipLOD;
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
@@ -423,14 +437,16 @@ fragment float4 DrawImageArrayPS(
 
 fragment float4 DrawCubePS(
     ColorInOut in [[stage_in]],
-    constant Uniforms & uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
-    texturecube<float> colorMap [[ texture(TextureIndexColor) ]])
+    texturecube<float> colorMap [[ texture(TextureIndexColor) ]]
+)
 {
     float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.xyz);
     
     // here are the pixel dimensions of the lod
-    uint lod = uniforms.mipLOD;
+    uint lod = uniformsLevel.mipLOD;
     float w = colorMap.get_width(lod);
     float2 textureSize = float2(w, w);
     // colorMap.get_num_mip_levels();
@@ -440,14 +456,16 @@ fragment float4 DrawCubePS(
 
 fragment float4 DrawCubeArrayPS(
     ColorInOut in [[stage_in]],
-    constant Uniforms & uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
-    texturecube_array<float> colorMap [[ texture(TextureIndexColor) ]])
+    texturecube_array<float> colorMap [[ texture(TextureIndexColor) ]]
+)
 {
-    float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.xyz, uniforms.arrayOrSlice);
+    float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.xyz, uniformsLevel.arrayOrSlice);
     
     // here are the pixel dimensions of the lod
-    uint lod = uniforms.mipLOD;
+    uint lod = uniformsLevel.mipLOD;
     float w = colorMap.get_width(lod);
     float2 textureSize = float2(w, w);
     // colorMap.get_num_mip_levels();
@@ -458,12 +476,14 @@ fragment float4 DrawCubeArrayPS(
 
 fragment float4 DrawVolumePS(
     ColorInOut in [[stage_in]],
-    constant Uniforms & uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
-    texture3d<float> colorMap [[ texture(TextureIndexColor) ]])
+    texture3d<float> colorMap [[ texture(TextureIndexColor) ]]
+)
 {
     // fix up the tex coordinate here to be normalized w = [0,1]
-    uint lod = uniforms.mipLOD;
+    uint lod = uniformsLevel.mipLOD;
     float3 uvw = in.texCoordXYZ;
     
     uvw.z /= ((float)colorMap.get_depth(lod) - 1.0);
