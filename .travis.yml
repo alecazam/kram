@@ -1,18 +1,28 @@
-os: 
-- osx
-- windows
-osx_image: xcode12.2
-compiler: clang
-language: 
-- cpp
-- objective-c
+matrix:
+  include:
+    - os: linux
+      compiler: clang
+      language: cpp
+      dist: trusty
 
-# need cmake 3.19 for universal apps, but vms have 3.18
-addons:
-  homebrew:
-    packages:
-    - cmake
-    update: true
+    - os: windows
+      compiler: clang
+      language: cpp
+
+    - os: osx
+      language: objective-c
+      compiler: clang
+      osx_image: xcode12.2
+
+      # need cmake 3.19 for universal apps, but vms have 3.18
+      addons:
+        homebrew:
+          packages:
+          - cmake
+          update: true
 
 script:
-- if [ $TRAVIS_OS_NAME == osx ]; then ./scripts/cibuild.sh; fi
+- if [ $TRAVIS_OS_NAME == osx ]; then ./scripts/cibuild.sh $TRAVIS_OS_NAME; fi
+- if [ $TRAVIS_OS_NAME == windows ]; then ./scripts/cibuild.sh $TRAVIS_OS_NAME; fi
+#- if [ $TRAVIS_OS_NAME == linux ]; then ./scripts/cibuild.sh $TRAVIS_OS_NAME; fi
+
