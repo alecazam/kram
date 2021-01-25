@@ -9,6 +9,13 @@ matrix:
       compiler: clang
       language: cpp
 
+      # need cmake 3.18 on Win, and some Travis builds only have 3.17
+      addons:
+        homebrew:
+          packages:
+          - cmake
+          update: true
+
     - os: osx
       language: objective-c
       compiler: clang
