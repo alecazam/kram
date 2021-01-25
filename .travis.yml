@@ -1,0 +1,7 @@
+os: osx
+osx_image: xcode12.2
+compiler: clang
+language: cpp
+
+script:
+- if [ $TRAVIS_OS_NAME == osx ]; then ./scripts/cibuild.sh; fi
