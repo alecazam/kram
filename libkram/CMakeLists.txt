@@ -88,8 +88,11 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/zstd/zstddeclib.cpp"
 )
 
-# no objc on winOS
+# no objc on win or linux
 if (WIN32)
+    list(FILTER libSources EXCLUDE REGEX ".*ateencoder.mm$")
+    list(FILTER libSources EXCLUDE REGEX ".*ateencoder.h$")
+elseif (UNIXBUILD)
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.mm$")
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.h$")
 endif()
@@ -154,7 +157,12 @@ elseif (WIN32)
     # force include and fix STL
     target_compile_options(${myTargetLib} PRIVATE /FIKramConfig.h /W3 /arch:AVX)
     target_compile_definitions(${myTargetLib} PRIVATE "-D_D_HAS_EXCEPTIONS=0")
-
+    
+elseif (UNIXBUILD)
+    # TODO: finish this
+    
+    target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h -W -Wall)
+    
 endif()
 
 

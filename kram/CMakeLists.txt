@@ -10,7 +10,7 @@ if (APPLE)
 project(${myTargetApp} LANGUAGES C CXX OBJCXX
     VERSION 0.9.0
 )
-elseif (WIN32)
+else()
 project(${myTargetApp} LANGUAGES C CXX
     VERSION 0.9.0
 )
@@ -60,7 +60,7 @@ if (APPLE)
     target_compile_options(${myTargetApp} PRIVATE -W -Wall)
 
 elseif (WIN32)
-    target_link_libraries(${myTargetApp} "libkram")
+    target_link_libraries(${myTargetApp} libkram)
 
     # When Win rebuilds library, it doesn't relink app to correct code when you
     # build the app target project.  Breakpoints stop working after any library source edit,
@@ -82,6 +82,11 @@ elseif (WIN32)
     target_compile_definitions(${myTargetApp} PRIVATE "-D_D_HAS_EXCEPTIONS=0")
 
     target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX)
+elseif  (UNIXBUILD)
+    target_link_libraries(${myTargetApp} libkram)
+
+    # TODO: finish this
+    
 endif()
 
 

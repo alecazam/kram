@@ -1,9 +1,9 @@
 matrix:
   include:
-    - os: linux
-      compiler: clang
-      language: cpp
-      dist: trusty
+    # - os: linux
+    #   compiler: clang
+    #   language: cpp
+    #   dist: trusty
 
     - os: windows
       compiler: clang

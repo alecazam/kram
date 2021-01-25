@@ -1,7 +1,7 @@
 # for now don't require high cmake for TravisCI builds on Win, but need 3.19.2 for universal app builds
 if (APPLE)
     cmake_minimum_required(VERSION 3.19.2 FATAL_ERROR)
-elseif (WIN32)
+else()
     cmake_minimum_required(VERSION 3.18.0 FATAL_ERROR)
 endif()
 
@@ -10,10 +10,14 @@ endif()
 # https://cmake.org/cmake/help/latest/policy/CMP0077.html#policy:CMP0077
 #cmake_policy(SET CMP0077 NEW)
 
+set(UNIXBUILD FALSE)
 if (APPLE)
     message("build for macOS")
 elseif (WIN32)
-    message("build for winOS")
+    message("build for win")
+elseif (UNIX AND NOT APPLE)
+    message("build for unix")
+    set(UNIXBUILD TRUE)
 endif()
 
 #-----------------------------------------------------
@@ -51,11 +55,13 @@ set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
 
 #-----------------------------------------------------
 
+# cmake translates project to sln in Win, but to xcode projects on Mac.
+# No way to make xcode workspaces, but could do manually.
 set(myTargetWorkspace kramWorkspace)
 
 if (APPLE)
 project(${myTargetWorkspace} LANGUAGES C CXX OBJCXX)
-elseif (WIN32)
+else()
 project(${myTargetWorkspace} LANGUAGES C CXX)
 endif()
 
@@ -75,6 +81,7 @@ endif()
 
 set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
 
+# install doesn't seem to do anything on WIN32, the build elements are not copied
 install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
 install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
 if (APPLE)
