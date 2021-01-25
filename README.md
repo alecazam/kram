@@ -34,23 +34,23 @@ Texture Types - 1darray (no mips), 2d, 2darray, 3d (no mips), cube, cube array
 
 / - show keyboard shortcuts
 O - toggle preview, disables debug mode, shows lit normals, and mips and filtering are enabled
-Shift-/D - toggle block/pixel grid, must be zoomed-in to see it
-Shift-/E - advance debug mode, this is texture content specific
+⇧D - toggle pixel grid, must be zoomed-in to see it (block grid with ⇧)
+⇧E - advance debug mode, this is texture content specific (reverse dir with ⇧)
 H - toggle hud
 I - show texture info in overlay
 W - toggle repeat filter, scales uv from [0,1] to [0,2]
+S - show all - arrays, faces, slices and mips all on-screen
 
 R/G/B/A - show channel in isolation
 P - toggle shader premul, the shader performs this after sampling but for point sampling it is correct
-S - toggle signed/unsigned
+N - toggle signed/unsigned
 
-Shift-/0 - refit the current mip image to 1x, or fit view.  Smaller mips will appear at size with Shift-0.
-L - reload from disk if changed, zoom to fit
-Shift-L - reload, but at 1x
+⇧0 - refit the current mip image to 1x, or fit view.  (at 1x with ⇧).
+⇧L - reload from disk if changed, zoom to fit (at 1x with ⇧)
 
-Shift-/Y advance array
-Shift-/F advance face
-Shift-/M advance mip
+⇧Y advance array (reverse dir with ⇧)
+⇧F advance face
+⇧M advance mip
 ```
 
 ### Limitations
