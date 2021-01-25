@@ -15,14 +15,16 @@ pushd build
 
 # need cmake 3.19 for universal apps, but vms have 3.18
 # and 3.18 for Win, but machines only have 3.18 and 3.17 installed
-if [[ $buildType == osx ]]; then
-	# this is done in .travis file
-	# brew upgrade cmake
-elif [[ $buildType == windows ]]; then
-	choco upgrade cmake
-elif [[ $buildType == linux ]]; then
-	# TODO: add curl to some server
-fi
+
+# this is done in travis
+#if [[ $buildType == osx ]]; then brew upgrade cmake; fi
+
+if [[ $buildType == windows ]]; then choco upgrade cmake; fi
+
+# TODO: do a curl to update cmake
+#if [[ $buildType == linux ]]; then docurl...; fi
+
+
 
 # can't just use cmake .. on osx, cmake gets confused about metal files since language not recognized
 # but Xcode knows how to build these.  I don't to setup special rule for metal files right now.
