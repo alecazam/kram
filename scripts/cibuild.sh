@@ -7,7 +7,7 @@ mkdir -p bin
 mkdir -p build
 
 pushd build
-cmake ..
+cmake .. -G Xcode
 cmake --build . --config Release
 cmake --install . --config Release
 popd

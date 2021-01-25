@@ -6,11 +6,15 @@
 # now setup the app project, and link to libkram
 set(myTargetApp kram)
 
-project(
-    ${myTargetApp}
+if (APPLE)
+project(${myTargetApp} LANGUAGES C CXX OBJCXX
     VERSION 0.9.0
-    LANGUAGES C CXX
 )
+elseif (WIN32)
+project(${myTargetApp} LANGUAGES C CXX
+    VERSION 0.9.0
+)
+endif()
 
 # **** this the executable target ****, for a CLI App
 add_executable(${myTargetApp})

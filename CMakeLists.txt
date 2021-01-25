@@ -48,7 +48,11 @@ set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
 
 set(myTargetWorkspace kramWorkspace)
 
+if (APPLE)
+project(${myTargetWorkspace} LANGUAGES C CXX OBJCXX)
+elseif (WIN32)
 project(${myTargetWorkspace} LANGUAGES C CXX)
+endif()
 
 # the kram static library libkram which should build on iOS/Android/Mac/Win
 # this doesn't set a project, but maybe it should

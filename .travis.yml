@@ -1,7 +1,11 @@
-os: osx
+os: 
+- osx
+- windows
 osx_image: xcode12.2
 compiler: clang
-language: cpp
+language: 
+- cpp
+- objective-c
 
 # need cmake 3.19 for universal apps, but vms have 3.18
 addons:
