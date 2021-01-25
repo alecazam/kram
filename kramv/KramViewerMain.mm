@@ -758,8 +758,7 @@ NSArray<NSString*>* pasteboardTypes = @[
         }
         case Key::Slash: // has ? mark above it
             // display the chars for now
-            // TODO: show shift keys
-            text = "⇧RGBA, O-preview, ⇧E-debug\n"
+            text = "⇧RGBA, O-preview, ⇧E-debug, Show all\n"
                    "Hud, ⇧L-reload, ⇧0-fit\n"
                    "Checker, ⇧D-block/px grid, Info\n"
                    "W-wrap, Premul, N-signed\n"
@@ -837,8 +836,6 @@ NSArray<NSString*>* pasteboardTypes = @[
         // TODO: might switch c to channel cycle, so could just hit that
         // and depending on the content, it cycles through reasonable channel masks
             
-        // TODO: reset zoom off cmd+0 ?
-    
         // toggle checkerboard for transparency
         case Key::C:
             _showSettings->isCheckerboardShown = !_showSettings->isCheckerboardShown;
@@ -870,6 +867,14 @@ NSArray<NSString*>* pasteboardTypes = @[
             
             break;
         
+        case Key::S:
+            // TODO: have drawAllMips, drawAllLevels, drawAllLevelsAndMips
+            _showSettings->isShowingAllLevelsAndMips = !_showSettings->isShowingAllLevelsAndMips;
+            isChanged = true;
+            text = "Show All ";
+            text += _showSettings->isShowingAllLevelsAndMips ? "On" : "Off";
+            break;
+            
         // toggle hud that shows name and pixel value under the cursor
         // this may require calling setNeedsDisplay on the UILabel as cursor moves
         case Key::H:
@@ -965,18 +970,6 @@ NSArray<NSString*>* pasteboardTypes = @[
                 isChanged = true;
             }
             break;
-            
-        // srgb - this was removed, doesn't correctly reflect enabling/disabling srgb
-        // thought it might be useful if image used srgb and shouldn't.  f.e. on PNG where
-        // srgb flag is always set, even when it's not indended.
-//        case Key::S:
-//            _showSettings->isSRGBShown = !_showSettings->isSRGBShown;
-//
-//            text = "Srgb ";
-//            text += _showSettings->isSRGBShown ? "On" : "Off";
-//
-//            isChanged = true;
-//            break;
     }
     
     if (!text.empty()) {

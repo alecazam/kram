@@ -119,6 +119,7 @@ struct UniformsLevel {
     uint32_t mipLOD;
     uint32_t face;
     uint32_t arrayOrSlice;
+    simd::float2 drawOffset; // pixel offset to apply
 };
 
 // This is all tied to a single level sample

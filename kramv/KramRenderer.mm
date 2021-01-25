@@ -559,17 +559,6 @@ using namespace simd;
     float scaleY = MAX(1, texture.height);
     _modelMatrix = float4x4(simd_make_float4(scaleX, scaleY, 1.0f, 1.0f));
     _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0);
-
-    //_modelMatrix = matrix4x4_translation(0.0f, 0.0f, 0.0f) * _modelMatrix;
-
-    // TODO: also have Mac not be sandboxed, or figure out if drag/drop allows
-    // access to folder, ktx, or png files.
-    
-    // TODO: Downsample images by integer multiple to fit in the current window
-    // and have some sort of hierarchy to pick a given image.
-    
-    // TODO: what about a setting to 0 out a channel.  Can toggle only, default, off.
-    // would then be able to turn on/off channels to see image without them.
     
     return YES;
 }
@@ -591,8 +580,6 @@ using namespace simd;
 
     Uniforms& uniforms = *(Uniforms*)_dynamicUniformBuffer[_uniformBufferIndex].contents;
 
-   // uniforms.mipLOD = _showSettings->mipLOD;
-    
     uniforms.isNormal = _showSettings->isNormal;
     uniforms.isPremul = _showSettings->isPremul;
     uniforms.isSigned = _showSettings->isSigned;
@@ -847,7 +834,7 @@ using namespace simd;
         
         
         UniformsLevel uniformsLevel;
-        
+        uniformsLevel.drawOffset = simd_make_float2(0.0f);
         
         if (_showSettings->isPreview) {
             // upload this on each face drawn, since want to be able to draw all mips/levels at once
@@ -875,6 +862,88 @@ using namespace simd;
                                    indexBufferOffset:submesh.indexBuffer.offset];
             }
             
+        }
+        else if (_showSettings->isShowingAllLevelsAndMips) {
+            int32_t w = _colorMap.width;
+            int32_t h = _colorMap.height;
+            //int32_t d = _colorMap.depth;
+                        
+            MyMTLTextureType textureType = MyMTLTextureType2D;
+            if (_colorMap) {
+                textureType = (MyMTLTextureType)_colorMap.textureType;
+            }
+            
+            bool isCube = false;
+            if (textureType == MyMTLTextureTypeCube || textureType == MyMTLTextureTypeCubeArray) {
+                isCube = true;
+            }
+            
+            // gap the contact sheet, note this 2 pixels is scaled on small textures by the zoom
+            int32_t gap = 2; // * _showSettings->viewContentScaleFactor;
+            
+            for (int32_t mip = 0; mip < _showSettings->maxLOD; ++mip) {
+                
+                // upload this on each face drawn, since want to be able to draw all mips/levels at once
+                [self _setUniformsLevel:uniformsLevel mipLOD:mip];
+                
+                if (mip == 0) {
+                    uniformsLevel.drawOffset.y = 0.0f;
+                }
+                else {
+                    // all mips draw at top mip size currently
+                    uniformsLevel.drawOffset.y -= h + gap;
+                }
+                
+                // this its ktxImage.totalLevels()
+                int32_t numLevels =  std::max(1, _showSettings->arrayCount) *
+                                     std::max(1, _showSettings->faceCount) *
+                                     std::max(1, _showSettings->sliceCount);
+                
+                for (int32_t level = 0; level < numLevels; ++level) {
+                    
+                    if (isCube) {
+                        uniformsLevel.face = level % 6;
+                        uniformsLevel.arrayOrSlice = level / 6;
+                    }
+                    
+                    // advance x across faces/slices/array elements, 1d array and 2d thin array are weird though.
+                    if (level == 0) {
+                        uniformsLevel.drawOffset.x = 0.0f;
+                    }
+                    else {
+                        uniformsLevel.drawOffset.x += w + gap;
+                    }
+                    
+                    [renderEncoder setVertexBytes:&uniformsLevel
+                                            length:sizeof(uniformsLevel)
+                                           atIndex:BufferIndexUniformsLevel];
+
+                    [renderEncoder setFragmentBytes:&uniformsLevel
+                                              length:sizeof(uniformsLevel)
+                                             atIndex:BufferIndexUniformsLevel];
+                    
+                    // force lod, and don't mip
+                    [renderEncoder setFragmentSamplerState:
+                                          (canWrap && _showSettings->isWrap) ? _colorMapSamplerWrap : _colorMapSamplerClamp
+                                          lodMinClamp:mip
+                                          lodMaxClamp:mip + 1
+                                          atIndex:SamplerIndexColor];
+                
+
+                    // TODO: since this isn't a preview, have mode to display all faces and mips on on screen
+                    // faces and arrays and slices go across in a row,
+                    // and mips are displayed down from each of those in a column
+                    
+                    for(MTKSubmesh *submesh in _mesh.submeshes)
+                    {
+                        [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                                  indexCount:submesh.indexCount
+                                                   indexType:submesh.indexType
+                                                 indexBuffer:submesh.indexBuffer.buffer
+                                           indexBufferOffset:submesh.indexBuffer.offset];
+                    }
+                }
+            }
         }
         else {
             int32_t mip = _showSettings->mipLOD;
@@ -915,7 +984,6 @@ using namespace simd;
     
     [renderEncoder popDebugGroup];
 
-    
     [renderEncoder endEncoding];
     
     // TODO: run any post-processing on each texture visible as fsw

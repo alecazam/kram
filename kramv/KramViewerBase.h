@@ -72,6 +72,9 @@ public:
     bool isPixelGridShown = false;
     bool isBlockGridShown = false;
    
+    // show all mips, faces, arrays all at once
+    bool isShowingAllLevelsAndMips = false;
+    
     // expands uv from [0,1] to [0,2] in shader to see the repeat pattern
     bool isWrap = false;
     

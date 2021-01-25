@@ -22,12 +22,20 @@ struct ColorInOut
 
 ColorInOut DrawImageFunc(
     Vertex in [[stage_in]],
-    constant Uniforms& uniforms
+    constant Uniforms& uniforms,
+    constant UniformsLevel& uniformsLevel
 )
 {
     ColorInOut out;
 
-    float4 worldPos = uniforms.modelMatrix * in.position;
+    float4 position = in.position;
+    //position.xy += uniformsLevel.drawOffset;
+    
+    float4 worldPos = uniforms.modelMatrix * position;
+    
+    // try adding pixel offset to pixel values
+    worldPos.xy += uniformsLevel.drawOffset;
+    
     out.position = uniforms.projectionViewMatrix * worldPos;
     
     // this is a 2d coord always which is 0 to 1, or 0 to 2
@@ -50,7 +58,7 @@ vertex ColorInOut DrawImageVS(
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]]
 )
 {
-    return DrawImageFunc(in, uniforms);
+    return DrawImageFunc(in, uniforms, uniformsLevel);
 }
 
 vertex ColorInOut DrawCubeVS(
@@ -59,7 +67,7 @@ vertex ColorInOut DrawCubeVS(
      constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]]
 )
 {
-    ColorInOut out = DrawImageFunc(in, uniforms);
+    ColorInOut out = DrawImageFunc(in, uniforms, uniformsLevel);
     
     // convert to -1 to 1
     float3 uvw = out.texCoordXYZ;
@@ -114,7 +122,7 @@ vertex ColorInOut DrawVolumeVS(
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]]
 )
 {
-    ColorInOut out = DrawImageFunc(in, uniforms);
+    ColorInOut out = DrawImageFunc(in, uniforms, uniformsLevel);
     
     // this is normalized in ps by dividing by depth-1
     out.texCoordXYZ.z = uniformsLevel.arrayOrSlice;
