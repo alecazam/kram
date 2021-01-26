@@ -46,7 +46,8 @@
 #if KRAM_WIN
 
 // Disable warnings
-# can set disable, once, or error
+// can set disable, once, or error
+
 #pragma warning( disable : 4530 4305 4267 4996 4244 4305 )
 
 /* Couldn't seem to place these inside the open parens
