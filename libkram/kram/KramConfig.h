@@ -46,20 +46,18 @@
 #if KRAM_WIN
 
 // Disable warnings
-#pragma warning( disable :
+# can set disable, once, or error
+#pragma warning( disable : 4530 4305 4267 4996 4244 4305 )
+
+/* Couldn't seem to place these inside the open parens
     4530 // C++ exception handler used, but unwind semantics are not enabled. Specify /EHsc
     4305 // 'initializing': truncation from 'double'
     4267 // 'initializing': conversion from 'size_t' to 'uint32_t', possible loss of data
     4996 // 'fileno': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _fileno. See online help for details.
     4244 // 'initializing': conversion from 'int32_t' to 'float', possible loss of data
     4305 // '*=': truncation from 'double' to 'float'
-)
+*/
 
-// Issue warning only once
-//#pragma warning( once : )
-
-// Warning as an error.
-//#pragma warning( error : )
 
 #endif
 
