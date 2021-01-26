@@ -1146,13 +1146,14 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
 const char* encoderName(TexEncoder encoder)
 {
     switch(encoder) {
-        case kTexEncoderUnknown: return "Unknown"; break;
-        case kTexEncoderExplicit: return "Explicit"; break;
-        case kTexEncoderATE: return "ATE"; break;
-        case kTexEncoderSquish: return "Squish"; break;
-        case kTexEncoderBcenc: return "Bcenc"; break;
-        case kTexEncoderEtcenc: return "Etcenc"; break;
-        case kTexEncoderAstcenc: return "Astcenc"; break;
+        case kTexEncoderExplicit: return "Explicit";
+        case kTexEncoderATE: return "ATE";
+        case kTexEncoderSquish: return "Squish";
+        case kTexEncoderBcenc: return "Bcenc";
+        case kTexEncoderEtcenc: return "Etcenc";
+        case kTexEncoderAstcenc: return "Astcenc";
+        case kTexEncoderUnknown: return "Unknown";
+        default: return "Unknown"; // to fix Visual Studio C4715
     }
 }
 
