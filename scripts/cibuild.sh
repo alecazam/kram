@@ -6,14 +6,14 @@
 buildType=$1
 
 # translate Github Actions to os typpe
-if [[ $buildType =~ "ubuntu" ]]; then
-	buildType=linux
+if [[ $buildType =~ "macos" ]]; then
+	buildType="osx"
 fi
 if [[ $buildType =~ "windows" ]]; then
-	buildType=windows
+	buildType="windows"
 fi
 if [[ $buildType =~ "ubuntu" ]]; then
-	buildType=linux
+	buildType="linux"
 fi
 
 # exit on failure of any command
