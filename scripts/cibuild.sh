@@ -7,7 +7,7 @@ buildType=$1
 
 # translate Github Actions to os typpe
 if [[ $buildType =~ "macos" ]]; then
-	buildType="osx"
+	buildType="macos"
 fi
 if [[ $buildType =~ "windows" ]]; then
 	buildType="windows"
@@ -30,7 +30,7 @@ pushd build
 
 # can't just use cmake .. on osx, cmake gets confused about metal files since language not recognized
 # but Xcode knows how to build these.  I don't to setup special rule for metal files right now.
-if [[ $buildType == osx ]]; then
+if [[ $buildType == macos ]]; then
 	cmake .. -G Xcode
 elif [[ $buildType == windows ]]; then
 	#cmake .. -G "Visual Studio 15 2017 Win64"
@@ -51,10 +51,11 @@ popd
 
 pushd bin
 
-# now that bin folder has kramv.app, zip move it so it can be copied to releases
-# this should really use cpack in the make file to build a dmg, but not there yet
-if [[ $buildType == osx ]]; then
-	 zip -rm kramv.zip kramv.app
-fi
+# put these in with the zip
+cp ../LICENSE .
+cp ../README.md .
+
+# concatenate to one platform-specific zip archive to make it easy to install
+zip -r "kram-${buildType}.zip" *
 
 popd

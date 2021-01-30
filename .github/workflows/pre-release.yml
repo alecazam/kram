@@ -13,8 +13,8 @@ jobs:
     strategy:
       matrix:
         #os: [ubuntu-latest, macos-latest, windows-latest]
-        #os: [macos-latest, windows-latest]
-        os: [macos-latest]
+        os: [macos-latest, windows-latest]
+        #os: [macos-latest]
 
     steps:
       - name: Update CMake
@@ -27,16 +27,13 @@ jobs:
         run: ./scripts/cibuild.sh ${{ matrix.os }}
         shell: bash
           
-      - name: Upload build to releases
+      - name: Upload build to prereleases
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
           prerelease: true
           draft: true
-          title: "Development Build"
-          files: |
-            README.md
-            LICENSE.txt
-            bin/
+          title: "prerelease"
+          files: bin/*.zip
 

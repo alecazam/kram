@@ -31,8 +31,5 @@ jobs:
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
-          draft: true
-          files: |
-            README.md
-            LICENSE.txt
-            bin/*
+          #draft: true
+          files: bin/*.zip
