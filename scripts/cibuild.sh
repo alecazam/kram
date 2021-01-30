@@ -33,8 +33,8 @@ pushd build
 if [[ $buildType == osx ]]; then
 	cmake .. -G Xcode
 elif [[ $buildType == windows ]]; then
-	cmake .. -G "Visual Studio 15 2017 Win64"
-	#cmake .. -G "Visual Studio 15 2019" -A x64
+	#cmake .. -G "Visual Studio 15 2017 Win64"
+	cmake .. -G "Visual Studio 15 2019" -A x64
 elif [[ $buildType == linux ]]; then
 	cmake .. 
 fi
