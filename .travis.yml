@@ -29,29 +29,29 @@ script:
 # deploy bin folder to releases on github
 deploy:
   - provider: releases
-    api_key:
-      secure: $GITHUB_TOKEN
-    file_glob: true
-    file: bin/*
-    skip_cleanup: true
+    api_key:
+      secure: $GITHUB_TOKEN
+    file_glob: true
+    file: bin/*
+    skip_cleanup: true
     keep_history: true
     #draft: true
     #prerelease: true
-    on:
-      tags: true
+    on:
+      tags: true
       condition: $TRAVIS_OS_NAME = windows
       #branch: master
      
   - provider: releases
-    api_key:
-      secure: $GITHUB_TOKEN
-    file_glob: true
-    file: bin/*
-    skip_cleanup: true
+    api_key:
+      secure: $GITHUB_TOKEN
+    file_glob: true
+    file: bin/*
+    skip_cleanup: true
     keep_history: true
     #draft: true
     #prerelease: true
-    on:
-      tags: true
+    on:
+      tags: true
       condition: $TRAVIS_OS_NAME = osx
       # branch: master
