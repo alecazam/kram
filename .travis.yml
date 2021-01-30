@@ -20,8 +20,38 @@ matrix:
           - cmake
           update: true
 
+# do the build
 script:
 - if [ $TRAVIS_OS_NAME == osx ]; then ./scripts/cibuild.sh $TRAVIS_OS_NAME; fi
 - if [ $TRAVIS_OS_NAME == windows ]; then ./scripts/cibuild.sh $TRAVIS_OS_NAME; fi
 #- if [ $TRAVIS_OS_NAME == linux ]; then ./scripts/cibuild.sh $TRAVIS_OS_NAME; fi
 
+# deploy bin folder to releases on github
+deploy:
+  - provider: releases
+    api_key:
+      secure: $GITHUB_TOKEN
+    file_glob: true
+    file: bin/*
+    skip_cleanup: true
+    keep_history: true
+    draft: true
+    prerelease: true
+    on:
+      tags: true
+      condition: $TRAVIS_OS_NAME = windows
+      #branch: master
+     
+  - provider: releases
+    api_key:
+      secure: $GITHUB_TOKEN
+    file_glob: true
+    file: bin/*
+    skip_cleanup: true
+    keep_history: true
+    draft: true
+    prerelease: true
+    on:
+      tags: true
+      condition: $TRAVIS_OS_NAME = osx
+      # branch: master
