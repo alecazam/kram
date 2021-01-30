@@ -15,13 +15,13 @@ jobs:
         os: [macos-latest, windows-latest]
 
     steps:
-      - name: Update CMake 
-        uses: lukka/get-cmake@latest 
+      - name: Update CMake
+        uses: lukka/get-cmake@latest
 
-      - name: Check out code 
+      - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Build and install to bin/ 
+      - name: Build and install to bin/
         run: ./scripts/cibuild.sh ${{ matrix.os }}
         shell: bash
           
@@ -30,8 +30,8 @@ jobs:
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
-          prerelease: false
-          draft: false
+          prerelease: true
+          draft: true
           title: "Development Build"
           files: |
             README.md
