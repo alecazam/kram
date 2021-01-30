@@ -45,10 +45,10 @@ cmake --build . --config Release
 # copy it to bin directory
 cmake --install . --config Release
 
+popd
+
 # now that bin folder has kramv.app, zip move it so it can be copied to releases
 # this should really use cpack in the make file to build a dmg, but not there yet
 if [[ $buildType == osx ]]; then
 	zip -rm bin/kramv.app
 fi
-
-popd
