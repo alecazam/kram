@@ -35,8 +35,8 @@ deploy:
     file: bin/*
     skip_cleanup: true
     keep_history: true
-    draft: true
-    prerelease: true
+    #draft: true
+    #prerelease: true
     on:
       tags: true
       condition: $TRAVIS_OS_NAME = windows
@@ -49,8 +49,8 @@ deploy:
     file: bin/*
     skip_cleanup: true
     keep_history: true
-    draft: true
-    prerelease: true
+    #draft: true
+    #prerelease: true
     on:
       tags: true
       condition: $TRAVIS_OS_NAME = osx
