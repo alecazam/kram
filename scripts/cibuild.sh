@@ -56,6 +56,11 @@ cp ../LICENSE .
 cp ../README.md .
 
 # concatenate to one platform-specific zip archive to make it easy to install
-zip -r "kram-${buildType}.zip" *
+# lovely... zip isn't a part of Git-Bash, so use 7z in MSYS2
+if [[ $buildType == windows ]]; then
+	7z a -r "kram-${buildType}.zip" .
+else 
+	zip -r "kram-${buildType}.zip" .
+fi
 
 popd
