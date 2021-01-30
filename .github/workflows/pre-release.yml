@@ -3,8 +3,9 @@ name: "pre-release"
 # run on any changes, will copy data to pre-releases
 on:
   push:
-    branches:
-      - "master"
+    branches: [ '*' ]
+  pull_request:
+    branches: [ '*' ]
 
 jobs:
   pre-release:
