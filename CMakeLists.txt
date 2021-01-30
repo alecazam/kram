@@ -1,6 +1,6 @@
 # for now don't require high cmake for TravisCI builds on Win, but need 3.19.2 for universal app builds
 if (APPLE)
-    cmake_minimum_required(VERSION 3.19.2 FATAL_ERROR)
+    cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
 else()
     cmake_minimum_required(VERSION 3.18.0 FATAL_ERROR)
 endif()
