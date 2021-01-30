@@ -1,0 +1,40 @@
+name: "pre-release"
+
+# run on any changes, will copy data to pre-releases
+on:
+  push:
+    branches:
+      - "master"
+
+jobs:
+  pre-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        #os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - name: Update CMake 
+        uses: lukka/get-cmake@latest 
+
+      - name: Check out code 
+        uses: actions/checkout@v2
+
+      - name: Build and install to bin/ 
+        run: ./scripts/cibuild.sh ${{ matrix.os }}
+        shell: bash
+          
+      - name: Upload build to releases
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: false
+          draft: false
+          title: "Development Build"
+          files: |
+            README.md
+            LICENSE.txt
+            bin/
+
