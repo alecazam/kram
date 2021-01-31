@@ -33,7 +33,7 @@ jobs:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
           prerelease: true
-          draft: true
+          draft: false
           title: "prerelease"
           files: bin/*.zip
 
