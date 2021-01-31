@@ -27,20 +27,21 @@ jobs:
         shell: bash
         
       # this doesn't work with a matrix, only macos is uploaded, no way to specify same tag  
-      - name: Upload build to releases
-        uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: true
-          draft: false
-          title: "prerelease"
-          files: bin/*.zip
+      # - name: Upload build to releases
+      #   uses: "marvinpinto/action-automatic-releases@latest"
+      #   with:
+      #     repo_token: "${{ secrets.GITHUB_TOKEN }}"
+      #     automatic_release_tag: "latest"
+      #     prerelease: true
+      #     draft: false
+      #     title: "prerelease"
+      #     files: bin/*.zip
 
       # so do another upload to get both
       - name: Upload all builds to releases
         uses: svenstaro/upload-release-action@v2
         with:
+          prerelease: true
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: bin/*.zip
           file_glob: true

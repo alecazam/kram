@@ -26,12 +26,12 @@ jobs:
         shell: bash
 
       # this doesn't work with a matrix, only macos is uploaded, no way to specify same tag  
-      - name: Upload build to releases
-        uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
-          files: bin/*.zip
+      # - name: Upload build to releases
+      #   uses: "marvinpinto/action-automatic-releases@latest"
+      #   with:
+      #     repo_token: "${{ secrets.GITHUB_TOKEN }}"
+      #     prerelease: false
+      #     files: bin/*.zip
 
       # so do another upload to get both
       - name: Upload all builds to releases
