@@ -14,8 +14,7 @@ jobs:
       matrix:
         #os: [ubuntu-latest, macos-latest, windows-latest]
         os: [macos-latest, windows-latest]
-        #os: [macos-latest]
-
+        
     steps:
       - name: Update CMake
         uses: lukka/get-cmake@latest
@@ -26,8 +25,9 @@ jobs:
       - name: Build and install to bin/
         run: ./scripts/cibuild.sh ${{ matrix.os }}
         shell: bash
-          
-      - name: Upload build to prereleases
+        
+      # this doesn't work with a matrix, only macos is uploaded, no way to specify same tag  
+      - name: Upload build to releases
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -37,3 +37,10 @@ jobs:
           title: "prerelease"
           files: bin/*.zip
 
+      # so do another upload to get both
+      - name: Upload all builds to releases
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: bin/kram-${{ matrix.os }}.zip
+          tag: ${{ github.ref }}
