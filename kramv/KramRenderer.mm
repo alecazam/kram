@@ -895,15 +895,16 @@ using namespace simd;
                 }
                 
                 // this its ktxImage.totalLevels()
-                int32_t numLevels =  std::max(1, _showSettings->arrayCount) *
-                                     std::max(1, _showSettings->faceCount) *
-                                     std::max(1, _showSettings->sliceCount);
+                int32_t numLevels =  _showSettings->totalLevels();
                 
                 for (int32_t level = 0; level < numLevels; ++level) {
                     
                     if (isCube) {
                         uniformsLevel.face = level % 6;
                         uniformsLevel.arrayOrSlice = level / 6;
+                    }
+                    else {
+                        uniformsLevel.arrayOrSlice = level;
                     }
                     
                     // advance x across faces/slices/array elements, 1d array and 2d thin array are weird though.

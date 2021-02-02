@@ -62,6 +62,8 @@ public:
     int32_t sliceNumber = 0;
     int32_t sliceCount = 0;
     
+    int32_t totalLevels() const;
+    
     // DONE: hook all these up to shader and view
     bool isHudShown = true;
    

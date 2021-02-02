@@ -274,9 +274,17 @@ NSArray<NSString*>* pasteboardTypes = @[
     float4 pixel = mInv * simd_make_float4(clipPoint.x, clipPoint.y, 1.0f, 1.0f);
     //pixel /= pixel.w; // in case perspective used
 
+    // allow pan to extend to show all
+    float maxX = 0.5f;
+    float minY = -0.5f;
+    if (_showSettings->isShowingAllLevelsAndMips) {
+        maxX += 1.0f * (_showSettings->totalLevels() - 1);
+        minY -= 1.0f * (_showSettings->maxLOD - 1);
+    }
+    
     // that's in model space (+/0.5f, +/0.5f), so convert to texture space
-    pixel.x = clamp(pixel.x, -0.5f, 0.5f);
-    pixel.y = clamp(pixel.y, -0.5f, 0.5f);
+    pixel.x = clamp(pixel.x, -0.5f, maxX);
+    pixel.y = clamp(pixel.y, minY, 0.5f);
     
     // now that's the point that we want to zoom towards
     // No checkson this zoom
@@ -348,15 +356,26 @@ NSArray<NSString*>* pasteboardTypes = @[
     CGRect imageRect = CGRectMake(pt0.x, pt0.y, pt1.x - pt0.x, pt1.y - pt0.y);
     CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
    
+    int32_t numTexturesX = _showSettings->totalLevels();
+    int32_t numTexturesY = _showSettings->maxLOD;
+    
+    if (_showSettings->isShowingAllLevelsAndMips) {
+        imageRect.origin.y -= (numTexturesY - 1 ) * imageRect.size.height;
+        
+        imageRect.size.width *= numTexturesX;
+        imageRect.size.height *= numTexturesY;
+    }
+    
     float visibleWidth = imageRect.size.width * _showSettings->viewSizeX / _showSettings->viewContentScaleFactor;
     float visibleHeight = imageRect.size.height * _showSettings->viewSizeY / _showSettings->viewContentScaleFactor;
     
     // don't allow image to get too big
     // take into account zoomFit, or need to limit zoomFit and have smaller images be smaller on screen
     float maxZoom = std::max(128.0f, _showSettings->zoomFit);
-    
-    if ((visibleWidth > maxZoom * (_showSettings->imageBoundsX + 2)) ||
-        (visibleHeight > maxZoom * (_showSettings->imageBoundsY + 2))) {
+        
+    // don't allow image to get too big
+    if ((visibleWidth > maxZoom * (_showSettings->imageBoundsX + 2) * numTexturesX) ||
+        (visibleHeight > maxZoom * (_showSettings->imageBoundsY + 2) * numTexturesY)) {
         _zoomGesture.magnification = _validMagnification;
         return;
     }
@@ -468,6 +487,12 @@ NSArray<NSString*>* pasteboardTypes = @[
     pixel.x *= _showSettings->imageBoundsX;
     pixel.y *= _showSettings->imageBoundsY;
 
+// TODO: finish this logic, need to account for gaps too, and then isolate to a given level and mip to sample
+//    if (_showSettings->isShowingAllLevelsAndMips) {
+//        pixel.x *= _showSettings->totalLevels();
+//        pixel.y *= _showSettings->maxLOD;
+//    }
+    
     // TODO: clearing out the last px visited makes it hard to gather data
     // put value on clipboard, or allow click to lock the displayed pixel and value.
     // Might just change header to px(last): ...
@@ -652,6 +677,16 @@ NSArray<NSString*>* pasteboardTypes = @[
     CGRect imageRect = CGRectMake(pt0.x, pt0.y, pt1.x - pt0.x, pt1.y - pt0.y);
     CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
    
+    int32_t numTexturesX = _showSettings->totalLevels();
+    int32_t numTexturesY = _showSettings->maxLOD;
+    
+    if (_showSettings->isShowingAllLevelsAndMips) {
+        imageRect.origin.y -= (numTexturesY - 1 ) * imageRect.size.height;
+        
+        imageRect.size.width *= numTexturesX;
+        imageRect.size.height *= numTexturesY;
+    }
+    
     if (!NSIntersectsRect(imageRect, viewRect)) {
         return;
     }
