@@ -6,13 +6,14 @@
 # now setup the app project, and link to libkram
 set(myTargetApp kram)
 
+# not using version in cmake anymore, this is pulled in by KramVersion.h
 if (APPLE)
 project(${myTargetApp} LANGUAGES C CXX OBJCXX
-    VERSION 0.9.0
+    #VERSION 0.9.0
 )
 else()
 project(${myTargetApp} LANGUAGES C CXX
-    VERSION 0.9.0
+    #VERSION 0.9.0
 )
 endif()
 

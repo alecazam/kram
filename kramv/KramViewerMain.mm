@@ -22,6 +22,7 @@
 #include "KTXMipper.h"
 #include "KramImage.h"
 #include "KramViewerBase.h"
+#include "KramVersion.h" // keep kramv version in sync with libkram
 
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;
@@ -49,6 +50,8 @@ using namespace kram;
 //-------------
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
+
+- (IBAction)showAboutDialog:(id)sender;
 
 @end
 
@@ -84,6 +87,54 @@ using namespace kram;
     
     NSURL *url = urls.firstObject;
     [view loadTextureFromURL:url];
+}
+
+
+- (IBAction)showAboutDialog:(id)sender {
+    // calls openDocumentWithContentsOfURL above
+    NSMutableDictionary<NSAboutPanelOptionKey, id>* options = [[NSMutableDictionary alloc] init];
+
+    // name and icon are already supplied
+
+    // want to embed the git tag here
+    options[@"Copyright"] =  [NSString stringWithUTF8String:
+        "kram ©2020,2021 by Alec Miller"
+    ];
+    
+    // add a link to kram website, skip the Visit text
+    NSMutableAttributedString* str = [[NSMutableAttributedString alloc] initWithString:@"https://github.com/alecazam/kram"];
+    [str addAttribute: NSLinkAttributeName value: @"https://github.com/alecazam/kram" range: NSMakeRange(0, str.length)];
+
+    [str appendAttributedString: [[NSAttributedString alloc] initWithString:[NSString stringWithUTF8String:
+        "\n"
+        "kram is open-source and inspired by the\n"
+        "software technologies of these companies\n"
+        "  Khronos, Binomial, ARM, Google, and Apple\n"
+        "and devs who generously shared their work.\n"
+        "  Rich Geldrich, Peter Harris, Mark Callow,\n"
+        "  Philip Rideout, Romain Guy, Colt McAnlis,\n"
+        "  John Ratcliff, Sean Parent, David Ireland,\n"
+        "  Mike Frysinger, and Yann Collett\n"
+    ]]];
+    
+    options[NSAboutPanelOptionCredits] = str;
+     
+     
+    // skip the v character
+    const char* version = KRAM_VERSION;
+    version += 1;
+    
+    // this is the build version, should be github hash?
+    options[NSAboutPanelOptionVersion] = @"";
+    
+    // this is app version
+    options[NSAboutPanelOptionApplicationVersion] = [NSString stringWithUTF8String:
+        version
+    ];
+
+    [[NSApplication sharedApplication] orderFrontStandardAboutPanelWithOptions:options];
+    
+    //[[NSApplication sharedApplication] orderFrontStandardAboutPanel:sender];
 }
 
 @end
@@ -143,6 +194,96 @@ enum Key {
     UpArrow              = 0x7E,
 };
 
+/*
+ 
+// This is meant to advance a given image through a variety of encoder formats.
+// Then can compare the encoding results and pick the better one.
+// This could help artist see the effect on all mips of an encoder choice, and dial up/down the setting.
+// Would this cycle through astc and bc together, or separately.
+MyMTLPixelFormat encodeSrcTextureAsFormat(MyMTLPixelFormat currentFormat, bool increment) {
+    // if dev drops a png, then have a mode to see different encoding styles
+    // on normals, it would just be BC5, ETCrg, ASTCla and blocks
+    #define findIndex(array, x) \
+        for (int32_t i = 0, count = sizeof(array); i < count; ++i) { \
+            if (array[i] == x) { \
+                int32_t index = i; \
+                if (increment) \
+                    index = (index + 1) % count; \
+                else \
+                    index = (index + count - 1) % count; \
+                newFormat = array[index]; \
+                break; \
+            } \
+        }
+ 
+    MyMTLPixelFormat newFormat = currentFormat;
+    
+    // these are formats to cycle through
+    MyMTLPixelFormat bc[]     = { MyMTLPixelFormatBC7_RGBAUnorm, MyMTLPixelFormatBC3_RGBA, MyMTLPixelFormatBC1_RGBA };
+    MyMTLPixelFormat bcsrgb[] = { MyMTLPixelFormatBC7_RGBAUnorm_sRGB, MyMTLPixelFormatBC3_RGBA_sRGB, MyMTLPixelFormatBC1_RGBA_sRGB };
+    
+    // TODO: support non-square block with astcenc
+    MyMTLPixelFormat astc[]     = { MyMTLPixelFormatASTC_4x4_LDR, MyMTLPixelFormatASTC_5x5_LDR, MyMTLPixelFormatASTC_6x6_LDR, MyMTLPixelFormatASTC_8x8_LDR };
+    MyMTLPixelFormat astcsrgb[] = { MyMTLPixelFormatASTC_4x4_sRGB, MyMTLPixelFormatASTC_5x5_sRGB, MyMTLPixelFormatASTC_6x6_sRGB, MyMTLPixelFormatASTC_8x8_sRGB };
+    MyMTLPixelFormat astchdr[]  = { MyMTLPixelFormatASTC_4x4_HDR, MyMTLPixelFormatASTC_5x5_HDR, MyMTLPixelFormatASTC_6x6_HDR, MyMTLPixelFormatASTC_8x8_HDR };
+ 
+    if (isASTCFormat(currentFormat)) {
+        if (isHDRFormat(currentFormat)) {
+            // skip it, need hdr decode for Intel
+            // findIndex(astchdr, currentFormat);
+        }
+        else if (isSrgbFormat(currentFormat)) {
+            findIndex(astcsrgb, currentFormat);
+        }
+        else {
+            findIndex(astc, currentFormat);
+        }
+    }
+    else if (isBCFormat(currentFormat)) {
+        if (isHDRFormat(currentFormat)) {
+            // skip it for now, bc6h
+        }
+        else if (isSrgbFormat(currentFormat)) {
+            findIndex(bcsrgb, currentFormat);
+        }
+        else {
+            findIndex(bc, currentFormat);
+        }
+    }
+    
+    #undef findIndex
+    
+    return newFormat;
+}
+
+void encodeSrcForEncodeComparisons(bool increment) {
+    auto newFormat = encodeSrcTextureAsFormat(displayedFormat, increment);
+    
+     // TODO: have to encode and then decode astc on macOS-Intel
+     // load png and keep it around, and then call encode and then diff the image against the original pixels
+     // 565 will always differ from the original.
+     
+     // Once encode generated, then cache result, only ever display two textures
+     // in a comparison mode. Also have eyedropper sample from second texture
+     // could display src vs. encode, or cached textures against each other
+     // have PSNR too ?
+     
+    // see if the format is in cache
+    
+    // encode incremented format and cache, that way don't wait too long
+    // and once all encode formats generated, can cycle through them until next image loaded
+    
+    //KTXImage image;
+    //image.open(...);
+    //image.encode();
+    //decodeIfNeeded(...);
+    //comparisonTexture = [createImage:image];
+    //set that onto the shader to diff against after recontruct
+    
+    // this format after decode may not be the same
+    displayedFormat = newFormat;
+}
+*/
 
 // also NSPasteboardTypeURL
 // also NSPasteboardTypeTIFF
@@ -374,15 +515,17 @@ NSArray<NSString*>* pasteboardTypes = @[
     float maxZoom = std::max(128.0f, _showSettings->zoomFit);
         
     // don't allow image to get too big
-    if ((visibleWidth > maxZoom * (_showSettings->imageBoundsX + 2) * numTexturesX) ||
-        (visibleHeight > maxZoom * (_showSettings->imageBoundsY + 2) * numTexturesY)) {
+    int32_t gap = _showSettings->showAllPixelGap;
+    if ((visibleWidth > maxZoom * (_showSettings->imageBoundsX + gap) * numTexturesX) ||
+        (visibleHeight > maxZoom * (_showSettings->imageBoundsY + gap) * numTexturesY)) {
         _zoomGesture.magnification = _validMagnification;
         return;
     }
     
     // don't allow image to get too small
-    if ((visibleWidth < std::min((int32_t)_showSettings->imageBoundsX, 4)) ||
-        (visibleHeight < std::min((int32_t)_showSettings->imageBoundsY, 4))) {
+    int32_t minPixelSize = 4;
+    if ((visibleWidth < std::min((int32_t)_showSettings->imageBoundsX, minPixelSize)) ||
+        (visibleHeight < std::min((int32_t)_showSettings->imageBoundsY, minPixelSize))) {
         _zoomGesture.magnification = _validMagnification;
         return;
     }
@@ -1122,6 +1265,8 @@ NSArray<NSString*>* pasteboardTypes = @[
     // did setNeedsDisplay, but already doing that in loadTextureFromURL
 }
 
+
+
 // this doesn't seem to enable New/Open File menu items, but it should
 // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/EventArchitecture/EventArchitecture.html
 #if 0
@@ -1170,6 +1315,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     NSTrackingArea *_trackingArea;
 }
 
+
 - (void)viewDidLoad
 {
     [super viewDidLoad];
@@ -1199,6 +1345,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     [_view addTrackingArea:_trackingArea];
 
 }
+
 
 
 

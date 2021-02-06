@@ -879,7 +879,7 @@ using namespace simd;
             }
             
             // gap the contact sheet, note this 2 pixels is scaled on small textures by the zoom
-            int32_t gap = 2; // * _showSettings->viewContentScaleFactor;
+            int32_t gap = _showSettings->showAllPixelGap; // * _showSettings->viewContentScaleFactor;
             
             for (int32_t mip = 0; mip < _showSettings->maxLOD; ++mip) {
                 

@@ -18,6 +18,7 @@
 #include "KramImage.h"  // has config defines, move them out
 #include "KramMmapHelper.h"
 #include "KramTimer.h"
+#include "KramVersion.h"
 #include "TaskSystem.h"
 #include "lodepng/lodepng.h"
 
@@ -839,55 +840,82 @@ static void setupTestArgs(vector<const char*>& args)
     }
 }
 
+// display "version build kram"
 #if KRAM_RELEASE
 #define appName "kram"
-#define usageName appName
+#define usageName appName " " KRAM_VERSION
 #else
 #define appName "kram"
-#define usageName "DEBUG kram"
+#define usageName appName " DEBUG " KRAM_VERSION
 #endif
 
-void kramDecodeUsage()
+void kramDecodeUsage(bool showVersion = true)
 {
     KLOGI("Kram",
-          "Usage: " usageName
-          " decode\n"
+          "%s\n"
+          "Usage: kram decode\n"
           "\t [-swizzle rgba01]\n"
           "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
           "\t [-v/erbose]\n"
           "\t -i/nput .ktx\n"
           "\t -o/utput .ktx\n"
-          "\n");
+          "\n",
+          showVersion ? usageName : "" );
 }
 
-void kramInfoUsage()
+void kramInfoUsage(bool showVersion = true)
 {
     KLOGI("Kram",
-          "Usage: " usageName
-          " info\n"
+          "%s\n"
+          "Usage: kram info\n"
           "\t -i/nput <.png | .ktx>\n"
           "\t [-o/utput info.txt]\n"
           "\t [-v/erbose]\n"
-          "\n");
+          "\n",
+          showVersion ? usageName : "");
 }
 
-void kramScriptUsage()
+void kramScriptUsage(bool showVersion = true)
 {
     KLOGI("Kram",
-          "Usage: " usageName
-          " script\n"
+          "%s\n"
+          "Usage: kram script\n"
           "\t -i/nput kramscript.txt\n"
           "\t [-v/erbose]\n"
           "\t [-j/obs numJobs]\n"
           "\t [-c/ontinue]\tcontinue on errors\n"
-          "\n");
+          "\n",
+          showVersion ? usageName : "");
 }
 
-void kramEncodeUsage()
+void kramEncodeUsage(bool showVersion = true)
 {
+    const char* squishEnabled = "";
+    const char* bcencEnabled = "";
+    const char* ateEnabled = "";
+    const char* etcencEnabled = "";
+    const char* astcencEnabled = "";
+    
+    // prerocessor in MSVC can't handle this
+    #if !COMPILE_SQUISH
+    squishEnabled = "(DISABLED)";
+    #endif
+    #if !COMPILE_BCENC
+    bcencEnabled = "(DISABLED)";
+    #endif
+    #if !COMPILE_ATE
+    ateEnabled = "(DISABLED)";
+    #endif
+    #if !COMPILE_ASTCENC
+    astcencEnabled = "(DISABLED)";
+    #endif
+    #if !COMPILE_ETCENC
+    etcencEnabled = "(DISABLED)";
+    #endif
+    
     KLOGI("Kram",
-          "Usage: " usageName
-          " encode\n"
+          "%s\n"
+          "Usage: kram encode\n"
           "\t -f/ormat (bc1 | astc4x4 | etc2rgba | rgba16f)\n"
           "\t [-srgb] [-signed] [-normal]\n"
           "\t -i/nput <source.png | .ktx>\n"
@@ -897,7 +925,7 @@ void kramEncodeUsage()
           "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
           "\t [-resize (16x32 | pow2)]\n"
           "\n"
-          //"\t [-mipalign] [-mipnone]\n"
+          //"\t [-mipalign]\n"
           "\t [-mipnone]\n"
           "\t [-mipmin size] [-mipmax size]\n"
           "\n"
@@ -926,52 +954,27 @@ void kramEncodeUsage()
           "\t-format etc2[r|rg|rgb|rgba]"
           "\tETC2 compression - r11sn, rg11sn, rgba, rgba\n"
           "\t-format astc[4x4|5x5|6x6|8x8]"
-          "\tASTC and block size. ETC/BC are 4x4 only.\n"
+          "\tASTC compression - block size.\n"
           "\n"
 
           // can force an encoder when there is overlap
           "\t-encoder squish"
-          "\tbc[1,3,4,5]"
-          // prerocessor in MSVC can't handle this
-          //#if !COMPILE_SQUISH
-          //          "(DISABLED)"
-          //#endif
-          "\n"
-
+          "\tbc[1,3,4,5] %s\n" // can be disabled
+          
           "\t-encoder bcenc"
-          "\tbc[1,3,4,5,7]"
-          //#if !COMPILE_BCENC
-          //          "(DISABLED)"
-          //#endif
-          "\n"
-
+          "\tbc[1,3,4,5,7] %s\n" // can be disabled
+          
           "\t-encoder ate"
-          "\tbc[1,4,5,7]"
-          //#if !COMPILE_ATE
-          //          "(DISABLED)"
-          //#endif
-          "\n"
-
+          "\tbc[1,4,5,7] %s\n" // can be disabled
+          
           "\t-encoder ate"
-          "\tastc[4x4,8x8]"
-          //#if !COMPILE_ATE
-          //          "(DISABLED)"
-          //#endif
-          "\n"
+          "\tastc[4x4,8x8] %s\n" // can be disabled
 
           "\t-encoder astcenc"
-          "\tastc[4x4,5x5,6x6,8x8] ldr/hdr support"
-          //#if !COMPILE_ATE
-          //          "(DISABLED)"
-          //#endif
-          "\n"
+          "\tastc[4x4,5x5,6x6,8x8] ldr/hdr support %s\n" // can be disabled
 
           "\t-encoder etcenc"
-          "\tetc2[r,rg,rgb,rgba]"
-          //#if !COMPILE_ETCENC
-          //          "(DISABLED)"
-          //#endif
-          "\n"
+          "\tetc2[r,rg,rgb,rgba] %s\n" // can be disabled
 
           "\t-encoder explicit"
           "\tr|rg|rgba[8|16f|32f]\n"
@@ -986,7 +989,6 @@ void kramEncodeUsage()
           "\tOnly output mips >= size px\n"
           "\t-mipmax size"
           "\tOnly output mips <= size px\n"
-
           "\n"
 
           "\t-srgb"
@@ -1015,26 +1017,43 @@ void kramEncodeUsage()
 
           "\t-v"
           "\tVerbose encoding output\n"
-          "\n");
+          "\n",
+          showVersion ? usageName : "",
+          
+          squishEnabled,
+          bcencEnabled,
+          ateEnabled,
+          ateEnabled,
+          astcencEnabled,
+          etcencEnabled
+          );
 }
 
 void kramUsage()
 {
     KLOGI("Kram",
-          "SYNTAX\n" usageName "[encode | decode | info | script | ...]\n");
+          usageName "\n"
+          "SYNTAX\nkram [encode | decode | info | script | ...]\n"
+          );
 
-    kramEncodeUsage();
-    kramInfoUsage();
-    kramDecodeUsage();
-    kramScriptUsage();
+    kramEncodeUsage(false);
+    kramInfoUsage(false);
+    kramDecodeUsage(false);
+    kramScriptUsage(false);
 }
 
 static int32_t kramAppInfo(vector<const char*>& args)
 {
+    // this is help
+    int32_t argc = (int32_t)args.size();
+    if (argc == 0) {
+        kramInfoUsage();
+        return 0;
+    }
+    
     string srcFilename;
     string dstFilename;
 
-    int32_t argc = (int32_t)args.size();
     bool isVerbose = false;
 
     bool error = false;
@@ -1339,9 +1358,11 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         }
 
         sprintf(tmp,
+                "fmtk: %s\n"
                 "fmtm: %s (%d)\n"
                 "fmtv: %s (%d)\n"
                 "fmtg: %s (0x%04X)\n",
+                formatTypeName(metalFormat),
                 metalTypeName(metalFormat), metalFormat,
                 vulkanTypeName(metalFormat), vulkanType(metalFormat),
                 glTypeName(metalFormat), glType(metalFormat));
@@ -1354,8 +1375,10 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
             info += propText;
         }
 
-        // TODO: expand to more mip types
-        if (textureType == MyMTLTextureType2D && isVerbose) {
+        // TODO: handle zstd compressed KTX2 too, they have a length and compressed length field
+        // also Basis + zstd
+        
+        if (isVerbose) {
             // dump mips/dims, but this can be a lot of data on arrays
             int32_t mipLevel = 0;
             int32_t w = srcImage.width;
@@ -1363,11 +1386,12 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
             for (const auto& mip : srcImage.mipLevels) {
                 sprintf(tmp,
-                        "mipd: %dx%d\n"
                         "mipn: %d\n"
-                        "mipl: %zu\n"
+                        "mipd: %dx%d\n"
+                        "mips: %zu\n"
+                        "mipc: %dx\n"
                         "mipo: %zu\n",
-                        w, h, mipLevel++, mip.length, mip.offset);
+                        w, h, mipLevel++, mip.length, srcImage.totalChunks(), mip.offset);
                 info += tmp;
 
                 // drop a mip level
@@ -1381,14 +1405,19 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
 static int32_t kramAppDecode(vector<const char*>& args)
 {
+    // this is help
+    int32_t argc = (int32_t)args.size();
+    if (argc == 0) {
+        kramDecodeUsage();
+        return 0;
+    }
+    
     // decode and write out to ktx file for now
     // all mips, or no mips, can preserve name-value pairs in original
 
     // parse the command-line
     string srcFilename;
     string dstFilename;
-
-    int32_t argc = (int32_t)args.size();
 
     bool error = false;
     bool isVerbose = false;
@@ -1536,6 +1565,13 @@ static int32_t kramAppDecode(vector<const char*>& args)
 
 static int32_t kramAppEncode(vector<const char*>& args)
 {
+    // this is help
+    int32_t argc = (int32_t)args.size();
+    if (argc == 0) {
+        kramEncodeUsage();
+        return 0;
+    }
+    
     // parse the command-line
     string srcFilename;
     string dstFilename;
@@ -1543,8 +1579,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
     ImageInfoArgs infoArgs;
 
-    int32_t argc = (int32_t)args.size();
-
+    
     bool error = false;
     for (int32_t i = 0; i < argc; ++i) {
         // check for options
@@ -1922,8 +1957,13 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
 int32_t kramAppScript(vector<const char*>& args)
 {
+    // this is help
     int32_t argc = (int32_t)args.size();
-
+    if (argc == 0) {
+        kramScriptUsage();
+        return 0;
+    }
+    
     string srcFilename;
 
     bool isVerbose = false;
@@ -2151,7 +2191,7 @@ int32_t kramAppCommand(vector<const char*>& args)
 {
     // make sure next arg is a valid command type
     CommandType commandType = kCommandTypeUnknown;
-    if (args.size() > 1) {
+    if (args.size() >= 1) {
         const char* command = args[0];
         commandType = parseCommandType(command);
 

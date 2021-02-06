@@ -12,7 +12,7 @@ set(myTargetApp kramv)
 # the mac build has ObjC++
 project(
     ${myTargetApp}
-    VERSION 0.9.0
+    #VERSION 0.9.0
     LANGUAGES C CXX OBJCXX
 )
 

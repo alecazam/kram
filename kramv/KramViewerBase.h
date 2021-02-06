@@ -49,6 +49,9 @@ public:
     // Can mask various channels (r/g/b/a only, vs. all), may also add toggle of channel
     TextureChannels channels;
     
+    // this is gap used for showAll
+    int32_t showAllPixelGap = 2;
+    
     // These control which texture is viewed in single texture mode
     int32_t mipLOD = 0;
     int32_t maxLOD = 1;

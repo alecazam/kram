@@ -1072,34 +1072,16 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
 
         // ktx requires 4 byte alignment to rows of pixels (affext r8, rg8, r16f)
         // it's not enough to fix alignment below, so this needs fixed in mipStorage calc.
-        int32_t numPadding = 3 - ((mipStorageSize + 3) % 4);
-        if (numPadding != 0) {
-            // TODO: add error, need to pad rows not just stick pad at end
-            // this can happen on mips with formats below that don't align to 4 byte boundaries
-            // rgb8/16f also have this, but not supporting those formats currently.
-            return false;
-        }
-
-        // add 4 byte alignment into the mipOffset computations.
-        // This is only needed on explicit formats no already a multiple of 4
-        // and only on mip sizes that would not result in a multiple of 4.
-        //        if (numPadding > 0) {
-        //            if (info.pixelFormat == MyMTLPixelFormatR8Unorm) {
-        //                // 1-3
-        //            }
-        //            else if (info.pixelFormat == MyMTLPixelFormatRG8Unorm) {
-        //                assert(numPadding == 2);
-        //            }
-        //            else if (info.pixelFormat == MyMTLPixelFormatR16Float) {
-        //                assert(numPadding == 2);
-        //            }
-        //            else {
-        //                assert(false);
-        //            }
-        //        }
+//        int32_t numPadding = 3 - ((mipStorageSize + 3) % 4);
+//        if (numPadding != 0) {
+//            // TODO: add error, need to pad rows not just stick pad at end
+//            // this can happen on mips with formats below that don't align to 4 byte boundaries
+//            // rgb8/16f also have this, but not supporting those formats currently.
+//            return false;
+//        }
 
         // next row of mips are offset
-        mipOffset += mipStorageSize * header.totalChunks();  //  + numPadding;
+        mipOffset += mipStorageSize * header.totalChunks();
     }
 
     //----------------------------------------------
