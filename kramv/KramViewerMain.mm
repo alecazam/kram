@@ -111,10 +111,10 @@ using namespace kram;
         "software technologies of these companies\n"
         "  Khronos, Binomial, ARM, Google, and Apple\n"
         "and devs who generously shared their work.\n"
-        "  Rich Geldrich, Peter Harris, Mark Callow,\n"
+        "  Simon Brown, Rich Geldreich, Pete Harris,\n"
         "  Philip Rideout, Romain Guy, Colt McAnlis,\n"
         "  John Ratcliff, Sean Parent, David Ireland,\n"
-        "  Mike Frysinger, and Yann Collett\n"
+        "  Mark Callow, Mike Frysinger, Yann Collett\n"
     ]]];
     
     options[NSAboutPanelOptionCredits] = str;
