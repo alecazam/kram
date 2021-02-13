@@ -20,9 +20,11 @@
 #import "KramShaders.h"
 #include "KramLog.h"
 #include "KTXMipper.h"
+#include "KramMmapHelper.h"
 #include "KramImage.h"
 #include "KramViewerBase.h"
 #include "KramVersion.h" // keep kramv version in sync with libkram
+#include "KramZipHelper.h"
 
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;
@@ -80,7 +82,7 @@ using namespace kram;
 - (void)application:(NSApplication *)sender openURLs:(nonnull NSArray<NSURL *> *)urls
 {
     // see if this is called
-    NSLog(@"OpenURLs");
+    //NSLog(@"OpenURLs");
     
     // this is called from "Open In...", and also from OpenRecent documents menu
     MyMTKView* view = sender.mainWindow.contentView;
@@ -298,6 +300,11 @@ NSArray<NSString*>* pasteboardTypes = @[
     NSTextField* _hudLabel2;
     vector<string> _textSlots;
     ShowSettings* _showSettings;
+    
+    // allow zip files to be dropped and opened, and can advance through bundle content
+    ZipHelper _zip;
+    MmapHelper _zipMmap;
+    int32_t _fileIndex;
 }
 
 - (void)awakeFromNib
@@ -1096,6 +1103,12 @@ NSArray<NSString*>* pasteboardTypes = @[
             text += _showSettings->isPremul ? "On" : "Off";
             break;
             
+        case Key::J:
+            if ([self advanceTextureFromAchive:!isShiftKeyDown]) {
+                isChanged = true;
+                text = "Loaded " + _showSettings->lastFilename;
+            }
+            break;
             
         // mip up/down
         case Key::M:
@@ -1205,7 +1218,6 @@ NSArray<NSString*>* pasteboardTypes = @[
         // this turns it into a real path (supposedly works even with sandbox)
         NSURL * url = [NSURL URLWithString:urlString];
         
-        
         if ([self loadTextureFromURL:url]) {
             return YES;
         }
@@ -1214,11 +1226,76 @@ NSArray<NSString*>* pasteboardTypes = @[
     return NO;
 }
 
-- (BOOL)loadTextureFromURL:(NSURL*)url {
-    //NSLog(@"LoadTexture");
-    
-    const char* filename = url.fileSystemRepresentation;
 
+-(BOOL)loadArchive:(const char*)zipFilename
+{
+    // TODO: avoid loading the zip again if name and/or timestamp hasn't changed on it
+    
+    _zipMmap.close();
+    if (!_zipMmap.open(zipFilename)) {
+        return NO;
+    }
+   
+    // Note: if mmap fails, could read entire zip into memory
+    // and then still use the same code below.
+
+    if (!_zip.openForRead(_zipMmap.data(), _zipMmap.dataLength())) {
+        return NO;
+    }
+    
+    // load the first entry in the archive
+    _fileIndex = 0;
+    
+    return YES;
+}
+
+-(BOOL)advanceTextureFromAchive:(BOOL)increment
+{
+    if (!_zipMmap.data()) {
+        // no archive loaded
+        return NO;
+    }
+    
+    // this advances through the fileIndex of a dropped
+    size_t numEntries = _zip.zipEntrys().size();
+    if (numEntries == 0) {
+        return NO;
+    }
+    
+    if (increment)
+        _fileIndex = (_fileIndex + 1) % numEntries;
+    else
+        _fileIndex = (_fileIndex - 1 + numEntries) % numEntries;
+
+    // now lookup the filename and data at that entry
+    const auto& entry = _zip.zipEntrys()[_fileIndex];
+    const char* filename = entry.filename;
+    double timestamp = (double)entry.modificationDate;
+    
+    return [self loadTextureFromArchive:filename timestamp:timestamp];
+}
+
+- (BOOL)loadTextureFromArchive:(const char*)filename timestamp:(double)timestamp
+{
+    if (!(endsWithExtension(filename, ".png") ||
+          endsWithExtension(filename, ".ktx") ||
+          endsWithExtension(filename, ".ktx2")) )
+    {
+        return NO;
+    }
+        
+    const uint8_t* imageData = nullptr;
+    uint64_t imageDataLength = 0;
+    if (!_zip.extractRaw(filename, &imageData, imageDataLength)) {
+        return NO;
+    }
+     
+    string fullFilename = filename;
+    Renderer* renderer = (Renderer*)self.delegate;
+    if (![renderer loadTextureFromData:fullFilename timestamp:(double)timestamp imageData:imageData imageDataLength:imageDataLength]) {
+        return NO;
+    }
+    
     // set title to filename, chop this to just file+ext, not directory
     const char* filenameShort = strrchr(filename, '/');
     if (filenameShort == nullptr) {
@@ -1227,29 +1304,71 @@ NSArray<NSString*>* pasteboardTypes = @[
     else {
         filenameShort += 1;
     }
+        
+    // was using subtitle, but that's macOS 11.0 feature.
+    string title = "kramv - ";
+    title += filenameShort;
     
+    self.window.title = [NSString stringWithUTF8String: title.c_str()];
+        
+    // doesn't set imageURL or update the recent document menu
+    
+    self.needsDisplay = YES;
+    return YES;
+}
+    
+- (BOOL)loadTextureFromURL:(NSURL*)url {
+    //NSLog(@"LoadTexture");
+    
+    const char* filename = url.fileSystemRepresentation;
+
+    if (endsWithExtension(filename, ".zip")) {
+        if (!self.imageURL || ![self.imageURL isEqualTo:url]) {
+            BOOL isArchiveLoaded = [self loadArchive:filename];
+            
+            if (!isArchiveLoaded) {
+                return NO;
+            }
+            
+            // store the
+            self.imageURL = url;
+        }
+       
+        // now reload the filename if needed
+        const auto& entry = _zip.zipEntrys()[_fileIndex];
+        const char* filename = entry.filename;
+        double timestamp = entry.modificationDate;
+        
+        return [self loadTextureFromArchive:filename timestamp:timestamp];
+    }
+        
+    if (!(endsWithExtension(filename, ".png") ||
+          endsWithExtension(filename, ".ktx") ||
+          endsWithExtension(filename, ".ktx2")) )
+    {
+        return NO;
+    }
+        
+    Renderer* renderer = (Renderer*)self.delegate;
+    if (![renderer loadTexture:url]) {
+        return NO;
+    }
+    
+    // set title to filename, chop this to just file+ext, not directory
+    const char* filenameShort = strrchr(filename, '/');
+    if (filenameShort == nullptr) {
+        filenameShort = filename;
+    }
+    else {
+        filenameShort += 1;
+    }
+        
     // was using subtitle, but that's macOS 11.0 feature.
     string title = "kramv - ";
     title += filenameShort;
     
     self.window.title = [NSString stringWithUTF8String: title.c_str()];
     
-    if (endsWithExtension(filename, ".png")) {
-        Renderer* renderer = (Renderer*)self.delegate;
-        if (![renderer loadTexture:url]) {
-            return NO;
-        }
-    }
-    else if (endsWithExtension(filename, ".ktx") || endsWithExtension(filename, ".ktx2")) {
-        Renderer* renderer = (Renderer*)self.delegate;
-        if (![renderer loadTexture:url]) {
-            return NO;
-        }
-    }
-    else {
-        return NO;
-    }
-
     // add to recent document menu
     NSDocumentController *dc = [NSDocumentController sharedDocumentController];
     [dc noteNewRecentDocumentURL:url];

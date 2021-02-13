@@ -18,7 +18,10 @@ public:
     bool open(const char *filename);
     void close();
 
-public:
+    const uint8_t *data() { return addr; }
+    size_t dataLength() { return length; }
+    
+private:
     const uint8_t *addr = nullptr;
     size_t length = 0;
 };

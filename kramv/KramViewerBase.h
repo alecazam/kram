@@ -144,6 +144,9 @@ public:
     MyMTLPixelFormat originalFormat;
     
     void advanceDebugMode(bool isShiftKeyDown);
+    
+    string lastFilename;
+    double lastTimestamp = 0.0;
 };
 
 float4x4 matrix4x4_translation(float tx, float ty, float tz);

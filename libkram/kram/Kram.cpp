@@ -131,13 +131,13 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
 
     if (useMmap) {
         if (isKTX) {  // really want endsWidth
-            if (!LoadKtx(mmapHelper.addr, mmapHelper.length,
+            if (!LoadKtx(mmapHelper.data(), mmapHelper.dataLength(),
                          sourceImage)) {
                 return false;  // error
             }
         }
         else if (isPNG) {
-            if (!LoadPng(mmapHelper.addr, mmapHelper.length,
+            if (!LoadPng(mmapHelper.data(), mmapHelper.dataLength(),
                          sourceImage)) {
                 return false;  // error
             }
@@ -188,7 +188,7 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
     }
 
     if (useMmap) {
-        if (!sourceImage.open(mmapHelper.addr, mmapHelper.length)) {
+        if (!sourceImage.open(mmapHelper.data(), mmapHelper.dataLength())) {
             return false;
         }
     }
@@ -1168,8 +1168,8 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         }
 
         if (useMmap) {
-            data = srcMmapHelper.addr;
-            dataSize = (int32_t)srcMmapHelper.length;
+            data = srcMmapHelper.data();
+            dataSize = (int32_t)srcMmapHelper.dataLength();
         }
         else {
             if (!srcFileHelper.open(srcFilename.c_str(), "rb")) {

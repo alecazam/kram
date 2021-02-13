@@ -503,6 +503,10 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 	if bundle:
 		# TODO: build an asset catalog for app slicing and ODR on iOS/macOS, Android has similar
 		
+		# DONE: need to push/popDir but basically strip the full path before files are zipped.
+		#  want find to generate files from within the out/platform directory.
+		os.chdir(dstDirForPlatform)
+
 		# either store ktx2 or compress ktx in updating a zip with the data
 		if ktx2:
 			dstBundle = "bundle-" + platform + "-ktx2" + ".zip"
@@ -512,10 +516,6 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 			command = "find {0} -name '*.ktx' | zip -u -@ {1}".format(".", dstBundle)
 
 		print("running " + command)
-
-		# DONE: need to push/popDir but basically strip the full path before files are zipped.
-		#  want find to generate files from within the out/platform directory.
-		os.chdir(dstDirForPlatform)
 
 		# find or zip return number of file count, so have to check < 0
 		retval = subprocess.call(command, shell=True)

@@ -246,11 +246,11 @@ static int32_t numberOfMipmapLevels(const Image& image) {
         // TODO: use a MTLView to enable srgb or not, then can load and guess the srgb status
         // at a higher level, and also toggle on/off srgb conversion in the shader.
         
-        return [self loadTextureFromPNGData:mmapHelper.addr dataSize:(int32_t)mmapHelper.length isSRGB:isSRGB originalFormat:originalFormat];
+        return [self loadTextureFromPNGData:mmapHelper.data() dataSize:(int32_t)mmapHelper.dataLength() isSRGB:isSRGB originalFormat:originalFormat];
     }
     
     // route all data through the version that copies or does sync upload
-    return [self loadTextureFromData:mmapHelper.addr imageDataLength:(int32_t)mmapHelper.length originalFormat:originalFormat];
+    return [self loadTextureFromData:mmapHelper.data() imageDataLength:(int32_t)mmapHelper.dataLength() originalFormat:originalFormat];
 }
 
 - (id<MTLTexture>)createTexture:(KTXImage&)image {

@@ -24,7 +24,9 @@ namespace kram {
 //   allows it to accept per-frame update and drawable resize callbacks.
 @interface Renderer : NSObject <MTKViewDelegate>
 
--(nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view settings:(nonnull kram::ShowSettings*)settings;
+- (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view settings:(nonnull kram::ShowSettings*)settings;
+
+- (BOOL)loadTextureFromData:(const std::string&)fullFilename timestamp:(double)timestamp imageData:(nonnull const uint8_t*)imageData imageDataLength:(uint64_t)imageDataLength;
 
 - (BOOL)loadTexture:(nonnull NSURL *)url;
 

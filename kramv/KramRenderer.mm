@@ -77,8 +77,6 @@ using namespace simd;
     KramLoader *_loader;
     MTKMesh *_mesh;
     
-    string _lastFilename;
-    double _lastTimestamp;
     
     ShowSettings* _showSettings;
 }
@@ -91,7 +89,6 @@ using namespace simd;
         _showSettings = settings;
         
         _device = view.device;
-        _lastTimestamp = 0.0;
         
         _loader = [KramLoader new];
         _loader.device = _device;
@@ -398,8 +395,37 @@ using namespace simd;
     }
 }
 
-
-
+- (BOOL)loadTextureFromData:(const string&)fullFilename timestamp:(double)timestamp imageData:(nonnull const uint8_t*)imageData imageDataLength:(uint64_t)imageDataLength
+{
+    // image can be decoded to rgba8u if platform can't display format natively
+    // but still want to identify blockSize from original format
+    bool isTextureChanged =
+        (fullFilename != _showSettings->lastFilename) ||
+        (timestamp != _showSettings->lastTimestamp);
+    
+    if (isTextureChanged) {
+        // synchronously cpu upload from ktx file to texture
+        MTLPixelFormat originalFormatMTL = MTLPixelFormatInvalid;
+        id<MTLTexture> texture = [_loader loadTextureFromData:imageData imageDataLength:imageDataLength originalFormat:&originalFormatMTL];
+        if (!texture) {
+            return NO;
+        }
+        
+        // TODO: this only works with paths, reading file off disk, but here it's in archive
+        // _showSettings->imageInfo = kramInfoToString(fullFilename, isVerbose);
+        _showSettings->imageInfo.clear();
+        
+        _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
+        
+        _showSettings->lastFilename = fullFilename;
+        _showSettings->lastTimestamp = timestamp;
+        
+        _colorMap = texture;
+    }
+    
+    return [self loadTextureImpl:fullFilename isTextureChanged:isTextureChanged];
+}
+    
 - (BOOL)loadTexture:(nonnull NSURL *)url
 {
     string fullFilename = [url.path UTF8String];
@@ -411,65 +437,60 @@ using namespace simd;
     
     // DONE: tie this to url and modstamp differences
     double timestamp = fileDate.timeIntervalSince1970;
-    bool isTextureChanged = (fullFilename != _lastFilename) || (timestamp != _lastTimestamp);
+    bool isTextureChanged =
+        (fullFilename != _showSettings->lastFilename) ||
+        (timestamp != _showSettings->lastTimestamp);
     
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
-    MyMTLPixelFormat format;
-    MyMTLPixelFormat originalFormat = _showSettings->originalFormat;
-    
-    id<MTLTexture> texture;
-    
     if (isTextureChanged) {
         // synchronously cpu upload from ktx file to texture
         MTLPixelFormat originalFormatMTL = MTLPixelFormatInvalid;
-        texture = [_loader loadTextureFromURL:url originalFormat:&originalFormatMTL];
+        id<MTLTexture> texture = [_loader loadTextureFromURL:url originalFormat:&originalFormatMTL];
         if (!texture) {
             return NO;
         }
         
-        _colorMap = texture;
-        
-        format = (MyMTLPixelFormat)texture.pixelFormat;
-        originalFormat = (MyMTLPixelFormat)originalFormatMTL;
-        _showSettings->originalFormat = originalFormat;
-        
-        _lastFilename = fullFilename;
-        _lastTimestamp = timestamp;
-        
         bool isVerbose = false;
         _showSettings->imageInfo = kramInfoToString(fullFilename, isVerbose);
         
-        // use MTLView to handle toggle of srgb read state (writes are still lin -> srgb framebuffer)
-        //_colorMapView = nil;
-       
-        // if we guess wrong on srgb, then have ability to see without srgb reads
-        // TODO: this only works for sRGBA8 <-> RGBA8, not BC1_SRGB <-> BC1 and other encode formats
-        // require that MTLTextureUsagePixelFormatView be set on the originally created texture.  Ugh.
-//        bool isSrgbFormat_ = isSrgbFormat(format);
-//        if (isSrgbFormat_) {
-//            MyMTLPixelFormat fmtNoSRGB = toggleSrgbFormat(format);
-//            _colorMapView = [_colorMap newTextureViewWithPixelFormat:(MTLPixelFormat)fmtNoSRGB];
-//        }
+        _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
         
-        Int2 blockDims = blockDimsOfFormat(originalFormat);
+        _showSettings->lastFilename = fullFilename;
+        _showSettings->lastTimestamp = timestamp;
+        
+        _colorMap = texture;
+    }
+    
+    return [self loadTextureImpl:fullFilename isTextureChanged:isTextureChanged];
+}
+
+static string toLower(const string& text) {
+    return string([[[NSString stringWithUTF8String:text.c_str()] lowercaseString] UTF8String]);
+}
+
+- (BOOL)loadTextureImpl:(const string&)fullFilename isTextureChanged:(BOOL)isTextureChanged
+{
+    if (isTextureChanged) {
+        Int2 blockDims = blockDimsOfFormat(_showSettings->originalFormat);
         _showSettings->blockX = blockDims.x;
         _showSettings->blockY = blockDims.y;
     }
     
-    texture = _colorMap;
+    id<MTLTexture> texture = _colorMap;
     
-    format = (MyMTLPixelFormat)texture.pixelFormat;
-    originalFormat = _showSettings->originalFormat;
+    MyMTLPixelFormat format = (MyMTLPixelFormat)texture.pixelFormat;
+    MyMTLPixelFormat originalFormat = _showSettings->originalFormat;
     
     // based on original or transcode?
     _showSettings->isSigned = isSignedFormat(format);
     
-    //_showSettings->isSRGBShown = true;
-    
     // need a way to get at KTXImage, but would need to keep mmap alive
     // this doesn't handle normals that are ASTC, so need more data from loader
-    string filename = [[url.path lowercaseString] UTF8String];
+    string fullFilenameCopy = fullFilename;
+
+    // this is so unreadable
+    string filename = toLower(fullFilenameCopy);
 
     // could cycle between rrr1 and r001.
     int32_t numChannels = numChannelsOfFormat(originalFormat);
@@ -691,51 +712,53 @@ using namespace simd;
 
 - (void)drawInMTKView:(nonnull MTKView *)view
 {
-    /// Per frame updates here
+    @autoreleasepool {
+        /// Per frame updates here
 
-    // TODO: move this out, needs to get called off mouseMove, but don't want to call drawMain
-    [self drawSample];
-    
-    dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
-
-    _uniformBufferIndex = (_uniformBufferIndex + 1) % MaxBuffersInFlight;
-
-    id <MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
-    commandBuffer.label = @"MyCommand";
-
-    __block dispatch_semaphore_t block_sema = _inFlightSemaphore;
-    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */)
-     {
-         dispatch_semaphore_signal(block_sema);
-     }];
-
-    [self _updateGameState];
-    
-    // use to autogen mipmaps if needed, might eliminate this since it's always box filter
-    // TODO: do mips via kram instead, but was useful for pow-2 mip comparisons.
-    
-    // also use to readback pixels
-    // also use for async texture upload
-    bool needsBlit = _loader.isMipgenNeeded && _colorMap.mipmapLevelCount > 1;
-    if (needsBlit) {
-        id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
-        blitEncoder.label = @"MyBlitEncoder";
+        // TODO: move this out, needs to get called off mouseMove, but don't want to call drawMain
+        [self drawSample];
         
-        // autogen mips will include srgb conversions, so toggling srgb on/off isn't quite correct
-        if (_loader.mipgenNeeded) {
-            [blitEncoder generateMipmapsForTexture:_colorMap];
+        dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
+
+        _uniformBufferIndex = (_uniformBufferIndex + 1) % MaxBuffersInFlight;
+
+        id <MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+        commandBuffer.label = @"MyCommand";
+
+        __block dispatch_semaphore_t block_sema = _inFlightSemaphore;
+        [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */)
+         {
+             dispatch_semaphore_signal(block_sema);
+         }];
+
+        [self _updateGameState];
+        
+        // use to autogen mipmaps if needed, might eliminate this since it's always box filter
+        // TODO: do mips via kram instead, but was useful for pow-2 mip comparisons.
+        
+        // also use to readback pixels
+        // also use for async texture upload
+        bool needsBlit = _loader.isMipgenNeeded && _colorMap.mipmapLevelCount > 1;
+        if (needsBlit) {
+            id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
+            blitEncoder.label = @"MyBlitEncoder";
             
-            _loader.mipgenNeeded = NO;
+            // autogen mips will include srgb conversions, so toggling srgb on/off isn't quite correct
+            if (_loader.mipgenNeeded) {
+                [blitEncoder generateMipmapsForTexture:_colorMap];
+                
+                _loader.mipgenNeeded = NO;
+            }
+        
+            [blitEncoder endEncoding];
         }
-    
-        [blitEncoder endEncoding];
+        
+        
+        [self drawMain:commandBuffer view:view];
+        
+        [commandBuffer presentDrawable:view.currentDrawable];
+        [commandBuffer commit];
     }
-    
-    
-    [self drawMain:commandBuffer view:view];
-    
-    [commandBuffer presentDrawable:view.currentDrawable];
-    [commandBuffer commit];
 }
 
 - (void)drawMain:(id<MTLCommandBuffer>)commandBuffer view:(nonnull MTKView *)view {
