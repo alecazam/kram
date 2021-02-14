@@ -271,7 +271,7 @@ Reduced memory by 4x and passing down rgba8u instead of rgba32f.  Converted to 3
 
 ```
 
-### Open Source Usage
+### Open source usage
 
 kram includes additional open-source:
 
@@ -286,7 +286,7 @@ kram includes additional open-source:
 | zstd           | Yann Collett (FB)  | BSD-2     | KTX2 mip decode           |
 | miniz	         | Rich Gelreich      | Unlicense | bundle support via zip    |
 
-#### Open Source Changes
+#### Open source changes
 
 * lodepng - altered header paths.
 * SSE2Neon - updated to newer arm64 permute instructions.
@@ -297,9 +297,10 @@ kram includes additional open-source:
 * zstd - using single file version of zstd for decode, disabled encode paths
 * miniz - expose raw data and offset for mmap-ed zip files, disabled writer, disable read crc checks, in .cpp file
 
-## kram Features to complete:
+## kram unstarted features:
 
 * Tile command for SVT tiling
+* Block twiddling support for consoles
 * Merge command to combine images (similar to ImageMagick)
 * Atlas command to atlas to 2D and 2D array textures.  Display names, show bounds of atlases.
 * 3D chart flattening.
@@ -314,6 +315,7 @@ kram includes additional open-source:
 * Run srgb conversion on endpoint data after fitting linear color point cloud
 * PSNR stats off encode + decode
 * Dump stats on BC6/7 block types, and ASTC void extent, dual-plane, etc
+* Iterate through block encoded types on source images to help artists see tradeoffs
 
 ### Test Images
 
@@ -601,3 +603,18 @@ kram uses half4/float4 to preserve precision when srgb or premul are specified.
 The encoders all have to encode non-linear srgb point clouds, which isn't correct.
 
 ```
+
+### On texture alases (TODO:)
+
+2D atlas packing works for source textures, but suffers from many issues.  Often packed by hand or algorithm, the results look great as PNG where there are no mips and no block encoding. But the images break down once textures are block encoded. These are some of the complex problems:
+
+* Mip bleed - Solved with mip lod clamping.
+* Alignment bleed - Solved with padding.
+* Block bleed - Solved with pow2 blocks - 4x4 scales down to 2x2 and 1x1.  6x6 scales to non-integral 3x3 and 1.5x1.5.
+* Clamp only - Solved by disabling wrap/mirror modes and uv scaling.
+* Complex pack - stb_rect_pack tightly pack images to a 2d area without accounting for bleed issues
+ 
+kram will soon offer an atlas mode that uses ES3-level 2d array textures.  These waste some space, but are much simpler to pack, provide a full encoded mip chain with any block type, and also avoid the 5 problems mentioned above.  Named atlas entries reference a given array element, but could be repacked and remapped as used to a smaller atlas.  Dropping mip levels can be done across all entries, but is a little harder for a single array element.  Sparse texture works correctly for 2d array textures.  Can draw many types of objects and particles with only a single texture array.
+
+The idea is to copy all atlased images to a 2d vertical strip.  This makes row-byte handling simpler.  Then kram can already convert a vertical strip to a 2D array, and the output rectangle, array index, mip range, and altas names are tracked as well.
+
