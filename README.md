@@ -54,7 +54,7 @@ N - toggle signed/unsigned
 ⇧F advance face
 ⇧M advance mip
 
-⇧J advance bundle image (can traverse zip of ktx/ktx files)
+⇧J advance bundle image (can traverse zip of ktx/ktx2 files)
 ```
 
 ### Limitations
