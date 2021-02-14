@@ -610,6 +610,6 @@ The encoders all have to encode non-linear srgb point clouds, which isn't correc
 * Alignment bleed - Solved with padding.
 * Block bleed - Solved with pow2 blocks - 4x4 scales down to 2x2 and 1x1.  6x6 scales to non-integral 3x3 and 1.5x1.5.
 * Clamp only - Solved by disabling wrap/mirror modes and uv scaling.
-* Complex pack - stb_rect_pack and many others try to solve rectangle packing to minimize waste on 2d sheet, but often spill to more textures.
+* Complex pack - stb_rect_pack tightly pack images to a 2d area without accounting for bleed issues
  
 kram will soon offer an atlas mode that uses ES3-level 2d array textures.  These waste some space, but are much simpler to pack, provide a full encoded mip chain with any block type, and also avoid the 5 problems mentioned above.  Named atlas entries reference a given array element, but could be repacked and remapped as used to a smaller atlas.  Dropping mip levels can be done across all entries, but it a little harder for a single array element.  Sparse texture works correctly for 2d array textures.  Can draw many types of objects and particles with only a single texture set.
