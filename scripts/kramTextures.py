@@ -17,6 +17,9 @@ import time
 # cli handling
 import click
 
+# command line arg parsing for atlas
+import re
+
 # TODO: this won't run after install on Windows for me, fine on Mac
 # for physical core count to limit spawns
 #import psutil
@@ -124,6 +127,23 @@ class TextureProcessor:
 			
 		return kind
 
+	def parseAtlasChunks(self, name):
+		name = name.lower()
+	
+		# assume 2d texture for everything
+		chunksX = 0
+		chunksY = 0
+
+		if ("-atlas" in name):
+			match = re.search(r"-atlas\d+x\d+", name)
+			if match: 
+				nums = re.findall(r'\d+', match.group())
+
+				chunksX = int(nums[0])
+				chunksY = int(nums[1])
+				
+		return chunksX, chunksY
+
 	def spawn(self, command):
 		print("running " + command)
 		
@@ -186,7 +206,14 @@ class TextureProcessor:
 		}
 		typeText = switcher.get(texType, " -type 2d")
 
-		cmd = "encode" + fmt + typeText + " -i " + srcPath + " -o " + dstFile
+		# this could work on 3d and cubearray textures, but for now only use on 2D textures
+		chunksText = ""
+		if texType == TextureType.Tex2DArray:
+			chunksX, chunksY = self.parseAtlasChunks(srcRoot)
+			if chunksX > 0 and chunksY > 0:
+				chunksText = " -chunks {0}x{1}".format(chunksX, chunksY)
+
+		cmd = "encode" + fmt + typeText + chunksText + " -i " + srcPath + " -o " + dstFile
 
 		# can print out commands to script and then process that all in C++
 		if self.doScript:
@@ -501,7 +528,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 	# Bundling
 	
 	if bundle:
-		# TODO: build an asset catalog for app slicing and ODR on iOS/macOS, Android has similar
+		# TODO: build an asset catalog symlinked to zip for app slicing and ODR on iOS/macOS, Android has similar
 		
 		# DONE: need to push/popDir but basically strip the full path before files are zipped.
 		#  want find to generate files from within the out/platform directory.

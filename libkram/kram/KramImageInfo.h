@@ -68,6 +68,11 @@ public:
 
     string swizzleText;
     string averageChannels;
+    
+    // count of chunks to help turn 2d texture into 2d array, 3d, cubearray
+    int32_t chunksX = 0;
+    int32_t chunksY = 0;
+    int32_t chunksCount = 0;
 };
 
 // preset data that contains all inputs about the encoding
@@ -141,6 +146,10 @@ public:
 
     int32_t mipMinSize = 1;
     int32_t mipMaxSize = 32 * 1024;
+    
+    int32_t chunksX = 0;
+    int32_t chunksY = 0;
+    int32_t chunksCount = 0;
 };
 
 bool isSwizzleValid(const char* swizzle);
@@ -149,7 +158,8 @@ bool isChannelValid(const char* channels);
 
 bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
                          vector<Int2>& chunkOffsets, KTXHeader& header,
-                         bool& doMipmaps);
+                         bool& doMipmaps,
+                         int32_t chunksX, int32_t chunksY, int32_t chunksCount);
 
 bool validateFormatAndEncoder(ImageInfoArgs& infoArgs);
 

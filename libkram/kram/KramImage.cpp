@@ -956,7 +956,9 @@ bool Image::encode(ImageInfo& info, FILE* dstFile) const
     int32_t h = _height;
 
     if (!validateTextureType(info.textureType, w, h, chunkOffsets, header,
-                             info.doMipmaps)) {
+                             info.doMipmaps,
+                             info.chunksX, info.chunksY, info.chunksCount))
+    {
         return false;
     }
 

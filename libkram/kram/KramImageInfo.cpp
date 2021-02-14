@@ -620,10 +620,12 @@ bool validateFormatAndEncoder(ImageInfoArgs& infoArgs)
 
 bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
                          vector<Int2>& chunkOffsets, KTXHeader& header,
-                         bool& doMipmaps)
+                         bool& doMipmaps,
+                         int32_t chunksX, int32_t chunksY, int32_t chunksCount)
 {
     // TODO: add error messages to false cases to help with generating
     // TODO: support non-pow2 cubemaps and cubemap arrays?
+    // TODO: tie chunks into 3d, cubearray so don't have to use long strips
 
     if (textureType == MyMTLTextureTypeCube) {
         header.numberOfFaces = 6;
@@ -742,29 +744,53 @@ bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
         }
     }
     else if (textureType == MyMTLTextureType2DArray) {
-        if (w > h) {
-            // horizontal strip
-            header.numberOfArrayElements = w / h;
-            if (w != (int32_t)(h * header.numberOfArrayElements)) {
-                return false;
-            }
-
-            w = h;  // assume square
+        
+        if (chunksCount > 0) {
+            w = w / chunksX;
+            h = h / chunksY;
+            
+            // this can be smaller than chunksX * chunkY, but assume chunks packed up and to left
+            header.numberOfArrayElements = chunksCount;
+            
+            int32_t x = 0;
+            int32_t y = 0;
             for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
-                Int2 chunkOffset = {w * i, 0};
+                if ((i > 0) && ((i % chunksX) == 0)) {
+                    y++;
+                    x = 0;
+                }
+                
+                Int2 chunkOffset = {w * x, h * y};
                 chunkOffsets.push_back(chunkOffset);
+                
+                x++;
             }
         }
         else {
-            header.numberOfArrayElements = h / w;
-            if (h != (int32_t)(w * header.numberOfArrayElements)) {
-                return false;
-            }
+            if (w > h) {
+                // horizontal strip
+                header.numberOfArrayElements = w / h;
+                if (w != (int32_t)(h * header.numberOfArrayElements)) {
+                    return false;
+                }
 
-            h = w;  // assume square
-            for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
-                Int2 chunkOffset = {0, h * i};
-                chunkOffsets.push_back(chunkOffset);
+                w = h;  // assume square
+                for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
+                    Int2 chunkOffset = {w * i, 0};
+                    chunkOffsets.push_back(chunkOffset);
+                }
+            }
+            else {
+                header.numberOfArrayElements = h / w;
+                if (h != (int32_t)(w * header.numberOfArrayElements)) {
+                    return false;
+                }
+
+                h = w;  // assume square
+                for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
+                    Int2 chunkOffset = {0, h * i};
+                    chunkOffsets.push_back(chunkOffset);
+                }
             }
         }
     }
@@ -1014,6 +1040,11 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
         hasAlpha = false;
     if (!isColorFormat(pixelFormat))
         hasColor = false;
+    
+    // copy over chunks
+    chunksX = args.chunksX;
+    chunksY = args.chunksY;
+    chunksCount = args.chunksCount;
 }
 
 void ImageInfo::optimizeFormat()

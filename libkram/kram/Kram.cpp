@@ -929,6 +929,7 @@ void kramEncodeUsage(bool showVersion = true)
           "\t [-mipnone]\n"
           "\t [-mipmin size] [-mipmax size]\n"
           "\n"
+          "\t [-chunks 4x4]\n"
           "\t [-swizzle rg01]\n"
           "\t [-avg rxbx]\n"
           "\t [-sdf]\n"
@@ -1010,6 +1011,9 @@ void kramEncodeUsage(bool showVersion = true)
           "\tChange format from bc7/3 to bc1, or etc2rgba to rgba if opaque\n"
           "\n"
 
+          "\t-chunks 4x4"
+          "\tSpecifies how many chunks to split up texture into 2darray\n"
+          
           "\t-swizzle [rgba01 x4]"
           "\tSpecifies pre-encode swizzle pattern\n"
           "\t-avg [rgba]"
@@ -1695,6 +1699,32 @@ static int32_t kramAppEncode(vector<const char*>& args)
             continue;
         }
 
+        else if (isStringEqual(word, "-chunks")) {
+            ++i;
+            if (i >= argc) {
+                KLOGE("Kram", "chunks count missing");
+                error = true;
+                continue;
+            }
+
+            const char* chunksString = args[i];
+            int32_t chunksX = 0;
+            int32_t chunksY = 0;
+            if (sscanf(chunksString, "%dx%d", &chunksX, &chunksY) != 2) {
+                KLOGE("Kram", "chunks count arg invalid");
+                error = true;
+            }
+            
+            // this is a count of how many chunks (tiles) across and down
+            // currently assuming all slots contain data, but may need a total count
+            // also an assumption that texture dimensions evenly divisible by count
+            infoArgs.chunksX = chunksX;
+            infoArgs.chunksY = chunksY;
+            infoArgs.chunksCount = chunksX * chunksY;
+            
+            continue;
+        }
+        
         else if (isStringEqual(word, "-avg")) {
             ++i;
             const char* channelString = args[i];
