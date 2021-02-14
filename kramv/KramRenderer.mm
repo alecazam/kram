@@ -425,7 +425,9 @@ using namespace simd;
         _showSettings->lastFilename = fullFilename;
         _showSettings->lastTimestamp = timestamp;
         
-        _colorMap = texture;
+        @autoreleasepool {
+            _colorMap = texture;
+        }
     }
     
     return [self loadTextureImpl:fullFilename isTextureChanged:isTextureChanged];
@@ -464,7 +466,9 @@ using namespace simd;
         _showSettings->lastFilename = fullFilename;
         _showSettings->lastTimestamp = timestamp;
         
-        _colorMap = texture;
+        @autoreleasepool {
+            _colorMap = texture;
+        }
     }
     
     return [self loadTextureImpl:fullFilename isTextureChanged:isTextureChanged];

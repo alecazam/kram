@@ -47,6 +47,11 @@ set_target_properties(${myTargetApp} PROPERTIES
     XCODE_ATTRIBUTE_GCC_ENABLE_CPP_EXCEPTIONS NO
     XCODE_ATTRIBUTE_GCC_ENABLE_CPP_RTTI NO
 
+    # can't believe this isn't on by default in CMAKE
+    XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+    
+    #-------------------------
+        
     # libs can use dwarf, but apps need dSym generated
     XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
     XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH "NO"

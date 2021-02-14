@@ -253,7 +253,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     return [self loadTextureFromData:mmapHelper.data() imageDataLength:(int32_t)mmapHelper.dataLength() originalFormat:originalFormat];
 }
 
-- (id<MTLTexture>)createTexture:(KTXImage&)image {
+- (nullable id<MTLTexture>)createTexture:(KTXImage&)image {
     MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
 
     // Indicate that each pixel has a blue, green, red, and alpha channel, where each channel is

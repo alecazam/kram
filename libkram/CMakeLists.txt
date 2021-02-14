@@ -143,6 +143,9 @@ if (APPLE)
         # turn off exceptions/rtti
         XCODE_ATTRIBUTE_GCC_ENABLE_CPP_EXCEPTIONS NO
         XCODE_ATTRIBUTE_GCC_ENABLE_CPP_RTTI NO
+        
+        # can't believe this isn't on by default in CMAKE
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
     )
 
     target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h -W -Wall)
