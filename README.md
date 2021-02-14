@@ -272,15 +272,16 @@ Reduced memory by 4x and passing down rgba8u instead of rgba32f.  Converted to 3
 ### Open Source  Usage
 Kram includes additional open-source:
 
-| Library        | Author             | License | Purpose                   |
-|----------------|--------------------|---------|---------------------------|
-| lodepng        | Lode Vandevenne    | MIT     | png encode/decode         |
-| SSE2Neon       | John W. Ratcliff   | MIT     | sse to neon               |
-| heman          | Philip Rideout     | MIT     | parabola EDT for SDF      |
-| TaskSystem     | Sean Parent        | MIT     | C++11 work queue          |
-| tmpfileplus    | David Ireland      | Moz 2.0 | fixes C tmpfile api       |
-| mmap universal | Mike Frysinger     | Pub     | mmap on Windows           |
-| zstd           | Yann Collett (FB)  | BSD-2   | KTX2 mip decode           |
+| Library        | Author             | License   | Purpose                   |
+|----------------|--------------------|-----------|---------------------------|
+| lodepng        | Lode Vandevenne    | MIT       | png encode/decode         |
+| SSE2Neon       | John W. Ratcliff   | MIT       | sse to neon               |
+| heman          | Philip Rideout     | MIT       | parabola EDT for SDF      |
+| TaskSystem     | Sean Parent        | MIT       | C++11 work queue          |
+| tmpfileplus    | David Ireland      | Moz 2.0   | fixes C tmpfile api       |
+| mmap universal | Mike Frysinger     | Pub       | mmap on Windows           |
+| zstd           | Yann Collett (FB)  | BSD-2     | KTX2 mip decode           |
+| miniz	         | Rich Gelreich      | Unlicense | bundle support via zip    |
 
 ```
 lodepng
