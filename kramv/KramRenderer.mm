@@ -411,10 +411,15 @@ using namespace simd;
             return NO;
         }
         
-        // TODO: this only works with paths, reading file off disk, but here it's in archive
-        // _showSettings->imageInfo = kramInfoToString(fullFilename, isVerbose);
-        _showSettings->imageInfo.clear();
-        
+        // archive shouldn't contain png, so only support ktx/ktx2 here
+        // TODO: have loader return KTXImage instead of parsing it again
+        KTXImage sourceImage;
+        if (!sourceImage.open(imageData,imageDataLength)) {
+            return NO;
+        }
+        bool isVerbose = false;
+        _showSettings->imageInfo = kramInfoKTXToString(fullFilename, sourceImage, isVerbose);
+           
         _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
         
         _showSettings->lastFilename = fullFilename;

@@ -32,7 +32,8 @@ public:
 
     void close();
 
-    int size() const;
+    // returns -1 if stat call fails
+    int64_t size() const;
 
     FILE* pointer() { return _fp; }
 

@@ -947,7 +947,8 @@ NSArray<NSString*>* pasteboardTypes = @[
                    "Hud, ⇧L-reload, ⇧0-fit\n"
                    "Checker, ⇧D-block/px grid, Info\n"
                    "W-wrap, Premul, N-signed\n"
-                   "⇧Mip, ⇧Face, ⇧Y-array/slice";
+                   "⇧Mip, ⇧Face, ⇧Y-array/slice\n"
+                   "⇧J-next bundle image\n";
             break;
             
         case Key::Zero: { // scale and reset pan
@@ -1277,7 +1278,7 @@ NSArray<NSString*>* pasteboardTypes = @[
 
 - (BOOL)loadTextureFromArchive:(const char*)filename timestamp:(double)timestamp
 {
-    if (!(endsWithExtension(filename, ".png") ||
+    if (!(//endsWithExtension(filename, ".png") ||
           endsWithExtension(filename, ".ktx") ||
           endsWithExtension(filename, ".ktx2")) )
     {

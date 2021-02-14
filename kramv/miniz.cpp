@@ -4852,7 +4852,7 @@ size_t mz_zip_reader_get_raw_data_offset(mz_zip_archive *pZip, mz_uint file_inde
     mz_uint8 *pLocal_header = (mz_uint8 *)local_header_u32;
     
     // just so can read the data in debugger
-    mz_local_file_header* header = (mz_local_file_header*)&local_header_u32;
+    //mz_local_file_header* header = (mz_local_file_header*)&local_header_u32;
     
     if (!mz_zip_reader_file_stat(pZip, file_index, &file_stat))
         return 0;

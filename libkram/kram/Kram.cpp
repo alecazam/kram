@@ -1180,7 +1180,9 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
             // read entire png into memory
             // even though really just want to peek at header
-            int32_t size = srcFileHelper.size();
+            int64_t size = srcFileHelper.size();
+            if (size < 0) return "";
+            
             srcFileBuffer.resize(size);
             if (!srcFileHelper.read(srcFileBuffer.data(), size)) {
                 return "";
@@ -1188,95 +1190,9 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
             data = srcFileBuffer.data();
             dataSize = (int32_t)srcFileBuffer.size();
+            
+            info = kramInfoPNGToString(srcFilename, data, dataSize, isVerbose);
         }
-
-        // vector<uint8_t> pixels;
-        uint32_t width = 0;
-        uint32_t height = 0;
-        uint32_t errorLode = 0;
-
-        // can identify 16unorm data for heightmaps via this call
-        LodePNGState state;
-        lodepng_state_init(&state);
-
-        errorLode = lodepng_inspect(&width, &height, &state, data, dataSize);
-        if (errorLode != 0) {
-            KLOGE("Kram", "info couldn't open png file");
-            return "";
-        }
-
-        bool hasColor = true;
-        bool hasAlpha = true;
-        bool hasPalette = state.info_png.color.colortype == LCT_PALETTE;
-
-        switch (state.info_png.color.colortype) {
-            case LCT_GREY:
-            case LCT_GREY_ALPHA:
-                hasColor = false;
-                break;
-            case LCT_RGB:
-            case LCT_RGBA:
-            case LCT_PALETTE:  // ?
-                hasColor = true;
-                break;
-        }
-
-        switch (state.info_png.color.colortype) {
-            case LCT_GREY:
-            case LCT_RGB:
-                hasAlpha = false;
-                break;
-            case LCT_RGBA:
-            case LCT_GREY_ALPHA:
-            case LCT_PALETTE:  // ?
-                hasAlpha = true;
-                break;
-        }
-
-        string tmp;
-        bool isMB = (dataSize > (512 * 1024));
-        sprintf(tmp,
-                "file: %s\n"
-                "size: %d\n"
-                "sizm: %0.3f %s\n",
-                srcFilename.c_str(),
-                dataSize,
-                isMB ? dataSize / (1024.0f * 1024.0f) : dataSize / 1024.0f,
-                isMB ? "MB" : "KB");
-        info += tmp;
-
-        sprintf(tmp,
-                "type: %s\n"
-                "dims: %dx%d\n"
-                "dimm: %0.3f MP\n"
-                "bitd: %d\n"
-                "colr: %s\n"
-                "alph: %s\n"
-                "palt: %s\n",
-                textureTypeName(MyMTLTextureType2D),
-                width, height,
-                width * height / (1000.0f * 1000.0f),
-                state.info_png.color.bitdepth,
-                hasColor ? "y" : "n",
-                hasAlpha ? "y" : "n",
-                hasPalette ? "y" : "n");
-        info += tmp;
-
-        // optional block with ppi
-        // TODO: inspect doesn't parse this block, only decode call does
-//        if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
-//            float metersToInches = 39.37;
-//            sprintf(tmp,
-//                    "ppix: %d\n"
-//                    "ppiy: %d\n",
-//                    (int32_t)(state.info_png.phys_x * metersToInches),
-//                    (int32_t)(state.info_png.phys_y * metersToInches));
-//            info += tmp;
-//        }
-
-        // TODO: also bkgd blocks.
-        // TODO: sRGB, cHRM, gAMA and other colorspace blocks aren't supported by lodepng,
-        // so can't report those would need to walk those blocks manually.
     }
     else if (isKTX) {
         KTXImage srcImage;
@@ -1288,115 +1204,229 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
             KLOGE("Kram", "info couldn't open ktx file");
             return "";
         }
+        
+        info = kramInfoKTXToString(srcFilename, srcImage, isVerbose);
+    }
+    
+    return info;
+}
 
-        // for now driving everything off metal type, but should switch to neutral
-        MyMTLPixelFormat metalFormat = srcImage.pixelFormat;
 
-        int32_t dataSize = srcImage.fileDataLength;
-        
-        string tmp;
-        bool isMB = (dataSize > (512 * 1024));
-        sprintf(tmp,
-                "file: %s\n"
-                "size: %d\n"
-                "sizm: %0.3f %s\n",
-                srcFilename.c_str(),
-                dataSize,
-                isMB ? dataSize / (1024.0f * 1024.0f) : dataSize / 1024.0f,
-                isMB ? "MB" : "KB");
-        info += tmp;
+string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint64_t dataSize, bool /* isVerbose */)
+{
+    // vector<uint8_t> pixels;
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t errorLode = 0;
 
-        int32_t pixelMultiplier = srcImage.totalChunks();
-        
-        float numPixels = srcImage.width * srcImage.height;
-        numPixels *= (float)pixelMultiplier;
-        
-        if (srcImage.header.numberOfMipmapLevels > 1) {
-            numPixels *= 4.0 / 3.0f; // estimate for now
-        }
-        
-        numPixels /= (1000.0f * 1000.0f);
-        
-        auto textureType = srcImage.header.metalTextureType();
-        switch (textureType) {
-            case MyMTLTextureType1DArray:
-            case MyMTLTextureType2D:
-            case MyMTLTextureTypeCube:
-            case MyMTLTextureTypeCubeArray:
-            case MyMTLTextureType2DArray:
-                sprintf(tmp,
-                        "type: %s\n"
-                        "dims: %dx%d\n"
-                        "dimm: %0.3f MP\n"
-                        "mips: %d\n",
-                        textureTypeName(srcImage.header.metalTextureType()),
-                        srcImage.width, srcImage.height,
-                        numPixels,
-                        srcImage.header.numberOfMipmapLevels);
-                break;
-            case MyMTLTextureType3D:
-                sprintf(tmp,
-                        "type: %s\n"
-                        "dims: %dx%dx%d\n"
-                        "dimm: %0.3f MP\n"
-                        "mips: %d\n",
-                        textureTypeName(srcImage.header.metalTextureType()),
-                        srcImage.width, srcImage.height, srcImage.depth,
-                        numPixels,
-                        srcImage.header.numberOfMipmapLevels);
-                break;
-        }
-        info += tmp;
+    // can identify 16unorm data for heightmaps via this call
+    LodePNGState state;
+    lodepng_state_init(&state);
 
-        // print out the array
-        if (srcImage.header.numberOfArrayElements > 1) {
+    errorLode = lodepng_inspect(&width, &height, &state, data, dataSize);
+    if (errorLode != 0) {
+        KLOGE("Kram", "info couldn't open png file");
+        return "";
+    }
+
+    string info;
+    
+    bool hasColor = true;
+    bool hasAlpha = true;
+    bool hasPalette = state.info_png.color.colortype == LCT_PALETTE;
+
+    switch (state.info_png.color.colortype) {
+        case LCT_GREY:
+        case LCT_GREY_ALPHA:
+            hasColor = false;
+            break;
+        case LCT_RGB:
+        case LCT_RGBA:
+        case LCT_PALETTE:  // ?
+            hasColor = true;
+            break;
+    }
+
+    switch (state.info_png.color.colortype) {
+        case LCT_GREY:
+        case LCT_RGB:
+            hasAlpha = false;
+            break;
+        case LCT_RGBA:
+        case LCT_GREY_ALPHA:
+        case LCT_PALETTE:  // ?
+            hasAlpha = true;
+            break;
+    }
+
+    string tmp;
+    bool isMB = (dataSize > (512 * 1024));
+    sprintf(tmp,
+            "file: %s\n"
+            "size: %d\n"
+            "sizm: %0.3f %s\n",
+            srcFilename.c_str(),
+            dataSize,
+            isMB ? dataSize / (1024.0f * 1024.0f) : dataSize / 1024.0f,
+            isMB ? "MB" : "KB");
+    info += tmp;
+
+    sprintf(tmp,
+            "type: %s\n"
+            "dims: %dx%d\n"
+            "dimm: %0.3f MP\n"
+            "bitd: %d\n"
+            "colr: %s\n"
+            "alph: %s\n"
+            "palt: %s\n",
+            textureTypeName(MyMTLTextureType2D),
+            width, height,
+            width * height / (1000.0f * 1000.0f),
+            state.info_png.color.bitdepth,
+            hasColor ? "y" : "n",
+            hasAlpha ? "y" : "n",
+            hasPalette ? "y" : "n");
+    info += tmp;
+
+    // optional block with ppi
+    // TODO: inspect doesn't parse this block, only decode call does
+//        if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
+//            float metersToInches = 39.37;
+//            sprintf(tmp,
+//                    "ppix: %d\n"
+//                    "ppiy: %d\n",
+//                    (int32_t)(state.info_png.phys_x * metersToInches),
+//                    (int32_t)(state.info_png.phys_y * metersToInches));
+//            info += tmp;
+//        }
+
+    // TODO: also bkgd blocks.
+    // TODO: sRGB, cHRM, gAMA and other colorspace blocks aren't supported by lodepng,
+    // so can't report those would need to walk those blocks manually.
+    return info;
+}
+
+string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, bool isVerbose)
+{
+//    KTXImage srcImage;
+//
+//    // Note: could change to not read any mips
+//    bool success = SetupSourceKTX(srcMmapHelper, srcFileHelper, srcFileBuffer,
+//                                  srcFilename, srcImage);
+//    if (!success) {
+//        KLOGE("Kram", "info couldn't open ktx file");
+//        return "";
+//    }
+
+    string info;
+    
+    // for now driving everything off metal type, but should switch to neutral
+    MyMTLPixelFormat metalFormat = srcImage.pixelFormat;
+
+    int32_t dataSize = srcImage.fileDataLength;
+    
+    string tmp;
+    bool isMB = (dataSize > (512 * 1024));
+    sprintf(tmp,
+            "file: %s\n"
+            "size: %d\n"
+            "sizm: %0.3f %s\n",
+            srcFilename.c_str(),
+            dataSize,
+            isMB ? dataSize / (1024.0f * 1024.0f) : dataSize / 1024.0f,
+            isMB ? "MB" : "KB");
+    info += tmp;
+
+    int32_t pixelMultiplier = srcImage.totalChunks();
+    
+    float numPixels = srcImage.width * srcImage.height;
+    numPixels *= (float)pixelMultiplier;
+    
+    if (srcImage.header.numberOfMipmapLevels > 1) {
+        numPixels *= 4.0 / 3.0f; // estimate for now
+    }
+    
+    numPixels /= (1000.0f * 1000.0f);
+    
+    auto textureType = srcImage.header.metalTextureType();
+    switch (textureType) {
+        case MyMTLTextureType1DArray:
+        case MyMTLTextureType2D:
+        case MyMTLTextureTypeCube:
+        case MyMTLTextureTypeCubeArray:
+        case MyMTLTextureType2DArray:
             sprintf(tmp,
-                    "arry: %d\n",
-                    srcImage.header.numberOfArrayElements);
+                    "type: %s\n"
+                    "dims: %dx%d\n"
+                    "dimm: %0.3f MP\n"
+                    "mips: %d\n",
+                    textureTypeName(srcImage.header.metalTextureType()),
+                    srcImage.width, srcImage.height,
+                    numPixels,
+                    srcImage.header.numberOfMipmapLevels);
+            break;
+        case MyMTLTextureType3D:
+            sprintf(tmp,
+                    "type: %s\n"
+                    "dims: %dx%dx%d\n"
+                    "dimm: %0.3f MP\n"
+                    "mips: %d\n",
+                    textureTypeName(srcImage.header.metalTextureType()),
+                    srcImage.width, srcImage.height, srcImage.depth,
+                    numPixels,
+                    srcImage.header.numberOfMipmapLevels);
+            break;
+    }
+    info += tmp;
 
-            info += tmp;
-        }
-
+    // print out the array
+    if (srcImage.header.numberOfArrayElements > 1) {
         sprintf(tmp,
-                "fmtk: %s\n"
-                "fmtm: %s (%d)\n"
-                "fmtv: %s (%d)\n"
-                "fmtg: %s (0x%04X)\n",
-                formatTypeName(metalFormat),
-                metalTypeName(metalFormat), metalFormat,
-                vulkanTypeName(metalFormat), vulkanType(metalFormat),
-                glTypeName(metalFormat), glType(metalFormat));
+                "arry: %d\n",
+                srcImage.header.numberOfArrayElements);
+
         info += tmp;
+    }
 
-        // report any props
-        string propText;
-        for (const auto& prop : srcImage.props) {
-            sprintf(propText, "prop: %s %s\n", prop.first.c_str(), prop.second.c_str());
-            info += propText;
-        }
+    sprintf(tmp,
+            "fmtk: %s\n"
+            "fmtm: %s (%d)\n"
+            "fmtv: %s (%d)\n"
+            "fmtg: %s (0x%04X)\n",
+            formatTypeName(metalFormat),
+            metalTypeName(metalFormat), metalFormat,
+            vulkanTypeName(metalFormat), vulkanType(metalFormat),
+            glTypeName(metalFormat), glType(metalFormat));
+    info += tmp;
 
-        // TODO: handle zstd compressed KTX2 too, they have a length and compressed length field
-        // also Basis + zstd
-        
-        if (isVerbose) {
-            // dump mips/dims, but this can be a lot of data on arrays
-            int32_t mipLevel = 0;
-            int32_t w = srcImage.width;
-            int32_t h = srcImage.height;
+    // report any props
+    string propText;
+    for (const auto& prop : srcImage.props) {
+        sprintf(propText, "prop: %s %s\n", prop.first.c_str(), prop.second.c_str());
+        info += propText;
+    }
 
-            for (const auto& mip : srcImage.mipLevels) {
-                sprintf(tmp,
-                        "mipn: %d\n"
-                        "mipd: %dx%d\n"
-                        "mips: %zu\n"
-                        "mipc: %dx\n"
-                        "mipo: %zu\n",
-                        w, h, mipLevel++, mip.length, srcImage.totalChunks(), mip.offset);
-                info += tmp;
+    // TODO: handle zstd compressed KTX2 too, they have a length and compressed length field
+    // also Basis + zstd
+    
+    if (isVerbose) {
+        // dump mips/dims, but this can be a lot of data on arrays
+        int32_t mipLevel = 0;
+        int32_t w = srcImage.width;
+        int32_t h = srcImage.height;
 
-                // drop a mip level
-                mipDown(w, h);
-            }
+        for (const auto& mip : srcImage.mipLevels) {
+            sprintf(tmp,
+                    "mipn: %d\n"
+                    "mipd: %dx%d\n"
+                    "mips: %zu\n"
+                    "mipc: %dx\n"
+                    "mipo: %zu\n",
+                    w, h, mipLevel++, mip.length, srcImage.totalChunks(), mip.offset);
+            info += tmp;
+
+            // drop a mip level
+            mipDown(w, h);
         }
     }
 

@@ -258,10 +258,11 @@ void FileHelper::close()
     _fp = nullptr;
 }
 
-int FileHelper::size() const
+int64_t FileHelper::size() const
 {
+    // returns -1, so can't return size_t
     if (!_fp) {
-        return -1; // not ideal if passed to unsigned size_t
+        return -1;
     }
 
     // otherwise fstat won't extract the size
@@ -271,9 +272,9 @@ int FileHelper::size() const
 
     struct stat stats;
     if (fstat(fd, &stats) < 0) {
-        return -1;  // not ideal if passed to unsigned size_t
+        return -1;
     }
-    return (int)stats.st_size;
+    return (int64_t)stats.st_size;
 }
 
 }  // namespace kram
