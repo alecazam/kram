@@ -53,6 +53,8 @@ N - toggle signed/unsigned
 ⇧Y advance array (reverse dir with ⇧)
 ⇧F advance face
 ⇧M advance mip
+
+⇧J advance bundle image (can traverse zip of ktx/ktx2 files)
 ```
 
 ### Limitations
@@ -125,7 +127,7 @@ At runtime:
 ```
 
 ### Building
-Kram uses CMake to setup the projects and build.  kramv.app, kram, and libkram are generated, but kramv.app and kram are stand-alone.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
+kram uses CMake to setup the projects and build.  kramv.app, kram, and libkram are generated, but kramv.app and kram are stand-alone.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
 
 For Mac, the build is out-of-source, and can be built from the command line, or debugged from the xcodeproj that is built.  Ninja and Makefiles can also be generated from cmake, but remember to trash the CMakeCache.txt file.
 
@@ -225,7 +227,7 @@ cd build
 ### Open Source Encoder Usage
 This app would not be possible without the open-source contributions from the following people and organizations.  These people also inspired me to make this app open-source, and maybe this will encourage more great tools or game tech.
 
-Kram includes the following encoders/decoders:
+kram includes the following encoders/decoders:
 
 | Encoder  | Author           | License     | Encodes                     | Decodes | 
 |----------|------------------|-------------|-----------------------------|---------|
@@ -269,40 +271,34 @@ Reduced memory by 4x and passing down rgba8u instead of rgba32f.  Converted to 3
 
 ```
 
-### Open Source  Usage
-Kram includes additional open-source:
+### Open Source Usage
 
-| Library        | Author             | License | Purpose                   |
-|----------------|--------------------|---------|---------------------------|
-| lodepng        | Lode Vandevenne    | MIT     | png encode/decode         |
-| SSE2Neon       | John W. Ratcliff   | MIT     | sse to neon               |
-| heman          | Philip Rideout     | MIT     | parabola EDT for SDF      |
-| TaskSystem     | Sean Parent        | MIT     | C++11 work queue          |
-| tmpfileplus    | David Ireland      | Moz 2.0 | fixes C tmpfile api       |
-| mmap universal | Mike Frysinger     | Pub     | mmap on Windows           |
-| zstd           | Yann Collett (FB)  | BSD-2   | KTX2 mip decode           |
+kram includes additional open-source:
 
-```
-lodepng
-Altered header paths.
+| Library        | Author             | License   | Purpose                   |
+|----------------|--------------------|-----------|---------------------------|
+| lodepng        | Lode Vandevenne    | MIT       | png encode/decode         |
+| SSE2Neon       | John W. Ratcliff   | MIT       | sse to neon               |
+| heman          | Philip Rideout     | MIT       | parabola EDT for SDF      |
+| TaskSystem     | Sean Parent        | MIT       | C++11 work queue          |
+| tmpfileplus    | David Ireland      | Moz 2.0   | fixes C tmpfile api       |
+| mmap universal | Mike Frysinger     | Pub       | mmap on Windows           |
+| zstd           | Yann Collett (FB)  | BSD-2     | KTX2 mip decode           |
+| miniz	         | Rich Gelreich      | Unlicense | bundle support via zip    |
 
-SSE2Neon
-Updated to newer arm64 permute instructions.
+#### Open Source Changes
 
-heman 
-SDF altered to support mip generation from bigger distance fields.
-   This requires srcWidth x dstHeight floats.
-   
-TaskSystem
-Altered to allow control over number of threads.
-Commented out future system until needed.
+* lodepng - altered header paths.
+* SSE2Neon - updated to newer arm64 permute instructions.
+* heman - altered sdf calcs for mipgen off largest sdf mip
+* TaskSystem - altered to control thread count, 
+* tmpfileplus - small changes to work on Mac/Win better allow extension suffix
+* mmap universal - may leak a file mapping handle on Win.
+* zstd - using single file version of zstd for decode, disabled encode paths
+* miniz - expose raw data and offset for mmap-ed zip files, disabled writer, disable read crc checks, in .cpp file
 
-mmap
-This matches mmap api, but leaks a file mapping handle.
-  
-```
+## kram Features to complete:
 
-### Features to complete:
 * Tile command for SVT tiling
 * Merge command to combine images (similar to ImageMagick)
 * Atlas command to atlas to 2D and 2D array textures.  Display names, show bounds of atlases.
@@ -478,8 +474,8 @@ Android and iOS, Apple M1
 No GPU encode/decode
 Etcpak and ETC2Comp are two encoders.   Etcpak is fast with AVX2, less for ARM.
 ETC2Comp encoder slow on rgb/a due to large iteration space of each block.  
-ETC2Comp multipass skips encoding blocks by treating quality as percentage which is dubious, fixed in Kram.
-Kram breaks out quality from block percentage for multipass.
+ETC2Comp multipass skips encoding blocks by treating quality as percentage which is dubious, fixed in kram.
+kram breaks out quality from block percentage for multipass.
 
 r - 4bpp, 2 11-bit endpoints, unpacks to r16f in texture cache, signed/unsigned
 rg - 8bpp, 2 22-bit endpoints, unpacks to rg16f in texture cache, signed/unsigned
@@ -541,7 +537,7 @@ ASTC doesn't compress and RDO as tightly.
 
 ### On mip calculations and non-power-of-two textures
 
-With the exception of PVRTC, the block encoded formats support non-power-of-two mipmaps.  But very little literature talks about how mips are calculated.  D3D first used round-down mips, GL followed suit, and Metal/Vulkan followed suit.  Round down cuts out a mip level, and does a floor of the mip levels.   Round-up mips generally have a better mapping to the upper with a simple box filter.  Kram hasn't adjusted it's box filter to adjust for this yet, but there are links into the code to articles about how to better weight pixels.  The kram box filter is correct for power-of-two mipgen, but should be improved for these cases.
+With the exception of PVRTC, the block encoded formats support non-power-of-two mipmaps.  But very little literature talks about how mips are calculated.  D3D first used round-down mips, GL followed suit, and Metal/Vulkan followed suit.  Round down cuts out a mip level, and does a floor of the mip levels.   Round-up mips generally have a better mapping to the upper with a simple box filter.  kram hasn't adjusted it's box filter to adjust for this yet, but there are links into the code to articles about how to better weight pixels.  The kram box filter is correct for power-of-two mipgen, but should be improved for these cases.
 
 ```
 Round Down
@@ -554,9 +550,9 @@ Round Up
 1px      a+b+c
 ```
 
-### On memory handling in Kram:
+### On memory handling in kram:
 
-Batch processing on multiple threads can use a lot of memory.  Paging can reduce performance.  Kram memory maps the source png/ktx, decodes the png into memory or reads ktx pixels from the mmap, pulls chunks for the slice/cube/texture, then generates mips in place, and uses a half4 type for srgb/premul to maintain higher precision, and finally writes the mip to disk.  Then kram process another mip.
+Batch processing on multiple threads can use a lot of memory.  Paging can reduce performance.  kram memory maps the source png/ktx, decodes the png into memory or reads ktx pixels from the mmap, pulls chunks for the slice/cube/texture, then generates mips in place, and uses a half4 type for srgb/premul to maintain higher precision, and finally writes the mip to disk.  Then kram process another mip.
 
 The rgba8u image and half4 image are stored for mips.  1gb can be used to process separate textures on 16 cores.  This may be an argument for multiple cores processing a single image.  Running fewer threads can reduce peak memory use.  Also hyperthreaded cores share SIMD units, so using physical processor counts may be similar performance to HT counts.  Alignment is maintained and memory is reduced with in-place mips, but that also means mipgen in kram is intermingled with encoding.
 
@@ -577,7 +573,7 @@ KTX is a well-designed format, and KTX2 continues that tradition.  It was also f
 
 Visually validating and previewing the results is complicated.  KTX/2 have few viewers, hence the need for kramv.  Apple's Preview can open BC and ASTC files on macOS, but not ETC/PVRTC.  And then you can't look at channels or mips, or turn on/off premultiplied alpha, or view signed/unsigned data.  Preview premultiplies PNG images, but KTX files aren't.  Apple's thumbnails don't work for ETC2 or PVRTC data in KTX files.  Windows thumbnails don't work for KTX at all.  PVRTexToolGUI 2020R2 applies sRGB incorrectly to images, and can't open BC4/5/7 files on Mac.  
 
-Kram adds props to KTX/2 file to store data.  Currently props store Metal and Vulkan formats.  This is important since GL's ASTC LDR and HDR formats are the same constant.  Also props are saved for channel content and post-swizzle.  Loaders, viewers, and shaders can utilize this metadata.
+kram adds props to KTX/2 file to store data.  Currently props store Metal and Vulkan formats.  This is important since GL's ASTC LDR and HDR formats are the same constant.  Also props are saved for channel content and post-swizzle.  Loaders, viewers, and shaders can utilize this metadata.
 
 KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  KTX2 reverses mip ordering smallest to largest, so that streamed textures can display smaller mips before they finish fully streaming.  KTX2 can also supercompress each mip with zstd and Basis for transcode.  I suppose this could then be unpacked to tiles for sparse texturing.  KTX2 does not store a length field inside the mip data which keeps consistent alignment. 
 
@@ -598,10 +594,10 @@ The texture cache typically stores 4x4 block to match encoded formats.
 Sampling is then done from that block of linear data with higher precision.
 
 Texturing hardware does not yet support premultiplied alpha.  
-Kram does premul prior to mip generation.
+kram does premul prior to mip generation.
 Srgb is then re-applied to linear premul data before encoding.
 
-Kram uses half4/float4 to preserve precision when srgb or premul are specified.  
+kram uses half4/float4 to preserve precision when srgb or premul are specified.  
 The encoders all have to encode non-linear srgb point clouds, which isn't correct.
 
 ```
