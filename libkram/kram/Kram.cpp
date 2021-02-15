@@ -1067,6 +1067,7 @@ static int32_t kramAppInfo(vector<const char*>& args)
             KLOGE("Kram", "unexpected argument \"%s\"\n",
                   word);
             error = true;
+            break;
         }
 
         if (isStringEqual(word, "-output") ||
@@ -1075,7 +1076,7 @@ static int32_t kramAppInfo(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "no output file defined");
                 error = true;
-                continue;
+                break;
             }
 
             dstFilename = args[i];
@@ -1087,7 +1088,7 @@ static int32_t kramAppInfo(vector<const char*>& args)
             if (i >= argc) {
                 error = true;
                 KLOGE("Kram", "no input file defined");
-                continue;
+                break;
             }
 
             srcFilename = args[i];
@@ -1101,6 +1102,7 @@ static int32_t kramAppInfo(vector<const char*>& args)
             KLOGE("Kram", "unexpected argument \"%s\"\n",
                   word);
             error = true;
+            break;
         }
     }
 
@@ -1464,6 +1466,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
             KLOGE("Kram", "unexpected argument \"%s\"\n",
                   word);
             error = true;
+            break;
         }
 
         if (isStringEqual(word, "-output") ||
@@ -1472,7 +1475,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "decode output missing");
                 error = true;
-                continue;
+                break;
             }
 
             // TODO: if args ends with /, then output to that dir
@@ -1485,7 +1488,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "decode input missing");
                 error = true;
-                continue;
+                break;
             }
 
             srcFilename = args[i];
@@ -1497,13 +1500,14 @@ static int32_t kramAppDecode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "decode swizzle missing");
                 error = true;
-                continue;
+                break;
             }
 
             const char* swizzleString = args[i];
             if (!isSwizzleValid(swizzleString)) {
                 KLOGE("Kram", "decode swizzle invalid");
                 error = true;
+                break;
             }
             swizzleText = swizzleString;
             continue;
@@ -1515,7 +1519,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "encoder arg invalid");
                 error = true;
-                continue;
+                break;
             }
 
             textureDecoder = parseEncoder(args[i]);
@@ -1532,6 +1536,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
             KLOGE("Kram", "unexpected argument \"%s\"\n",
                   word);
             error = true;
+            break;
         }
     }
 
@@ -1640,7 +1645,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "mipmax arg invalid");
                 error = true;
-                continue;
+                break;
             }
 
             infoArgs.mipMaxSize = atoi(args[i]);
@@ -1651,7 +1656,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "mipmin arg invalid");
                 error = true;
-                continue;
+                break;
             }
 
             infoArgs.mipMinSize = atoi(args[i]);
@@ -1674,7 +1679,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "encoder arg invalid");
                 error = true;
-                continue;
+                break;
             }
 
             infoArgs.textureEncoder = parseEncoder(args[i]);
@@ -1686,7 +1691,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "swizzle arg invalid");
                 error = true;
-                continue;
+                break;
             }
 
             const char* swizzleString = args[i];
@@ -1704,7 +1709,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "chunks count missing");
                 error = true;
-                continue;
+                break;
             }
 
             const char* chunksString = args[i];
@@ -1713,6 +1718,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (sscanf(chunksString, "%dx%d", &chunksX, &chunksY) != 2) {
                 KLOGE("Kram", "chunks count arg invalid");
                 error = true;
+                break;
             }
             
             // this is a count of how many chunks (tiles) across and down
@@ -1731,6 +1737,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (!isChannelValid(channelString)) {
                 KLOGE("Kram", "avg channel arg invalid");
                 error = true;
+                break;
             }
             infoArgs.averageChannels = channelString;
             continue;
@@ -1740,7 +1747,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "type arg invalid");
                 error = true;
-                continue;
+                break;
             }
 
             infoArgs.textureType = parseTextureType(args[i]);
@@ -1751,7 +1758,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "quality arg invalid");
                 error = true;
-                continue;
+                break;
             }
 
             infoArgs.quality = atoi(args[i]);
@@ -1764,7 +1771,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "no output file defined");
                 error = true;
-                continue;
+                break;
             }
 
             // TODO: if args ends with /, then output to that dir
@@ -1783,7 +1790,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "no input file defined");
                 error = true;
-                continue;
+                break;
             }
 
             srcFilename = args[i];
@@ -2052,7 +2059,7 @@ int32_t kramAppScript(vector<const char*>& args)
             if (i >= argc) {
                 KLOGE("Kram", "no input file defined");
                 error = true;
-                continue;
+                break;
             }
 
             srcFilename = args[i];
@@ -2065,7 +2072,7 @@ int32_t kramAppScript(vector<const char*>& args)
                 KLOGE("Kram", "no job count defined");
 
                 error = true;
-                continue;
+                break;
             }
 
             numJobs = atoi(args[i]);
@@ -2083,6 +2090,7 @@ int32_t kramAppScript(vector<const char*>& args)
             KLOGE("Kram", "unexpected argument \"%s\"\n",
                   word);
             error = true;
+            break;
         }
     }
 
