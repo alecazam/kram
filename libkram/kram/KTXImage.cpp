@@ -881,7 +881,7 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength)
     textureType = header.metalTextureType();
 
     // convert keyValues to props vector
-    initProps();
+    initProps(fileData + sizeof(KTXHeader), header.bytesOfKeyValueData);
 
     // find prop for KTXmetalFormat, and use that
     // only if not found, then fallback on gl format conversion from KTXHeader
@@ -899,18 +899,18 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength)
         pixelFormat = header.metalFormat();
     }
 
-    return initMipLevels(true);
+    return initMipLevels(true, sizeof(KTXHeader) + header.bytesOfKeyValueData);
 }
 
-void KTXImage::initProps()
+void KTXImage::initProps(const uint8_t* propsData, size_t propDataSize)
 {
     props.clear();
 
-    if (header.bytesOfKeyValueData > 0) {
+    if (propDataSize > 0) {
         const uint8_t* keyValuesStart =
-            (const uint8_t*)fileData + sizeof(KTXHeader);
+            (const uint8_t*)propsData;
         const uint8_t* keyValuesEnd =
-            (const uint8_t*)fileData + sizeof(KTXHeader) + header.bytesOfKeyValueData;
+            (const uint8_t*)propsData + propDataSize;
 
         while (keyValuesStart < keyValuesEnd) {
             size_t dataSize = *(const uint32_t*)keyValuesStart;
@@ -1052,7 +1052,7 @@ void KTXImage::toPropsData(vector<uint8_t>& propsData)
     // TODO: this needs to pad to 16-bytes, so may need a prop for that
 }
 
-bool KTXImage::initMipLevels(bool validateLevelSizeFromRead)
+bool KTXImage::initMipLevels(bool validateLevelSizeFromRead, size_t offsetToImageData)
 {
     // largest mips are first in file
     uint32_t numMips = max(1u, header.numberOfMipmapLevels);
@@ -1062,7 +1062,7 @@ bool KTXImage::initMipLevels(bool validateLevelSizeFromRead)
     mipLevels.reserve(numMips);
     mipLevels.clear();
 
-    size_t totalDataSize = sizeof(KTXHeader) + header.bytesOfKeyValueData;
+    size_t totalDataSize = offsetToImageData; // sizeof(KTXHeader) + header.bytesOfKeyValueData;
     //size_t blockSize = this->blockSize();
 
     int32_t w = width;
@@ -1285,13 +1285,11 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
     if (memcmp(imageData, kKTX2Identifier, sizeof(kKTX2Identifier)) != 0) {
         return false;
     }
-        
+    
+    // these are set after decompress of mips if needed
     //fileData = imageData;
     //fileDataLength = (int)imageDataLength;
 
-    // TODO: should make sure bytes exist
-    // TODO: make sure identifier matches what it should be
-    
     // copy out the header,
     const KTX2Header& header2 = *(const KTX2Header*)imageData;
 
@@ -1359,16 +1357,25 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
     // Only reading this format, never writing it out.
     skipImageLength = true;
     
-    // TODO: need to transfer key-value data pairs
-    // header.bytesOfKeyValueData = header2.kvdByteLength;
-    // for now just replace props
-    initProps();
+    // transfer key-value data pairs
+    // bytesOfKeyValueData will be updated if props written out
+    // but probably want to leave this out of level offsets
+    header.bytesOfKeyValueData = 0; // header2.kvdByteLength;
+    initProps(imageData + header2.kvdByteOffset, header2.kvdByteLength);
    
+    
     if (!isLevelOfMipCompressed) {
         fileData = imageData;
         fileDataLength = imageDataLength;
         
-        if (!initMipLevels(false)) {
+        // might be able to just use header2.sgdByteOffset + header2.sgdByteLength
+        uint32_t offsetToImageData = //std::max(std::max(
+            //header2.dfdByteOffset +  header2.dfdByteLength,
+            //header2.kvdByteOffset +  header2.kvdByteLength),
+            header2.sgdByteOffset +  header2.sgdByteLength;
+                                           
+        
+        if (!initMipLevels(false, offsetToImageData)) {
             return false;
         }
         
@@ -1386,7 +1393,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
         }
     }
     else {
-        if (!initMipLevels(false)) {
+        if (!initMipLevels(false, sizeof(KTXHeader) + header.bytesOfKeyValueData)) {
             return false;
         }
         

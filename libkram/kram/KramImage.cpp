@@ -469,7 +469,7 @@ bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, 
     vector<uint8_t> propsData;
     dstImage.toPropsData(propsData);
     dstHeader.bytesOfKeyValueData = uint32_t(propsData.size());
-    if (!dstImage.initMipLevels(false)) {
+    if (!dstImage.initMipLevels(false, sizeof(KTXHeader) + dstHeader.bytesOfKeyValueData)) {
         return false;
     }
     

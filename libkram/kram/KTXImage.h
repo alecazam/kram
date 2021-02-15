@@ -181,8 +181,8 @@ public:
     // this calls init calls
     bool open(const uint8_t* imageData, size_t imageDataLength);
     
-    void initProps();
-    bool initMipLevels(bool validateLevelSizeFromRead);
+    void initProps(const uint8_t* propsData, size_t propDataSize);
+    bool initMipLevels(bool validateLevelSizeFromRead, size_t offsetToImageData);
 
     // props handling
     void toPropsData(vector<uint8_t>& propsData);
