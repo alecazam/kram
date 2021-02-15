@@ -1314,16 +1314,6 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
 
 string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, bool isVerbose)
 {
-//    KTXImage srcImage;
-//
-//    // Note: could change to not read any mips
-//    bool success = SetupSourceKTX(srcMmapHelper, srcFileHelper, srcFileBuffer,
-//                                  srcFilename, srcImage);
-//    if (!success) {
-//        KLOGE("Kram", "info couldn't open ktx file");
-//        return "";
-//    }
-
     string info;
     
     // for now driving everything off metal type, but should switch to neutral

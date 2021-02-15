@@ -26,6 +26,9 @@ using namespace kram;
 using namespace std;
 using namespace simd;
 
+string kram::toLower(const string& text) {
+    return string([[[NSString stringWithUTF8String:text.c_str()] lowercaseString] UTF8String]);
+}
 
 //-----------------------------------------------
     
@@ -191,7 +194,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                   withBytes:sourceImage.pixels()
                 bytesPerRow:bytesPerRow];
     
-    // have to schedule this inside main loop
+    // have to schedule autogen inside render using MTLBlitEncoder
     if (image.header.numberOfMipmapLevels > 1) {
         _isMipgenNeeded = YES;
     }
@@ -211,15 +214,15 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     
     const char *path = [url.absoluteURL.path UTF8String];
 
+    // TODO: could also ignore extension, and look at header/signature instead
+    // files can be renamed to the incorrect extensions
+    string filename = toLower(path);
+    
     MmapHelper mmapHelper;
     if (!mmapHelper.open(path)) {
         return nil;
     }
                
-    // TODO: could also ignore extension, and look at header/signature intead
-    // files can be renamed to the incorrect extensions
-    string filename = [[url.absoluteURL.path lowercaseString] UTF8String];
-
     if (endsWithExtension(filename.c_str(), ".png")) {
         // set title to filename, chop this to just file+ext, not directory
         string filenameShort = filename;
@@ -242,9 +245,6 @@ static int32_t numberOfMipmapLevels(const Image& image) {
         }
         
         bool isSRGB = (!isNormal && !isSDF);
-        
-        // TODO: use a MTLView to enable srgb or not, then can load and guess the srgb status
-        // at a higher level, and also toggle on/off srgb conversion in the shader.
         
         return [self loadTextureFromPNGData:mmapHelper.data() dataSize:(int32_t)mmapHelper.dataLength() isSRGB:isSRGB originalFormat:originalFormat];
     }

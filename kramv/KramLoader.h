@@ -17,6 +17,7 @@
 
 #endif
 
+
 // This loads KTX and PNG data synchronously.  Will likely move to only loading KTX files, with a png -> ktx conversion.
 // The underlying KTXImage is not yet returned to the caller, but would be useful for prop queries.
 @interface KramLoader : NSObject
@@ -36,3 +37,15 @@
 @property (nonatomic, readwrite, getter=isMipgenNeeded) BOOL mipgenNeeded;
 
 @end
+
+//-------------------------------------
+
+// for toLower
+#include <string>
+
+namespace kram {
+    using namespace std;
+
+    // provide access to lowercase strings
+    string toLower(const string& text);
+}

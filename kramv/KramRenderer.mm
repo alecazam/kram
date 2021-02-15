@@ -474,9 +474,7 @@ using namespace simd;
     return [self loadTextureImpl:fullFilename isTextureChanged:isTextureChanged];
 }
 
-static string toLower(const string& text) {
-    return string([[[NSString stringWithUTF8String:text.c_str()] lowercaseString] UTF8String]);
-}
+
 
 - (BOOL)loadTextureImpl:(const string&)fullFilename isTextureChanged:(BOOL)isTextureChanged
 {
