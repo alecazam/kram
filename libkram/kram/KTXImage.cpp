@@ -1458,5 +1458,21 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
     return true;
 }
 
+vector<uint8_t>& KTXImage::imageData() {
+    return imageDataFromKTX2;
+}
+
+void KTXImage::reserveImageData() {
+    int32_t numChunks = totalChunks();
+    const auto& lastMip = mipLevels[header.numberOfMipmapLevels-1];
+    size_t totalKTXSize =
+        lastMip.offset + lastMip.length * numChunks;
+    imageDataFromKTX2.resize(totalKTXSize);
+    memset(imageDataFromKTX2.data(), 0, totalKTXSize);
+    
+    fileDataLength = totalKTXSize;
+    fileData = imageDataFromKTX2.data();
+}
+
 
 }  // namespace kram

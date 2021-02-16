@@ -41,9 +41,15 @@ public:
 
     bool loadImageFromKTX(const KTXImage& image);
 
+    // encode/ecode to a file
     bool encode(ImageInfo& info, FILE* dstFile) const;
 
     bool decode(const KTXImage& image, FILE* dstFile, TexEncoder decoder, bool isVerbose, const string& swizzleText) const;
+    
+    // encode/decode to a memory block (TODO: change over to returning dstImage holding all data inside)
+    bool encode(ImageInfo& info, KTXImage& dstImage) const;
+
+    bool decode(const KTXImage& image, KTXImage& dstImage, TexEncoder decoder, bool isVerbose, const string& swizzleText) const;
 
     // this is only for 2d images
     bool resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, ImageResizeFilter filter = kImageResizeFilterPoint);
@@ -59,6 +65,9 @@ public:
     bool hasAlpha() const { return _hasAlpha; }
 
 private:
+    bool encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const;
+    bool decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstImage, TexEncoder decoder, bool isVerbose, const string& swizzleText) const;
+
     // compute how big mips will be
     void computeMipStorage(const KTXImage& image, int32_t w, int32_t h,
                            bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize,

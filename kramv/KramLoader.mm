@@ -48,69 +48,31 @@ string kram::toLower(const string& text) {
 // on macOS/arm, the M1 supports all 3 encode formats
 #define DO_DECODE TARGET_CPU_X86_64
 
-- (BOOL)decodeImageIfNeeded:(KTXImage&)image data:(vector<uint8_t>&)data
+- (BOOL)decodeImageIfNeeded:(KTXImage&)image imageDecoded:(KTXImage&)imageDecoded useImageDecoded:(bool&)useImageDecoded
 {
 #if DO_DECODE
-    MyMTLPixelFormat format = image.pixelFormat;
-
-    // decode to disk, and then load that in place of original
-    // MacIntel can only open BC and explicit formats.
-    FileHelper decodedTmpFile;
-
-    bool useDecode = false;
-    if (isETCFormat(format)) {
-        if (!decodedTmpFile.openTemporaryFile(".ktx", "w+")) {
+    useImageDecoded = false;
+    
+    Image imageUnused; // TODO: move to only using KTXImage, decode needs to move there
+    
+    if (isETCFormat(image.pixelFormat)) {
+        if (!imageUnused.decode(image, imageDecoded, kTexEncoderEtcenc, false, "")) {
             return NO;
         }
-        
-        Image imageDecode;
-        if (!imageDecode.decode(image, decodedTmpFile.pointer(), kTexEncoderEtcenc, false, "")) {
-            return NO;
-        }
-        useDecode = true;
+        useImageDecoded = true;
     }
-    else if (isASTCFormat(format)) {
-        if (!decodedTmpFile.openTemporaryFile(".ktx", "w+")) {
-            return NO;
-        }
-        
-        Image imageDecode;
-        if (!imageDecode.decode(image, decodedTmpFile.pointer(), kTexEncoderAstcenc, false, "")) {
+    else if (isASTCFormat(image.pixelFormat)) {
+        if (!imageUnused.decode(image, imageDecoded, kTexEncoderAstcenc, false, "")) {
             return NO;
         }
     
-        useDecode = true;
+        useImageDecoded = true;
     }
     
     // TODO: decode BC format on iOS when not supported, but viewer only on macOS for now
-
-    if (useDecode) {
-        FILE* fp = decodedTmpFile.pointer();
-        
-        size_t size = decodedTmpFile.size();
-        if (size <= 0) {
-            return NO;
-        }
-        
-        data.resize(size);
-        
-        // have to pull into buffer, this only works with sync load path for now
-        rewind(fp);
-        
-        size_t readBytes = fread(data.data(), 1, size, fp);
-        if (readBytes != size) {
-            fprintf(stderr, "%s\n", strerror(errno));
-            
-            return NO;
-        }
-        
-        image.skipImageLength = false;
-        if (!image.open(data.data(), (int32_t)size)) { // doesn't fail
-            return NO;
-        }
-    }
     
 #endif
+    
     return YES;
 }
     
@@ -126,12 +88,13 @@ string kram::toLower(const string& text) {
         *originalFormat = (MTLPixelFormat)image.pixelFormat;
     }
     
-    vector<uint8_t> data;
-    if (![self decodeImageIfNeeded:image data:data]) {
+    KTXImage imageDecoded;
+    bool useImageDecoded = false;
+    if (![self decodeImageIfNeeded:image imageDecoded:imageDecoded useImageDecoded:useImageDecoded]) {
         return nil;
     }
     
-    return [self loadTextureFromImage:image];
+    return [self loadTextureFromImage:useImageDecoded ? imageDecoded : image];
 }
 
 static int32_t numberOfMipmapLevels(const Image& image) {

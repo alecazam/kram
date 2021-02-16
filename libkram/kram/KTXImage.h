@@ -207,6 +207,10 @@ public:
     //int totalMipLevels() const;
     uint32_t totalChunks() const;
 
+    // this is where KTXImage holds all mip data internally
+    void reserveImageData();
+    vector<uint8_t>& imageData();
+
 private:
     bool openKTX2(const uint8_t* imageData, size_t imageDataLength);
 

@@ -371,7 +371,7 @@ NSArray<NSString*>* pasteboardTypes = @[
 - (NSTextField*)_addHud:(BOOL)isShadow
 {
     // add a label for the hud
-    NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(isShadow ? 11 : 10, isShadow ? 11 : 10, 400, 200)];
+    NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(isShadow ? 11 : 10, isShadow ? 11 : 10, 800, 300)];
     label.drawsBackground = NO;
     label.textColor = !isShadow ?
         [NSColor colorWithSRGBRed:0 green:1 blue:0 alpha:1] :
