@@ -73,6 +73,8 @@ public:
 
 private:
     void mipmapLevel(const ImageData &srcImage, ImageData &dstImage) const;
+    
+    void mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) const;
 };
 
 }  // namespace kram

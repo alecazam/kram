@@ -304,7 +304,7 @@ void Mipper::mipmap(const ImageData& srcImage, ImageData& dstImage) const
     mipmapLevel(srcImage, dstImage);
 }
 
-void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
+void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) const
 {
     int32_t width = srcImage.width;
     int32_t height = srcImage.height;
@@ -324,50 +324,223 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
     
     int32_t dstIndex = 0;
 
-    // To see the downsampled mip dimensions enable this
-    //    int32_t wDst = width;
-    //    int32_t hDst = height;
-    //    mipDown(wDst, hDst);
-
-    // 535 produces 267.5 -> 267, last pixel in an odd width or height is skipped
-    // this code was incrementing too often at the end
     bool isOddX = width & 1;
     bool isOddY = height & 1;
 
-    for (int32_t y = 0; y < height; y += 2) {
-        // last y row is skipped if odd, this causes a shift
-        if (isOddY) {
-            if (y == (height - 1)) {
-                break;
-            }
-        }
-
+    // advance always by 2, but sample from neighbors
+    int32_t mipWidth = std::max(1, width / 2);
+    int32_t mipHeight = std::max(1, height / 2);
+    
+    float invWidth = 1.0f/width;
+    float invHeight = 1.0f/height;
+    
+    for (int32_t y = isOddY ? 1 : 0; y < height; y += 2) {
+        int32_t ym = y - 1;
         int32_t y0 = y;
         int32_t y1 = y + 1;
-        if (y1 == height) {
-            y1 = y;
+
+        // weights
+        int32_t mipY = y/2;
+        float ymw = (mipHeight - mipY - 1) * invHeight;
+        float y0w = mipHeight * invHeight;
+        float y1w = mipY * invHeight;
+        
+        if (!isOddY) {
+            ym = y; // weight is 0
+            
+            ymw = 0.0f;
+            y0w = 0.5f;
+            y1w = 0.5f;
         }
+        
+        ym *= width;
+        y0 *= width;
+        y1 *= width;
+
+        for (int32_t x = isOddX ? 1 : 0; x < width; x += 2) {
+ 
+            int32_t xm = x - 1;
+            int32_t x0 = x;
+            int32_t x1 = x + 1;
+ 
+            // weights
+            int32_t mipX = x/2;
+            float xmw = (mipWidth - mipX - 1) * invWidth;
+            float x0w = mipWidth * invWidth;
+            float x1w = mipX * invWidth;
+            
+            if (!isOddX) {
+                xm = x; // weight is 0
+                
+                xmw = 0.0f;
+                x0w = 0.5f;
+                x1w = 0.5f;
+            }
+            
+            // we have 3x2, 2x3 or 3x3 pattern to weight
+            // now lookup the 9 values from the buffer
+            
+            float4 c[9];
+            
+            if (srcHalf) {
+                c[0] = toFloat4(srcHalf[ym + xm]);
+                c[1] = toFloat4(srcHalf[ym + x0]);
+                c[2] = toFloat4(srcHalf[ym + x1]);
+                
+                c[3] = toFloat4(srcHalf[y0 + xm]);
+                c[4] = toFloat4(srcHalf[y0 + x0]);
+                c[5] = toFloat4(srcHalf[y0 + x1]);
+                
+                c[6] = toFloat4(srcHalf[y1 + xm]);
+                c[7] = toFloat4(srcHalf[y1 + x0]);
+                c[8] = toFloat4(srcHalf[y1 + x1]);
+            }
+            else if (srcFloat) {
+                c[0] = srcFloat[ym + xm];
+                c[1] = srcFloat[ym + x0];
+                c[2] = srcFloat[ym + x1];
+                
+                c[3] = srcFloat[y0 + xm];
+                c[4] = srcFloat[y0 + x0];
+                c[5] = srcFloat[y0 + x1];
+                
+                c[6] = srcFloat[y1 + xm];
+                c[7] = srcFloat[y1 + x0];
+                c[8] = srcFloat[y1 + x1];
+            }
+            else {
+                c[0] = ColorToUnormFloat4(srcColor[ym + xm]);
+                c[1] = ColorToUnormFloat4(srcColor[ym + x0]);
+                c[2] = ColorToUnormFloat4(srcColor[ym + x1]);
+                
+                c[3] = ColorToUnormFloat4(srcColor[y0 + xm]);
+                c[4] = ColorToUnormFloat4(srcColor[y0 + x0]);
+                c[5] = ColorToUnormFloat4(srcColor[y0 + x1]);
+                
+                c[6] = ColorToUnormFloat4(srcColor[y1 + xm]);
+                c[7] = ColorToUnormFloat4(srcColor[y1 + x0]);
+                c[8] = ColorToUnormFloat4(srcColor[y1 + x1]);
+            }
+                
+            // apply weights to columns/rows
+            for (int32_t i = 0; i < 3; i++) {
+                c[3*i+0] *= xmw;
+                c[3*i+1] *= x0w;
+                c[3*i+2] *= x1w;
+            }
+             
+            for (int32_t i = 0; i < 3; i++) {
+                c[0+i] *= ymw;
+                c[3+i] *= y0w;
+                c[6+i] *= y1w;
+            }
+                
+            // add them all up
+            float4 cFloat = c[0];
+            for (int32_t i = 1; i < 9; ++i) {
+                cFloat += c[i];
+            }
+                
+            if (srcHalf) {
+
+                // overwrite float4 image
+                cDstHalf[dstIndex] = toHalf4(cFloat);
+
+                // assume hdr pulls from half/float data
+                if (!srcImage.isHDR) {
+                    // convert back to srgb for encode
+                    if (srcImage.isSRGB) {
+                        cFloat.x = linearToSRGBFunc(cFloat.x);
+                        cFloat.y = linearToSRGBFunc(cFloat.y);
+                        cFloat.z = linearToSRGBFunc(cFloat.z);
+                    }
+
+                    // override rgba8u version, since this is what is encoded
+                    Color c = Unormfloat4ToColor(cFloat);
+
+                    // can only skip this if cSrc = cDst
+                    cDstColor[dstIndex] = c;
+                }
+            }
+            else if (srcFloat) {
+
+                // overwrite float4 image
+                cDstFloat[dstIndex] = cFloat;
+
+                // assume hdr pulls from half/float data
+                if (!srcImage.isHDR) {
+                    // convert back to srgb for encode
+                    if (srcImage.isSRGB) {
+                        cFloat.x = linearToSRGBFunc(cFloat.x);
+                        cFloat.y = linearToSRGBFunc(cFloat.y);
+                        cFloat.z = linearToSRGBFunc(cFloat.z);
+                    }
+
+                    // Overwrite the RGBA8u image too (this will go out to
+                    // encoder) that means BC/ASTC are linearly fit to
+                    // non-linear srgb colors - ick
+                    Color c = Unormfloat4ToColor(cFloat);
+                    cDstColor[dstIndex] = c;
+                }
+            }
+            else {
+
+                // can overwrite memory on linear image, some precision loss, but fast
+                Color c = Unormfloat4ToColor(cFloat);
+                cDstColor[dstIndex] = c;
+            }
+
+            dstIndex++;
+        }
+    }
+}
+
+    
+void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
+{
+    int32_t width = srcImage.width;
+    int32_t height = srcImage.height;
+
+    bool isOddX = width & 1;
+    bool isOddY = height & 1;
+    
+    if (isOddX || isOddY) {
+        mipmapLevelOdd(srcImage, dstImage);
+        return;
+    }
+    
+    // fast path for 2x2 downsample below, can do in 4 taps
+    
+    // this can receive premul, srgb data
+    // the mip chain is linear data only
+    Color* cDstColor = dstImage.pixels;
+    const Color* srcColor = srcImage.pixels;
+
+    float4* cDstFloat = dstImage.pixelsFloat;
+    const float4* srcFloat = srcImage.pixelsFloat;
+
+    half4* cDstHalf = dstImage.pixelsHalf;
+    const half4* srcHalf = srcImage.pixelsHalf;
+    
+    // Note the ptrs above may point to same memory
+    
+    int32_t dstIndex = 0;
+
+    for (int32_t y = 0; y < height; y += 2) {
+        int32_t y0 = y;
+        int32_t y1 = y + 1;
         y0 *= width;
         y1 *= width;
 
         for (int32_t x = 0; x < width; x += 2) {
-            // last x column is skipped if odd, this causes a shift
-            if (isOddX) {
-                if (x == (width - 1)) {
-                    break;
-                }
-            }
-
+            int32_t x0 = x;
             int32_t x1 = x + 1;
-            if (x1 == width) {
-                x1 = x;
-            }
 
             if (srcHalf) {
                 float4 c0, c1, c2, c3;
-                c0 = toFloat4(srcHalf[y0 + x]);
+                c0 = toFloat4(srcHalf[y0 + x0]);
                 c1 = toFloat4(srcHalf[y0 + x1]);
-                c2 = toFloat4(srcHalf[y1 + x]);
+                c2 = toFloat4(srcHalf[y1 + x0]);
                 c3 = toFloat4(srcHalf[y1 + x1]);
 
                 // mip filter is simple box filter
@@ -394,10 +567,10 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
                 }
             }
             else if (srcFloat) {
-                const float4& c0 = srcFloat[y0 + x];
+                const float4& c0 = srcFloat[y0 + x0];
                 const float4& c1 = srcFloat[y0 + x1];
 
-                const float4& c2 = srcFloat[y1 + x];
+                const float4& c2 = srcFloat[y1 + x0];
                 const float4& c3 = srcFloat[y1 + x1];
 
                 // mip filter is simple box filter
@@ -425,10 +598,10 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
             }
             else {
                 // faster 8-bit only path for LDR and unmultiplied
-                const Color& c0 = srcColor[y0 + x];
+                const Color& c0 = srcColor[y0 + x0];
                 const Color& c1 = srcColor[y0 + x1];
 
-                const Color& c2 = srcColor[y1 + x];
+                const Color& c2 = srcColor[y1 + x0];
                 const Color& c3 = srcColor[y1 + x1];
 
                 // 8-bit box filter, with +2/4 for rounding
