@@ -302,7 +302,7 @@ kram includes additional open-source:
 * Tile command for SVT tiling
 * Block twiddling support for consoles
 * Merge command to combine images (similar to ImageMagick)
-* Atlas command to atlas to 2D and 2D array textures.  Display names, show bounds of atlases.
+* Atlas command to atlas to 2D and 2D array textures.  Display names, show bounds of atlases.  Have -chunks arg now.
 * 3D chart flattening.
 * Motion vector direction analysis.
 * Split view comparison rendering.  Move horizontal slider like ShaderToy.
@@ -541,7 +541,7 @@ ASTC doesn't compress and RDO as tightly.
 
 ### On mip calculations and non-power-of-two textures
 
-With the exception of PVRTC, the block encoded formats support non-power-of-two mipmaps.  But very little literature talks about how mips are calculated.  D3D first used round-down mips, GL followed suit, and Metal/Vulkan followed suit.  Round down cuts out a mip level, and does a floor of the mip levels.   Round-up mips generally have a better mapping to the upper with a simple box filter.  kram hasn't adjusted it's box filter to adjust for this yet, but there are links into the code to articles about how to better weight pixels.  The kram box filter is correct for power-of-two mipgen, but should be improved for these cases.
+With the exception of PVRTC, the block encoded formats support non-power-of-two mipmaps.  But very little literature talks about how mips are calculated.  OpenGL/D3D first used round-down mips, and Metal/Vulkan had to follow suit.  Round down cuts out a mip level, and does a floor of the mip levels.   Round-up mips generally have a better mapping to the upper with a simple box filter.  kram now has reasonable cases for pow2 and non-pow2 mip generation.  Odd source pixel counts have to shift weights as leftmost/rightmost pixels contribute more on the left/right sides, and avoid a shift in image pixels.
 
 ```
 Round Down
