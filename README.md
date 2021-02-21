@@ -7,6 +7,9 @@ C++11 library from 200 to 800KB in size depending on encoder options.  Compiles 
 # kramv.app
 ObjC++ Viewer for PNG/KTX supported files from kram.  530KB in size.  Uses Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  No dmg yet, just drop onto /Applications folder, and then run scripts/fixfinder.sh to flush LaunchServices (see below).  Runs on macOS (ARM/Intel).
 
+Diagrams and screenshots can be located here:
+https://www.figma.com/file/bPmPSpBGTi2xTVnBDqVEq0/kram
+
 #### Releases includes builds for macOS (Xcode 12.3 - arm64/x64) and Windows x64 (VS 2019 - x64).  libkram can be built for iOS/Android.
 
 ### About kram
