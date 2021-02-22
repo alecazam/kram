@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "KTXImage.h"  // for MyMTLTextureType
-#include "KTXMipper.h"
+#include "KramMipper.h"
 #include "KramConfig.h"
 #include "KramImageInfo.h"
 

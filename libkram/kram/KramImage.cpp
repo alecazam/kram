@@ -39,7 +39,7 @@
 #include <algorithm>
 
 #include "KTXImage.h"
-#include "KTXMipper.h"
+#include "KramMipper.h"
 #include "KramFileHelper.h"
 #include "KramSDFMipper.h"
 #include "KramTimer.h"
@@ -85,6 +85,7 @@ Image::Image() : _width(0), _height(0), _hasColor(false), _hasAlpha(false)
 {
 }
 
+// TODO: eliminate this and Image class, use KTXImage everywhere so can have explicit mip chains
 bool Image::loadImageFromKTX(const KTXImage& image)
 {
     // copy the data into a contiguous array
@@ -444,7 +445,7 @@ static bool writeDataAtOffset(const uint8_t* data, size_t dataSize, size_t dataO
 
 bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, bool isVerbose, const string& swizzleText) const
 {
-    KTXImage dstImage;
+    KTXImage dstImage; // thrown out, data written to file
     return decodeImpl(srcImage, dstFile, dstImage, decoder, isVerbose, swizzleText);
 }
 
@@ -2087,7 +2088,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 #if 0
             // This hackimproves L1 and LA block generating
             // even enabled dual-plane mode for LA.  Otherwise rgb and rgba blocks
-            // are generated on data that only contains L or LA blocks.
+            // are generated on data that only contain L or LA blocks.
 
             bool useUniqueChannels = true;
             if (useUniqueChannels) {

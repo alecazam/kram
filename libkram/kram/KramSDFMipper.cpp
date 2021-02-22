@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include "KTXMipper.h"
+#include "KramMipper.h"
 
 namespace kram {
 using namespace heman;

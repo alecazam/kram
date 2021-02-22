@@ -19,7 +19,7 @@
 #import "KramRenderer.h"
 #import "KramShaders.h"
 #include "KramLog.h"
-#include "KTXMipper.h"
+#include "KramMipper.h"
 #include "KramMmapHelper.h"
 #include "KramImage.h"
 #include "KramViewerBase.h"
@@ -261,7 +261,10 @@ MyMTLPixelFormat encodeSrcTextureAsFormat(MyMTLPixelFormat currentFormat, bool i
 void encodeSrcForEncodeComparisons(bool increment) {
     auto newFormat = encodeSrcTextureAsFormat(displayedFormat, increment);
     
-     // TODO: have to encode and then decode astc on macOS-Intel
+    // This is really only useful for variable block size formats like ASTC
+    // maybe some value in BC7 to BC1 comparison (original vs. BC7 vs. BC1)
+ 
+     // TODO: have to encode and then decode astc/etc on macOS-Intel
      // load png and keep it around, and then call encode and then diff the image against the original pixels
      // 565 will always differ from the original.
      
@@ -275,10 +278,11 @@ void encodeSrcForEncodeComparisons(bool increment) {
     // encode incremented format and cache, that way don't wait too long
     // and once all encode formats generated, can cycle through them until next image loaded
     
-    //KTXImage image;
+    // Could reuse the same buffer for all ASTC formats, larger blocks always need less mem
+    //KramImage image; // TODO: move encode to KTXImage, convert png to one layer KTXImage
     //image.open(...);
-    //image.encode();
-    //decodeIfNeeded(...);
+    //image.encode(dstImage);
+    //decodeIfNeeded(dstImage, dstImageDecoded);
     //comparisonTexture = [createImage:image];
     //set that onto the shader to diff against after recontruct
     

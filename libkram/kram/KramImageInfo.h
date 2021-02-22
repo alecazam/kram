@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "KTXImage.h"
-#include "KTXMipper.h"  // for Color
+#include "KramMipper.h"  // for Color
 #include "KramConfig.h"
 
 namespace kram {

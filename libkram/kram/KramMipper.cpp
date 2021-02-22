@@ -2,7 +2,7 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-#include "KTXMipper.h"
+#include "KramMipper.h"
 
 #include <algorithm>
 #include <cassert>
