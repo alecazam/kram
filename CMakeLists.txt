@@ -10,11 +10,17 @@ endif()
 # https://cmake.org/cmake/help/latest/policy/CMP0077.html#policy:CMP0077
 #cmake_policy(SET CMP0077 NEW)
 
-set(UNIXBUILD FALSE)
+set(BUILD_UNIX FALSE)
+set(BUILD_IOS FALSE)
 if (APPLE)
-    message("build for macOS")
+    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        message("build for iOS")
+        set(BUILD_IOS TRUE)
+    else()
+        message("build for macOS")
+    endif()
 elseif (WIN32)
-    message("build for win")
+    message("build for win x64")
 elseif (UNIX AND NOT APPLE)
     message("build for unix")
     set(UNIXBUILD TRUE)
@@ -45,8 +51,16 @@ set(CMAKE_CXX_EXTENSIONS NO)
 # set(CMAKE_OSX_SYSROOT macosx11.0)
 # set(CMAKE_OSX_SYSROOT macos)  # this doesn't work
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
-set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
+# CMAKE_OSX_DEPLOYMENT_TARGET must be set as a CACHE variable, or it will be stripped
+if (APPLE)
+    if (BUILD_IOS)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum iOS")
+        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)" CACHE STRING "Architecture iOS")
+    else()
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum macOS")
+        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)" CACHE STRING "Architecture macOS")
+    endif()
+endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 set(CMAKE_BUILD_TYPE Release)
@@ -60,9 +74,9 @@ set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
 set(myTargetWorkspace kramWorkspace)
 
 if (APPLE)
-project(${myTargetWorkspace} LANGUAGES C CXX OBJCXX)
+    project(${myTargetWorkspace} LANGUAGES C CXX OBJCXX)
 else()
-project(${myTargetWorkspace} LANGUAGES C CXX)
+    project(${myTargetWorkspace} LANGUAGES C CXX)
 endif()
 
 # the kram static library libkram which should build on iOS/Android/Mac/Win
@@ -75,6 +89,54 @@ add_subdirectory(kram)
 # the viewer is only written for macOS Intel/ARM currently, uses libkram
 if (APPLE)
     add_subdirectory(kramv)
+endif()
+
+#-----------------------------------------------------
+
+# https://discourse.cmake.org/t/specifying-cmake-osx-sysroot-breaks-xcode-projects-but-no-other-choice/2532/8
+# use snipet from Alian Martin to validate SDK
+
+if (APPLE)
+    if(NOT DEFINED CMAKE_OSX_SYSROOT)
+        message(FATAL_ERROR "Cannot check SDK version if CMAKE_OSX_SYSROOT is not defined."
+    )
+    endif()
+
+    # check the Xcode app itself for it's version
+    set(XCODE_MIN_APP 12.2)
+    if(XCODE AND XCODE_VERSION VERSION_LESS XCODE_MIN_APP)
+        message(FATAL_ERROR "This project requires at least Xcode ${XCODE_MIN_APP}")
+    endif()
+
+    # check the SDK
+    set(XCODE_MIN_SDK_IOS, 14.0)
+    set(XCODE_MIN_SDK_MACOS, 11.0)
+
+    execute_process(
+        COMMAND xcrun --sdk "${CMAKE_OSX_SYSROOT}" --show-sdk-version
+        OUTPUT_VARIABLE SDK_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    if (BUILD_IOS)
+        message("iOS SDK ${SDK_VERSION}")
+        message("iOS deploy ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+        message("iOS arch ${CMAKE_OSX_ARCHITECTURES}")
+                
+        if (SDK_VERSION VERSION_LESS XCODE_MIN_SDK_IOS)
+            message(FATAL_ERROR "This project requires at least iPhoneOS ${XCODE_MIN_SDK_IOS}"
+        )
+        endif()
+    else()
+        message("macOS SDK ${SDK_VERSION}")
+        message("macOS deploy ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+        message("macOS arch ${CMAKE_OSX_ARCHITECTURES}")
+                        
+        if (SDK_VERSION VERSION_LESS XCODE_MIN_SDK_MACOS)
+            message(FATAL_ERROR "This project requires at least macOS SDK ${XCODE_MIN_SDK_MACOS}"
+        )
+        endif()
+    endif()
 endif()
 
 #-----------------------------------------------------
