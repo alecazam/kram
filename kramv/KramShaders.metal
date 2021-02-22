@@ -337,8 +337,15 @@ float4 DrawPixels(
         // adding some slop here so that flat areas don't flood the visual with red
         else if (uniforms.debugMode == ShDebugModePosX) {
             // two channels here, would need to color each channel
-            if (c.r >= 0.5 + 0.05) {
-                isHighlighted = true;
+            if (uniforms.isSDF) {
+                if (c.r >= 0.5) {
+                    isHighlighted = true;
+                }
+            }
+            else {
+                if (c.r >= 0.5 + 0.05) {
+                    isHighlighted = true;
+                }
             }
         }
         else if (uniforms.debugMode == ShDebugModePosY) {
@@ -350,7 +357,7 @@ float4 DrawPixels(
         // TODO: is it best to highlight the interest pixels in red
         // or the negation of that to see which ones aren't.
         if (isHighlighted) {
-            float3 highlightColor = float3(1.0f, 0.0f, 0.0f);
+            float3 highlightColor = float3(1.0f, 0.0f, 1.0f);
             c.rgb = highlightColor;
         }
         

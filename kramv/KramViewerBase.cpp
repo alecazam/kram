@@ -47,10 +47,10 @@ void ShowSettings::advanceDebugMode(bool isShiftKeyDown) {
     // if (_showSettings->debugMode == DebugModeGray && !hasColor) advanceDebugMode(isShiftKeyDown);
 
     // for normals show directions
-    if (debugMode == DebugModePosX && !isNormal) {
+    if (debugMode == DebugModePosX && !(isNormal || isSDF)) {
         advanceDebugMode(isShiftKeyDown);
     }
-    if (debugMode == DebugModePosY && !isNormal) {
+    if (debugMode == DebugModePosY && !(isNormal)) {
         advanceDebugMode(isShiftKeyDown);
     }
     
