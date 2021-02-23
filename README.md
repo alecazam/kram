@@ -609,17 +609,19 @@ The encoders all have to encode non-linear srgb point clouds, which isn't correc
 
 ```
 
-### On texture alases (TODO:)
+### On texture atlases and charts (TODO:)
 
-2D atlas packing works for source textures, but suffers from many issues.  Often packed by hand or algorithm, the results look great as PNG where there are no mips and no block encoding. But the images break down once textures are block encoded. These are some of the complex problems:
+2D atlas packing works for source textures like particle flipbooks, but suffers from many issues.  Often packed by hand or algorithm, the results look great as PNG, but break down once mipped and block encoded. These are some of the complex problems:
 
-* Mip bleed - Solved with mip lod clamping.
-* Alignment bleed - Solved with padding.
+* Mip bleed - Solved with mip lod clamping or disabling mips.
+* Alignment bleed - Solved with padding to smallest visible mip blocks.
 * Block bleed - Solved with pow2 blocks - 4x4 scales down to 2x2 and 1x1.  6x6 scales to non-integral 3x3 and 1.5x1.5.
 * Clamp only - Solved by disabling wrap/mirror modes and uv scaling.
 * Complex pack - stb_rect_pack tightly pack images to a 2d area without accounting for bleed issues
  
 kram will soon offer an atlas mode that uses ES3-level 2d array textures.  These waste some space, but are much simpler to pack, provide a full encoded mip chain with any block type, and also avoid the 5 problems mentioned above.  Named atlas entries reference a given array element, but could be repacked and remapped as used to a smaller atlas.  Dropping mip levels can be done across all entries, but is a little harder for a single array element.  Sparse textures work for 2d array textures, but often the min sparse size is 256x256 (64K) or 128x128 (16K) and the rest is the packed mip tail.  Can draw many types of objects and particles with only a single texture array.
 
-The idea is to copy all atlased images to a 2d vertical strip.  This makes row-byte handling simpler.  Then kram can already convert a vertical strip to a 2D array, and the output rectangle, array index, mip range, and altas names are tracked as well.  But there is some subtlety to copy smaller textures to the smaller mips and use sampler mip clamping.
+The idea is to copy all atlased images to a 2d vertical strip.  This makes row-byte handling simpler.  Then kram can already convert a vertical strip to a 2D array, and the output rectangle, array index, mip range, and altas names are tracked as well.  But there is some subtlety to copy smaller textures to the smaller mips and use sampler mip clamping.  Non-pow2 textures will have transparent fill around the sides.
+
+Apps like Substance Painter use charts of unwrapped UV.  These need to be gapped and aligned to block sizes to avoid the problems above.  Often times the gap is too small (1px) for the mipchain, and instead the algorithms cover up the issue by dilating colors into the gutter regions, so that black outlines are not visible.  thelka_atlas, xatlas, and other utilities can build these charts.
 
