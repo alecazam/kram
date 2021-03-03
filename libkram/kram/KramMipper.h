@@ -68,7 +68,7 @@ public:
     // drop by 1 mip level by box filter
     void mipmap(const ImageData &srcImage, ImageData &dstImage) const;
 
-    void initPixelsHalfIfNeeded(ImageData &srcImage, bool doPremultiply,
+    void initPixelsHalfIfNeeded(ImageData &srcImage, bool doPremultiply, bool doPrezero,
                                 vector<half4> &halfImage) const;
 
 private:

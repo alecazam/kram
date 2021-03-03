@@ -56,12 +56,14 @@ public:
     bool isVerbose = false;
     bool doSDF = false;
     bool isPremultiplied = false;
+    bool isPrezero = false;
     bool isNormal = false;  // signed, but may be stored unorm and swizzled (f.e. astc/bc3nm gggr or rrrg)
 
     // can pick a smaller format if alpha = 1 (only for bc and etc)
     bool optimizeFormatForOpaque = false;
 
     // these and formatString set the pixelFormat
+    // if pixelFOrmat set directly, then these are updated off that format
     bool isSigned = false;
     bool isSRGB = false;
     bool isHDR = false;
@@ -116,6 +118,7 @@ public:
     bool isSRGB = false;
     bool isColorWeighted = false;
     bool isPremultiplied = false;  // don't premul
+    bool isPrezero = false;
     bool isHDR = false;
 
     //bool skipImageLength = false;  // gen ktxa

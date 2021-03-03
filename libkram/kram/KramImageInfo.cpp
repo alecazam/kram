@@ -991,7 +991,11 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     textureEncoder = args.textureEncoder;
     textureType = args.textureType;
 
+    isPrezero = args.isPrezero;
     isPremultiplied = args.isPremultiplied;
+    if (!isPremultiplied)
+        isPrezero = false;
+    
     isNormal = args.isNormal;
 
     doSDF = args.doSDF;

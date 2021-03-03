@@ -935,6 +935,7 @@ void kramEncodeUsage(bool showVersion = true)
           "\t [-avg rxbx]\n"
           "\t [-sdf]\n"
           "\t [-premul]\n"
+          "\t [-prezero]\n"
           "\t [-quality 0-100]\n"
           "\t [-optopaque]\n"
           "\t [-v]\n"
@@ -1008,6 +1009,12 @@ void kramEncodeUsage(bool showVersion = true)
           "\tPremultiplied alpha to src pixels before output\n"
           "\n"
 
+          // This is meant to work with shaders that (incorrectly) premul after sampling.
+          // limits the rgb bleed in regions that should not display colors.  Can stil have black color halos.
+          "\t-prezero"
+          "\tPremultiplied alpha to src pixels before output but only where a=0\n"
+          "\n"
+          
           "\t-optopaque"
           "\tChange format from bc7/3 to bc1, or etc2rgba to rgba if opaque\n"
           "\n"
@@ -1823,6 +1830,10 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
         else if (isStringEqual(word, "-premul")) {
             infoArgs.isPremultiplied = true;
+            continue;
+        }
+        else if (isStringEqual(word, "-prezero")) {
+            infoArgs.isPrezero = true;
             continue;
         }
         else if (isStringEqual(word, "-v") ||

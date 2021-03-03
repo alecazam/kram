@@ -164,9 +164,13 @@ void Mipper::initTables()
 #endif
 }
 
-void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
+void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, bool doPrezero,
                                     vector<half4>& halfImage) const
 {
+    Color zeroColor = { 0, 0, 0, 0 };
+    float4 zeroColorf = simd_make_float4(0.0, 0.0f, 0.0f, 0.f); // need a constant for this
+    half4 zeroColorh = toHalf4(zeroColorf);
+    
     int32_t w = srcImage.width;
     int32_t h = srcImage.height;
 
@@ -177,6 +181,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
         assert(false);
     }
     else if (srcImage.isSRGB) {
+        
         // this does srgb and premul conversion
         for (int32_t y = 0; y < h; y++) {
             int32_t y0 = y * w;
@@ -189,19 +194,29 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
                 if (c0.a != 255) {
                     float alpha = alphaToFloat[c0.a];
 
-                    if (!doPremultiply) {
-                        cFloat.w = alpha;
-                    }
-                    else {
+                    if (doPremultiply) {
                         // premul and sets alpha
                         cFloat *= alpha;
                     }
+                    else if (doPrezero) {
+                        if (c0.a == 0) {
+                            cFloat = zeroColorf;
+                            c0 = zeroColor;
+                        }
+                        else {
+                            cFloat.w = alpha;
+                        }
+                    }
+                    else {
+                        cFloat.w = alpha;
+                    }
                 }
 
-                //                if (!floatImage.empty()) {
-                //                    floatImage[y0 + x] = cFloat;
-                //                }
-                //                else
+                // TODO: 32F path
+                // if (!floatImage.empty()) {
+                //    floatImage[y0 + x] = cFloat;
+                // }
+                // else
                 {
                     halfImage[y0 + x] = toHalf4(cFloat);
                 }
@@ -215,6 +230,26 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
                     cFloat.z = linearToSRGBFunc(cFloat.z);
 
                     c0 = Unormfloat4ToColor(cFloat);
+                }
+            }
+        }
+    }
+    else if (doPrezero) {
+        // do premul conversion
+        for (int32_t y = 0; y < h; y++) {
+            int32_t y0 = y * w;
+            for (int32_t x = 0; x < w; x++) {
+                Color& c0 = srcImage.pixels[y0 + x];
+                
+                // TODO: assumes 16, need 32f path too
+                if (c0.a == 0) {
+                    c0 = zeroColor;
+                    halfImage[y0 + x] = zeroColorh;
+                }
+                else {
+                    float4 cFloat = {alphaToFloat[c0.r], alphaToFloat[c0.g],
+                                    alphaToFloat[c0.b], alphaToFloat[c0.a]};
+                    halfImage[y0 + x] = toHalf4(cFloat);
                 }
             }
         }
@@ -234,10 +269,11 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply,
                     cFloat *= alpha;
                 }
 
-                //                if (!floatImage.empty()) {
-                //                    floatImage[y0 + x] = cFloat;
-                //                }
-                //                else
+                // TODO: 32F path
+                // if (!floatImage.empty()) {
+                //    floatImage[y0 + x] = cFloat;
+                // }
+                // else
                 {
                     halfImage[y0 + x] = toHalf4(cFloat);
                 }

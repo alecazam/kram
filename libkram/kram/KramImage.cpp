@@ -1198,7 +1198,7 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
     vector<half4> halfImage;
     vector<float4> floatImage;
 
-    bool doPremultiply = info.hasAlpha && info.isPremultiplied;
+    bool doPremultiply = info.hasAlpha && (info.isPremultiplied || info.isPrezero);
     bool isMultichunk = chunkOffsets.size() > 1;
 
     if (info.isHDR) {
@@ -1216,11 +1216,25 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
         // run this across all the source data
         // do this in-place before mips are generated
         if (doPremultiply) {
-            for (const auto& pixel : _pixelsFloat) {
-                float alpha = pixel.w;
-                float4& pixelChange = const_cast<float4&>(pixel);
-                pixelChange *= alpha;
-                pixelChange.w = alpha;
+            if (info.isPrezero) {
+                for (const auto& pixel : _pixelsFloat) {
+                    float alpha = pixel.w;
+                    float4& pixelChange = const_cast<float4&>(pixel);
+                    
+                    // only premul at 0 alpha regions
+                    if (alpha == 0.0f) {
+                        pixelChange *= alpha;
+                        pixelChange.w = alpha;
+                    }
+                }
+            }
+            else {
+                for (const auto& pixel : _pixelsFloat) {
+                    float alpha = pixel.w;
+                    float4& pixelChange = const_cast<float4&>(pixel);
+                    pixelChange *= alpha;
+                    pixelChange.w = alpha;
+                }
             }
         }
     }
@@ -1334,7 +1348,7 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
                 // copy and convert to half4 or float4 image
                 // srcImage already points to float data, so could modify that
                 // only need doPremultiply at the top mip
-                mipper.initPixelsHalfIfNeeded(srcImage, doPremultiply,
+                mipper.initPixelsHalfIfNeeded(srcImage, doPremultiply && !info.isPrezero, info.isPrezero,
                                               halfImage);
             }
         }
