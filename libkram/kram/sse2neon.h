@@ -5855,6 +5855,7 @@ FORCE_INLINE void _mm_clflush(void const *p)
     // no corollary for Neon?
 }
 
+/* conflicts with mm_malloc.h
 // Allocate aligned blocks of memory.
 // https://software.intel.com/en-us/
 //         cpp-compiler-developer-guide-and-reference-allocating-and-freeing-aligned-memory-blocks
@@ -5874,6 +5875,7 @@ FORCE_INLINE void _mm_free(void *addr)
 {
     free(addr);
 }
+*/
 
 // Starting with the initial value in crc, accumulates a CRC32 value for
 // unsigned 8-bit integer v.

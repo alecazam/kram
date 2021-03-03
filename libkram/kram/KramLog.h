@@ -18,9 +18,17 @@ enum LogLevel {
     LogLevelError = 3,
 };
 
+// these validate the inputs to any sprintf like format + args
+#ifndef __printflike
+    #define __printflike(fmtIndex, varargIndex)
+#endif
+#ifndef __scanflike
+    #define __scanflike(fmtIndex, varargIndex)
+#endif
+
 extern int32_t logMessage(const char* group, int32_t logLevel,
                       const char* file, int32_t line, const char* func,
-                      const char* fmt, ...);
+                      const char* fmt, ...) __printflike(6, 7);
 
 // verify leaves conditional code in the build
 #if KRAM_DEBUG
@@ -38,7 +46,12 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
 
 // TODO: move to Strings.h
 using namespace std;
-int32_t sprintf(string& str, const char* format, ...);
+
+// returns length of string, -1 if failure
+int32_t sprintf(string& str, const char* format, ...) __printflike(2, 3);
+
+// returns length of chars appended, -1 if failure
+int32_t append_sprintf(string& str, const char* format, ...) __printflike(2, 3);
 
 bool startsWith(const char* str, const string& substring);
 bool endsWithExtension(const char* str, const string& substring);

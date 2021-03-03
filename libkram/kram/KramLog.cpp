@@ -19,27 +19,43 @@ using namespace std;
 //
 //}
 
-static int32_t vsprintf(string& str, const char* format, va_list args)
-{
-    if (strchr(format, '%') == nullptr) {
-        str = format;
-        return (int32_t)str.length();
-    }
 
-    // can't reuse args after vsnprintf
-    va_list argsCopy;
-    va_copy(argsCopy, args);
+
+static int32_t append_vsprintf(string& str, const char* format, va_list args) 
+{
+    if (strcmp(format, "%s") == 0) {
+        const char* firstArg = va_arg(args, const char*);
+        str += firstArg;
+        return strlen(firstArg);
+    }
+    if (strrchr(format, '%') == nullptr) {
+        str += format;
+        return strlen(format);
+    }
 
     // format once to get length (without NULL at end)
+    va_list argsCopy;
+    va_copy(argsCopy, args);
     int32_t len = vsnprintf(NULL, 0, format, argsCopy);
-
+    va_end(argsCopy);
+    
     if (len > 0) {
+        size_t existingLen = str.length();
+        
         // resize and format again into string
-        str.resize(len);
+        str.resize(existingLen + len, 0);
 
-        vsnprintf(&str[0], len + 1, format, args);
+        vsnprintf((char*)str.data() + existingLen, len + 1, format, args);
     }
+    
     return len;
+}
+
+
+static int32_t vsprintf(string& str, const char* format, va_list args)
+{
+    str.clear();
+    return append_vsprintf(str, format, args);
 }
 
 int32_t sprintf(string& str, const char* format, ...)
@@ -51,6 +67,17 @@ int32_t sprintf(string& str, const char* format, ...)
 
     return len;
 }
+
+int32_t append_sprintf(string& str, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int32_t len = append_vsprintf(str, format, args);
+    va_end(args);
+
+    return len;
+}
+
 
 bool startsWith(const char* str, const string& substring)
 {
@@ -84,22 +111,20 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
 
     // convert var ags to a msg
     const char* msg;
+    
     string str;
-
-    va_list args;
-    va_start(args, fmt);
     if (strstr(fmt, "%") == nullptr) {
         msg = fmt;
     }
     else {
+        va_list args;
         va_start(args, fmt);
         vsprintf(str, fmt, args);
         va_end(args);
 
         msg = str.c_str();
     }
-    va_end(args);
-
+   
     // pipe to correct place, could even be file output
     FILE* fp = stdout;
     if (logLevel >= LogLevelWarning)

@@ -167,6 +167,48 @@ public:
 
 //---------------------------------------------
 
+// Mips are reversed from KTX1 (mips are smallest first for streaming),
+// and this stores an array of supercompressed levels, and has dfds.
+class KTX2Header {
+public:
+
+    uint8_t identifier[12] = { // same is kKTX2Identifier
+        0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
+        // '«', 'K', 'T', 'X', ' ', '2', '0', '»', '\r', '\n', '\x1A', '\n'
+    };
+
+    uint32_t vkFormat = 0; // invalid
+    uint32_t typeSize = 1;
+    
+    uint32_t pixelWidth = 1;
+    uint32_t pixelHeight = 0;
+    uint32_t pixelDepth = 0;
+
+    uint32_t layerCount = 0;
+    uint32_t faceCount = 1;
+    uint32_t levelCount = 1;
+    uint32_t supercompressionScheme = 0;
+
+    // Index
+
+    // dfd block
+    uint32_t dfdByteOffset = 0;
+    uint32_t dfdByteLength = 0;
+
+    // key-value
+    uint32_t kvdByteOffset = 0;
+    uint32_t kvdByteLength = 0;
+
+    // supercompress global data
+    uint64_t sgdByteOffset = 0;
+    uint64_t sgdByteLength = 0;
+
+    // chunks hold levelCount of all mips of the same size
+    // KTX2ImageChunk* chunks; // [levelCount]
+};
+
+//---------------------------------------------
+
 // This is one entire level of mipLevels.
 class KTXImageLevel {
 public:
@@ -233,7 +275,7 @@ public:  // TODO: bury this
     KTXHeader header;  // copy of KTXHeader, so can be modified and then written back
 
     // write out only string/string props, for easy of viewing
-    vector<pair<string, string>> props;
+    vector<pair<string, string> > props;
 
     vector<KTXImageLevel> mipLevels;  // offsets into fileData
 

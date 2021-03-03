@@ -85,7 +85,21 @@ Image::Image() : _width(0), _height(0), _hasColor(false), _hasAlpha(false)
 {
 }
 
-// TODO: eliminate this and Image class, use KTXImage everywhere so can have explicit mip chains
+// TODO: use KTXImage everywhere so can have explicit mip chains
+// this routine converts KTX to float4, but don't need if already matching 4 channels
+// could do other formata conversions here on more supported formats (101010A2, etc).
+
+// TODO: handle loading KTXImage with custom mips
+// TODO: handle loading KTXImage with other texture types (cube, array, etc)
+
+// TODO: image here is very specifically a single level of chunks of float4 or Color (RGBA8Unorm)
+// the encoder is only written to deal with those types.
+
+// TODO: for png need to turn grid/horizontal strip into a vertical strip if not already
+// that way can move through the chunks and overwrite them in-place.
+// That would avoid copying each chunk out in the encode, but have to do in reodering.
+// That way data is stored as KTX would instead of how PNG does.
+
 bool Image::loadImageFromKTX(const KTXImage& image)
 {
     // copy the data into a contiguous array
@@ -186,7 +200,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                     int32_t srcX = (y0 + x) * numSrcChannels;
                     int32_t dstX = (y0 + x) * numDstChannels;
 
-                    // copy in available alues
+                    // copy in available values
                     for (int32_t i = 0; i < numSrcChannels; ++i) {
                         srcPixel.v[i] = srcPixels[srcX + i];
                     }
@@ -1242,6 +1256,8 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
 
     // allocate to hold props and entire image to write out
     if (!dstFile) {
+        dstImage.initMipLevels(false, mipOffset);
+        
         dstImage.reserveImageData();
     }
     

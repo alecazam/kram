@@ -10,6 +10,7 @@
 #include <atomic>
 #include <cmath>
 #include <ctime>
+#include <inttypes.h>
 #include <string>
 #include <vector>
 
@@ -1269,7 +1270,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     bool isMB = (dataSize > (512 * 1024));
     sprintf(tmp,
             "file: %s\n"
-            "size: %d\n"
+            "size: %" PRIu64 "\n"
             "sizm: %0.3f %s\n",
             srcFilename.c_str(),
             dataSize,
@@ -1417,7 +1418,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                     "mipd: %dx%d\n"
                     "mips: %zu\n"
                     "mipc: %dx\n"
-                    "mipo: %zu\n",
+                    "mipo: %" PRIu64 "\n",
                     w, h, mipLevel++, mip.length, srcImage.totalChunks(), mip.offset);
             info += tmp;
 
@@ -1991,7 +1992,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
         
         if (success) {
             success = srcImage.encode(info, tmpFileHelper.pointer());
-
+            
             if (!success) {
                 KLOGE("Kram", "encode failed");
             }

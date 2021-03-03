@@ -46,7 +46,7 @@ public:
 
     bool decode(const KTXImage& image, FILE* dstFile, TexEncoder decoder, bool isVerbose, const string& swizzleText) const;
     
-    // encode/decode to a memory block (TODO: change over to returning dstImage holding all data inside)
+    // encode/decode to a memory block
     bool encode(ImageInfo& info, KTXImage& dstImage) const;
 
     bool decode(const KTXImage& image, KTXImage& dstImage, TexEncoder decoder, bool isVerbose, const string& swizzleText) const;
