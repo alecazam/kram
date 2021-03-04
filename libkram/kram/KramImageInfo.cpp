@@ -993,7 +993,7 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
 
     isPrezero = args.isPrezero;
     isPremultiplied = args.isPremultiplied;
-    if (!isPremultiplied)
+    if (isPremultiplied)
         isPrezero = false;
     
     isNormal = args.isNormal;

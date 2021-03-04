@@ -1204,9 +1204,9 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
             data = srcFileBuffer.data();
             dataSize = (int32_t)srcFileBuffer.size();
-            
-            info = kramInfoPNGToString(srcFilename, data, dataSize, isVerbose);
         }
+        info = kramInfoPNGToString(srcFilename, data, dataSize, isVerbose);
+        
     }
     else if (isKTX) {
         KTXImage srcImage;
@@ -1423,7 +1423,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
             sprintf(tmp,
                     "mipn: %d\n"
                     "mipd: %dx%d\n"
-                    "mips: %zu\n"
+                    "mips: %" PRIu64 "\n"
                     "mipc: %dx\n"
                     "mipo: %" PRIu64 "\n",
                     w, h, mipLevel++, mip.length, srcImage.totalChunks(), mip.offset);
