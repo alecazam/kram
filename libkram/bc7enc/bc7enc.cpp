@@ -33,11 +33,11 @@ static inline int32_t iabs32(int32_t v) { uint32_t msk = v >> 31; return (v ^ ms
 static inline void swapu(uint32_t* a, uint32_t* b) { uint32_t t = *a; *a = *b; *b = t; }
 //static inline void swapf(float* a, float* b) { float t = *a; *a = *b; *b = t; }
 
-typedef struct {
+struct color_quad_u8 {
     uint8_t r, g, b, a;
     inline const uint8_t& operator[](int index) const { return *(&r + index); }
     inline uint8_t& operator[](int index) { return *(&r + index); }
-} color_quad_u8;
+};
 
 static inline color_quad_u8 *color_quad_u8_set_clamped(color_quad_u8 *pRes, int32_t r, int32_t g, int32_t b, int32_t a) { pRes->r = (uint8_t)clampi(r, 0, 255); pRes->g = (uint8_t)clampi(g, 0, 255); pRes->b = (uint8_t)clampi(b, 0, 255); pRes->a = (uint8_t)clampi(a, 0, 255); return pRes; }
 static inline color_quad_u8 *color_quad_u8_set(color_quad_u8 *pRes, int32_t r, int32_t g, int32_t b, int32_t a) { assert((uint32_t)(r | g | b | a) <= 255); pRes->r = (uint8_t)r; pRes->g = (uint8_t)g; pRes->b = (uint8_t)b; pRes->a = (uint8_t)a; return pRes; }
@@ -60,11 +60,11 @@ static inline vec4F vec4F_mul(const vec4F *pLHS, float s) { vec4F res = *pLHS * 
 static inline vec4F *vec4F_normalize_in_place(vec4F *pV) {  *pV = normalize(*pV); return pV; }
 
 #else
-typedef struct {
+struct vec4F {
     float r, g, b, a;
     inline const float& operator[](int index) const { return *(&r + index); }
     inline float& operator[](int index) { return *(&r + index); }
-} vec4F;
+};
 
 static inline vec4F *vec4F_set_scalar(vec4F *pV, float x) {    pV->r = x; pV->g = x; pV->b = x;    pV->a = x;    return pV; }
 static inline vec4F *vec4F_set(vec4F *pV, float x, float y, float z, float w) {    pV->r = x;    pV->g = y;    pV->b = z;    pV->a = w;    return pV; }
