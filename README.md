@@ -382,6 +382,7 @@ Usage: kram encode
 	 [-avg rxbx]
 	 [-sdf]
 	 [-premul]
+	 [-prezero]
 	 [-quality 0-100]
 	 [-optopaque]
 	 [-v]
@@ -413,8 +414,8 @@ OPTIONS
 	-signed	Signed r or rg for etc/bc formats, astc doesn't have signed format.
 	-normal	Normal map rg storage signed for etc/bc (rg01), only unsigned astc L+A (gggr).
 	-sdf	Generate single-channel SDF from a bitmap, can mip and drop large mips. Encode to r8, bc4, etc2r, astc4x4 (Unorm LLL1) to encode
-	-premul	Premultiplied alpha to src pixels before output
-
+	-premul	Premultiplied alpha to src pixels before output.  Disable multiply of alpha post-sampling.  In kramv, view with "Premul off".
+	-prezero Premultiplied alpha only where 0, where shaders multiply alpha post-sampling.  Not true premul and black halos if alpha ramp is fast.  In kramv, view with "Premul on".
 	-optopaque	Change format from bc7/3 to bc1, or etc2rgba to rgba if opaque
 	
 	-chunks 4x4	Specifies how many chunks to split up texture into 2darray
