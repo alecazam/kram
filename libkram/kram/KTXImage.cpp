@@ -41,11 +41,11 @@ const char* kPropFilter = "KramFilter";
 using namespace std;
 
 // These start each KTX file to indicate the type
-const uint8_t kKTXIdentifier[12] = {
+const uint8_t kKTXIdentifier[kKTXIdentifierSize] = {
     0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
     //'«', 'K', 'T', 'X', ' ', '1', '1', '»', '\r', '\n', '\x1A', '\n'
 };
-const uint8_t kKTX2Identifier[12] = {
+const uint8_t kKTX2Identifier[kKTXIdentifierSize] = {
     0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
     // '«', 'K', 'T', 'X', ' ', '2', '0', '»', '\r', '\n', '\x1A', '\n'
 };
@@ -513,6 +513,12 @@ bool isFloatFormat(MyMTLPixelFormat format)
     return it.is16F() || it.is32F();
 }
 
+bool isHalfFormat(MyMTLPixelFormat format)
+{
+    const auto& it = formatInfo(format);
+    return it.is16F();
+}
+
 bool isBCFormat(MyMTLPixelFormat format)
 {
     const auto& it = formatInfo(format);
@@ -529,6 +535,12 @@ bool isASTCFormat(MyMTLPixelFormat format)
 {
     const auto& it = formatInfo(format);
     return it.isASTC();
+}
+
+bool isExplicitFormat(MyMTLPixelFormat format)
+{
+    const auto& it = formatInfo(format);
+    return !(it.isASTC() || it.isETC() || it.isBC());
 }
 
 bool isHdrFormat(MyMTLPixelFormat format)

@@ -123,13 +123,17 @@ struct Int2 {
 
 //---------------------------------------------
 
+constexpr int32_t kKTXIdentifierSize = 12;
+extern const uint8_t kKTXIdentifier[kKTXIdentifierSize];
+extern const uint8_t kKTX2Identifier[kKTXIdentifierSize];
+
 class KTXHeader {
 public:
     // Don't add any date to this class.  It's typically the top of a file cast to this.
     // As such, this doesn't have much functionality, other than to hold the header.
 
     // 64-byte header
-    uint8_t identifier[12] = { // same is kKTXIdentifier
+    uint8_t identifier[kKTXIdentifierSize] = { // same is kKTXIdentifier
         0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
         //'«', 'K', 'T', 'X', ' ', '1', '1', '»', '\r', '\n', '\x1A', '\n'
     };
@@ -172,7 +176,7 @@ public:
 class KTX2Header {
 public:
 
-    uint8_t identifier[12] = { // same is kKTX2Identifier
+    uint8_t identifier[kKTXIdentifierSize] = { // same is kKTX2Identifier
         0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
         // '«', 'K', 'T', 'X', ' ', '2', '0', '»', '\r', '\n', '\x1A', '\n'
     };
@@ -286,6 +290,7 @@ public:  // TODO: bury this
 
 // Generic format helpers.  All based on the ubiquitous type.
 bool isFloatFormat(MyMTLPixelFormat format);
+bool isHalfFormat(MyMTLPixelFormat format);
 bool isHdrFormat(MyMTLPixelFormat format);
 bool isSrgbFormat(MyMTLPixelFormat format);
 bool isColorFormat(MyMTLPixelFormat format);
@@ -295,6 +300,7 @@ bool isSignedFormat(MyMTLPixelFormat format);
 bool isBCFormat(MyMTLPixelFormat format);
 bool isETCFormat(MyMTLPixelFormat format);
 bool isASTCFormat(MyMTLPixelFormat format);
+bool isExplicitFormat(MyMTLPixelFormat format);
 
 Int2 blockDimsOfFormat(MyMTLPixelFormat format);
 uint32_t blockSizeOfFormat(MyMTLPixelFormat format);

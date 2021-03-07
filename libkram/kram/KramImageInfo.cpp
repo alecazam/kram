@@ -542,7 +542,11 @@ bool validateFormatAndEncoder(ImageInfoArgs& infoArgs)
 {
     bool error = false;
 
-    MyMTLPixelFormat format = parseFormat(infoArgs);
+    // caller an set or this can parse format from the format text
+    MyMTLPixelFormat format = infoArgs.pixelFormat;
+    if (format == MyMTLPixelFormatInvalid) {
+        format = parseFormat(infoArgs);
+    }
     if (format == MyMTLPixelFormatInvalid) {
         return false;
     }

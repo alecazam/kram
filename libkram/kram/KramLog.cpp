@@ -19,15 +19,22 @@ using namespace std;
 //
 //}
 
+// Note: careful with stdio sscanf.  In clang, this does and initial strlen which for long buffers
+// being parsed (f.e. mmapped Json) this can significantly slow a parser down.
 
 
 static int32_t append_vsprintf(string& str, const char* format, va_list args) 
 {
+    // for KLOGE("group", "%s", "text")
     if (strcmp(format, "%s") == 0) {
         const char* firstArg = va_arg(args, const char*);
         str += firstArg;
         return strlen(firstArg);
     }
+    
+    // This is important for the case where ##VAR_ARGS only leaves the format.
+    // In this case "text" must be a compile time constant string to avoid security warning needed for above.
+    // for KLOGE("group", "text")
     if (strrchr(format, '%') == nullptr) {
         str += format;
         return strlen(format);
@@ -113,7 +120,7 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
     const char* msg;
     
     string str;
-    if (strstr(fmt, "%") == nullptr) {
+    if (strrchr(fmt, '%') == nullptr) {
         msg = fmt;
     }
     else {

@@ -19,6 +19,7 @@ enum LogLevel {
 };
 
 // these validate the inputs to any sprintf like format + args
+// these come from sys/cdefs.h on Apple, but need to be define for __clang__ on other platforms
 #ifndef __printflike
     #define __printflike(fmtIndex, varargIndex)
 #endif

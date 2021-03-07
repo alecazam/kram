@@ -1270,6 +1270,9 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
 
     // allocate to hold props and entire image to write out
     if (!dstFile) {
+        // recompute, it's had mips added into it above
+        mipOffset = sizeof(KTXHeader) + header.bytesOfKeyValueData;
+
         dstImage.initMipLevels(false, mipOffset);
         
         dstImage.reserveImageData();
