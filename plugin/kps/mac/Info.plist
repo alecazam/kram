@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundleGetInfoString</key>
+	<string>22.0 © 2020 Adobe. All rights reserved.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2020 Adobe. All rights reserved.</string>
+	<key>CFBundleShortVersionString</key>
+	<string>22.0.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PLUGIN_TYPE)</string>
+	<key>CFBundleSignature</key>
+	<string>8BIM</string>
+</dict>
+</plist>

@@ -43,6 +43,7 @@ endif()
 set(myTargetLib libkram)
 
 # **** This will create libkram.a or .so or kram.lib depending on platform.
+# can also use OBJECT or SHARED, object cuts compile time
 add_library(${myTargetLib} STATIC)
 
 # turn off pch

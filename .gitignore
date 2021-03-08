@@ -41,4 +41,5 @@ out/
 # Executables
 *.exe
 *.out
-*.app
+
+plugin/ext/

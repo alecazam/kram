@@ -91,6 +91,11 @@ if (APPLE)
     add_subdirectory(kramv)
 endif()
 
+# ps plugin that uses libkram
+if (APPLE)
+    add_subdirectory(plugin)
+endif()
+
 #-----------------------------------------------------
 
 # https://discourse.cmake.org/t/specifying-cmake-osx-sysroot-breaks-xcode-projects-but-no-other-choice/2532/8
@@ -109,8 +114,8 @@ if (APPLE)
     endif()
 
     # check the SDK
-    set(XCODE_MIN_SDK_IOS, 14.0)
-    set(XCODE_MIN_SDK_MACOS, 11.0)
+    set(XCODE_MIN_SDK_IOS 14.0)
+    set(XCODE_MIN_SDK_MACOS 11.0)
 
     execute_process(
         COMMAND xcrun --sdk "${CMAKE_OSX_SYSROOT}" --show-sdk-version
@@ -143,13 +148,21 @@ endif()
 
 set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
 
+# So by default install depends on ALL_BUILD target, but that will fail if plugin
+# does not have everything setup to build (or like now is not building).
+# The plugin is currently setting EXCLUDE_FROM_ALL on the target so it's not built.
+# https://stackoverflow.com/questions/17164731/installing-only-one-target-and-its-dependencies-out-of-a-complex-project-with
+
 # install doesn't seem to do anything on WIN32, the build elements are not copied
 install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
 install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
 if (APPLE)
 	install(TARGETS kramv BUNDLE DESTINATION ${BIN_DIR})
 endif()
-
+# don't install this
+#if (APPLE)
+#    install(TARGETS kram-ps BUNDLE DESTINATION ${BIN_DIR})
+#endif()
 
 
 

@@ -30,7 +30,9 @@ target_link_libraries(${myTargetApp}
     libkram
     "-framework Cocoa" 
     "-framework Metal" 
-    "-framework MetalKit" 
+    "-framework MetalKit"
+    
+    # could eliminate this by replacing cube in kramv, but may want full 3d models for charts w/xatlas
     "-framework ModelIO"
 )
     
@@ -136,7 +138,11 @@ target_sources(${myTargetApp} PRIVATE
 
 # only these 2 resources are copied into the Resource, the other two are signed
 # Can't lowercase Resources or files don't go to correct place
-set_source_files_properties(Assets.xcassets Base.lproj/Main.storyboard PROPERTIES
+set_source_files_properties(
+    Assets.xcassets
+    Base.lproj/Main.storyboard
+    
+    PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources
 )
 
