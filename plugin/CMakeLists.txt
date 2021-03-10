@@ -56,7 +56,7 @@ set_target_properties(${myTargetApp} PROPERTIES
     # this drops app from 762KB to 174KB with only ATE enabled
     # note about needing -gfull instead of -gused here or debug info messed up:
     # https://gist.github.com/tkersey/39b4fe69e14b859889ffadccb009e397
-    #XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES
+    XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES
     XCODE_ATTRIBUTE_LLVM_LTO[variant=Release] "Incremental"
     
     #-------------------------
@@ -203,6 +203,9 @@ target_sources(${myTargetApp} PRIVATE
 #    Base.lproj/Main.storyboard
     ${appNibSources}
     
+    # this is created in the PRE_BUILD step below
+    ${KPS_SOURCE_DIR}/${myTargetApp}.rsrc
+    
     ${KPS_SOURCE_DIR}/mac/Info.plist
     
 #    ${KPS_SOURCE_DIR}/mac/Info.plist
@@ -231,7 +234,7 @@ set_source_files_properties(
 # turned off for now, and checking in pre-built resource
 # but app still can't find _main entrpoint.
 
-if (FALSE)
+if (TRUE)
 
 execute_process(
     COMMAND xcrun -f Rez
@@ -242,17 +245,24 @@ execute_process(
 add_custom_command(TARGET ${myTargetApp} PRE_BUILD
     DEPENDS ${KPS_SOURCE_DIR}/KPS.r
     COMMAND ${rezCompiler}
+    
+    # several .r are located across the build
     -I ${SDK_SOURCE_DIR}/resources/
     -I ${SDK_SOURCE_DIR}/photoshop/
     # -I ${SDK_COMMON_DIR}/includes/
     
     -arch x86_64
     
+    # use the datafork
+    -useDF
+    
     # needs this for Carbon.r and CoreServices.r in the Adobe .r headers
     #-F Carbon
     #-F CoreServices
+    
+    # where to find framework files
     -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/
-
+    
     -o "${KPS_SOURCE_DIR}/${myTargetApp}.rsrc"
     ${KPS_SOURCE_DIR}/KPS.r
 )

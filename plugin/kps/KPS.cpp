@@ -989,6 +989,12 @@ DLLExport MACPASCAL void PluginMain(const short selector,
                                      intptr_t *dataPointer,
 						             short *result)
 {
+    // using this to keep dead-strip from removing all code
+    if (selector == formatSelectorAbout && formatParamBlock == nullptr)
+    {
+        return;
+    }
+    
 	if (selector == formatSelectorAbout)
 	{
 		sSPBasic = ((AboutRecordPtr)formatParamBlock)->sSPBasic;
@@ -1139,9 +1145,12 @@ DLLExport MACPASCAL void PluginMain(const short selector,
 	}
 }
 
-// Tthis is just to silence broken build.
+// This is just to silence broken build.
 // Even though this is a plugin, Xcode wants _main or won't link.
 int main(int macroUnusedArg(argc), char** macroUnusedArg(argv))
 {
+    // call this to prevent dead-stripping
+    PluginMain(formatSelectorAbout, nullptr, nullptr, nullptr);
+    
     return 0;
 }
