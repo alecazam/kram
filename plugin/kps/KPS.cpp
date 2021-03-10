@@ -1138,3 +1138,10 @@ DLLExport MACPASCAL void PluginMain(const short selector,
     
 	}
 }
+
+// Tthis is just to silence broken build.
+// Even though this is a plugin, Xcode wants _main or won't link.
+int main(int macroUnusedArg(argc), char** macroUnusedArg(argv))
+{
+    return 0;
+}
