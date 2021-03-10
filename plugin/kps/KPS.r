@@ -85,18 +85,30 @@
     // also CoreServices/CoreServices.r is pulled in from another Adobe header, which is also Carbon
     //#include "MacOMacrezXcode.h"
 
-#define Macintosh 1
+    #define Macintosh    1
+    #define MSWindows    0
+    #define Rez          1
 
-#ifndef TARGET_API_MAC_CARBON
-#define TARGET_API_MAC_CARBON 1
-#endif
+    #ifndef TARGET_MAC_OS
+        #define TARGET_MAC_OS 1
+    #endif
 
-#ifndef TARGET_MAC_OS
-#define TARGET_MAC_OS 1
-#endif
+    #ifndef DEBUG
+        #ifndef NDEBUG
+            #define DEBUG 1
+        #else
+            #define DEBUG 0
+        #endif
+    #endif
 
-#include <Carbon.r>
+    #define BUILDING_FOR_MACH        1
 
+    // can this carbon dependency be eliminated?
+    #ifndef TARGET_API_MAC_CARBON
+        #define TARGET_API_MAC_CARBON 1
+    #endif
+
+    #include <Carbon.r>
 
     #define __PIMac__            1
     #define DLLExport extern "C"
@@ -106,14 +118,14 @@
     #define Macintosh 1
 #endif
 
-#ifdef __PIMac__
+#if defined(__PIMac__)
 	#include "PIGeneral.r"
 #elif defined(__PIWin__)
 	#include "PIGeneral.h"
 #endif
 
-
 //#include "PIUtilities.r"
+
 #ifndef ResourceID
     #define ResourceID        16000
 #endif
