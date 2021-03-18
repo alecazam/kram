@@ -61,7 +61,7 @@ set_target_properties(${myTargetApp} PROPERTIES
     # this drops app from 762KB to 174KB with only ATE enabled
     # note about needing -gfull instead of -gused here or debug info messed up:
     # https://gist.github.com/tkersey/39b4fe69e14b859889ffadccb009e397
-    XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES
+    XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING[variant=Release] YES
     XCODE_ATTRIBUTE_LLVM_LTO[variant=Release] "Incremental"
     
     #-------------------------

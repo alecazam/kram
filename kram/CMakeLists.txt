@@ -83,12 +83,28 @@ elseif (WIN32)
     string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
     # don't need force with apps, since they only access kram folder files which include KramConfig
-    # force include and fix STL
-    #target_compile_options(${myTargetApp} PRIVATE /FIKramConfig.h)
-    target_compile_definitions(${myTargetApp} PRIVATE "-D_D_HAS_EXCEPTIONS=0")
-
-    target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX)
-elseif  (UNIXBUILD)
+    
+    # all warnings, AVX1, and multiprocess compiles
+    target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX /MP /GF /FC)
+    
+    # fix STL
+    target_compile_definitions(${myTargetApp} PRIVATE "-D_D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
+    
+    if (CMAKE_BUILD_TYPE EQUAL "Debug")
+        target_compile_definitions(${myTargetLib} PRIVATE "/INCREMENTAL")
+        
+    elseif (CMAKE_BUILD_TYPE EQUAL "Release")
+        # only dead strip on Release builds since this disables Incremental linking, may want Profile build that doesn't use this
+        target_compile_definitions(${myTargetLib} PRIVATE "/OPT:REF")
+        
+        # other possibliities
+        # /GL - whole program optimization
+        # /Gy - edit and continue with function level linking
+        # /Oi - enable intrinsic functions
+    
+    endif()
+    
+elseif (UNIXBUILD)
     target_link_libraries(${myTargetApp} libkram)
 
     # TODO: finish this

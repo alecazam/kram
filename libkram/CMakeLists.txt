@@ -158,9 +158,14 @@ elseif (WIN32)
     string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-    # force include and fix STL
-    target_compile_options(${myTargetLib} PRIVATE /FIKramConfig.h /W3 /arch:AVX)
-    target_compile_definitions(${myTargetLib} PRIVATE "-D_D_HAS_EXCEPTIONS=0")
+    # force include
+    target_compile_options(${myTargetLib} PRIVATE /FIKramConfig.h)
+        
+    # all warnings, AVX1, and multiprocess compiles
+    target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX /MP)
+    
+    # fix STL
+    target_compile_definitions(${myTargetLib} PRIVATE "-D_D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
     
 elseif (UNIXBUILD)
     # TODO: finish this
