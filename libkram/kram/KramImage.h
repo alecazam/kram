@@ -86,7 +86,7 @@ private:
                                 vector<Color>& tmpImage) const;
 
     // convert x field to normals
-    void heightToNormals(float scale);
+    void heightToNormals(float scale, bool isWrap = false);
 
 private:
     // pixel size of image

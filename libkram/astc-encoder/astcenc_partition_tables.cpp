@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2011-2020 Arm Limited
+// Copyright 2011-2021 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -75,14 +75,14 @@ static int compare_canonicalized_partition_tables(
    consider and thus improves encode performance. */
 static void partition_table_zap_equal_elements(
 	int texel_count,
-	partition_info* pi
+	partition_info* pt
 ) {
 	int partition_tables_zapped = 0;
 	uint64_t *canonicalizeds = new uint64_t[PARTITION_COUNT * 7];
 
 	for (int i = 0; i < PARTITION_COUNT; i++)
 	{
-		gen_canonicalized_partition_table(texel_count, pi[i].partition_of_texel, canonicalizeds + i * 7);
+		gen_canonicalized_partition_table(texel_count, pt[i].partition_of_texel, canonicalizeds + i * 7);
 	}
 
 	for (int i = 0; i < PARTITION_COUNT; i++)
@@ -91,7 +91,7 @@ static void partition_table_zap_equal_elements(
 		{
 			if (compare_canonicalized_partition_tables(canonicalizeds + 7 * i, canonicalizeds + 7 * j))
 			{
-				pi[i].partition_count = 0;
+				pt[i].partition_count = 0;
 				partition_tables_zapped++;
 				break;
 			}
@@ -275,7 +275,7 @@ static void generate_one_partition_table(
 
 	for (int i = 0; i < 4; i++)
 	{
-		pt->texels_per_partition[i] = counts[i];
+		pt->partition_texel_count[i] = counts[i];
 	}
 
 	if (counts[0] == 0)
@@ -304,10 +304,10 @@ static void generate_one_partition_table(
 		pt->coverage_bitmaps[i] = 0ULL;
 	}
 
-	int texels_to_process = bsd->texelcount_for_bitmap_partitioning;
+	int texels_to_process = bsd->kmeans_texel_count;
 	for (int i = 0; i < texels_to_process; i++)
 	{
-		int idx = bsd->texels_for_bitmap_partitioning[i];
+		int idx = bsd->kmeans_texels[i];
 		pt->coverage_bitmaps[pt->partition_of_texel[idx]] |= 1ULL << i;
 	}
 }

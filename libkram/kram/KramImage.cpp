@@ -777,7 +777,11 @@ bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstIma
                     dstImageASTC.dim_z = 1;  // Not using 3D blocks, not supported on iOS
                     //dstImageASTC.dim_pad = 0;
                     dstImageASTC.data_type = ASTCENC_TYPE_U8;
-                    dstImageASTC.data = outputTexture.data();
+                    
+                    
+                    // encode/encode still setup on array of 2d slices, so need address of data
+                    uint8_t* outData = outputTexture.data();
+                    dstImageASTC.data = (void**)&outData;
 
                     int32_t srcDataLength = (int32_t)srcMipLevel.length;
                     Int2 blockDims = srcImage.blockDims();
@@ -790,20 +794,20 @@ bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstIma
 
                     astcenc_config config;
                     astcenc_error error = astcenc_config_init(
-                        profile, blockDims.x, blockDims.y, 1, ASTCENC_PRE_FAST, ASTCENC_FLG_DECOMPRESS_ONLY, config);
+                        profile, blockDims.x, blockDims.y, 1, ASTCENC_PRE_FAST, ASTCENC_FLG_DECOMPRESS_ONLY, &config);
                     if (error != ASTCENC_SUCCESS) {
                         return false;
                     }
 
                     astcenc_context* codec_context = nullptr;
-                    error = astcenc_context_alloc(config, 1, &codec_context);
+                    error = astcenc_context_alloc(&config, 1, &codec_context);
                     if (error != ASTCENC_SUCCESS) {
                         return false;
                     }
                     // no swizzle
                     astcenc_swizzle swizzleDecode = {ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A};
 
-                    error = astcenc_decompress_image(codec_context, srcData, srcDataLength, dstImageASTC, swizzleDecode);
+                    error = astcenc_decompress_image(codec_context, srcData, srcDataLength, &dstImageASTC, swizzleDecode, 0);
 
                     astcenc_context_free(codec_context);
 
@@ -908,26 +912,41 @@ bool Image::resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, Image
     return true;
 }
 
+// functional ctor
+inline float4 float4m(float x, float y, float z, float w)
+{
+    return { x, y, z, w };
+}
+
 // TODO: to hook this up, read 16u png into pixelsFlat, then gen an 8-bit normal xy
 // from that.  This is more like SDF where a single height is used.
-void Image::heightToNormals(float scale)
+void Image::heightToNormals(float scale, bool isWrap)
 {
     int32_t w = _width;
     int32_t h = _height;
 
-    // TODO: hook these up, but needs src != dst or copy
-    bool isWrapY = false;
-    bool isWrapX = false;
+    bool isWrapY = isWrap;
+    bool isWrapX = isWrap;
 
     // 2.0 is distance betwen +1 and -1
-    float scaleX = scale / 2.0;
-    float scaleY = scale / 2.0;
+    // don't scale by this, want caller to be able to pass 1.0 as default scale not 2.0
+    float scaleX = scale; // / 2.0;
+    float scaleY = scale; // / 2.0;
 
     // src/dst the same here
     // may need to copy a row/column of pixels for wrap
     const float4* srcPixels = _pixelsFloat.data();
     float4* dstPixels = (float4*)_pixelsFloat.data();
 
+    const Color* srcPixels8 = (const Color*)_pixels.data();
+    Color* dstPixels8 = (Color*)_pixels.data();
+    bool isFloat = _pixels.empty();
+    
+    if (!isFloat) {
+        scaleX /= 255.0f;
+        scaleY /= 255.0f;
+    }
+    
     for (int32_t y = 0; y < h; ++y) {
         int32_t y0 = y;
         int32_t ym = y - 1;
@@ -962,27 +981,58 @@ void Image::heightToNormals(float scale)
                 if (xp > (w - 1)) xp = w - 1;
             }
 
-            // cross pattern
-            // height channel is in x
-            float cN = srcPixels[ym + x0].x;
-            float cS = srcPixels[yp + x0].x;
-            float cE = srcPixels[y0 + xp].x;
-            float cW = srcPixels[y0 + xm].x;
+            
+            if (isFloat) {
+                
+                // cross pattern
+                // height channel is in x
+                float cN = srcPixels[ym + x0].x;
+                float cS = srcPixels[yp + x0].x;
+                float cE = srcPixels[y0 + xp].x;
+                float cW = srcPixels[y0 + xm].x;
 
-            // up is N, so this is rhcs
-            float dx = (cE - cW) * scaleX;
-            float dy = (cN - cS) * scaleY;
+                // up is N, so this is rhcs
+                float dx = (cE - cW) * scaleX;
+                float dy = (cN - cS) * scaleY;
+           
+                float4 normal = float4m(dx, dy, 1.0f, 0.0f);
+                normal = normalize(normal);
 
-            float len = sqrtf(dx * dx + dy * dy + 1.0f);
+                // write out the result
+                float4& dstPixel = dstPixels[y0 + x];
 
-            dx /= len;
-            dy /= len;
+                dstPixel.x = normal.x;
+                dstPixel.y = normal.y;
+                dstPixel.z = normal.z; // can reconstruct
+                
+                // store height in alpha
+                dstPixel.w = srcPixels[y0 + x0].x;
+            }
+            else {
+                // cross pattern
+                // height channel is in x
+                uint8_t cN = srcPixels8[4 * (ym + x0)].r; // assumes first elem (.r) is height channel
+                uint8_t cS = srcPixels8[4 * (yp + x0)].r;
+                uint8_t cE = srcPixels8[4 * (y0 + xp)].r;
+                uint8_t cW = srcPixels8[4 * (y0 + xm)].r;
 
-            // write out the result
-            float4& dstPixel = dstPixels[y0 + x];
+                float dx = (cE - cW) * scaleX;
+                float dy = (cN - cS) * scaleY;
+           
+                float4 normal = float4m(dx, dy, 1.0f, 0.0f);
+                normal = normalize(normal);
+                normal *= 127.5f;
+                
+                Color& dstPixel8 = dstPixels8[y0 + x];
 
-            dstPixel.x = dx;
-            dstPixel.y = dy;
+                dstPixel8.r = normal.x;
+                dstPixel8.g = normal.y;
+                dstPixel8.b = normal.z; // can reconstruct
+                
+                // store height in alpha
+                dstPixel8.a = srcPixels8[y0 + x0].r;
+            }
+                
         }
     }
 }
@@ -2031,23 +2081,25 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             // flags |= ASTCENC_FLG_USE_ALPHA_WEIGHT;
 
             // convert quality to present
-            astcenc_preset preset = ASTCENC_PRE_FAST;
-            if (info.quality <= 10) {
-                preset = ASTCENC_PRE_FAST;
-            }
-            else if (info.quality <= 50) {
-                preset = ASTCENC_PRE_MEDIUM;
-            }
-            else if (info.quality < 90) {
-                preset = ASTCENC_PRE_THOROUGH;
-            }
-            else {
-                preset = ASTCENC_PRE_EXHAUSTIVE;
-            }
+            float quality = info.quality;
+            
+//            ASTCENC_PRE_FAST;
+//            if (info.quality <= 10) {
+//                preset = ASTCENC_PRE_FAST;
+//            }
+//            else if (info.quality <= 50) {
+//                preset = ASTCENC_PRE_MEDIUM;
+//            }
+//            else if (info.quality < 90) {
+//                preset = ASTCENC_PRE_THOROUGH;
+//            }
+//            else {
+//                preset = ASTCENC_PRE_EXHAUSTIVE;
+//            }
 
             astcenc_config config;
             astcenc_error error = astcenc_config_init(
-                profile, blockDims.x, blockDims.y, 1, preset, flags, config);
+                profile, blockDims.x, blockDims.y, 1, quality, flags, &config);
             if (error != ASTCENC_SUCCESS) {
                 return false;
             }
@@ -2099,11 +2151,11 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             // have 2d image
             // hacked the src pixel handling to only do slices, not a 3D texture
             if (info.isHDR) {
-                srcImage.data = (void*)srcPixelDataFloat4;
+                srcImage.data = (void**)&srcPixelDataFloat4;
                 srcImage.data_type = ASTCENC_TYPE_F32;
             }
             else {
-                srcImage.data = (void*)srcPixelData;
+                srcImage.data = (void**)&srcPixelData;
                 srcImage.data_type = ASTCENC_TYPE_U8;
             }
 
@@ -2113,7 +2165,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 
             // could this be built once, and reused across all mips
             astcenc_context* codec_context = nullptr;
-            error = astcenc_context_alloc(config, 1, &codec_context);
+            error = astcenc_context_alloc(&config, 1, &codec_context);
             if (error != ASTCENC_SUCCESS) {
                 return false;
             }
@@ -2144,7 +2196,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             }
 
             error = astcenc_compress_image(
-                codec_context, srcImage, swizzleEncode,
+                codec_context, &srcImage, swizzleEncode,
                 outputTexture.data.data(), mipStorageSize,
                 0);  // threadIndex
 
@@ -2153,7 +2205,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             }
 #else
             error = astcenc_compress_image(
-                codec_context, srcImage, swizzleEncode,
+                codec_context, &srcImage, swizzleEncode,
                 outputTexture.data.data(), mipStorageSize,
                 0);  // threadIndex
 #endif

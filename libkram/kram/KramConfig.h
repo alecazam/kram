@@ -311,4 +311,11 @@ inline half4 toHalf4(const float4& vv)
 }
 #endif
 
+// this just strips args
+#define macroUnusedArg(x)
+
+// this just strips args
+#define macroUnusedVar(x) (void)x
+
+
 }  // namespace simd

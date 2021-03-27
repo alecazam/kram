@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2011-2020 Arm Limited
+// Copyright 2011-2021 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -20,6 +20,8 @@
  */
 
 #include "astcenc_internal.h"
+
+#include <array>
 
 // unpacked quint triplets <low,middle,high> for each packed-quint value
 static const uint8_t quints_of_integer[128][3] = {
@@ -329,94 +331,111 @@ static const uint8_t integer_of_trits[3][3][3][3][3] = {
 	}
 };
 
-static void find_number_of_bits_trits_quints(
-	int quantization_level,
-	int* bits,
-	int* trits,
-	int* quints
+/**
+ * @brief The number of bits, trits, and quints needed for a quant level.
+ */
+struct btq_count {
+	/**< The quantization level. */
+	uint8_t quant;
+
+	/**< The number of bits. */
+	uint8_t bits;
+
+	/**< The number of trits. */
+	uint8_t trits;
+
+	/**< The number of quints. */
+	uint8_t quints;
+};
+
+/**
+ * @brief The table of bits, trits, and quints needed for a quant encode.
+ */
+static const std::array<btq_count, 21> btq_counts = {{
+	{   QUANT_2, 1, 0, 0 },
+	{   QUANT_3, 0, 1, 0 },
+	{   QUANT_4, 2, 0, 0 },
+	{   QUANT_5, 0, 0, 1 },
+	{   QUANT_6, 1, 1, 0 },
+	{   QUANT_8, 3, 0, 0 },
+	{  QUANT_10, 1, 0, 1 },
+	{  QUANT_12, 2, 1, 0 },
+	{  QUANT_16, 4, 0, 0 },
+	{  QUANT_20, 2, 0, 1 },
+	{  QUANT_24, 3, 1, 0 },
+	{  QUANT_32, 5, 0, 0 },
+	{  QUANT_40, 3, 0, 1 },
+	{  QUANT_48, 4, 1, 0 },
+	{  QUANT_64, 6, 0, 0 },
+	{  QUANT_80, 4, 0, 1 },
+	{  QUANT_96, 5, 1, 0 },
+	{ QUANT_128, 7, 0, 0 },
+	{ QUANT_160, 5, 0, 1 },
+	{ QUANT_192, 6, 1, 0 },
+	{ QUANT_256, 8, 0, 0 }
+}};
+
+/**
+ * @brief The sequence scale, round, and divisors needed to compute sizing.
+ *
+ * The length of a quantized sequence in bits is:
+ *     (scale * <sequence_len> + round) / divisor
+ */
+struct ise_size {
+	/**< The quantization level. */
+	uint8_t quant;
+
+	/**< The scaling parameter. */
+	uint8_t scale;
+
+	/**< The rounding parameter. */
+	uint8_t round;
+
+	/**< The divisor parameter. */
+	uint8_t divisor;
+};
+
+/**
+ * @brief The table of scale, round, and divisors needed for quant sizing.
+ */
+static const std::array<ise_size, 21> ise_sizes = {{
+	{   QUANT_2,  1, 0, 1 },
+	{   QUANT_3,  8, 4, 5 },
+	{   QUANT_4,  2, 0, 1 },
+	{   QUANT_5,  7, 2, 3 },
+	{   QUANT_6, 13, 4, 5 },
+	{   QUANT_8,  3, 0, 1 },
+	{  QUANT_10, 10, 2, 3 },
+	{  QUANT_12, 18, 4, 5 },
+	{  QUANT_16,  4, 0, 1 },
+	{  QUANT_20, 13, 2, 3 },
+	{  QUANT_24, 23, 4, 5 },
+	{  QUANT_32,  5, 0, 1 },
+	{  QUANT_40, 16, 2, 3 },
+	{  QUANT_48, 28, 4, 5 },
+	{  QUANT_64,  6, 0, 1 },
+	{  QUANT_80, 19, 2, 3 },
+	{  QUANT_96, 33, 4, 5 },
+	{ QUANT_128,  7, 0, 1 },
+	{ QUANT_160, 22, 2, 3 },
+	{ QUANT_192, 38, 4, 5 },
+	{ QUANT_256,  8, 0, 1 }
+}};
+
+/* See header for documentation. */
+int get_ise_sequence_bitcount(
+	int items,
+	quant_method quant
 ) {
-	*bits = 0;
-	*trits = 0;
-	*quints = 0;
-	switch (quantization_level)
+	// Cope with out-of bounds values - input might be invalid
+	if (static_cast<size_t>(quant) >= ise_sizes.size())
 	{
-	case QUANT_2:
-		*bits = 1;
-		break;
-	case QUANT_3:
-		*bits = 0;
-		*trits = 1;
-		break;
-	case QUANT_4:
-		*bits = 2;
-		break;
-	case QUANT_5:
-		*bits = 0;
-		*quints = 1;
-		break;
-	case QUANT_6:
-		*bits = 1;
-		*trits = 1;
-		break;
-	case QUANT_8:
-		*bits = 3;
-		break;
-	case QUANT_10:
-		*bits = 1;
-		*quints = 1;
-		break;
-	case QUANT_12:
-		*bits = 2;
-		*trits = 1;
-		break;
-	case QUANT_16:
-		*bits = 4;
-		break;
-	case QUANT_20:
-		*bits = 2;
-		*quints = 1;
-		break;
-	case QUANT_24:
-		*bits = 3;
-		*trits = 1;
-		break;
-	case QUANT_32:
-		*bits = 5;
-		break;
-	case QUANT_40:
-		*bits = 3;
-		*quints = 1;
-		break;
-	case QUANT_48:
-		*bits = 4;
-		*trits = 1;
-		break;
-	case QUANT_64:
-		*bits = 6;
-		break;
-	case QUANT_80:
-		*bits = 4;
-		*quints = 1;
-		break;
-	case QUANT_96:
-		*bits = 5;
-		*trits = 1;
-		break;
-	case QUANT_128:
-		*bits = 7;
-		break;
-	case QUANT_160:
-		*bits = 5;
-		*quints = 1;
-		break;
-	case QUANT_192:
-		*bits = 6;
-		*trits = 1;
-		break;
-	case QUANT_256:
-		*bits = 8;
-		break;
+		// Arbitrary large number that's more than an ASTC block can hold
+		return 1024;
 	}
+
+	auto& entry = ise_sizes[quant];
+	return (entry.scale * items + entry.round) / entry.divisor;
 }
 
 // routine to write up to 8 bits
@@ -456,85 +475,163 @@ static inline int read_bits(
 }
 
 void encode_ise(
-	int quantization_level,
+	int quant_level,
 	int elements,
 	const uint8_t* input_data,
 	uint8_t* output_data,
 	int bit_offset
 ) {
-	uint8_t lowparts[64];
-	uint8_t highparts[69];		// 64 elements + 5 elements for padding
-	uint8_t tq_blocks[22];		// trit-blocks or quint-blocks
+	int bits = btq_counts[quant_level].bits;
+	int trits = btq_counts[quant_level].trits;
+	int quints = btq_counts[quant_level].quints;
+	int mask = (1 << bits) - 1;
 
-	int bits, trits, quints;
-	find_number_of_bits_trits_quints(quantization_level, &bits, &trits, &quints);
-
-	for (int i = 0; i < elements; i++)
-	{
-		lowparts[i] = input_data[i] & ((1 << bits) - 1);
-		highparts[i] = input_data[i] >> bits;
-	}
-
-	for (int i = elements; i < elements + 5; i++)
-	{
-		highparts[i] = 0;		// padding before we start constructing trit-blocks or quint-blocks
-	}
-
-	// construct trit-blocks or quint-blocks as necessary
+	// Write out trits and bits
 	if (trits)
 	{
-		int trit_blocks = (elements + 4) / 5;
-		for (int i = 0; i < trit_blocks; i++)
+		int i = 0;
+		int full_trit_blocks = elements / 5;
+
+		for (int j = 0; j < full_trit_blocks; j++)
 		{
-			tq_blocks[i] = integer_of_trits[highparts[5 * i + 4]][highparts[5 * i + 3]][highparts[5 * i + 2]][highparts[5 * i + 1]][highparts[5 * i]];
+			int i4 = input_data[i + 4] >> bits;
+			int i3 = input_data[i + 3] >> bits;
+			int i2 = input_data[i + 2] >> bits;
+			int i1 = input_data[i + 1] >> bits;
+			int i0 = input_data[i + 0] >> bits;
+
+			uint8_t T = integer_of_trits[i4][i3][i2][i1][i0];
+
+			// The max size of a trit bit count is 6, so we can always safely
+			// pack a single MX value with the following 1 or 2 T bits.
+			uint8_t pack;
+
+			// Element 0 + T0 + T1
+			pack = (input_data[i++] & mask) | (((T >> 0) & 0x3) << bits);
+			write_bits(pack, bits + 2, bit_offset, output_data);
+			bit_offset += bits + 2;
+
+			// Element 1 + T2 + T3
+			pack = (input_data[i++] & mask) | (((T >> 2) & 0x3) << bits);
+			write_bits(pack, bits + 2, bit_offset, output_data);
+			bit_offset += bits + 2;
+
+			// Element 2 + T4
+			pack = (input_data[i++] & mask) | (((T >> 4) & 0x1) << bits);
+			write_bits(pack, bits + 1, bit_offset, output_data);
+			bit_offset += bits + 1;
+
+			// Element 3 + T5 + T6
+			pack = (input_data[i++] & mask) | (((T >> 5) & 0x3) << bits);
+			write_bits(pack, bits + 2, bit_offset, output_data);
+			bit_offset += bits + 2;
+
+			// Element 4 + T7
+			pack = (input_data[i++] & mask) | (((T >> 7) & 0x1) << bits);
+			write_bits(pack, bits + 1, bit_offset, output_data);
+			bit_offset += bits + 1;
+		}
+
+		// Loop tail for a partial block
+		if (i != elements)
+		{
+			// i4 cannot be present - we know the block is partial
+			// i0 must be present - we know the block isn't empty
+			int i4 =                         0;
+			int i3 = i + 3 >= elements ? 0 : input_data[i + 3] >> bits;
+			int i2 = i + 2 >= elements ? 0 : input_data[i + 2] >> bits;
+			int i1 = i + 1 >= elements ? 0 : input_data[i + 1] >> bits;
+			int i0 =                         input_data[i + 0] >> bits;
+
+			uint8_t T = integer_of_trits[i4][i3][i2][i1][i0];
+
+			for (int j = 0; i < elements; i++, j++)
+			{
+				// Truncated table as this iteration is always partital
+				static const uint8_t tbits[4]  { 2, 2, 1, 2 };
+				static const uint8_t tshift[4] { 0, 2, 4, 5 };
+
+				uint8_t pack = (input_data[i] & mask) |
+				               (((T >> tshift[j]) & ((1 << tbits[j]) - 1)) << bits);
+
+				write_bits(pack, bits + tbits[j], bit_offset, output_data);
+				bit_offset += bits + tbits[j];
+			}
 		}
 	}
-
-	if (quints)
+	// Write out quints and bits
+	else if (quints)
 	{
-		int quint_blocks = (elements + 2) / 3;
-		for (int i = 0; i < quint_blocks; i++)
+		int i = 0;
+		int full_quint_blocks = elements / 3;
+
+		for (int j = 0; j < full_quint_blocks; j++)
 		{
-			tq_blocks[i] = integer_of_quints[highparts[3 * i + 2]][highparts[3 * i + 1]][highparts[3 * i]];
+			int i2 = input_data[i + 2] >> bits;
+			int i1 = input_data[i + 1] >> bits;
+			int i0 = input_data[i + 0] >> bits;
+
+			uint8_t T = integer_of_quints[i2][i1][i0];
+
+			// The max size of a quint bit count is 5, so we can always safely
+			// pack a single M value with the following 2 or 3 T bits.
+			uint8_t pack;
+
+			// Element 0
+			pack = (input_data[i++] & mask) | (((T >> 0) & 0x7) << bits);
+			write_bits(pack, bits + 3, bit_offset, output_data);
+			bit_offset += bits + 3;
+
+			// Element 1
+			pack = (input_data[i++] & mask) | (((T >> 3) & 0x3) << bits);
+			write_bits(pack, bits + 2, bit_offset, output_data);
+			bit_offset += bits + 2;
+
+			// Element 2
+			pack = (input_data[i++] & mask) | (((T >> 5) & 0x3) << bits);
+			write_bits(pack, bits + 2, bit_offset, output_data);
+			bit_offset += bits + 2;
+		}
+
+		// Loop tail for a partial block
+		if (i != elements)
+		{
+			// i2 cannot be present - we know the block is partial
+			// i0 must be present - we know the block isn't empty
+			int i2 =                         0;
+			int i1 = i + 1 >= elements ? 0 : input_data[i + 1] >> bits;
+			int i0 =                         input_data[i + 0] >> bits;
+
+			uint8_t T = integer_of_quints[i2][i1][i0];
+
+			for (int j = 0; i < elements; i++, j++)
+			{
+				// Truncated table as this iteration is always partital
+				static const uint8_t tbits[2]  { 3, 2 };
+				static const uint8_t tshift[2] { 0, 3 };
+
+				uint8_t pack = (input_data[i] & mask) |
+				               (((T >> tshift[j]) & ((1 << tbits[j]) - 1)) << bits);
+
+				write_bits(pack, bits + tbits[j], bit_offset, output_data);
+				bit_offset += bits + tbits[j];
+			}
 		}
 	}
-
-	// then, write out the actual bits.
-	int lcounter = 0;
-	int hcounter = 0;
-	for (int i = 0; i < elements; i++)
+	// Write out just bits
+	else
 	{
-		write_bits(lowparts[i], bits, bit_offset, output_data);
-		bit_offset += bits;
-
-		if (trits)
+		promise(elements > 0);
+		for (int i = 0; i < elements; i++)
 		{
-			static const int bits_to_write[5] = { 2, 2, 1, 2, 1 };
-			static const int block_shift[5] = { 0, 2, 4, 5, 7 };
-			static const int next_lcounter[5] = { 1, 2, 3, 4, 0 };
-			static const int hcounter_incr[5] = { 0, 0, 0, 0, 1 };
-			write_bits(tq_blocks[hcounter] >> block_shift[lcounter], bits_to_write[lcounter], bit_offset, output_data);
-			bit_offset += bits_to_write[lcounter];
-			hcounter += hcounter_incr[lcounter];
-			lcounter = next_lcounter[lcounter];
-		}
-
-		if (quints)
-		{
-			static const int bits_to_write[3] = { 3, 2, 2 };
-			static const int block_shift[3] = { 0, 3, 5 };
-			static const int next_lcounter[3] = { 1, 2, 0 };
-			static const int hcounter_incr[3] = { 0, 0, 1 };
-			write_bits(tq_blocks[hcounter] >> block_shift[lcounter], bits_to_write[lcounter], bit_offset, output_data);
-			bit_offset += bits_to_write[lcounter];
-			hcounter += hcounter_incr[lcounter];
-			lcounter = next_lcounter[lcounter];
+			write_bits(input_data[i], bits, bit_offset, output_data);
+			bit_offset += bits;
 		}
 	}
 }
 
 void decode_ise(
-	int quantization_level,
+	int quant_level,
 	int elements,
 	const uint8_t* input_data,
 	uint8_t* output_data,
@@ -547,8 +644,9 @@ void decode_ise(
 	uint8_t results[68];
 	uint8_t tq_blocks[22];		// trit-blocks or quint-blocks
 
-	int bits, trits, quints;
-	find_number_of_bits_trits_quints(quantization_level, &bits, &trits, &quints);
+	int bits = btq_counts[quant_level].bits;
+	int trits = btq_counts[quant_level].trits;
+	int quints = btq_counts[quant_level].quints;
 
 	int lcounter = 0;
 	int hcounter = 0;
@@ -567,10 +665,10 @@ void decode_ise(
 
 		if (trits)
 		{
-			static const int bits_to_read[5] = { 2, 2, 1, 2, 1 };
-			static const int block_shift[5] = { 0, 2, 4, 5, 7 };
-			static const int next_lcounter[5] = { 1, 2, 3, 4, 0 };
-			static const int hcounter_incr[5] = { 0, 0, 0, 0, 1 };
+			static const int bits_to_read[5]  { 2, 2, 1, 2, 1 };
+			static const int block_shift[5]   { 0, 2, 4, 5, 7 };
+			static const int next_lcounter[5] { 1, 2, 3, 4, 0 };
+			static const int hcounter_incr[5] { 0, 0, 0, 0, 1 };
 			int tdata = read_bits(bits_to_read[lcounter], bit_offset, input_data);
 			bit_offset += bits_to_read[lcounter];
 			tq_blocks[hcounter] |= tdata << block_shift[lcounter];
@@ -580,10 +678,10 @@ void decode_ise(
 
 		if (quints)
 		{
-			static const int bits_to_read[3] = { 3, 2, 2 };
-			static const int block_shift[3] = { 0, 3, 5 };
-			static const int next_lcounter[3] = { 1, 2, 0 };
-			static const int hcounter_incr[3] = { 0, 0, 1 };
+			static const int bits_to_read[3]  { 3, 2, 2 };
+			static const int block_shift[3]   { 0, 3, 5 };
+			static const int next_lcounter[3] { 1, 2, 0 };
+			static const int hcounter_incr[3] { 0, 0, 1 };
 			int tdata = read_bits(bits_to_read[lcounter], bit_offset, input_data);
 			bit_offset += bits_to_read[lcounter];
 			tq_blocks[hcounter] |= tdata << block_shift[lcounter];
@@ -599,7 +697,7 @@ void decode_ise(
 		for (int i = 0; i < trit_blocks; i++)
 		{
 			const uint8_t *tritptr = trits_of_integer[tq_blocks[i]];
-			results[5 * i] |= tritptr[0] << bits;
+			results[5 * i    ] |= tritptr[0] << bits;
 			results[5 * i + 1] |= tritptr[1] << bits;
 			results[5 * i + 2] |= tritptr[2] << bits;
 			results[5 * i + 3] |= tritptr[3] << bits;
@@ -613,7 +711,7 @@ void decode_ise(
 		for (int i = 0; i < quint_blocks; i++)
 		{
 			const uint8_t *quintptr = quints_of_integer[tq_blocks[i]];
-			results[3 * i] |= quintptr[0] << bits;
+			results[3 * i    ] |= quintptr[0] << bits;
 			results[3 * i + 1] |= quintptr[1] << bits;
 			results[3 * i + 2] |= quintptr[2] << bits;
 		}
@@ -622,58 +720,5 @@ void decode_ise(
 	for (int i = 0; i < elements; i++)
 	{
 		output_data[i] = results[i];
-	}
-}
-
-int compute_ise_bitcount(
-	int items,
-	quantization_method quant
-) {
-	switch (quant)
-	{
-	case QUANT_2:
-		return items;
-	case QUANT_3:
-		return (8 * items + 4) / 5;
-	case QUANT_4:
-		return 2 * items;
-	case QUANT_5:
-		return (7 * items + 2) / 3;
-	case QUANT_6:
-		return (13 * items + 4) / 5;
-	case QUANT_8:
-		return 3 * items;
-	case QUANT_10:
-		return (10 * items + 2) / 3;
-	case QUANT_12:
-		return (18 * items + 4) / 5;
-	case QUANT_16:
-		return items * 4;
-	case QUANT_20:
-		return (13 * items + 2) / 3;
-	case QUANT_24:
-		return (23 * items + 4) / 5;
-	case QUANT_32:
-		return 5 * items;
-	case QUANT_40:
-		return (16 * items + 2) / 3;
-	case QUANT_48:
-		return (28 * items + 4) / 5;
-	case QUANT_64:
-		return 6 * items;
-	case QUANT_80:
-		return (19 * items + 2) / 3;
-	case QUANT_96:
-		return (33 * items + 4) / 5;
-	case QUANT_128:
-		return 7 * items;
-	case QUANT_160:
-		return (22 * items + 2) / 3;
-	case QUANT_192:
-		return (38 * items + 4) / 5;
-	case QUANT_256:
-		return 8 * items;
-	default:
-		return 100000;
 	}
 }

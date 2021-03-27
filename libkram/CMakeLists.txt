@@ -174,11 +174,6 @@ elseif (UNIXBUILD)
     
 endif()
 
-
-target_compile_definitions(${myTargetLib} PUBLIC
-    -DASTCENC_SSE=42 -DASTCENC_AVX=1 -DASTCENC_POPCNT=0
-    -DASTCENC_VECALIGN=16 -DASTCENC_ISA_INVARIANCE=0)
-
 target_compile_definitions(${myTargetLib} PUBLIC
     "-DCOMPILE_ATE=${COMPILE_ATE}"
     "-DCOMPILE_BCENC=${COMPILE_BCENC}"

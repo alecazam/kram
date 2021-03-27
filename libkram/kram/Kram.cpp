@@ -75,11 +75,15 @@ bool LoadPng(const uint8_t* data, size_t dataSize, Image& sourceImage)
         case LCT_GREY_ALPHA:
             hasColor = false;
             break;
+        case LCT_MAX_OCTET_VALUE:
         case LCT_RGB:
         case LCT_RGBA:
         case LCT_PALETTE:  // ?
             hasColor = true;
             break;
+        
+            hasColor = false;
+            break;;
     }
 
     switch (state.info_png.color.colortype) {
@@ -87,6 +91,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, Image& sourceImage)
         case LCT_RGB:
             hasAlpha = false;
             break;
+        case LCT_MAX_OCTET_VALUE:
         case LCT_RGBA:
         case LCT_GREY_ALPHA:
         case LCT_PALETTE:  // ?
@@ -1254,6 +1259,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
         case LCT_GREY_ALPHA:
             hasColor = false;
             break;
+        case LCT_MAX_OCTET_VALUE:
         case LCT_RGB:
         case LCT_RGBA:
         case LCT_PALETTE:  // ?
@@ -1266,6 +1272,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
         case LCT_RGB:
             hasAlpha = false;
             break;
+        case LCT_MAX_OCTET_VALUE:
         case LCT_RGBA:
         case LCT_GREY_ALPHA:
         case LCT_PALETTE:  // ?

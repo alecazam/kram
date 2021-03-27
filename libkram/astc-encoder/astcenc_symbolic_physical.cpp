@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2011-2020 Arm Limited
+// Copyright 2011-2021 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -78,7 +78,7 @@ void symbolic_to_physical(
 		// This encodes separate constant-color blocks. There is currently
 		// no attempt to coalesce them into larger void-extents.
 
-		static const uint8_t cbytes[8] = { 0xFC, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+		static const uint8_t cbytes[8] { 0xFC, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 		for (int i = 0; i < 8; i++)
 		{
 			pcb.data[i] = cbytes[i];
@@ -99,7 +99,7 @@ void symbolic_to_physical(
 		// This encodes separate constant-color blocks. There is currently
 		// no attempt to coalesce them into larger void-extents.
 
-		static const uint8_t cbytes[8] = { 0xFC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+		static const uint8_t cbytes[8]  { 0xFC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 		for (int i = 0; i < 8; i++)
 		{
 			pcb.data[i] = cbytes[i];
@@ -124,34 +124,34 @@ void symbolic_to_physical(
 		weightbuf[i] = 0;
 	}
 
-	const decimation_table *const *ixtab2 = bsd.decimation_tables;
+	const decimation_table *const *dts = bsd.decimation_tables;
 
-	const int packed_index = bsd.block_mode_to_packed[scb.block_mode];
-	assert(packed_index >= 0 && packed_index < bsd.block_mode_packed_count);
-	const block_mode& bm = bsd.block_modes_packed[packed_index];
+	const int packed_index = bsd.block_mode_packed_index[scb.block_mode];
+	assert(packed_index >= 0 && packed_index < bsd.block_mode_count);
+	const block_mode& bm = bsd.block_modes[packed_index];
 
-	int weight_count = ixtab2[bm.decimation_mode]->num_weights;
-	int weight_quantization_method = bm.quantization_mode;
+	int weight_count = dts[bm.decimation_mode]->weight_count;
+	int weight_quant_method = bm.quant_mode;
 	int is_dual_plane = bm.is_dual_plane;
 
 	int real_weight_count = is_dual_plane ? 2 * weight_count : weight_count;
 
-	int bits_for_weights = compute_ise_bitcount(real_weight_count,
-	                                            (quantization_method) weight_quantization_method);
+	int bits_for_weights = get_ise_sequence_bitcount(real_weight_count,
+	                                                 (quant_method)weight_quant_method);
 
 	if (is_dual_plane)
 	{
 		uint8_t weights[64];
 		for (int i = 0; i < weight_count; i++)
 		{
-			weights[2 * i] = scb.plane1_weights[i];
-			weights[2 * i + 1] = scb.plane2_weights[i];
+			weights[2 * i] = scb.weights[i];
+			weights[2 * i + 1] = scb.weights[i + PLANE2_WEIGHTS_OFFSET];
 		}
-		encode_ise(weight_quantization_method, real_weight_count, weights, weightbuf, 0);
+		encode_ise(weight_quant_method, real_weight_count, weights, weightbuf, 0);
 	}
 	else
 	{
-		encode_ise(weight_quantization_method, weight_count, scb.plane1_weights, weightbuf, 0);
+		encode_ise(weight_quant_method, weight_count, scb.weights, weightbuf, 0);
 	}
 
 	for (int i = 0; i < 16; i++)
@@ -184,10 +184,7 @@ void symbolic_to_physical(
 			for (int i = 0; i < partition_count; i++)
 			{
 				int class_of_format = scb.color_formats[i] >> 2;
-				if (class_of_format < low_class)
-				{
-					low_class = class_of_format;
-				}
+				low_class = astc::min(class_of_format, low_class);
 			}
 
 			if (low_class == 3)
@@ -247,7 +244,7 @@ void symbolic_to_physical(
 	}
 
 	// then, encode an ISE based on them.
-	encode_ise(scb.color_quantization_level, valuecount_to_encode, values_to_encode, pcb.data, (scb.partition_count == 1 ? 17 : 19 + PARTITION_BITS));
+	encode_ise(scb.color_quant_level, valuecount_to_encode, values_to_encode, pcb.data, (scb.partition_count == 1 ? 17 : 19 + PARTITION_BITS));
 }
 
 void physical_to_symbolic(
@@ -260,7 +257,7 @@ void physical_to_symbolic(
 	scb.error_block = 0;
 
 	// get hold of the decimation tables.
-	const decimation_table *const *ixtab2 = bsd.decimation_tables;
+	const decimation_table *const *dts = bsd.decimation_tables;
 
 	// extract header fields
 	int block_mode = read_bits(11, 0, pcb.data);
@@ -327,17 +324,17 @@ void physical_to_symbolic(
 		return;
 	}
 
-	const int packed_index = bsd.block_mode_to_packed[block_mode];
+	const int packed_index = bsd.block_mode_packed_index[block_mode];
 	if (packed_index < 0)
 	{
 		scb.error_block = 1;
 		return;
 	}
-	assert(packed_index >= 0 && packed_index < bsd.block_mode_packed_count);
-	const struct block_mode& bm = bsd.block_modes_packed[packed_index];
+	assert(packed_index >= 0 && packed_index < bsd.block_mode_count);
+	const struct block_mode& bm = bsd.block_modes[packed_index];
 
-	int weight_count = ixtab2[bm.decimation_mode]->num_weights;
-	int weight_quantization_method = bm.quantization_mode;
+	int weight_count = dts[bm.decimation_mode]->weight_count;
+	int weight_quant_method = bm.quant_mode;
 	int is_dual_plane = bm.is_dual_plane;
 
 	int real_weight_count = is_dual_plane ? 2 * weight_count : weight_count;
@@ -352,24 +349,24 @@ void physical_to_symbolic(
 		bswapped[i] = bitrev8(pcb.data[15 - i]);
 	}
 
-	int bits_for_weights = compute_ise_bitcount(real_weight_count,
-												(quantization_method) weight_quantization_method);
+	int bits_for_weights = get_ise_sequence_bitcount(real_weight_count,
+	                                                 (quant_method)weight_quant_method);
 
 	int below_weights_pos = 128 - bits_for_weights;
 
 	if (is_dual_plane)
 	{
 		uint8_t indices[64];
-		decode_ise(weight_quantization_method, real_weight_count, bswapped, indices, 0);
+		decode_ise(weight_quant_method, real_weight_count, bswapped, indices, 0);
 		for (int i = 0; i < weight_count; i++)
 		{
-			scb.plane1_weights[i] = indices[2 * i];
-			scb.plane2_weights[i] = indices[2 * i + 1];
+			scb.weights[i] = indices[2 * i];
+			scb.weights[i + PLANE2_WEIGHTS_OFFSET] = indices[2 * i + 1];
 		}
 	}
 	else
 	{
-		decode_ise(weight_quantization_method, weight_count, bswapped, scb.plane1_weights, 0);
+		decode_ise(weight_quant_method, weight_count, bswapped, scb.weights, 0);
 	}
 
 	if (is_dual_plane && partition_count == 4)
@@ -443,7 +440,7 @@ void physical_to_symbolic(
 	}
 
 	// then, determine the color endpoint format to use for these integers
-	static const int color_bits_arr[5] = { -1, 115 - 4, 113 - 4 - PARTITION_BITS, 113 - 4 - PARTITION_BITS, 113 - 4 - PARTITION_BITS };
+	static const int color_bits_arr[5] { -1, 115 - 4, 113 - 4 - PARTITION_BITS, 113 - 4 - PARTITION_BITS, 113 - 4 - PARTITION_BITS };
 	int color_bits = color_bits_arr[partition_count] - bits_for_weights - encoded_type_highpart_size;
 	if (is_dual_plane)
 	{
@@ -455,16 +452,16 @@ void physical_to_symbolic(
 		color_bits = 0;
 	}
 
-	int color_quantization_level = quantization_mode_table[color_integer_count >> 1][color_bits];
-	scb.color_quantization_level = color_quantization_level;
-	if (color_quantization_level < 4)
+	int color_quant_level = quant_mode_table[color_integer_count >> 1][color_bits];
+	scb.color_quant_level = color_quant_level;
+	if (color_quant_level < 4)
 	{
 		scb.error_block = 1;
 	}
 
 	// then unpack the integer-bits
 	uint8_t values_to_decode[32];
-	decode_ise(color_quantization_level, color_integer_count, pcb.data, values_to_decode, (partition_count == 1 ? 17 : 19 + PARTITION_BITS));
+	decode_ise(color_quant_level, color_integer_count, pcb.data, values_to_decode, (partition_count == 1 ? 17 : 19 + PARTITION_BITS));
 
 	// and distribute them over the endpoint types
 	int valuecount_to_decode = 0;

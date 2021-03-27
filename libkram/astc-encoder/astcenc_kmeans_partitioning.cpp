@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2011-2020 Arm Limited
+// Copyright 2011-2021 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -37,16 +37,12 @@
 // algorithm similar to XKCD #221. (http://xkcd.com/221/)
 
 // cluster the texels using the k++ means clustering initialization algorithm.
-static void kpp_initialize(
-	int xdim,
-	int ydim,
-	int zdim,
+static void kmeans_init(
+	int texels_per_block,
 	int partition_count,
 	const imageblock* blk,
-	float4* cluster_centers
+	vfloat4* cluster_centers
 ) {
-	int texels_per_block = xdim * ydim * zdim;
-
 	int cluster_center_samples[4];
 	// pick a random sample as first center-point.
 	cluster_center_samples[0] = 145897 /* number from random.org */  % texels_per_block;
@@ -56,20 +52,14 @@ static void kpp_initialize(
 
 	// compute the distance to the first point.
 	int sample = cluster_center_samples[0];
-	float4 center_color = float4(blk->data_r[sample],
-								 blk->data_g[sample],
-								 blk->data_b[sample],
-								 blk->data_a[sample]);
+	vfloat4 center_color = blk->texel(sample);
 
 	float distance_sum = 0.0f;
 	for (int i = 0; i < texels_per_block; i++)
 	{
-		float4 color = float4(blk->data_r[i],
-							  blk->data_g[i],
-							  blk->data_b[i],
-							  blk->data_a[i]);
-		float4 diff = color - center_color;
-		float distance = dot(diff, diff);
+		vfloat4 color =  blk->texel(i);
+		vfloat4 diff = color - center_color;
+		float distance = dot_s(diff, diff);
 		distance_sum += distance;
 		distances[i] = distance;
 	}
@@ -110,21 +100,15 @@ static void kpp_initialize(
 		}
 
 		// update the distances with the new point.
-		center_color = float4(blk->data_r[sample],
-		                      blk->data_g[sample],
-		                      blk->data_b[sample],
-		                      blk->data_a[sample]);
+		center_color = blk->texel(sample);
 
 		distance_sum = 0.0f;
 		for (int i = 0; i < texels_per_block; i++)
 		{
-			float4 color = float4(blk->data_r[i],
-			                      blk->data_g[i],
-			                      blk->data_b[i],
-			                      blk->data_a[i]);
-			float4 diff = color - center_color;
-			float distance = dot(diff, diff);
-			distance = MIN(distance, distances[i]);
+			vfloat4 color = blk->texel(i);
+			vfloat4 diff = color - center_color;
+			float distance = dot_s(diff, diff);
+			distance = astc::min(distance, distances[i]);
 			distance_sum += distance;
 			distances[i] = distance;
 		}
@@ -134,66 +118,52 @@ static void kpp_initialize(
 	for (int i = 0; i < partition_count; i++)
 	{
 		int center_sample = cluster_center_samples[i];
-		float4 color = float4(blk->data_r[center_sample],
-		                      blk->data_g[center_sample],
-		                      blk->data_b[center_sample],
-		                      blk->data_a[center_sample]);
-		cluster_centers[i] = color;
+		cluster_centers[i] = blk->texel(center_sample);
 	}
 }
 
 // basic K-means clustering: given a set of cluster centers,
 // assign each texel to a partition
-static void basic_kmeans_assign_pass(
-	int xdim,
-	int ydim,
-	int zdim,
+static void kmeans_assign(
+	int texels_per_block,
 	int partition_count,
 	const imageblock* blk,
-	const float4* cluster_centers,
+	const vfloat4* cluster_centers,
 	int* partition_of_texel
 ) {
-	int texels_per_block = xdim * ydim * zdim;
-
 	float distances[MAX_TEXELS_PER_BLOCK];
 
-	int texels_per_partition[4];
+	int partition_texel_count[4];
 
-	texels_per_partition[0] = texels_per_block;
+	partition_texel_count[0] = texels_per_block;
 	for (int i = 1; i < partition_count; i++)
 	{
-		texels_per_partition[i] = 0;
+		partition_texel_count[i] = 0;
 	}
 
 	for (int i = 0; i < texels_per_block; i++)
 	{
-		float4 color = float4(blk->data_r[i],
-							  blk->data_g[i],
-							  blk->data_b[i],
-							  blk->data_a[i]);
-		float4 diff = color - cluster_centers[0];
-		float distance = dot(diff, diff);
+		vfloat4 color = blk->texel(i);
+		vfloat4 diff = color - cluster_centers[0];
+		float distance = dot_s(diff, diff);
 		distances[i] = distance;
 		partition_of_texel[i] = 0;
 	}
 
 	for (int j = 1; j < partition_count; j++)
 	{
-		float4 center_color = cluster_centers[j];
+		vfloat4 center_color = cluster_centers[j];
 
 		for (int i = 0; i < texels_per_block; i++)
 		{
-			float4 color = float4(blk->data_r[i],
-								  blk->data_g[i],
-								  blk->data_b[i],
-								  blk->data_a[i]);
-			float4 diff = color - center_color;
-			float distance = dot(diff, diff);
+			vfloat4 color = blk->texel(i);
+			vfloat4 diff = color - center_color;
+			float distance = dot_s(diff, diff);
 			if (distance < distances[i])
 			{
 				distances[i] = distance;
-				texels_per_partition[partition_of_texel[i]]--;
-				texels_per_partition[j]++;
+				partition_texel_count[partition_of_texel[i]]--;
+				partition_texel_count[j]++;
 				partition_of_texel[i] = j;
 			}
 		}
@@ -210,10 +180,10 @@ static void basic_kmeans_assign_pass(
 		problem_case = 0;
 		for (int i = 0; i < partition_count; i++)
 		{
-			if (texels_per_partition[i] == 0)
+			if (partition_texel_count[i] == 0)
 			{
-				texels_per_partition[partition_of_texel[i]]--;
-				texels_per_partition[i]++;
+				partition_texel_count[partition_of_texel[i]]--;
+				partition_texel_count[i]++;
 				partition_of_texel[i] = i;
 				problem_case = 1;
 			}
@@ -224,33 +194,26 @@ static void basic_kmeans_assign_pass(
 
 // basic k-means clustering: given a set of cluster assignments
 // for the texels, find the center position of each cluster.
-static void basic_kmeans_update(
-	int xdim,
-	int ydim,
-	int zdim,
+static void kmeans_update(
+	int texels_per_block,
 	int partition_count,
 	const imageblock* blk,
 	const int* partition_of_texel,
-	float4* cluster_centers
+	vfloat4* cluster_centers
 ) {
-	int texels_per_block = xdim * ydim * zdim;
-
-	float4 color_sum[4];
+	vfloat4 color_sum[4];
 	int weight_sum[4];
 
 	for (int i = 0; i < partition_count; i++)
 	{
-		color_sum[i] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+		color_sum[i] = vfloat4::zero();
 		weight_sum[i] = 0;
 	}
 
 	// first, find the center-of-gravity in each cluster
 	for (int i = 0; i < texels_per_block; i++)
 	{
-		float4 color = float4(blk->data_r[i],
-		                      blk->data_g[i],
-		                      blk->data_b[i],
-		                      blk->data_a[i]);
+		vfloat4 color = blk->texel(i);
 		int part = partition_of_texel[i];
 		color_sum[part] = color_sum[part] + color;
 		weight_sum[part]++;
@@ -258,7 +221,7 @@ static void basic_kmeans_update(
 
 	for (int i = 0; i < partition_count; i++)
 	{
-		cluster_centers[i] = color_sum[i] * (1.0f / weight_sum[i]);
+		cluster_centers[i] = color_sum[i] * (1.0f / static_cast<float>(weight_sum[i]));
 	}
 }
 
@@ -271,7 +234,7 @@ static inline int partition_mismatch2(
 ) {
 	int v1 = astc::popcount(a0 ^ b0) + astc::popcount(a1 ^ b1);
 	int v2 = astc::popcount(a0 ^ b1) + astc::popcount(a1 ^ b0);
-	return MIN(v1, v2);
+	return astc::min(v1, v2);
 }
 
 // compute the bit-mismatch for a partitioning in 3-partition mode
@@ -297,31 +260,17 @@ static inline int partition_mismatch3(
 
 	int s0 = p11 + p22;
 	int s1 = p12 + p21;
-	int v0 = MIN(s0, s1) + p00;
+	int v0 = astc::min(s0, s1) + p00;
 
 	int s2 = p10 + p22;
 	int s3 = p12 + p20;
-	int v1 = MIN(s2, s3) + p01;
+	int v1 = astc::min(s2, s3) + p01;
 
 	int s4 = p10 + p21;
 	int s5 = p11 + p20;
-	int v2 = MIN(s4, s5) + p02;
+	int v2 = astc::min(s4, s5) + p02;
 
-	if (v1 < v0)
-		v0 = v1;
-	if (v2 < v0)
-		v0 = v2;
-
-	return v0;
-}
-
-static inline int MIN3(
-	int a,
-	int b,
-	int c
-) {
-	int d = MIN(a, b);
-	return MIN(c, d);
+	return astc::min(v0, v1, v2);
 }
 
 // compute the bit-mismatch for a partitioning in 4-partition mode
@@ -355,21 +304,19 @@ static inline int partition_mismatch4(
 	int p32 = astc::popcount(a3 ^ b2);
 	int p33 = astc::popcount(a3 ^ b3);
 
-	int mx23 = MIN(p22 + p33, p23 + p32);
-	int mx13 = MIN(p21 + p33, p23 + p31);
-	int mx12 = MIN(p21 + p32, p22 + p31);
-	int mx03 = MIN(p20 + p33, p23 + p30);
-	int mx02 = MIN(p20 + p32, p22 + p30);
-	int mx01 = MIN(p21 + p30, p20 + p31);
+	int mx23 = astc::min(p22 + p33, p23 + p32);
+	int mx13 = astc::min(p21 + p33, p23 + p31);
+	int mx12 = astc::min(p21 + p32, p22 + p31);
+	int mx03 = astc::min(p20 + p33, p23 + p30);
+	int mx02 = astc::min(p20 + p32, p22 + p30);
+	int mx01 = astc::min(p21 + p30, p20 + p31);
 
-	int v0 = p00 + MIN3(p11 + mx23, p12 + mx13, p13 + mx12);
-	int v1 = p01 + MIN3(p10 + mx23, p12 + mx03, p13 + mx02);
-	int v2 = p02 + MIN3(p11 + mx03, p10 + mx13, p13 + mx01);
-	int v3 = p03 + MIN3(p11 + mx02, p12 + mx01, p10 + mx12);
+	int v0 = p00 + astc::min(p11 + mx23, p12 + mx13, p13 + mx12);
+	int v1 = p01 + astc::min(p10 + mx23, p12 + mx03, p13 + mx02);
+	int v2 = p02 + astc::min(p11 + mx03, p10 + mx13, p13 + mx01);
+	int v3 = p03 + astc::min(p11 + mx02, p12 + mx01, p10 + mx12);
 
-	int x0 = MIN(v0, v1);
-	int x1 = MIN(v2, v3);
-	return MIN(x0, x1);
+	return astc::min(v0, v1, v2, v3);
 }
 
 static void count_partition_mismatch_bits(
@@ -378,7 +325,7 @@ static void count_partition_mismatch_bits(
 	const uint64_t bitmaps[4],
 	int bitcounts[PARTITION_COUNT]
 ) {
-	const partition_info *pi = get_partition_table(bsd, partition_count);
+	const partition_info *pt = get_partition_table(bsd, partition_count);
 
 	if (partition_count == 2)
 	{
@@ -386,15 +333,15 @@ static void count_partition_mismatch_bits(
 		uint64_t bm1 = bitmaps[1];
 		for (int i = 0; i < PARTITION_COUNT; i++)
 		{
-			if (pi->partition_count == 2)
+			if (pt->partition_count == 2)
 			{
-				bitcounts[i] = partition_mismatch2(bm0, bm1, pi->coverage_bitmaps[0], pi->coverage_bitmaps[1]);
+				bitcounts[i] = partition_mismatch2(bm0, bm1, pt->coverage_bitmaps[0], pt->coverage_bitmaps[1]);
 			}
 			else
 			{
 				bitcounts[i] = 255;
 			}
-			pi++;
+			pt++;
 		}
 	}
 	else if (partition_count == 3)
@@ -404,15 +351,15 @@ static void count_partition_mismatch_bits(
 		uint64_t bm2 = bitmaps[2];
 		for (int i = 0; i < PARTITION_COUNT; i++)
 		{
-			if (pi->partition_count == 3)
+			if (pt->partition_count == 3)
 			{
-				bitcounts[i] = partition_mismatch3(bm0, bm1, bm2, pi->coverage_bitmaps[0], pi->coverage_bitmaps[1], pi->coverage_bitmaps[2]);
+				bitcounts[i] = partition_mismatch3(bm0, bm1, bm2, pt->coverage_bitmaps[0], pt->coverage_bitmaps[1], pt->coverage_bitmaps[2]);
 			}
 			else
 			{
 				bitcounts[i] = 255;
 			}
-			pi++;
+			pt++;
 		}
 	}
 	else if (partition_count == 4)
@@ -423,37 +370,37 @@ static void count_partition_mismatch_bits(
 		uint64_t bm3 = bitmaps[3];
 		for (int i = 0; i < PARTITION_COUNT; i++)
 		{
-			if (pi->partition_count == 4)
+			if (pt->partition_count == 4)
 			{
-				bitcounts[i] = partition_mismatch4(bm0, bm1, bm2, bm3, pi->coverage_bitmaps[0], pi->coverage_bitmaps[1], pi->coverage_bitmaps[2], pi->coverage_bitmaps[3]);
+				bitcounts[i] = partition_mismatch4(bm0, bm1, bm2, bm3, pt->coverage_bitmaps[0], pt->coverage_bitmaps[1], pt->coverage_bitmaps[2], pt->coverage_bitmaps[3]);
 			}
 			else
 			{
 				bitcounts[i] = 255;
 			}
-			pi++;
+			pt++;
 		}
 	}
 
 }
 
-// counting-sort on the mismatch-bits, thereby
-// sorting the partitions into an ordering.
+/**
+ * @brief Use counting sort on the mismatch array to sort partition candidates.
+ */
 static void get_partition_ordering_by_mismatch_bits(
 	const int mismatch_bits[PARTITION_COUNT],
 	int partition_ordering[PARTITION_COUNT]
 ) {
-	int mscount[256];
-	for (int i = 0; i < 256; i++)
-	{
-		mscount[i] = 0;
-	}
+	int mscount[256] { 0 };
 
+	// Create the histogram of mismatch counts
 	for (int i = 0; i < PARTITION_COUNT; i++)
 	{
 		mscount[mismatch_bits[i]]++;
 	}
 
+	// Create a running sum from the histogram array
+	// Cells store previous values only; i.e. exclude self after sum
 	int summa = 0;
 	for (int i = 0; i < 256; i++)
 	{
@@ -462,6 +409,8 @@ static void get_partition_ordering_by_mismatch_bits(
 		summa += cnt;
 	}
 
+	// Use the running sum as the index, incrementing after read to allow
+	// sequential entries with the same count
 	for (int i = 0; i < PARTITION_COUNT; i++)
 	{
 		int idx = mscount[mismatch_bits[i]]++;
@@ -475,46 +424,39 @@ void kmeans_compute_partition_ordering(
 	const imageblock* blk,
 	int* ordering
 ) {
-	float4 cluster_centers[4];
+	vfloat4 cluster_centers[4];
 	int partition_of_texel[MAX_TEXELS_PER_BLOCK];
 
-	// 3 passes of plain k-means partitioning
+	// Use three passes of k-means clustering to partition the block data
 	for (int i = 0; i < 3; i++)
 	{
 		if (i == 0)
 		{
-			kpp_initialize(bsd->xdim, bsd->ydim, bsd->zdim, partition_count, blk, cluster_centers);
+			kmeans_init(bsd->texel_count, partition_count, blk, cluster_centers);
 		}
 		else
 		{
-			basic_kmeans_update(bsd->xdim, bsd->ydim, bsd->zdim, partition_count, blk, partition_of_texel, cluster_centers);
+			kmeans_update(bsd->texel_count, partition_count, blk, partition_of_texel, cluster_centers);
 		}
 
-		basic_kmeans_assign_pass(bsd->xdim, bsd->ydim, bsd->zdim, partition_count, blk, cluster_centers, partition_of_texel);
+		kmeans_assign(bsd->texel_count, partition_count, blk, cluster_centers, partition_of_texel);
 	}
 
-	// at this point, we have a near-ideal partitioning.
-
-	// construct bitmaps
-	uint64_t bitmaps[4];
-	for (int i = 0; i < 4; i++)
-	{
-		bitmaps[i] = 0ULL;
-	}
-
-	int texels_to_process = bsd->texelcount_for_bitmap_partitioning;
+	// Construct the block bitmaps of texel assignments to each partition
+	uint64_t bitmaps[4] { 0 };
+	int texels_to_process = bsd->kmeans_texel_count;
 	for (int i = 0; i < texels_to_process; i++)
 	{
-		int idx = bsd->texels_for_bitmap_partitioning[i];
+		int idx = bsd->kmeans_texels[i];
 		bitmaps[partition_of_texel[idx]] |= 1ULL << i;
 	}
 
-	int bitcounts[PARTITION_COUNT];
-	// for each entry in the partition table, count bits of partition-mismatch.
-	count_partition_mismatch_bits(bsd, partition_count, bitmaps, bitcounts);
+	// Count the mismatch between the block and the format's partition tables
+	int mismatch_counts[PARTITION_COUNT];
+	count_partition_mismatch_bits(bsd, partition_count, bitmaps, mismatch_counts);
 
-	// finally, sort the partitions by bits-of-partition-mismatch
-	get_partition_ordering_by_mismatch_bits(bitcounts, ordering);
+	// Sort the partitions based on the number of mismatched bits
+	get_partition_ordering_by_mismatch_bits(mismatch_counts, ordering);
 }
 
 #endif

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2020 Arm Limited
+// Copyright 2020-2021 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -43,9 +43,9 @@
  *       allocate multiple contexts and assign each context to a thread.
  *     * An application wishing to process a single image in using multiple
  *       threads can configure the context for multi-threaded use, and invoke
- *       astcenc_compress() once per thread for faster compression. The caller
- *       is responsible for creating the worker threads. Note that
- *       decompression is always single-threaded.
+ *       astcenc_compress/decompress() once per thread for faster processing.
+ *       The caller is responsible for creating the worker threads, and
+ *       synchronizing between images.
  *
  * Threading
  * =========
@@ -76,21 +76,21 @@
  * Images
  * ======
  *
- * Images are passed in as a astcenc_image structure. Inputs can be either
- * 8-bit unorm inputs (passed in via the data8 pointer), or 16-bit floating
- * point inputs (passed in via the data16 pointer). The unused pointer should
- * be set to nullptr.
+ * Images are passed in as an astcenc_image structure. Inputs can be either
+ * 8-bit unorm, 16-bit half-float, or 32-bit float, as indicated by the
+ * data_type field.
  *
  * Images can be any dimension; there is no requirement for them to be a
  * multiple of the ASTC block size.
  *
- * Data is always passed in as 4 color channels, and accessed as 3D array
- * indexed using e.g.
+ * Data is always passed in as 4 color channels, and accessed as an array of
+ * 2D image slices. Data within an image slice is always tightly packed without
+ * padding. Addresing looks like this:
  *
- *     data8[z_coord][y_coord][x_coord * 4    ]   // Red
- *     data8[z_coord][y_coord][x_coord * 4 + 1]   // Green
- *     data8[z_coord][y_coord][x_coord * 4 + 2]   // Blue
- *     data8[z_coord][y_coord][x_coord * 4 + 3]   // Alpha
+ *     data[z_coord][y_coord * x_dim * 4 + x_coord * 4    ]   // Red
+ *     data[z_coord][y_coord * x_dim * 4 + x_coord * 4 + 1]   // Green
+ *     data[z_coord][y_coord * x_dim * 4 + x_coord * 4 + 2]   // Blue
+ *     data[z_coord][y_coord * x_dim * 4 + x_coord * 4 + 3]   // Alpha
  *
  * Common compressor usage
  * =======================
@@ -144,6 +144,16 @@
 #include <cstddef>
 #include <cstdint>
 
+#if defined(ASTCENC_DYNAMIC_LIBRARY)
+	#if defined(_MSC_VER)
+		#define ASTCENC_PUBLIC extern "C" __declspec(dllexport)
+	#else
+		#define ASTCENC_PUBLIC extern "C" __attribute__ ((visibility ("default")))
+	#endif
+#else
+	#define ASTCENC_PUBLIC
+#endif
+
 /* ============================================================================
     Data declarations
 ============================================================================ */
@@ -171,8 +181,8 @@ enum astcenc_error {
 	ASTCENC_ERR_BAD_BLOCK_SIZE,
 	/** @brief The call failed due to an out-of-spec color profile. */
 	ASTCENC_ERR_BAD_PROFILE,
-	/** @brief The call failed due to an out-of-spec quality preset. */
-	ASTCENC_ERR_BAD_PRESET,
+	/** @brief The call failed due to an out-of-spec quality value. */
+	ASTCENC_ERR_BAD_QUALITY,
 	/** @brief The call failed due to an out-of-spec channel swizzle. */
 	ASTCENC_ERR_BAD_SWIZZLE,
 	/** @brief The call failed due to an out-of-spec flag set. */
@@ -180,7 +190,11 @@ enum astcenc_error {
 	/** @brief The call failed due to the context not supporting the operation. */
 	ASTCENC_ERR_BAD_CONTEXT,
 	/** @brief The call failed due to unimplemented functionality. */
-	ASTCENC_ERR_NOT_IMPLEMENTED
+	ASTCENC_ERR_NOT_IMPLEMENTED,
+#if defined(ASTCENC_DIAGNOSTICS)
+	/** @brief The call failed due to an issue with diagnostic tracing. */
+	ASTCENC_ERR_DTRACE_FAILURE,
+#endif
 };
 
 /**
@@ -197,21 +211,20 @@ enum astcenc_profile {
 	ASTCENC_PRF_HDR
 };
 
-/**
- * @brief A codec quality preset.
- */
-enum astcenc_preset {
-	/** @brief The fastest, lowest quality, search preset. */
-	ASTCENC_PRE_FASTEST = 0,
-	/** @brief The fast search preset. */
-	ASTCENC_PRE_FAST,
-	/** @brief The medium quality search preset. */
-	ASTCENC_PRE_MEDIUM,
-	/** @brief The throrough quality search preset. */
-	ASTCENC_PRE_THOROUGH,
-	/** @brief The exhaustive, highest quality, search preset. */
-	ASTCENC_PRE_EXHAUSTIVE
-};
+/** @brief The fastest, lowest quality, search preset. */
+static const float ASTCENC_PRE_FASTEST = 0.0f;
+
+/** @brief The fast search preset. */
+static const float ASTCENC_PRE_FAST = 10.0f;
+
+/** @brief The medium quality search preset. */
+static const float ASTCENC_PRE_MEDIUM = 60.0f;
+
+/** @brief The throrough quality search preset. */
+static const float ASTCENC_PRE_THOROUGH = 98.0f;
+
+/** @brief The exhaustive, highest quality, search preset. */
+static const float ASTCENC_PRE_EXHAUSTIVE = 100.0f;
 
 /**
  * @brief A codec channel swizzle selector.
@@ -276,7 +289,32 @@ static const unsigned int ASTCENC_FLG_MAP_NORMAL          = 1 << 0;
  * the color channels to be treated independently for the purposes of error
  * analysis.
  */
-static const unsigned int ASTCENC_FLG_MAP_MASK            = 1 << 1;
+static const unsigned int ASTCENC_FLG_MAP_MASK             = 1 << 1;
+
+/**
+ * @brief Enable RGBM map compression.
+ *
+ * Input data will be treated as HDR data that has been stored in an LDR
+ * RGBM-encoded wrapper format. Data must be preprocessed by the user to be in
+ * LDR RGBM format before calling the compression function, this flag is only
+ * used to control the use of RGBM-specific heuristics and error metrics.
+ *
+ * IMPORTANT: The ASTC format is prone to bad failure modes with unconstrained
+ * RGBM data; very small M values can round to zero due to quantization and
+ * result in black or white pixels. It is *highly* recommended that the minimum
+ * value of M used in the encoding is kept above a lower threshold (try 16 or
+ * 32). Applying this threshold reduces the number of very dark colors that can
+ * be represented, but is still slightly higher precision than 8-bit LDR.
+ *
+ * When this flag is set the value of @c rgbm_m_scale in the context must be
+ * set to the RGBM scale factor used during reconstruction. This defaults to 5
+ * when in RGBM mode.
+ *
+ * It is recommended that the value of @c cw_a_weight is set to twice the value
+ * of the multiplier scale, ensuring that the M value is accurately encoded.
+ * This defaults to 10 when in RGBM mode, matching the default scale factor.
+ */
+static const unsigned int ASTCENC_FLG_MAP_RGBM             = 1 << 6;
 
 /**
  * @brief Enable alpha weighting.
@@ -286,7 +324,7 @@ static const unsigned int ASTCENC_FLG_MAP_MASK            = 1 << 1;
  * more accurately encode the alpha value in areas where the color value
  * is less significant.
  */
-static const unsigned int ASTCENC_FLG_USE_ALPHA_WEIGHT    = 1 << 2;
+static const unsigned int ASTCENC_FLG_USE_ALPHA_WEIGHT     = 1 << 2;
 
 /**
  * @brief Enable perceptual error metrics.
@@ -295,25 +333,38 @@ static const unsigned int ASTCENC_FLG_USE_ALPHA_WEIGHT    = 1 << 2;
  * perceptual error rather than best PSNR. Only some input modes support
  * perceptual error metrics.
  */
-static const unsigned int ASTCENC_FLG_USE_PERCEPTUAL      = 1 << 3;
+static const unsigned int ASTCENC_FLG_USE_PERCEPTUAL       = 1 << 3;
 
 /**
  * @brief Create a decompression-only context.
  *
- * This mode enables context allocation to skip some transient buffer
- * allocation, resulting in a lower-memory footprint.
+ * This mode disables support for compression. This enables context allocation
+ * to skip some transient buffer allocation, resulting in lower memory usage.
  */
-static const unsigned int ASTCENC_FLG_DECOMPRESS_ONLY     = 1 << 4;
+static const unsigned int ASTCENC_FLG_DECOMPRESS_ONLY      = 1 << 4;
+
+/**
+ * @brief Create a self-decompression context.
+ *
+ * This mode configures the compressor so that it is only guaranteed to be
+ * able to decompress images that were actually created using the current
+ * context. This is the common case for compression use cases, and setting this
+ * flag enables additional optimizations, but does mean that the context cannot
+ * reliably decompress arbitrary ASTC images.
+ */
+static const unsigned int ASTCENC_FLG_SELF_DECOMPRESS_ONLY = 1 << 5;
 
 /**
  * @brief The bit mask of all valid flags.
  */
 static const unsigned int ASTCENC_ALL_FLAGS =
-                              ASTCENC_FLG_MAP_NORMAL |
                               ASTCENC_FLG_MAP_MASK |
+                              ASTCENC_FLG_MAP_NORMAL |
+                              ASTCENC_FLG_MAP_RGBM |
                               ASTCENC_FLG_USE_ALPHA_WEIGHT |
                               ASTCENC_FLG_USE_PERCEPTUAL |
-                              ASTCENC_FLG_DECOMPRESS_ONLY;
+                              ASTCENC_FLG_DECOMPRESS_ONLY |
+                              ASTCENC_FLG_SELF_DECOMPRESS_ONLY;
 
 /**
  * @brief The config structure.
@@ -327,7 +378,8 @@ static const unsigned int ASTCENC_ALL_FLAGS =
  * the value in the config applies to the channel that exists after any
  * compression data swizzle is applied.
  */
-struct astcenc_config {
+struct astcenc_config
+{
 	/** @brief The color profile. */
 	astcenc_profile profile;
 
@@ -402,12 +454,22 @@ struct astcenc_config {
 	 */
 	float b_deblock_weight;
 
+	/** @brief The RGBM scale factor for the shared multiplier (-rgbm). */
+	float rgbm_m_scale;
+
 	/**
-	 * @brief The maximum number of partitions searched (-partitionlimit).
+	 * @brief The maximum number of partitions searched (-partitioncountlimit).
+	 *
+	 * Valid values are between 1 and 4.
+	 */
+	unsigned int tune_partition_count_limit;
+
+	/**
+	 * @brief The maximum number of partitions searched (-partitionindexlimit).
 	 *
 	 * Valid values are between 1 and 1024.
 	 */
-	unsigned int tune_partition_limit;
+	unsigned int tune_partition_index_limit;
 
 	/**
 	 * @brief The maximum centile for block modes searched (-blockmodelimit).
@@ -439,6 +501,30 @@ struct astcenc_config {
 	float tune_db_limit;
 
 	/**
+	 * @brief The amount of overshoot needed to early-out mode 0 fast path.
+	 *
+	 * We have a fast-path for mode 0 (1 partition, 1 plane) which uses only
+	 * essential block modes as an initital search. This can short-cut
+	 * compression for simple blocks, but to avoid shortcutting too much we
+	 * force this to overshoot the MSE threshold needed to hit the block-local
+	 * db_limit e.g. 1.0 = no overshoot, 2.0 = need half the error to trigger.
+	 */
+	float tune_mode0_mse_overshoot;
+
+	/**
+	 * @brief The amount of overshoot needed to early-out refinement.
+	 *
+	 * The codec will refine block candidates iteratively to improve the
+	 * encoding, based on the @c tune_refinement_limit count. Earlier
+	 * implementations will use all refinement iterations, even if the target
+	 * threshold is reached. This tuning parameter allows an early out, but
+	 * with an overshoot MSE threshold. Setting this to 1.0 will early-out as
+	 * soon as the target is hit, but does reduce image quality vs the
+	 * default behavior of over-refinement.
+	 */
+	float tune_refinement_mse_overshoot;
+
+	/**
 	 * @brief The threshold for skipping 3+ partitions (-partitionearlylimit).
 	 *
 	 * This option is ineffective for normal maps.
@@ -451,27 +537,116 @@ struct astcenc_config {
 	 * This option is ineffective for normal maps.
 	 */
 	float tune_two_plane_early_out_limit;
+
+#if defined(ASTCENC_DIAGNOSTICS)
+	/**
+	 * @brief The path to save the diagnostic trace data to.
+	 *
+	 * This option is not part of the public API, and requires special builds
+	 * of the library.
+	 */
+	const char* trace_file_path;
+#endif
 };
 
 /**
  * @brief An uncompressed 2D or 3D image.
  *
- * Inputs can be either 8-bit unorm inputs (passed in via the data8 pointer),
- * or 16-bit floating point inputs (passed in via the data16 pointer). The
- * unused pointer must be set to nullptr. Data is always passed in as 4 color
- * channels, and accessed as 3D array indexed using [Z][Y][(X * 4) + (0..3)].
+ * 3D image are passed in as an array of 2D slices. Each slice has identical
+ * size and color format.
  */
-struct astcenc_image {
+struct astcenc_image
+{
 	/** @brief The X dimension of the image, in texels. */
 	unsigned int dim_x;
+
 	/** @brief The Y dimension of the image, in texels. */
 	unsigned int dim_y;
-	/** @brief The X dimension of the image, in texels. */
+
+	/** @brief The Z dimension of the image, in texels. */
 	unsigned int dim_z;
+
 	/** @brief The data type per channel. */
 	astcenc_type data_type;
-	/** @brief The data; actually of type <t>***. */
-	void *data;
+
+	/** @brief The array of 2D slices, of length @c dim_z. */
+	void** data;
+};
+
+/**
+ * @brief A block encoding metadata query result.
+ *
+ * If the block is an error block or a constant color block or an error block
+ * all fields other than the profile, block dimensions, and error/constant
+ * indicator will be zero.
+ */
+struct astcenc_block_info
+{
+	/** @brief The block encoding color profile. */
+	astcenc_profile profile;
+
+	/** @brief The number of texels in the X dimension. */
+	int block_x;
+
+	/** @brief The number of texels in the Y dimension. */
+	int block_y;
+
+	/** @brief The number of texel in the Z dimension. */
+	int block_z;
+
+	/** @brief The number of texels in the block. */
+	int texel_count;
+
+	/** @brief True if this block is an error block. */
+	bool is_error_block;
+
+	/** @brief True if this block is a constant color block. */
+	bool is_constant_block;
+
+	/** @brief True if this block is an HDR block. */
+	bool is_hdr_block;
+
+	/** @brief True if this block uses two weight planes. */
+	bool is_dual_plane_block;
+
+	/** @brief The number of partitions if not constant color. */
+	int partition_count;
+
+	/** @brief The partition index if 2 - 4 partitions used. */
+	int partition_index;
+
+	/** @brief The component index of the second plane if dual plane. */
+	int dual_plane_component;
+
+	/** @brief The color endpoint encoding mode for each partition. */
+	int color_endpoint_modes[4];
+
+	/** @brief The number of color endpoint quantization levels. */
+	int color_level_count;
+
+	/** @brief The number of weight quantization levels. */
+	int weight_level_count;
+
+	/** @brief The number of weights in the X dimension. */
+	int weight_x;
+
+	/** @brief The number of weights in the Y dimension. */
+	int weight_y;
+
+	/** @brief The number of weights in the Z dimension. */
+	int weight_z;
+
+	/** @brief The unpacked color endpoints for each partition. */
+	float color_endpoints[4][2][4];
+
+	/** @brief The per-texel interpolation weights for the block. */
+	float weight_values_plane1[216];
+
+	/** @brief The per-texel interpolation weights for the block. */
+	float weight_values_plane2[216];
+
+	/** @brief The per-texel partition assignments for the block. */
+	uint8_t partition_assignment[216];
 };
 
 /**
@@ -484,21 +659,24 @@ struct astcenc_image {
  * @param      block_x   ASTC block size X dimension.
  * @param      block_y   ASTC block size Y dimension.
  * @param      block_z   ASTC block size Z dimension.
- * @param      preset    Search quality preset.
+ * @param      quality   Search quality preset / effort level. Either an
+ *                       @c ASTCENC_PRE_* value, or a effort level between 0
+ *                       and 100. Performance is not linear between 0 and 100.
+
  * @param      flags     A valid set of ASTCENC_FLG_* flag bits.
  * @param[out] config    Output config struct to populate.
  *
  * @return ASTCENC_SUCCESS on success, or an error if the inputs are invalid
  * either individually, or in combination.
  */
-astcenc_error astcenc_config_init(
+ASTCENC_PUBLIC astcenc_error astcenc_config_init(
 	astcenc_profile profile,
 	unsigned int block_x,
 	unsigned int block_y,
 	unsigned int block_z,
-	astcenc_preset preset,
+	float quality,
 	unsigned int flags,
-	astcenc_config& config);
+	astcenc_config* config);
 
 /**
  * @brief Allocate a new codec context based on a config.
@@ -515,14 +693,13 @@ astcenc_error astcenc_config_init(
  * be set when creating ay context.
  *
  * @param[in]  config         Codec config.
- * @param      thread_count   Thread count to configure for. Decompress-only
- *                            contexts must have a thread_count of 1.
+ * @param      thread_count   Thread count to configure for.
  * @param[out] context        Location to store an opaque context pointer.
  *
  * @return ASTCENC_SUCCESS on success, or an error if context creation failed.
  */
-astcenc_error astcenc_context_alloc(
-	const astcenc_config& config,
+ASTCENC_PUBLIC astcenc_error astcenc_context_alloc(
+	const astcenc_config* config,
 	unsigned int thread_count,
 	astcenc_context** context);
 
@@ -536,7 +713,7 @@ astcenc_error astcenc_context_alloc(
  * available. Each thread must have a unique thread_index.
  *
  * @param         context        Codec context.
- * @param[in,out] image          Input image.
+ * @param[in,out] image          An input image, in 2D slices.
  * @param         swizzle        Compression data swizzle.
  * @param[out]    data_out       Pointer to output data array.
  * @param         data_len       Length of the output data array.
@@ -544,16 +721,16 @@ astcenc_error astcenc_context_alloc(
  *
  * @return ASTCENC_SUCCESS on success, or an error if compression failed.
  */
-astcenc_error astcenc_compress_image(
+ASTCENC_PUBLIC astcenc_error astcenc_compress_image(
 	astcenc_context* context,
-	astcenc_image& image,
+	astcenc_image* image,
 	astcenc_swizzle swizzle,
 	uint8_t* data_out,
 	size_t data_len,
 	unsigned int thread_index);
 
 /**
- * @brief Reset the compressor state for a new compression.
+ * @brief Reset the codec state for a new compression.
  *
  * The caller is responsible for synchronizing threads in the worker thread
  * pool. This function must only be called when all threads have exited the
@@ -564,34 +741,70 @@ astcenc_error astcenc_compress_image(
  *
  * @return ASTCENC_SUCCESS on success, or an error if reset failed.
  */
-astcenc_error astcenc_compress_reset(
+ASTCENC_PUBLIC astcenc_error astcenc_compress_reset(
 	astcenc_context* context);
 
 /**
  * @brief Decompress an image.
  *
- * @param         context      Codec context.
- * @param[in]     data         Pointer to compressed data.
- * @param         data_len     Length of the compressed data, in bytes.
- * @param[in,out] image_out    Output image.
- * @param         swizzle      Decompression data swizzle.
+ * @param         context        Codec context.
+ * @param[in]     data           Pointer to compressed data.
+ * @param         data_len       Length of the compressed data, in bytes.
+ * @param[in,out] image_out      Output image.
+ * @param         swizzle        Decompression data swizzle.
+ * @param         thread_index   Thread index [0..N-1] of calling thread.
  *
  * @return ASTCENC_SUCCESS on success, or an error if decompression failed.
  */
-astcenc_error astcenc_decompress_image(
+ASTCENC_PUBLIC astcenc_error astcenc_decompress_image(
 	astcenc_context* context,
 	const uint8_t* data,
 	size_t data_len,
-	astcenc_image& image_out,
-	astcenc_swizzle swizzle);
+	astcenc_image* image_out,
+	astcenc_swizzle swizzle,
+	unsigned int thread_index);
+
+/**
+ * @brief Reset the codec state for a new decompression.
+ *
+ * The caller is responsible for synchronizing threads in the worker thread
+ * pool. This function must only be called when all threads have exited the
+ * astcenc_decompress_image() function for image N, but before any thread
+ * enters it for image N + 1.
+ *
+ * @param context   Codec context.
+ *
+ * @return ASTCENC_SUCCESS on success, or an error if reset failed.
+ */
+ASTCENC_PUBLIC astcenc_error astcenc_decompress_reset(
+	astcenc_context* context);
 
 /**
  * Free the compressor context.
  *
  * @param context   The codec context.
  */
-void astcenc_context_free(
+ASTCENC_PUBLIC void astcenc_context_free(
 	astcenc_context* context);
+
+/**
+ * @brief Provide a high level summary of a block's encoding.
+ *
+ * This feature is primarily useful for codec developers but may be useful
+ * for developers building advanced content packaging pipelines.
+ *
+ * @param context   Codec context.
+ * @param data      One block of compressesd ASTC data.
+ * @param info      The output info structure to populate.
+ *
+ * @return ASTCENC_SUCCESS if the block was decoded, or an error otherwise.
+ *         Note that this function will return success even if the block itself
+ *         was an error block encoding, as the decode was correctly handled.
+ */
+ASTCENC_PUBLIC astcenc_error astcenc_get_block_info(
+	astcenc_context* context,
+	const uint8_t data[16],
+	astcenc_block_info* info);
 
 /**
  * @brief Get a printable string for specific status code.
@@ -600,7 +813,7 @@ void astcenc_context_free(
  *
  * @return A human readable nul-terminated string.
  */
-const char* astcenc_get_error_string(
+ASTCENC_PUBLIC const char* astcenc_get_error_string(
 	astcenc_error status);
 
 #endif

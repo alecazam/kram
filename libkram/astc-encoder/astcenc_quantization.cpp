@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2011-2020 Arm Limited
+// Copyright 2011-2021 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -23,7 +23,7 @@
 
 #if !defined(ASTCENC_DECOMPRESS_ONLY)
 
-const uint8_t color_quantization_tables[21][256] = {
+const uint8_t color_quant_tables[21][256] = {
 	{
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -406,7 +406,7 @@ const uint8_t color_quantization_tables[21][256] = {
 
 #endif
 
-const uint8_t color_unquantization_tables[21][256] = {
+const uint8_t color_unquant_tables[21][256] = {
 	{
 		0, 255
 	},
@@ -533,19 +533,18 @@ const uint8_t color_unquantization_tables[21][256] = {
 	}
 };
 
-// quantization_mode_table[integercount/2][bits] gives
-// us the quantization level for a given integer count and number of bits that
-// the integer may fit into. This is needed for color decoding,
-// and for the color encoding.
-int quantization_mode_table[17][128];
+// The quant_mode_table[integercount/2][bits] gives us the quantization
+// level for a given integer count and number of bits that the integer may fit
+// into. This is needed for color decoding, and for the color encoding.
+int8_t quant_mode_table[17][128];
 
-void build_quantization_mode_table()
+void build_quant_mode_table()
 {
 	for (int i = 0; i <= 16; i++)
 	{
 		for (int j = 0; j < 128; j++)
 		{
-			quantization_mode_table[i][j] = -1;
+			quant_mode_table[i][j] = -1;
 		}
 	}
 
@@ -553,10 +552,10 @@ void build_quantization_mode_table()
 	{
 		for (int j = 1; j <= 16; j++)
 		{
-			int p = compute_ise_bitcount(2 * j, (quantization_method) i);
+			int p = get_ise_sequence_bitcount(2 * j, (quant_method)i);
 			if (p < 128)
 			{
-				quantization_mode_table[j][p] = i;
+				quant_mode_table[j][p] = i;
 			}
 		}
 	}
@@ -566,13 +565,13 @@ void build_quantization_mode_table()
 		int largest_value_so_far = -1;
 		for (int j = 0; j < 128; j++)
 		{
-			if (quantization_mode_table[i][j] > largest_value_so_far)
+			if (quant_mode_table[i][j] > largest_value_so_far)
 			{
-				largest_value_so_far = quantization_mode_table[i][j];
+				largest_value_so_far = quant_mode_table[i][j];
 			}
 			else
 			{
-				quantization_mode_table[i][j] = largest_value_so_far;
+				quant_mode_table[i][j] = largest_value_so_far;
 			}
 		}
 	}

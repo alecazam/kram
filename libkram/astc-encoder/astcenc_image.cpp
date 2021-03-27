@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2011-2020 Arm Limited
+// Copyright 2011-2021 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -24,256 +24,108 @@
 
 #include "astcenc_internal.h"
 
-// hack in 2d array support for f32 on encode, and u8 on decode
-#define USE_2DARRAY 1
-
-// conversion functions between the LNS representation and the FP16 representation.
-static float float_to_lns(float p)
-{
-	if (astc::isnan(p) || p <= 1.0f / 67108864.0f)
-	{
-		// underflow or NaN value, return 0.
-		// We count underflow if the input value is smaller than 2^-26.
-		return 0.0f;
-	}
-
-	if (fabsf(p) >= 65536.0f)
-	{
-		// overflow, return a +INF value
-		return 65535.0f;
-	}
-
-	int expo;
-	float normfrac = frexpf(p, &expo);
-	float p1;
-	if (expo < -13)
-	{
-		// input number is smaller than 2^-14. In this case, multiply by 2^25.
-		p1 = p * 33554432.0f;
-		expo = 0;
-	}
-	else
-	{
-		expo += 14;
-		p1 = (normfrac - 0.5f) * 4096.0f;
-	}
-
-	if (p1 < 384.0f)
-		p1 *= 4.0f / 3.0f;
-	else if (p1 <= 1408.0f)
-		p1 += 128.0f;
-	else
-		p1 = (p1 + 512.0f) * (4.0f / 5.0f);
-
-	p1 += ((float)expo) * 2048.0f;
-	return p1 + 1.0f;
-}
-
-static uint16_t lns_to_sf16(uint16_t p)
-{
-	uint16_t mc = p & 0x7FF;
-	uint16_t ec = p >> 11;
-	uint16_t mt;
-	if (mc < 512)
-		mt = 3 * mc;
-	else if (mc < 1536)
-		mt = 4 * mc - 512;
-	else
-		mt = 5 * mc - 2048;
-
-	uint16_t res = (ec << 10) | (mt >> 3);
-	if (res >= 0x7BFF)
-		res = 0x7BFF;
-	return res;
-}
-
-// conversion function from 16-bit LDR value to FP16.
-// note: for LDR interpolation, it is impossible to get a denormal result;
-// this simplifies the conversion.
-// FALSE; we can receive a very small UNORM16 through the constant-block.
-uint16_t unorm16_to_sf16(uint16_t p)
-{
-	if (p == 0xFFFF)
-		return 0x3C00;			// value of 1.0 .
-	if (p < 4)
-		return p << 8;
-
-	int lz = clz32(p) - 16;
-	p <<= (lz + 1);
-	p >>= 6;
-	p |= (14 - lz) << 10;
-	return p;
-}
-
 void imageblock_initialize_deriv(
-	const imageblock* pb,
+	const imageblock* blk,
 	int pixelcount,
-	float4* dptr
+	vfloat4* dptr
 ) {
+	// TODO: For LDR on the current codec we can skip this if no LNS and just
+	// early-out as we use the same LNS settings everywhere ...
 	for (int i = 0; i < pixelcount; i++)
 	{
-		// compute derivatives for RGB first
-		if (pb->rgb_lns[i])
+		vfloat4 derv_unorm(65535.0f);
+		vfloat4 derv_lns = vfloat4::zero();
+
+		// TODO: Pack these into bits and avoid the disjoint fetch
+		int rgb_lns = blk->rgb_lns[i];
+		int a_lns = blk->alpha_lns[i];
+
+		// Compute derivatives if we have any use of LNS
+		if (rgb_lns || a_lns)
 		{
-			float3 fdata = float3(pb->data_r[i], pb->data_g[i], pb->data_b[i]);
-			fdata.r = sf16_to_float(lns_to_sf16((uint16_t)fdata.r));
-			fdata.g = sf16_to_float(lns_to_sf16((uint16_t)fdata.g));
-			fdata.b = sf16_to_float(lns_to_sf16((uint16_t)fdata.b));
+			vfloat4 data = blk->texel(i);
+			vint4 datai = lns_to_sf16(float_to_int(data));
 
-			float r = MAX(fdata.r, 6e-5f);
-			float g = MAX(fdata.g, 6e-5f);
-			float b = MAX(fdata.b, 6e-5f);
+			vfloat4 dataf = float16_to_float(datai);
+			dataf = max(dataf, 6e-5f);
 
-			float rderiv = (float_to_lns(r * 1.05f) - float_to_lns(r)) / (r * 0.05f);
-			float gderiv = (float_to_lns(g * 1.05f) - float_to_lns(g)) / (g * 0.05f);
-			float bderiv = (float_to_lns(b * 1.05f) - float_to_lns(b)) / (b * 0.05f);
+			vfloat4 data_lns1 = dataf * 1.05f;
+			data_lns1 = float_to_lns(data_lns1);
 
-			// the derivative may not actually take values smaller than 1/32 or larger than 2^25;
-			// if it does, we clamp it.
-			if (rderiv < (1.0f / 32.0f))
-			{
-				rderiv = (1.0f / 32.0f);
-			}
-			else if (rderiv > 33554432.0f)
-			{
-				rderiv = 33554432.0f;
-			}
+			vfloat4 data_lns2 = dataf;
+			data_lns2 = float_to_lns(data_lns2);
 
-			if (gderiv < (1.0f / 32.0f))
-			{
-				gderiv = (1.0f / 32.0f);
-			}
-			else if (gderiv > 33554432.0f)
-			{
-				gderiv = 33554432.0f;
-			}
+			vfloat4 divisor_lns = dataf * 0.05f;
 
-			if (bderiv < (1.0f / 32.0f))
-			{
-				bderiv = (1.0f / 32.0f);
-			}
-			else if (bderiv > 33554432.0f)
-			{
-				bderiv = 33554432.0f;
-			}
-
-			dptr->r = rderiv;
-			dptr->g = gderiv;
-			dptr->b = bderiv;
-		}
-		else
-		{
-			dptr->r = 65535.0f;
-			dptr->g = 65535.0f;
-			dptr->b = 65535.0f;
+			// Clamp derivatives between 1/32 and 2^25
+			float lo = 1.0f / 32.0f;
+			float hi = 33554432.0f;
+			derv_lns = clamp(lo, hi, (data_lns1 - data_lns2) / divisor_lns);
 		}
 
-		// then compute derivatives for Alpha
-		if (pb->alpha_lns[i])
-		{
-			float fdata = pb->data_a[i];
-			fdata = sf16_to_float(lns_to_sf16((uint16_t)fdata));
-
-			float a = MAX(fdata, 6e-5f);
-			float aderiv = (float_to_lns(a * 1.05f) - float_to_lns(a)) / (a * 0.05f);
-			// the derivative may not actually take values smaller than 1/32 or larger than 2^25;
-			// if it does, we clamp it.
-			if (aderiv < (1.0f / 32.0f))
-			{
-				aderiv = (1.0f / 32.0f);
-			}
-			else if (aderiv > 33554432.0f)
-			{
-				aderiv = 33554432.0f;
-			}
-
-			dptr->a = aderiv;
-		}
-		else
-		{
-			dptr->a = 65535.0f;
-		}
-
+		vint4 use_lns(rgb_lns, rgb_lns, rgb_lns, a_lns);
+		vmask4 lns_mask = use_lns != vint4::zero();
+		*dptr = select(derv_unorm, derv_lns, lns_mask);
 		dptr++;
 	}
 }
 
 // helper function to initialize the work-data from the orig-data
-void imageblock_initialize_work_from_orig(
-	imageblock* pb,
+static void imageblock_initialize_work_from_orig(
+	imageblock* blk,
 	int pixelcount
 ) {
-	pb->origin_texel = float4(pb->data_r[0], pb->data_g[0],
-	                          pb->data_b[0], pb->data_a[0]);
+	blk->origin_texel = blk->texel(0);
+
+	vfloat4 data_min(1e38f);
+	vfloat4 data_max(-1e38f);
+	bool grayscale = true;
 
 	for (int i = 0; i < pixelcount; i++)
 	{
-		float4 inc = float4(pb->data_r[i], pb->data_g[i],
-		                    pb->data_b[i], pb->data_a[i]);
+		vfloat4 data = blk->texel(i);
+		vfloat4 color_lns = vfloat4::zero();
+		vfloat4 color_unorm = data * 65535.0f;
 
-		if (pb->rgb_lns[i])
+		int rgb_lns = blk->rgb_lns[i];
+		int a_lns = blk->alpha_lns[i];
+
+		if (rgb_lns || a_lns)
 		{
-			pb->data_r[i] = float_to_lns(inc.r);
-			pb->data_g[i] = float_to_lns(inc.g);
-			pb->data_b[i] = float_to_lns(inc.b);
-		}
-		else
-		{
-			pb->data_r[i] = inc.r * 65535.0f;
-			pb->data_g[i] = inc.g * 65535.0f;
-			pb->data_b[i] = inc.b * 65535.0f;
+			color_lns = float_to_lns(data);
 		}
 
-		if (pb->alpha_lns[i])
+		vint4 use_lns(rgb_lns, rgb_lns, rgb_lns, a_lns);
+		vmask4 lns_mask = use_lns != vint4::zero();
+		data = select(color_unorm, color_lns, lns_mask);
+
+		// Compute block metadata
+		data_min = min(data_min, data);
+		data_max = max(data_max, data);
+
+		if (grayscale && (data.lane<0>() != data.lane<1>() || data.lane<0>() != data.lane<2>()))
 		{
-			pb->data_a[i] = float_to_lns(inc.a);
+			grayscale = false;
 		}
-		else
-		{
-			pb->data_a[i] = inc.a * 65535.0f;
-		}
+
+		// Store block data
+		blk->data_r[i] = data.lane<0>();
+		blk->data_g[i] = data.lane<1>();
+		blk->data_b[i] = data.lane<2>();
+		blk->data_a[i] = data.lane<3>();
 	}
-}
 
-// helper function to initialize the orig-data from the work-data
-void imageblock_initialize_orig_from_work(
-	imageblock* pb,
-	int pixelcount
-) {
-	for (int i = 0; i < pixelcount; i++)
-	{
-		float4 inc = float4(pb->data_r[i], pb->data_g[i],
-		                    pb->data_b[i], pb->data_a[i]);
-
-		if (pb->rgb_lns[i])
-		{
-			pb->data_r[i] = sf16_to_float(lns_to_sf16((uint16_t)inc.r));
-			pb->data_g[i] = sf16_to_float(lns_to_sf16((uint16_t)inc.g));
-			pb->data_b[i] = sf16_to_float(lns_to_sf16((uint16_t)inc.b));
-		}
-		else
-		{
-			pb->data_r[i] = sf16_to_float(unorm16_to_sf16((uint16_t)inc.r));
-			pb->data_g[i] = sf16_to_float(unorm16_to_sf16((uint16_t)inc.g));
-			pb->data_b[i] = sf16_to_float(unorm16_to_sf16((uint16_t)inc.b));
-		}
-
-		if (pb->alpha_lns[i])
-		{
-			pb->data_a[i] = sf16_to_float(lns_to_sf16((uint16_t)inc.a));
-		}
-		else
-		{
-			pb->data_a[i] = sf16_to_float(unorm16_to_sf16((uint16_t)inc.a));
-		}
-	}
+	// Store block metadata
+	blk->data_min = data_min;
+	blk->data_max = data_max;
+	blk->grayscale = grayscale;
 }
 
 // fetch an imageblock from the input file.
 void fetch_imageblock(
 	astcenc_profile decode_mode,
 	const astcenc_image& img,
-	imageblock* pb,	// picture-block to initialize with image data
+	imageblock* blk,	// picture-block to initialize with image data
 	const block_size_descriptor* bsd,
 	// position in texture.
 	int xpos,
@@ -285,9 +137,9 @@ void fetch_imageblock(
 	int ysize = img.dim_y;
 	int zsize = img.dim_z;
 
-	pb->xpos = xpos;
-	pb->ypos = ypos;
-	pb->zpos = zpos;
+	blk->xpos = xpos;
+	blk->ypos = ypos;
+	blk->zpos = zpos;
 
 	// True if any non-identity swizzle
 	bool needs_swz = (swz.r != ASTCENC_SWZ_R) || (swz.g != ASTCENC_SWZ_G) ||
@@ -300,49 +152,24 @@ void fetch_imageblock(
 		data[ASTCENC_SWZ_0] = 0x00;
 		data[ASTCENC_SWZ_1] = 0xFF;
 
-#if USE_2DARRAY
-        uint8_t* data8 = static_cast<uint8_t*>(img.data);
-#else
-		uint8_t*** data8 = static_cast<uint8_t***>(img.data);
-#endif
 		for (int z = 0; z < bsd->zdim; z++)
 		{
-            int zi = zpos + z;
-            if (zi < 0)
-                zi = 0;
-            if (zi >= zsize)
-                zi = zsize - 1;
+			int zi = astc::min(zpos + z, zsize - 1);
+			uint8_t* data8 = static_cast<uint8_t*>(img.data[zi]);
 
 			for (int y = 0; y < bsd->ydim; y++)
 			{
-                int yi = ypos + y;
-                if (yi < 0)
-                    yi = 0;
-                if (yi >= ysize)
-                    yi = ysize - 1;
-                
+				int yi = astc::min(ypos + y, ysize - 1);
+
 				for (int x = 0; x < bsd->xdim; x++)
 				{
-					int xi = xpos + x;
-					if (xi < 0)
-						xi = 0;
-					if (xi >= xsize)
-						xi = xsize - 1;
-#if USE_2DARRAY
-                    int px = (yi * xsize + xi) * 4;
-                    assert(zi == 0);
-                    assert(px >= 0 && px < (xsize * ysize * 4));
-                    
-                    int r = data8[px + 0];
-                    int g = data8[px + 1];
-                    int b = data8[px + 2];
-                    int a = data8[px + 3];
-#else
-					int r = data8[zi][yi][4 * xi    ];
-					int g = data8[zi][yi][4 * xi + 1];
-					int b = data8[zi][yi][4 * xi + 2];
-					int a = data8[zi][yi][4 * xi + 3];
-#endif
+					int xi = astc::min(xpos + x, xsize - 1);
+
+					int r = data8[(4 * xsize * yi) + (4 * xi    )];
+					int g = data8[(4 * xsize * yi) + (4 * xi + 1)];
+					int b = data8[(4 * xsize * yi) + (4 * xi + 2)];
+					int a = data8[(4 * xsize * yi) + (4 * xi + 3)];
+
 					if (needs_swz)
 					{
 						data[ASTCENC_SWZ_R] = r;
@@ -356,10 +183,10 @@ void fetch_imageblock(
 						a = data[swz.a];
 					}
 
-					pb->data_r[idx] = r / 255.0f;
-					pb->data_g[idx] = g / 255.0f;
-					pb->data_b[idx] = b / 255.0f;
-					pb->data_a[idx] = a / 255.0f;
+					blk->data_r[idx] = static_cast<float>(r) / 255.0f;
+					blk->data_g[idx] = static_cast<float>(g) / 255.0f;
+					blk->data_b[idx] = static_cast<float>(b) / 255.0f;
+					blk->data_a[idx] = static_cast<float>(a) / 255.0f;
 					idx++;
 				}
 			}
@@ -371,34 +198,23 @@ void fetch_imageblock(
 		data[ASTCENC_SWZ_0] = 0x0000;
 		data[ASTCENC_SWZ_1] = 0x3C00;
 
-		uint16_t*** data16 = static_cast<uint16_t***>(img.data);
 		for (int z = 0; z < bsd->zdim; z++)
 		{
+			int zi = astc::min(zpos + z, zsize - 1);
+			uint16_t* data16 = static_cast<uint16_t*>(img.data[zi]);
+
 			for (int y = 0; y < bsd->ydim; y++)
 			{
+				int yi = astc::min(ypos + y, ysize - 1);
+
 				for (int x = 0; x < bsd->xdim; x++)
 				{
-					int xi = xpos + x;
-					int yi = ypos + y;
-					int zi = zpos + z;
-					// clamp XY coordinates to the picture.
-					if (xi < 0)
-						xi = 0;
-					if (yi < 0)
-						yi = 0;
-					if (zi < 0)
-						zi = 0;
-					if (xi >= xsize)
-						xi = xsize - 1;
-					if (yi >= ysize)
-						yi = ysize - 1;
-					if (zi >= ysize)
-						zi = zsize - 1;
+					int xi = astc::min(xpos + x, xsize - 1);
 
-					int r = data16[zi][yi][4 * xi    ];
-					int g = data16[zi][yi][4 * xi + 1];
-					int b = data16[zi][yi][4 * xi + 2];
-					int a = data16[zi][yi][4 * xi + 3];
+					int r = data16[(4 * xsize * yi) + (4 * xi    )];
+					int g = data16[(4 * xsize * yi) + (4 * xi + 1)];
+					int b = data16[(4 * xsize * yi) + (4 * xi + 2)];
+					int a = data16[(4 * xsize * yi) + (4 * xi + 3)];
 
 					if (needs_swz)
 					{
@@ -413,10 +229,11 @@ void fetch_imageblock(
 						a = data[swz.a];
 					}
 
-					pb->data_r[idx] = MAX(sf16_to_float(r), 1e-8f);
-					pb->data_g[idx] = MAX(sf16_to_float(g), 1e-8f);
-					pb->data_b[idx] = MAX(sf16_to_float(b), 1e-8f);
-					pb->data_a[idx] = MAX(sf16_to_float(a), 1e-8f);
+					vfloat4 dataf = max(float16_to_float(vint4(r, g, b, a)), 1e-8f);
+					blk->data_r[idx] = dataf.lane<0>();
+					blk->data_g[idx] = dataf.lane<1>();
+					blk->data_b[idx] = dataf.lane<2>();
+					blk->data_a[idx] = dataf.lane<3>();
 					idx++;
 				}
 			}
@@ -430,76 +247,25 @@ void fetch_imageblock(
 		data[ASTCENC_SWZ_0] = 0.0f;
 		data[ASTCENC_SWZ_1] = 1.0f;
 
-#if USE_2DARRAY
-        float4* data32 = static_cast<float4*>(img.data);
-#else
-		float*** data32 = static_cast<float***>(img.data);
-#endif
 		for (int z = 0; z < bsd->zdim; z++)
 		{
-            int zi = zpos + z;
-            if (zi < 0)
-                zi = 0;
-            if (zi >= ysize)
-                zi = zsize - 1;
-            
+			int zi = astc::min(zpos + z, zsize - 1);
+			float* data32 = static_cast<float*>(img.data[zi]);
+
 			for (int y = 0; y < bsd->ydim; y++)
 			{
-                int yi = ypos + y;
-                if (yi < 0)
-                    yi = 0;
-                if (yi >= ysize)
-                    yi = ysize - 1;
-                
+				int yi = astc::min(ypos + y, ysize - 1);
+
 				for (int x = 0; x < bsd->xdim; x++)
 				{
-                    // clamp XY coordinates to the picture.
-                    int xi = xpos + x;
-					if (xi < 0)
-						xi = 0;
-					if (xi >= xsize)
-						xi = xsize - 1;
-       
-#if USE_2DARRAY
-                    int px = (yi * xsize + xi); // * 4;
-                    assert(zi == 0);
-                    assert(px >= 0 && px < (xsize * ysize));
-                    float4 val = data32[px];
-                    val = max(val, float4(1e-8f)); // why can't this 0, the U8 Path does?
-                    
-                    if (needs_swz)
-                    {
-                        // prob best as a swizzle, and then select in 0/1 elements
-                        // instead of a 6 array lookup which isn't simd compatible.
-                        float r = val.r;
-                        float g = val.g;
-                        float b = val.b;
-                        float a = val.a;
-                        
-                        data[ASTCENC_SWZ_R] = r;
-                        data[ASTCENC_SWZ_G] = g;
-                        data[ASTCENC_SWZ_B] = b;
-                        data[ASTCENC_SWZ_A] = a;
+					int xi = astc::min(xpos + x, xsize - 1);
 
-                        val.r = data[swz.r];
-                        val.g = data[swz.g];
-                        val.b = data[swz.b];
-                        val.a = data[swz.a];
-                    }
-                    
-                    // ugh, this pulls out of simd to planar
-                    pb->data_r[idx] = val.r;
-                    pb->data_g[idx] = val.g;
-                    pb->data_b[idx] = val.b;
-                    pb->data_a[idx] = val.a;
-                    
-#else
-					float r = data32[zi][yi][4 * xi    ];
-					float g = data32[zi][yi][4 * xi + 1];
-					float b = data32[zi][yi][4 * xi + 2];
-					float a = data32[zi][yi][4 * xi + 3];
+					float r = data32[(4 * xsize * yi) + (4 * xi    )];
+					float g = data32[(4 * xsize * yi) + (4 * xi + 1)];
+					float b = data32[(4 * xsize * yi) + (4 * xi + 2)];
+					float a = data32[(4 * xsize * yi) + (4 * xi + 3)];
 
-                    if (needs_swz)
+					if (needs_swz)
 					{
 						data[ASTCENC_SWZ_R] = r;
 						data[ASTCENC_SWZ_G] = g;
@@ -511,12 +277,11 @@ void fetch_imageblock(
 						b = data[swz.b];
 						a = data[swz.a];
 					}
-    
-					pb->data_r[idx] = MAX(r, 1e-8f);
-					pb->data_g[idx] = MAX(g, 1e-8f);
-					pb->data_b[idx] = MAX(b, 1e-8f);
-					pb->data_a[idx] = MAX(a, 1e-8f);
-#endif
+
+					blk->data_r[idx] = astc::max(r, 1e-8f);
+					blk->data_g[idx] = astc::max(g, 1e-8f);
+					blk->data_b[idx] = astc::max(b, 1e-8f);
+					blk->data_a[idx] = astc::max(a, 1e-8f);
 					idx++;
 				}
 			}
@@ -529,18 +294,17 @@ void fetch_imageblock(
 	// impose the choice on every pixel when encoding.
 	for (int i = 0; i < bsd->texel_count; i++)
 	{
-		pb->rgb_lns[i] = rgb_lns;
-		pb->alpha_lns[i] = alpha_lns;
-		pb->nan_texel[i] = 0;
+		blk->rgb_lns[i] = rgb_lns;
+		blk->alpha_lns[i] = alpha_lns;
+		blk->nan_texel[i] = 0;
 	}
 
-	imageblock_initialize_work_from_orig(pb, bsd->texel_count);
-	update_imageblock_flags(pb, bsd->xdim, bsd->ydim, bsd->zdim);
+	imageblock_initialize_work_from_orig(blk, bsd->texel_count);
 }
 
 void write_imageblock(
 	astcenc_image& img,
-	const imageblock* pb,	// picture-block to initialize with image data. We assume that orig_data is valid.
+	const imageblock* blk,	// picture-block to initialize with image data. We assume that orig_data is valid.
 	const block_size_descriptor* bsd,
 	// position to write the block to
 	int xpos,
@@ -548,10 +312,21 @@ void write_imageblock(
 	int zpos,
 	astcenc_swizzle swz
 ) {
-	const uint8_t *nptr = pb->nan_texel;
+	const uint8_t *nptr = blk->nan_texel;
 	int xsize = img.dim_x;
 	int ysize = img.dim_y;
 	int zsize = img.dim_z;
+
+	int x_start = xpos;
+	int x_end = std::min(xsize, xpos + bsd->xdim);
+	int x_nudge = bsd->xdim - (x_end - x_start);
+
+	int y_start = ypos;
+	int y_end = std::min(ysize, ypos + bsd->ydim);
+	int y_nudge = (bsd->ydim - (y_end - y_start)) * bsd->xdim;
+
+	int z_start = zpos;
+	int z_end = std::min(zsize, zpos + bsd->zdim);
 
 	float data[7];
 	data[ASTCENC_SWZ_0] = 0.0f;
@@ -568,280 +343,174 @@ void write_imageblock(
 	int idx = 0;
 	if (img.data_type == ASTCENC_TYPE_U8)
 	{
-#if USE_2DARRAY
-        uint8_t* data8 = static_cast<uint8_t*>(img.data);
-#else
-		uint8_t*** data8 = static_cast<uint8_t***>(img.data);
-#endif
-		for (int z = 0; z < bsd->zdim; z++)
+		for (int z = z_start; z < z_end; z++)
 		{
-			for (int y = 0; y < bsd->ydim; y++)
+			// Fetch the image plane
+			uint8_t* data8 = static_cast<uint8_t*>(img.data[z]);
+
+			for (int y = y_start; y < y_end; y++)
 			{
-				for (int x = 0; x < bsd->xdim; x++)
+				for (int x = x_start; x < x_end; x++)
 				{
-					int xi = xpos + x;
-					int yi = ypos + y;
-					int zi = zpos + z;
+					vint4 colori = vint4::zero();
 
-					if (xi >= 0 && yi >= 0 && zi >= 0 && xi < xsize && yi < ysize && zi < zsize)
+					if (*nptr)
 					{
-						int ri, gi, bi, ai;
-
-						if (*nptr)
-						{
-							// NaN-pixel, but we can't display it. Display purple instead.
-							ri = 0xFF;
-							gi = 0x00;
-							bi = 0xFF;
-							ai = 0xFF;
-						}
-						else if (needs_swz)
-						{
-							data[ASTCENC_SWZ_R] = pb->data_r[idx];
-							data[ASTCENC_SWZ_G] = pb->data_g[idx];
-							data[ASTCENC_SWZ_B] = pb->data_b[idx];
-							data[ASTCENC_SWZ_A] = pb->data_a[idx];
-
-							if (needs_z)
-							{
-								float xcoord = (data[0] * 2.0f) - 1.0f;
-								float ycoord = (data[3] * 2.0f) - 1.0f;
-								float zcoord = 1.0f - xcoord * xcoord - ycoord * ycoord;
-								if (zcoord < 0.0f)
-								{
-									zcoord = 0.0f;
-								}
-								data[ASTCENC_SWZ_Z] = (astc::sqrt(zcoord) * 0.5f) + 0.5f;
-							}
-
-							ri = astc::flt2int_rtn(MIN(data[swz.r], 1.0f) * 255.0f);
-							gi = astc::flt2int_rtn(MIN(data[swz.g], 1.0f) * 255.0f);
-							bi = astc::flt2int_rtn(MIN(data[swz.b], 1.0f) * 255.0f);
-							ai = astc::flt2int_rtn(MIN(data[swz.a], 1.0f) * 255.0f);
-						}
-						else
-						{
-							ri = astc::flt2int_rtn(MIN(pb->data_r[idx], 1.0f) * 255.0f);
-							gi = astc::flt2int_rtn(MIN(pb->data_g[idx], 1.0f) * 255.0f);
-							bi = astc::flt2int_rtn(MIN(pb->data_b[idx], 1.0f) * 255.0f);
-							ai = astc::flt2int_rtn(MIN(pb->data_a[idx], 1.0f) * 255.0f);
-						}
-#if USE_2DARRAY
-                        int px = (yi * xsize + xi) * 4;
-                        assert(zi == 0);
-                        assert(px >= 0 && px < (xsize * ysize * 4));
-                        
-                        data8[px + 0] = ri;
-                        data8[px + 1] = gi;
-                        data8[px + 2] = bi;
-                        data8[px + 3] = ai;
-
-#else
-						data8[zi][yi][4 * xi    ] = ri;
-						data8[zi][yi][4 * xi + 1] = gi;
-						data8[zi][yi][4 * xi + 2] = bi;
-						data8[zi][yi][4 * xi + 3] = ai;
-#endif
+						// Can't display NaN - show magenta error color
+						colori = vint4(0xFF, 0x00, 0xFF, 0xFF);
 					}
+					else if (needs_swz)
+					{
+						data[ASTCENC_SWZ_R] = blk->data_r[idx];
+						data[ASTCENC_SWZ_G] = blk->data_g[idx];
+						data[ASTCENC_SWZ_B] = blk->data_b[idx];
+						data[ASTCENC_SWZ_A] = blk->data_a[idx];
+
+						if (needs_z)
+						{
+							float xcoord = (data[0] * 2.0f) - 1.0f;
+							float ycoord = (data[3] * 2.0f) - 1.0f;
+							float zcoord = 1.0f - xcoord * xcoord - ycoord * ycoord;
+							if (zcoord < 0.0f)
+							{
+								zcoord = 0.0f;
+							}
+							data[ASTCENC_SWZ_Z] = (astc::sqrt(zcoord) * 0.5f) + 0.5f;
+						}
+
+						vfloat4 color = vfloat4(data[swz.r], data[swz.g], data[swz.b], data[swz.a]);
+						colori = float_to_int_rtn(min(color, 1.0f) * 255.0f);
+					}
+					else
+					{
+						vfloat4 color = blk->texel(idx);
+						colori = float_to_int_rtn(min(color, 1.0f) * 255.0f);
+					}
+
+					colori = pack_low_bytes(colori);
+					store_nbytes(colori, data8 + (4 * xsize * y) + (4 * x    ));
+
 					idx++;
 					nptr++;
 				}
+				idx += x_nudge;
+				nptr += x_nudge;
 			}
+			idx += y_nudge;
+			nptr += y_nudge;
 		}
 	}
 	else if (img.data_type == ASTCENC_TYPE_F16)
 	{
-		uint16_t*** data16 = static_cast<uint16_t***>(img.data);
-		for (int z = 0; z < bsd->zdim; z++)
+		for (int z = z_start; z < z_end; z++)
 		{
-			for (int y = 0; y < bsd->ydim; y++)
+			// Fetch the image plane
+			uint16_t* data16 = static_cast<uint16_t*>(img.data[z]);
+
+			for (int y = y_start; y < y_end; y++)
 			{
-				for (int x = 0; x < bsd->xdim; x++)
+				for (int x = x_start; x < x_end; x++)
 				{
-					int xi = xpos + x;
-					int yi = ypos + y;
-					int zi = zpos + z;
+					vint4 color;
 
-					if (xi >= 0 && yi >= 0 && zi >= 0 && xi < xsize && yi < ysize && zi < zsize)
+					if (*nptr)
 					{
-						int ri, gi, bi, ai;
-
-						if (*nptr)
-						{
-							ri = 0xFFFF;
-							gi = 0xFFFF;
-							bi = 0xFFFF;
-							ai = 0xFFFF;
-						}
-						else if (needs_swz)
-						{
-							data[ASTCENC_SWZ_R] = pb->data_r[idx];
-							data[ASTCENC_SWZ_G] = pb->data_g[idx];
-							data[ASTCENC_SWZ_B] = pb->data_b[idx];
-							data[ASTCENC_SWZ_A] = pb->data_a[idx];
-
-							if (needs_z)
-							{
-								float xN = (data[0] * 2.0f) - 1.0f;
-								float yN = (data[3] * 2.0f) - 1.0f;
-								float zN = 1.0f - xN * xN - yN * yN;
-								if (zN < 0.0f)
-								{
-									zN = 0.0f;
-								}
-								data[ASTCENC_SWZ_Z] = (astc::sqrt(zN) * 0.5f) + 0.5f;
-							}
-
-							ri = float_to_sf16(data[swz.r], SF_NEARESTEVEN);
-							gi = float_to_sf16(data[swz.g], SF_NEARESTEVEN);
-							bi = float_to_sf16(data[swz.b], SF_NEARESTEVEN);
-							ai = float_to_sf16(data[swz.a], SF_NEARESTEVEN);
-						}
-						else
-						{
-							ri = float_to_sf16(pb->data_r[idx], SF_NEARESTEVEN);
-							gi = float_to_sf16(pb->data_g[idx], SF_NEARESTEVEN);
-							bi = float_to_sf16(pb->data_b[idx], SF_NEARESTEVEN);
-							ai = float_to_sf16(pb->data_a[idx], SF_NEARESTEVEN);
-						}
-
-						data16[zi][yi][4 * xi    ] = ri;
-						data16[zi][yi][4 * xi + 1] = gi;
-						data16[zi][yi][4 * xi + 2] = bi;
-						data16[zi][yi][4 * xi + 3] = ai;
+						color = vint4(0xFFFF);
 					}
+					else if (needs_swz)
+					{
+						data[ASTCENC_SWZ_R] = blk->data_r[idx];
+						data[ASTCENC_SWZ_G] = blk->data_g[idx];
+						data[ASTCENC_SWZ_B] = blk->data_b[idx];
+						data[ASTCENC_SWZ_A] = blk->data_a[idx];
+
+						if (needs_z)
+						{
+							float xN = (data[0] * 2.0f) - 1.0f;
+							float yN = (data[3] * 2.0f) - 1.0f;
+							float zN = 1.0f - xN * xN - yN * yN;
+							if (zN < 0.0f)
+							{
+								zN = 0.0f;
+							}
+							data[ASTCENC_SWZ_Z] = (astc::sqrt(zN) * 0.5f) + 0.5f;
+						}
+
+						vfloat4 colorf(data[swz.r], data[swz.g], data[swz.b], data[swz.a]);
+						color = float_to_float16(colorf);
+					}
+					else
+					{
+						vfloat4 colorf = blk->texel(idx);
+						color = float_to_float16(colorf);
+					}
+
+					data16[(4 * xsize * y) + (4 * x    )] = (uint16_t)color.lane<0>();
+					data16[(4 * xsize * y) + (4 * x + 1)] = (uint16_t)color.lane<1>();
+					data16[(4 * xsize * y) + (4 * x + 2)] = (uint16_t)color.lane<2>();
+					data16[(4 * xsize * y) + (4 * x + 3)] = (uint16_t)color.lane<3>();
+
 					idx++;
 					nptr++;
 				}
+				idx += x_nudge;
+				nptr += x_nudge;
 			}
+			idx += y_nudge;
+			nptr += y_nudge;
 		}
 	}
 	else // if (img.data_type == ASTCENC_TYPE_F32)
 	{
 		assert(img.data_type == ASTCENC_TYPE_F32);
-        
-		float*** data32 = static_cast<float***>(img.data);
-		for (int z = 0; z < bsd->zdim; z++)
+
+		for (int z = z_start; z < z_end; z++)
 		{
-			for (int y = 0; y < bsd->ydim; y++)
+			// Fetch the image plane
+			float* data32 = static_cast<float*>(img.data[z]);
+
+			for (int y = y_start; y < y_end; y++)
 			{
-				for (int x = 0; x < bsd->xdim; x++)
+				for (int x = x_start; x < x_end; x++)
 				{
-					int xi = xpos + x;
-					int yi = ypos + y;
-					int zi = zpos + z;
+					vfloat4 color = blk->texel(idx);
 
-					if (xi >= 0 && yi >= 0 && zi >= 0 && xi < xsize && yi < ysize && zi < zsize)
+					if (*nptr)
 					{
-						float rf, gf, bf, af;
-
-						if (*nptr)
-						{
-							rf = std::numeric_limits<float>::quiet_NaN();
-							gf = std::numeric_limits<float>::quiet_NaN();
-							bf = std::numeric_limits<float>::quiet_NaN();
-							af = std::numeric_limits<float>::quiet_NaN();
-						}
-						else if (needs_swz)
-						{
-							data[ASTCENC_SWZ_R] = pb->data_r[idx];
-							data[ASTCENC_SWZ_G] = pb->data_g[idx];
-							data[ASTCENC_SWZ_B] = pb->data_b[idx];
-							data[ASTCENC_SWZ_A] = pb->data_a[idx];
-
-							if (needs_z)
-							{
-								float xN = (data[0] * 2.0f) - 1.0f;
-								float yN = (data[3] * 2.0f) - 1.0f;
-								float zN = 1.0f - xN * xN - yN * yN;
-								if (zN < 0.0f)
-								{
-									zN = 0.0f;
-								}
-								data[ASTCENC_SWZ_Z] = (astc::sqrt(zN) * 0.5f) + 0.5f;
-							}
-
-							rf = data[swz.r];
-							gf = data[swz.g];
-							bf = data[swz.b];
-							af = data[swz.a];
-						}
-						else
-						{
-							rf = pb->data_r[idx];
-							gf = pb->data_g[idx];
-							bf = pb->data_b[idx];
-							af = pb->data_a[idx];
-						}
-
-						data32[zi][yi][4 * xi    ] = rf;
-						data32[zi][yi][4 * xi + 1] = gf;
-						data32[zi][yi][4 * xi + 2] = bf;
-						data32[zi][yi][4 * xi + 3] = af;
+						color = vfloat4(std::numeric_limits<float>::quiet_NaN());
 					}
+					else if (needs_swz)
+					{
+						data[ASTCENC_SWZ_R] = color.lane<0>();
+						data[ASTCENC_SWZ_G] = color.lane<1>();
+						data[ASTCENC_SWZ_B] = color.lane<2>();
+						data[ASTCENC_SWZ_A] = color.lane<3>();
+
+						if (needs_z)
+						{
+							float xN = (data[0] * 2.0f) - 1.0f;
+							float yN = (data[3] * 2.0f) - 1.0f;
+							float zN = 1.0f - xN * xN - yN * yN;
+							if (zN < 0.0f)
+							{
+								zN = 0.0f;
+							}
+							data[ASTCENC_SWZ_Z] = (astc::sqrt(zN) * 0.5f) + 0.5f;
+						}
+
+						color = vfloat4(data[swz.r], data[swz.g], data[swz.b], data[swz.a]);
+					}
+
+					store(color, data32 + (4 * xsize * y) + (4 * x    ));
+
 					idx++;
 					nptr++;
 				}
+				idx += x_nudge;
+				nptr += x_nudge;
 			}
+			idx += y_nudge;
+			nptr += y_nudge;
 		}
 	}
-}
-
-/*
-   For an imageblock, update its flags.
-   The updating is done based on data, not orig_data.
-*/
-void update_imageblock_flags(
-	imageblock* pb,
-	int xdim,
-	int ydim,
-	int zdim
-) {
-	float red_min = 1e38f, red_max = -1e38f;
-	float green_min = 1e38f, green_max = -1e38f;
-	float blue_min = 1e38f, blue_max = -1e38f;
-	float alpha_min = 1e38f, alpha_max = -1e38f;
-
-	int texels_per_block = xdim * ydim * zdim;
-
-	int grayscale = 1;
-
-	for (int i = 0; i < texels_per_block; i++)
-	{
-		float red = pb->data_r[i];
-		float green = pb->data_g[i];
-		float blue = pb->data_b[i];
-		float alpha = pb->data_a[i];
-		if (red < red_min)
-			red_min = red;
-		if (red > red_max)
-			red_max = red;
-		if (green < green_min)
-			green_min = green;
-		if (green > green_max)
-			green_max = green;
-		if (blue < blue_min)
-			blue_min = blue;
-		if (blue > blue_max)
-			blue_max = blue;
-		if (alpha < alpha_min)
-			alpha_min = alpha;
-		if (alpha > alpha_max)
-			alpha_max = alpha;
-
-		if (grayscale == 1 && (red != green || red != blue))
-		{
-			grayscale = 0;
-		}
-	}
-
-	pb->red_min = red_min;
-	pb->red_max = red_max;
-	pb->green_min = green_min;
-	pb->green_max = green_max;
-	pb->blue_min = blue_min;
-	pb->blue_max = blue_max;
-	pb->alpha_min = alpha_min;
-	pb->alpha_max = alpha_max;
-	pb->grayscale = grayscale;
 }

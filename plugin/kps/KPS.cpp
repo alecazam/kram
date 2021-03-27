@@ -83,8 +83,6 @@ extern DialogFormat FormatToDialog(DDS_Format fmt);
 extern DDS_Format DialogToFormat(DialogFormat fmt);
 extern MyMTLPixelFormat FormatToPixelFormat(DDS_Format fmt);
 
-// this just strips args
-#define macroUnusedArg(x)
 
 // global needed by a bunch of Photoshop SDK routines
 SPBasicSuite *sSPBasic = NULL;

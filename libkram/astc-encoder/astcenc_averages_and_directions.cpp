@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2011-2020 Arm Limited
+// Copyright 2011-2021 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -37,81 +37,71 @@
 // We have separate versions for blocks with and without alpha, since the
 // processing for blocks with alpha is significantly more expensive. The
 // direction vectors it produces are NOT normalized.
-void compute_averages_and_directions_rgba(
+void compute_avgs_and_dirs_4_comp(
 	const partition_info* pt,
 	const imageblock* blk,
 	const error_weight_block* ewb,
-	const float4* color_scalefactors,
-	float4* averages,
-	float4* directions_rgba
+	partition_metrics pms[4]
 ) {
 	int partition_count = pt->partition_count;
+	promise(partition_count > 0);
+
 	for (int partition = 0; partition < partition_count; partition++)
 	{
 		const uint8_t *weights = pt->texels_of_partition[partition];
-		int texelcount = pt->texels_per_partition[partition];
 
-		float4 base_sum = float4(0.0f);
+		vfloat4 base_sum = vfloat4::zero();
 		float partition_weight = 0.0f;
 
-		for (int i = 0; i < texelcount; i++)
+		int texel_count = pt->partition_texel_count[partition];
+		promise(texel_count > 0);
+
+		for (int i = 0; i < texel_count; i++)
 		{
 			int iwt = weights[i];
 			float weight = ewb->texel_weight[iwt];
-			float4 texel_datum = float4(blk->data_r[iwt],
-			                            blk->data_g[iwt],
-			                            blk->data_b[iwt],
-			                            blk->data_a[iwt]) * weight;
-			partition_weight += weight;
+			vfloat4 texel_datum = blk->texel(iwt);
 
-			base_sum = base_sum + texel_datum;
+			partition_weight += weight;
+			base_sum = base_sum + texel_datum * weight;
 		}
 
-		float4 average = base_sum * (1.0f / MAX(partition_weight, 1e-7f));
-		averages[partition] = average * color_scalefactors[partition];
+		vfloat4 average = base_sum * (1.0f / astc::max(partition_weight, 1e-7f));
+		pms[partition].avg = average * pms[partition].color_scale;
 
-		float4 sum_xp = float4(0.0f);
-		float4 sum_yp = float4(0.0f);
-		float4 sum_zp = float4(0.0f);
-		float4 sum_wp = float4(0.0f);
+		vfloat4 sum_xp = vfloat4::zero();
+		vfloat4 sum_yp = vfloat4::zero();
+		vfloat4 sum_zp = vfloat4::zero();
+		vfloat4 sum_wp = vfloat4::zero();
 
-		for (int i = 0; i < texelcount; i++)
+		for (int i = 0; i < texel_count; i++)
 		{
 			int iwt = weights[i];
 			float weight = ewb->texel_weight[iwt];
-			float4 texel_datum = float4(blk->data_r[iwt],
-			                            blk->data_g[iwt],
-			                            blk->data_b[iwt],
-			                            blk->data_a[iwt]);
+			vfloat4 texel_datum = blk->texel(iwt);
 			texel_datum = (texel_datum - average) * weight;
 
-			if (texel_datum.r > 0.0f)
-			{
-				sum_xp = sum_xp + texel_datum;
-			}
+			vfloat4 zero = vfloat4::zero();
 
-			if (texel_datum.g > 0.0f)
-			{
-				sum_yp = sum_yp + texel_datum;
-			}
+			vmask4 tdm0 = vfloat4(texel_datum.lane<0>()) > zero;
+			sum_xp += select(zero, texel_datum, tdm0);
 
-			if (texel_datum.b > 0.0f)
-			{
-				sum_zp = sum_zp + texel_datum;
-			}
+			vmask4 tdm1 = vfloat4(texel_datum.lane<1>()) > zero;
+			sum_yp += select(zero, texel_datum, tdm1);
 
-			if (texel_datum.a > 0.0f)
-			{
-				sum_wp = sum_wp + texel_datum;
-			}
+			vmask4 tdm2 = vfloat4(texel_datum.lane<2>()) > zero;
+			sum_zp += select(zero, texel_datum, tdm2);
+
+			vmask4 tdm3 = vfloat4(texel_datum.lane<3>()) > zero;
+			sum_wp += select(zero, texel_datum, tdm3);
 		}
 
-		float prod_xp = dot(sum_xp, sum_xp);
-		float prod_yp = dot(sum_yp, sum_yp);
-		float prod_zp = dot(sum_zp, sum_zp);
-		float prod_wp = dot(sum_wp, sum_wp);
+		float prod_xp = dot_s(sum_xp, sum_xp);
+		float prod_yp = dot_s(sum_yp, sum_yp);
+		float prod_zp = dot_s(sum_zp, sum_zp);
+		float prod_wp = dot_s(sum_wp, sum_wp);
 
-		float4 best_vector = sum_xp;
+		vfloat4 best_vector = sum_xp;
 		float best_sum = prod_xp;
 
 		if (prod_yp > best_sum)
@@ -131,109 +121,21 @@ void compute_averages_and_directions_rgba(
 			best_vector = sum_wp;
 		}
 
-		directions_rgba[partition] = best_vector;
+		pms[partition].dir = best_vector;
 	}
 }
 
-void compute_averages_and_directions_rgb(
+void compute_avgs_and_dirs_3_comp(
 	const partition_info* pt,
 	const imageblock* blk,
 	const error_weight_block* ewb,
-	const float4* color_scalefactors,
-	float3* averages,
-	float3* directions_rgb
-) {
-	int partition_count = pt->partition_count;
-	const float *texel_weights = ewb->texel_weight_rgb;
-
-	for (int partition = 0; partition < partition_count; partition++)
-	{
-		const uint8_t *weights = pt->texels_of_partition[partition];
-		int texelcount = pt->texels_per_partition[partition];
-
-		float3 base_sum = float3(0.0f, 0.0f, 0.0f);
-		float partition_weight = 0.0f;
-
-		for (int i = 0; i < texelcount; i++)
-		{
-			int iwt = weights[i];
-			float weight = texel_weights[iwt];
-			float3 texel_datum = float3(blk->data_r[iwt],
-			                            blk->data_g[iwt],
-			                            blk->data_b[iwt]) * weight;
-			partition_weight += weight;
-
-			base_sum = base_sum + texel_datum;
-		}
-
-		float4 csf = color_scalefactors[partition];
-		float3 average = base_sum * (1.0f / MAX(partition_weight, 1e-7f));
-		averages[partition] = average * float3(csf.r, csf.g, csf.b);
-
-		float3 sum_xp = float3(0.0f);
-		float3 sum_yp = float3(0.0f);
-		float3 sum_zp = float3(0.0f);
-
-		for (int i = 0; i < texelcount; i++)
-		{
-			int iwt = weights[i];
-			float weight = texel_weights[iwt];
-			float3 texel_datum = float3(blk->data_r[iwt],
-			                            blk->data_g[iwt],
-			                            blk->data_b[iwt]);
-			texel_datum = (texel_datum - average) * weight;
-
-			if (texel_datum.r > 0.0f)
-			{
-				sum_xp = sum_xp + texel_datum;
-			}
-
-			if (texel_datum.g > 0.0f)
-			{
-				sum_yp = sum_yp + texel_datum;
-			}
-
-			if (texel_datum.b > 0.0f)
-			{
-				sum_zp = sum_zp + texel_datum;
-			}
-		}
-
-		float prod_xp = dot(sum_xp, sum_xp);
-		float prod_yp = dot(sum_yp, sum_yp);
-		float prod_zp = dot(sum_zp, sum_zp);
-
-		float3 best_vector = sum_xp;
-		float best_sum = prod_xp;
-
-		if (prod_yp > best_sum)
-		{
-			best_vector = sum_yp;
-			best_sum = prod_yp;
-		}
-
-		if (prod_zp > best_sum)
-		{
-			best_vector = sum_zp;
-		}
-
-		directions_rgb[partition] = best_vector;
-	}
-}
-
-void compute_averages_and_directions_3_components(
-	const partition_info* pt,
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	const float3* color_scalefactors,
 	int omitted_component,
-	float3* averages,
-	float3* directions
+	partition_metrics pm[4]
 ) {
 	const float *texel_weights;
-	const float* data_vr;
-	const float* data_vg;
-	const float* data_vb;
+	const float* data_vr = blk->data_r;
+	const float* data_vg = blk->data_g;
+	const float* data_vb = blk->data_b;
 
 	if (omitted_component == 0)
 	{
@@ -245,86 +147,82 @@ void compute_averages_and_directions_3_components(
 	else if (omitted_component == 1)
 	{
 		texel_weights = ewb->texel_weight_rba;
-		data_vr = blk->data_r;
 		data_vg = blk->data_b;
 		data_vb = blk->data_a;
 	}
 	else if (omitted_component == 2)
 	{
 		texel_weights = ewb->texel_weight_rga;
-		data_vr = blk->data_r;
-		data_vg = blk->data_g;
 		data_vb = blk->data_a;
 	}
 	else
 	{
 		assert(omitted_component == 3);
 		texel_weights = ewb->texel_weight_rgb;
-		data_vr = blk->data_r;
-		data_vg = blk->data_g;
-		data_vb = blk->data_b;
 	}
 
 	int partition_count = pt->partition_count;
+	promise(partition_count > 0);
+
 	for (int partition = 0; partition < partition_count; partition++)
 	{
 		const uint8_t *weights = pt->texels_of_partition[partition];
-		int texelcount = pt->texels_per_partition[partition];
 
-		float3 base_sum = float3(0.0f);
+		vfloat4 base_sum = vfloat4::zero();
 		float partition_weight = 0.0f;
 
-		for (int i = 0; i < texelcount; i++)
+		int texel_count = pt->partition_texel_count[partition];
+		promise(texel_count > 0);
+
+		for (int i = 0; i < texel_count; i++)
 		{
 			int iwt = weights[i];
 			float weight = texel_weights[iwt];
-			float3 texel_datum = float3(data_vr[iwt],
-			                            data_vg[iwt],
-			                            data_vb[iwt]) * weight;
-			partition_weight += weight;
+			vfloat4 texel_datum(data_vr[iwt],
+			                    data_vg[iwt],
+			                    data_vb[iwt],
+			                    0.0f);
 
-			base_sum = base_sum + texel_datum;
+			partition_weight += weight;
+			base_sum = base_sum + texel_datum * weight;
 		}
 
-		float3 csf = color_scalefactors[partition];
+		vfloat4 csf = pm[partition].color_scale;
 
-		float3 average = base_sum * (1.0f / MAX(partition_weight, 1e-7f));
-		averages[partition] = average * float3(csf.r, csf.g, csf.b);
+		vfloat4 average = base_sum * (1.0f / astc::max(partition_weight, 1e-7f));
+		pm[partition].avg = average * csf;
 
-		float3 sum_xp = float3(0.0f);
-		float3 sum_yp = float3(0.0f);
-		float3 sum_zp = float3(0.0f);
+		vfloat4 sum_xp = vfloat4::zero();
+		vfloat4 sum_yp = vfloat4::zero();
+		vfloat4 sum_zp = vfloat4::zero();
 
-		for (int i = 0; i < texelcount; i++)
+		for (int i = 0; i < texel_count; i++)
 		{
 			int iwt = weights[i];
 			float weight = texel_weights[iwt];
-			float3 texel_datum = float3(data_vr[iwt],
-			                            data_vg[iwt],
-			                            data_vb[iwt]);
+			vfloat4 texel_datum = vfloat4(data_vr[iwt],
+			                              data_vg[iwt],
+			                              data_vb[iwt],
+			                              0.0f);
 			texel_datum = (texel_datum - average) * weight;
 
-			if (texel_datum.r > 0.0f)
-			{
-				sum_xp = sum_xp + texel_datum;
-			}
+			vfloat4 zero = vfloat4::zero();
 
-			if (texel_datum.g > 0.0f)
-			{
-				sum_yp = sum_yp + texel_datum;
-			}
+			vmask4 tdm0 = vfloat4(texel_datum.lane<0>()) > zero;
+			sum_xp += select(zero, texel_datum, tdm0);
 
-			if (texel_datum.b > 0.0f)
-			{
-				sum_zp = sum_zp + texel_datum;
-			}
+			vmask4 tdm1 = vfloat4(texel_datum.lane<1>()) > zero;
+			sum_yp += select(zero, texel_datum, tdm1);
+
+			vmask4 tdm2 = vfloat4(texel_datum.lane<2>()) > zero;
+			sum_zp += select(zero, texel_datum, tdm2);
 		}
 
-		float prod_xp = dot(sum_xp, sum_xp);
-		float prod_yp = dot(sum_yp, sum_yp);
-		float prod_zp = dot(sum_zp, sum_zp);
+		float prod_xp = dot3_s(sum_xp, sum_xp);
+		float prod_yp = dot3_s(sum_yp, sum_yp);
+		float prod_zp = dot3_s(sum_zp, sum_zp);
 
-		float3 best_vector = sum_xp;
+		vfloat4 best_vector = sum_xp;
 		float best_sum = prod_xp;
 
 		if (prod_yp > best_sum)
@@ -338,17 +236,16 @@ void compute_averages_and_directions_3_components(
 			best_vector = sum_zp;
 		}
 
-		if (dot(best_vector, best_vector) < 1e-18f)
+		if (dot3_s(best_vector, best_vector) < 1e-18f)
 		{
-			best_vector = float3(1.0f, 1.0f, 1.0f);
+			best_vector = vfloat4(1.0f, 1.0f, 1.0f, 0.0f);
 		}
 
-		directions[partition] = best_vector;
+		pm[partition].dir = best_vector;
 	}
-
 }
 
-void compute_averages_and_directions_2_components(
+void compute_avgs_and_dirs_2_comp(
 	const partition_info* pt,
 	const imageblock* blk,
 	const error_weight_block* ewb,
@@ -383,15 +280,19 @@ void compute_averages_and_directions_2_components(
 	}
 
 	int partition_count = pt->partition_count;
+	promise(partition_count > 0);
+
 	for (int partition = 0; partition < partition_count; partition++)
 	{
 		const uint8_t *weights = pt->texels_of_partition[partition];
-		int texelcount = pt->texels_per_partition[partition];
 
 		float2 base_sum = float2(0.0f);
 		float partition_weight = 0.0f;
 
-		for (int i = 0; i < texelcount; i++)
+		int texel_count = pt->partition_texel_count[partition];
+		promise(texel_count > 0);
+
+		for (int i = 0; i < texel_count; i++)
 		{
 			int iwt = weights[i];
 			float weight = texel_weights[iwt];
@@ -403,13 +304,13 @@ void compute_averages_and_directions_2_components(
 
 		float2 csf = color_scalefactors[partition];
 
-		float2 average = base_sum * (1.0f / MAX(partition_weight, 1e-7f));
+		float2 average = base_sum * (1.0f / astc::max(partition_weight, 1e-7f));
 		averages[partition] = average * float2(csf.r, csf.g);
 
 		float2 sum_xp = float2(0.0f);
 		float2 sum_yp = float2(0.0f);
 
-		for (int i = 0; i < texelcount; i++)
+		for (int i = 0; i < texel_count; i++)
 		{
 			int iwt = weights[i];
 			float weight = texel_weights[iwt];
@@ -443,340 +344,406 @@ void compute_averages_and_directions_2_components(
 }
 
 void compute_error_squared_rgba(
-	const partition_info* pt,    // the partition that we use when computing the squared-error.
+	const partition_info* pt,
 	const imageblock* blk,
 	const error_weight_block* ewb,
-	const processed_line4* plines_uncorr,
-	const processed_line4* plines_samechroma,
-	const processed_line3* plines_separate_red,
-	const processed_line3* plines_separate_green,
-	const processed_line3* plines_separate_blue,
-	const processed_line3* plines_separate_alpha,
-	float* lengths_uncorr,
-	float* lengths_samechroma,
-	float4* lengths_separate,
-	float* uncorr_errors,
-	float* samechroma_errors,
-	float4* separate_color_errors
+	const processed_line4* uncor_plines,
+	const processed_line4* samec_plines,
+	float* uncor_lengths,
+	float* samec_lengths,
+	float* uncor_errors,
+	float* samec_errors
 ) {
-	float uncorr_errorsum = 0.0f;
-	float samechroma_errorsum = 0.0f;
-	float red_errorsum = 0.0f;
-	float green_errorsum = 0.0f;
-	float blue_errorsum = 0.0f;
-	float alpha_errorsum = 0.0f;
+	float uncor_errorsum = 0.0f;
+	float samec_errorsum = 0.0f;
 
-	for (int partition = 0; partition < pt->partition_count; partition++)
+	int partition_count = pt->partition_count;
+	promise(partition_count > 0);
+
+	for (int partition = 0; partition < partition_count; partition++)
 	{
-		// TODO: sort partitions by number of texels. For warp-architectures,
-		// this can reduce the running time by about 25-50%.
 		const uint8_t *weights = pt->texels_of_partition[partition];
-		int texelcount = pt->texels_per_partition[partition];
 
-		float uncorr_lowparam = 1e10f;
-		float uncorr_highparam = -1e10f;
+		float uncor_loparam = 1e10f;
+		float uncor_hiparam = -1e10f;
 
-		float samechroma_lowparam = 1e10f;
-		float samechroma_highparam = -1e10f;
+		float samec_loparam = 1e10f;
+		float samec_hiparam = -1e10f;
 
-		float4 separate_lowparam = float4(1e10f);
-		float4 separate_highparam = float4(-1e10f);
+		processed_line4 l_uncor = uncor_plines[partition];
+		processed_line4 l_samec = samec_plines[partition];
 
-		processed_line4 l_uncorr = plines_uncorr[partition];
-		processed_line4 l_samechroma = plines_samechroma[partition];
-		processed_line3 l_red = plines_separate_red[partition];
-		processed_line3 l_green = plines_separate_green[partition];
-		processed_line3 l_blue = plines_separate_blue[partition];
-		processed_line3 l_alpha = plines_separate_alpha[partition];
+		int texel_count = pt->partition_texel_count[partition];
+		promise(texel_count > 0);
 
-		// TODO: split up this loop due to too many temporaries; in particular,
-		// the six line functions will consume 18 vector registers
-		for (int i = 0; i < texelcount; i++)
+		int i = 0;
+
+		// Vectorize some useful scalar inputs
+		vfloat l_uncor_bs0(l_uncor.bs.lane<0>());
+		vfloat l_uncor_bs1(l_uncor.bs.lane<1>());
+		vfloat l_uncor_bs2(l_uncor.bs.lane<2>());
+		vfloat l_uncor_bs3(l_uncor.bs.lane<3>());
+
+		vfloat l_uncor_amod0(l_uncor.amod.lane<0>());
+		vfloat l_uncor_amod1(l_uncor.amod.lane<1>());
+		vfloat l_uncor_amod2(l_uncor.amod.lane<2>());
+		vfloat l_uncor_amod3(l_uncor.amod.lane<3>());
+
+		vfloat l_uncor_bis0(l_uncor.bis.lane<0>());
+		vfloat l_uncor_bis1(l_uncor.bis.lane<1>());
+		vfloat l_uncor_bis2(l_uncor.bis.lane<2>());
+		vfloat l_uncor_bis3(l_uncor.bis.lane<3>());
+
+		vfloat l_samec_bs0(l_samec.bs.lane<0>());
+		vfloat l_samec_bs1(l_samec.bs.lane<1>());
+		vfloat l_samec_bs2(l_samec.bs.lane<2>());
+		vfloat l_samec_bs3(l_samec.bs.lane<3>());
+
+		assert(all(l_samec.amod == vfloat4(0.0f)));
+
+		vfloat l_samec_bis0(l_samec.bis.lane<0>());
+		vfloat l_samec_bis1(l_samec.bis.lane<1>());
+		vfloat l_samec_bis2(l_samec.bis.lane<2>());
+		vfloat l_samec_bis3(l_samec.bis.lane<3>());
+
+		vfloat uncor_loparamv(1e10f);
+		vfloat uncor_hiparamv(-1e10f);
+		vfloat4 uncor_errorsumv = vfloat4::zero();
+
+		vfloat samec_loparamv(1e10f);
+		vfloat samec_hiparamv(-1e10f);
+		vfloat4 samec_errorsumv = vfloat4::zero();
+
+		int clipped_texel_count = round_down_to_simd_multiple_vla(texel_count);
+		for (/* */; i < clipped_texel_count; i += ASTCENC_SIMD_WIDTH)
+		{
+			vint texel_idxs(&(weights[i]));
+
+			vfloat data_r = gatherf(blk->data_r, texel_idxs);
+			vfloat data_g = gatherf(blk->data_g, texel_idxs);
+			vfloat data_b = gatherf(blk->data_b, texel_idxs);
+			vfloat data_a = gatherf(blk->data_a, texel_idxs);
+
+			vfloat ew_r = gatherf(ewb->texel_weight_r, texel_idxs);
+			vfloat ew_g = gatherf(ewb->texel_weight_g, texel_idxs);
+			vfloat ew_b = gatherf(ewb->texel_weight_b, texel_idxs);
+			vfloat ew_a = gatherf(ewb->texel_weight_a, texel_idxs);
+
+			vfloat uncor_param  = (data_r * l_uncor_bs0)
+			                    + (data_g * l_uncor_bs1)
+			                    + (data_b * l_uncor_bs2)
+			                    + (data_a * l_uncor_bs3);
+
+			uncor_loparamv = min(uncor_param, uncor_loparamv);
+			uncor_hiparamv = max(uncor_param, uncor_hiparamv);
+
+			vfloat uncor_dist0 = (l_uncor_amod0 - data_r)
+			                   + (uncor_param * l_uncor_bis0);
+			vfloat uncor_dist1 = (l_uncor_amod1 - data_g)
+			                   + (uncor_param * l_uncor_bis1);
+			vfloat uncor_dist2 = (l_uncor_amod2 - data_b)
+			                   + (uncor_param * l_uncor_bis2);
+			vfloat uncor_dist3 = (l_uncor_amod3 - data_a)
+			                   + (uncor_param * l_uncor_bis3);
+
+			vfloat uncor_error = (ew_r * uncor_dist0 * uncor_dist0)
+			                   + (ew_g * uncor_dist1 * uncor_dist1)
+			                   + (ew_b * uncor_dist2 * uncor_dist2)
+			                   + (ew_a * uncor_dist3 * uncor_dist3);
+
+			haccumulate(uncor_errorsumv, uncor_error);
+
+			// Process samechroma data
+			vfloat samec_param = (data_r * l_samec_bs0)
+			                   + (data_g * l_samec_bs1)
+			                   + (data_b * l_samec_bs2)
+			                   + (data_a * l_samec_bs3);
+
+			samec_loparamv = min(samec_param, samec_loparamv);
+			samec_hiparamv = max(samec_param, samec_hiparamv);
+
+
+			vfloat samec_dist0 = samec_param * l_samec_bis0 - data_r;
+			vfloat samec_dist1 = samec_param * l_samec_bis1 - data_g;
+			vfloat samec_dist2 = samec_param * l_samec_bis2 - data_b;
+			vfloat samec_dist3 = samec_param * l_samec_bis3 - data_a;
+
+			vfloat samec_error = (ew_r * samec_dist0 * samec_dist0)
+			                   + (ew_g * samec_dist1 * samec_dist1)
+			                   + (ew_b * samec_dist2 * samec_dist2)
+			                   + (ew_a * samec_dist3 * samec_dist3);
+
+			haccumulate(samec_errorsumv, samec_error);
+		}
+
+		uncor_loparam = hmin_s(uncor_loparamv);
+		uncor_hiparam = hmax_s(uncor_hiparamv);
+
+		samec_loparam = hmin_s(samec_loparamv);
+		samec_hiparam = hmax_s(samec_hiparamv);
+
+		// Loop tail
+		// Error is buffered and accumulated in blocks of 4 to ensure that
+		// the partial sums added to the accumulator are invariant with the
+		// vector implementation, irrespective of vector size ...
+		alignas(16) float uncor_errorsum_tmp[4] { 0 };
+		alignas(16) float samec_errorsum_tmp[4] { 0 };
+		for (/* */; i < texel_count; i++)
 		{
 			int iwt = weights[i];
 
-			float texel_weight_rgba = ewb->texel_weight[iwt];
-			if (texel_weight_rgba > 1e-20f)
+			vfloat4 dat = blk->texel(iwt);
+			vfloat4 ews = ewb->error_weights[iwt];
+
+			float uncor_param = dot_s(dat, l_uncor.bs);
+			uncor_loparam = astc::min(uncor_param, uncor_loparam);
+			uncor_hiparam = astc::max(uncor_param, uncor_hiparam);
+
+			float samec_param = dot_s(dat, l_samec.bs);
+			samec_loparam = astc::min(samec_param, samec_loparam);
+			samec_hiparam = astc::max(samec_param, samec_hiparam);
+
+			vfloat4 uncor_dist  = (l_uncor.amod - dat)
+			                    + (uncor_param * l_uncor.bis);
+			float uncor_error_tmp = dot_s(ews, uncor_dist * uncor_dist);
+
+			vfloat4 samec_dist = samec_param * l_samec.bis - dat;
+			float samec_error_tmp = dot_s(ews, samec_dist * samec_dist);
+
+			// Accumulate error sum in the temporary array
+			int error_index = i & 0x3;
+			uncor_errorsum_tmp[error_index] = uncor_error_tmp;
+			samec_errorsum_tmp[error_index] = samec_error_tmp;
+
+#if ASTCENC_SIMD_WIDTH == 8
+			// Zero the temporary staging buffer every 4 items unless last iter
+			if ((i & 0x7) == 0x03)
 			{
-				float4 dat = float4(blk->data_r[iwt],
-				                    blk->data_g[iwt],
-				                    blk->data_b[iwt],
-				                    blk->data_a[iwt]);
+				haccumulate(uncor_errorsumv, vfloat4::loada(uncor_errorsum_tmp));
+				storea(vfloat4::zero(), uncor_errorsum_tmp);
 
-				float4 ews = ewb->error_weights[iwt];
-
-				float uncorr_param = dot(dat, l_uncorr.bs);
-				uncorr_lowparam = MIN(uncorr_param, uncorr_lowparam);
-				uncorr_highparam = MAX(uncorr_param, uncorr_highparam);
-
-				float samechroma_param = dot(dat, l_samechroma.bs);
-				samechroma_lowparam = MIN(samechroma_param, samechroma_lowparam);
-				samechroma_highparam = MAX(samechroma_param, samechroma_highparam);
-
-				float4 separate_param = float4(dot(float3(dat.g, dat.b, dat.a), l_red.bs),
-				                               dot(float3(dat.r, dat.b, dat.a), l_green.bs),
-				                               dot(float3(dat.r, dat.g, dat.a), l_blue.bs),
-				                               dot(float3(dat.r, dat.g, dat.b), l_alpha.bs));
-
-				separate_lowparam = float4(MIN(separate_param.r, separate_lowparam.r),
-				                           MIN(separate_param.g, separate_lowparam.g),
-				                           MIN(separate_param.b, separate_lowparam.b),
-				                           MIN(separate_param.a, separate_lowparam.a));
-
-				separate_highparam = float4(MAX(separate_param.r, separate_highparam.r),
-				                            MAX(separate_param.g, separate_highparam.g),
-				                            MAX(separate_param.b, separate_highparam.b),
-				                            MAX(separate_param.a, separate_highparam.a));
-
-				float4 uncorr_dist  = (l_uncorr.amod - dat) + (uncorr_param * l_uncorr.bis);
-				uncorr_errorsum += dot(ews, uncorr_dist * uncorr_dist);
-
-				float4 samechroma_dist = (l_samechroma.amod - dat) +
-				                         (samechroma_param * l_samechroma.bis);
-				samechroma_errorsum += dot(ews, samechroma_dist * samechroma_dist);
-
-				float3 red_dist = (l_red.amod - float3(dat.g, dat.b, dat.a)) +
-				                  (separate_param.r * l_red.bis);
-				red_errorsum += dot(float3(ews.g, ews.b, ews.a), red_dist * red_dist);
-
-				float3 green_dist  = (l_green.amod - float3(dat.r, dat.b, dat.a)) +
-				                     (separate_param.g * l_green.bis);
-				green_errorsum += dot(float3(ews.r, ews.b, ews.a), green_dist * green_dist);
-
-				float3 blue_dist  = (l_blue.amod - float3(dat.r, dat.g, dat.a)) +
-				                    (separate_param.b * l_blue.bis);
-				blue_errorsum += dot(float3(ews.r, ews.g, ews.a), blue_dist * blue_dist);
-
-				float3 alpha_dist  = (l_alpha.amod - float3(dat.r, dat.g, dat.b)) +
-				                     (separate_param.a * l_alpha.bis);
-				alpha_errorsum += dot(float3(ews.r, ews.g, ews.b), alpha_dist * alpha_dist);
+				haccumulate(samec_errorsumv, vfloat4::loada(samec_errorsum_tmp));
+				storea(vfloat4::zero(), samec_errorsum_tmp);
 			}
+#endif
 		}
 
-		float uncorr_linelen = uncorr_highparam - uncorr_lowparam;
-		float samechroma_linelen = samechroma_highparam - samechroma_lowparam;
-		float4 separate_linelen = separate_highparam - separate_lowparam;
+		// Accumulate the loop tail using the vfloat4 swizzle
+		haccumulate(uncor_errorsumv, vfloat4::loada(uncor_errorsum_tmp));
+		haccumulate(samec_errorsumv, vfloat4::loada(samec_errorsum_tmp));
+
+		// Resolve the final scalar accumulator sum
+		haccumulate(uncor_errorsum, uncor_errorsumv);
+		haccumulate(samec_errorsum, samec_errorsumv);
+
+		float uncor_linelen = uncor_hiparam - uncor_loparam;
+		float samec_linelen = samec_hiparam - samec_loparam;
 
 		// Turn very small numbers and NaNs into a small number
-		if (!(uncorr_linelen > 1e-7f))
-		{
-			uncorr_linelen = 1e-7f;
-		}
+		uncor_linelen = astc::max(uncor_linelen, 1e-7f);
+		samec_linelen = astc::max(samec_linelen, 1e-7f);
 
-		if (!(samechroma_linelen > 1e-7f))
-		{
-			samechroma_linelen = 1e-7f;
-		}
-
-		if (!(separate_linelen.r > 1e-7f))
-		{
-			separate_linelen.r = 1e-7f;
-		}
-
-		if (!(separate_linelen.g > 1e-7f))
-		{
-			separate_linelen.g = 1e-7f;
-		}
-
-		if (!(separate_linelen.b > 1e-7f))
-		{
-			separate_linelen.b = 1e-7f;
-		}
-
-		if (!(separate_linelen.a > 1e-7f))
-		{
-			separate_linelen.a = 1e-7f;
-		}
-
-		lengths_uncorr[partition] = uncorr_linelen;
-		lengths_samechroma[partition] = samechroma_linelen;
-		lengths_separate[partition] = separate_linelen;
-
-		*uncorr_errors = uncorr_errorsum;
-		*samechroma_errors = samechroma_errorsum;
-		*separate_color_errors = float4(red_errorsum, green_errorsum, blue_errorsum, alpha_errorsum);
+		uncor_lengths[partition] = uncor_linelen;
+		samec_lengths[partition] = samec_linelen;
 	}
+
+	*uncor_errors = uncor_errorsum;
+	*samec_errors = samec_errorsum;
 }
 
 void compute_error_squared_rgb(
-	const partition_info *pt,    // the partition that we use when computing the squared-error.
+	const partition_info *pt,
 	const imageblock *blk,
 	const error_weight_block *ewb,
-	const processed_line3 *plines_uncorr,
-	const processed_line3 *plines_samechroma,
-	const processed_line2 *plines_separate_red,
-	const processed_line2 *plines_separate_green,
-	const processed_line2 *plines_separate_blue,
-	float *lengths_uncorr,
-	float *lengths_samechroma,
-	float3 *lengths_separate,
-	float *uncorr_errors,
-	float *samechroma_errors,
-	float3 *separate_color_errors
+	partition_lines3 plines[4],
+	float& uncor_error,
+	float& samec_error
 ) {
-	float uncorr_errorsum = 0.0f;
-	float samechroma_errorsum = 0.0f;
-	float red_errorsum = 0.0f;
-	float green_errorsum = 0.0f;
-	float blue_errorsum = 0.0f;
+	float uncor_errorsum = 0.0f;
+	float samec_errorsum = 0.0f;
 
-	for (int partition = 0; partition < pt->partition_count; partition++)
+	int partition_count = pt->partition_count;
+	promise(partition_count > 0);
+
+	for (int partition = 0; partition < partition_count; partition++)
 	{
-		// TODO: sort partitions by number of texels. For warp-architectures,
-		// this can reduce the running time by about 25-50%.
+		partition_lines3& pl = plines[partition];
 		const uint8_t *weights = pt->texels_of_partition[partition];
-		int texelcount = pt->texels_per_partition[partition];
+		int texel_count = pt->partition_texel_count[partition];
+		promise(texel_count > 0);
 
-		float uncorr_lowparam = 1e10f;
-		float uncorr_highparam = -1e10f;
+		float uncor_loparam = 1e10f;
+		float uncor_hiparam = -1e10f;
 
-		float samechroma_lowparam = 1e10f;
-		float samechroma_highparam = -1e10f;
+		float samec_loparam = 1e10f;
+		float samec_hiparam = -1e10f;
 
-		float3 separate_lowparam = float3(1e10f);
-		float3 separate_highparam = float3(-1e10f);
+		processed_line3 l_uncor = pl.uncor_pline;
+		processed_line3 l_samec = pl.samec_pline;
 
-		processed_line3 l_uncorr = plines_uncorr[partition];
-		processed_line3 l_samechroma = plines_samechroma[partition];
-		processed_line2 l_red = plines_separate_red[partition];
-		processed_line2 l_green = plines_separate_green[partition];
-		processed_line2 l_blue = plines_separate_blue[partition];
+		int i = 0;
 
-		// TODO: split up this loop due to too many temporaries; in
-		// particular, the six line functions will consume 18 vector registers
+		// This implementation is an example vectorization of this function.
+		// It works for - the codec is a 2-4% faster than not vectorizing - but
+		// the benefit is limited by the use of gathers and register pressure
 
-		for (int i = 0; i < texelcount; i++)
+		// Vectorize some useful scalar inputs
+		vfloat l_uncor_bs0(l_uncor.bs.lane<0>());
+		vfloat l_uncor_bs1(l_uncor.bs.lane<1>());
+		vfloat l_uncor_bs2(l_uncor.bs.lane<2>());
+
+		vfloat l_uncor_amod0(l_uncor.amod.lane<0>());
+		vfloat l_uncor_amod1(l_uncor.amod.lane<1>());
+		vfloat l_uncor_amod2(l_uncor.amod.lane<2>());
+
+		vfloat l_uncor_bis0(l_uncor.bis.lane<0>());
+		vfloat l_uncor_bis1(l_uncor.bis.lane<1>());
+		vfloat l_uncor_bis2(l_uncor.bis.lane<2>());
+
+		vfloat l_samec_bs0(l_samec.bs.lane<0>());
+		vfloat l_samec_bs1(l_samec.bs.lane<1>());
+		vfloat l_samec_bs2(l_samec.bs.lane<2>());
+
+		assert(all(l_samec.amod == vfloat4(0.0f)));
+
+		vfloat l_samec_bis0(l_samec.bis.lane<0>());
+		vfloat l_samec_bis1(l_samec.bis.lane<1>());
+		vfloat l_samec_bis2(l_samec.bis.lane<2>());
+
+		vfloat uncor_loparamv(1e10f);
+		vfloat uncor_hiparamv(-1e10f);
+		vfloat4 uncor_errorsumv = vfloat4::zero();
+
+		vfloat samec_loparamv(1e10f);
+		vfloat samec_hiparamv(-1e10f);
+		vfloat4 samec_errorsumv = vfloat4::zero();
+
+		int clipped_texel_count = round_down_to_simd_multiple_vla(texel_count);
+		for (/* */; i < clipped_texel_count; i += ASTCENC_SIMD_WIDTH)
+		{
+			vint texel_idxs(&(weights[i]));
+
+			vfloat data_r = gatherf(blk->data_r, texel_idxs);
+			vfloat data_g = gatherf(blk->data_g, texel_idxs);
+			vfloat data_b = gatherf(blk->data_b, texel_idxs);
+
+			vfloat ew_r = gatherf(ewb->texel_weight_r, texel_idxs);
+			vfloat ew_g = gatherf(ewb->texel_weight_g, texel_idxs);
+			vfloat ew_b = gatherf(ewb->texel_weight_b, texel_idxs);
+
+			vfloat uncor_param  = (data_r * l_uncor_bs0)
+			                    + (data_g * l_uncor_bs1)
+			                    + (data_b * l_uncor_bs2);
+
+			uncor_loparamv = min(uncor_param, uncor_loparamv);
+			uncor_hiparamv = max(uncor_param, uncor_hiparamv);
+
+			vfloat uncor_dist0 = (l_uncor_amod0 - data_r)
+			                   + (uncor_param * l_uncor_bis0);
+			vfloat uncor_dist1 = (l_uncor_amod1 - data_g)
+			                   + (uncor_param * l_uncor_bis1);
+			vfloat uncor_dist2 = (l_uncor_amod2 - data_b)
+			                   + (uncor_param * l_uncor_bis2);
+
+			vfloat uncor_err = (ew_r * uncor_dist0 * uncor_dist0)
+			                 + (ew_g * uncor_dist1 * uncor_dist1)
+			                 + (ew_b * uncor_dist2 * uncor_dist2);
+
+			haccumulate(uncor_errorsumv, uncor_err);
+
+			// Process samechroma data
+			vfloat samec_param = (data_r * l_samec_bs0)
+			                   + (data_g * l_samec_bs1)
+			                   + (data_b * l_samec_bs2);
+
+			samec_loparamv = min(samec_param, samec_loparamv);
+			samec_hiparamv = max(samec_param, samec_hiparamv);
+
+
+			vfloat samec_dist0 = samec_param * l_samec_bis0 - data_r;
+			vfloat samec_dist1 = samec_param * l_samec_bis1 - data_g;
+			vfloat samec_dist2 = samec_param * l_samec_bis2 - data_b;
+
+			vfloat samec_err = (ew_r * samec_dist0 * samec_dist0)
+			                 + (ew_g * samec_dist1 * samec_dist1)
+			                 + (ew_b * samec_dist2 * samec_dist2);
+
+			haccumulate(samec_errorsumv, samec_err);
+		}
+
+		uncor_loparam = hmin_s(uncor_loparamv);
+		uncor_hiparam = hmax_s(uncor_hiparamv);
+
+		samec_loparam = hmin_s(samec_loparamv);
+		samec_hiparam = hmax_s(samec_hiparamv);
+
+		// Loop tail
+		// Error is buffered and accumulated in blocks of 4 to ensure that
+		// the partial sums added to the accumulator are invariant with the
+		// vector implementation, irrespective of vector size ...
+		alignas(16) float uncor_errorsum_tmp[4] { 0 };
+		alignas(16) float samec_errorsum_tmp[4] { 0 };
+		for (/* */; i < texel_count; i++)
 		{
 			int iwt = weights[i];
 
-			float texel_weight_rgb = ewb->texel_weight_rgb[iwt];
-			if (texel_weight_rgb > 1e-20f)
+			vfloat4 dat = blk->texel3(iwt);
+			vfloat4 ews = ewb->error_weights[iwt];
+
+			float uncor_param = dot3_s(dat, l_uncor.bs);
+			uncor_loparam  = astc::min(uncor_param, uncor_loparam);
+			uncor_hiparam = astc::max(uncor_param, uncor_hiparam);
+
+			float samec_param = dot3_s(dat, l_samec.bs);
+			samec_loparam  = astc::min(samec_param, samec_loparam);
+			samec_hiparam = astc::max(samec_param, samec_hiparam);
+
+			vfloat4 uncor_dist  = (l_uncor.amod - dat)
+			                    + (uncor_param * l_uncor.bis);
+			float uncor_error_tmp = dot3_s(ews, uncor_dist * uncor_dist);
+
+			vfloat4 samec_dist = samec_param * l_samec.bis - dat;
+			float samec_error_tmp = dot3_s(ews, samec_dist * samec_dist);
+
+			// Accumulate error sum in the temporary array
+			int error_index = i & 0x3;
+			uncor_errorsum_tmp[error_index] = uncor_error_tmp;
+			samec_errorsum_tmp[error_index] = samec_error_tmp;
+
+#if ASTCENC_SIMD_WIDTH == 8
+			// Emit the staging buffer every 4 items unless last iteration
+			if ((i & 0x7) == 0x03)
 			{
-				float3 dat = float3(blk->data_r[iwt],
-				                    blk->data_g[iwt],
-				                    blk->data_b[iwt]);
+				haccumulate(uncor_errorsumv, vfloat4::loada(uncor_errorsum_tmp));
+				storea(vfloat4::zero(), uncor_errorsum_tmp);
 
-				float3 ews = float3(ewb->error_weights[iwt].r,
-				                    ewb->error_weights[iwt].g,
-				                    ewb->error_weights[iwt].b);
-
-				float uncorr_param = dot(dat, l_uncorr.bs);
-				uncorr_lowparam  = MIN(uncorr_param, uncorr_lowparam);
-				uncorr_highparam = MAX(uncorr_param, uncorr_highparam);
-
-				float samechroma_param = dot(dat, l_samechroma.bs);
-				samechroma_lowparam  = MIN(samechroma_param, samechroma_lowparam);
-				samechroma_highparam = MAX(samechroma_param, samechroma_highparam);
-
-				float3 separate_param = float3(dot(float2(dat.g, dat.b), l_red.bs),
-				                               dot(float2(dat.r, dat.b), l_green.bs),
-				                               dot(float2(dat.r, dat.g), l_blue.bs));
-
-				separate_lowparam  = float3(MIN(separate_param.r, separate_lowparam.r),
-				                            MIN(separate_param.g, separate_lowparam.g),
-				                            MIN(separate_param.b, separate_lowparam.b));
-
-				separate_highparam  = float3(MAX(separate_param.r, separate_highparam.r),
-				                             MAX(separate_param.g, separate_highparam.g),
-				                             MAX(separate_param.b, separate_highparam.b));
-
-				float3 uncorr_dist  = (l_uncorr.amod - dat) +
-				                      (uncorr_param * l_uncorr.bis);
-				uncorr_errorsum += dot(ews, uncorr_dist * uncorr_dist);
-
-				float3 samechroma_dist = (l_samechroma.amod - dat) +
-				                         (samechroma_param * l_samechroma.bis);
-				samechroma_errorsum += dot(ews, samechroma_dist * samechroma_dist);
-
-				float2 red_dist = (l_red.amod - float2(dat.g, dat.b)) +
-				                  (separate_param.r * l_red.bis);
-				red_errorsum += dot(float2(ews.g, ews.b), red_dist * red_dist);
-
-				float2 green_dist = (l_green.amod - float2(dat.r, dat.b)) +
-				                    (separate_param.g * l_green.bis);
-				green_errorsum += dot(float2(ews.r, ews.b), green_dist * green_dist);
-
-				float2 blue_dist = (l_blue.amod - float2(dat.r, dat.g)) +
-				                   (separate_param.b * l_blue.bis);
-				blue_errorsum += dot(float2(ews.r, ews.g), blue_dist * blue_dist);
+				haccumulate(samec_errorsumv, vfloat4::loada(samec_errorsum_tmp));
+				storea(vfloat4::zero(), samec_errorsum_tmp);
 			}
+#endif
 		}
 
-		float uncorr_linelen = uncorr_highparam - uncorr_lowparam;
-		float samechroma_linelen = samechroma_highparam - samechroma_lowparam;
-		float3 separate_linelen = separate_highparam - separate_lowparam;
+		// Accumulate the loop tail using the vfloat4 swizzle
+		haccumulate(uncor_errorsumv, vfloat4::loada(uncor_errorsum_tmp));
+		haccumulate(samec_errorsumv, vfloat4::loada(samec_errorsum_tmp));
+
+		// Resolve the final scalar accumulator sum
+		haccumulate(uncor_errorsum, uncor_errorsumv);
+		haccumulate(samec_errorsum, samec_errorsumv);
+
+		float uncor_linelen = uncor_hiparam - uncor_loparam;
+		float samec_linelen = samec_hiparam - samec_loparam;
 
 		// Turn very small numbers and NaNs into a small number
-		if (!(uncorr_linelen > 1e-7f))
-		{
-			uncorr_linelen = 1e-7f;
-		}
+		uncor_linelen = astc::max(uncor_linelen, 1e-7f);
+		samec_linelen = astc::max(samec_linelen, 1e-7f);
 
-		if (!(samechroma_linelen > 1e-7f))
-		{
-			samechroma_linelen = 1e-7f;
-		}
-
-		if (!(separate_linelen.r > 1e-7f))
-		{
-			separate_linelen.r = 1e-7f;
-		}
-
-		if (!(separate_linelen.g > 1e-7f))
-		{
-			separate_linelen.g = 1e-7f;
-		}
-
-		if (!(separate_linelen.b > 1e-7f))
-		{
-			separate_linelen.b = 1e-7f;
-		}
-
-		lengths_uncorr[partition] = uncorr_linelen;
-		lengths_samechroma[partition] = samechroma_linelen;
-		lengths_separate[partition] = separate_linelen;
-
-		*uncorr_errors = uncorr_errorsum;
-		*samechroma_errors = samechroma_errorsum;
-		*separate_color_errors = float3(red_errorsum, green_errorsum, blue_errorsum);
-	}
-}
-
-// function to compute the error across a tile when using a particular line for
-// a particular partition.
-float compute_error_squared_rgb_single_partition(
-	int partition_to_test,
-	const block_size_descriptor* bsd,
-	const partition_info* pt,	// the partition that we use when computing the squared-error.
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	const processed_line3* lin	// the line for the partition.
-) {
-	int texels_per_block = bsd->texel_count;
-	float errorsum = 0.0f;
-
-	for (int i = 0; i < texels_per_block; i++)
-	{
-		int partition = pt->partition_of_texel[i];
-		float texel_weight = ewb->texel_weight_rgb[i];
-
-		if (partition != partition_to_test || texel_weight < 1e-20f)
-		{
-			continue;
-		}
-
-		float3 point = float3(blk->data_r[i],
-		                      blk->data_g[i],
-		                      blk->data_b[i]);
-		float param = dot(point, lin->bs);
-		float3 rp1 = lin->amod + param * lin->bis;
-		float3 dist = rp1 - point;
-		float4 ews = ewb->error_weights[i];
-		float3 ews3 = float3(ews.r, ews.g, ews.b);
-		errorsum += dot(ews3, dist * dist);
+		pl.uncor_line_len = uncor_linelen;
+		pl.samec_line_len = samec_linelen;
 	}
 
-	return errorsum;
+	uncor_error = uncor_errorsum;
+	samec_error = samec_errorsum;
 }
 
 #endif
