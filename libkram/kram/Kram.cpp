@@ -999,6 +999,15 @@ void kramEncodeUsage(bool showVersion = true)
           "\tOnly output mips <= size px\n"
           "\n"
 
+          // tex to normal
+          "\t-height"
+          "\tConvert height.x to normal.xy\n"
+          "\t-heightScale scale"
+          "\tScale heights up down to adjust normal map\n"
+          "\t-wrap"
+          "\tWrap texture at edges (height only for now)\n"
+          "\n"
+
           "\t-srgb"
           "\tsRGB for rgb/rgba formats\n"
           "\t-signed"
@@ -1678,6 +1687,36 @@ static int32_t kramAppEncode(vector<const char*>& args)
 //            continue;
 //        }
 
+        else if (isStringEqual(word, "-heightScale")) {
+            ++i;
+            if (i >= argc) {
+                KLOGE("Kram", "heightScale arg invalid");
+                error = true;
+                break;
+            }
+            
+            infoArgs.isHeight = true;
+            infoArgs.heightScale = atof(args[i]);
+            
+            // Note: caller can negate scale, but don't allow scale 0.
+            if (infoArgs.heightScale == 0.0f) {
+                KLOGE("Kram", "heightScale arg cannot be 0");
+                error = true;
+            }
+            continue;
+        }
+        else if (isStringEqual(word, "-height")) {
+            // converted to a normal map
+            infoArgs.isHeight = true;
+            continue;
+        }
+        else if (isStringEqual(word, "-wrap")) {
+            // whether texture is clamp or wrap
+            infoArgs.isWrap = true;
+            continue;
+        }
+        
+        
         else if (isStringEqual(word, "-e") ||
                  isStringEqual(word, "-encoder")) {
             ++i;

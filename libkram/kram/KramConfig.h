@@ -391,5 +391,12 @@ inline void mipDown(int32_t& w, int32_t& h)
 #endif
 }
 
+// Use this on vectors
+template<typename T>
+inline size_t vsizeof(const std::vector<T>& v)
+{
+    return sizeof(T) * v.size();
+}
+
 
 

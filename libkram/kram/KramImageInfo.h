@@ -58,7 +58,7 @@ public:
     bool isPremultiplied = false;
     bool isPrezero = false;
     bool isNormal = false;  // signed, but may be stored unorm and swizzled (f.e. astc/bc3nm gggr or rrrg)
-
+    
     // can pick a smaller format if alpha = 1 (only for bc and etc)
     bool optimizeFormatForOpaque = false;
 
@@ -68,6 +68,11 @@ public:
     bool isSRGB = false;
     bool isHDR = false;
 
+    // for now these are only usable with normal to height
+    bool isHeight = false;
+    bool isWrap = false;
+    float heightScale = 1.0f;
+    
     string swizzleText;
     string averageChannels;
     
@@ -91,7 +96,12 @@ public:
                                   const char* swizzleText);
     static void swizzleTextureLDR(int32_t w, int32_t h, Color* srcPixels_,
                                   const char* swizzleText);
-
+    
+    // convert x field to normals
+    static void heightToNormals(int32_t w, int32_t h,
+                                float4* srcPixelsFloat_,
+                                Color* srcPixels_,
+                                float scale, bool isWrap = false);
 private:
     // this walks pixels for hasColor and hasAlpha if not already set to false
     void updateImageTraitsHDR(int32_t w, int32_t h,
@@ -145,6 +155,11 @@ public:
     bool useEtcenc = false;
     bool useExplicit = false;
 
+    // for now these are only usable with normal to height
+    bool isHeight = false;
+    bool isWrap = false;
+    float heightScale = 1.0f;
+    
     int32_t quality = 49;
 
     int32_t mipMinSize = 1;

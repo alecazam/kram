@@ -1017,6 +1017,13 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
 
     quality = args.quality;
 
+    // this is for height to normal, will convert .r to normal xy
+    isHeight = args.isHeight;
+    isWrap = args.isWrap;
+    heightScale = args.heightScale;
+    if (isHeight)
+        isNormal = true;
+    
     // Note: difference between input srgb and output srgb, but it's mingled
     // here a bit
 
@@ -1099,6 +1106,11 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
         hasColor = false;
     }
 
+    // this will only work on 2d textures, since this is all pre-chunk
+    if (isHeight) {
+        heightToNormals(w, h, srcPixelsFloat, srcPixels, heightScale, isWrap);
+    }
+    
     // this updates hasColor/hasAlpha
     if (!swizzleText.empty()) {
         // set any channels that are constant
@@ -1181,6 +1193,168 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
         }
     }
 }
+
+
+
+// TODO: tread 16u png into pixelsFlat, then gen an 8-bit normal xy
+// from that.  This is more like SDF where a single height is used.
+
+void ImageInfo::heightToNormals(int32_t w, int32_t h,
+                            float4* srcPixels,
+                            Color* srcPixels8,
+                            float scale, bool isWrap)
+{
+    // see here
+    // https://developer.download.nvidia.com/CgTutorial/cg_tutorial_chapter08.html
+
+    // src/dst the same here
+    // may need to copy a row/column of pixels for wrap
+    float4* dstPixels = srcPixels;
+    Color* dstPixels8 = srcPixels8;
+    
+    bool isFloat = srcPixels;
+    
+    // copy the texture, or there are too many edge cases in the code below
+    vector<Color> srcDataCopy8;
+    vector<float4> srcDataCopy;
+    if (isFloat) {
+        srcDataCopy.resize(w*h);
+        memcpy(srcDataCopy.data(), srcPixels, vsizeof(srcDataCopy));
+        srcPixels = srcDataCopy.data();
+    }
+    else {
+        srcDataCopy8.resize(w*h);
+        memcpy(srcDataCopy8.data(), srcPixels8, vsizeof(srcDataCopy8));
+        srcPixels8 = srcDataCopy8.data();
+    }
+    
+    //-----------------------
+    
+    bool isWrapX = isWrap;
+    bool isWrapY = isWrap;
+    
+    // 2.0 is distance betwen +1 and -1
+    // don't scale by this, want caller to be able to pass 1.0 as default scale not 2.0
+    float scaleX = scale; // / 2.0;
+    float scaleY = scale; // / 2.0;
+
+    if (!isFloat) {
+        scaleX /= 255.0f;
+        scaleY /= 255.0f;
+    }
+    
+    // TODO: doing this at image level doesn't support chunk conversion
+    // so this would only work for 2D images, and not atlas strips to a 2D array.
+    
+    // TODO: Larger kernel support to 2x2, 3x3, 5x5, 7x7, 9x9
+    // This pattern is a 3x3 cross here only 4 cardinal samples are used.
+    // Bigger areas have bleed especially if this is run on a chart.
+    
+    // this recommends generating a few maps, and blending between them
+    // https://vrayschool.com/normal-map/
+    
+    for (int32_t y = 0; y < h; ++y) {
+        int32_t y0 = y;
+        int32_t ym = y - 1;
+        int32_t yp = y + 1;
+
+        if (isWrapY) {
+            ym = (ym + h) % h;
+            yp = (yp) % h;
+        }
+        else {
+            // clamp
+            if (ym < 0) ym = 0;
+            if (yp > (h - 1)) yp = h - 1;
+        }
+
+        y0 *= w;
+        ym *= w;
+        yp *= w;
+
+        for (int32_t x = 0; x < w; ++x) {
+            //int32_t x0 = x;
+            int32_t xm = x - 1;
+            int32_t xp = x + 1;
+
+            if (isWrapX) {
+                xm = (xm + w) % w;
+                xp = (xp) % w;
+            }
+            else {
+                // clamp
+                if (xm < 0) xm = 0;
+                if (xp > (w - 1)) xp = w - 1;
+            }
+
+            
+            if (isFloat) {
+                
+                // cross pattern
+                // height channel is in x
+                float cN = srcPixels[ym + x].x;
+                float cS = srcPixels[yp + x].x;
+                float cE = srcPixels[y0 + xp].x;
+                float cW = srcPixels[y0 + xm].x;
+
+                // up is N, so this is rhcs
+                float dx = (cE - cW) * scaleX;
+                float dy = (cN - cS) * scaleY;
+           
+                float4 normal = float4m(dx, dy, 1.0f, 0.0f);
+                normal = normalize(normal);
+                
+                // convert to unorm
+                normal = normal * 0.5 + 0.5f;
+                
+                // write out the result
+                float4& dstPixel = dstPixels[y0 + x];
+
+                dstPixel.x = normal.x;
+                dstPixel.y = normal.y;
+                
+                // TODO: consider storing in z, easier to see data channel, not premul
+                // store height in alpha.  Let caller provide the swizzle xyzh01
+                //dstPixel.z = normal.z; // can reconstruct from xy
+                //dstPixel.w = srcPixels[y0 + x0].x;
+                
+                dstPixel.z = srcPixels[y0 + x].z;
+                dstPixel.w = srcPixels[y0 + x].w;
+            }
+            else {
+                // cross pattern
+                // height channel is in x
+                uint8_t cN = srcPixels8[ym + x].r; // assumes first elem (.r) is height channel
+                uint8_t cS = srcPixels8[yp + x].r;
+                uint8_t cE = srcPixels8[y0 + xp].r;
+                uint8_t cW = srcPixels8[y0 + xm].r;
+
+                float dx = (cE - cW) * scaleX;
+                float dy = (cN - cS) * scaleY;
+           
+                float4 normal = float4m(dx, dy, 1.0f, 0.0f);
+                normal = normalize(normal);
+                
+                // convert to unorm
+                normal = normal * 127 + 128.0f;
+                
+                Color& dstPixel8 = dstPixels8[y0 + x];
+
+                dstPixel8.r = normal.x;
+                dstPixel8.g = normal.y;
+                
+                // TODO: consider storing height in z, easier to see data channel, not premul
+                // store height in alpha.  Let caller provide the swizzle xyzh01
+                //dstPixel8.b = normal.z; // can reconstruct from xy
+                //dstPixel8.a = srcPixels8[y0 + x0].r;
+                
+                dstPixel8.b = srcPixels8[y0 + x].b;
+                dstPixel8.a = srcPixels8[y0 + x].a;
+            }
+        }
+    }
+}
+
 
 const char* encoderName(TexEncoder encoder)
 {

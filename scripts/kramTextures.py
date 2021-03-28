@@ -31,6 +31,7 @@ class TextureContent(Enum):
 	SDF = 3
 	MetalRoughness = 4
 	Mask = 5
+	Height = 6
 
 class TextureType(Enum):
 	Unknown = 0
@@ -103,6 +104,8 @@ class TextureProcessor:
 			content = TextureContent.Albedo
 		elif name.endswith("-n") or name.endswith("-normal"):
 			content = TextureContent.Normal
+		elif name.endswith("-h") or name.endswith("-height"):
+			content = TextureContent.Height
 
 		return content
 
@@ -167,7 +170,14 @@ class TextureProcessor:
 
 		# this only exports to ktx, post process will convert to ktx2
 		ext = ".ktx"
-		dstName = srcFilename + ext
+		dstName = srcFilename 
+
+		# replace -h with -n, since it will be converted to a normal
+		if dstName.endswith("-h"):
+			dstName = dstName.replace("-h", "-n")
+
+		dstName += ext
+
 		dstFile = dstDir + dstName
 
 		# check the modstamp of src vs. dst output, form same name at dstPath, and check os.stat() on that
@@ -423,7 +433,8 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 	fmtSDF = ""
 	fmtMetalRoughness = ""
 	fmtMask = ""
-	
+	fmtHeight = ""
+
 	# note 1/2/2nm in astc need swizzles to store more efficiently
 	# and at 4x4 aren't any smaller than explicit values
 	# prefer etc since it's smaller and higher bit depth (11-bits)
@@ -438,6 +449,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f etc2rg"
 		fmtMask = " -f etc2r"
 		fmtSDF = " -f etc2r -signed -sdf"
+		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
 
 	elif platform == "android":
 		fmtAlbedo = " -f etc2rgba -srgb -premul -optopaque" # or astc
@@ -445,7 +457,8 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f etc2rg"
 		fmtMask = " -f etc2r"
 		fmtSDF = " -f etc2r -signed -sdf"
-		
+		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
+
 	elif platform == "mac":
 		# bc1 on Toof has purple, green, yellow artifacts with bc7enc, and has more banding
 		# and a lot of weird blocky artifacts, look into bc1 encoder.  
@@ -455,7 +468,8 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f bc5"
 		fmtMask = " -f bc4"
 		fmtSDF = " -f bc4 -signed -sdf"
-		
+		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
+
 	elif platform == "win":
 		# bc1 on Toof has purple, green, yellow artifacts with bc7enc, and has more banding
 		# and a lot of weird blocky artifacts, look into bc1 encoder
@@ -464,6 +478,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f bc5"
 		fmtMask = " -f bc4"
 		fmtSDF = " -f bc4 -signed -sdf"
+		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
 
 	elif platform == "any":
 		# output to s/rgba8u, then run through ktxsc to go to BasisLZ
@@ -473,6 +488,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f rgba8 -swizzle r001"
 		fmtMask = " -f rgba8 -swizzle r001"
 		fmtSDF = " -f rgba8 -swizzle r001 -sdf"
+		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
 
 	else:
 		return 1
@@ -492,7 +508,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 	if verbose:
 		moreArgs += " -v"
 		
-	formats = [fmtUnknown, fmtAlbedo, fmtNormal, fmtSDF, fmtMetalRoughness, fmtMask]
+	formats = [fmtUnknown, fmtAlbedo, fmtNormal, fmtSDF, fmtMetalRoughness, fmtMask, fmtHeight]
 
 	formats = [fmt + moreArgs for fmt in formats]
 	
