@@ -440,7 +440,11 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 	# prefer etc since it's smaller and higher bit depth (11-bits)
 
 	# note sdf and signed data will look odd in Preview.  It's not
-	# really setup for signed data.
+	# really setup for signed data.  
+
+	# heightScale and wrap is really a per texture setting, but don't have 
+	# support for that yet.
+	fmtHeightArgs = " -height -heightScale 4 -wrap"
 
 	if platform == "ios":
 		# use astc since has more quality settings
@@ -449,7 +453,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f etc2rg"
 		fmtMask = " -f etc2r"
 		fmtSDF = " -f etc2r -signed -sdf"
-		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
+		fmtHeight = fmtNormal + fmtHeightArgs
 
 	elif platform == "android":
 		fmtAlbedo = " -f etc2rgba -srgb -premul -optopaque" # or astc
@@ -457,7 +461,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f etc2rg"
 		fmtMask = " -f etc2r"
 		fmtSDF = " -f etc2r -signed -sdf"
-		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
+		fmtHeight = fmtNormal + fmtHeightArgs
 
 	elif platform == "mac":
 		# bc1 on Toof has purple, green, yellow artifacts with bc7enc, and has more banding
@@ -468,7 +472,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f bc5"
 		fmtMask = " -f bc4"
 		fmtSDF = " -f bc4 -signed -sdf"
-		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
+		fmtHeight = fmtNormal + fmtHeightArgs
 
 	elif platform == "win":
 		# bc1 on Toof has purple, green, yellow artifacts with bc7enc, and has more banding
@@ -478,7 +482,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f bc5"
 		fmtMask = " -f bc4"
 		fmtSDF = " -f bc4 -signed -sdf"
-		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
+		fmtHeight = fmtNormal + fmtHeightArgs
 
 	elif platform == "any":
 		# output to s/rgba8u, then run through ktxsc to go to BasisLZ
@@ -488,7 +492,7 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtMetalRoughness = " -f rgba8 -swizzle r001"
 		fmtMask = " -f rgba8 -swizzle r001"
 		fmtSDF = " -f rgba8 -swizzle r001 -sdf"
-		fmtHeight = fmtNormal + " -height -heightScale 2 -wrap"
+		fmtHeight = fmtNormal + fmtHeightArgs
 
 	else:
 		return 1

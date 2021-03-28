@@ -697,8 +697,6 @@ NSArray<NSString*>* pasteboardTypes = @[
         // this will always be a linear color
         float4 c = _showSettings->textureResult;
         
-        // this saturates the value, so don't use for extended srgb
-        float4 s = linearToSRGB(c);
         
         int32_t x = _showSettings->textureResultX;
         int32_t y = _showSettings->textureResultY;
@@ -747,13 +745,19 @@ NSArray<NSString*>* pasteboardTypes = @[
         bool isFloat = isHdr;
         
         bool isDecodeSigned = isSignedFormat(_showSettings->decodedFormat);
+        if (isSigned && !isDecodeSigned) {
+            c.x = c.x * 2.0f - 1.0f;
+            c.y = c.y * 2.0f - 1.0f;
+            c.z = c.y * 2.0f - 1.0f;
+            c.w = c.y * 2.0f - 1.0f;
+        }
         
         if (isNormal) {
             float nx = c.x;
             float ny = c.y;
             
             // unorm -> snorm
-            if (!isDecodeSigned) {
+            if (!isSigned) {
                 nx = nx * 2.0f - 1.0f;
                 ny = ny * 2.0f - 1.0f;
             }
@@ -764,24 +768,27 @@ NSArray<NSString*>* pasteboardTypes = @[
             
             // print the underlying color (some nmaps are xy in 4 channels)
             string tmp;
-            printChannels(tmp, "ln: ", c, numChannels, isFloat, isDecodeSigned);
+            printChannels(tmp, "ln: ", c, numChannels, isFloat, isSigned);
             text += tmp;
             
             // print direction
             float4 d = float4m(nx,ny,nz,0.0f);
             isFloat = true;
-            isDecodeSigned = true;
-            printChannels(tmp, "dr: ", d, 3, isFloat, isDecodeSigned);
+            isSigned = true;
+            printChannels(tmp, "dr: ", d, 3, isFloat, isSigned);
             text += tmp;
         }
         else {
             // DONE: write some print helpers based on float4 and length
             string tmp;
-            printChannels(tmp, "ln: ", c, numChannels, isFloat, isDecodeSigned);
+            printChannels(tmp, "ln: ", c, numChannels, isFloat, isSigned);
             text += tmp;
             
             if (isSrgb) {
-                printChannels(tmp, "sr: ", s, numChannels, isFloat, isDecodeSigned);
+                // this saturates the value, so don't use for extended srgb
+                float4 s = linearToSRGB(c);
+                
+                printChannels(tmp, "sr: ", s, numChannels, isFloat, isSigned);
                 text += tmp;
             }
         }
@@ -1265,6 +1272,13 @@ NSArray<NSString*>* pasteboardTypes = @[
         // this turns it into a real path (supposedly works even with sandbox)
         NSURL * url = [NSURL URLWithString:urlString];
         
+        // convert the original path and then back to a url, otherwise reload fails
+        // when this file is replaced.
+        const char* filename = url.fileSystemRepresentation;
+        NSString* filenameString = [NSString stringWithUTF8String:filename];
+        
+        url = [NSURL fileURLWithPath:filenameString];
+        
         if ([self loadTextureFromURL:url]) {
             return YES;
         }
@@ -1368,7 +1382,16 @@ NSArray<NSString*>* pasteboardTypes = @[
     //NSLog(@"LoadTexture");
     
     const char* filename = url.fileSystemRepresentation;
-
+    
+    // Getting a url that returns nil on reload, probably some security thing
+    // consider storing a path instead of a url.  Probably when file is replaced
+    // the saved image url no longer points to a valid filename.
+    if (filename == nullptr)
+    {
+        KLOGE("kramv", "Fix this url returning nil issue");
+        return NO;
+    }
+    
     if (endsWithExtension(filename, ".zip")) {
         if (!self.imageURL || ![self.imageURL isEqualTo:url]) {
             BOOL isArchiveLoaded = [self loadArchive:filename];
