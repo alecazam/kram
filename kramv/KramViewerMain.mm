@@ -48,6 +48,64 @@ using namespace kram;
 
 @end
 
+//-------------
+
+@interface KramDocument : NSDocument
+
+@end
+
+
+@interface KramDocument ()
+
+@end
+
+@implementation KramDocument
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        // Add your subclass-specific initialization here.
+    }
+    return self;
+}
+
++ (BOOL)autosavesInPlace {
+    return NO; // YES;
+}
+
+// call when "new" called
+- (void)makeWindowControllers {
+    // Override to return the Storyboard file name of the document.
+    //NSStoryboard* storyboard = [NSStoryboard storyboardWithName:@"Main" bundle:nil];
+    //NSWindowController* controller = [storyboard instantiateControllerWithIdentifier:@"Document Window Controller"];
+    //[self addWindowController:controller];
+}
+
+
+- (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
+    // Insert code here to write your document to data of the specified type. If outError != NULL, ensure that you create and set an appropriate error if you return nil.
+    // Alternatively, you could remove this method and override -fileWrapperOfType:error:, -writeToURL:ofType:error:, or -writeToURL:ofType:forSaveOperation:originalContentsURL:error: instead.
+    [NSException raise:@"UnimplementedMethod" format:@"%@ is unimplemented", NSStringFromSelector(_cmd)];
+    return nil;
+}
+
+
+- (BOOL)readFromURL:(NSURL *)url ofType:(NSString *)typeName error:(NSError **)outError {
+    
+#if 0
+    MyMTKView* view = self.windowControllers.firstObject.window.contentView;
+    return [view loadTextureFromURL:url];
+#else
+    NSApplication* app = [NSApplication sharedApplication];
+    MyMTKView* view = app.mainWindow.contentView;
+    return [view loadTextureFromURL:url];
+#endif
+}
+
+
+@end
+
+
 
 //-------------
 
@@ -79,6 +137,7 @@ using namespace kram;
     return YES;
 }
 
+#if 1
 - (void)application:(NSApplication *)sender openURLs:(nonnull NSArray<NSURL *> *)urls
 {
     // see if this is called
@@ -90,7 +149,19 @@ using namespace kram;
     NSURL *url = urls.firstObject;
     [view loadTextureFromURL:url];
 }
-
+#else
+- (BOOL)application:(NSApplication *)sender openFile:(nonnull NSString*)filename
+{
+    // see if this is called
+    //NSLog(@"OpenURLs");
+    
+    // this is called from "Open In...", and also from OpenRecent documents menu
+    MyMTKView* view = sender.mainWindow.contentView;
+    
+    NSURL *url = [NSURL URLWithString:filename];
+    return [view loadTextureFromURL:url];
+}
+#endif
 
 - (IBAction)showAboutDialog:(id)sender {
     // calls openDocumentWithContentsOfURL above
@@ -1226,9 +1297,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     }
 }
 
-- (BOOL)acceptsFirstResponder {
-    return YES;
-}
+
 
 // Note: docs state that drag&drop should be handled automatically by UTI setup via openURLs
 // but I find these calls are needed, or it doesn't work.  Maybe need to register for NSRUL
@@ -1275,6 +1344,12 @@ NSArray<NSString*>* pasteboardTypes = @[
         // convert the original path and then back to a url, otherwise reload fails
         // when this file is replaced.
         const char* filename = url.fileSystemRepresentation;
+        if (filename == nullptr)
+        {
+            KLOGE("kramv", "Fix this drop url returning nil issue");
+            return NO;
+        }
+        
         NSString* filenameString = [NSString stringWithUTF8String:filename];
         
         url = [NSURL fileURLWithPath:filenameString];
@@ -1382,13 +1457,11 @@ NSArray<NSString*>* pasteboardTypes = @[
     //NSLog(@"LoadTexture");
     
     const char* filename = url.fileSystemRepresentation;
-    
-    // Getting a url that returns nil on reload, probably some security thing
-    // consider storing a path instead of a url.  Probably when file is replaced
-    // the saved image url no longer points to a valid filename.
     if (filename == nullptr)
     {
-        KLOGE("kramv", "Fix this url returning nil issue");
+        // Fixed by converting dropped urls into paths then back to a url.
+        // When file replaced the drop url is no longer valid.
+        KLOGE("kramv", "Fix this load url returning nil issue");
         return NO;
     }
     
@@ -1456,10 +1529,10 @@ NSArray<NSString*>* pasteboardTypes = @[
 
 
 
-// this doesn't seem to enable New/Open File menu items, but it should
+// this doesn't seem to enable New.  Was able to get "Open" to highlight by setting NSDocument as class for doc types.
 // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/EventArchitecture/EventArchitecture.html
 #if 0
-
+/*
 // "New"" calls this
 - (__kindof NSDocument *)openUntitledDocumentAndDisplay:(BOOL)displayDocument
                                                   error:(NSError * _Nullable *)outError
@@ -1484,7 +1557,14 @@ NSArray<NSString*>* pasteboardTypes = @[
 - (IBAction)newDocument {
     // calls openUntitledDocumentAndDisplay above
 }
+*/
 #endif
+
+
+- (BOOL)acceptsFirstResponder {
+    return YES;
+}
+
 
 @end
 
@@ -1534,9 +1614,6 @@ NSArray<NSString*>* pasteboardTypes = @[
     [_view addTrackingArea:_trackingArea];
 
 }
-
-
-
 
 @end
 

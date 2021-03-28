@@ -19,6 +19,8 @@
 			<array>
 				<string>org.khronos.ktx</string>
 			</array>
+			<key>NSDocumentClass</key>
+			<string>KramDocument</string>
 		</dict>
 		<dict>
 			<key>CFBundleTypeIconSystemGenerated</key>
@@ -33,6 +35,8 @@
 			<array>
 				<string>public.png</string>
 			</array>
+			<key>NSDocumentClass</key>
+			<string>KramDocument</string>
 		</dict>
 		<dict>
 			<key>CFBundleTypeIconSystemGenerated</key>
@@ -40,13 +44,15 @@
 			<key>CFBundleTypeName</key>
 			<string>KTX2</string>
 			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
+			<string>Editor</string>
 			<key>LSHandlerRank</key>
 			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>public.ktx2</string>
 			</array>
+			<key>NSDocumentClass</key>
+			<string>KramDocument</string>
 		</dict>
 		<dict>
 			<key>CFBundleTypeIconSystemGenerated</key>
@@ -61,6 +67,8 @@
 			<array>
 				<string>public.zip-archive</string>
 			</array>
+			<key>NSDocumentClass</key>
+			<string>KramDocument</string>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
@@ -85,5 +93,27 @@
 	<string>Main</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.image</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>KTX2</string>
+			<key>UTTypeIcons</key>
+			<dict/>
+			<key>UTTypeIdentifier</key>
+			<string>public.ktx2</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ktx2</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>
