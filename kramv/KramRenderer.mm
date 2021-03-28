@@ -462,6 +462,7 @@ using namespace simd;
         _showSettings->imageInfo = kramInfoToString(fullFilename, isVerbose);
         
         _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
+        _showSettings->decodedFormat = (MyMTLPixelFormat)texture.pixelFormat;
         
         _showSettings->lastFilename = fullFilename;
         _showSettings->lastTimestamp = timestamp;

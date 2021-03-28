@@ -142,6 +142,7 @@ public:
     
     // format before any transcode to supported formats
     MyMTLPixelFormat originalFormat;
+    MyMTLPixelFormat decodedFormat;
     
     void advanceDebugMode(bool isShiftKeyDown);
     

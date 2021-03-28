@@ -746,12 +746,14 @@ NSArray<NSString*>* pasteboardTypes = @[
         bool isNormal = _showSettings->isNormal;
         bool isFloat = isHdr;
         
+        bool isDecodeSigned = isSignedFormat(_showSettings->decodedFormat);
+        
         if (isNormal) {
             float nx = c.x;
             float ny = c.y;
             
             // unorm -> snorm
-            if (!isSigned) {
+            if (!isDecodeSigned) {
                 nx = nx * 2.0f - 1.0f;
                 ny = ny * 2.0f - 1.0f;
             }
@@ -762,23 +764,24 @@ NSArray<NSString*>* pasteboardTypes = @[
             
             // print the underlying color (some nmaps are xy in 4 channels)
             string tmp;
-            printChannels(tmp, "ln: ", c, numChannels, isFloat, isSigned);
+            printChannels(tmp, "ln: ", c, numChannels, isFloat, isDecodeSigned);
             text += tmp;
             
             // print direction
             float4 d = float4m(nx,ny,nz,0.0f);
             isFloat = true;
-            printChannels(tmp, "dr: ", d, 3, isFloat, isSigned);
+            isDecodeSigned = true;
+            printChannels(tmp, "dr: ", d, 3, isFloat, isDecodeSigned);
             text += tmp;
         }
         else {
             // DONE: write some print helpers based on float4 and length
             string tmp;
-            printChannels(tmp, "ln: ", c, numChannels, isFloat, isSigned);
+            printChannels(tmp, "ln: ", c, numChannels, isFloat, isDecodeSigned);
             text += tmp;
             
             if (isSrgb) {
-                printChannels(tmp, "sr: ", s, numChannels, isFloat, isSigned);
+                printChannels(tmp, "sr: ", s, numChannels, isFloat, isDecodeSigned);
                 text += tmp;
             }
         }
