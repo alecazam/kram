@@ -107,16 +107,13 @@
 #define USE_NEON 0
 #endif
 
+// not using simd/simd.h on Win or Linux, but clang would support
 #ifndef USE_SIMDLIB
 #if KRAM_MAC || KRAM_IOS
 #define USE_SIMDLIB 1
 #else
 #define USE_SIMDLIB 0
 #endif
-#endif
-
-#if !USE_SIMDLIB
-#define simd_make_float4(x, y, z, w) float4(x, y, z, w)
 #endif
 
 // use _Float16/_fp16 vs. other
@@ -219,32 +216,84 @@ public:
 #include "float4a.h"
 #endif
 
-// D3D hobbled non-pow2 mips by only supporting round down, not round up
-// So then OpenGL followed that.  And then Metal followd OpenGL.
-// Round up adds an extra mip level to the chain, but results in much better filtering.
-// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_non_power_of_two.txt
-// http://download.nvidia.com/developer/Papers/2005/NP2_Mipmapping/NP2_Mipmap_Creation.pdf
-#define ROUNDMIPSDOWN 1
-
-inline void mipDown(int32_t& w, int32_t& h)
+namespace simd
 {
-#if ROUNDMIPSDOWN
-    w = w / 2;
-    h = h / 2;
 
-    if (w < 1) w = 1;
-    if (h < 1) h = 1;
-#else
-    w = (w + 1) / 2;
-    h = (h + 1) / 2;
-#endif
+#if !USE_SIMDLIB
+
+
+// don't have float2/float3 type yet
+//// use instead of simd_make_float
+//inline float2 float2m(float x)
+//{
+//    return float2(x);
+//}
+//
+//inline float3 float3m(float x)
+//{
+//    return float3(x);
+//}
+//inline float3 float3m(float x, float y, float z)
+//{
+//    return float3(x, y, z);
+//}
+
+inline float4 float4m(float x)
+{
+    return float4(x);
 }
 
-namespace simd {
+inline float4 float4m(float x, float y, float z, float w)
+{
+    return float4(x, y, z, w);
+}
+//inline float4 float4m(const float3& v float w)
+//{
+//    return float4(v, w);
+//}
+
+#else
+
+// functional ctor
+inline float4 float4m(float3 v, float w)
+{
+    return vector4(v, w);
+}
+
+inline float2 float2m(float x, float y)
+{
+    return { x, y };
+}
+inline float3 float3m(float x, float y, float z)
+{
+    return { x, y, z };
+}
+inline float4 float4m(float x, float y, float z, float w)
+{
+    return { x, y, z, w };
+}
+
+inline float2 float2m(float x)
+{
+    return float2m(x,x);
+}
+
+inline float3 float3m(float x)
+{
+    return float3m(x,x,x);
+}
+
+inline float4 float4m(float x)
+{
+    return float4m(x,x,x,x);
+}
+
+#endif
+
 inline float4 saturate(const float4& v)
 {
-    const float4 kZero = simd_make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    const float4 kOne = simd_make_float4(1.0f, 1.0f, 1.0f, 1.0f);
+    const float4 kZero = float4m(0.0f, 0.0f, 0.0f, 0.0f);
+    const float4 kOne = float4m(1.0f, 1.0f, 1.0f, 1.0f);
     return min(max(v, kZero), kOne);
 }
 
@@ -255,7 +304,7 @@ inline float4 toFloat4(const half4& vv)
     // https://patchwork.ozlabs.org/project/gcc/patch/559BC75A.1080606@arm.com/
     // https://gcc.gnu.org/onlinedocs/gcc-7.5.0/gcc/Half-Precision.html
     // https://developer.arm.com/documentation/dui0491/i/Using-NEON-Support/Converting-vectors
-    return simd_make_float4((float)vv.x, (float)vv.y, (float)vv.z, (float)vv.w);
+    return float4m((float)vv.x, (float)vv.y, (float)vv.z, (float)vv.w);
 }
 inline half4 toHalf4(const float4& vv)
 {
@@ -311,11 +360,36 @@ inline half4 toHalf4(const float4& vv)
 }
 #endif
 
+}  // namespace simd
+
+//---------------------------------------
+
 // this just strips args
 #define macroUnusedArg(x)
 
 // this just strips args
 #define macroUnusedVar(x) (void)x
 
+// GL/D3D hobbled non-pow2 mips by only supporting round down, not round up
+// And then Metal followd OpenGL since it's the same hw and drivers.
+// Round up adds an extra mip level to the chain, but results in much better filtering.
+// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_non_power_of_two.txt
+// http://download.nvidia.com/developer/Papers/2005/NP2_Mipmapping/NP2_Mipmap_Creation.pdf
+#define ROUNDMIPSDOWN 1
 
-}  // namespace simd
+inline void mipDown(int32_t& w, int32_t& h)
+{
+#if ROUNDMIPSDOWN
+    w = w / 2;
+    h = h / 2;
+
+    if (w < 1) w = 1;
+    if (h < 1) h = 1;
+#else
+    w = (w + 1) / 2;
+    h = (h + 1) / 2;
+#endif
+}
+
+
+

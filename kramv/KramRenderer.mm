@@ -585,7 +585,7 @@ using namespace simd;
     // have one of these for each texture added to the viewer
     float scaleX = MAX(1, texture.width);
     float scaleY = MAX(1, texture.height);
-    _modelMatrix = float4x4(simd_make_float4(scaleX, scaleY, 1.0f, 1.0f));
+    _modelMatrix = float4x4(float4m(scaleX, scaleY, 1.0f, 1.0f));
     _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0);
     
     return YES;
@@ -596,7 +596,7 @@ using namespace simd;
     float4x4 panTransform = matrix4x4_translation(-panX, panY, 0.0);
     
     // scale
-    float4x4 viewMatrix = float4x4(simd_make_float4(zoom, zoom, 1.0f, 1.0f));
+    float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));
     viewMatrix = panTransform * viewMatrix;
     
     return _projectionMatrix * viewMatrix * _modelMatrix;
@@ -656,7 +656,7 @@ using namespace simd;
     float4x4 panTransform = matrix4x4_translation(-_showSettings->panX, _showSettings->panY, 0.0);
     
     // scale
-    _viewMatrix = float4x4(simd_make_float4(_showSettings->zoom, _showSettings->zoom, 1.0f, 1.0f));
+    _viewMatrix = float4x4(float4m(_showSettings->zoom, _showSettings->zoom, 1.0f, 1.0f));
     _viewMatrix = panTransform * _viewMatrix;
     
     // viewMatrix should typically be the inverse
@@ -864,7 +864,7 @@ using namespace simd;
         
         
         UniformsLevel uniformsLevel;
-        uniformsLevel.drawOffset = simd_make_float2(0.0f);
+        uniformsLevel.drawOffset = float2m(0.0f);
         
         if (_showSettings->isPreview) {
             // upload this on each face drawn, since want to be able to draw all mips/levels at once

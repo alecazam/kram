@@ -423,7 +423,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     float4x4 mInv = simd_inverse(projectionViewModelMatrix);
     mInv.columns[3].w = 1.0f; // fixes inverse, calls always leaves m[3][3] = 0.999
 
-    float4 pixel = mInv * simd_make_float4(clipPoint.x, clipPoint.y, 1.0f, 1.0f);
+    float4 pixel = mInv * float4m(clipPoint.x, clipPoint.y, 1.0f, 1.0f);
     //pixel /= pixel.w; // in case perspective used
 
     // allow pan to extend to show all
@@ -489,8 +489,8 @@ NSArray<NSString*>* pasteboardTypes = @[
     // https://stackoverflow.com/questions/30002361/image-zoom-centered-on-mouse-position
     
     // find the cursor location with respect to the image
-    float4 bottomLeftCorner = simd_make_float4(-0.5, -0.5f, 0.0f, 1.0f);
-    float4 topRightCorner = simd_make_float4(0.5, 0.5f, 0.0f, 1.0f);
+    float4 bottomLeftCorner = float4m(-0.5, -0.5f, 0.0f, 1.0f);
+    float4 topRightCorner = float4m(0.5, 0.5f, 0.0f, 1.0f);
     
     Renderer* renderer = (Renderer*)self.delegate;
     float4x4 newMatrix = [renderer computeImageTransform:_showSettings->panX panY:_showSettings->panY zoom:zoom];
@@ -625,7 +625,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     float4x4 mInv = simd_inverse(projectionViewModelMatrix);
     mInv.columns[3].w = 1.0f; // fixes inverse, calls always leaves m[3][3] = 0.999
     
-    float4 pixel = mInv * simd_make_float4(clipPoint.x, clipPoint.y, 1.0f, 1.0f);
+    float4 pixel = mInv * float4m(clipPoint.x, clipPoint.y, 1.0f, 1.0f);
     //pixel /= pixel.w; // in case perspective used
     
     // that's in model space (+/0.5f, +/0.5f), so convert to texture space
@@ -637,10 +637,13 @@ NSArray<NSString*>* pasteboardTypes = @[
     pixel.x *= 0.999f;
     pixel.y *= 0.999f;
     
+    float uvX = pixel.x;
+    float uvY = pixel.y;
+    
     // pixels are 0 based
     pixel.x *= _showSettings->imageBoundsX;
     pixel.y *= _showSettings->imageBoundsY;
-
+    
 // TODO: finish this logic, need to account for gaps too, and then isolate to a given level and mip to sample
 //    if (_showSettings->isShowingAllLevelsAndMips) {
 //        pixel.x *= _showSettings->totalLevels();
@@ -700,7 +703,43 @@ NSArray<NSString*>* pasteboardTypes = @[
         int32_t x = _showSettings->textureResultX;
         int32_t y = _showSettings->textureResultY;
         
+        // pixel at top-level mip
         sprintf(text, "px:%d %d\n", x, y);
+        
+        // show block num
+        int mipLOD = _showSettings->mipLOD;
+        
+        // TODO:: these block numbers are not accurate on Toof at 4x4
+        // there is resizing going on to the dimensions
+        
+        int mipX = _showSettings->imageBoundsX;
+        int mipY = _showSettings->imageBoundsY;
+        
+        for (int i = 0; i < mipLOD; ++i) {
+            mipX = (mipX+1) >> 1;
+            mipY = (mipY+1) >> 1;
+        }
+        mipX = std::max(1, mipX);
+        mipY = std::max(1, mipY);
+        
+        mipX = (int32_t)(uvX * mipX);
+        mipY = (int32_t)(uvY * mipY);
+        
+        // TODO: may want to return mip in pixel readback
+        // don't have it right now, so don't display if preview is enabled
+        if (_showSettings->isPreview)
+            mipLOD = 0;
+        
+        auto blockDims = blockDimsOfFormat(format);
+        if (blockDims.x > 1)
+            append_sprintf(text, "bpx: %d %d\n", mipX / blockDims.x, mipY / blockDims.y);
+        
+        // TODO: on astc if we have original blocks can run analysis from astc-encoder
+        // about each block.
+        
+        // show the mip pixel (only if not preview and mip changed)
+        if (mipLOD > 0 && !_showSettings->isPreview)
+            append_sprintf(text, "mpx: %d %d\n", mipX, mipY);
         
         // TODO: more criteria here, can have 2 channel PBR metal-roughness
         // also have 4 channel normals where zw store other data.
@@ -708,38 +747,38 @@ NSArray<NSString*>* pasteboardTypes = @[
         bool isFloat = isHdr;
         
         if (isNormal) {
-            float x = c.x;
-            float y = c.y;
+            float nx = c.x;
+            float ny = c.y;
             
             // unorm -> snorm
             if (!isSigned) {
-                x = x * 2.0f - 1.0f;
-                y = y * 2.0f - 1.0f;
+                nx = nx * 2.0f - 1.0f;
+                ny = ny * 2.0f - 1.0f;
             }
             
             // this is always postive on tan-space normals
             // assuming we're not viewing world normals
-            float z = sqrt(1.0f - std::min(x * x + y * y, 1.0f));
+            float nz = sqrt(1.0f - std::min(nx * nx + ny * ny, 1.0f));
             
             // print the underlying color (some nmaps are xy in 4 channels)
             string tmp;
-            printChannels(tmp, "c: ", c, numChannels, isFloat, isSigned);
+            printChannels(tmp, "ln: ", c, numChannels, isFloat, isSigned);
             text += tmp;
             
             // print direction
-            float4 d = simd_make_float4(x,y,z,0.0f);
+            float4 d = float4m(nx,ny,nz,0.0f);
             isFloat = true;
-            printChannels(tmp, "d: ", d, 3, isFloat, isSigned);
+            printChannels(tmp, "dr: ", d, 3, isFloat, isSigned);
             text += tmp;
         }
         else {
             // DONE: write some print helpers based on float4 and length
             string tmp;
-            printChannels(tmp, "l: ", c, numChannels, isFloat, isSigned);
+            printChannels(tmp, "ln: ", c, numChannels, isFloat, isSigned);
             text += tmp;
             
             if (isSrgb) {
-                printChannels(tmp, "s: ", s, numChannels, isFloat, isSigned);
+                printChannels(tmp, "sr: ", s, numChannels, isFloat, isSigned);
                 text += tmp;
             }
         }
@@ -820,8 +859,8 @@ NSArray<NSString*>* pasteboardTypes = @[
     
     // what if zoom moves it outside?
     
-    float4 pt0 = projectionViewModelMatrix * simd_make_float4(-0.5, -0.5f, 0.0f, 1.0f);
-    float4 pt1 = projectionViewModelMatrix * simd_make_float4(0.5, 0.5f, 0.0f, 1.0f);
+    float4 pt0 = projectionViewModelMatrix * float4m(-0.5, -0.5f, 0.0f, 1.0f);
+    float4 pt1 = projectionViewModelMatrix * float4m(0.5, 0.5f, 0.0f, 1.0f);
     
     // for perspective
     //pt0 /= pt0.w;

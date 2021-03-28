@@ -361,7 +361,7 @@ using namespace simd;
 using Vec4 = float4;
 // default ctor for float4(1) sets 1,0,0,0 in simd, but impls like Vec4 expect float4(repeating: x)
 #define VEC4_CONST(x) Vec4(makeVec4(x,x,x,x))
-#define makeVec4(x,y,z,w) simd_make_float4(x,y,z,w)
+#define makeVec4(x,y,z,w) float4m(x,y,z,w)
 
 inline bool CompareAnyLessThan(Vec4 x, Vec4 y) { return any(x < y); }
 inline Vec4 Min(Vec4 x, Vec4 y) { return min(x, y); }

@@ -26,13 +26,13 @@ struct Color {
 inline float4 ColorToUnormFloat4(const Color &value)
 {
     // simd lib can't ctor these even in C++, so will make abstracting harder
-    float4 c = simd_make_float4((float)value.r, (float)value.g, (float)value.b, (float)value.a);
+    float4 c = float4m((float)value.r, (float)value.g, (float)value.b, (float)value.a);
     return c / 255.0f;
 }
 
 inline float4 ColorToSnormFloat4(const Color &value)
 {
-    float4 c = simd_make_float4((float)value.r, (float)value.g, (float)value.b, (float)value.a);
+    float4 c = float4m((float)value.r, (float)value.g, (float)value.b, (float)value.a);
     return (c - float4(128.0f)) / 255.0f;
 }
 

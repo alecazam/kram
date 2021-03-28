@@ -912,16 +912,13 @@ bool Image::resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, Image
     return true;
 }
 
-// functional ctor
-inline float4 float4m(float x, float y, float z, float w)
-{
-    return { x, y, z, w };
-}
-
 // TODO: to hook this up, read 16u png into pixelsFlat, then gen an 8-bit normal xy
 // from that.  This is more like SDF where a single height is used.
 void Image::heightToNormals(float scale, bool isWrap)
 {
+    // see here
+    // https://developer.download.nvidia.com/CgTutorial/cg_tutorial_chapter08.html
+    
     int32_t w = _width;
     int32_t h = _height;
 
@@ -946,6 +943,28 @@ void Image::heightToNormals(float scale, bool isWrap)
         scaleX /= 255.0f;
         scaleY /= 255.0f;
     }
+ 
+    bool isSame = srcPixels8 == dstPixels8;
+    if (isFloat)
+        isSame = srcPixels == dstPixels;
+        
+    // TODO: doing this at image level doesn't support chunk conversion
+    // so this would only work for 2D images, and not atlas strips to a 2D array.
+    
+    // TODO: to copy 3 rows in cyclic buffer, if src == dst, and handle clamp/wrap
+    // by copying the first/last row.   For now disallow this.
+    // TODO: copy two rows here, then one row in the loop this would fundamentally
+    // change the algorithm, since all of these lookups assume the full srcImage
+    // really only need prev row, and previous height in row.  Larger kernel support
+    // to 3x3, 5x5, 7x7, 9x9.  This pattern is a 3x3 area with a cross
+    // where only 4 cardinal samples are used.  This bigger areas have bleed
+    // especially if this is run on a chart.  This is more for like terrain height maps.
+    
+    // this recomends generating a few maps, and blending between them
+    // https://vrayschool.com/normal-map/
+    
+    if (isSame)
+        return;
     
     for (int32_t y = 0; y < h; ++y) {
         int32_t y0 = y;
@@ -1003,8 +1022,9 @@ void Image::heightToNormals(float scale, bool isWrap)
 
                 dstPixel.x = normal.x;
                 dstPixel.y = normal.y;
-                dstPixel.z = normal.z; // can reconstruct
+                dstPixel.z = normal.z; // can reconstruct from xy
                 
+                // TODO: consider storing in z, easier to see data channel, not premul
                 // store height in alpha
                 dstPixel.w = srcPixels[y0 + x0].x;
             }
@@ -1027,12 +1047,12 @@ void Image::heightToNormals(float scale, bool isWrap)
 
                 dstPixel8.r = normal.x;
                 dstPixel8.g = normal.y;
-                dstPixel8.b = normal.z; // can reconstruct
+                dstPixel8.b = normal.z; // can reconstruct from xy
                 
+                // TODO: consider storing in z, easier to see data channel, not premul
                 // store height in alpha
                 dstPixel8.a = srcPixels8[y0 + x0].r;
             }
-                
         }
     }
 }

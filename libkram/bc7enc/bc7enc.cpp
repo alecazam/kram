@@ -48,11 +48,11 @@ using namespace simd;
 using vec4F = float4;
 
 static inline vec4F *vec4F_set_scalar(vec4F *pV, float x) {	*pV = vec4F(x); return pV; }
-static inline vec4F *vec4F_set(vec4F *pV, float x, float y, float z, float w) {	*pV = simd_make_float4(x,y,z,w); return pV; }
+static inline vec4F *vec4F_set(vec4F *pV, float x, float y, float z, float w) {	*pV = float4m(x,y,z,w); return pV; }
 static inline vec4F *vec4F_saturate_in_place(vec4F *pV) { *pV = saturate(*pV); return pV; }
 static inline vec4F vec4F_saturate(const vec4F *pV) { vec4F res = saturate(*pV); return res; }
 
-static inline vec4F vec4F_from_color(const color_quad_u8 *pC) { vec4F res = simd_make_float4((float)pC->r, (float)pC->g, (float)pC->b, (float)pC->a); return res; }
+static inline vec4F vec4F_from_color(const color_quad_u8 *pC) { vec4F res = float4m((float)pC->r, (float)pC->g, (float)pC->b, (float)pC->a); return res; }
 static inline vec4F vec4F_add(const vec4F *pLHS, const vec4F *pRHS) { vec4F res = *pLHS + *pRHS; return res; }
 static inline vec4F vec4F_sub(const vec4F *pLHS, const vec4F *pRHS) { vec4F res = *pLHS - *pRHS; return res; }
 static inline float vec4F_dot(const vec4F *pLHS, const vec4F *pRHS) { return dot(*pLHS, *pRHS); }

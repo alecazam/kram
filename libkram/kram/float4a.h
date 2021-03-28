@@ -174,7 +174,7 @@ public:
     float4() {}
 
     // TODO: problem is that Apple's simd::float4(val) is val,000, simd::float4(val, 0, 0, 0) is 0 (last element?)
-    // have to go through simd_make_float4(val, val, val, val) to get 4 values
+    // have to go through float4m(val, val, val, val) to get 4 values
     // This behavior doesn't match HLSL/GLSL and is an artifact of the comma operator messing things up.
     explicit float4(float val) { reg = _mm_set1_ps(val); }  // xyzw = val
     explicit float4(tType val) { reg = val; }

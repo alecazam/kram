@@ -76,7 +76,7 @@ inline float srgbToLinearFunc(float s)
 float4 linearToSRGB(float4 lin) {
     lin = saturate(lin);
     
-    return simd_make_float4(
+    return float4m(
         linearToSRGBFunc(lin.x),
         linearToSRGBFunc(lin.y),
         linearToSRGBFunc(lin.z),
@@ -168,7 +168,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
                                     vector<half4>& halfImage) const
 {
     Color zeroColor = { 0, 0, 0, 0 };
-    float4 zeroColorf = simd_make_float4(0.0, 0.0f, 0.0f, 0.f); // need a constant for this
+    float4 zeroColorf = float4m(0.0, 0.0f, 0.0f, 0.f); // need a constant for this
     half4 zeroColorh = toHalf4(zeroColorf);
     
     int32_t w = srcImage.width;
