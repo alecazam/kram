@@ -13,7 +13,7 @@
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
-	<string>$(PLUGIN_TYPE)</string>
+	<string>8BIF</string>
 	<key>CFBundleSignature</key>
 	<string>8BIM</string>
 </dict>
