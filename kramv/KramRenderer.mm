@@ -144,7 +144,11 @@ using namespace simd;
     /// Load Metal state objects and initialize renderer dependent view properties
 
     view.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-    view.colorPixelFormat = MTLPixelFormatBGRA8Unorm_sRGB; // TODO: adjust this to draw srgb or not, prefer RGBA
+    //view.colorPixelFormat = MTLPixelFormatBGRA8Unorm_sRGB; // TODO: adjust this to draw srgb or not, prefer RGBA
+    
+    // have a mix of linear color and normals, don't want srgb conversion until displayed
+    view.colorPixelFormat = MTLPixelFormatRGBA16Float;
+    
     view.sampleCount = 1;
 
     _mtlVertexDescriptor = [[MTLVertexDescriptor alloc] init];

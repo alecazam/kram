@@ -51,7 +51,7 @@ inline Color Unormfloat4ToColor(float4 value)
 inline Color Snormfloat4ToColor(float4 value)
 {
     Color c;
-    value = round(127.0f * value) + float4(127.0f);  // or is it 128? TODO: validatate last ctor sets all values
+    value = round(127.0f * value) + float4(128.0f); 
     c.r = (uint8_t)value.x;
     c.g = (uint8_t)value.y;
     c.b = (uint8_t)value.z;

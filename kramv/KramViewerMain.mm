@@ -77,7 +77,7 @@ using namespace kram;
 - (void)makeWindowControllers {
     // Override to return the Storyboard file name of the document.
     //NSStoryboard* storyboard = [NSStoryboard storyboardWithName:@"Main" bundle:nil];
-    //NSWindowController* controller = [storyboard instantiateControllerWithIdentifier:@"Document Window Controller"];
+    //NSWindowController* controller = [storyboard instantiateControllerWithIdentifier:@"NameNeeded];
     //[self addWindowController:controller];
 }
 
@@ -137,7 +137,6 @@ using namespace kram;
     return YES;
 }
 
-#if 1
 - (void)application:(NSApplication *)sender openURLs:(nonnull NSArray<NSURL *> *)urls
 {
     // see if this is called
@@ -149,19 +148,6 @@ using namespace kram;
     NSURL *url = urls.firstObject;
     [view loadTextureFromURL:url];
 }
-#else
-- (BOOL)application:(NSApplication *)sender openFile:(nonnull NSString*)filename
-{
-    // see if this is called
-    //NSLog(@"OpenURLs");
-    
-    // this is called from "Open In...", and also from OpenRecent documents menu
-    MyMTKView* view = sender.mainWindow.contentView;
-    
-    NSURL *url = [NSURL URLWithString:filename];
-    return [view loadTextureFromURL:url];
-}
-#endif
 
 - (IBAction)showAboutDialog:(id)sender {
     // calls openDocumentWithContentsOfURL above
@@ -663,6 +649,16 @@ NSArray<NSString*>* pasteboardTypes = @[
     [self updateEyedropper];
 }
 
+inline float4 toPremul(const float4& c)
+{
+    // premul with a
+    float4 cpremul = c;
+    float a = c.a;
+    cpremul.w = 1.0f;
+    cpremul *= a;
+    return cpremul;
+}
+
 - (void)updateEyedropper {
     if ((!_showSettings->isHudShown)) {
         return;
@@ -819,8 +815,8 @@ NSArray<NSString*>* pasteboardTypes = @[
         if (isSigned && !isDecodeSigned) {
             c.x = c.x * 2.0f - 1.0f;
             c.y = c.y * 2.0f - 1.0f;
-            c.z = c.y * 2.0f - 1.0f;
-            c.w = c.y * 2.0f - 1.0f;
+            c.z = c.z * 2.0f - 1.0f;
+            c.w = c.w * 2.0f - 1.0f;
         }
         
         if (isNormal) {
@@ -861,6 +857,22 @@ NSArray<NSString*>* pasteboardTypes = @[
                 
                 printChannels(tmp, "sr: ", s, numChannels, isFloat, isSigned);
                 text += tmp;
+            }
+            
+            // display the premul values too
+            if (c.a < 1.0f)
+            {
+                printChannels(tmp, "lnp: ", toPremul(c), numChannels, isFloat, isSigned);
+                text += tmp;
+                
+                // TODO: do we need the premul srgb color too?
+                if (isSrgb) {
+                    // this saturates the value, so don't use for extended srgb
+                    float4 s = linearToSRGB(c);
+                    
+                    printChannels(tmp, "srp: ", toPremul(s), numChannels, isFloat, isSigned);
+                    text += tmp;
+                }
             }
         }
         

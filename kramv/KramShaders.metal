@@ -129,6 +129,86 @@ vertex ColorInOut DrawVolumeVS(
     return out;
 }
 
+float toUnorm8(float c)
+{
+    return (127.0 / 255.0) * c + (128 / 255.0);
+}
+float2 toUnorm8(float2 c)
+{
+    return (127.0 / 255.0) * c + float2(128 / 255.0);
+}
+float3 toUnorm8(float3 c)
+{
+    return (127.0 / 255.0) * c + float3(128 / 255.0);
+}
+
+float toUnorm(float c)
+{
+    return 0.5 * c + 0.5;
+}
+float2 toUnorm(float2 c)
+{
+    return 0.5 * c + 0.5;
+}
+float3 toUnorm(float3 c)
+{
+    return 0.5 * c + 0.5;
+}
+
+float toSnorm8(float c)
+{
+    return (255.0 / 127.0) * c - (128 / 127.0);
+}
+
+float2 toSnorm8(float2 c)
+{
+    return (255.0 / 127.0) * c - float2(128 / 127.0);
+}
+
+float3 toSnorm8(float3 c)
+{
+    return (255.0 / 127.0) * c - float3(128 / 127.0);
+}
+
+float recip(float c)
+{
+    return 1.0 / c;
+}
+float2 recip(float2 c)
+{
+    return 1.0 / c;
+}
+float3 recip(float3 c)
+{
+    return 1.0 / c;
+}
+float4 recip(float4 c)
+{
+    return 1.0 / c;
+}
+
+
+// scale and reconstruct normal
+float3 toNormal(float3 n)
+{
+    // make sure the normal doesn't exceed the unit circle
+    // many reconstructs skip and get a non-unit or z=0 normal
+    // might make optional or flag pixel with a debug mode that exeed
+    float len = length_squared(n.xy);
+    if (len > 0.99 * 0.99)
+    {
+        len *= 1.001; // so we have a non-zero z component below
+        n.xy *= rsqrt(len);
+    }
+
+    // make sure always have non-zero z, or get Nan after it knocks out N of TBN
+    // since that's often pointing purely in 001 direction.
+    len = min(0.999, len);
+    n.z = sqrt(1 - len);
+    return n;
+}
+
+
 float4 DrawPixels(
     ColorInOut in [[stage_in]],
     constant Uniforms& uniforms,
@@ -142,7 +222,7 @@ float4 DrawPixels(
         if (uniforms.isSDF) {
             if (!uniforms.isSigned) {
                 // convert to signed normal to compute z
-                c.r = 2.0 * c.r - 256.0 / 255.0; // 0 = 128 on unorm data on 8u
+                c.r = toSnorm8(c.r); // 0 = 128 on unorm data on 8u
             }
             
             // 0.0 is the boundary of visible vs. non-visible and not a true alpha
@@ -157,7 +237,7 @@ float4 DrawPixels(
             float dist = c.r;
 
             // size of one pixel line
-            float onePixel = 1.0 / max(0.0001, length(float2(dfdx(dist), dfdy(dist))));
+            float onePixel = recip(max(0.0001, length(float2(dfdx(dist), dfdy(dist)))));
 
             // distance to edge in pixels (scalar)
             float pixelDist = dist * onePixel;
@@ -178,10 +258,10 @@ float4 DrawPixels(
             // to signed
             if (!uniforms.isSigned) {
                 // convert to signed normal to compute z
-                c.rg = 2.0 * c.rg - float2(256.0 / 255.0); // 0 = 128 on unorm data on 8u
+                c.rg = toSnorm8(c.rg);
             }
             
-            c.z = sqrt(1 - saturate(dot(c.xy, c.xy))); // z always positive
+            c.rgb = toNormal(c.rgb);
             
             float3 lightDir = normalize(float3(1,1,1));
             float3 lightColor = float3(1,1,1);
@@ -213,7 +293,7 @@ float4 DrawPixels(
         else {
             // to unorm
             if (uniforms.isSigned) {
-                c.xyz = c.xyz * 0.5 + 0.5;
+                c.xyz = toUnorm(c.xyz);
             }
             
             // to premul, but also need to see without premul
@@ -227,7 +307,7 @@ float4 DrawPixels(
         if (uniforms.numChannels == 1) {
             // toUnorm
             if (uniforms.isSigned) {
-                c.x = c.x * 0.5 + 0.5;
+                c.x = toUnorm(c.x);
             }
         }
         else if (uniforms.isNormal) {
@@ -239,13 +319,13 @@ float4 DrawPixels(
             // to signed
             if (!uniforms.isSigned) {
                 // convert to signed normal to compute z
-                c.rg = 2.0 * c.rg - float2(256.0 / 255.0); // 0 = 128 on unorm data
+                c.rg = toSnorm8(c.rg);
             }
             
-            c.z = sqrt(1 - saturate(dot(c.xy, c.xy))); // z always positive
+            c.rgb = toNormal(c.rgb);
             
             // from signed, to match other editors that don't display signed data
-            c.xyz = c.xyz * 0.5 + 0.5; // can sample from this
+            c.xyz = toUnorm(c.xyz); // can sample from this
             
             // view data as abs magnitude
             //c.xyz = abs(c.xyz); // bright on extrema, but no indicator of sign (use r,g viz)
@@ -258,7 +338,7 @@ float4 DrawPixels(
             // signed 1/2 channel formats return sr,0,0, and sr,sg,0 for rgb?
             // May want to display those as 0 not 0.5.
             if (uniforms.isSigned) {
-                c.xyz = c.xyz * 0.5 + 0.5;
+                c.xyz = toUnorm(c.xyz);
             }
             
             // to premul, but also need to see without premul
@@ -307,7 +387,7 @@ float4 DrawPixels(
 
     
     
-    if (uniforms.debugMode != ShDebugModeNone && c.a != 0.0f) {
+    if (uniforms.debugMode != ShDebugModeNone && c.a != 0.0) {
         
         bool isHighlighted = false;
         if (uniforms.debugMode == ShDebugModeTransparent) {
@@ -357,7 +437,7 @@ float4 DrawPixels(
         // TODO: is it best to highlight the interest pixels in red
         // or the negation of that to see which ones aren't.
         if (isHighlighted) {
-            float3 highlightColor = float3(1.0f, 0.0f, 1.0f);
+            float3 highlightColor = float3(1, 0, 1);
             c.rgb = highlightColor;
         }
         
@@ -375,7 +455,7 @@ float4 DrawPixels(
         // DONE: don't draw grid if too small
         
         // fwidth = abs(ddx(p)) + abs(ddy(p))
-        float2 lineWidth = 1.0 / fwidth(pixels);
+        float2 lineWidth = recip(fwidth(pixels));
         
         // only show grid when pixels are 8px or bigger
         if (max(lineWidth.x, lineWidth.y) >= 8.0) {
