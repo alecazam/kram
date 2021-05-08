@@ -53,6 +53,9 @@ void ShowSettings::advanceDebugMode(bool isShiftKeyDown) {
     if (debugMode == DebugModePosY && !(isNormal)) {
         advanceDebugMode(isShiftKeyDown);
     }
+    if (debugMode == DebugModeCircleXY && !(isNormal)) {
+        advanceDebugMode(isShiftKeyDown);
+    }
     
     // TODO: have a clipping mode against a variable range too, only show pixels within that range
     // to help isolate problem pixels.  Useful for depth, and have auto-range scaling for it and hdr.

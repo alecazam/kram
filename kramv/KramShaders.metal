@@ -135,11 +135,11 @@ float toUnorm8(float c)
 }
 float2 toUnorm8(float2 c)
 {
-    return (127.0 / 255.0) * c + float2(128 / 255.0);
+    return (127.0 / 255.0) * c + (128 / 255.0);
 }
 float3 toUnorm8(float3 c)
 {
-    return (127.0 / 255.0) * c + float3(128 / 255.0);
+    return (127.0 / 255.0) * c + (128 / 255.0);
 }
 
 float toUnorm(float c)
@@ -162,12 +162,17 @@ float toSnorm8(float c)
 
 float2 toSnorm8(float2 c)
 {
-    return (255.0 / 127.0) * c - float2(128 / 127.0);
+    return (255.0 / 127.0) * c - (128 / 127.0);
 }
 
 float3 toSnorm8(float3 c)
 {
-    return (255.0 / 127.0) * c - float3(128 / 127.0);
+    return (255.0 / 127.0) * c - (128 / 127.0);
+}
+
+float2 toSnorm(float2 c)
+{
+    return 2 * c - 1.0;
 }
 
 float recip(float c)
@@ -194,20 +199,29 @@ float3 toNormal(float3 n)
     // make sure the normal doesn't exceed the unit circle
     // many reconstructs skip and get a non-unit or z=0 normal
     // might make optional or flag pixel with a debug mode that exeed
-    float len = length_squared(n.xy);
-    if (len > 0.99 * 0.99)
+    float len2 = length_squared(n.xy);
+    const float maxLen2 = 0.99 * 0.99;
+    
+    if (len2 > maxLen2)
     {
-        len *= 1.001; // so we have a non-zero z component below
-        n.xy *= rsqrt(len);
+        len2 *= 1.001; // so we have a non-zero z component below
+        n.xy *= rsqrt(len2);
+        len2 = maxLen2;
     }
-
+    //len2 = min(0.99, len2);
+    
     // make sure always have non-zero z, or get Nan after it knocks out N of TBN
     // since that's often pointing purely in 001 direction.
-    len = min(0.999, len);
-    n.z = sqrt(1 - len);
+    n.z = sqrt(1 - len2);
     return n;
 }
 
+// TODO: do more test shapes, but that affects eyedropper
+// use mikktspace, gen bitan in frag shader with sign, don't normalize vb/vt
+// see http://www.mikktspace.com/
+
+// TODO: eliminate the toUnorm() calls below, rendering to rgba16f
+// but also need to remove conversion code on cpu side expecting unorm in eyedropper
 
 float4 DrawPixels(
     ColorInOut in [[stage_in]],
@@ -433,7 +447,14 @@ float4 DrawPixels(
                 isHighlighted = true;
             }
         }
-        
+        else if (uniforms.debugMode == ShDebugModeCircleXY) {
+            // flag pixels that would throw off normal reconstruct sqrt(1-dot(n.xy,n.xy))
+            // see code above in shader that helps keep that from z = 0
+            float len2 = length_squared(toSnorm(c.rg));
+            if (len2 > (0.99 * 0.99)) {
+                isHighlighted = true;
+            }
+        }
         // TODO: is it best to highlight the interest pixels in red
         // or the negation of that to see which ones aren't.
         if (isHighlighted) {

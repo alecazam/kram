@@ -80,6 +80,7 @@ typedef NS_ENUM(int32_t, ShaderDebugMode)
     
     ShDebugModePosX = 5,
     ShDebugModePosY = 6,
+    ShDebugModeCircleXY = 7,
     
     ShDebugModeCount
 };

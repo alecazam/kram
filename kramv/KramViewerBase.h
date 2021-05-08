@@ -40,6 +40,7 @@ enum DebugMode
     
     DebugModePosX = 5,
     DebugModePosY = 6,
+    DebugModeCircleXY = 7,
     
     DebugModeCount
 };

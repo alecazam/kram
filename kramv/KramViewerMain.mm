@@ -1072,6 +1072,7 @@ inline float4 toPremul(const float4& c)
                 case DebugModeHDR: text = "Debug HDR"; break;
                 case DebugModePosX: text = "Debug +X"; break;
                 case DebugModePosY: text = "Debug +Y"; break;
+                case DebugModeCircleXY: text = "Debug XY>=1"; break;
                 default: break;
             }
             isChanged = true;
