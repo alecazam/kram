@@ -46,6 +46,8 @@ using namespace kram;
 
 - (BOOL)loadTextureFromURL:(NSURL*)url;
 
+- (void)setHudText:(const char*)text;
+
 @end
 
 //-------------
@@ -92,13 +94,37 @@ using namespace kram;
 
 - (BOOL)readFromURL:(NSURL *)url ofType:(NSString *)typeName error:(NSError **)outError {
     
+    // TODO: this recent menu only seems to work the first time
+    // and not in subsequent calls to the same entry.  readFromUrl isn't even called.
+    // So don't get a chance to switch back to a recent texture.
+    // Maybe there's some list of documents created and so it doesn't
+    // think the file needs to be reloaded.
+    //
+    // Note: if I return NO from this call then a dialog pops up that image
+    // couldn't be loaded, but then the readFromURL is called everytime a new
+    // image is picked from the list.
+    
+    // called from OpenRecent documents menu
+    
 #if 0
     MyMTKView* view = self.windowControllers.firstObject.window.contentView;
     return [view loadTextureFromURL:url];
 #else
     NSApplication* app = [NSApplication sharedApplication];
     MyMTKView* view = app.mainWindow.contentView;
-    return [view loadTextureFromURL:url];
+    BOOL success = [view loadTextureFromURL:url];
+    if (success)
+    {
+        [view setHudText:""];
+    }
+    
+    // Let's see the document list
+//    NSDocumentController* dc = [NSDocumentController sharedDocumentController];
+//    NSDocument* currentDoc = dc.currentDocument;
+//
+//    KLOGW("kramv", "This is document count %d", (int)dc.documents.count, );
+
+    return success;
 #endif
 }
 
@@ -139,10 +165,7 @@ using namespace kram;
 
 - (void)application:(NSApplication *)sender openURLs:(nonnull NSArray<NSURL *> *)urls
 {
-    // see if this is called
-    //NSLog(@"OpenURLs");
-    
-    // this is called from "Open In...", and also from OpenRecent documents menu
+    // this is called from "Open In..."
     MyMTKView* view = sender.mainWindow.contentView;
     
     NSURL *url = urls.firstObject;
@@ -659,6 +682,26 @@ inline float4 toPremul(const float4& c)
     return cpremul;
 }
 
+float toSnorm8(float c)
+{
+    return (255.0 / 127.0) * c - (128 / 127.0);
+}
+
+float2 toSnorm8(float2 c)
+{
+    return (255.0 / 127.0) * c - (128 / 127.0);
+}
+
+float3 toSnorm8(float3 c)
+{
+    return (255.0 / 127.0) * c - (128 / 127.0);
+}
+float4 toSnorm8(float4 c)
+{
+    return (255.0 / 127.0) * c - (128 / 127.0);
+}
+
+
 - (void)updateEyedropper {
     if ((!_showSettings->isHudShown)) {
         return;
@@ -813,10 +856,7 @@ inline float4 toPremul(const float4& c)
         
         bool isDecodeSigned = isSignedFormat(_showSettings->decodedFormat);
         if (isSigned && !isDecodeSigned) {
-            c.x = c.x * 2.0f - 1.0f;
-            c.y = c.y * 2.0f - 1.0f;
-            c.z = c.z * 2.0f - 1.0f;
-            c.w = c.w * 2.0f - 1.0f;
+            c = toSnorm8(c.x);
         }
         
         if (isNormal) {
@@ -825,13 +865,20 @@ inline float4 toPremul(const float4& c)
             
             // unorm -> snorm
             if (!isSigned) {
-                nx = nx * 2.0f - 1.0f;
-                ny = ny * 2.0f - 1.0f;
+                nx = toSnorm8(nx);
+                ny = toSnorm8(ny);
             }
+            
+            // Note: not clamping nx,ny to < 1 like in shader
             
             // this is always postive on tan-space normals
             // assuming we're not viewing world normals
-            float nz = sqrt(1.0f - std::min(nx * nx + ny * ny, 1.0f));
+            const float maxLen2 = 0.999 * 0.999;
+            float len2 = nx * nx + ny * ny;
+            if (len2 > maxLen2)
+                len2 = maxLen2;
+            
+            float nz = sqrt(1.0f - len2);
             
             // print the underlying color (some nmaps are xy in 4 channels)
             string tmp;
@@ -1368,6 +1415,8 @@ inline float4 toPremul(const float4& c)
         url = [NSURL fileURLWithPath:filenameString];
         
         if ([self loadTextureFromURL:url]) {
+            [self setHudText:""];
+            
             return YES;
         }
    }
@@ -1525,8 +1574,11 @@ inline float4 toPremul(const float4& c)
     
     self.window.title = [NSString stringWithUTF8String: title.c_str()];
     
+     // topmost entry will be the recently opened document
+    // some entries may go stale if directories change, not sure who validates the list
+    
     // add to recent document menu
-    NSDocumentController *dc = [NSDocumentController sharedDocumentController];
+    NSDocumentController* dc = [NSDocumentController sharedDocumentController];
     [dc noteNewRecentDocumentURL:url];
 
     self.imageURL = url;

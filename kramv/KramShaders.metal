@@ -169,6 +169,10 @@ float3 toSnorm8(float3 c)
 {
     return (255.0 / 127.0) * c - (128 / 127.0);
 }
+float4 toSnorm8(float4 c)
+{
+    return (255.0 / 127.0) * c - (128 / 127.0);
+}
 
 float2 toSnorm(float2 c)
 {
@@ -200,7 +204,7 @@ float3 toNormal(float3 n)
     // many reconstructs skip and get a non-unit or z=0 normal
     // might make optional or flag pixel with a debug mode that exeed
     float len2 = length_squared(n.xy);
-    const float maxLen2 = 0.99 * 0.99;
+    const float maxLen2 = 0.999 * 0.999;
     
     if (len2 > maxLen2)
     {
@@ -208,7 +212,7 @@ float3 toNormal(float3 n)
         n.xy *= rsqrt(len2);
         len2 = maxLen2;
     }
-    //len2 = min(0.99, len2);
+    //len2 = min(0.999, len2);
     
     // make sure always have non-zero z, or get Nan after it knocks out N of TBN
     // since that's often pointing purely in 001 direction.
@@ -451,7 +455,7 @@ float4 DrawPixels(
             // flag pixels that would throw off normal reconstruct sqrt(1-dot(n.xy,n.xy))
             // see code above in shader that helps keep that from z = 0
             float len2 = length_squared(toSnorm(c.rg));
-            if (len2 > (0.99 * 0.99)) {
+            if (len2 > (0.999 * 0.999)) {
                 isHighlighted = true;
             }
         }

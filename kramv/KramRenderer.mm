@@ -585,6 +585,8 @@ using namespace simd;
     
     _showSettings->zoom = _showSettings->zoomFit;
     
+    // wish could keep existing setting, but new texture might not
+    // be supported debugMode for new texture
     _showSettings->debugMode = DebugMode::DebugModeNone;
     
     // have one of these for each texture added to the viewer
