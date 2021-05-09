@@ -31,15 +31,15 @@ Compute shaders are used to display a single pixel sample from the gpu texture. 
 In non-preview mode, point sampling in a pixel shader is used to show exact pixel values of a single mip, array, and face.  Debug modes provide pixel analysis.  KramLoader shows synchronous cpu upload to a private Metal texture, but does not yet supply the underlying KTXImage.  Pinch zoom and panning tries to keep the image from onscreen, and zoom is to the cursor so navigating feels intuitive.
 
 ```
-Formats - R/RG/RGBA 8/16F/32F, BC/ETC2/ASTC
+Formats - R/RG/RGBA 8/16F/32F, BC/ETC2/ASTC,  RGB has limited import support
 Container Types - KTX, KTX2, PNG
-Content Types - Albedo, Normal, SDF
-Debug modes - transparent, color, gray, +x, +y
+Content Types - Albedo, Normal, SDF, Height
+Debug modes - transparent, color, gray, +x, +y, xy >= 1
 Texture Types - 1darray (no mips), 2d, 2darray, 3d (no mips), cube, cube array
 
 / - show keyboard shortcuts
 O - toggle preview, disables debug mode, shows lit normals, and mips and filtering are enabled
-⇧D - toggle pixel grid, must be zoomed-in to see it (block grid with ⇧)
+⇧D - toggle through none, pixel grid, block grid, atlas grid (32, 64, 128, 256), must be zoomed-in to see pixel grid
 ⇧E - advance debug mode, this is texture content specific (reverse dir with ⇧)
 H - toggle hud
 I - show texture info in overlay
