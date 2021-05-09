@@ -6,6 +6,283 @@
 
 using namespace metal;
 
+//---------------------------------
+// helpers
+
+float toUnorm8(float c)
+{
+    return (127.0 / 255.0) * c + (128.0 / 255.0);
+}
+float2 toUnorm8(float2 c)
+{
+    return (127.0 / 255.0) * c + (128.0 / 255.0);
+}
+float3 toUnorm8(float3 c)
+{
+    return (127.0 / 255.0) * c + (128.0 / 255.0);
+}
+float4 toUnorm8(float4 c)
+{
+    return (127.0 / 255.0) * c + (128.0 / 255.0);
+}
+
+float toUnorm(float c)
+{
+    return 0.5 * c + 0.5;
+}
+float2 toUnorm(float2 c)
+{
+    return 0.5 * c + 0.5;
+}
+float3 toUnorm(float3 c)
+{
+    return 0.5 * c + 0.5;
+}
+float4 toUnorm(float4 c)
+{
+    return 0.5 * c + 0.5;
+}
+
+float toSnorm8(float c)
+{
+    return (255.0 / 127.0) * c - (128.0 / 127.0);
+}
+float2 toSnorm8(float2 c)
+{
+    return (255.0 / 127.0) * c - (128.0 / 127.0);
+}
+float3 toSnorm8(float3 c)
+{
+    return (255.0 / 127.0) * c - (128.0 / 127.0);
+}
+float4 toSnorm8(float4 c)
+{
+    return (255.0 / 127.0) * c - (128.0 / 127.0);
+}
+
+half2 toSnorm8(half2 c)
+{
+    return (255.0h / 127.0h) * c - (128.0h / 127.0h);
+}
+
+float toSnorm(float c)
+{
+    return 2.0 * c - 1.0;
+}
+float2 toSnorm(float2 c)
+{
+    return 2.0 * c - 1.0;
+}
+float3 toSnorm(float3 c)
+{
+    return 2.0 * c - 1.0;
+}
+float4 toSnorm(float4 c)
+{
+    return 2.0 * c - 1.0;
+}
+
+float recip(float c)
+{
+    return 1.0 / c;
+}
+float2 recip(float2 c)
+{
+    return 1.0 / c;
+}
+float3 recip(float3 c)
+{
+    return 1.0 / c;
+}
+float4 recip(float4 c)
+{
+    return 1.0 / c;
+}
+
+half toHalf(float c)
+{
+    return half(c);
+}
+half2 toHalf(float2 c)
+{
+    return half2(c);
+}
+half3 toHalf(float3 c)
+{
+    return half3(c);
+}
+half4 toHalf(float4 c)
+{
+    return half4(c);
+}
+
+float toFloat(half c)
+{
+    return float(c);
+}
+float2 toFloat(half2 c)
+{
+    return float2(c);
+}
+float3 toFloat(half3 c)
+{
+    return float3(c);
+}
+float4 toFloat(half4 c)
+{
+    return float4(c);
+}
+
+//-------------------------------------------
+// functions
+
+// reconstruct normal from xy, n.z ignored
+float3 toNormal(float3 n)
+{
+    // make sure the normal doesn't exceed the unit circle
+    // many reconstructs skip and get a non-unit or n.z=0
+    // this can all be done with half math too
+    
+    float len2 = length_squared(n.xy);
+    const float maxLen2 = 0.999 * 0.999;
+    
+    if (len2 <= maxLen2) {
+        // textures should be corrected to always take this path
+        n.z = sqrt(1.0 - len2);
+    }
+    else {
+        n.xy *= 0.999 * rsqrt(len2);
+        n.z = 0.0447108; // sqrt(1-maxLen2)
+    }
+    
+    return n;
+}
+
+// reconstruct normal from xy, n.z ignored
+half3 toNormal(half3 n)
+{
+    // make sure the normal doesn't exceed the unit circle
+    // many reconstructs skip and get a non-unit or n.z=0
+    // this can all be done with half math too
+    
+    half len2 = length_squared(n.xy);
+    const half maxLen2 = 0.999h * 0.999h;
+    
+    if (len2 <= maxLen2) {
+        // textures should be corrected to always take this path
+        n.z = sqrt(1.0h - len2);
+    }
+    else {
+        n.xy *= 0.999h * rsqrt(len2);
+        n.z = 0.0447108h; // sqrt(1-maxLen2)
+    }
+    
+    return n;
+}
+
+// use mikktspace, gen bitan in frag shader with sign, don't normalize vb/vt
+// see http://www.mikktspace.com/
+half3 transformNormal(half4 tangent, half3 vertexNormal,
+                      texture2d<half> texture, sampler s, float2 uv, bool isSigned = true)
+{
+    // Normalize tangent/vertexNormal in vertex shader
+    // but don't renormalize interpolated tangent, vertexNormal in fragment shader
+    // Reconstruct bitan in frag shader
+    // https://bgolus.medium.com/generating-perfect-normal-maps-for-unity-f929e673fc57
+
+    half4 nmap = texture.sample(s, uv);
+    if (!isSigned) {
+        nmap.xy = toSnorm8(nmap.xy);
+    }
+    half3 normal = toNormal(nmap.xyz);
+    
+    // now transform by basis and normalize from any shearing, and since interpolated basis vectors
+    // are not normalized
+    half3x3 tbn = half3x3(tangent.xyz, tangent.w * cross(vertexNormal, tangent.xyz), vertexNormal);
+    normal = tbn * normal;
+    return normalize(normal);
+}
+
+// TODO: have more bones, or read from texture instead of uniforms
+// can then do instanced skining, but vfetch lookup slower
+#define maxBones 128
+
+// this is for vertex shader
+void skinPosAndBasis(thread float4& position, thread float3& tangent, thread float3& normal,
+                     uint4 indices, float4 weights, float3x4 bones[maxBones])
+{
+    // TODO: might do this as up to 12x vtex lookup, fetch from buffer texture
+    // but uniforms after setup would be faster if many bones
+    float3x4 bindPoseToBoneTransform = bones[indices.x];
+    
+    if (weights[0] != 1.0)
+    {
+        // weight the bone transforms
+        bindPoseToBoneTransform *= weights[0];
+        
+        // with RGB10A2U have 2 bits in weights.w to store the boneCount
+        // or could count non-zero weights, make sure to set w > 0 if 4 bones
+        // the latter is more compatible with more conent
+        
+        //int numBones = 1 + int(weights.w * 3.0);
+        
+        int numBones = int(dot(float4(weights > 0.0), float4(1)));
+        
+        // reconstruct so can store weights in RGB10A2U
+        if (numBones == 4)
+            weights.w = 1 - saturate(dot(weights.xyz, float3(1.0)));
+        
+        for (int i = 1; i < numBones; ++i)
+        {
+            bindPoseToBoneTransform += bones[indices[i]] * weights[i];
+        }
+    }
+    
+    // 3x4 is a transpose of 4x4 transform
+    position.xyz = position * bindPoseToBoneTransform;
+    
+    // not dealing with non-uniform scale correction
+    // see scale2 handling in transformBasis, a little different with transpose of 3x4
+    
+    tangent = (float4(tangent, 0.0) * bindPoseToBoneTransform);
+    normal  = (float4(normal, 0.0)  * bindPoseToBoneTransform);
+}
+
+// this is for vertex shader
+void transformBasis(thread float3& tangent, thread float3& normal,
+                    float4x4 modelToWorldTfm, bool isScaled = false)
+{
+    tangent = (modelToWorldTfm * float4(tangent, 0.0)).xyz;
+    normal  = (modelToWorldTfm * float4(normal, 0.0)).xyz;
+    
+    // have to apply invSquare of scale here to approximate invT
+    // also make sure to identify inversion off determinant before instancing so that backfacing is correct
+    // this is only needed if non-uniform scale present in modelToWorldTfm, could precompute
+    if (isScaled)
+    {
+        // compute scale squared from rows
+        float3 scale2 = float3(
+            length_squared(modelToWorldTfm[0].xyz),
+            length_squared(modelToWorldTfm[1].xyz),
+            length_squared(modelToWorldTfm[2].xyz));
+        
+        // do a max(1e4), but really don't have scale be super small
+        scale2 = max(0.0001 * 0.0001, scale2);
+        
+        // apply inverse
+        tangent /= scale2;
+        normal  /= scale2;
+    }
+    
+    // vertex shader normalize, but the fragment shader should not
+    tangent = normalize(tangent);
+    normal  = normalize(normal);
+    
+    // make sure to preserve bitan sign in tangent.w
+}
+
+//-------------------------------------------
+
 struct Vertex
 {
     float4 position [[attribute(VertexAttributePosition)]];
@@ -41,7 +318,9 @@ ColorInOut DrawImageFunc(
     // this is a 2d coord always which is 0 to 1, or 0 to 2
     out.texCoord.xy = in.texCoord;
     if (uniforms.isWrap) {
-        out.texCoord.xy *= 2.0; // can make this a repeat value uniform
+        // can make this a repeat value uniform
+        float wrapAmount = 2.0;
+        out.texCoord.xy *= wrapAmount;
     }
    
     // potentially 3d coord, and may be -1 to 1
@@ -71,7 +350,7 @@ vertex ColorInOut DrawCubeVS(
     
     // convert to -1 to 1
     float3 uvw = out.texCoordXYZ;
-    uvw.xy = uvw.xy * 2.0 - 1.0;
+    uvw.xy = toSnorm(uvw.xy);
     uvw.z = 1.0;
     
     // switch to the face
@@ -129,100 +408,9 @@ vertex ColorInOut DrawVolumeVS(
     return out;
 }
 
-float toUnorm8(float c)
-{
-    return (127.0 / 255.0) * c + (128 / 255.0);
-}
-float2 toUnorm8(float2 c)
-{
-    return (127.0 / 255.0) * c + (128 / 255.0);
-}
-float3 toUnorm8(float3 c)
-{
-    return (127.0 / 255.0) * c + (128 / 255.0);
-}
-
-float toUnorm(float c)
-{
-    return 0.5 * c + 0.5;
-}
-float2 toUnorm(float2 c)
-{
-    return 0.5 * c + 0.5;
-}
-float3 toUnorm(float3 c)
-{
-    return 0.5 * c + 0.5;
-}
-
-float toSnorm8(float c)
-{
-    return (255.0 / 127.0) * c - (128 / 127.0);
-}
-
-float2 toSnorm8(float2 c)
-{
-    return (255.0 / 127.0) * c - (128 / 127.0);
-}
-
-float3 toSnorm8(float3 c)
-{
-    return (255.0 / 127.0) * c - (128 / 127.0);
-}
-float4 toSnorm8(float4 c)
-{
-    return (255.0 / 127.0) * c - (128 / 127.0);
-}
-
-float2 toSnorm(float2 c)
-{
-    return 2 * c - 1.0;
-}
-
-float recip(float c)
-{
-    return 1.0 / c;
-}
-float2 recip(float2 c)
-{
-    return 1.0 / c;
-}
-float3 recip(float3 c)
-{
-    return 1.0 / c;
-}
-float4 recip(float4 c)
-{
-    return 1.0 / c;
-}
-
-
-// scale and reconstruct normal
-float3 toNormal(float3 n)
-{
-    // make sure the normal doesn't exceed the unit circle
-    // many reconstructs skip and get a non-unit or n.z=0
-    // this can all be done with half math too
-    
-    float len2 = length_squared(n.xy);
-    const float maxLen2 = 0.999 * 0.999;
-    
-    if (len2 <= maxLen2) {
-        // textures should be corrected to always take this path
-        n.z = sqrt(1 - len2);
-    }
-    else {
-        len2 *= 1.001*1.001;  // need n.xy = approx 0.999 length
-        n.xy *= rsqrt(len2);
-        n.z = 0.0447108; // sqrt(1-maxLen2)
-    }
-    
-    return n;
-}
 
 // TODO: do more test shapes, but that affects eyedropper
-// use mikktspace, gen bitan in frag shader with sign, don't normalize vb/vt
-// see http://www.mikktspace.com/
+// generate and pass down tangents + bitanSign in the geometry
 
 // TODO: eliminate the toUnorm() calls below, rendering to rgba16f
 // but also need to remove conversion code on cpu side expecting unorm in eyedropper
@@ -455,7 +643,9 @@ float4 DrawPixels(
             // flag pixels that would throw off normal reconstruct sqrt(1-dot(n.xy,n.xy))
             // see code above in shader that helps keep that from z = 0
             float len2 = length_squared(toSnorm(c.rg));
-            if (len2 > (0.999 * 0.999)) {
+            const float maxLen2 = 0.999 * 0.999;
+            
+            if (len2 > maxLen2) {
                 isHighlighted = true;
             }
         }
