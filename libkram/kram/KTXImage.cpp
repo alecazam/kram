@@ -1363,7 +1363,15 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
             
             // the offsets are reversed in ktx2 file
             level1.offset = level2.offset;
-            assert(level1.length == level2.length);
+            
+            if (level1.length != level2.length)
+            {
+                // This is likely due to the reversal of mips
+                // but many of the test images from libkx are hitting this, fix this issue.
+                
+                KLOGE("kram", "mip sizes aren't equal");
+                return false;
+            }
         }
     }
     else {

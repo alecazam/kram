@@ -178,6 +178,11 @@ using namespace kram;
     // this is called from "Open In..."
     MyMTKView* view = sender.mainWindow.contentView;
     
+    // TODO: if more than one url dropped, and they are albedo/nmap, then display them
+    // together with the single uv set.  Need controls to show one or all together.
+    
+    // TODO: also do an overlapping diff if two files are dropped with same dimensions.
+    
     NSURL *url = urls.firstObject;
     [view loadTextureFromURL:url];
 }
