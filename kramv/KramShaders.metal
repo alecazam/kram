@@ -201,22 +201,22 @@ float4 recip(float4 c)
 float3 toNormal(float3 n)
 {
     // make sure the normal doesn't exceed the unit circle
-    // many reconstructs skip and get a non-unit or z=0 normal
-    // might make optional or flag pixel with a debug mode that exeed
+    // many reconstructs skip and get a non-unit or n.z=0
+    // this can all be done with half math too
+    
     float len2 = length_squared(n.xy);
     const float maxLen2 = 0.999 * 0.999;
     
-    if (len2 > maxLen2)
-    {
-        len2 *= 1.001; // so we have a non-zero z component below
-        n.xy *= rsqrt(len2);
-        len2 = maxLen2;
+    if (len2 <= maxLen2) {
+        // textures should be corrected to always take this path
+        n.z = sqrt(1 - len2);
     }
-    //len2 = min(0.999, len2);
+    else {
+        len2 *= 1.001*1.001;  // need n.xy = approx 0.999 length
+        n.xy *= rsqrt(len2);
+        n.z = 0.0447108; // sqrt(1-maxLen2)
+    }
     
-    // make sure always have non-zero z, or get Nan after it knocks out N of TBN
-    // since that's often pointing purely in 001 direction.
-    n.z = sqrt(1 - len2);
     return n;
 }
 
