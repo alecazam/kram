@@ -914,7 +914,7 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength)
     }
 
     if (pixelFormat == MyMTLPixelFormatInvalid) {
-        KLOGE("kram", "unsupported texture format glType 0x%0X", header.glFormat);
+        KLOGE("kram", "unsupported texture format glBase/glInternalFormat 0x%04X 0x%04X", header.glBaseInternalFormat, header.glInternalFormat);
         return false;
     }
     
