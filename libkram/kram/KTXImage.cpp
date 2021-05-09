@@ -503,7 +503,9 @@ const KTXFormatInfo& formatInfo(MyMTLPixelFormat format)
     initFormatsIfNeeded();
     
     const auto& it = gFormatTable->find(format);
-    assert(it != gFormatTable->end());
+    if (it == gFormatTable->end()) {
+        return gFormatTable->find(MyMTLPixelFormatInvalid)->second;
+    }
     return it->second;
 }
 
@@ -911,6 +913,11 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength)
         pixelFormat = header.metalFormat();
     }
 
+    if (pixelFormat == MyMTLPixelFormatInvalid) {
+        KLOGE("kram", "unsupported texture format glType 0x%0X", header.glFormat);
+        return false;
+    }
+    
     return initMipLevels(true, sizeof(KTXHeader) + header.bytesOfKeyValueData);
 }
 
@@ -1325,6 +1332,13 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
    
     // convert format to MyMTLPixelFormat
     pixelFormat = vulkanToMetalFormat(header2.vkFormat);
+    
+    // kram can only load a subset of format
+    if (pixelFormat == MyMTLPixelFormatInvalid)
+    {
+        KLOGE("kram", "unsupported texture format VK_FORMAT %u", header2.vkFormat);
+        return false;
+    }
     
     // Note: KTX2 also doesn't have the length field embedded the mipData
     // so need to be able to set skipLength to unify the mipgen if aliasing the mip data
