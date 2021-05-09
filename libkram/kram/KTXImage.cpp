@@ -159,6 +159,13 @@ enum GLFormat {
     GL_RG32F = 0x8230,
     GL_RGBA32F = 0x8814,
 
+#if SUPPORT_RGB
+    GL_RGB8   = 0x8051,
+    GL_SRGB8  = 0x8C41,
+    GL_RGB16F = 0x881B,
+    GL_RGB32F = 0x8815
+#endif
+    
     /* These are all of the variants of ASTC, ugh.  Only way to identify them is to
  walk blocks and it's unclear how to convert from 3D to 2D blocks or whether hw
  supports sliced 3D.
@@ -299,6 +306,15 @@ enum VKFormat {
     //    VK_FORMAT_ASTC_12x10_SRGB_BLOCK = 182,
     //    VK_FORMAT_ASTC_12x12_UNORM_BLOCK = 183,
     //    VK_FORMAT_ASTC_12x12_SRGB_BLOCK = 184,
+
+#if SUPPORT_RGB
+    // import only
+    VK_FORMAT_R8G8B8_UNORM      = 23,
+    VK_FORMAT_R8G8B8_SRGB       = 29,
+    VK_FORMAT_R16G16B16_SFLOAT  = 90,
+    VK_FORMAT_R32G32B32_SFLOAT   = 106,
+   
+#endif
 };
 
 // DONE: setup a format table, so can switch on it
@@ -489,8 +505,16 @@ static bool initFormatsIfNeeded()
 
     KTX_FORMAT(EXPr32f, MyMTLPixelFormatR32Float, VK_FORMAT_R32_SFLOAT, GL_R32F, GL_RED, 1, 1, 4, 1, FLAG_32F)
     KTX_FORMAT(EXPrg32f, MyMTLPixelFormatRG32Float, VK_FORMAT_R32G32_SFLOAT, GL_RG32F, GL_RG, 1, 1, 8, 2, FLAG_32F)
-    KTX_FORMAT(EXPrg32f, MyMTLPixelFormatRGBA32Float, VK_FORMAT_R32G32B32A32_SFLOAT, GL_RGBA32F, GL_RGBA, 1, 1, 16, 4, FLAG_32F)
+    KTX_FORMAT(EXPrgba32f, MyMTLPixelFormatRGBA32Float, VK_FORMAT_R32G32B32A32_SFLOAT, GL_RGBA32F, GL_RGBA, 1, 1, 16, 4, FLAG_32F)
 
+#if SUPPORT_RGB
+    // these are import only formats
+    KTX_FORMAT(EXPrgb8, MyMTLPixelFormatRGB8Unorm_internal, VK_FORMAT_R8G8B8_UNORM, GL_RGB8, GL_RGB, 1, 1, 3, 3, 0)
+    KTX_FORMAT(EXPsrgb8, MyMTLPixelFormatRGB8Unorm_sRGB_internal, VK_FORMAT_R8G8B8_SRGB, GL_SRGB8, GL_SRGB, 1, 1, 3, 3, FLAG_SRGB)
+    KTX_FORMAT(EXPrgb16f, MyMTLPixelFormatRGB16Float_internal, VK_FORMAT_R16G16B16_SFLOAT, GL_RGB16F, GL_RGB, 1, 1, 6, 3, FLAG_16F)
+    KTX_FORMAT(EXPrgb32f, MyMTLPixelFormatRGB32Float_internal, VK_FORMAT_R32G32B32_SFLOAT, GL_RGB32F, GL_RGB, 1, 1, 12, 3, FLAG_32F)
+#endif
+    
     return true;
 }
 

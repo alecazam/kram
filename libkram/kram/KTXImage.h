@@ -102,11 +102,21 @@ enum MyMTLPixelFormat {
 
     // TODO: also need rgb9e5 for fallback if ASTC HDR/6H not supported
     // That is Unity's fallback if alpha not needed, otherwise RGBA16F.
+    
+#if SUPPORT_RGB
+    // Can import files from KTX/KTX2 with RGB data, but convert right away to RGBA.
+    // These are not export formats.  Watch alignment on these too.  These
+    // have no MTLPixelFormat.
+    MyMTLPixelFormatRGB8Unorm_internal = 200,
+    MyMTLPixelFormatRGB8Unorm_sRGB_internal = 201,
+    MyMTLPixelFormatRGB16Float_internal = 202,
+    MyMTLPixelFormatRGB32Float_internal = 203,
+#endif
 };
 
 enum MyMTLTextureType {
-    // MyMTLTextureType1D = 0,
-    MyMTLTextureType1DArray = 1,
+    // MyMTLTextureType1D = 0,   // not twiddled or compressed, more like a buffer but with texture limits
+    MyMTLTextureType1DArray = 1, // not twiddled or compressed, more like a buffer but with texture limits
     MyMTLTextureType2D = 2,
     MyMTLTextureType2DArray = 3,
     // MyMTLTextureType2DMultisample = 4,

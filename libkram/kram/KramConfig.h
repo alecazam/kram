@@ -146,6 +146,11 @@
 #define COMPILE_ASTCENC 0
 #endif
 
+// rgb8/16f/32f formats only supported for import, Metal doesn't expose these formats
+#ifndef SUPPORT_RGB
+#define SUPPORT_RGB 1
+#endif
+
 // includes that are usable across all files
 #include "KramLog.h"
 

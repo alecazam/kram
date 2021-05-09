@@ -130,7 +130,13 @@ bool Image::loadImageFromKTX(const KTXImage& image)
     switch (image.pixelFormat) {
         case MyMTLPixelFormatR8Unorm:
         case MyMTLPixelFormatRG8Unorm:
-        case MyMTLPixelFormatRGBA8Unorm: {
+#if SUPPORT_RGB
+        case MyMTLPixelFormatRGB8Unorm_sRGB_internal: // TODO: not handling srgba yet
+        case MyMTLPixelFormatRGB8Unorm_internal:
+#endif
+        case MyMTLPixelFormatRGBA8Unorm_sRGB: // TODO: not handling srgba yet
+        case MyMTLPixelFormatRGBA8Unorm:
+        {
             const uint8_t* srcPixels =
                 image.fileData + image.mipLevels[0].offset;
 
@@ -171,6 +177,9 @@ bool Image::loadImageFromKTX(const KTXImage& image)
 
         case MyMTLPixelFormatR16Float:
         case MyMTLPixelFormatRG16Float:
+#if SUPPORT_RGB
+        case MyMTLPixelFormatRGB16Float_internal:
+#endif
         case MyMTLPixelFormatRGBA16Float: {
             int32_t numSrcChannels = blockSize / 2;  // 2 = sizeof(_float16)
             int32_t numDstChannels = 4;
@@ -220,7 +229,10 @@ bool Image::loadImageFromKTX(const KTXImage& image)
 
         case MyMTLPixelFormatR32Float:
         case MyMTLPixelFormatRG32Float:
-        case MyMTLPixelFormatRGBA32Float: {
+#if SUPPORT_RGB
+        case MyMTLPixelFormatRGB32Float_internal:
+#endif
+       case MyMTLPixelFormatRGBA32Float: {
             const float* srcPixels =
                 (const float*)(image.fileData + image.mipLevels[0].offset);
 
