@@ -131,10 +131,10 @@ bool Image::loadImageFromKTX(const KTXImage& image)
         case MyMTLPixelFormatR8Unorm:
         case MyMTLPixelFormatRG8Unorm:
 #if SUPPORT_RGB
-        case MyMTLPixelFormatRGB8Unorm_sRGB_internal: // TODO: not handling srgba yet
+        case MyMTLPixelFormatRGB8Unorm_sRGB_internal:
         case MyMTLPixelFormatRGB8Unorm_internal:
 #endif
-        case MyMTLPixelFormatRGBA8Unorm_sRGB: // TODO: not handling srgba yet
+        case MyMTLPixelFormatRGBA8Unorm_sRGB:
         case MyMTLPixelFormatRGBA8Unorm:
         {
             const uint8_t* srcPixels =
@@ -144,6 +144,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             int32_t numDstChannels = 4;
 
             // Note: clearing unspecified channels to 0000, not 0001
+            // can set swizzleText when encoding
             _pixels.resize(4 * _width * _height);
             if (numSrcChannels != 4) {
                 memset(_pixels.data(), 0, _pixels.size());
@@ -185,6 +186,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             int32_t numDstChannels = 4;
 
             // Note: clearing unspecified channels to 0000, not 0001
+            // can set swizzleText when encoding
             _pixelsFloat.resize(_width * _height);
             if (numSrcChannels != 4) {
                 memset(_pixelsFloat.data(), 0,
@@ -240,6 +242,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             int32_t numDstChannels = 4;
 
             // Note: clearing unspecified channels to 0000, not 0001
+            // can set swizzleText when encoding
             _pixelsFloat.resize(_width * _height);
             if (numSrcChannels != 4) {
                 memset(_pixelsFloat.data(), 0,

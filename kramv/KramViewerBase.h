@@ -77,6 +77,7 @@ public:
     // draw a 1x1 or blockSize grid, note ASTC has non-square grid sizes
     bool isPixelGridShown = false;
     bool isBlockGridShown = false;
+    bool isAtlasGridShown = false;
    
     // show all mips, faces, arrays all at once
     bool isShowingAllLevelsAndMips = false;
@@ -107,9 +108,12 @@ public:
     int32_t imageBoundsX = 0; // px
     int32_t imageBoundsY = 0; // px
  
-    // size of the block, uses in block grid drawing
+    // size of the block, used in block grid drawing
     int32_t blockX = 1;
     int32_t blockY = 1;
+    
+    // set when isGridShow is true
+    int32_t gridSize = 1;
     
     // for eyedropper, lookup this pixel value, and return it to CPU
     int32_t textureLookupX = 0;

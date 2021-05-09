@@ -1232,28 +1232,59 @@ float4 toSnorm8(float4 c)
             break;
         
         // toggle pixel grid when magnified above 1 pixel, can happen from mipmap changes too
-        case Key::D:
+        case Key::D: {
+            static int grid = 0;
+            static const int kNumGrids = 7;
+            
+            #define advanceGrid(g, dec) \
+                grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
+            
             // TODO: display how many blocks there are
-            if (isShiftKeyDown && _showSettings->blockX > 1) {
-                // if block size is 1, then this shouldn't toggle
-                _showSettings->isBlockGridShown = !_showSettings->isBlockGridShown;
-                _showSettings->isPixelGridShown = false;
-                sprintf(text, "Block Grid %dx%d %s",
-                        _showSettings->blockX, _showSettings->blockY,
-                        _showSettings->isBlockGridShown ? "On" : "Off");
+                
+            // if block size is 1, then this shouldn't toggle
+            _showSettings->isBlockGridShown = false;
+            _showSettings->isAtlasGridShown = false;
+            _showSettings->isPixelGridShown = false;
+
+            advanceGrid(grid, isShiftKeyDown);
+
+            if (grid == 2 && _showSettings->blockX == 1) {
+                // skip it
+                advanceGrid(grid, isShiftKeyDown);
+            }
+
+            static const uint32_t gridSizes[kNumGrids] = {
+                0, 1, 2,
+                32, 64, 128, 256 // atlas sizes
+            };
+
+            if (grid == 0) {
+                sprintf(text, "Grid Off");
+            }
+            else if (grid == 1) {
+                _showSettings->isPixelGridShown = true;
+
+                sprintf(text, "Pixel Grid 1x1 On");
+            }
+            else if (grid == 2) {
+                _showSettings->isBlockGridShown = true;
+
+                sprintf(text, "Block Grid %dx%d On",
+                        _showSettings->blockX, _showSettings->blockY);
             }
             else {
-               
-                _showSettings->isPixelGridShown = !_showSettings->isPixelGridShown;
-                _showSettings->isBlockGridShown = false;
-                text = "Pixel Grid ";
-                text += _showSettings->isPixelGridShown ? "On" : "Off";
+                _showSettings->isAtlasGridShown = true;
+
+                _showSettings->gridSize = gridSizes[grid];
+
+                sprintf(text, "Atlas Grid %dx%d On",
+                        _showSettings->gridSize, _showSettings->gridSize);
             }
-        
+            
             isChanged = true;
             
             break;
-        
+        }
         case Key::S:
             // TODO: have drawAllMips, drawAllLevels, drawAllLevelsAndMips
             _showSettings->isShowingAllLevelsAndMips = !_showSettings->isShowingAllLevelsAndMips;

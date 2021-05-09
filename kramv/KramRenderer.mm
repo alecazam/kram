@@ -648,11 +648,14 @@ using namespace simd;
         uniforms.gridY = 1;
     }
     else if (_showSettings->isBlockGridShown) {
-        
         if (_showSettings->blockX > 1) {
             uniforms.gridX = _showSettings->blockX;
             uniforms.gridY = _showSettings->blockY;
         }
+    }
+    else if (_showSettings->isAtlasGridShown) {
+        uniforms.gridX = _showSettings->gridSize;
+        uniforms.gridY = _showSettings->gridSize;
     }
     
     // no debug mode when preview kicks on, make it possible to toggle back and forth more easily
