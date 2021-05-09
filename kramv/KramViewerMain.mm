@@ -94,36 +94,46 @@ using namespace kram;
 
 - (BOOL)readFromURL:(NSURL *)url ofType:(NSString *)typeName error:(NSError **)outError {
     
-    // TODO: this recent menu only seems to work the first time
-    // and not in subsequent calls to the same entry.  readFromUrl isn't even called.
-    // So don't get a chance to switch back to a recent texture.
-    // Maybe there's some list of documents created and so it doesn't
-    // think the file needs to be reloaded.
-    //
-    // Note: if I return NO from this call then a dialog pops up that image
-    // couldn't be loaded, but then the readFromURL is called everytime a new
-    // image is picked from the list.
     
     // called from OpenRecent documents menu
     
 #if 0
-    MyMTKView* view = self.windowControllers.firstObject.window.contentView;
-    return [view loadTextureFromURL:url];
+    //MyMTKView* view = self.windowControllers.firstObject.window.contentView;
+    //return [view loadTextureFromURL:url];
 #else
+
     NSApplication* app = [NSApplication sharedApplication];
     MyMTKView* view = app.mainWindow.contentView;
     BOOL success = [view loadTextureFromURL:url];
     if (success)
     {
         [view setHudText:""];
+    
+        // DONE: this recent menu only seems to work the first time
+        // and not in subsequent calls to the same entry.  readFromUrl isn't even called.
+        // So don't get a chance to switch back to a recent texture.
+        // Maybe there's some list of documents created and so it doesn't
+        // think the file needs to be reloaded.
+        //
+        // Note: if I return NO from this call then a dialog pops up that image
+        // couldn't be loaded, but then the readFromURL is called everytime a new
+        // image is picked from the list.
+        
+        // Clear the document list so readFromURL keeps getting called
+        // Can't remove currentDoc, so have to skip that
+        NSDocumentController* dc = [NSDocumentController sharedDocumentController];
+        NSDocument* currentDoc = dc.currentDocument;
+        NSMutableArray* docsToRemove = [[NSMutableArray alloc] init];
+        for (NSDocument* doc in dc.documents) {
+            if (doc != currentDoc)
+                [docsToRemove addObject: doc];
+        }
+        
+        for (NSDocument* doc in docsToRemove) {
+            [dc removeDocument: doc];
+        }
     }
     
-    // Let's see the document list
-//    NSDocumentController* dc = [NSDocumentController sharedDocumentController];
-//    NSDocument* currentDoc = dc.currentDocument;
-//
-//    KLOGW("kramv", "This is document count %d", (int)dc.documents.count, );
-
     return success;
 #endif
 }
@@ -682,6 +692,8 @@ inline float4 toPremul(const float4& c)
     return cpremul;
 }
 
+// Writing out to rgba32 for sampling, but unorm formats like ASTC and RGBA8
+// are still off and need to use the following.
 float toSnorm8(float c)
 {
     return (255.0 / 127.0) * c - (128 / 127.0);
