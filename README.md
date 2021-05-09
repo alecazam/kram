@@ -37,10 +37,12 @@ Content Types - Albedo, Normal, SDF, Height
 Debug modes - transparent, color, gray, +x, +y, xy >= 1
 Texture Types - 1darray (no mips), 2d, 2darray, 3d (no mips), cube, cube array
 
+⇧ decrement any advance listed below
+
 / - show keyboard shortcuts
 O - toggle preview, disables debug mode, shows lit normals, and mips and filtering are enabled
 ⇧D - toggle through none, pixel grid, block grid, atlas grid (32, 64, 128, 256), must be zoomed-in to see pixel grid
-⇧E - advance debug mode, this is texture content specific (reverse dir with ⇧)
+⇧E - advance debug mode, this is texture content specific 
 H - toggle hud
 I - show texture info in overlay
 W - toggle repeat filter, scales uv from [0,1] to [0,2]
@@ -53,7 +55,7 @@ N - toggle signed/unsigned
 ⇧0 - refit the current mip image to 1x, or fit view.  (at 1x with ⇧).
 ⇧L - reload from disk if changed, zoom to fit (at 1x with ⇧)
 
-⇧Y advance array (reverse dir with ⇧)
+⇧Y advance array 
 ⇧F advance face
 ⇧M advance mip
 
@@ -68,10 +70,10 @@ Texture processing is complex and there be dragons.  Just be aware of some of th
 GPU - none of the encoders use the GPU, so cpu threading and multi-process is used
 
 Rescale Filtering - 1x1 point filter
-Mip filtering - 2x2 box filter that's reasonable for pow2, but not ideal for non-pow2 mips, 
+Mip filtering - 2x2 box filter that's reasonable for pow2, and a non-linear filters for non-pow2 so there is no pixel shift 
   done in linear space using half4 storage, in-place to save mem
 
-1D array - no mip support due to hardware
+1D array - no mip support due to hardware, no encoding
 3D textures - no mip support, uses ASTC 2d slice encode used by Metal/Android, not exotic ASTC 3d format
     
 BC/ETC2/ASTC - supposedly WebGL requires pow2, and some implementation need top multiple of 4 for BC/ETC2
