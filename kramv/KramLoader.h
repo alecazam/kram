@@ -40,6 +40,16 @@
 
 //-------------------------------------
 
+// This loads KTX and PNG data synchronously.  Will likely move to only loading KTX files, with a png -> ktx conversion.
+// The underlying KTXImage is not yet returned to the caller, but would be useful for prop queries.
+@interface KramBlitLoader : NSObject
+
+@property (retain, nonatomic, readwrite, nonnull) id<MTLDevice> device;
+
+@end
+
+//-------------------------------------
+
 // for toLower
 #include <string>
 

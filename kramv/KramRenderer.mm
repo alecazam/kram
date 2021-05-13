@@ -654,8 +654,8 @@ using namespace simd;
         }
     }
     else if (_showSettings->isAtlasGridShown) {
-        uniforms.gridX = _showSettings->gridSize;
-        uniforms.gridY = _showSettings->gridSize;
+        uniforms.gridX = _showSettings->gridSizeX;
+        uniforms.gridY = _showSettings->gridSizeY;
     }
     
     // no debug mode when preview kicks on, make it possible to toggle back and forth more easily

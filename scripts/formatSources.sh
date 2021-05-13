@@ -10,7 +10,7 @@ clang-format -style=file -i KTX*.cpp
 clang-format -style=file -i KTX*.h
 popd
 
-pushd ../viewer
+pushd ../kramv
 clang-format -style=file -i Kram*.cpp
 clang-format -style=file -i Kram*.h
 clang-format -style=file -i Kram*.mm

@@ -2303,8 +2303,76 @@ CommandType parseCommandType(const char* command)
     return commandType;
 }
 
+void PSTest() {
+    static bool doTest = false;
+    if (doTest) {
+        return;
+    }
+    
+    // So it looks like Photoshop is doing srgb * alpha right away on PNG import. This results in dimmer colors
+    // when they are read on the GPU, since then the gpu does srgb to linear conversion.  values2
+    // is that case below.  Also note that the Photoshop color picker shows only srgb intensities, not the linear.
+    // color value.  This lets it line up with screen color pickers like Apple DCM.  Apple Preview also shows
+    // images with the same dim colors, so it's replicating what Photoshop does.
+    //
+    // Gimp and kramv do what is in values3 resulting in brighter intensities. One question with formats like
+    // astc that interpolate the endpoints in srgb space off the selectors is how to encode colors.
+    // Almost makes sense to drop srgb when premul alpha is involved and store linear color instead.
+    // Figma follows that convention.
+
+    // Here's kramv's srgb flow:
+    // PNG unmul alpha -> srbToLinear(rgb) * alpha -> build mips in linear -> linearToSrgb(lin.rgb)
+    //   -> encode endpoints/colors -> BC/ASTC/ETC2
+    //
+    // Here's Photoshop I think:
+    // PNG unmul alpha -> srgbToLinear(rgb * alpha) -> linarToSrgb( c ) -> toUnmul( c/alpha ) -> Png
+    
+    
+    Mipper mipper;
+
+    // 1. srgb 8-bit values
+    uint8_t alpha = 200;
+    float alphaF = mipper.toAlphaFloat(alpha);
+
+    uint8_t values1[256];
+    uint8_t values2[256];
+    uint8_t values3[256];
+
+    for (int32_t i = 0; i < 256; ++i) {
+        // premul and then snap back to store
+        values1[i] = ((uint32_t)i * (uint32_t)alpha) / 255;
+    }
+
+    // now convert those values to linear color (float)
+    for (int32_t i = 0; i < 256; ++i) {
+        float value = mipper.toLinear(values1[i]);
+        
+        values2[i] = uint8_t(value * 255.1);
+        
+        //KLOGI("srgb", "[%d] = %g\n", i, value);
+    }
+
+    // convert srgb to linear and then do premul
+    for (int32_t i = 0; i < 256; ++i) {
+        float value = mipper.toLinear(i);
+        value *= alphaF;
+        
+        values3[i] = uint8_t(value * 255.1);
+    }
+
+    // log them side-by-side for comparison
+    KLOGI("srgb", "premul by %0.3f", 200.0/255.0);
+    for (int32_t i = 0; i < 256; ++i) {
+        KLOGI("srgb", "[%d] = %u, %u, %u",
+              i, values1[i], values2[i], values3[i]);
+    }
+}
+
+
 int32_t kramAppCommand(vector<const char*>& args)
 {
+    PSTest();
+    
     // make sure next arg is a valid command type
     CommandType commandType = kCommandTypeUnknown;
     if (args.size() >= 1) {

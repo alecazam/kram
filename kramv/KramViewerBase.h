@@ -112,8 +112,9 @@ public:
     int32_t blockX = 1;
     int32_t blockY = 1;
     
-    // set when isGridShow is true
-    int32_t gridSize = 1;
+    // set when isGridShown is true
+    int32_t gridSizeX = 1;
+    int32_t gridSizeY = 1;
     
     // for eyedropper, lookup this pixel value, and return it to CPU
     int32_t textureLookupX = 0;

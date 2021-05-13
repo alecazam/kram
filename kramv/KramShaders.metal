@@ -133,6 +133,9 @@ float4 toFloat(half4 c)
     return float4(c);
 }
 
+// TODO: note that Metal must pass the same half3 from vertex to fragment shader
+// so can't mix a float vs with half fs.
+
 //-------------------------------------------
 // functions
 
@@ -213,6 +216,9 @@ void skinPosAndBasis(thread float4& position, thread float3& tangent, thread flo
 {
     // TODO: might do this as up to 12x vtex lookup, fetch from buffer texture
     // but uniforms after setup would be faster if many bones
+    // instances use same bones, but different indices/weights already
+    // but could draw skinned variants with vtex lookup and not have so much upload prep
+    
     float3x4 bindPoseToBoneTransform = bones[indices.x];
     
     if (weights[0] != 1.0)
@@ -226,11 +232,11 @@ void skinPosAndBasis(thread float4& position, thread float3& tangent, thread flo
         
         //int numBones = 1 + int(weights.w * 3.0);
         
-        int numBones = int(dot(float4(weights > 0.0), float4(1)));
+        int numBones = int(dot(float4(weights > 0.0), float4(1.0)));
         
         // reconstruct so can store weights in RGB10A2U
         if (numBones == 4)
-            weights.w = 1 - saturate(dot(weights.xyz, float3(1.0)));
+            weights.w = 1.0 - saturate(dot(weights.xyz, float3(1.0)));
         
         for (int i = 1; i < numBones; ++i)
         {
@@ -248,30 +254,46 @@ void skinPosAndBasis(thread float4& position, thread float3& tangent, thread flo
     normal  = (float4(normal, 0.0)  * bindPoseToBoneTransform);
 }
 
+float3x3 toFloat3x3(float4x4 m)
+{
+    return float3x3(m[0].xyz, m[1].xyz, m[2].xyz);
+}
+
 // this is for vertex shader
 void transformBasis(thread float3& tangent, thread float3& normal,
                     float4x4 modelToWorldTfm, bool isScaled = false)
 {
-    tangent = (modelToWorldTfm * float4(tangent, 0.0)).xyz;
-    normal  = (modelToWorldTfm * float4(normal, 0.0)).xyz;
     
+    float3x3 m = toFloat3x3(modelToWorldTfm);
+    
+    // question here of whether tangent is transformed by m or mInvT
+    // most apps assume m, but after averaging it can be just as off the surface as the normal
+    bool useInverseOnTangent = true;
+    if (useInverseOnTangent)
+        tangent = tangent * m;
+    else
+        tangent = m * tangent;
+    
+    // note this is n * R = Rt * n, for simple affine transforms Rinv = Rt, invScale then handled below
+    normal = normal * m;
+       
     // have to apply invSquare of scale here to approximate invT
     // also make sure to identify inversion off determinant before instancing so that backfacing is correct
-    // this is only needed if non-uniform scale present in modelToWorldTfm, could precompute
+    // this is only needed if non-uniform scale present in modelToWorldTfm, could precompute scale2
     if (isScaled)
     {
         // compute scale squared from rows
         float3 scale2 = float3(
-            length_squared(modelToWorldTfm[0].xyz),
-            length_squared(modelToWorldTfm[1].xyz),
-            length_squared(modelToWorldTfm[2].xyz));
+            length_squared(m[0].xyz),
+            length_squared(m[1].xyz),
+            length_squared(m[2].xyz));
         
         // do a max(1e4), but really don't have scale be super small
-        scale2 = max(0.0001 * 0.0001, scale2);
+        scale2 = recip(max(0.0001 * 0.0001, scale2));
         
         // apply inverse
-        tangent /= scale2;
-        normal  /= scale2;
+        tangent *= scale2;
+        normal  *= scale2;
     }
     
     // vertex shader normalize, but the fragment shader should not

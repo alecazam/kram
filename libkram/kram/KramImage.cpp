@@ -1223,6 +1223,144 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
 
     Mipper mipper;
     SDFMipper sdfMipper;
+#if 0
+    // TODO: can go out to KTX2 here instead
+    // It has two different blocks, supercompression for BasisLZ
+    // and a DFD block which details the block content.
+    // And mips are reversed.
+    bool doWriteKTX2 = false;
+    if (doWriteKTX2 && dstFile) // in memory version will always be KTX1 format for nwo
+    {
+        KTX2Header header2;
+        
+        header2.vkFormat = vulkanType(info.pixelFormat);
+        // header2.typeSize = 1; // skip
+        
+        header2.pixelWidth = header.pixelWidth;
+        header2.pixelHeight = header.pixelHeight;
+        header2.pixelDepth = header.pixelDepth;
+        
+        if (dstImage.textureType == MyMTLTextureType1DArray) {
+            header2.pixelHeight = 0;
+            header2.pixelDepth = 0;
+        }
+        
+        header2.layerCount = header.numberOfArrayElements;
+        header2.faceCount = header.numberOfFaces;
+        header2.levelCount = numDstMipLevels; // header.numberOfMipmapLevels;
+        
+        // compute size of dfd
+        vector<uint8_t> dfdData;
+        
+        // compute offsets and lengts of data blocks
+        header2.dfdByteOffset = sizeof(header2);
+        header2.kvdByteOffset = header2.dfdByteOffset + dfdData.size();
+        header2.sgdByteOffset = header2.kvdByteOffset + propsData.size();
+        
+        header2.dfdByteLength = dfdData.size();
+        header2.kvdByteLength = propsData.size();
+        header2.sgdByteLength = 0;
+        
+        // TODO: figure out dfd here
+        
+        // write the header
+        if (!writeDataAtOffset((const uint8_t*)&header2, sizeof(header2), 0, dstFile, dstImage)) {
+            return false;
+        }
+        
+        // write the dfd
+        if (!writeDataAtOffset(dfdData.data(), dfdData.size(), header2.dfdByteOffset, dstFile, dstImage)) {
+            return false;
+        }
+        
+        // write the props
+        if (!writeDataAtOffset(propsData.data(), propsData.size(), header2.kvdByteOffset, dstFile, dstImage)) {
+            return false;
+        }
+        
+        // skip supercompression block
+        
+        // TODO: this either writes to file or to dstImage (in-memory KTX file)
+        
+        // TODO: also need to support a few compressions
+        // zstd and zlib, does dfd contain the offsets of each chunk
+        // and the compressed sizes of mips.  Know format and sizes uncompressed.
+        // but need to fill out the compressed size field.
+        
+        vector<KTX2ImageLevel> levels;
+        levels.resize(numDstMipLevels);
+        
+        size_t levelListStartOffset = header2.sgdByteOffset + header2.sgdByteLength;
+        size_t levelStartOffset = levelListStartOffset + levels.size() * sizeof(KTX2ImageLevel);
+       
+        size_t lastLevelOffset = levelStartOffset;
+        for (int32_t i = 0; i < numDstMipLevels; ++i) {
+            levels[i].length = numChunks * numDstMipLevels;
+            levels[i].lengthCompressed = levels[i].length;
+            levels[i].offset = lastLevelOffset + levels[i].lengthCompressed;
+            lastLevelOffset = levels[i].offset;
+        }
+    
+        // TODO: compress to a seperate zstd stream for each level
+        // then can continue to do mips in place, and just append the bytes to that level
+        // after compression.   If not compressed, then code from KTX1 can be used.
+        bool isCompressed = false;
+        
+        if (!isCompressed) {
+            if (!writeDataAtOffset(levels.data(), levels.size(), levelListStartOffset, dstFile, dstImage)) {
+                return false;
+            }
+        }
+        
+        // TODO: here allocate a zstd encoder for each level
+        vector< vector<uint8_t> > compressedLevels;
+        if (isCompressed) {
+            compressedLevels.resize(numDstMipLevels);
+        }
+        
+        // write the chunks of mips see code below, seeks are important since
+        // it's building mips on the fly.
+        for (int32_t chunk = 0; chunk < numChunks; ++chunk) {
+            // TODO: actually build the mip (reuse code below for KTX)
+            
+            if (!isCompressed)
+                continue;
+            
+            // handle zstd compression here, and add to end of existing encoder for level
+            zstd_compress(level);
+            
+            // append the compressed bytes to each strea
+            levels[mipLevel].append(data);
+        }
+        
+        if (isCompressed) {
+            
+            // update the offsets and compressed sizes
+            lastLevelOffset = levelStartOffset;
+            for (int32_t i = 0; i < numDstMipLevels; ++i) {
+                levels[i].lengthCompressed = compressedLevels[i].size();
+                levels[i].offset = lastLevelOffset + levels[i].lengthCompressed;
+                lastLevelOffset = levels[i].offset;
+            }
+            
+            // write out sizes
+            if (!writeDataAtOffset(levels.data(), levels.size(), levelListStartOffset, dstFile, dstImage)) {
+                return false;
+            }
+            
+            // and now seek and write out each compressed level
+            for (int32_t i = 0; i < numDstMipLevels; ++i) {
+                if (!writeDataAtOffset(compressedLevels[i].data(), compressedLevels[i].size(), levels[i].offset, dstFile, dstImage)) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+#endif
+    
+    // ----------------------------------------------------
 
     // write the header out
     KTXHeader headerCopy = header;

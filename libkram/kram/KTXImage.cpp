@@ -1240,14 +1240,6 @@ const char* textureTypeName(MyMTLTextureType textureType)
 }
 
 
-// This is one entire level of mipLevels.
-class KTX2ImageLevel {
-public:
-    uint64_t offset; // numChunks * length
-    uint64_t lengthCompressed; // can only be read in, can't compute this, but can compute upper bound from zstd
-    uint64_t length; // size of a single mip
-};
-
 
 
 //// Data Format Descriptor

@@ -1275,10 +1275,13 @@ float4 toSnorm8(float4 c)
             else {
                 _showSettings->isAtlasGridShown = true;
 
-                _showSettings->gridSize = gridSizes[grid];
-
+                // want to be able to show altases tht have long entries derived from props
+                // but right now just a square grid atlas
+                _showSettings->gridSizeX =
+                _showSettings->gridSizeY = gridSizes[grid];
+                
                 sprintf(text, "Atlas Grid %dx%d On",
-                        _showSettings->gridSize, _showSettings->gridSize);
+                        _showSettings->gridSizeX, _showSettings->gridSizeY);
             }
             
             isChanged = true;

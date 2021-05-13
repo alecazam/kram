@@ -179,19 +179,26 @@ public:
     MyMTLPixelFormat metalFormat() const;
 };
 
+// This is one entire level of mipLevels.
+// In KTX, the image levels are assumed from format and size since no compression applied.
+class KTXImageLevel {
+public:
+    uint64_t offset; // numChunks * length
+    uint64_t length; // size of a single mip
+};
+
 //---------------------------------------------
 
 // Mips are reversed from KTX1 (mips are smallest first for streaming),
 // and this stores an array of supercompressed levels, and has dfds.
 class KTX2Header {
 public:
-
-    uint8_t identifier[kKTXIdentifierSize] = { // same is kKTX2Identifier
+     uint8_t identifier[kKTXIdentifierSize] = { // same is kKTX2Identifier
         0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
         // '«', 'K', 'T', 'X', ' ', '2', '0', '»', '\r', '\n', '\x1A', '\n'
     };
 
-    uint32_t vkFormat = 0; // invalid
+    uint32_t vkFormat = 0; // invalid format
     uint32_t typeSize = 1;
     
     uint32_t pixelWidth = 1;
@@ -218,17 +225,23 @@ public:
     uint64_t sgdByteLength = 0;
 
     // chunks hold levelCount of all mips of the same size
-    // KTX2ImageChunk* chunks; // [levelCount]
+    // KTX2ImageLevel* chunks; // [levelCount]
+};
+
+// Unlike KTX, KTX2 writes an array of level sizes since compression may e involved.
+// These correspond to an entire compressed array of chunks.
+// So often an entire level mus be decompressed before a chunk can be accessed.
+// This is one entire level of mipLevels.
+class KTX2ImageLevel {
+public:
+    uint64_t offset; // numChunks * length
+    uint64_t lengthCompressed; // can only be read in, can't compute this, but can compute upper bound from zstd
+    uint64_t length; // size of a single mip
 };
 
 //---------------------------------------------
 
-// This is one entire level of mipLevels.
-class KTXImageLevel {
-public:
-    uint64_t offset; // numChunks * length
-    uint64_t length; // size of a single mip
-};
+
 
 // Since can't add anything to KTXHeader without throwing off KTXHeader size,
 // this holds any mutable data for reading/writing KTX images.
