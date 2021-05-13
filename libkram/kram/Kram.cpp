@@ -47,7 +47,14 @@ bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
     return sourceImage.loadImageFromKTX(image);
 }
 
-bool LoadPng(const uint8_t* data, size_t dataSize, Image& sourceImage)
+inline Color toPremul(Color c) {
+    c.r = ((uint32_t)c.r * (uint32_t)c.a) / 255;
+    c.g = ((uint32_t)c.g * (uint32_t)c.a) / 255;
+    c.b = ((uint32_t)c.b * (uint32_t)c.a) / 255;
+    return c;
+}
+
+bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, Image& sourceImage)
 {
     uint32_t width = 0;
     uint32_t height = 0;
@@ -107,6 +114,18 @@ bool LoadPng(const uint8_t* data, size_t dataSize, Image& sourceImage)
         return false;
     }
 
+    // apply premul srgb right away, don't use with -premul or alpha is applied twice
+    // this may throw off the props.  Note this ignores srgb conversion.
+    // This is hack to look like Photoshop and Apple Preview, where they process srgb wrong
+    // on premul PNG data on load, and colors look much darker.
+    
+    if (hasAlpha && isPremulRgb) {
+        Color* colors = (Color*)pixels.data();
+        for (int32_t i = 0, iEnd = width*height; i < iEnd; ++i) {
+            colors[i] = toPremul(colors[i]);
+        }
+    }
+    
     return sourceImage.loadImageFromPixels(pixels, width, height, hasColor, hasAlpha);
 }
 
@@ -117,7 +136,7 @@ bool SetupTmpFile(FileHelper& tmpFileHelper, const char* suffix)
 
 bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
                       vector<uint8_t>& fileBuffer,
-                      const string& srcFilename, Image& sourceImage)
+                      const string& srcFilename, Image& sourceImage, bool isPremulSrgb = false)
 {
     bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
     bool isPNG = endsWith(srcFilename, ".png");
@@ -143,7 +162,7 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
             }
         }
         else if (isPNG) {
-            if (!LoadPng(mmapHelper.data(), mmapHelper.dataLength(),
+            if (!LoadPng(mmapHelper.data(), mmapHelper.dataLength(), isPremulSrgb,
                          sourceImage)) {
                 return false;  // error
             }
@@ -171,7 +190,7 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
             }
         }
         else if (isPNG) {
-            if (!LoadPng(fileBuffer.data(), fileHelper.size(),
+            if (!LoadPng(fileBuffer.data(), fileHelper.size(), isPremulSrgb,
                          sourceImage)) {
                 return false;  // error
             }
@@ -1029,6 +1048,10 @@ void kramEncodeUsage(bool showVersion = true)
           "\tPremultiplied alpha to src pixels before output but only where a=0\n"
           "\n"
           
+          "\t-premulrgb"
+          "\tPremultiplied alpha to src pixels at load to emulate Photoshop, don't use with -premul\n"
+          "\n"
+          
           "\t-optopaque"
           "\tChange format from bc7/3 to bc1, or etc2rgba to rgba if opaque\n"
           "\n"
@@ -1632,6 +1655,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
     ImageInfoArgs infoArgs;
 
+    bool isPremulRgb = false;
     
     bool error = false;
     for (int32_t i = 0; i < argc; ++i) {
@@ -1874,6 +1898,9 @@ static int32_t kramAppEncode(vector<const char*>& args)
             continue;
         }
 
+        // This means to post-multiply alpha after loading, not that incoming data in already premul
+        // png has the limitation that it's unmul, but tiff/exr can store premul.  With 8-bit images
+        // really would prefer to premul them when building the texture.
         else if (isStringEqual(word, "-premul")) {
             infoArgs.isPremultiplied = true;
             continue;
@@ -1882,6 +1909,12 @@ static int32_t kramAppEncode(vector<const char*>& args)
             infoArgs.isPrezero = true;
             continue;
         }
+        // this means premul the data at read from srgb, this it to match photoshop
+        else if (isStringEqual(word, "-premulrgb")) {
+            isPremulRgb = true;
+            continue;
+        }
+        
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
             infoArgs.isVerbose = true;
@@ -1977,7 +2010,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
     vector<uint8_t> srcFileBuffer;
 
     bool success = SetupSourceImage(srcMmapHelper, srcFileHelper, srcFileBuffer,
-                                    srcFilename, srcImage);
+                                    srcFilename, srcImage, isPremulRgb);
 
     if (success) {
         success = SetupTmpFile(tmpFileHelper, ".ktx");
@@ -2305,7 +2338,7 @@ CommandType parseCommandType(const char* command)
 
 void PSTest() {
     static bool doTest = false;
-    if (doTest) {
+    if (!doTest) {
         return;
     }
     

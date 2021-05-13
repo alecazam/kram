@@ -73,6 +73,8 @@ public:
     float toLinear(uint8_t srgb) const { return srgbToLinear[srgb]; }
     float toAlphaFloat(uint8_t alpha) const { return alphaToFloat[alpha]; }
     
+    uint8_t toPremul(uint8_t channelIntensity, uint8_t alpha) const { return ((uint32_t)channelIntensity * (uint32_t)alpha) / 255; }
+    
 private:
     void initTables();
 
