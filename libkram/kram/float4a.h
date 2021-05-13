@@ -368,7 +368,7 @@ inline float length_squared(const float4& vv)
 }
 inline float length(const float4& vv)
 {
-    return sqrtf(length(vv));
+    return sqrtf(length_squared(vv));
 }
 
 // sse4.1 ops
