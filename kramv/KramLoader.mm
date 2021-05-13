@@ -186,7 +186,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
 {
     // can only load 8u and 16u from png, no hdr formats, no premul either, no props
     Image sourceImage;
-    bool isLoaded = LoadPng(data, dataSize, sourceImage);
+    bool isLoaded = LoadPng(data, dataSize, false, sourceImage);
     if (!isLoaded) {
         return nil;
     }
