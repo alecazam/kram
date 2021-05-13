@@ -57,13 +57,12 @@ public:
 };
 
 class Mipper {
-public:
+private:
     float srgbToLinear[256];
     float alphaToFloat[256];
 
+public:
     Mipper();
-
-    void initTables();
 
     // drop by 1 mip level by box filter
     void mipmap(const ImageData &srcImage, ImageData &dstImage) const;
@@ -71,7 +70,12 @@ public:
     void initPixelsHalfIfNeeded(ImageData &srcImage, bool doPremultiply, bool doPrezero,
                                 vector<half4> &halfImage) const;
 
+    float toLinear(uint8_t srgb) const { return srgbToLinear[srgb]; }
+    float toAlphaFloat(uint8_t alpha) const { return alphaToFloat[alpha]; }
+    
 private:
+    void initTables();
+
     void mipmapLevel(const ImageData &srcImage, ImageData &dstImage) const;
     
     void mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) const;
