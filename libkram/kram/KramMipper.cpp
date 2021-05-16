@@ -333,8 +333,9 @@ void Mipper::mipmap(const ImageData& srcImage, ImageData& dstImage) const
 {
     dstImage.width = srcImage.width;
     dstImage.height = srcImage.height;
-
-    mipDown(dstImage.width, dstImage.height);
+    dstImage.depth = srcImage.depth;
+    
+    mipDown(dstImage.width, dstImage.height, dstImage.depth);
 
     // this assumes that we can read mip-1 from srcImage
     mipmapLevel(srcImage, dstImage);
@@ -344,7 +345,7 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
 {
     int32_t width = srcImage.width;
     int32_t height = srcImage.height;
-
+    
     // this can receive premul, srgb data
     // the mip chain is linear data only
     Color* cDstColor = dstImage.pixels;

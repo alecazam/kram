@@ -51,6 +51,8 @@ public:
 
     int32_t quality = 49;  // may want float
 
+    bool isKTX2 = false;
+    
     //bool skipImageLength = false;
     bool doMipmaps = true;  // default to mips on
     bool isVerbose = false;
@@ -119,6 +121,8 @@ public:
     string averageChannels;
     string swizzleText;
 
+    bool isKTX2 = false;
+    
     // output image state
     // Note: difference between input srgb and output srgb, but it's mingled
     // here a bit

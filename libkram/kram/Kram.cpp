@@ -511,7 +511,7 @@ string formatInputAndOutput(int32_t testNumber, const char* srcFilename, MyMTLPi
     size_t extSeparator = dst.rfind('.');
     assert(extSeparator != string::npos);
     dst.erase(extSeparator);
-    dst.append(".ktx");
+    dst.append(".ktx"); // TODO: test ktx2 too
 
     cmd += dst;
 
@@ -1386,7 +1386,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     numPixels *= (float)pixelMultiplier;
     
     if (srcImage.header.numberOfMipmapLevels > 1) {
-        numPixels *= 4.0 / 3.0f; // estimate for now
+        numPixels *= 4.0 / 3.0f; // TODO: estimate for now
     }
     
     numPixels /= (1000.0f * 1000.0f);
@@ -1424,14 +1424,12 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
 
     // print out the array
     if (srcImage.header.numberOfArrayElements > 1) {
-        sprintf(tmp,
+        append_sprintf(info,
                 "arry: %d\n",
                 srcImage.header.numberOfArrayElements);
-
-        info += tmp;
     }
 
-    sprintf(tmp,
+    append_sprintf(info,
             "fmtk: %s\n"
             "fmtm: %s (%d)\n"
             "fmtv: %s (%d)\n"
@@ -1440,13 +1438,10 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
             metalTypeName(metalFormat), metalFormat,
             vulkanTypeName(metalFormat), vulkanType(metalFormat),
             glTypeName(metalFormat), glType(metalFormat));
-    info += tmp;
 
     // report any props
-    string propText;
     for (const auto& prop : srcImage.props) {
-        sprintf(propText, "prop: %s %s\n", prop.first.c_str(), prop.second.c_str());
-        info += propText;
+        append_sprintf(info, "prop: %s %s\n", prop.first.c_str(), prop.second.c_str());
     }
 
     // TODO: handle zstd compressed KTX2 too, they have a length and compressed length field
@@ -1457,19 +1452,51 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
         int32_t mipLevel = 0;
         int32_t w = srcImage.width;
         int32_t h = srcImage.height;
-
+        int32_t d = srcImage.depth; 
+        
+        // num chunks
+        append_sprintf(info,
+            "chun: %d\n",
+            srcImage.totalChunks());
+        
         for (const auto& mip : srcImage.mipLevels) {
-            sprintf(tmp,
-                    "mipn: %d\n"
-                    "mipd: %dx%d\n"
-                    "mips: %" PRIu64 "\n"
-                    "mipc: %dx\n"
-                    "mipo: %" PRIu64 "\n",
-                    w, h, mipLevel++, mip.length, srcImage.totalChunks(), mip.offset);
-            info += tmp;
 
+            switch (textureType) {
+                case MyMTLTextureType3D:
+                append_sprintf(info,
+                   "mipl: %d %dx%dx%d ",
+                    mipLevel++,
+                   w, h, d);
+                   break;
+                default:
+                   append_sprintf(info,
+                    "mipl: %d %dx%d ",
+                    mipLevel++,
+                    w, h);
+                   break;
+            }
+                           
+            if (mip.lengthCompressed != 0) {
+                size_t percent = (100 * mip.lengthCompressed) / mip.length;
+                
+                append_sprintf(info,
+                    "%" PRIu64 ",%" PRIu64 ",%" PRIu64 " %d%%\n",
+                    mip.offset,
+                    mip.length, // only size of one mip right now, not mip * numChunks
+                    mip.lengthCompressed, // TODO: preserve so can be displayed
+                    (int)percent
+                );
+            }
+            else {
+                append_sprintf(info,
+                    "%" PRIu64 ",%" PRIu64 "\n",
+                    mip.offset,
+                    mip.length // only size of one mip right now, not mip * numChunks
+                );
+            }
+            
             // drop a mip level
-            mipDown(w, h);
+            mipDown(w, h, d);
         }
     }
 
@@ -1593,10 +1620,11 @@ static int32_t kramAppDecode(vector<const char*>& args)
         error = true;
     }
 
-    isKTX = endsWith(dstFilename, ".ktx");
+    bool isDstKTX = endsWith(dstFilename, ".ktx");
+    bool isDstKTX2 = endsWith(dstFilename, ".ktx2");
 
-    if (!isKTX) {
-        KLOGE("Kram", "decode only supports ktx output");
+    if (!(isDstKTX || isDstKTX2)) {
+        KLOGE("Kram", "decode only supports ktx and ktx2 output");
         error = true;
     }
 
@@ -1620,7 +1648,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
         return -1;
     }
 
-    success = success && SetupTmpFile(tmpFileHelper, ".ktx");
+    success = success && SetupTmpFile(tmpFileHelper, isDstKTX ? ".ktx" : ".ktx2");
 
     if (success && isVerbose) {
         KLOGI("Kram", "Decoding %s to %s with %s\n",
@@ -1984,10 +2012,12 @@ static int32_t kramAppEncode(vector<const char*>& args)
         error = true;
     }
 
+    // allow ktx and ktx2 output
     bool isDstKTX = endsWith(dstFilename, ".ktx");
+    bool isDstKTX2 = endsWith(dstFilename, ".ktx2");
    
-    if (!isDstKTX) {
-        KLOGE("Kram", "encode only supports ktx output");
+    if (!(isDstKTX || isDstKTX2)) {
+        KLOGE("Kram", "encode only supports ktx and ktx2 output");
         error = true;
     }
 
@@ -1996,6 +2026,8 @@ static int32_t kramAppEncode(vector<const char*>& args)
         return -1;
     }
 
+    infoArgs.isKTX2 = isDstKTX2;
+    
     // Any new settings just go into this struct which is passed into enoder
     ImageInfo info;
     info.initWithArgs(infoArgs);
@@ -2013,7 +2045,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                                     srcFilename, srcImage, isPremulRgb);
 
     if (success) {
-        success = SetupTmpFile(tmpFileHelper, ".ktx");
+        success = SetupTmpFile(tmpFileHelper, isDstKTX ? ".ktx" : ".ktx2");
 
         if (!success) {
             KLOGE("Kram", "encode couldn't generate tmp file for output");

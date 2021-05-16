@@ -995,6 +995,8 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     textureEncoder = args.textureEncoder;
     textureType = args.textureType;
 
+    isKTX2 = args.isKTX2;
+    
     isPrezero = args.isPrezero;
     isPremultiplied = args.isPremultiplied;
     if (isPremultiplied)

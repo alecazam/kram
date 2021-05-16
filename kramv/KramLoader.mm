@@ -343,6 +343,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     
     int32_t w = image.width;
     int32_t h = image.height;
+    int32_t d = image.depth;
     
     int32_t numMips     = MAX(1, image.header.numberOfMipmapLevels);
     int32_t numArrays   = MAX(1, image.header.numberOfArrayElements);
@@ -469,7 +470,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
             }
         }
         
-        mipDown(w, h);
+        mipDown(w, h, d);
     }
         
     return texture;
@@ -578,6 +579,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     
     int32_t w = image.width;
     int32_t h = image.height;
+    int32_t d = image.depth;
     
     int32_t numMips     = MAX(1, image.header.numberOfMipmapLevels);
     int32_t numArrays   = MAX(1, image.header.numberOfArrayElements);
@@ -687,7 +689,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
             }
         }
         
-        mipDown(w, h);
+        mipDown(w, h, d);
     }
         
     // this only affect managed textures

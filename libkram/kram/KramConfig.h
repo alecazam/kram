@@ -378,28 +378,23 @@ inline half4 toHalf4(const float4& vv)
 
 //---------------------------------------
 
-#define ROUNDMIPSDOWN 1
 
-inline void mipDown(int32_t& w, int32_t& h)
+inline void mipDown(int32_t& w, int32_t& h, int32_t& d)
 {
     // GL/D3D hobbled non-pow2 mips by only supporting round down, not round up
-    // And then Metal followd OpenGL since it's the same hw and drivers.
+    // And then Metal followed OpenGL since it's the same hw and drivers.
     // Round up adds an extra mip level to the chain, but results in much better filtering.
     // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_non_power_of_two.txt
     // http://download.nvidia.com/developer/Papers/2005/NP2_Mipmapping/NP2_Mipmap_Creation.pdf
     
-#if ROUNDMIPSDOWN
     // round-down
     w = w / 2;
     h = h / 2;
-
+    d = h / 2;
+    
     if (w < 1) w = 1;
     if (h < 1) h = 1;
-#else
-    // round-up
-    w = (w + 1) / 2;
-    h = (h + 1) / 2;
-#endif
+    if (d < 1) d = 1;
 }
 
 // Use this on vectors
