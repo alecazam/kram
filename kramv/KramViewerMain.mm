@@ -824,12 +824,17 @@ float4 toSnorm8(float4 c)
         // this will always be a linear color
         float4 c = _showSettings->textureResult;
         
-        
         int32_t x = _showSettings->textureResultX;
         int32_t y = _showSettings->textureResultY;
         
+        // show uv, so can relate to gpu coordinates stored in geometry and find atlas areas
+        append_sprintf(text, "uv:%0.3f %0.3f\n",
+            (float)x / _showSettings->imageBoundsX,
+            (float)y / _showSettings->imageBoundsY
+        );
+        
         // pixel at top-level mip
-        sprintf(text, "px:%d %d\n", x, y);
+        append_sprintf(text, "px:%d %d\n", x, y);
         
         // show block num
         int mipLOD = _showSettings->mipLOD;
