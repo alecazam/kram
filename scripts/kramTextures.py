@@ -221,7 +221,7 @@ class TextureProcessor:
 		# choice of none, zlib, or zstd
 		compressorText = ""
 		if self.doKTX2:
-			compressorText = " -zstd"
+			compressorText = " -zstd 0"
 
 		# this could work on 3d and cubearray textures, but for now only use on 2D textures
 		chunksText = ""
@@ -278,9 +278,12 @@ class TextureProcessor:
 			# 		else:
 			# 			result = self.spawn(self.appKtx2sc + " --zcmp 3 --threads 1 " + ktx2Filename)
 
-			# double check supercompressed version, may not be necessary
-			if self.appKtx2check != "" and result == 0:
-			 	result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
+			if self.doKTX2:
+				ktx2Filename = dstFile
+				
+				# double check supercompressed version, may not be necessary
+				if self.appKtx2check != "" and result == 0:
+			 		result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
 			
 
 		return result
@@ -370,16 +373,15 @@ class TextureProcessor:
 
 @click.command()
 @click.option('-p', '--platform', type=click.Choice(['ios', 'mac', 'win', 'android', 'any']), required=True, help="build platform")
-@click.option('-c', '--container', type=click.Choice(['ktx', 'ktxa']), default="ktx", help="container type")
+@click.option('-c', '--container', type=click.Choice(['ktx', 'ktx2']), default="ktx2", help="container type")
 @click.option('-v', '--verbose', is_flag=True, help="verbose output")
 @click.option('-q', '--quality', default=49, type=click.IntRange(0, 100), help="quality affects encode speed")
 @click.option('-j', '--jobs', default=64, help="max physical cores to use")
 @click.option('--force', is_flag=True, help="force rebuild ignoring modstamps")
 @click.option('--script', is_flag=True, help="generate kram script and execute that")
-@click.option('--ktx2', is_flag=True, help="generate ktx2 files from ktx output")
-@click.option('--check', is_flag=True, help="check ktx2 files as generated")
+@click.option('--check', is_flag=True, help="check ktx2 files when generated")
 @click.option('--bundle', is_flag=True, help="bundle files by updating a zip file")
-def processTextures(platform, container, verbose, quality, jobs, force, script, ktx2, check, bundle):
+def processTextures(platform, container, verbose, quality, jobs, force, script, check, bundle):
 	# output to multiple dirs by type
 
 	# eventually pass these in as strings, so script is generic
@@ -392,6 +394,10 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 	appKtx2check = ""
 	doUastc = False
 
+	ktx2 = True
+	if container == "ktx":
+		ktx2 = False
+
 	# can convert ktx -> ktx2 files with zstd and Basis supercompression
 	# caller must have ktx2ktx2 and ktx2sc in path build from https://github.com/KhronosGroup/KTX-Software
 	if platform == "any":
@@ -399,11 +405,16 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		doUastc = True
 
 	if ktx2:
-		script = False
+		# have to run check script after generating, or have to convert ktx to ktx2
+		# so that's why these disable scripting
+		if doUastc or check:
+			script = False
 
+		# these were for converting ktx output from kram to ktx2, and for uastc from original png
 		appKtx2 = "ktx2ktx2"
 		appKtx2sc ="ktxsc"
 
+		# this is a validator app
 		if check:
 			appKtx2check = "ktx2check"
 	

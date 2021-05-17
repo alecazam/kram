@@ -909,6 +909,10 @@ struct MipConstructData {
     
     // Can skip the larger and smaller mips.  This is the larger mips skipped.
     uint32_t numSkippedMips = 0;
+    
+    // this is size of 2d image src after accounting for chunks for a strip of array/cube data
+    uint32_t modifiedWidth = 0;
+    uint32_t modifiedHeight = 0;
 };
 
 
@@ -1264,6 +1268,11 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
         return false;
     }
 
+    // This is wxh of source in case it has chunks
+    // dstImage will start at this, but may mip down smaller base on mipMaxSize
+    mipConstructData.modifiedWidth = w;
+    mipConstructData.modifiedHeight = h;
+    
     // work out how much memory we need to load
     header.initFormatGL(info.pixelFormat);
 
@@ -1433,8 +1442,8 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
                     return false;
                 }
                 
-                if (info.compressor.compressorLevel > 0.0) {
-                   int zstdLevel = (int)round(info.compressor.compressorLevel * 100.0);
+                if (info.compressor.compressorLevel > 0.0f) {
+                   int zstdLevel = (int)round(info.compressor.compressorLevel);
                     if (zstdLevel > 100) {
                         zstdLevel = 100;
                     }
@@ -1446,8 +1455,8 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
             }
             else if (info.compressor.compressorType == KTX2SupercompressionZlib) {
                 // set the level up
-                if (info.compressor.compressorLevel > 0.0) {
-                    zlibLevel = (int)round(info.compressor.compressorLevel * 10.0);
+                if (info.compressor.compressorLevel > 0.0f) {
+                    zlibLevel = (int)round(info.compressor.compressorLevel);
                     if (zlibLevel > 10) {
                         zlibLevel = 10;
                     }
@@ -1601,15 +1610,15 @@ bool Image::createMipsFromChunks(
 
     // This is for 8-bit data (pixelsFloat used for in-place mipgen)
     ImageData srcImage;
-    srcImage.width = _width;
-    srcImage.height = _height;
+    srcImage.width = data.modifiedWidth;
+    srcImage.height = data.modifiedHeight;
     
     // KramMipper uses these
     srcImage.isSRGB = info.isSRGB;
     srcImage.isHDR = info.isHDR;
 
     int32_t w = srcImage.width;
-    int32_t h = srcImage.width;
+    int32_t h = srcImage.height;
     
     // ----------------------------------------------------
     

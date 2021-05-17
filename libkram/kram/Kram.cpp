@@ -1060,10 +1060,10 @@ void kramEncodeUsage(bool showVersion = true)
           "\tSpecifies how many chunks to split up texture into 2darray\n"
           
           // ktx2 specific settings
-          "\t-zstd"
-          "\tktx2 with zstd mip compressor\n"
-          "\t-zlib"
-          "\tktx2 with zlib mip compressor\n"
+          "\t-zstd level"
+          "\tktx2 with zstd mip compressor, 0 for default\n"
+          "\t-zlib level"
+          "\tktx2 with zlib mip compressor, 0 for defauult\n"
           
           "\t-swizzle [rgba01 x4]"
           "\tSpecifies pre-encode swizzle pattern\n"
@@ -1654,7 +1654,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
         return -1;
     }
 
-    success = success && SetupTmpFile(tmpFileHelper, isDstKTX ? ".ktx" : ".ktx2");
+    success = success && SetupTmpFile(tmpFileHelper, isDstKTX2 ? ".ktx2" : ".ktx");
 
     if (success && isVerbose) {
         KLOGI("Kram", "Decoding %s to %s with %s\n",
@@ -1965,10 +1965,25 @@ static int32_t kramAppEncode(vector<const char*>& args)
         // TODO: need level control
         else if (isStringEqual(word, "-zstd")) {
             infoArgs.compressor.compressorType = KTX2SupercompressionZstd;
+            ++i;
+            if (i >= argc) {
+                KLOGE("Kram", "zstd level arg invalid");
+                error = true;
+                break;
+            }
+            infoArgs.compressor.compressorLevel = atoi(args[i]);
+            
             //continue;
         }
         else if (isStringEqual(word, "-zlib")) {
             infoArgs.compressor.compressorType = KTX2SupercompressionZlib;
+            ++i;
+            if (i >= argc) {
+                KLOGE("Kram", "zlib level arg invalid");
+                error = true;
+                break;
+            }
+            infoArgs.compressor.compressorLevel = atoi(args[i]);
             //continue;
         }
         else {
@@ -2056,7 +2071,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                                     srcFilename, srcImage, isPremulRgb);
 
     if (success) {
-        success = SetupTmpFile(tmpFileHelper, isDstKTX ? ".ktx" : ".ktx2");
+        success = SetupTmpFile(tmpFileHelper, isDstKTX2 ? ".ktx2" : ".ktx");
 
         if (!success) {
             KLOGE("Kram", "encode couldn't generate tmp file for output");

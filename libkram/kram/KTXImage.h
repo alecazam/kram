@@ -254,7 +254,7 @@ enum KTX2Supercompression {
 
 struct KTX2Compressor {
     KTX2Supercompression compressorType = KTX2SupercompressionNone;
-    float compressorLevel = 0.0f; // 0.0 default, 100.0 full compression
+    float compressorLevel = 0.0f; // 0.0 is default
     
     bool isCompressed() const { return compressorType != KTX2SupercompressionNone; }
 };
