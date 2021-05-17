@@ -181,11 +181,11 @@ public:
 
 // This is one entire level of mipLevels.
 // In KTX, the image levels are assumed from format and size since no compression applied.
-class KTXImageLevel {
-public:
-    uint64_t offset; // numChunks * length
-    uint64_t length; // size of a single mip
-};
+//class KTXImageLevel {
+//public:
+//    uint64_t offset; // numChunks * length
+//    uint64_t length; // size of a single mip
+//};
 
 //---------------------------------------------
 
@@ -225,18 +225,38 @@ public:
     uint64_t sgdByteLength = 0;
 
     // chunks hold levelCount of all mips of the same size
-    // KTX2ImageLevel* chunks; // [levelCount]
+    // KTXImageLevel* chunks; // [levelCount]
 };
 
-// Unlike KTX, KTX2 writes an array of level sizes since compression may e involved.
-// These correspond to an entire compressed array of chunks.
-// So often an entire level mus be decompressed before a chunk can be accessed.
+// Unlike KTX, KTX2 writes an array of level sizes since level compression may be used.
+// Level compression is an entire compressed array of chunks at a given mip dimension.
+// So then the entire level must be decompressed before a chunk can be accessed.
 // This is one entire level of mipLevels.
-class KTX2ImageLevel {
+//
+// Use this for KTX, but there length == lengthCompressed, and the array is just a temporary.
+// and the offsts include a 4 byte length at the start of each level.
+class KTXImageLevel {
 public:
-    uint64_t offset; // numChunks * length
-    uint64_t lengthCompressed; // can only be read in, can't compute this, but can compute upper bound from zstd
-    uint64_t length; // size of a single mip
+    uint64_t offset = 0; //  differ in ordering - ktx largest first, ktx2 smallest first
+    uint64_t lengthCompressed = 0; // set to 0 if not compresseds
+    uint64_t length = 0; // numChunks * mipSize when written for non cube on KTX1 or all KTX2, internally only stores mipSize
+};
+
+enum KTX2Supercompression {
+    KTX2SupercompressionNone = 0,
+    KTX2SupercompressionBasisLZ = 1, // can transcode, but can't gen from KTX file using ktxsc, uses sgdByteLength
+    KTX2SupercompressionZstd = 2, // faster deflate, ktxsc support
+    KTX2SupercompressionZlib = 3, // deflate, no ktxsc support (use miniz)
+    // TODO: Need LZFSE?
+    // TODO: need Kraken for PS4
+    // TODO: need Xbox format
+};
+
+struct KTX2Compressor {
+    KTX2Supercompression compressorType = KTX2SupercompressionNone;
+    float compressorLevel = 0.0f; // 0.0 default, 100.0 full compression
+    
+    bool isCompressed() const { return compressorType != KTX2SupercompressionNone; }
 };
 
 //---------------------------------------------
@@ -251,8 +271,12 @@ public:
     bool open(const uint8_t* imageData, size_t imageDataLength);
     
     void initProps(const uint8_t* propsData, size_t propDataSize);
-    bool initMipLevels(bool validateLevelSizeFromRead, size_t offsetToImageData);
+    
+    void initMipLevels(size_t mipOffset);
+    void initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize);
 
+    bool validateMipLevels() const;
+    
     // props handling
     void toPropsData(vector<uint8_t>& propsData);
 

@@ -10,19 +10,10 @@
 #include <map>
 #include <unordered_map>
 
-extern "C" {
-
-// not using zstd.h, so pull this in directly from zstddeclib.c
-bool FSE_isError(size_t size);
-
-typedef struct ZSTD_DCtx_s ZSTD_DCtx;
-ZSTD_DCtx* ZSTD_createDCtx(void);
-size_t     ZSTD_freeDCtx(ZSTD_DCtx* dctx);
-
-size_t ZSTD_decompressDCtx(ZSTD_DCtx* dctx,
-                               void* dst, size_t dstCapacity,
-                         const void* src, size_t srcSize);
-}
+// for zlib decompress
+#include "miniz.h"
+// for zstd decompress
+#include "zstd.h"
 
 namespace kram {
 
@@ -942,7 +933,8 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength)
         return false;
     }
     
-    return initMipLevels(true, sizeof(KTXHeader) + header.bytesOfKeyValueData);
+    initMipLevels(sizeof(KTXHeader) + header.bytesOfKeyValueData);
+    return validateMipLevels();
 }
 
 void KTXImage::initProps(const uint8_t* propsData, size_t propDataSize)
@@ -1095,7 +1087,85 @@ void KTXImage::toPropsData(vector<uint8_t>& propsData)
     // TODO: this needs to pad to 16-bytes, so may need a prop for that
 }
 
-bool KTXImage::initMipLevels(bool validateLevelSizeFromRead, size_t offsetToImageData)
+void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize)
+{
+     // dst levels
+    int32_t w = width;
+    int32_t h = height;
+    int32_t d = depth;
+    
+    bool needsDownsample = (w > mipMaxSize || h > mipMaxSize);
+
+    int32_t maxMipLevels = 16;  // 64K x 64K
+    
+    // can still downsample src multiple times even with only 1 level exported
+    if ((!doMipmaps) && needsDownsample) {
+        maxMipLevels = 1;
+    }
+
+    KTXImageLevel level;
+    level.offset = 0; // compute later, once know ktx vs. ktx2
+    
+    mipLevels.clear();
+    
+    if (doMipmaps || needsDownsample) {
+        bool keepMip =
+            (w >= mipMinSize && w <= mipMaxSize) &&
+            (h >= mipMinSize && h <= mipMaxSize);
+        
+        if (keepMip) {
+            level.length = mipLevelSize(w, h);
+            level.lengthCompressed = 0;
+            
+            if (mipLevels.empty()) {
+                // adjust the top dimensions
+                width = w;
+                height = h;
+                depth = d;
+            }
+            mipLevels.push_back(level);
+        }
+
+        do {
+            mipDown(w, h, d);
+
+            keepMip =
+                (w >= mipMinSize && w <= mipMaxSize) &&
+                (h >= mipMinSize && h <= mipMaxSize);
+            
+            if (keepMip && (mipLevels.size() < (size_t)maxMipLevels)) {
+                // length needs to be multiplied by chunk size before writing out
+                level.length = mipLevelSize(w, h);
+                level.lengthCompressed = 0;
+                
+                if (mipLevels.empty()) {
+                    // adjust the top dimensions
+                    width = w;
+                    height = h;
+                    depth = d;
+                }
+                
+                mipLevels.push_back(level);
+            }
+
+        } while (w > 1 || h > 1 || d > 1);
+    }
+    else {
+        // length needs to be multiplied by chunk size before writing out
+        level.length = mipLevelSize(w, h);
+        level.lengthCompressed = 0;
+        
+        mipLevels.push_back(level);
+    }
+    
+    
+    header.numberOfMipmapLevels = mipLevels.size();
+    
+    header.pixelWidth = width;
+    header.pixelHeight = height;
+}
+    
+void KTXImage::initMipLevels(size_t mipOffset)
 {
     // largest mips are first in file
     uint32_t numMips = max(1u, header.numberOfMipmapLevels);
@@ -1105,117 +1175,62 @@ bool KTXImage::initMipLevels(bool validateLevelSizeFromRead, size_t offsetToImag
     mipLevels.reserve(numMips);
     mipLevels.clear();
 
-    size_t totalDataSize = offsetToImageData; // sizeof(KTXHeader) + header.bytesOfKeyValueData;
-    //size_t blockSize = this->blockSize();
+    size_t offset = mipOffset;
 
     int32_t w = width;
     int32_t h = height;
-
+    int32_t d = depth;
+    
     for (uint32_t i = 0; i < numMips; ++i) {
         size_t dataSize = mipLevelSize(w, h);
 
         uint32_t levelSize = dataSize * numChunks;
 
         // compute dataSize from header data
-
         if (!skipImageLength) {
-            // read data size
-            // 4-byte dataSize throws off alignment of mips to block size on most formats
-            // would need to pad after this by block size
-
-            // validate that no weird size to image
-            if (validateLevelSizeFromRead) {
-                const uint8_t* levelSizeField = (const uint8_t*)fileData + totalDataSize;
-
-                uint32_t levelSizeFromRead = *(const uint32_t*)levelSizeField;
-                // cube only stores size of one face, ugh
-                if (textureType == MyMTLTextureTypeCube) {
-                    levelSizeFromRead *= 6;
-                }
-
-                if (levelSizeFromRead != levelSize) {
-                    KLOGE("kram", "mip %d levelSize mismatch %d %d", i, (int)levelSizeFromRead, (int)levelSize);
-                    return false;
-                }
-            }
-
             // advance past the length
-            totalDataSize += sizeof(uint32_t);
+            offset += sizeof(uint32_t);
         }
 
-        size_t offset = totalDataSize;
-
+        // TODO: Here is where offset alignment to 4 bytes may be needed
+        // but that also needs to be accounted for in allocation
+        
         // level holds single texture size not level size, but offset reflects level start
-        KTXImageLevel level = {offset, dataSize};
+        KTXImageLevel level = { offset, 0, dataSize };
         mipLevels.push_back(level);
 
-        totalDataSize += levelSize;
-
-        // TODO: remove code below, since padding really isn't used with 4-byte alignment of rowBytes in KTX1
-        //mips += levelSize;
-
-        //        for (int array = 0; array < numArrays; ++array) {
-        //            for (int face = 0; face < numFaces; ++face) {
-        //                for (int slice = 0; slice < numSlices; ++slice) {
-        //                    const uint8_t* srcImageData = mips;
-        //                    mips += dataSize;
-        //                    totalDataSize += dataSize;
-        //
-        //                    // assumes all images are in same mmap file, so can just
-        //                    // alias the offset these offsets need to be at a multiple
-        //                    // of the block size
-        //                    size_t offset = srcImageData - fileData;
-        //                    KTXImageLevel level = {offset, dataSize};
-        //                    mipLevels.push_back(level);
-        //
-        //                    if (skipImageLength) {
-        //                        if ((offset & (blockSize - 1)) != 0) {
-        //                            return false;
-        //                        }
-        //                    }
-        //
-        //                    // TODO: pad to 4 on 1/2/3 byte formats
-        //                    // but make sure if this is on every mip or not
-        //                }
-        //
-        ////                // cube padding to 4 byte alignment
-        ////                if (textureType == MyMTLTextureTypeCube) {
-        ////                    size_t padding =
-        ////                        3 - ((dataSize + 3) % 4);  // 0, 1, 2, 3 -> 0, 3, 2, 1
-        ////                    if (padding > 0) {
-        ////                        mips += padding;
-        ////                        totalDataSize += padding;
-        ////                    }
-        ////
-        ////                    if (skipImageLength) {
-        ////                        if (padding != 0) {
-        ////                            return false;
-        ////                        }
-        ////                    }
-        ////                }
-        //            }
-        //        }
-
-        //        // mip padding to 4 byte alignment
-        //        size_t padding =
-        //            3 - ((totalDataSize + 3) % 4);  // 0, 1, 2, 3 -> 0, 3, 2, 1
-        //        if (padding > 0) {
-        //            mips += padding;
-        //            totalDataSize += padding;
-        //        }
-        //
-        //        if (skipImageLength) {
-        //            if (padding != 0) {
-        //                return false;
-        //            }
-        //        }
-
-        //  https://computergraphics.stackexchange.com/questions/1441/how-does-mip-mapping-work-with-non-power-of-2-textures
-
-        mipDown(w, h);
+        offset += levelSize;
+        
+        mipDown(w, h, d);
     }
+}
 
-    return true;
+bool KTXImage::validateMipLevels() const {
+    if (skipImageLength)
+        return true;
+    
+    bool isValid = true;
+
+    // validate that no weird size to image
+    for (uint32_t i = 0; i < mipLevels.size(); ++i) {
+        auto& level = mipLevels[i];
+        
+        const uint8_t* levelSizeField = (const uint8_t*)fileData + level.offset - sizeof(uint32_t);
+        uint32_t levelSizeFromRead = *(const uint32_t*)levelSizeField;
+        
+        // cube only stores size of one face, ugh
+        if (textureType == MyMTLTextureTypeCube) {
+            levelSizeFromRead *= 6;
+        }
+
+        if (levelSizeFromRead != level.length) {
+            KLOGE("kram", "mip %d levelSize mismatch %d %d", i, (int)levelSizeFromRead, (int)level.length);
+            isValid = false;
+            break;
+        }
+    }
+    
+    return isValid;
 }
 
 const char* textureTypeName(MyMTLTextureType textureType)
@@ -1241,7 +1256,7 @@ const char* textureTypeName(MyMTLTextureType textureType)
 
 
 
-
+// KTX2 layout
 //// Data Format Descriptor
 //uint32_t dfdTotalSize = 0;
 //continue
@@ -1272,6 +1287,17 @@ const char* textureTypeName(MyMTLTextureType textureType)
 // can use ktx2ktx2 and ktx2sc to supercompress, and kramv can use this to open and view data as a KTX1 file.
 // ignoring Basis and supercompression data, etc.
 
+// wish C++ had a defer
+struct ZSTDScope2
+{
+    ZSTDScope2(ZSTD_DCtx* ctx_) : ctx(ctx_) {}
+    ~ZSTDScope2() { ZSTD_freeDCtx(ctx); }
+    
+private:
+    ZSTD_DCtx* ctx = nullptr;
+};
+
+
 bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
 {
     if ((size_t)imageDataLength < sizeof(KTX2Header)) {
@@ -1290,21 +1316,15 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
     // copy out the header,
     const KTX2Header& header2 = *(const KTX2Header*)imageData;
 
-    enum KTX2Supercompression {
-        KTX2SupercompressionNone = 0,
-        KTX2SupercompressionBasisLZ = 1, // can transcode, but can't gen from KTX file using ktxsc, uses sgdByteLength
-        KTX2SupercompressionZstd = 2, // faster deflate, ktxsc support
-        KTX2SupercompressionZlib = 3, // deflate, no ktxsc support (use miniz)
-        // TODO: Need LZFSE?
-    };
-    
-    bool isLevelOfMipCompressed = header2.supercompressionScheme != KTX2SupercompressionNone;
     
     if (header2.supercompressionScheme != KTX2SupercompressionNone &&
-        header2.supercompressionScheme != KTX2SupercompressionZstd) {
+        header2.supercompressionScheme != KTX2SupercompressionZstd &&
+        header2.supercompressionScheme != KTX2SupercompressionZlib) {
         KLOGE("kram", "Unknown supercompression %d", header2.supercompressionScheme);
         return false;
     }
+    
+    bool isCompressed = header2.supercompressionScheme != KTX2SupercompressionNone;
     
     // This typically means UASTC encoding + zstd supercompression, and code doesn't handle that below yet
     if (header2.vkFormat == 0) {
@@ -1329,12 +1349,13 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
 
     int32_t numChunks = totalChunks();
     
-    // need to copy out lengthCompressed here, since we can't determine that
-    vector<KTX2ImageLevel> levels;
+    vector<KTXImageLevel> levels;
     uint32_t levelOffset = sizeof(KTX2Header);
     for (uint32_t i = 0; i < header.numberOfMipmapLevels; ++i) {
         // ktx2 stores levels in same order as ktx1, but larger mips occur later in the file
-        auto level = *(const KTX2ImageLevel*)(imageData + levelOffset + sizeof(KTX2ImageLevel) * i);
+        // only KTX2 writes this array out due to lengthCompressed field.
+        
+        auto level = *(const KTXImageLevel*)(imageData + levelOffset + sizeof(KTXImageLevel) * i);
         
         assert(level.length % numChunks == 0);
         
@@ -1356,32 +1377,27 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
         return false;
     }
     
-    // Note: KTX2 also doesn't have the length field embedded the mipData
-    // so need to be able to set skipLength to unify the mipgen if aliasing the mip data
-    // Only reading this format, never writing it out.
-    skipImageLength = true;
-    
     // transfer key-value data pairs
     // bytesOfKeyValueData will be updated if props written out
-    // but probably want to leave this out of level offsets
-    header.bytesOfKeyValueData = 0; // header2.kvdByteLength;
+    header.bytesOfKeyValueData = 0;
     initProps(imageData + header2.kvdByteOffset, header2.kvdByteLength);
    
     
-    if (!isLevelOfMipCompressed) {
+    if (!isCompressed) {
+        // Note: this is aliasing the mips from a ktx2 file into a ktx1 KTXImage
+        // This is highly unsafe.
+        
+        // Note: KTX2 also doesn't have the length field embedded the mipData
+        // so need to be able to set skipLength to unify the mipgen if aliasing the mip data
+        // Only reading this format, never writing it out.
+        skipImageLength = true;
+        
         fileData = imageData;
         fileDataLength = imageDataLength;
         
-        // might be able to just use header2.sgdByteOffset + header2.sgdByteLength
-        uint32_t offsetToImageData = //std::max(std::max(
-            //header2.dfdByteOffset +  header2.dfdByteLength,
-            //header2.kvdByteOffset +  header2.kvdByteLength),
-            header2.sgdByteOffset +  header2.sgdByteLength;
-                                           
-        
-        if (!initMipLevels(false, offsetToImageData)) {
-            return false;
-        }
+        // these are mip offset for KTX2 file
+        size_t mipOffset = header2.sgdByteOffset + header2.sgdByteLength;
+        initMipLevels(mipOffset);
         
         // TODO: KTX1 packs rows to 4 bytes, but KTX2 packs tightly to 1
         // for now just reverse the ktx2 mips back to ktx1, aliasing fileData
@@ -1405,9 +1421,9 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
         }
     }
     else {
-        if (!initMipLevels(false, sizeof(KTXHeader) + header.bytesOfKeyValueData)) {
-            return false;
-        }
+        // This is decompressing KTX2 into KTX1
+        size_t mipOffset = sizeof(KTXHeader) + header.bytesOfKeyValueData;
+        initMipLevels(mipOffset);
         
         // compute the decompressed size
         // Note: initMipLevels computes but doesn't store this
@@ -1421,6 +1437,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
         bool isZstd = header2.supercompressionScheme == KTX2SupercompressionZstd;
         ZSTD_DCtx* dctx = nullptr;
         if (isZstd) dctx = ZSTD_createDCtx();
+        ZSTDScope2 scope(dctx);
         
         // need to decompress mips here
         for (uint32_t i = 0; i < header.numberOfMipmapLevels; ++i) {
@@ -1434,6 +1451,13 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
             size_t dstDataSize = level1.length * numChunks;
             uint8_t* dstData = (uint8_t*)fileData + level1.offset; // can const_cast, since class owns data
             
+            // preserve lengthCompressed so kram info can display the value
+            // this field will need to be set to 0
+            
+            // This does display in kram info, but it's confusing since image was converted to ktx1
+            // and the offsets are largest first.  So for now, don't copy this in.
+            // level1.lengthCompressed = level2.lengthCompressed;
+            
             // TODO: use basis transcoder (single file) for Basis UASTC here, then don't need libktx yet
             // wont work for BasisLZ (which is ETC1S).
             
@@ -1445,26 +1469,39 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
                         dstData, dstDataSize,
                         srcData, srcDataSize);
                     
-                    if (FSE_isError(result)) {
-                        ZSTD_freeDCtx(dctx);
+                    if (ZSTD_isError(result)) {
+                        KLOGE("kram", "decode mip zstd failed");
                         return false;
                     }
-                    assert(level2.length * numChunks == result);
+                    if (level2.length * numChunks != result) {
+                        KLOGE("kram", "decode mip zstd size not expected");
+                        return false;
+                    }
                     break;
                 }
-                case KTX2SupercompressionBasisLZ:
-                    // TODO: this one really needs KTX-software branch
-                    // also loader has option to transcode to various formats
-                    break;
+                
+                case KTX2SupercompressionZlib: {
+                    // can use miniz or libCompression
+                    mz_ulong dstDataSizeMZ = 0;
+                    if (mz_uncompress(dstData, &dstDataSizeMZ,
+                                      srcData, srcDataSize) != MZ_OK) {
+                        KLOGE("kram", "decode mip zlib failed");
+                        return false;
+                    }
+                    if (dstDataSizeMZ != dstDataSize) {
+                        KLOGE("kram", "decode mip zlib size not expected");
+                        return false;
+                    }
                     
-                case KTX2SupercompressionZlib:
-                    // TODO: can use miniz on this, or libCompression
                     break;
+                }
+                    
+                // already checked at top of function
+                default: {
+                    return false;
+                }
             }
         }
-        
-        if (dctx) ZSTD_freeDCtx(dctx);
-        
     }
     
     return true;
@@ -1476,6 +1513,8 @@ vector<uint8_t>& KTXImage::imageData() {
 
 void KTXImage::reserveImageData() {
     int32_t numChunks = totalChunks();
+    
+    // on KTX1 the last mip is the smallest and last in the file
     const auto& lastMip = mipLevels[header.numberOfMipmapLevels-1];
     size_t totalKTXSize =
         lastMip.offset + lastMip.length * numChunks;

@@ -29,6 +29,8 @@ enum ImageResizeFilter {
 
 //---------------------------
 
+struct MipConstructData;
+
 // TODO: this can only holds one level of mips, so custom mips aren't possible.
 // Mipmap generation is all in-place to this storage.
 class Image {
@@ -66,14 +68,13 @@ public:
 
 private:
     bool encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const;
+    
     bool decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstImage, TexEncoder decoder, bool isVerbose, const string& swizzleText) const;
 
     // compute how big mips will be
-    void computeMipStorage(const KTXImage& image, int32_t w, int32_t h,
+    void computeMipStorage(const KTXImage& image, int32_t& w, int32_t& h, int32_t& numSkippedMips,
                            bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize,
-                           int32_t& storageSize, int32_t& storageSizeTotal,
-                           vector<int32_t>& mipStorageSizes,
-                           int32_t& numDstMipLevels, int32_t& numMipLevels) const;
+                           vector<KTXImageLevel>& dstMipLevels) const;
 
     // ugh, reduce the params into this
     bool compressMipLevel(const ImageInfo& info, KTXImage& image,
@@ -85,7 +86,17 @@ private:
                                 const KTXImage& image, ImageData& srcImage,
                                 vector<Color>& tmpImage) const;
 
-    
+    bool createMipsFromChunks(ImageInfo& info, MipConstructData& data,
+                              FILE* dstFile, KTXImage& dstImage) const;
+
+    bool writeKTX1FileOrImage(
+         ImageInfo& info,
+         MipConstructData& mipConstructData,
+         const vector<uint8_t>& propsData,
+         FILE* dstFile, KTXImage& dstImage) const;
+
+    void addBaseProps(const ImageInfo& info, KTXImage& dstImage) const;
+
 private:
     // pixel size of image
     int32_t _width = 0;

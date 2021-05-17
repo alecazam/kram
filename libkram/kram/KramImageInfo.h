@@ -51,6 +51,8 @@ public:
 
     int32_t quality = 49;  // may want float
 
+    // ktx2 has a compression type and level
+    KTX2Compressor compressor;
     bool isKTX2 = false;
     
     //bool skipImageLength = false;
@@ -121,6 +123,8 @@ public:
     string averageChannels;
     string swizzleText;
 
+    // ktx2 has a compression type and level
+    KTX2Compressor compressor;
     bool isKTX2 = false;
     
     // output image state
@@ -172,6 +176,8 @@ public:
     int32_t chunksX = 0;
     int32_t chunksY = 0;
     int32_t chunksCount = 0;
+    
+    
 };
 
 bool isSwizzleValid(const char* swizzle);

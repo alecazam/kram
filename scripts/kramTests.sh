@@ -10,7 +10,7 @@
 ../scripts/kramTextures.py -p android --ktx2 --bundle  
 ../scripts/kramTextures.py -p android --bundle  
 
-# this only has ktx2 form
-../scripts/kramTextures.py -p any --ktx2 --bundle  
+# this only has ktx2 form, tests uastc which kram doesn't open/save yet
+#../scripts/kramTextures.py -p any --ktx2 --bundle  
 
 

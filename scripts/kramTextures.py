@@ -52,7 +52,8 @@ class TextureProcessor:
 	appKtx2sc = ""
 	appKtx2check = ""
 	doUastc = False
-
+	doKTX2 = False
+	
 	# preset formats for a given platform
 	textureFormats = []
 
@@ -168,8 +169,9 @@ class TextureProcessor:
 		
 		srcFilename = os.path.basename(srcRoot) # just the name no ext
 
-		# this only exports to ktx, post process will convert to ktx2
 		ext = ".ktx"
+		if self.doKTX2:
+			ext = ".ktx2"
 		dstName = srcFilename 
 
 		# replace -h with -n, since it will be converted to a normal
@@ -216,6 +218,11 @@ class TextureProcessor:
 		}
 		typeText = switcher.get(texType, " -type 2d")
 
+		# choice of none, zlib, or zstd
+		compressorText = ""
+		if self.doKTX2:
+			compressorText = " -zstd"
+
 		# this could work on 3d and cubearray textures, but for now only use on 2D textures
 		chunksText = ""
 		if texType == TextureType.Tex2DArray:
@@ -223,7 +230,7 @@ class TextureProcessor:
 			if chunksX > 0 and chunksY > 0:
 				chunksText = " -chunks {0}x{1}".format(chunksX, chunksY)
 
-		cmd = "encode" + fmt + typeText + chunksText + " -i " + srcPath + " -o " + dstFile
+		cmd = "encode" + fmt + typeText + chunksText + compressorText + " -i " + srcPath + " -o " + dstFile
 
 		# can print out commands to script and then process that all in C++
 		if self.doScript:
@@ -234,6 +241,7 @@ class TextureProcessor:
 		else:
 			timer = -time.perf_counter()
 		
+			# kram can't compress to uastc ktx2, but this script can via ktx2sc from original file
 			result = self.spawn(self.appKram + " " + cmd)
 
 			# report slow textures
@@ -242,36 +250,38 @@ class TextureProcessor:
 			if timer > slowTextureTime:
 				print("perf: encode {0} took {1:.3f}s".format(dstName, timer))
 
+			
 			# TODO: split this off into another modstamp testing pass, and only do work if ktx is older than ktx2
 			# convert ktx -> ktx2, and zstd supercompress the mips, kram can read these and decompress
 			# for now, this is only possible when not scripted
 			# could read these in kram, and then execute them, or write these to another file
 			# and then execute that if script file suceeds
-			if self.appKtx2:
-				ktx2Filename = dstFile + "2"
+			# if self.appKtx2:
+			# 	ktx2Filename = dstFile + "2"
 				
-				# create the ktx2
-				result = self.spawn(self.appKtx2 + " -f -o " + ktx2Filename + " " + dstFile)
+			# 	# create the ktx2
+			# 	result = self.spawn(self.appKtx2 + " -f -o " + ktx2Filename + " " + dstFile)
 				
-				# too bad this can't check ktx1...
-				if self.appKtx2check != "" and result == 0:
-					result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
+			# 	# too bad this can't check ktx1...
+			# 	if self.appKtx2check != "" and result == 0:
+			# 		result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
 
-				# can only zstd compress block encoded files, but can do BasisLZ on 
-				#   explicit files.
+			# 	# can only zstd compress block encoded files, but can do BasisLZ on 
+			# 	#   explicit files.
 
-				# overwrite it with supercompressed version
-				# basis uastc supercompress - only if content isn't already block encoded, TODO: kramv and loader cannot read this
-				# zstd supercompress - works on everything, kramv and loader can read this
-				if self.appKtx2sc != "" and result == 0:
-					if self.doUastc:
-						result = self.spawn(self.appKtx2sc + " --uastc 2 --uastc_rdo_q 1.0 --zcmp 3 --threads 1 " + ktx2Filename)
-					else:
-						result = self.spawn(self.appKtx2sc + " --zcmp 3 --threads 1 " + ktx2Filename)
+			# 	# overwrite it with supercompressed version
+			# 	# basis uastc supercompress - only if content isn't already block encoded, TODO: kramv and loader cannot read this
+			# 	# zstd supercompress - works on everything, kramv and loader can read this
+			# 	if self.appKtx2sc != "" and result == 0:
+			# 		if self.doUastc:
+			# 			result = self.spawn(self.appKtx2sc + " --uastc 2 --uastc_rdo_q 1.0 --zcmp 3 --threads 1 " + ktx2Filename)
+			# 		else:
+			# 			result = self.spawn(self.appKtx2sc + " --zcmp 3 --threads 1 " + ktx2Filename)
 
-				# double check supercompressed version, may not be necessary
-				if self.appKtx2check != "" and result == 0:
-					result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
+			# double check supercompressed version, may not be necessary
+			if self.appKtx2check != "" and result == 0:
+			 	result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
+			
 
 		return result
 
@@ -526,11 +536,17 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		
 	processor = TextureProcessor(platform, appKram, maxCores, force, script, scriptFile, formats)
 	if ktx2:
+		processor.doKTX2 = ktx2
+
+		# used to need all of these apps to gen ktx2, but can gen directly from kram now
+		# leaving these to test aastc case
 		processor.appKtx2 = appKtx2
 		processor.appKtx2sc = appKtx2sc
-		processor.appKtx2check = appKtx2check
 		processor.doUastc = doUastc
 
+		# check app still useful
+		processor.appKtx2check = appKtx2check
+		
 	for srcDir in srcDirs:
 		dstDir = dstDirForPlatform + srcDir
 		os.makedirs(dstDir, exist_ok = True)

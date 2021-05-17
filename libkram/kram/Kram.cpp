@@ -893,7 +893,7 @@ void kramInfoUsage(bool showVersion = true)
     KLOGI("Kram",
           "%s\n"
           "Usage: kram info\n"
-          "\t -i/nput <.png | .ktx>\n"
+          "\t -i/nput <.png | .ktx | .ktx2>\n"
           "\t [-o/utput info.txt]\n"
           "\t [-v/erbose]\n"
           "\n",
@@ -943,8 +943,8 @@ void kramEncodeUsage(bool showVersion = true)
           "Usage: kram encode\n"
           "\t -f/ormat (bc1 | astc4x4 | etc2rgba | rgba16f)\n"
           "\t [-srgb] [-signed] [-normal]\n"
-          "\t -i/nput <source.png | .ktx>\n"
-          "\t -o/utput <target.ktx | .ktxa>\n"
+          "\t -i/nput <source.png | .ktx | .ktx2>\n"
+          "\t -o/utput <target.ktx | .ktx | .ktx2>\n"
           "\n"
           "\t [-type 2d|3d|..]\n"
           "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
@@ -1059,6 +1059,12 @@ void kramEncodeUsage(bool showVersion = true)
           "\t-chunks 4x4"
           "\tSpecifies how many chunks to split up texture into 2darray\n"
           
+          // ktx2 specific settings
+          "\t-zstd"
+          "\tktx2 with zstd mip compressor\n"
+          "\t-zlib"
+          "\tktx2 with zlib mip compressor\n"
+          
           "\t-swizzle [rgba01 x4]"
           "\tSpecifies pre-encode swizzle pattern\n"
           "\t-avg [rgba]"
@@ -1125,7 +1131,7 @@ static int32_t kramAppInfo(vector<const char*>& args)
             }
 
             dstFilename = args[i];
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-input") ||
                  isStringEqual(word, "-i")) {
@@ -1137,7 +1143,7 @@ static int32_t kramAppInfo(vector<const char*>& args)
             }
 
             srcFilename = args[i];
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
@@ -1544,7 +1550,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
 
             // TODO: if args ends with /, then output to that dir
             dstFilename = args[i];
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-input") ||
                  isStringEqual(word, "-i")) {
@@ -1556,7 +1562,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
             }
 
             srcFilename = args[i];
-            continue;
+            //continue;
         }
 
         else if (isStringEqual(word, "-swizzle")) {
@@ -1574,7 +1580,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
                 break;
             }
             swizzleText = swizzleString;
-            continue;
+            //continue;
         }
         // this is really decoder, but keep same argument as encoder
         else if (isStringEqual(word, "-e") ||
@@ -1587,14 +1593,14 @@ static int32_t kramAppDecode(vector<const char*>& args)
             }
 
             textureDecoder = parseEncoder(args[i]);
-            continue;
+            //continue;
         }
 
         // probably should be per-command and global verbose
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
             isVerbose = true;
-            continue;
+            //continue;
         }
         else {
             KLOGE("Kram", "unexpected argument \"%s\"\n",
@@ -1698,11 +1704,11 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
         if (isStringEqual(word, "-sdf")) {
             infoArgs.doSDF = true;
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-optopaque")) {
             infoArgs.optimizeFormatForOpaque = true;
-            continue;
+            //continue;
         }
 
         // mip setting
@@ -1715,7 +1721,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.mipMaxSize = atoi(args[i]);
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-mipmin")) {
             ++i;
@@ -1726,12 +1732,12 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.mipMinSize = atoi(args[i]);
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-mipnone")) {
             // disable mips even if pow2
             infoArgs.doMipmaps = false;
-            continue;
+            //continue;
         }
 //        else if (isStringEqual(word, "-mipalign")) {
 //            // pad start of each mip to pixel/block size of format
@@ -1755,17 +1761,17 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 KLOGE("Kram", "heightScale arg cannot be 0");
                 error = true;
             }
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-height")) {
             // converted to a normal map
             infoArgs.isHeight = true;
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-wrap")) {
             // whether texture is clamp or wrap
             infoArgs.isWrap = true;
-            continue;
+            //continue;
         }
         
         
@@ -1779,7 +1785,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.textureEncoder = parseEncoder(args[i]);
-            continue;
+            //continue;
         }
 
         else if (isStringEqual(word, "-swizzle")) {
@@ -1797,7 +1803,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
             infoArgs.swizzleText = swizzleString;
-            continue;
+            //continue;
         }
 
         else if (isStringEqual(word, "-chunks")) {
@@ -1824,7 +1830,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             infoArgs.chunksY = chunksY;
             infoArgs.chunksCount = chunksX * chunksY;
             
-            continue;
+            //continue;
         }
         
         else if (isStringEqual(word, "-avg")) {
@@ -1836,7 +1842,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
             infoArgs.averageChannels = channelString;
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-type")) {
             ++i;
@@ -1847,7 +1853,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.textureType = parseTextureType(args[i]);
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-quality")) {
             ++i;
@@ -1858,7 +1864,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.quality = atoi(args[i]);
-            continue;
+            //continue;
         }
 
         else if (isStringEqual(word, "-output") ||
@@ -1872,13 +1878,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
             // TODO: if args ends with /, then output to that dir
             dstFilename = args[i];
-
-//            // see if it's a ktxa file
-//            if (dstFilename.back() == 'a' ||
-//                dstFilename.back() == 'A') {
-//                infoArgs.skipImageLength = true;
-//            }
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-input") ||
                  isStringEqual(word, "-i")) {
@@ -1890,29 +1890,29 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             srcFilename = args[i];
-            continue;
+            //continue;
         }
 
         // these affect the format
         else if (isStringEqual(word, "-hdr")) {
             // not validating format for whether it's srgb or not
             infoArgs.isHDR = true;
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-srgb")) {
             // not validating format for whether it's srgb or not
             infoArgs.isSRGB = true;
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-signed")) {
             // not validating format for whether it's signed or not
             infoArgs.isSigned = true;
-            continue;
+            //continue;
         }
 
         else if (isStringEqual(word, "-normal")) {
             infoArgs.isNormal = true;
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-resize")) {
             ++i;
@@ -1923,7 +1923,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             resizeString = args[i];
-            continue;
+            //continue;
         }
 
         // This means to post-multiply alpha after loading, not that incoming data in already premul
@@ -1931,22 +1931,22 @@ static int32_t kramAppEncode(vector<const char*>& args)
         // really would prefer to premul them when building the texture.
         else if (isStringEqual(word, "-premul")) {
             infoArgs.isPremultiplied = true;
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-prezero")) {
             infoArgs.isPrezero = true;
-            continue;
+            //continue;
         }
         // this means premul the data at read from srgb, this it to match photoshop
         else if (isStringEqual(word, "-premulrgb")) {
             isPremulRgb = true;
-            continue;
+            //continue;
         }
         
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
             infoArgs.isVerbose = true;
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-f") ||
                  isStringEqual(word, "-format")) {
@@ -1958,7 +1958,18 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.formatString = args[i];
-            continue;
+            //continue;
+        }
+        
+        // compressor for ktx2 mips
+        // TODO: need level control
+        else if (isStringEqual(word, "-zstd")) {
+            infoArgs.compressor.compressorType = KTX2SupercompressionZstd;
+            //continue;
+        }
+        else if (isStringEqual(word, "-zlib")) {
+            infoArgs.compressor.compressorType = KTX2SupercompressionZlib;
+            //continue;
         }
         else {
             KLOGE("Kram", "unexpected argument \"%s\"\n",
@@ -2176,7 +2187,7 @@ int32_t kramAppScript(vector<const char*>& args)
             }
 
             srcFilename = args[i];
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-jobs") ||
                  isStringEqual(word, "-j")) {
@@ -2189,7 +2200,7 @@ int32_t kramAppScript(vector<const char*>& args)
             }
 
             numJobs = atoi(args[i]);
-            continue;
+            //continue;
         }
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
