@@ -118,11 +118,13 @@ bool Image::loadImageFromKTX(const KTXImage& image)
         return false;
     }
 
-    // TODO: handle custom mips, this will currently box filter to build
+    // TODO: handle loading custom mips.  Save will currently box filter to build
     // remaining mips but for SDF or coverage scaled alpha test, need to
-    // preserve original data.
+    // preserve original data.  Problem is that Image save to KTX/2 always does in-place
+    // mipgen.
+    
     if (image.header.numberOfMipmapLevels > 1) {
-        KLOGW("Image", "Skipping custom mip levels");
+        KLOGW("Image", "Skipping custom mip levels from KTX load");
     }
 
     // so can call through to blockSize
@@ -467,6 +469,7 @@ bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstIma
     vector<uint8_t> propsData;
     dstImage.toPropsData(propsData);
     dstHeader.bytesOfKeyValueData = (uint32_t)vsizeof(propsData);
+    
     size_t mipOffset = sizeof(KTXHeader) + dstHeader.bytesOfKeyValueData;
     dstImage.initMipLevels(mipOffset);
     
@@ -900,7 +903,12 @@ struct MipConstructData {
     vector<half4> halfImage;
     vector<float4> floatImage;
 
+    // Subdividing strips of larger images into cube/atlas/etc.
+    // These offsets are where to find each chunk in that larger image
     vector<Int2> chunkOffsets;
+    
+    // Can skip the larger and smaller mips.  This is the larger mips skipped.
+    uint32_t numSkippedMips = 0;
 };
 
 
@@ -1267,7 +1275,7 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
     dstImage.height = h;
     dstImage.depth = header.pixelDepth; // from validate above
     
-    dstImage.initMipLevels(info.doMipmaps, info.mipMinSize, info.mipMaxSize);
+    dstImage.initMipLevels(info.doMipmaps, info.mipMinSize, info.mipMaxSize, mipConstructData.numSkippedMips);
     
     // ----------------------------------------------------
 
@@ -1762,7 +1770,7 @@ bool Image::createMipsFromChunks(
         // build mips for the chunk, dropping mips as needed, but downsampling
         // from available image
 
-        int32_t numSkippedMips = 0; // TODO: data.numSkippedMips;
+        int32_t numSkippedMips = data.numSkippedMips;
         
         for (int32_t mipLevel = 0; mipLevel < (int32_t)dstMipLevels.size(); ++mipLevel) {
 

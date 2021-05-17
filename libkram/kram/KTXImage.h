@@ -273,7 +273,7 @@ public:
     void initProps(const uint8_t* propsData, size_t propDataSize);
     
     void initMipLevels(size_t mipOffset);
-    void initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize);
+    void initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize, uint32_t& numSkippedMips);
 
     bool validateMipLevels() const;
     

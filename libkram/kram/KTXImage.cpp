@@ -1087,12 +1087,14 @@ void KTXImage::toPropsData(vector<uint8_t>& propsData)
     // TODO: this needs to pad to 16-bytes, so may need a prop for that
 }
 
-void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize)
+void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize, uint32_t& numSkippedMips)
 {
      // dst levels
     int32_t w = width;
     int32_t h = height;
     int32_t d = depth;
+    
+    numSkippedMips = 0;
     
     bool needsDownsample = (w > mipMaxSize || h > mipMaxSize);
 
@@ -1104,7 +1106,8 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
     }
 
     KTXImageLevel level;
-    level.offset = 0; // compute later, once know ktx vs. ktx2
+    //level.offset = 0; // compute later, once know ktx vs. ktx2
+    //level.lengthCompressed = 0;
     
     mipLevels.clear();
     
@@ -1115,7 +1118,6 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
         
         if (keepMip) {
             level.length = mipLevelSize(w, h);
-            level.lengthCompressed = 0;
             
             if (mipLevels.empty()) {
                 // adjust the top dimensions
@@ -1124,6 +1126,11 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
                 depth = d;
             }
             mipLevels.push_back(level);
+        }
+        else {
+            if (mipLevels.empty()) {
+                numSkippedMips++;
+            }
         }
 
         do {
@@ -1136,7 +1143,6 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
             if (keepMip && (mipLevels.size() < (size_t)maxMipLevels)) {
                 // length needs to be multiplied by chunk size before writing out
                 level.length = mipLevelSize(w, h);
-                level.lengthCompressed = 0;
                 
                 if (mipLevels.empty()) {
                     // adjust the top dimensions
@@ -1147,13 +1153,17 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
                 
                 mipLevels.push_back(level);
             }
+            else {
+                if (mipLevels.empty()) {
+                    numSkippedMips++;
+                }
+            }
 
         } while (w > 1 || h > 1 || d > 1);
     }
     else {
         // length needs to be multiplied by chunk size before writing out
         level.length = mipLevelSize(w, h);
-        level.lengthCompressed = 0;
         
         mipLevels.push_back(level);
     }
