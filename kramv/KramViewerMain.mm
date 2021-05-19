@@ -1849,7 +1849,15 @@ float4 toSnorm8(float4 c)
         if (!success) {
             string errorText;
             getErrorLogCaptureText(errorText);
-            [self setHudText: errorText.c_str()];
+            setErrorLogCapture(false);
+            
+            // prepend filename
+            string finalErrorText;
+            append_sprintf(finalErrorText,
+                           "Could not load from archive:\n %s\n", filename);
+            finalErrorText += errorText;
+            
+            [self setHudText: finalErrorText.c_str()];
         }
         
         setErrorLogCapture(false);
@@ -1860,6 +1868,14 @@ float4 toSnorm8(float4 c)
           endsWithExtension(filename, ".ktx") ||
           endsWithExtension(filename, ".ktx2")) )
     {
+        string errorText = "Unsupported file extension, must be .zip, .png, .ktx, ktx2\n";
+        
+        string finalErrorText;
+        append_sprintf(finalErrorText,
+                       "Could not load from archive:\n %s\n", filename);
+        finalErrorText += errorText;
+        
+        [self setHudText: finalErrorText.c_str()];
         return NO;
     }
         
@@ -1871,8 +1887,15 @@ float4 toSnorm8(float4 c)
     if (!success) {
         string errorText;
         getErrorLogCaptureText(errorText);
-        [self setHudText: errorText.c_str()];
         setErrorLogCapture(false);
+        
+        // prepend filename
+        string finalErrorText;
+        append_sprintf(finalErrorText,
+                       "Could not load from file\n %s\n", filename);
+        finalErrorText += errorText;
+       
+        [self setHudText: finalErrorText.c_str()];
         return NO;
     }
     setErrorLogCapture(false);
