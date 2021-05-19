@@ -100,9 +100,9 @@ KTX - breaks loads of mips with 4 byte length offset at the start of each level 
   metadata/props aren't standardized and only ascii prop support so easy to dump out
 
 KTX2 - works in kram and viewer, has aligned compressed levels of mips, 
-  libkram only supports None/Zstd supercompression, only read no write support, 
-  write by converting ktx -> ktx2 with ktx2ktx2 + ktxsc (see kramTexture.py --ktx2 option)
-
+  libkram supports None/Zlib/Zstd supercompression for read/write
+  doesn't support UASTC or BasisLZ yet
+  
 ```
 
 ### An example pipeline
@@ -223,9 +223,14 @@ cd build
 ./Release/kram -testall
 ./Release/kram -test 1002
 
+# for ktx
 ./Release/kram encode -f astc4x4 -srgb -premul -quality 49 -mipmax 1024 -type 2d -i ../tests/src/ColorMap-a.png -o ../tests/out/ios/ColorMap-a.ktx
 ./Release/kram encode -f etc2rg -signed -normal -quality 49 -mipmax 1024 -type 2d -i ../tests/src/collectorbarrel-n.png -o ../tests/out/ios/collectorbarrel-n.ktx
 ./Release/kram encode -f etc2r -signed -sdf -quality 49 -mipmax 1024 -type 2d -i ../kram/tests/src/flipper-sdf.png -o ../tests/out/ios/flipper-sdf.ktx
+
+# for ktx (without and with zstd compression)
+./Release/kram encode -f astc4x4 -srgb -premul -quality 49 -mipmax 1024 -type 2d -i ../tests/src/ColorMap-a.png -o ../tests/out/ios/ColorMap-a.ktx2
+./Release/kram encode -f astc4x4 -srgb -premul -quality 49 -mipmax 1024 -type 2d -zstd 0 -i ../tests/src/ColorMap-a.png -o ../tests/out/ios/ColorMap-a.ktx2
 
 ```
 
@@ -257,7 +262,7 @@ Squish
 Simplified to single folder.
 Replaced sse vector with float4/a for ARM/Neon support.
 
-Astcenc v2.1
+Astcenc v2.5 (current is v3.0)
 Provide rgba8u source pixels.  Converted to 32f at tile level.
 Improved 1 and 2 channel format encoding (not transfered to v2.1).
 Avoid reading off end of arrays with padding.
@@ -585,7 +590,7 @@ Visually validating and previewing the results is complicated.  KTX/2 have few v
 
 kram adds props to KTX/2 file to store data.  Currently props store Metal and Vulkan formats.  This is important since GL's ASTC LDR and HDR formats are the same constant.  Also props are saved for channel content and post-swizzle.  Loaders, viewers, and shaders can utilize this metadata.
 
-KTX can be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  KTX2 reverses mip ordering smallest to largest, so that streamed textures can display smaller mips before they finish fully streaming.  KTX2 can also supercompress each mip with zstd and Basis for transcode.  I suppose this could then be unpacked to tiles for sparse texturing.  KTX2 does not store a length field inside the mip data which keeps consistent alignment. 
+Kram now supports KTX2 export.  But KTX can also be converted to KTX2 and each mip supercompressed via ktx2ktx2 and ktxsc.  KTX2 reverses mip ordering smallest to largest, so that streamed textures can display smaller mips before they finish fully streaming.  KTX2 can also supercompress each mip with zstd and Basis for transcode.  I suppose this could then be unpacked to tiles for sparse texturing.  KTX2 does not store a length field inside the mip data which keeps consistent alignment. 
 
 Metal cannot load mmap mip data that isn't aligned to a multiple of the block size (8 or 16 bytes for BC/ASTC/ETC).  KTX adds a 4 byte length into the mip data that breaks alignment, but KTX2 fortunately skips that.  But KTX2 typically compresses the levels and needs decode/transcode to send to the GPU.
 
