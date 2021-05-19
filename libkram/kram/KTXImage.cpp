@@ -1329,7 +1329,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     const KTX2Header& header2 = *(const KTX2Header*)imageData;
 
 
-    if (header2.supercompressionScheme != KTX2SupercompressionBasisLZ) {
+    if (header2.supercompressionScheme == KTX2SupercompressionBasisLZ) {
         KLOGE("kram", "BasisLZ supercompression not yet supported");
         return false;
     }
