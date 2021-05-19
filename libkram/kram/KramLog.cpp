@@ -14,6 +14,31 @@
 namespace kram {
 using namespace std;
 
+static mutex gLogLock;
+static string gErrorLogCaptureText;
+static bool gIsErrorLogCapture = false;
+void setErrorLogCapture(bool enable) {
+    gIsErrorLogCapture = enable;
+    if (enable) {
+        unique_lock<mutex> lock(gLogLock);
+        gErrorLogCaptureText.clear();
+    }
+}
+bool isErrorLogCapture() { return gIsErrorLogCapture; }
+
+
+// return the text
+void getErrorLogCaptureText(string& text) {
+    if (gIsErrorLogCapture) {
+        unique_lock<mutex> lock(gLogLock);
+        text = gErrorLogCaptureText;
+    }
+    else {
+        text.clear();
+    }
+}
+
+
 // TODO: install assert handler to intercept, and also add a verify (assert that leaves source in)
 //void __assert(const char *expression, const char *file, int32_t line) {
 //
@@ -200,9 +225,16 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
     }
 
     // stdout isn't thread safe, so to prevent mixed output put this under mutex
-    static mutex gLogLock;
     unique_lock<mutex> lock(gLogLock);
 
+    // this means caller needs to know all errors to display in the hud
+    if (gIsErrorLogCapture && logLevel == LogLevelError) {
+        gErrorLogCaptureText += msg;
+        if (needsNewline) {
+            gErrorLogCaptureText += "\n";
+        }
+    }
+    
     fprintf(fp, "%s%s%s%s%s%s", tag, groupString, space, msg, needsNewline ? "\n" : "", fileLineFunc.c_str());
 
     return 0;  // reserved for later

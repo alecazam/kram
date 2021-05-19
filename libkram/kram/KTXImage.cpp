@@ -1328,6 +1328,11 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     // copy out the header,
     const KTX2Header& header2 = *(const KTX2Header*)imageData;
 
+
+    if (header2.supercompressionScheme != KTX2SupercompressionBasisLZ) {
+        KLOGE("kram", "BasisLZ supercompression not yet supported");
+        return false;
+    }
     
     if (header2.supercompressionScheme != KTX2SupercompressionNone &&
         header2.supercompressionScheme != KTX2SupercompressionZstd &&
@@ -1340,7 +1345,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     
     // This typically means UASTC encoding + zstd supercompression, and code doesn't handle that below yet
     if (header2.vkFormat == 0) {
-        KLOGE("kram", "Basis encode not yet supported");
+        KLOGE("kram", "Basis decode not yet supported");
         return false;
     }
     

@@ -48,6 +48,12 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
 // TODO: move to Strings.h
 using namespace std;
 
+// when set true, the internal string is cleared
+void setErrorLogCapture(bool enable);
+bool isErrorLogCapture();
+// return the text
+void getErrorLogCaptureText(string& text);
+
 // returns length of string, -1 if failure
 int32_t sprintf(string& str, const char* format, ...) __printflike(2, 3);
 
@@ -59,5 +65,6 @@ bool endsWithExtension(const char* str, const string& substring);
 
 // https://stackoverflow.com/questions/874134/find-out-if-string-ends-with-another-string-in-c
 bool endsWith(const string& value, const string& ending);
+
 
 }  // namespace kram

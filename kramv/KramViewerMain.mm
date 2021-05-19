@@ -1842,7 +1842,18 @@ float4 toSnorm8(float4 c)
         const char* filename = entry.filename;
         double timestamp = entry.modificationDate;
         
-        return [self loadTextureFromArchive:filename timestamp:timestamp];
+        setErrorLogCapture(true);
+        
+        BOOL success = [self loadTextureFromArchive:filename timestamp:timestamp];
+        
+        if (!success) {
+            string errorText;
+            getErrorLogCaptureText(errorText);
+            [self setHudText: errorText.c_str()];
+        }
+        
+        setErrorLogCapture(false);
+        return success;
     }
         
     if (!(endsWithExtension(filename, ".png") ||
@@ -1853,9 +1864,18 @@ float4 toSnorm8(float4 c)
     }
         
     Renderer* renderer = (Renderer*)self.delegate;
-    if (![renderer loadTexture:url]) {
+    setErrorLogCapture(true);
+    
+    BOOL success = [renderer loadTexture:url];
+    
+    if (!success) {
+        string errorText;
+        getErrorLogCaptureText(errorText);
+        [self setHudText: errorText.c_str()];
+        setErrorLogCapture(false);
         return NO;
     }
+    setErrorLogCapture(false);
     
     // set title to filename, chop this to just file+ext, not directory
     const char* filenameShort = strrchr(filename, '/');
