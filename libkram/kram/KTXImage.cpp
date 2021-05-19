@@ -1223,6 +1223,8 @@ bool KTXImage::validateMipLevels() const {
     
     bool isValid = true;
 
+    int numChunks = header.totalChunks();
+
     // validate that no weird size to image
     for (uint32_t i = 0; i < mipLevels.size(); ++i) {
         auto& level = mipLevels[i];
@@ -1235,7 +1237,7 @@ bool KTXImage::validateMipLevels() const {
             levelSizeFromRead *= 6;
         }
 
-        if (levelSizeFromRead != level.length) {
+        if (levelSizeFromRead != level.length * numChunks) {
             KLOGE("kram", "mip %d levelSize mismatch %d %d", i, (int)levelSizeFromRead, (int)level.length);
             isValid = false;
             break;
