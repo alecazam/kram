@@ -877,7 +877,7 @@ MyMTLTextureType KTXHeader::metalTextureType() const
 
 //---------------------------------------------------
 
-bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength)
+bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly)
 {
     // Note: never trust the extension, always load based on the identifier
     if ((size_t)imageDataLength < sizeof(kKTX2Identifier)) {
@@ -886,7 +886,7 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength)
     
     // check for ktx2
     if (memcmp(imageData, kKTX2Identifier, sizeof(kKTX2Identifier)) == 0) {
-        return openKTX2(imageData, imageDataLength);
+        return openKTX2(imageData, imageDataLength, isInfoOnly);
     }
     
     // check for ktx1
@@ -1087,16 +1087,16 @@ void KTXImage::toPropsData(vector<uint8_t>& propsData)
     // TODO: this needs to pad to 16-bytes, so may need a prop for that
 }
 
-void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize, uint32_t& numSkippedMips)
+void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize, int32_t mipSkip, uint32_t& numSkippedMips)
 {
      // dst levels
     int32_t w = width;
     int32_t h = height;
     int32_t d = depth;
     
-    numSkippedMips = 0;
+    numSkippedMips = mipSkip;
     
-    bool needsDownsample = (w > mipMaxSize || h > mipMaxSize);
+    bool needsDownsample = (numSkippedMips > 0) || (w > mipMaxSize || h > mipMaxSize);
 
     int32_t maxMipLevels = 16;  // 64K x 64K
     
@@ -1113,8 +1113,9 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
     
     if (doMipmaps || needsDownsample) {
         bool keepMip =
-            (w >= mipMinSize && w <= mipMaxSize) &&
-            (h >= mipMinSize && h <= mipMaxSize);
+            (numSkippedMips >= (uint32_t)mipSkip) ||
+            ((w >= mipMinSize && w <= mipMaxSize) &&
+            (h >= mipMinSize && h <= mipMaxSize));
         
         if (keepMip) {
             level.length = mipLevelSize(w, h);
@@ -1137,8 +1138,9 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
             mipDown(w, h, d);
 
             keepMip =
-                (w >= mipMinSize && w <= mipMaxSize) &&
-                (h >= mipMinSize && h <= mipMaxSize);
+                (numSkippedMips >= (uint32_t)mipSkip) ||
+                ((w >= mipMinSize && w <= mipMaxSize) &&
+                (h >= mipMinSize && h <= mipMaxSize));
             
             if (keepMip && (mipLevels.size() < (size_t)maxMipLevels)) {
                 // length needs to be multiplied by chunk size before writing out
@@ -1308,7 +1310,7 @@ private:
 };
 
 
-bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
+bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly)
 {
     if ((size_t)imageDataLength < sizeof(KTX2Header)) {
         return false;
@@ -1392,10 +1394,34 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
     header.bytesOfKeyValueData = 0;
     initProps(imageData + header2.kvdByteOffset, header2.kvdByteLength);
    
+    // skip parsing th elevels
+    if (isInfoOnly) {
+        skipImageLength = true;
+        fileData = imageData;
+        fileDataLength = imageDataLength;
+        
+        // copy these over from ktx2
+        mipLevels = levels;
+        
+        // copy the original ktx2 levels, this includes mip compression
+        bool isCompressed =
+            (mipLevels[0].lengthCompressed > 0) &&
+            (mipLevels[0].length != mipLevels[0].lengthCompressed);
+        
+        for (auto& level : mipLevels) {
+            level.length /= numChunks;
+            
+            // this indicates not compressed
+            if (!isCompressed) {
+                level.lengthCompressed = 0;
+            }
+        }
+        return true;
+    }
     
     if (!isCompressed) {
         // Note: this is aliasing the mips from a ktx2 file into a ktx1 KTXImage
-        // This is highly unsafe.
+        // This is highly unsafe but mostly works for input.
         
         // Note: KTX2 also doesn't have the length field embedded the mipData
         // so need to be able to set skipLength to unify the mipgen if aliasing the mip data
@@ -1442,6 +1468,8 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength)
         // DONE: this memory is held in the class to keep it alive, mmap is no longer used
         imageDataFromKTX2.resize(fileDataLength, 0);
         fileData = imageDataFromKTX2.data();
+        
+        // TODO: may need to fill out length field in fileData
         
         // Note: specific to zstd
         bool isZstd = header2.supercompressionScheme == KTX2SupercompressionZstd;

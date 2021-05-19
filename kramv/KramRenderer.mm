@@ -421,9 +421,10 @@ using namespace simd;
         if (!sourceImage.open(imageData,imageDataLength)) {
             return NO;
         }
-        bool isVerbose = false;
-        _showSettings->imageInfo = kramInfoKTXToString(fullFilename, sourceImage, isVerbose);
-           
+       
+        _showSettings->imageInfo = kramInfoKTXToString(fullFilename, sourceImage, false);
+        _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, sourceImage, true);
+       
         _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
         
         _showSettings->lastFilename = fullFilename;
@@ -462,8 +463,8 @@ using namespace simd;
             return NO;
         }
         
-        bool isVerbose = false;
-        _showSettings->imageInfo = kramInfoToString(fullFilename, isVerbose);
+        _showSettings->imageInfo = kramInfoToString(fullFilename, false);
+        _showSettings->imageInfoVerbose = kramInfoToString(fullFilename, true);
         
         _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
         _showSettings->decodedFormat = (MyMTLPixelFormat)texture.pixelFormat;

@@ -910,9 +910,9 @@ struct MipConstructData {
     // Can skip the larger and smaller mips.  This is the larger mips skipped.
     uint32_t numSkippedMips = 0;
     
-    // this is size of 2d image src after accounting for chunks for a strip of array/cube data
-    uint32_t modifiedWidth = 0;
-    uint32_t modifiedHeight = 0;
+    // 2d image src after accounting for chunks for a strip of array/cube data
+    uint32_t chunkWidth = 0;
+    uint32_t chunkHeight = 0;
 };
 
 
@@ -1270,8 +1270,8 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
 
     // This is wxh of source in case it has chunks
     // dstImage will start at this, but may mip down smaller base on mipMaxSize
-    mipConstructData.modifiedWidth = w;
-    mipConstructData.modifiedHeight = h;
+    mipConstructData.chunkWidth = w;
+    mipConstructData.chunkHeight = h;
     
     // work out how much memory we need to load
     header.initFormatGL(info.pixelFormat);
@@ -1284,8 +1284,12 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
     dstImage.height = h;
     dstImage.depth = header.pixelDepth; // from validate above
     
-    dstImage.initMipLevels(info.doMipmaps, info.mipMinSize, info.mipMaxSize, mipConstructData.numSkippedMips);
+    dstImage.initMipLevels(info.doMipmaps, info.mipMinSize, info.mipMaxSize, info.mipSkip, mipConstructData.numSkippedMips);
     
+    if (dstImage.mipLevels.empty()) {
+        KLOGE("kram", "skipped all mips");
+        return false;
+    }
     // ----------------------------------------------------
 
     int32_t numChunks = (int32_t)chunkOffsets.size();
@@ -1317,6 +1321,9 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
         // could build and compress and entire level at a time, but can't write any of it
         // out until smallest mips are constructed.  Only then are offsets resolved.
         
+        // A better way would be to do mips in-place, but in-order, and compressing the large
+        // to small mips into an array of open compressor streams.  Then only need one mip instead of
+        // all levels in memory.
         if (!writeKTX1FileOrImage(info,  mipConstructData, propsData, nullptr, dstImage)) {
             return false;
         }
@@ -1610,8 +1617,8 @@ bool Image::createMipsFromChunks(
 
     // This is for 8-bit data (pixelsFloat used for in-place mipgen)
     ImageData srcImage;
-    srcImage.width = data.modifiedWidth;
-    srcImage.height = data.modifiedHeight;
+    srcImage.width = data.chunkWidth;
+    srcImage.height = data.chunkHeight;
     
     // KramMipper uses these
     srcImage.isSRGB = info.isSRGB;

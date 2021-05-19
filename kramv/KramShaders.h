@@ -73,14 +73,15 @@ typedef NS_ENUM(int32_t, ShaderTextureChannels)
 typedef NS_ENUM(int32_t, ShaderDebugMode)
 {
     ShDebugModeNone = 0,
-    ShDebugModeTransparent = 1,
-    ShDebugModeColor = 2,
-    ShDebugModeGray = 3,
-    ShDebugModeHDR = 4,
+    ShDebugModeTransparent, // alpha < 255
+    ShDebugModeNonZero, // any(rgba) > 0
+    ShDebugModeColor,
+    ShDebugModeGray,
+    ShDebugModeHDR,
     
-    ShDebugModePosX = 5,
-    ShDebugModePosY = 6,
-    ShDebugModeCircleXY = 7,
+    ShDebugModePosX,
+    ShDebugModePosY,
+    ShDebugModeCircleXY,
     
     ShDebugModeCount
 };

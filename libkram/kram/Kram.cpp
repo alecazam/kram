@@ -203,7 +203,7 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
 // decoding reads a ktx file into KTXImage (not Image)
 bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
                     vector<uint8_t>& fileBuffer,
-                    const string& srcFilename, KTXImage& sourceImage)
+                    const string& srcFilename, KTXImage& sourceImage, bool isInfoOnly = false)
 {
     // first try mmap, and then use file -> buffer
     bool useMmap = true;
@@ -213,7 +213,7 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
     }
 
     if (useMmap) {
-        if (!sourceImage.open(mmapHelper.data(), mmapHelper.dataLength())) {
+        if (!sourceImage.open(mmapHelper.data(), mmapHelper.dataLength(), isInfoOnly)) {
             return false;
         }
     }
@@ -231,7 +231,7 @@ bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
             return false;
         }
 
-        if (!sourceImage.open(fileBuffer.data(), (int32_t)fileBuffer.size())) {
+        if (!sourceImage.open(fileBuffer.data(), (int32_t)fileBuffer.size(), isInfoOnly)) {
             return false;
         }
     }
@@ -952,7 +952,7 @@ void kramEncodeUsage(bool showVersion = true)
           "\n"
           //"\t [-mipalign]\n"
           "\t [-mipnone]\n"
-          "\t [-mipmin size] [-mipmax size]\n"
+          "\t [-mipmin size] [-mipmax size] [-mipskip count]\n"
           "\n"
           "\t [-chunks 4x4]\n"
           "\t [-swizzle rg01]\n"
@@ -1254,9 +1254,13 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
     else if (isKTX) {
         KTXImage srcImage;
 
+        // This means don't convert to KTX1, keep original data/offsets
+        // and also skip decompressing the mips
+        bool isInfoOnly = true;
+        
         // Note: could change to not read any mips
         bool success = SetupSourceKTX(srcMmapHelper, srcFileHelper, srcFileBuffer,
-                                      srcFilename, srcImage);
+                                      srcFilename, srcImage, isInfoOnly);
         if (!success) {
             KLOGE("Kram", "info couldn't open ktx file");
             return "";
@@ -1373,10 +1377,10 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     MyMTLPixelFormat metalFormat = srcImage.pixelFormat;
 
     int32_t dataSize = srcImage.fileDataLength;
-    
-    string tmp;
+
+    //string tmp;
     bool isMB = (dataSize > (512 * 1024));
-    sprintf(tmp,
+    append_sprintf(info,
             "file: %s\n"
             "size: %d\n"
             "sizm: %0.3f %s\n",
@@ -1384,17 +1388,42 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
             dataSize,
             isMB ? dataSize / (1024.0f * 1024.0f) : dataSize / 1024.0f,
             isMB ? "MB" : "KB");
-    info += tmp;
+    
+    int32_t numChunks = srcImage.totalChunks();
+    
+    // add up lengtha and lengthCompressed
+    if (srcImage.mipLevels[0].lengthCompressed > 0) {
+        uint64_t length = 0;
+        uint64_t lengthCompressed = 0;
 
-    int32_t pixelMultiplier = srcImage.totalChunks();
+        for (const auto& level : srcImage.mipLevels) {
+            length += level.length;
+            lengthCompressed += level.lengthCompressed;
+        }
+        
+        length *= numChunks;
+        uint64_t percent = (100 * lengthCompressed) / length;
+       
+        isMB = (lengthCompressed > (512 * 1024));
+        double lengthF = isMB ? length / (1024.0f * 1024.0f) : length / 1024.0f;
+        double lengthCompressedF = isMB ? lengthCompressed / (1024.0f * 1024.0f) : lengthCompressed / 1024.0f;
+        
+        append_sprintf(info,
+            "sizc: %0.3f,%0.3f %s %d%%\n",
+            lengthF, lengthCompressedF,
+            isMB ? "MB" : "KB",
+            (int)percent);
+    }
+                           
     
     float numPixels = srcImage.width * srcImage.height;
-    numPixels *= (float)pixelMultiplier;
+    numPixels *= (float)numChunks;
     
     if (srcImage.header.numberOfMipmapLevels > 1) {
         numPixels *= 4.0 / 3.0f; // TODO: estimate for now
     }
     
+    // to megapixels
     numPixels /= (1000.0f * 1000.0f);
     
     auto textureType = srcImage.header.metalTextureType();
@@ -1404,7 +1433,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
         case MyMTLTextureTypeCube:
         case MyMTLTextureTypeCubeArray:
         case MyMTLTextureType2DArray:
-            sprintf(tmp,
+            append_sprintf(info,
                     "type: %s\n"
                     "dims: %dx%d\n"
                     "dimm: %0.3f MP\n"
@@ -1415,7 +1444,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                     srcImage.header.numberOfMipmapLevels);
             break;
         case MyMTLTextureType3D:
-            sprintf(tmp,
+            append_sprintf(info,
                     "type: %s\n"
                     "dims: %dx%dx%d\n"
                     "dimm: %0.3f MP\n"
@@ -1426,8 +1455,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                     srcImage.header.numberOfMipmapLevels);
             break;
     }
-    info += tmp;
-
+    
     // print out the array
     if (srcImage.header.numberOfArrayElements > 1) {
         append_sprintf(info,
@@ -1449,9 +1477,6 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     for (const auto& prop : srcImage.props) {
         append_sprintf(info, "prop: %s %s\n", prop.first.c_str(), prop.second.c_str());
     }
-
-    // TODO: handle zstd compressed KTX2 too, they have a length and compressed length field
-    // also Basis + zstd
     
     if (isVerbose) {
         // dump mips/dims, but this can be a lot of data on arrays
@@ -1461,9 +1486,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
         int32_t d = srcImage.depth; 
         
         // num chunks
-        append_sprintf(info,
-            "chun: %d\n",
-            srcImage.totalChunks());
+        append_sprintf(info, "chun: %d\n", numChunks);
         
         for (const auto& mip : srcImage.mipLevels) {
 
@@ -1483,13 +1506,14 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
             }
                            
             if (mip.lengthCompressed != 0) {
-                size_t percent = (100 * mip.lengthCompressed) / mip.length;
+                uint64_t levelSize = mip.length * numChunks;
+                uint64_t percent = (100 * mip.lengthCompressed) / levelSize;
                 
                 append_sprintf(info,
                     "%" PRIu64 ",%" PRIu64 ",%" PRIu64 " %d%%\n",
                     mip.offset,
-                    mip.length, // only size of one mip right now, not mip * numChunks
-                    mip.lengthCompressed, // TODO: preserve so can be displayed
+                    levelSize,
+                    mip.lengthCompressed,
                     (int)percent
                 );
             }
@@ -1721,6 +1745,12 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.mipMaxSize = atoi(args[i]);
+            if (infoArgs.mipMaxSize < 1 || infoArgs.mipMaxSize > 65536) {
+                KLOGE("Kram", "mipmax arg invalid");
+                error = true;
+                break;
+            }
+            
             //continue;
         }
         else if (isStringEqual(word, "-mipmin")) {
@@ -1732,6 +1762,28 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.mipMinSize = atoi(args[i]);
+            if (infoArgs.mipMinSize < 1 || infoArgs.mipMinSize > 65536) {
+                KLOGE("Kram", "mipmin arg invalid");
+                error = true;
+                break;
+            }
+            //continue;
+        }
+        else if (isStringEqual(word, "-mipskip")) {
+            ++i;
+            if (i >= argc) {
+                KLOGE("Kram", "mipskip arg invalid");
+                error = true;
+                break;
+            }
+
+            infoArgs.mipSkip = atoi(args[i]);
+            if (infoArgs.mipSkip < 0 || infoArgs.mipSkip > 16) {
+                KLOGE("Kram", "mipskip arg invalid");
+                error = true;
+                break;
+            }
+            
             //continue;
         }
         else if (isStringEqual(word, "-mipnone")) {

@@ -268,12 +268,12 @@ struct KTX2Compressor {
 class KTXImage {
 public:
     // this calls init calls
-    bool open(const uint8_t* imageData, size_t imageDataLength);
+    bool open(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly = false);
     
     void initProps(const uint8_t* propsData, size_t propDataSize);
     
     void initMipLevels(size_t mipOffset);
-    void initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize, uint32_t& numSkippedMips);
+    void initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize, int32_t mipSkip, uint32_t& numSkippedMips);
 
     bool validateMipLevels() const;
     
@@ -305,7 +305,7 @@ public:
     vector<uint8_t>& imageData();
 
 private:
-    bool openKTX2(const uint8_t* imageData, size_t imageDataLength);
+    bool openKTX2(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly);
 
     // ktx2 mips are uncompressed to convert back to ktx1, but without the image offset
     vector<uint8_t> imageDataFromKTX2;

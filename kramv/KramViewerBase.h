@@ -30,17 +30,19 @@ enum TextureChannels
     ModeAAA1 = 8,
 };
 
+// Must line up with ShDebugMode
 enum DebugMode
 {
     DebugModeNone = 0,
-    DebugModeTransparent = 1,
-    DebugModeColor = 2,
-    DebugModeGray = 3,
-    DebugModeHDR = 4,
+    DebugModeTransparent,
+    DebugModeNonZero,
+    DebugModeColor,
+    DebugModeGray,
+    DebugModeHDR,
     
-    DebugModePosX = 5,
-    DebugModePosY = 6,
-    DebugModeCircleXY = 7,
+    DebugModePosX,
+    DebugModePosY,
+    DebugModeCircleXY,
     
     DebugModeCount
 };
@@ -145,7 +147,8 @@ public:
     
     // cached on load, raw info about the texture from libkram
     string imageInfo;
-    
+    string imageInfoVerbose;
+   
     // format before any transcode to supported formats
     MyMTLPixelFormat originalFormat;
     MyMTLPixelFormat decodedFormat;

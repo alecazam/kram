@@ -271,7 +271,12 @@ enum Key {
     M                    = 0x2E,
 
     // https://eastmanreference.com/complete-list-of-applescript-key-codes
-    Zero                 = 0x1D,
+    Num1                 = 0x12,
+    Num2                 = 0x13,
+    Num3                 = 0x14,
+    Num4                 = 0x15,
+    // ...
+    Num0                 = 0x1D,
     
     LeftBrace            = 0x21,
     RightBrace           = 0x1E,
@@ -395,8 +400,10 @@ NSArray<NSString*>* pasteboardTypes = @[
 
 @implementation MyMTKView
 {
+    NSStackView* _buttonStack;
     NSTextField* _hudLabel;
     NSTextField* _hudLabel2;
+    
     vector<string> _textSlots;
     ShowSettings* _showSettings;
     
@@ -404,6 +411,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     ZipHelper _zip;
     MmapHelper _zipMmap;
     int32_t _fileIndex;
+    BOOL _noImageLoaded;
 }
 
 - (void)awakeFromNib
@@ -456,6 +464,12 @@ NSArray<NSString*>* pasteboardTypes = @[
     _zoomGesture = [[NSMagnificationGestureRecognizer alloc] initWithTarget:self action:@selector(handleGesture:)];
     [self addGestureRecognizer:_zoomGesture];
        
+    _buttonStack = [self _addButtons];
+    
+    // hide until image loaded
+    _buttonStack.hidden = YES;
+    _noImageLoaded = YES;
+    
     _hudLabel2 = [self _addHud:YES];
     _hudLabel  = [self _addHud:NO];
     [self setHudText:""];
@@ -467,10 +481,125 @@ NSArray<NSString*>* pasteboardTypes = @[
     return _showSettings;
 }
 
+- (NSStackView*)_addButtons {
+    const int32_t numButtons = 25; // 13;
+    const char* names[numButtons*2] = {
+        
+        "?", "Help",
+        "I", "Info",
+        "H", "Hud",
+        "S", "Show All",
+        
+        "O", "Preview",
+        "W", "Repeat",
+        "P", "Premul",
+        "N", "Signed",
+        
+        "-", "",
+    
+        "E", "Debug",
+        "D", "Grid",
+        "C", "Checker",
+        "U", "Toggle UI",
+      
+        "-", "",
+        
+        "M", "Mip",
+        "F", "Face",
+        "Y", "Array",
+        "J", "Next",
+        "L", "Reload",
+        "0", "Fit",
+        
+        // TODO: need to shift hud over a little
+        // "UI", - add to show/hide buttons
+    
+        "-", "",
+        
+        // make these individual toggles and exclusive toggle off shift
+        "R", "Red",
+        "G", "Green",
+        "B", "Blue",
+        "A", "Alpha",
+    };
+    
+    NSRect rect = NSMakeRect(0,10,30,30);
+    
+    //#define ArrayCount(x) ((x) / sizeof(x[0]))
+    
+    NSMutableArray* buttons = [[NSMutableArray alloc] init];
+    
+    for (int32_t i = 0; i < numButtons; ++i) {
+        const char* icon = names[2*i+0];
+        const char* tip = names[2*i+1];
+        
+        NSString* name = [NSString stringWithUTF8String:icon];
+        NSString* toolTip = [NSString stringWithUTF8String:tip];
+        
+        NSButton* button = nil;
+        
+        button = [NSButton buttonWithTitle:name target:self action:@selector(handleAction:)];
+        [button setToolTip:toolTip];
+        button.hidden = NO;
+        
+        // turn off rounded bezel
+        button.bordered = NO;
+        
+        [button setFrame:rect];
+        
+        // stackView seems to disperse the items evenly across the area, so this doesn't work
+        if (icon[0] == '-') {
+            //rect.origin.y += 11;
+            button.enabled = NO;
+        }
+        else {
+            //sKrect.origin.y += 25;
+        }
+        
+        [buttons addObject:button];
+    }
+    
+    NSStackView* stackView = [NSStackView stackViewWithViews:buttons];
+    stackView.orientation = NSUserInterfaceLayoutOrientationVertical;
+    [self addSubview: stackView];
+    
+#if 0
+    // Want menus, so user can define their own shortcuts to commands
+    // Also need to enable/disable this via validateUserInterfaceItem
+    NSApplication* app = [NSApplication sharedApplication];
+
+    // TODO: add an edit menu in the storyboard
+    NSMenu* menu = app.windowsMenu;
+    [menu addItem:[NSMenuItem separatorItem]];
+
+    for (int32_t i = 0; i < numButtons; ++i) {
+        const char* icon = names[2*i+0];
+        const char* tip = names[2*i+1];
+    
+        NSString* shortcut = [NSString stringWithUTF8String:icon];
+        NSString* name = [NSString stringWithUTF8String:tip];
+        shortcut = @""; // for now, or AppKit turns key int cmd+shift+key
+        
+        if (icon[0] == '-') {
+            [menu addItem:[NSMenuItem separatorItem]];
+        }
+        else {
+            NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:name action:@selector(handleAction) keyEquivalent:shortcut];
+            [menu addItem: menuItem];
+        }
+    }
+#endif
+    
+    return stackView;
+}
+
 - (NSTextField*)_addHud:(BOOL)isShadow
 {
+    // TODO: This text field is clamping to the height, so have it set to 1200.
+    // really want field to expand to fill the window height for large output
+    
     // add a label for the hud
-    NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(isShadow ? 11 : 10, isShadow ? 11 : 10, 800, 300)];
+    NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(isShadow ? 21 : 20, isShadow ? 21 : 20, 800, 1200)];
     label.drawsBackground = NO;
     label.textColor = !isShadow ?
         [NSColor colorWithSRGBRed:0 green:1 blue:0 alpha:1] :
@@ -479,7 +608,8 @@ NSArray<NSString*>* pasteboardTypes = @[
     label.editable = NO;
     label.selectable = NO;
     label.lineBreakMode = NSLineBreakByClipping;
-
+    label.maximumNumberOfLines = 0; // fill to height
+    
     label.cell.scrollable = NO;
     label.cell.wraps = NO;
 
@@ -489,13 +619,19 @@ NSArray<NSString*>* pasteboardTypes = @[
     // UILabel has shadowColor/shadowOffset but NSTextField doesn't
     
     [self addSubview: label];
+    
+    // add vertical constrains to have it fill window, but keep 800 width
+    label.preferredMaxLayoutWidth = 800;
+
+    NSDictionary* views = @{ @"label" : label };
+    [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-[label]" options:0 metrics:nil views:views]];
+    [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-[label]" options:0 metrics:nil views:views]];
+    
     return label;
 }
 
 - (void)doZoomMath:(float)newZoom newPan:(float2&)newPan {
-// transform the cursor to texture coordinate, or clamped version if outside
-    
-    
+    // transform the cursor to texture coordinate, or clamped version if outside
     Renderer* renderer = (Renderer*)self.delegate;
     float4x4 projectionViewModelMatrix = [renderer computeImageTransform:_showSettings->panX panY:_showSettings->panY zoom:_showSettings->zoom];
 
@@ -1071,7 +1207,80 @@ float4 toSnorm8(float4 c)
 // TODO: convert to C++ actions, and then call into Base holding all this
 // move pan/zoom logic too.  Then use that as start of Win32 kramv.
 
+- (IBAction)handleAction:(id)sender {
+    // sender is the UI element/NSButton
+    // if (sender == )
+    NSButton* button = (NSButton*)sender;
+    
+    NSEvent* theEvent = [NSApp currentEvent];
+    bool isShiftKeyDown = (theEvent.modifierFlags & NSEventModifierFlagShift);
+    
+    string title = [button.title UTF8String];
+    int32_t keyCode = -1;
+    
+    if (title == "?")
+        keyCode = Key::Slash; // help
+    else if (title == "I")
+        keyCode = Key::I;
+    else if (title == "H")
+        keyCode = Key::H;
+    
+    else if (title == "S")
+        keyCode = Key::S;
+    else if (title == "O")
+        keyCode = Key::O;
+    else if (title == "W")
+        keyCode = Key::W;
+    else if (title == "P")
+        keyCode = Key::P;
+    else if (title == "N")
+        keyCode = Key::N;
+    
+    else if (title == "E")
+        keyCode = Key::E;
+    else if (title == "D")
+        keyCode = Key::D;
+    else if (title == "C")
+        keyCode = Key::C;
+    else if (title == "U")
+        keyCode = Key::U;
+    
+    else if (title == "M")
+        keyCode = Key::M;
+    else if (title == "F")
+        keyCode = Key::F;
+    else if (title == "Y")
+        keyCode = Key::Y;
+    else if (title == "J")
+        keyCode = Key::J;
+    else if (title == "L")
+        keyCode = Key::L;
+    else if (title == "0")
+        keyCode = Key::Num0;
+    
+    else if (title == "R")
+        keyCode = Key::R;
+    else if (title == "G")
+        keyCode = Key::G;
+    else if (title == "B")
+        keyCode = Key::B;
+    else if (title == "A")
+        keyCode = Key::A;
+    
+    
+    if (keyCode >= 0)
+        [self handleKey:keyCode isShiftKeyDown:isShiftKeyDown];
+}
+
 - (void)keyDown:(NSEvent *)theEvent
+{
+    bool isShiftKeyDown = theEvent.modifierFlags & NSEventModifierFlagShift;
+    uint32_t keyCode = theEvent.keyCode;
+
+    [self handleKey:keyCode isShiftKeyDown:isShiftKeyDown];
+}
+
+- (void)handleKey:(uint32_t)keyCode isShiftKeyDown:(bool)isShiftKeyDown
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
     TextureChannels& channels = _showSettings->channels;
@@ -1079,11 +1288,29 @@ float4 toSnorm8(float4 c)
     
     // TODO: fix isChanged to only be set when value changes
     // f.e. clamped values don't need to re-render
-    bool isShiftKeyDown = theEvent.modifierFlags & NSEventModifierFlagShift;
     string text;
     
-    switch(theEvent.keyCode) {
+    switch(keyCode) {
+        case Key::V: {
+            bool isVertical = _buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical;
+            isVertical = !isVertical;
+            
+            _buttonStack.orientation = isVertical ? NSUserInterfaceLayoutOrientationVertical : NSUserInterfaceLayoutOrientationHorizontal;
+            text = isVertical ? "Vert UI" : "Horiz UI";
+            break;
+        }
+        case Key::U:
+            // this means no image loaded yet
+            if (_noImageLoaded) {
+                return;
+            }
+            
+            _buttonStack.hidden = !_buttonStack.hidden;
+            text = _buttonStack.hidden ? "Hide UI" : "Show UI";
+            break;
+            
         // rgba channels
+        case Key::Num1:
         case Key::R:
             if (channels == TextureChannels::ModeRRR1 || channels == TextureChannels::ModeR001) {
                 channels = TextureChannels::ModeRGBA;
@@ -1096,6 +1323,8 @@ float4 toSnorm8(float4 c)
             isChanged = true;
             
             break;
+            
+        case Key::Num2:
         case Key::G:
             if (channels == TextureChannels::ModeGGG1 || channels == TextureChannels::Mode0G01) {
                 channels = TextureChannels::ModeRGBA;
@@ -1107,6 +1336,8 @@ float4 toSnorm8(float4 c)
             }
             isChanged = true;
             break;
+            
+        case Key::Num3:
         case Key::B:
             if (channels == TextureChannels::ModeBBB1 || channels == TextureChannels::Mode00B1) {
                 channels = TextureChannels::ModeRGBA;
@@ -1118,6 +1349,8 @@ float4 toSnorm8(float4 c)
             }
             isChanged = true;
             break;
+            
+        case Key::Num4:
         case Key::A:
             if (channels == TextureChannels::ModeAAA1) {
                 channels = TextureChannels::ModeRGBA;
@@ -1136,6 +1369,7 @@ float4 toSnorm8(float4 c)
             switch(_showSettings->debugMode) {
                 case DebugModeNone: text = "Debug Off"; break;
                 case DebugModeTransparent: text = "Debug Transparent"; break;
+                case DebugModeNonZero: text = "Debug NonZero"; break;
                 case DebugModeColor: text = "Debug Color"; break;
                 case DebugModeGray: text = "Debug Gray"; break;
                 case DebugModeHDR: text = "Debug HDR"; break;
@@ -1157,7 +1391,7 @@ float4 toSnorm8(float4 c)
                    "⇧J-next bundle image\n";
             break;
             
-        case Key::Zero: { // scale and reset pan
+        case Key::Num0: { // scale and reset pan
             float zoom;
             // fit image or mip
             if (isShiftKeyDown) {
@@ -1315,7 +1549,7 @@ float4 toSnorm8(float4 c)
         // info on the texture, could request info from lib, but would want to cache that info
         case Key::I:
             if (_showSettings->isHudShown) {
-                sprintf(text, "%s", _showSettings->imageInfo.c_str());
+                sprintf(text, "%s", isShiftKeyDown ? _showSettings->imageInfoVerbose.c_str() : _showSettings->imageInfo.c_str());
             }
             break;
         
@@ -1472,7 +1706,7 @@ float4 toSnorm8(float4 c)
         
         if ([self loadTextureFromURL:url]) {
             [self setHudText:""];
-            
+    
             return YES;
         }
    }
@@ -1561,12 +1795,20 @@ float4 toSnorm8(float4 c)
         
     // was using subtitle, but that's macOS 11.0 feature.
     string title = "kramv - ";
+    title += formatTypeName(_showSettings->originalFormat);
+    title += " - ";
     title += filenameShort;
     
     self.window.title = [NSString stringWithUTF8String: title.c_str()];
         
     // doesn't set imageURL or update the recent document menu
     
+    // show the controls
+    if (_noImageLoaded) {
+        _buttonStack.hidden = NO; // show controls
+        _noImageLoaded = NO;
+    }
+
     self.needsDisplay = YES;
     return YES;
 }
@@ -1626,6 +1868,8 @@ float4 toSnorm8(float4 c)
         
     // was using subtitle, but that's macOS 11.0 feature.
     string title = "kramv - ";
+    title += formatTypeName(_showSettings->originalFormat);
+    title += " - ";
     title += filenameShort;
     
     self.window.title = [NSString stringWithUTF8String: title.c_str()];
@@ -1638,6 +1882,12 @@ float4 toSnorm8(float4 c)
     [dc noteNewRecentDocumentURL:url];
 
     self.imageURL = url;
+    
+    // show the controls
+    if (_noImageLoaded) {
+        _buttonStack.hidden = NO; // show controls
+        _noImageLoaded = NO;
+    }
     
     self.needsDisplay = YES;
     return YES;
@@ -1733,8 +1983,12 @@ float4 toSnorm8(float4 c)
                 options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveInKeyWindow )
                 owner:_view userInfo:nil];
     [_view addTrackingArea:_trackingArea];
-
+    
+    // programmatically add some buttons
+    // think limited to 11 viewws before they must be wrapepd in a container.  That's how SwiftUI was.
+    
 }
+
 
 @end
 

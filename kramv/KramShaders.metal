@@ -444,6 +444,8 @@ float4 DrawPixels(
     float2 textureSize
 )
 {
+    float4 sc = c;
+    
     bool isPreview = uniforms.isPreview;
     if (isPreview) {
         
@@ -553,6 +555,7 @@ float4 DrawPixels(
             c.rgb = toNormal(c.rgb);
             
             // from signed, to match other editors that don't display signed data
+            sc = c;
             c.xyz = toUnorm(c.xyz); // can sample from this
             
             // view data as abs magnitude
@@ -566,13 +569,21 @@ float4 DrawPixels(
             // signed 1/2 channel formats return sr,0,0, and sr,sg,0 for rgb?
             // May want to display those as 0 not 0.5.
             if (uniforms.isSigned) {
+                // Note: premul on signed should occur while still signed, since it's a pull to zoer
+                // to premul, but also need to see without premul
+                if (uniforms.isPremul) {
+                    c.xyz *= c.a;
+                }
+                
+                sc = c;
                 c.xyz = toUnorm(c.xyz);
             }
-            
-            // to premul, but also need to see without premul
-            if (uniforms.isPremul) {
-                c.xyz *= c.a;
+            else {
+                if (uniforms.isPremul) {
+                    c.xyz *= c.a;
+                }
             }
+            
         }
     }
     
@@ -623,6 +634,20 @@ float4 DrawPixels(
                 isHighlighted = true;
             }
         }
+        else if (uniforms.debugMode == ShDebugModeNonZero) {
+            // want to compare so snorm 0 on signed data
+            // TODO: unorm formats don't store exact 0, so may need toleranc
+            if (uniforms.isSigned) {
+                if (any(sc != 0.0)) {
+                    isHighlighted = true;
+                }
+            }
+            else {
+                if (any(c != 0.0)) {
+                    isHighlighted = true;
+                }
+            }
+        }
         else if (uniforms.debugMode == ShDebugModeColor) {
             // with 565 formats, all pixels with light up
             if (c.r != c.g || c.r != c.b) {
@@ -636,7 +661,7 @@ float4 DrawPixels(
             }
         }
         else if (uniforms.debugMode == ShDebugModeHDR) {
-            if (any(c.rgb < float3(0.0)) || any(c.rgb < float3(0.0)) ) {
+            if (any(c.rgb < float3(0.0)) || any(c.rgb > float3(1.0)) ) {
                 isHighlighted = true;
             }
         }
