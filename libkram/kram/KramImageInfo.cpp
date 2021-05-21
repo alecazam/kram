@@ -1309,6 +1309,7 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
                 normal = normalize(normal);
                 
                 // convert to unorm
+                // TODO: may need to do around unorm8 offset of unorm 255/127 and + 128/127
                 normal = normal * 0.5 + 0.5f;
                 
                 // write out the result
@@ -1343,7 +1344,7 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
                 normal = normalize(normal);
                 
                 // convert to unorm
-                normal = normal * 127.0f + 128.0f;
+                normal = round(normal * 127.0f) + 128.0f;
                 
                 Color& dstPixel8 = dstPixels8[y0 + x];
 

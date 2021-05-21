@@ -66,7 +66,7 @@ inline Color toGrayscaleRec709(Color c, const Mipper& mipper) {
     float4 clin = mipper.toLinear(c);
     float luminance = dot(clin, kRec709Conversion);
     
-    c.r = (uint8_t)(linearToSRGBFunc(luminance) * 255.1f);
+    c.r = (uint8_t)(roundf(linearToSRGBFunc(luminance) * 255.0f));
     
     // can just copy into the other 3 terms
     c.g = c.b = c.r;
@@ -2530,7 +2530,7 @@ void PSTest() {
     for (int32_t i = 0; i < 256; ++i) {
         float value = mipper.toLinear(values1[i]);
         
-        values2[i] = uint8_t(value * 255.1);
+        values2[i] = uint8_t(roundf(value * 255.0f));
         
         //KLOGI("srgb", "[%d] = %g\n", i, value);
     }
@@ -2540,7 +2540,7 @@ void PSTest() {
         float value = mipper.toLinear(i);
         value *= alphaF;
         
-        values3[i] = uint8_t(value * 255.1);
+        values3[i] = uint8_t(roundf(value * 255.0));
     }
 
     // log them side-by-side for comparison

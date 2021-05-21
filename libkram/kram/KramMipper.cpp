@@ -34,13 +34,13 @@ int32_t nextPow2(int32_t num)
 
 inline uint8_t floatToUint8(float value)
 {
-    return (uint8_t)roundf(value * 255.1f);
+    return (uint8_t)roundf(value * 255.0f);
 }
 
 inline Color Unormfloat4ToColor(float4 value)
 {
     Color c;
-    value = round(value * 255.1f);
+    value = round(value * 255.0f);
     c.r = (uint8_t)value.x;
     c.g = (uint8_t)value.y;
     c.b = (uint8_t)value.z;
