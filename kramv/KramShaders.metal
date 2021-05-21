@@ -638,12 +638,12 @@ float4 DrawPixels(
             // want to compare so snorm 0 on signed data
             // TODO: unorm formats don't store exact 0, so may need toleranc
             if (uniforms.isSigned) {
-                if (any(sc != 0.0)) {
+                if (any(sc.rgb != 0.0)) {
                     isHighlighted = true;
                 }
             }
             else {
-                if (any(c != 0.0)) {
+                if (any(c.rgb != 0.0)) {
                     isHighlighted = true;
                 }
             }
@@ -656,7 +656,7 @@ float4 DrawPixels(
         }
         else if (uniforms.debugMode == ShDebugModeGray) {
             // with 565 formats, all pixels with light up
-            if (c.r == c.g && c.r == c.b) {
+            if (c.r != 0 && (c.r == c.g && c.r == c.b)) {
                 isHighlighted = true;
             }
         }

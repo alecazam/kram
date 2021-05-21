@@ -41,6 +41,9 @@ void remapToSignedBCEndpoint88(uint16_t &endpoint);
 
 float4 linearToSRGB(float4 lin);
 
+// return srgb from a linear intesnity
+float linearToSRGBFunc(float lin);
+
 class ImageData {
 public:
     // data can be mipped as 8u, 16f, or 32f.  Prefer smallest size.
@@ -71,8 +74,11 @@ public:
     void initPixelsHalfIfNeeded(ImageData &srcImage, bool doPremultiply, bool doPrezero,
                                 vector<half4> &halfImage) const;
 
+    // these use table lookups, so need to be class members
     float toLinear(uint8_t srgb) const { return srgbToLinear[srgb]; }
     float toAlphaFloat(uint8_t alpha) const { return alphaToFloat[alpha]; }
+    
+    float4 toLinear(const Color& c) const { return float4m(toLinear(c.r), toLinear(c.g), toLinear(c.b), toAlphaFloat(c.a)); }
     
     uint8_t toPremul(uint8_t channelIntensity, uint8_t alpha) const { return ((uint32_t)channelIntensity * (uint32_t)alpha) / 255; }
     

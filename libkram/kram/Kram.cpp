@@ -48,13 +48,33 @@ bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
 }
 
 inline Color toPremul(Color c) {
+    // these are really all fractional, but try this
     c.r = ((uint32_t)c.r * (uint32_t)c.a) / 255;
     c.g = ((uint32_t)c.g * (uint32_t)c.a) / 255;
     c.b = ((uint32_t)c.b * (uint32_t)c.a) / 255;
     return c;
 }
 
-bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, Image& sourceImage)
+// rec709
+// https://en.wikipedia.org/wiki/Grayscale
+inline Color toGrayscaleRec709(Color c, const Mipper& mipper) {
+    
+    const float4 kRec709Conversion = float4m(0.2126f, 0.7152f, 0.0722f, 0.0f); // really a float3
+    
+    // convert to linear, do luminance, then back to srgb primary
+    
+    float4 clin = mipper.toLinear(c);
+    float luminance = dot(clin, kRec709Conversion);
+    
+    c.r = (uint8_t)(linearToSRGBFunc(luminance) * 255.1f);
+    
+    // can just copy into the other 3 terms
+    c.g = c.b = c.r;
+    return c;
+}
+
+
+bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray, Image& sourceImage)
 {
     uint32_t width = 0;
     uint32_t height = 0;
@@ -114,6 +134,20 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, Image& sour
         return false;
     }
 
+    
+    // convert to grasycale on load
+    // better if could do this later in pipeline to stay in linear fp16 color
+    if (hasColor && isGray) {
+        Mipper mipper;
+            
+        Color* colors = (Color*)pixels.data();
+        for (int32_t i = 0, iEnd = width*height; i < iEnd; ++i) {
+            colors[i] = toGrayscaleRec709(colors[i], mipper);
+        }
+        
+        hasColor = false;
+    }
+    
     // apply premul srgb right away, don't use with -premul or alpha is applied twice
     // this may throw off the props.  Note this ignores srgb conversion.
     // This is hack to look like Photoshop and Apple Preview, where they process srgb wrong
@@ -136,7 +170,8 @@ bool SetupTmpFile(FileHelper& tmpFileHelper, const char* suffix)
 
 bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
                       vector<uint8_t>& fileBuffer,
-                      const string& srcFilename, Image& sourceImage, bool isPremulSrgb = false)
+                      const string& srcFilename, Image& sourceImage,
+                      bool isPremulSrgb = false, bool isGray = false)
 {
     bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
     bool isPNG = endsWith(srcFilename, ".png");
@@ -162,7 +197,7 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
             }
         }
         else if (isPNG) {
-            if (!LoadPng(mmapHelper.data(), mmapHelper.dataLength(), isPremulSrgb,
+            if (!LoadPng(mmapHelper.data(), mmapHelper.dataLength(), isPremulSrgb, isGray,
                          sourceImage)) {
                 return false;  // error
             }
@@ -190,7 +225,7 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
             }
         }
         else if (isPNG) {
-            if (!LoadPng(fileBuffer.data(), fileHelper.size(), isPremulSrgb,
+            if (!LoadPng(fileBuffer.data(), fileHelper.size(), isPremulSrgb, isGray,
                          sourceImage)) {
                 return false;  // error
             }
@@ -941,7 +976,8 @@ void kramEncodeUsage(bool showVersion = true)
     KLOGI("Kram",
           "%s\n"
           "Usage: kram encode\n"
-          "\t -f/ormat (bc1 | astc4x4 | etc2rgba | rgba16f)\n"
+          "\t -f/ormat (bc1 | astc4x4 | etc2rgba | rgba16f) [-quality 0-100]\n"
+          "\t [-zstd 0] or [-zlib 0] (for .ktx2 output)\n"
           "\t [-srgb] [-signed] [-normal]\n"
           "\t -i/nput <source.png | .ktx | .ktx2>\n"
           "\t -o/utput <target.ktx | .ktx | .ktx2>\n"
@@ -950,7 +986,6 @@ void kramEncodeUsage(bool showVersion = true)
           "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
           "\t [-resize (16x32 | pow2)]\n"
           "\n"
-          //"\t [-mipalign]\n"
           "\t [-mipnone]\n"
           "\t [-mipmin size] [-mipmax size] [-mipskip count]\n"
           "\n"
@@ -958,9 +993,8 @@ void kramEncodeUsage(bool showVersion = true)
           "\t [-swizzle rg01]\n"
           "\t [-avg rxbx]\n"
           "\t [-sdf]\n"
-          "\t [-premul]\n"
-          "\t [-prezero]\n"
-          "\t [-quality 0-100]\n"
+          "\t [-premul] [-prezero] [-premulrgb]\n"
+          "\t [-gray]\n"
           "\t [-optopaque]\n"
           "\t [-v]\n"
           "\n"
@@ -1007,17 +1041,20 @@ void kramEncodeUsage(bool showVersion = true)
           "\tr|rg|rgba[8|16f|32f]\n"
           "\n"
 
-          "\t-mipalign"
-          "\tAlign mip levels with .ktxa output \n"
+          // Mips
           "\t-mipnone"
           "\tDon't build mips even if pow2 dimensions\n"
 
           "\t-mipmin size"
           "\tOnly output mips >= size px\n"
+          
           "\t-mipmax size"
           "\tOnly output mips <= size px\n"
+          
+          "\t-mipskip count"
+          "\tOnly output largest mips >= count, similar to mipmax but with count instead of size px\n"
           "\n"
-
+          
           // tex to normal
           "\t-height"
           "\tConvert height.x to normal.xy\n"
@@ -1035,21 +1072,23 @@ void kramEncodeUsage(bool showVersion = true)
           "\tNormal map rg storage signed for etc/bc (rg01), only unsigned astc L+A (gggr).\n"
           "\t-sdf"
           "\tGenerate single-channel SDF from a bitmap, can mip and drop large mips. Encode to r8, bc4, etc2r, astc4x4 (Unorm LLL1) to encode\n"
-
+          
+          "\t-gray"
+          "\tConvert to grayscale before premul\n"
+          
           // premul is not on by default, but really should be or textures aren't sampled correctly
           // but this really only applies to color channel textures, so off by default.
           "\t-premul"
           "\tPremultiplied alpha to src pixels before output\n"
-          "\n"
-
+          
           // This is meant to work with shaders that (incorrectly) premul after sampling.
           // limits the rgb bleed in regions that should not display colors.  Can stil have black color halos.
           "\t-prezero"
           "\tPremultiplied alpha to src pixels before output but only where a=0\n"
-          "\n"
           
+          // This emulates Photoshop premul only on png files.  Multiplies  srgbColor.rgb * a.
           "\t-premulrgb"
-          "\tPremultiplied alpha to src pixels at load to emulate Photoshop, don't use with -premul\n"
+          "\tPremultiplied alpha to src pixels at load to emulate Photoshop srgbColor.rgb * a, don't use with -premul\n"
           "\n"
           
           "\t-optopaque"
@@ -1060,10 +1099,11 @@ void kramEncodeUsage(bool showVersion = true)
           "\tSpecifies how many chunks to split up texture into 2darray\n"
           
           // ktx2 specific settings
-          "\t-zstd level"
-          "\tktx2 with zstd mip compressor, 0 for default\n"
-          "\t-zlib level"
-          "\tktx2 with zlib mip compressor, 0 for defauult\n"
+          "\tktx2 mip compression, if not present then no compresion used\n"
+          "\t-zstd 0"
+          "\tktx2 with zstd mip compressor, 0 for default, 0 to 100\n"
+          "\t-zlib 0"
+          "\tktx2 with zlib mip compressor, 0 for default, 0 to 11\n"
           
           "\t-swizzle [rgba01 x4]"
           "\tSpecifies pre-encode swizzle pattern\n"
@@ -1714,6 +1754,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
     ImageInfoArgs infoArgs;
 
     bool isPremulRgb = false;
+    bool isGray = false;
     
     bool error = false;
     for (int32_t i = 0; i < argc; ++i) {
@@ -1734,7 +1775,11 @@ static int32_t kramAppEncode(vector<const char*>& args)
             infoArgs.optimizeFormatForOpaque = true;
             //continue;
         }
-
+        else if (isStringEqual(word, "-gray")) {
+            isGray = true;
+            //continue;
+        }
+        
         // mip setting
         else if (isStringEqual(word, "-mipmax")) {
             ++i;
@@ -1791,11 +1836,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
             infoArgs.doMipmaps = false;
             //continue;
         }
-//        else if (isStringEqual(word, "-mipalign")) {
-//            // pad start of each mip to pixel/block size of format
-//            infoArgs.skipImageLength = true;
-//            continue;
-//        }
 
         else if (isStringEqual(word, "-heightScale")) {
             ++i;
@@ -2120,7 +2160,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
     vector<uint8_t> srcFileBuffer;
 
     bool success = SetupSourceImage(srcMmapHelper, srcFileHelper, srcFileBuffer,
-                                    srcFilename, srcImage, isPremulRgb);
+                                    srcFilename, srcImage, isPremulRgb, isGray);
 
     if (success) {
         success = SetupTmpFile(tmpFileHelper, isDstKTX2 ? ".ktx2" : ".ktx");

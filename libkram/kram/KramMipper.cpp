@@ -59,7 +59,7 @@ inline Color Snormfloat4ToColor(float4 value)
     return c;
 }
 
-inline float linearToSRGBFunc(float lin)
+float linearToSRGBFunc(float lin)
 {
     assert(lin >= 0.0f && lin <= 1.0f);
     return (lin < 0.00313066844250063f) ? (lin * 12.92f)
