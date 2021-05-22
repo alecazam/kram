@@ -2302,7 +2302,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     // , so opaque textures repro as 254 alpha on Toof-a.png.
                     // ate sets pbits on mode 6 for same block.  Also fixed mip weights in non-pow2 mipper.
                     
-//                    bool doPrintBlock = false;
+                    bool doPrintBlock = false;
 //                    if (bx == 8 && by == 1) {
 //                        int32_t bp = 0;
 //                        bp = bp;
