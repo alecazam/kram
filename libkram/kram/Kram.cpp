@@ -65,6 +65,7 @@ inline Color toGrayscaleRec709(Color c, const Mipper& mipper) {
     
     float4 clin = mipper.toLinear(c);
     float luminance = dot(clin, kRec709Conversion);
+    luminance = std::min(luminance, 1.0f); // to avoid assert if math goes above 1.0
     
     c.r = (uint8_t)(roundf(linearToSRGBFunc(luminance) * 255.0f));
     

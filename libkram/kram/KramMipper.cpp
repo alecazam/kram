@@ -225,10 +225,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
                 if (doPremultiply && c0.a != 255) {
                     // need to overwrite the color 8-bit color too
                     // but this writes back to srgb for encoding
-                    cFloat.x = linearToSRGBFunc(cFloat.x);
-                    cFloat.y = linearToSRGBFunc(cFloat.y);
-                    cFloat.z = linearToSRGBFunc(cFloat.z);
-
+                    cFloat = linearToSRGB(cFloat);
                     c0 = Unormfloat4ToColor(cFloat);
                 }
             }
@@ -499,15 +496,11 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
                     if (srcImage.isSRGB) {
-                        // getting some values > 1
-                        cFloat = saturate(cFloat);
-                        
-                        cFloat.x = linearToSRGBFunc(cFloat.x);
-                        cFloat.y = linearToSRGBFunc(cFloat.y);
-                        cFloat.z = linearToSRGBFunc(cFloat.z);
+                        // getting some values > 1m, but this saturates
+                        cFloat = linearToSRGB(cFloat);
                     }
 
-                    // override rgba8u version, since this is what is encoded
+                    // overwrite rgba8u version, since this is what is encoded
                     Color c = Unormfloat4ToColor(cFloat);
 
                     // can only skip this if cSrc = cDst
@@ -523,12 +516,8 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
                     if (srcImage.isSRGB) {
-                        // getting some values > 1
-                        cFloat = saturate(cFloat);
-                        
-                        cFloat.x = linearToSRGBFunc(cFloat.x);
-                        cFloat.y = linearToSRGBFunc(cFloat.y);
-                        cFloat.z = linearToSRGBFunc(cFloat.z);
+                        // getting some values > 1, but this saturates
+                        cFloat = linearToSRGB(cFloat);
                     }
 
                     // Overwrite the RGBA8u image too (this will go out to
@@ -609,9 +598,7 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
                     if (srcImage.isSRGB) {
-                        cFloat.x = linearToSRGBFunc(cFloat.x);
-                        cFloat.y = linearToSRGBFunc(cFloat.y);
-                        cFloat.z = linearToSRGBFunc(cFloat.z);
+                        cFloat = linearToSRGB(cFloat);
                     }
 
                     // override rgba8u version, since this is what is encoded
@@ -639,9 +626,7 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
                     if (srcImage.isSRGB) {
-                        cFloat.x = linearToSRGBFunc(cFloat.x);
-                        cFloat.y = linearToSRGBFunc(cFloat.y);
-                        cFloat.z = linearToSRGBFunc(cFloat.z);
+                        cFloat = linearToSRGB(cFloat);
                     }
 
                     // Overwrite the RGBA8u image too (this will go out to
