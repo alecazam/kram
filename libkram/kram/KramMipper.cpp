@@ -499,8 +499,8 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
                     if (srcImage.isSRGB) {
-                        // round to 8-bits before conversion, and then back
-                        cFloat = round(cFloat * 255.0f) / 255.0f;
+                        // getting some values > 1
+                        cFloat = saturate(cFloat);
                         
                         cFloat.x = linearToSRGBFunc(cFloat.x);
                         cFloat.y = linearToSRGBFunc(cFloat.y);
@@ -523,8 +523,8 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
                     if (srcImage.isSRGB) {
-                        // round to 8-bits before conversion, and then back
-                        cFloat = round(cFloat * 255.0f) / 255.0f;
+                        // getting some values > 1
+                        cFloat = saturate(cFloat);
                         
                         cFloat.x = linearToSRGBFunc(cFloat.x);
                         cFloat.y = linearToSRGBFunc(cFloat.y);
