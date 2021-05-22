@@ -5,7 +5,7 @@ namespace kram
 using namespace simd;
 using namespace std;
 
-int32_t ShowSettings::totalLevels() const {
+int32_t ShowSettings::totalChunks() const {
     int32_t one = 1;
     return std::max(one, faceCount) * std::max(one, arrayCount) * std::max(one, sliceCount);
 }

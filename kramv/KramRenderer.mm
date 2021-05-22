@@ -935,8 +935,8 @@ using namespace simd;
                     uniformsLevel.drawOffset.y -= h + gap;
                 }
                 
-                // this its ktxImage.totalLevels()
-                int32_t numLevels =  _showSettings->totalLevels();
+                // this its ktxImage.totalChunks()
+                int32_t numLevels =  _showSettings->totalChunks();
                 
                 for (int32_t level = 0; level < numLevels; ++level) {
                     

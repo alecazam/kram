@@ -401,6 +401,7 @@ NSArray<NSString*>* pasteboardTypes = @[
 @implementation MyMTKView
 {
     NSStackView* _buttonStack;
+    NSMutableArray<NSButton*>* _buttonArray;
     NSTextField* _hudLabel;
     NSTextField* _hudLabel2;
     
@@ -464,6 +465,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     _zoomGesture = [[NSMagnificationGestureRecognizer alloc] initWithTarget:self action:@selector(handleGesture:)];
     [self addGestureRecognizer:_zoomGesture];
        
+    _buttonArray = [[NSMutableArray alloc] init];
     _buttonStack = [self _addButtons];
     
     // hide until image loaded
@@ -554,13 +556,19 @@ NSArray<NSString*>* pasteboardTypes = @[
         }
         else {
             //sKrect.origin.y += 25;
+            
+            // keep all buttons, since stackView will remove and pack the stack
+            [_buttonArray addObject:button];
         }
         
         [buttons addObject:button];
+        
+        
     }
     
     NSStackView* stackView = [NSStackView stackViewWithViews:buttons];
     stackView.orientation = NSUserInterfaceLayoutOrientationVertical;
+    stackView.detachesHiddenViews = YES; // default, but why have to have _buttonArrary
     [self addSubview: stackView];
     
 #if 0
@@ -623,9 +631,9 @@ NSArray<NSString*>* pasteboardTypes = @[
     // add vertical constrains to have it fill window, but keep 800 width
     label.preferredMaxLayoutWidth = 800;
 
-    NSDictionary* views = @{ @"label" : label };
-    [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-[label]" options:0 metrics:nil views:views]];
-    [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-[label]" options:0 metrics:nil views:views]];
+    //NSDictionary* views = @{ @"label" : label };
+    //[self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-[label]" options:0 metrics:nil views:views]];
+    //[self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-[label]" options:0 metrics:nil views:views]];
     
     return label;
 }
@@ -661,7 +669,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     float maxX = 0.5f;
     float minY = -0.5f;
     if (_showSettings->isShowingAllLevelsAndMips) {
-        maxX += 1.0f * (_showSettings->totalLevels() - 1);
+        maxX += 1.0f * (_showSettings->totalChunks() - 1);
         minY -= 1.0f * (_showSettings->maxLOD - 1);
     }
     
@@ -739,7 +747,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     CGRect imageRect = CGRectMake(pt0.x, pt0.y, pt1.x - pt0.x, pt1.y - pt0.y);
     CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
    
-    int32_t numTexturesX = _showSettings->totalLevels();
+    int32_t numTexturesX = _showSettings->totalChunks();
     int32_t numTexturesY = _showSettings->maxLOD;
     
     if (_showSettings->isShowingAllLevelsAndMips) {
@@ -909,7 +917,7 @@ float4 toSnorm8(float4 c)
     
 // TODO: finish this logic, need to account for gaps too, and then isolate to a given level and mip to sample
 //    if (_showSettings->isShowingAllLevelsAndMips) {
-//        pixel.x *= _showSettings->totalLevels();
+//        pixel.x *= _showSettings->totalChunks();
 //        pixel.y *= _showSettings->maxLOD;
 //    }
     
@@ -1064,8 +1072,8 @@ float4 toSnorm8(float4 c)
                 text += tmp;
             }
             
-            // display the premul values too
-            if (c.a < 1.0f)
+            // display the premul values too, but not fully transparent pixels
+            if (c.a > 0.0 && c.a < 1.0f)
             {
                 printChannels(tmp, "lnp: ", toPremul(c), numChannels, isFloat, isSigned);
                 text += tmp;
@@ -1168,7 +1176,7 @@ float4 toSnorm8(float4 c)
     CGRect imageRect = CGRectMake(pt0.x, pt0.y, pt1.x - pt0.x, pt1.y - pt0.y);
     CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
    
-    int32_t numTexturesX = _showSettings->totalLevels();
+    int32_t numTexturesX = _showSettings->totalChunks();
     int32_t numTexturesY = _showSettings->maxLOD;
     
     if (_showSettings->isShowingAllLevelsAndMips) {
@@ -1201,6 +1209,44 @@ float4 toSnorm8(float4 c)
         [self updateEyedropper];
         self.needsDisplay = YES;
     }
+}
+
+// use this to enable/disable menus, buttons, etc.  Called on every event
+// when not implemented, then user items are always enabled
+- (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item
+{
+    // TODO: tie to menus and buttons
+    return YES;
+}
+
+- (NSButton*)findButton:(const char*)name {
+    NSString* title = [NSString stringWithUTF8String:name];
+    for (NSButton* button in _buttonArray) {
+        if (button.title == title)
+            return button;
+    }
+    return nil;
+}
+
+- (void)updateUIAfterLoad {
+    
+    // base on showSettings, hide some fo the buttons
+    bool isShowAllHidden = _showSettings->totalChunks() <= 1 && _showSettings->mipLOD <= 1;
+    
+    bool isArrayHidden = _showSettings->arrayCount <= 1;
+    bool isFaceSliceHidden = _showSettings->faceCount <= 1 && _showSettings->sliceCount <= 1;
+    bool isMipHidden = _showSettings->mipLOD <= 1;
+    
+    bool isJumpToNextHidden = !_showSettings->isArchive;
+    
+    // could hide rgba buttons on some formas
+    // or have XYZBA on nromals, but have Y mapped to array
+    
+    [self findButton:"Y"].hidden = isArrayHidden;
+    [self findButton:"F"].hidden = isFaceSliceHidden;
+    [self findButton:"M"].hidden = isMipHidden;
+    [self findButton:"S"].hidden = isShowAllHidden;
+    [self findButton:"J"].hidden = isJumpToNextHidden;
 }
 
 
@@ -1599,7 +1645,7 @@ float4 toSnorm8(float4 c)
            
         case Key::F:
             // cube or cube array, but hit s to pick cubearray
-            if (_showSettings->faceCount) {
+            if (_showSettings->faceCount > 1) {
                 if (isShiftKeyDown) {
                     _showSettings->faceNumber = MAX(_showSettings->faceNumber - 1, 0);
                 }
@@ -1809,6 +1855,11 @@ float4 toSnorm8(float4 c)
         _noImageLoaded = NO;
     }
 
+    _showSettings->isArchive = false;
+   
+    // show/hide button
+    [self updateUIAfterLoad];
+    
     self.needsDisplay = YES;
     return YES;
 }
@@ -1931,6 +1982,11 @@ float4 toSnorm8(float4 c)
         _buttonStack.hidden = NO; // show controls
         _noImageLoaded = NO;
     }
+    
+    _showSettings->isArchive = false;
+   
+    // show/hide button
+    [self updateUIAfterLoad];
     
     self.needsDisplay = YES;
     return YES;

@@ -68,7 +68,7 @@ public:
     int32_t sliceNumber = 0;
     int32_t sliceCount = 0;
     
-    int32_t totalLevels() const;
+    int32_t totalChunks() const;
     
     // DONE: hook all these up to shader and view
     bool isHudShown = true;
@@ -102,6 +102,9 @@ public:
     
     // draw with reverseZ to better match perspective
     bool isReverseZ = true;
+    
+    // whether files are pulled from disk or zip archive.
+    bool isArchive = false;
     
     // can have up to 5 channels (xyz as xy, 2 other channels)
     int32_t numChannels = 0;
