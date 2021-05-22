@@ -804,9 +804,9 @@ bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstIma
 
             // write the mips out to the file, and code above can then decode into the same buffer
             // This isn't correct for cubes, arrays, and other types.  The mip length is only written out once for all mips.
-            int32_t dstMipOffset = dstMipLevel.offset + chunk * dstMipLevel.length;
             
             if (chunk == 0 && !dstImage.skipImageLength) {
+                // sie of one mip
                 uint32_t levelSize = dstMipLevel.length;
                 
                 // cubes write the face size, not the levels size, ugh
@@ -814,10 +814,14 @@ bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstIma
                     levelSize *= numChunks;
                 }
                 
-                if (!writeDataAtOffset((const uint8_t*)&levelSize, sizeof(levelSize), dstMipOffset - sizeof(levelSize), dstFile, dstImage)) {
+                if (!writeDataAtOffset((const uint8_t*)&levelSize, sizeof(levelSize), dstMipLevel.offset - sizeof(levelSize), dstFile, dstImage)) {
                     return false;
                 }
             }
+            
+            // only writing one mip at a time in the level here
+            // so written bytes are only length and not numChunks * length
+            int32_t dstMipOffset = dstMipLevel.offset + chunk * dstMipLevel.length;
             
             if (!writeDataAtOffset(outputTexture.data(), dstMipLevel.length, dstMipOffset, dstFile, dstImage)) {
                 return false;
@@ -1565,7 +1569,7 @@ bool Image::writeKTX1FileOrImage(
             auto& level = dstImage.mipLevels[i];
             level.offset = lastMipOffset + 4; // offset by length
             
-            lastMipOffset = level.offset + level.lengthCompressed * numChunks;
+            lastMipOffset = level.offset + level.length * numChunks;
         }
     }
     
@@ -1789,7 +1793,8 @@ bool Image::createMipsFromChunks(
         int32_t numSkippedMips = data.numSkippedMips;
         
         for (int32_t mipLevel = 0; mipLevel < (int32_t)dstMipLevels.size(); ++mipLevel) {
-
+            const auto& dstMipLevel = dstMipLevels[mipLevel];
+            
             if (mipLevel == 0 && !info.doSDF)
             {
                 if (numSkippedMips > 0) {
@@ -1827,12 +1832,12 @@ bool Image::createMipsFromChunks(
                     h = dstImageData.height;
                 }
             }
-            
-            // mipOffset are start of first chunk of a given mip size
-            size_t mipStorageSize = dstMipLevels[mipLevel].length; //  / numChunks;
+           
+            // size of one mip, not levelSize = numChunks * mipStorageSize
+            size_t mipStorageSize = dstMipLevel.length;
             
             // offset only valid for KTX and KTX2 w/o isCompressed
-            size_t mipOffset = dstMipLevels[mipLevel].offset + chunk * mipStorageSize;
+            size_t mipChunkOffset = dstMipLevel.offset + chunk * mipStorageSize;
            
             // just to check that each mip has a unique offset
             //KLOGI("Image", "chunk:%d %d\n", chunk, mipOffset);
@@ -1870,7 +1875,7 @@ bool Image::createMipsFromChunks(
                 // https://github.com/BinomialLLC/basis_universal/issues/40
 
                 // this contains all bytes at a mipLOD but not any padding
-                uint32_t levelSize = (uint32_t)dstMipLevels[mipLevel].length;
+                uint32_t levelSize = (uint32_t)mipStorageSize;
 
                 // this is size of one face for non-array cubes
                 // but for everything else, it's the numChunks * mipStorageSize
@@ -1881,7 +1886,7 @@ bool Image::createMipsFromChunks(
                 int32_t levelSizeOf = sizeof(levelSize);
                 assert(levelSizeOf == 4);
 
-                if (!writeDataAtOffset((const uint8_t*)&levelSize, levelSizeOf, mipOffset - levelSizeOf, dstFile, dstImage)) {
+                if (!writeDataAtOffset((const uint8_t*)&levelSize, levelSizeOf, dstMipLevel.offset - levelSizeOf, dstFile, dstImage)) {
                     return false;
                 }
             }
@@ -1889,7 +1894,7 @@ bool Image::createMipsFromChunks(
             // Note that default ktx alignment is 4, so r8u, r16f mips need to be padded out to 4 bytes
             // may need to write these out row by row, and let fseek pad the rows to 4.
 
-            if (!writeDataAtOffset(outputTexture.data.data(), mipStorageSize, mipOffset, dstFile, dstImage)) {
+            if (!writeDataAtOffset(outputTexture.data.data(), mipStorageSize, mipChunkOffset, dstFile, dstImage)) {
                 return false;
             }
         }
