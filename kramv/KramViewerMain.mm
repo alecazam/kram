@@ -1231,11 +1231,11 @@ float4 toSnorm8(float4 c)
 - (void)updateUIAfterLoad {
     
     // base on showSettings, hide some fo the buttons
-    bool isShowAllHidden = _showSettings->totalChunks() <= 1 && _showSettings->mipLOD <= 1;
+    bool isShowAllHidden = _showSettings->totalChunks() <= 1 && _showSettings->maxLOD <= 1;
     
     bool isArrayHidden = _showSettings->arrayCount <= 1;
     bool isFaceSliceHidden = _showSettings->faceCount <= 1 && _showSettings->sliceCount <= 1;
-    bool isMipHidden = _showSettings->mipLOD <= 1;
+    bool isMipHidden = _showSettings->maxLOD <= 1;
     
     bool isJumpToNextHidden = !_showSettings->isArchive;
     

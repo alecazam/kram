@@ -656,7 +656,7 @@ float4 DrawPixels(
         }
         else if (uniforms.debugMode == ShDebugModeGray) {
             // with 565 formats, all pixels with light up
-            if (c.r != 0 && (c.r == c.g && c.r == c.b)) {
+            if ((c.r > 0.0 && c.r < 1.0) && (c.r == c.g && c.r == c.b)) {
                 isHighlighted = true;
             }
         }
