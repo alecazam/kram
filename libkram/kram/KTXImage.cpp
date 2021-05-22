@@ -759,6 +759,18 @@ uint32_t KTXImage::mipLevelSize(uint32_t width_, uint32_t height_) const
     return count * size;
 }
 
+uint32_t KTXImage::blockCountRows(uint32_t width_) const
+{
+    assert(width_ >= 1);
+
+    Int2 dims = blockDims();
+
+    width_ = (width_ + dims.x - 1) / dims.x;
+    
+    return width_;
+}
+    
+    
 uint32_t KTXImage::blockCount(uint32_t width_, uint32_t height_) const
 {
     assert(width_ >= 1 && height_ >= 1);

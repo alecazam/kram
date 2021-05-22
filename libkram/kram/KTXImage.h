@@ -294,7 +294,8 @@ public:
     uint32_t blockSize() const;
     Int2 blockDims() const;
     uint32_t blockCount(uint32_t width_, uint32_t height_) const;
-
+    uint32_t blockCountRows(uint32_t width_) const;
+    
     // mip data depends on format
     uint32_t mipLevelSize(uint32_t width_, uint32_t height_) const;
     //int totalMipLevels() const;

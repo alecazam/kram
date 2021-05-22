@@ -87,6 +87,25 @@ public:
     vector<uint8_t> data;
 };
 
+// return the block mode of a bc7 block, or -1 if finvalid
+int32_t decodeBC7BlockMode(const void *pBlock)
+{
+    const uint32_t first_byte = static_cast<const uint8_t*>(pBlock)[0];
+
+    for (uint32_t mode = 0; mode <= 7; mode++)
+    {
+        // bit followed by zeros, mask out upper
+        uint8_t bits = (1U << mode);
+        
+        if ((first_byte & bits) == bits)
+        {
+            return mode;
+        }
+    }
+
+    return -1;
+}
+
 Image::Image() : _width(0), _height(0), _hasColor(false), _hasAlpha(false)
 {
 }
@@ -1600,7 +1619,73 @@ bool Image::writeKTX1FileOrImage(
     return true;
 }
 
-
+void printBCBlock(const uint8_t* bcBlock, MyMTLPixelFormat format) {
+    // https://docs.microsoft.com/en-us/windows/win32/direct3d11/bc7-format-mode-reference#mode-6
+    if (!(format == MyMTLPixelFormatBC7_RGBAUnorm || format == MyMTLPixelFormatBC7_RGBAUnorm_sRGB)) {
+        return;
+    }
+    
+    uint32_t mode = decodeBC7BlockMode(bcBlock);
+    
+    switch(mode) {
+        case 6: {
+            const uint64_t* block = (const uint64_t*)bcBlock;
+            // 6 bits of signature - LSB 000001
+            // 7 bits R0, 7 bits R1
+            // 7 bits G0, 7 bits G1
+            // 7 bits B0, 7 bits B1
+            // 7 bits A0, 7 bits A1
+            
+            // 1 bit P0, 1 bit  P1
+            // 63 bits of index data, how dos that work?
+            
+            uint32_t R0 = (uint32_t)((block[0] >> uint64_t(7*1)) & uint64_t(0b1111111));
+            uint32_t R1 = (uint32_t)((block[0] >> uint64_t(7*2)) & uint64_t(0b1111111));
+            
+            uint32_t G0 = (uint32_t)((block[0] >> uint64_t(7*3)) & uint64_t(0b1111111));
+            uint32_t G1 = (uint32_t)((block[0] >> uint64_t(7*4)) & uint64_t(0b1111111));
+            
+            uint32_t B0 = (uint32_t)((block[0] >> uint64_t(7*5)) & uint64_t(0b1111111));
+            uint32_t B1 = (uint32_t)((block[0] >> uint64_t(7*6)) & uint64_t(0b1111111));
+            
+            uint32_t A0 = (uint32_t)((block[0] >> uint64_t(7*7)) & uint64_t(0b1111111));
+            uint32_t A1 = (uint32_t)((block[0] >> uint64_t(7*8)) & uint64_t(0b1111111));
+            
+            uint32_t P0 = (uint32_t)((block[0] >> uint64_t(7*9)) & uint64_t(0b1));
+            uint32_t P1 = (uint32_t)((block[1] >> uint64_t(0)) & uint64_t(0b1));
+           
+            // r,g,b,a to be or-ed with the pbit to get tha actual value of the endpoints
+            
+            KLOGI("kram",
+                  "R0=%d, R1=%d\n"
+                  "G0=%d, G1=%d\n"
+                  "B0=%d, B1=%d\n"
+                  "A0=%d, A1=%d\n"
+                  "P0=%d, P1=%d\n",
+                  R0, R1,
+                  G0, G1,
+                  B0, B1,
+                  A0, A1,
+                  P0, P1);
+            
+            break;
+        }
+    }
+    
+    // Have a block debug mode that hud's the mode pixel values
+    // over the hovered block.
+    uint32_t pixels[4*4];
+    if (!unpack_bc7(bcBlock, (bc7decomp::color_rgba*)pixels)) {
+        return;
+    }
+    
+    for (uint32_t y = 0; y < 4; ++y) {
+        KLOGI("kram",
+              "[%u] = %08X %08X %08X %08X\n",
+              y, pixels[4*y + 0], pixels[4*y + 1], pixels[4*y + 2], pixels[4*y + 3]
+              );
+    }
+}
 
 bool Image::createMipsFromChunks(
     ImageInfo& info,
@@ -2184,6 +2269,9 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             int32_t blockSize = image.blockSize();
             for (int32_t y = 0; y < h; y += blockDim) {
                 for (int32_t x = 0; x < w; x += blockDim) {
+                    
+                    
+                    
                     // Have to copy to temp block, since encode doesn't test w/h edges
                     // copy src to 4x4 clamping the edge pixels
                     // TODO: do clamped edge pixels get weighted more then on non-multiple of 4 images ?
@@ -2210,6 +2298,17 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     int32_t b0 = by * blocks_x + bx;
                     uint8_t* dstBlock = &dstData[b0 * blockSize];
 
+                    // bc7enc is not setting pbit on bc7 mode6 and doesn's support opaque mode3 yet
+                    // , so opaque textures repro as 254 alpha on Toof-a.png.
+                    // ate sets pbits on mode 6 for same block.  Also fixed mip weights in non-pow2 mipper.
+                    
+//                    bool doPrintBlock = false;
+//                    if (bx == 8 && by == 1) {
+//                        int32_t bp = 0;
+//                        bp = bp;
+//                        doPrintBlock = true;
+//                    }
+                    
                     switch (info.pixelFormat) {
                         case MyMTLPixelFormatBC1_RGBA:
                         case MyMTLPixelFormatBC1_RGBA_sRGB: {
@@ -2239,6 +2338,10 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
                         case MyMTLPixelFormatBC7_RGBAUnorm:
                         case MyMTLPixelFormatBC7_RGBAUnorm_sRGB: {
                             bc7enc_compress_block(dstBlock, srcPixelCopy, &bc7params);
+                            
+                            if (doPrintBlock) {
+                                printBCBlock(dstBlock, info.pixelFormat);
+                            }
                             break;
                         }
                         default: {
@@ -2281,6 +2384,12 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             if (info.isSigned) {
                 doRemapSnormEndpoints = true;
             }
+            
+            
+            // find the 8,1 block and print it
+//            uint32_t numRowBlocks = image.blockCountRows(w);
+//            const uint8_t* block = outputTexture.data.data() + (numRowBlocks * 1 + 8) * image.blockSize();
+//            printBCBlock(block, pixelFormatRemap);
         }
 #endif
 #if COMPILE_SQUISH

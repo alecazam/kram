@@ -34,7 +34,7 @@ int32_t nextPow2(int32_t num)
 
 inline uint8_t floatToUint8(float value)
 {
-    return (uint8_t)roundf(value * 255.0f);
+    return (uint8_t)roundf(value * 255.0f); // or use 255.1f ?
 }
 
 inline Color Unormfloat4ToColor(float4 value)
@@ -390,6 +390,12 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
             y1w = 0.5f;
         }
         
+        // normalize weights
+        float totalY = ymw + y0w + y1w;
+        ymw /= totalY;
+        y0w /= totalY;
+        y1w /= totalY;
+//
         ym *= width;
         y0 *= width;
         y1 *= width;
@@ -413,6 +419,12 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 x0w = 0.5f;
                 x1w = 0.5f;
             }
+            
+            // this mipgen is pulling down alpha of 255 to 241 and smaller over the course of the whole mip chain
+            float totalX = xmw + x0w + x1w;
+            xmw /= totalX;
+            x0w /= totalX;
+            x1w /= totalX;
             
             // we have 3x2, 2x3 or 3x3 pattern to weight
             // now lookup the 9 values from the buffer
@@ -487,6 +499,9 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
                     if (srcImage.isSRGB) {
+                        // round to 8-bits before conversion, and then back
+                        cFloat = round(cFloat * 255.0f) / 255.0f;
+                        
                         cFloat.x = linearToSRGBFunc(cFloat.x);
                         cFloat.y = linearToSRGBFunc(cFloat.y);
                         cFloat.z = linearToSRGBFunc(cFloat.z);
@@ -508,6 +523,9 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
                     if (srcImage.isSRGB) {
+                        // round to 8-bits before conversion, and then back
+                        cFloat = round(cFloat * 255.0f) / 255.0f;
+                        
                         cFloat.x = linearToSRGBFunc(cFloat.x);
                         cFloat.y = linearToSRGBFunc(cFloat.y);
                         cFloat.z = linearToSRGBFunc(cFloat.z);
