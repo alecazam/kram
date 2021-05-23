@@ -77,6 +77,12 @@ set_target_properties(${myTargetApp} PROPERTIES
     
     # TODO: not sure how to set this, nothing online either ?
     # MACOSX_BUNDLE_APP_CATEGORY "Developer Tools"
+    
+    #-------------------------
+    # turn on shader capture support and indexing
+    # why can't this just be a yes or no, there's "Yes, exclude source code"
+    XCODE_ATTRIBUTE_MTL_ENABLE_DEBUG_INFO "Yes, include source code"
+    XCODE_ATTRIBUTE_MTL_ENABLE_INDEX_STORE YES
 )
 
 target_compile_options(${myTargetApp} PRIVATE -W -Wall)

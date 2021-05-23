@@ -1050,7 +1050,10 @@ using namespace simd;
     int32_t textureLookupX = _showSettings->textureLookupX;
     int32_t textureLookupY = _showSettings->textureLookupY;
     
-    [self drawSamples:commandBuffer lookupX:textureLookupX lookupY:textureLookupY];
+    int32_t textureLookupMipX = _showSettings->textureLookupMipX;
+    int32_t textureLookupMipY = _showSettings->textureLookupMipY;
+    
+    [self drawSamples:commandBuffer lookupX:textureLookupMipX lookupY:textureLookupMipY];
     
     // Synchronize the managed texture.
     id <MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];

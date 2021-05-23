@@ -125,6 +125,10 @@ public:
     int32_t textureLookupX = 0;
     int32_t textureLookupY = 0;
     
+    // exact pixel in the mip level
+    int32_t textureLookupMipX = 0;
+    int32_t textureLookupMipY = 0;
+    
     int32_t textureResultX = 0;
     int32_t textureResultY = 0;
     float4 textureResult;

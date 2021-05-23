@@ -982,7 +982,7 @@ kernel void SampleImageCS(
     // the for-loop is replaced with a collection of threads, each of which
     // calls this function.
     uint2 uv = uniforms.uv; // tie into texture lookup
-    uv = max(uint2(1), uv >> uniforms.mipLOD);
+    // uv >>= uniforms.mipLOD;
     
     // the color returned is linear
     float4 color = colorMap.read(uv, uniforms.mipLOD);
@@ -999,7 +999,7 @@ kernel void SampleImageArrayCS(
     // the for-loop is replaced with a collection of threads, each of which
     // calls this function.
     uint2 uv = uniforms.uv; // tie into texture lookup
-    uv = max(uint2(1), uv >> uniforms.mipLOD);
+    //uv >>= uniforms.mipLOD;
     
     uint arrayOrSlice = uniforms.arrayOrSlice;
     
@@ -1018,7 +1018,7 @@ kernel void SampleCubeCS(
     // the for-loop is replaced with a collection of threads, each of which
     // calls this function.
     uint2 uv = uint2(uniforms.uv); // tie into texture lookup
-    uv = max(uint2(1), uv >> uniforms.mipLOD);
+    //uv >>= uniforms.mipLOD;
     
     uint face = uniforms.face;
     
@@ -1040,7 +1040,7 @@ kernel void SampleCubeArrayCS(
     // the for-loop is replaced with a collection of threads, each of which
     // calls this function.
     uint2 uv = uint2(uniforms.uv); // tie into texture lookup
-    uv = max(uint2(1), uv >> uniforms.mipLOD);
+    //uv >>= uniforms.mipLOD;
     
     uint face = uniforms.face;
     uint arrayOrSlice = uniforms.arrayOrSlice;
@@ -1060,7 +1060,7 @@ kernel void SampleVolumeCS(
     // the for-loop is replaced with a collection of threads, each of which
     // calls this function.
     uint3 uv = uint3(uniforms.uv, uniforms.arrayOrSlice); // tie into texture lookup
-    uv = max(uint3(1), uv >> uniforms.mipLOD);
+    //uv >>= uniforms.mipLOD);
     
     // the color returned is linear
     float4 color = colorMap.read(uv, uniforms.mipLOD);

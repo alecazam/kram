@@ -983,21 +983,24 @@ float4 toSnorm8(float4 c)
         // show block num
         int mipLOD = _showSettings->mipLOD;
         
-        // TODO:: these block numbers are not accurate on Toof at 4x4
+        // TODO: these block numbers are not accurate on Toof at 4x4
         // there is resizing going on to the dimensions
         
         int mipX = _showSettings->imageBoundsX;
         int mipY = _showSettings->imageBoundsY;
         
         for (int i = 0; i < mipLOD; ++i) {
-            mipX = (mipX+1) >> 1;
-            mipY = (mipY+1) >> 1;
+            mipX = mipX >> 1;
+            mipY = mipY >> 1;
         }
         mipX = std::max(1, mipX);
         mipY = std::max(1, mipY);
         
         mipX = (int32_t)(uvX * mipX);
         mipY = (int32_t)(uvY * mipY);
+        
+        _showSettings->textureLookupMipX = mipX;
+        _showSettings->textureLookupMipY = mipY;
         
         // TODO: may want to return mip in pixel readback
         // don't have it right now, so don't display if preview is enabled
