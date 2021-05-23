@@ -745,6 +745,18 @@ MyMTLPixelFormat toggleSrgbFormat(MyMTLPixelFormat format)
     return MyMTLPixelFormatInvalid;
 }
 
+const char* supercompressionName(KTX2Supercompression type)
+{
+    const char* name = "Unknown";
+    switch(type) {
+        case KTX2SupercompressionNone:    name = "None"; break;
+        case KTX2SupercompressionBasisLZ: name = "BasisLZ"; break;
+        case KTX2SupercompressionZstd:    name = "Zstd"; break;
+        case KTX2SupercompressionZlib:    name = "Zlib"; break;
+    }
+    return name;
+}
+
 // https://docs.unity3d.com/ScriptReference/Experimental.Rendering.GraphicsFormat.html
 // Unity only handles 4,5,6,8,10,12 square block dimensions
 
@@ -1316,17 +1328,6 @@ const char* textureTypeName(MyMTLTextureType textureType)
 // can use ktx2ktx2 and ktx2sc to supercompress, and kramv can use this to open and view data as a KTX1 file.
 // ignoring Basis and supercompression data, etc.
 
-// wish C++ had a defer
-struct ZSTDScope2
-{
-    ZSTDScope2(ZSTD_DCtx* ctx_) : ctx(ctx_) {}
-    ~ZSTDScope2() { ZSTD_freeDCtx(ctx); }
-    
-private:
-    ZSTD_DCtx* ctx = nullptr;
-};
-
-
 bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly)
 {
     if ((size_t)imageDataLength < sizeof(KTX2Header)) {
@@ -1416,11 +1417,15 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     header.bytesOfKeyValueData = 0;
     initProps(imageData + header2.kvdByteOffset, header2.kvdByteLength);
    
+    
     // skip parsing th elevels
     if (isInfoOnly) {
         skipImageLength = true;
         fileData = imageData;
         fileDataLength = imageDataLength;
+        
+        // copy this in to return as info
+        supercompressionType = (KTX2Supercompression)header2.supercompressionScheme;
         
         // copy these over from ktx2
         mipLevels = levels;
@@ -1493,73 +1498,94 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
         
         // TODO: may need to fill out length field in fileData
         
-        // Note: specific to zstd
-        bool isZstd = header2.supercompressionScheme == KTX2SupercompressionZstd;
-        ZSTD_DCtx* dctx = nullptr;
-        if (isZstd) dctx = ZSTD_createDCtx();
-        ZSTDScope2 scope(dctx);
+        supercompressionType = (KTX2Supercompression)header2.supercompressionScheme;
         
         // need to decompress mips here
         for (uint32_t i = 0; i < header.numberOfMipmapLevels; ++i) {
             // compresssed level
             const auto& level2 = levels[i];
-            size_t srcDataSize = level2.lengthCompressed;
             const uint8_t* srcData = imageData + level2.offset;
-            
+           
             // uncompressed level
-            const auto& level1 = mipLevels[i];
-            size_t dstDataSize = level1.length * numChunks;
+            auto& level1 = mipLevels[i];
+            level1.lengthCompressed = level2.lengthCompressed; // need this for copyLevel to have enough data
             uint8_t* dstData = (uint8_t*)fileData + level1.offset; // can const_cast, since class owns data
+          
+            if (!unpackLevel(i, srcData, dstData)) {
+                return false;
+            }
             
-            // preserve lengthCompressed so kram info can display the value
-            // this field will need to be set to 0
-            
-            // This does display in kram info, but it's confusing since image was converted to ktx1
-            // and the offsets are largest first.  So for now, don't copy this in.
-            // level1.lengthCompressed = level2.lengthCompressed;
-            
-            // TODO: use basis transcoder (single file) for Basis UASTC here, then don't need libktx yet
-            // wont work for BasisLZ (which is ETC1S).
-            
-            switch(header2.supercompressionScheme) {
-                case KTX2SupercompressionZstd: {
-                    // decompress from zstd directly into ktx1 ordered chunk
-                    // Note: decode fails with FSE_decompress.
-                    auto result = ZSTD_decompressDCtx(dctx,
-                        dstData, dstDataSize,
-                        srcData, srcDataSize);
-                    
-                    if (ZSTD_isError(result)) {
-                        KLOGE("kram", "decode mip zstd failed");
-                        return false;
-                    }
-                    if (level2.length * numChunks != result) {
-                        KLOGE("kram", "decode mip zstd size not expected");
-                        return false;
-                    }
-                    break;
-                }
+            // have decompressed here, so set to 0
+            level1.lengthCompressed = 0;
+        }
+        
+        // have decompressed ktx1, so change back to None
+        supercompressionType = KTX2SupercompressionNone;
+    }
+    
+    return true;
+}
+
+bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData) {
+    
+    // uncompressed level
+    uint32_t numChunks = totalChunks();
+    const auto& level = mipLevels[mipNumber];
+    size_t dstDataSize = level.length * numChunks;
+    
+    if (level.lengthCompressed == 0) {
+        memcpy(dstData, srcData, dstDataSize);
+    }
+    else {
+        size_t srcDataSize = level.lengthCompressed;
+        
+        // TODO: use basis transcoder (single file) for Basis UASTC here, then don't need libktx yet
+        // wont work for BasisLZ (which is ETC1S).
+        // copy this in to return as info
+        
+        switch(supercompressionType) {
+            case KTX2SupercompressionZstd: {
+                // decompress from zstd directly into ktx1 ordered chunk
+                // Note: decode fails with FSE_decompress.
+                ZSTD_DCtx* dctx = ZSTD_createDCtx();
+                if (!dctx)
+                    return false;
                 
-                case KTX2SupercompressionZlib: {
-                    // can use miniz or libCompression
-                    mz_ulong dstDataSizeMZ = 0;
-                    if (mz_uncompress(dstData, &dstDataSizeMZ,
-                                      srcData, srcDataSize) != MZ_OK) {
-                        KLOGE("kram", "decode mip zlib failed");
-                        return false;
-                    }
-                    if (dstDataSizeMZ != dstDataSize) {
-                        KLOGE("kram", "decode mip zlib size not expected");
-                        return false;
-                    }
-                    
-                    break;
-                }
-                    
-                // already checked at top of function
-                default: {
+                auto dstDataSizeZstd = ZSTD_decompressDCtx(dctx,
+                    dstData, dstDataSize,
+                    srcData, srcDataSize);
+                ZSTD_freeDCtx(dctx);
+                
+                if (ZSTD_isError(dstDataSizeZstd)) {
+                    KLOGE("kram", "decode mip zstd failed");
                     return false;
                 }
+                if (dstDataSizeZstd != dstDataSize) {
+                    KLOGE("kram", "decode mip zstd size not expected");
+                    return false;
+                }
+                break;
+            }
+            
+            case KTX2SupercompressionZlib: {
+                // can use miniz or libCompression
+                mz_ulong dstDataSizeMiniz = 0;
+                if (mz_uncompress(dstData, &dstDataSizeMiniz,
+                                  srcData, srcDataSize) != MZ_OK) {
+                    KLOGE("kram", "decode mip zlib failed");
+                    return false;
+                }
+                if (dstDataSizeMiniz != dstDataSize) {
+                    KLOGE("kram", "decode mip zlib size not expected");
+                    return false;
+                }
+                
+                break;
+            }
+                
+            // already checked at top of function
+            default: {
+                return false;
             }
         }
     }

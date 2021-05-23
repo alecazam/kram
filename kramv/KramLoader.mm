@@ -120,7 +120,14 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
 {
     KTXImage image;
     
-    if (!image.open(imageData, imageDataLength)) {
+    // true keeps compressed mips on KTX2 and aliases original mip data
+    // but have decode etc2/asct path below that uncompressed mips
+    // and the rgb conversion path below as well in the viewer.
+    // games would want to decompress directly from aliased mmap ktx2 data into staging
+    // or have blocks pre-twiddled in hw morton order.
+    
+    bool isInfoOnly = false;
+    if (!image.open(imageData, imageDataLength, isInfoOnly)) {
         return nil;
     }
     
@@ -495,7 +502,9 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     self = [super init];
     
     // must be aligned to pagesize() or can't use with newBufferWithBytesNoCopy
-    dataSize = 16*1024*1024;
+    // enough to upload 4k x 4k @ 4 bytes no mips, careful with array and cube that get too big
+    dataSize = 64*1024*1024;
+    
     posix_memalign((void**)&data, getpagesize(), dataSize);
     
     // allocate memory for circular staging buffer, only need to memcpy to this
@@ -554,22 +563,19 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     return texture;
 }
 
-//for (int mipLevelNumber = 0; mipLevelNumber < numMips; ++mipLevelNumber) {
-//
-//    // zstd decompress entire mip level to the staging buffer
-//    zstd
-//}
-//
-//// so first memcpy and entire level(s) into the buffer
-////memcpy(...);
-
-
 // Has a synchronous upload via replaceRegion that only works for shared/managed (f.e. ktx),
 // and another path for private that uses a blitEncoder and must have block aligned data (f.e. ktxa, ktx2).
 // Could repack ktx data into ktxa before writing to temporary file, or when copying NSData into MTLBuffer.
 - (nullable id<MTLTexture>)blitTextureFromImage:(KTXImage &)image
 {
     id<MTLTexture> texture = [self createTexture:image];
+    
+    // Note: always starting at 0 here, since kramv is only uploading 1 texture
+    // but a real uploader would upload until buffer full, and then reset this back to 0
+    // A circular buffer if large enough to support multiple uploads over time.
+    // This can be a lot of temporary memory and must complete upload before changing.
+    
+    uint64_t bufferOffset = 0;
     
     //--------------------------------
     // upload mip levels
@@ -588,7 +594,31 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     
     Int2 blockDims = image.blockDims();
     
-    for (int mipLevelNumber = 0; mipLevelNumber < numMips; ++mipLevelNumber) {
+    // Note: copy entire decompressed level from KTX, but then upload
+    // each chunk of that with separate blit calls below.
+    size_t blockSize = image.blockSize();
+    
+    vector<uint64_t> bufferOffsets;
+    uint8_t* bufferData = (uint8_t*)_buffer.contents;
+    const uint8_t* mipData = (const uint8_t*)image.fileData;
+    bufferOffsets.resize(image.mipLevels.size());
+    
+    for (int32_t i = 0; i < numMips; ++i) {
+        const KTXImageLevel& mipLevel = image.mipLevels[i];
+        
+        // pad buffer offset to a multiple of the blockSize
+        bufferOffset += (blockSize - 1) - (bufferOffset & blockSize);
+        bufferOffsets[i] = bufferOffset;
+        bufferOffset += mipLevel.length;
+        
+        // this may have to decompress the level data
+        image.unpackLevel(i, mipData + mipLevel.offset, bufferData + bufferOffset);
+    }
+    
+    // blit encode calls must all be submitted to an encoder
+    // but may not have to be on the render thrad?
+    
+    for (int32_t mipLevelNumber = 0; mipLevelNumber < numMips; ++mipLevelNumber) {
         // there's a 4 byte levelSize for each mipLevel
         // the mipLevel.offset is immediately after this
         
@@ -616,45 +646,32 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                         bytesPerRow = (int32_t)mipLevel.length / yBlocks;
                     }
                     
-                    int32_t sliceOrArrayOrFace;
+                    int32_t chunkNum;
                                     
-                    if (image.header.numberOfArrayElements > 0) {
+                    if (image.header.numberOfArrayElements > 1) {
                         // can be 1d, 2d, or cube array
-                        sliceOrArrayOrFace = array;
+                        chunkNum = array;
                         if (numFaces > 1) {
-                            sliceOrArrayOrFace = 6 * sliceOrArrayOrFace + face;
+                            chunkNum = 6 * chunkNum + face;
                         }
                     }
                     else {
                         // can be 1d, 2d, or 3d
-                        sliceOrArrayOrFace = slice;
+                        chunkNum = slice;
                         if (numFaces > 1) {
-                            sliceOrArrayOrFace = face;
+                            chunkNum = face;
                         }
                     }
                     
-                    // this is size of one face/slice/texture, not the levels size
-                    int32_t mipStorageSize = (int32_t)mipLevel.length;
+                    // This is size of one chunk
+                    uint64_t mipStorageSize = mipLevel.length;
                     
-                    int32_t mipOffset = (int32_t)mipLevel.offset + sliceOrArrayOrFace * mipStorageSize;
-                    
-                    int32_t bufferBaseOffset = 0; // TODO: pos offset into the staging buffer
-                    mipOffset += bufferBaseOffset;
-                    
-                    // using buffer to store
-                    // offset into the level
-                    //const uint8_t *srcBytes = image.fileData + mipOffset;
-            
-                    // had blitEncoder support here
+                    // Have uploaded to buffer in same order visiting chunks.
+                    // Note: no call on MTLBlitEncoder to copy entire level of mips like glTexImage3D
+                    uint64_t mipOffset =  bufferOffsets[mipLevelNumber] + chunkNum * mipStorageSize;
                     
                     {
-                        // Note: this only works for managed/shared textures.
-                        // For private upload to buffer and then use blitEncoder to copy to texture.
-                        //bool isCubemap = image.textureType == MyMTLTextureTypeCube ||
-                        //                 image.textureType == MyMTLTextureTypeCubeArray;
                         bool is3D = image.textureType == MyMTLTextureType3D;
-                        //bool is2DArray = image.textureType == MyMTLTextureType2DArray;
-                        //bool is1DArray = image.textureType == MyMTLTextureType1DArray;
                         
                         // cpu copy the bytes from the data object into the texture
                         MTLRegion region = {
@@ -662,15 +679,10 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                             { (NSUInteger)w,  (NSUInteger)h, 1 }  // MTLSize
                         };
                         
-                        // TODO: revist how loading is done to load entire levels
-                        // otherwise too many replaceRegion calls.   Data is already packed by mip.
-                        
                         if (is3D) {
-                            region.origin.z = sliceOrArrayOrFace;
-                            sliceOrArrayOrFace = 0;
+                            region.origin.z = chunkNum;
+                            chunkNum = 0;
                         }
-                        
-                        // TODO: no call on MTLBlitEncoder to copy entire level of mips like glTexImage3D
                         
                         [_blitEncoder copyFromBuffer:_buffer
                                        sourceOffset:mipOffset
@@ -679,7 +691,7 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                                      sourceSize:region.size
                          
                                       toTexture:texture
-                               destinationSlice:sliceOrArrayOrFace
+                               destinationSlice:chunkNum
                                destinationLevel:mipLevelNumber
                               destinationOrigin:region.origin
                                         options:MTLBlitOptionNone

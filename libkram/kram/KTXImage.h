@@ -305,6 +305,15 @@ public:
     void reserveImageData();
     vector<uint8_t>& imageData();
 
+    // for KTX2 files, the mips can be compressed using various encoders
+    bool isSupercompressed() const { return isKTX2() && !mipLevels.empty() && mipLevels[0].lengthCompressed != 0; }
+    
+    bool isKTX1() const { return !skipImageLength; }
+    bool isKTX2() const { return skipImageLength; }
+    
+    // can use on ktx1/2 files, does a decompress if needed
+    bool unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData);
+    
 private:
     bool openKTX2(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly);
 
@@ -321,9 +330,10 @@ public:  // TODO: bury this
     uint32_t height;
     uint32_t depth;
 
-    // for ktxa and ktx2
+    // for ktx2
     bool skipImageLength = false;
-
+    KTX2Supercompression supercompressionType = KTX2SupercompressionNone;
+    
     KTXHeader header;  // copy of KTXHeader, so can be modified and then written back
 
     // write out only string/string props, for easy of viewing
@@ -335,6 +345,8 @@ public:  // TODO: bury this
     size_t fileDataLength;
     const uint8_t* fileData;  // mmap data
 };
+
+const char* supercompressionName(KTX2Supercompression type);
 
 // Generic format helpers.  All based on the ubiquitous type.
 bool isFloatFormat(MyMTLPixelFormat format);

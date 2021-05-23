@@ -1469,8 +1469,8 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     
     int32_t numChunks = srcImage.totalChunks();
     
-    // add up lengtha and lengthCompressed
-    if (srcImage.mipLevels[0].lengthCompressed > 0) {
+    // add up lengths and lengthCompressed
+    if (srcImage.isSupercompressed()) {
         uint64_t length = 0;
         uint64_t lengthCompressed = 0;
 
@@ -1485,12 +1485,15 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
         isMB = (length > (512 * 1024));
         double lengthF = isMB ? length / (1024.0f * 1024.0f) : length / 1024.0f;
         double lengthCompressedF = isMB ? lengthCompressed / (1024.0f * 1024.0f) : lengthCompressed / 1024.0f;
-        
+    
         append_sprintf(info,
-            "sizc: %0.3f,%0.3f %s %d%%\n",
+            "sizc: %0.3f,%0.3f %s %d%%\n"
+            "comp: %s\n",
             lengthF, lengthCompressedF,
             isMB ? "MB" : "KB",
-            (int)percent);
+            (int)percent,
+            supercompressionName(srcImage.supercompressionType)
+        );
     }
                            
     

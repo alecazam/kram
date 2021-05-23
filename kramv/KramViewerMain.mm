@@ -1226,14 +1226,6 @@ float4 toSnorm8(float4 c)
     }
 }
 
-// use this to enable/disable menus, buttons, etc.  Called on every event
-// when not implemented, then user items are always enabled
-- (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item
-{
-    // TODO: tie to menus and buttons
-    return YES;
-}
-
 - (NSButton*)findButton:(const char*)name {
     NSString* title = [NSString stringWithUTF8String:name];
     for (NSButton* button in _buttonArray) {
@@ -1253,6 +1245,18 @@ float4 toSnorm8(float4 c)
     return nil;
 }
 
+// use this to enable/disable menus, buttons, etc.  Called on every event
+// when not implemented, then user items are always enabled
+- (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item
+{
+    // TODO: tie to menus and buttons states for enable/disable toggles
+    // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/MenuList/Articles/EnablingMenuItems.html
+    
+    // MTKView is not doc based, so can't all super
+    //return [super validateUserInterfaceItem:anItem];
+    
+    return YES;
+}
 
 - (void)updateUIAfterLoad {
     
@@ -1299,6 +1303,8 @@ float4 toSnorm8(float4 c)
     [self findButton:"C"].hidden = isCheckerboardHidden;
     
     // menus (may want to disable, not hide)
+    // problem is crashes since menu seems to strip hidden items
+    // enabled state has to be handled in validateUserInterfaceItem
     [self findMenuItem:"Y"].hidden = isArrayHidden;
     [self findMenuItem:"F"].hidden = isFaceSliceHidden;
     [self findMenuItem:"M"].hidden = isMipHidden;

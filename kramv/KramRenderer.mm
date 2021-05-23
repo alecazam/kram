@@ -417,6 +417,8 @@ using namespace simd;
         
         // archive shouldn't contain png, so only support ktx/ktx2 here
         // TODO: have loader return KTXImage instead of parsing it again
+        // then can decode blocks in kramv
+        
         KTXImage sourceImage;
         if (!sourceImage.open(imageData,imageDataLength)) {
             return NO;
