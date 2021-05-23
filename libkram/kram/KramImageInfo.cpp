@@ -1305,6 +1305,9 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
                 float dx = (cE - cW) * scaleX;
                 float dy = (cN - cS) * scaleY;
            
+                //dx = -dx;
+                //dy = -dy;
+                
                 float4 normal = float4m(dx, dy, 1.0f, 0.0f);
                 normal = normalize(normal);
                 
@@ -1337,8 +1340,8 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
                 float dx = (cE - cW) * scaleX;
                 float dy = (cN - cS) * scaleY;
            
-                dx = -dx;
-                dy = -dy;
+                //dx = -dx;
+                //dy = -dy;
                 
                 float4 normal = float4m(dx, dy, 1.0f, 0.0f);
                 normal = normalize(normal);

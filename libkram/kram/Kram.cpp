@@ -34,18 +34,43 @@ namespace kram {
 
 using namespace std;
 
-bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
+// Twiddle pixels or blocks into Morton order.  Usually this is done during the upload of
+// linear-order block textures.  But on some platforms may be able to directly use the block
+// and pixel data if organized in the exact twiddle order the hw uses.
+// Code adapted from KTX doc example.
+class MortonOrder
 {
-    KTXImage image;
-    if (!image.open(data, dataSize)) {
-        return false;
+public:
+MortonOrder(uint32_t width, uint32_t height) {
+    minDim = (width <= height) ? width : height;
+    
+    // Smaller size must be a power of 2
+    assert((minDim & (minDim - 1)) == 0);
+
+    // Larger size must be a multiple of the smaller
+    assert(width % minDim == 0 && height % minDim == 0);
+}
+    
+// For a given xy block in a mip level, find the block offset in morton order
+uint32_t mortonOffset(uint32_t x, uint32_t y)
+{
+    uint32_t offset = 0, shift = 0;
+
+    for (uint32_t mask = 1; mask < minDim; mask <<= 1) {
+        offset |= (((y & mask) << 1) | (x & mask)) << shift;
+        shift++;
     }
 
-    // many different types of KTX files, for now only import from 2D type
-    // and only pull the first mip, but want to be able to pull custom mips from
-    // many types
-    return sourceImage.loadImageFromKTX(image);
+    // At least one of width and height will have run out of most-significant bits
+    offset |= ((x | y) >> shift) << (shift * 2);
+    return offset;
 }
+    
+private:
+    uint32_t minDim = 0;
+};
+
+
 
 inline Color toPremul(Color c) {
     // these are really all fractional, but try this
@@ -74,6 +99,18 @@ inline Color toGrayscaleRec709(Color c, const Mipper& mipper) {
     return c;
 }
 
+bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
+{
+    KTXImage image;
+    if (!image.open(data, dataSize)) {
+        return false;
+    }
+
+    // many different types of KTX files, for now only import from 2D type
+    // and only pull the first mip, but want to be able to pull custom mips from
+    // many types
+    return sourceImage.loadImageFromKTX(image);
+}
 
 bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray, Image& sourceImage)
 {
@@ -1445,7 +1482,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
         length *= numChunks;
         uint64_t percent = (100 * lengthCompressed) / length;
        
-        isMB = (lengthCompressed > (512 * 1024));
+        isMB = (length > (512 * 1024));
         double lengthF = isMB ? length / (1024.0f * 1024.0f) : length / 1024.0f;
         double lengthCompressedF = isMB ? lengthCompressed / (1024.0f * 1024.0f) : lengthCompressed / 1024.0f;
         

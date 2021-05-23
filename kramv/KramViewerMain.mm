@@ -1230,6 +1230,9 @@ float4 toSnorm8(float4 c)
 
 - (void)updateUIAfterLoad {
     
+    // TODO: move these to actions, and test their state instead of looking up buttons
+    // here and in HandleKey.
+    
     // base on showSettings, hide some fo the buttons
     bool isShowAllHidden = _showSettings->totalChunks() <= 1 && _showSettings->maxLOD <= 1;
     
@@ -1239,14 +1242,34 @@ float4 toSnorm8(float4 c)
     
     bool isJumpToNextHidden = !_showSettings->isArchive;
     
-    // could hide rgba buttons on some formas
-    // or have XYZBA on nromals, but have Y mapped to array
+    bool isGreenHidden = _showSettings->numChannels <= 1;
+    bool isBlueHidden  = _showSettings->numChannels <= 2 && !_showSettings->isNormal; // reconstruct z = b on normals
+    
+    // TODO: also need a hasAlpha for pixels, since many compressed formats like ASTC always have 4 channels
+    // but internally store R,RG01,... etc.  Can get more data from swizzle in the props.
+    // Often alpha doesn't store anything useful to view.
+    
+    bool hasAlpha = _showSettings->numChannels >= 3;
+    
+    bool isAlphaHidden = !hasAlpha;
+    bool isPremulHidden = !hasAlpha;
+    bool isCheckerboardHidden = !hasAlpha;
+   
+    bool isSignedHidden = !isSignedFormat(_showSettings->originalFormat);
     
     [self findButton:"Y"].hidden = isArrayHidden;
     [self findButton:"F"].hidden = isFaceSliceHidden;
     [self findButton:"M"].hidden = isMipHidden;
     [self findButton:"S"].hidden = isShowAllHidden;
     [self findButton:"J"].hidden = isJumpToNextHidden;
+    
+    [self findButton:"G"].hidden = isGreenHidden;
+    [self findButton:"B"].hidden = isBlueHidden;
+    [self findButton:"A"].hidden = isAlphaHidden;
+    
+    [self findButton:"P"].hidden = isPremulHidden;
+    [self findButton:"N"].hidden = isSignedHidden;
+    [self findButton:"C"].hidden = isCheckerboardHidden;
 }
 
 
@@ -1358,55 +1381,63 @@ float4 toSnorm8(float4 c)
         // rgba channels
         case Key::Num1:
         case Key::R:
-            if (channels == TextureChannels::ModeRRR1 || channels == TextureChannels::ModeR001) {
-                channels = TextureChannels::ModeRGBA;
-                text = "Mask RGBA";
+            if (![self findButton:"R"].isHidden) {
+                if (channels == TextureChannels::ModeRRR1 || channels == TextureChannels::ModeR001) {
+                    channels = TextureChannels::ModeRGBA;
+                    text = "Mask RGBA";
+                }
+                else {
+                    channels = isShiftKeyDown ? TextureChannels::ModeRRR1 : TextureChannels::ModeR001;
+                    text = isShiftKeyDown ? "Mask RRR1" : "Mask R001";
+                }
+                isChanged = true;
             }
-            else {
-                channels = isShiftKeyDown ? TextureChannels::ModeRRR1 : TextureChannels::ModeR001;
-                text = isShiftKeyDown ? "Mask RRR1" : "Mask R001";
-            }
-            isChanged = true;
-            
+    
             break;
             
         case Key::Num2:
         case Key::G:
-            if (channels == TextureChannels::ModeGGG1 || channels == TextureChannels::Mode0G01) {
-                channels = TextureChannels::ModeRGBA;
-                text = "Mask RGBA";
+            if (![self findButton:"G"].isHidden) {
+                if (channels == TextureChannels::ModeGGG1 || channels == TextureChannels::Mode0G01) {
+                    channels = TextureChannels::ModeRGBA;
+                    text = "Mask RGBA";
+                }
+                else {
+                    channels = isShiftKeyDown ? TextureChannels::ModeGGG1 : TextureChannels::Mode0G01;
+                    text = isShiftKeyDown ? "Mask GGG1" : "Mask 0G01";
+                }
+                isChanged = true;
             }
-            else {
-                channels = isShiftKeyDown ? TextureChannels::ModeGGG1 : TextureChannels::Mode0G01;
-                text = isShiftKeyDown ? "Mask GGG1" : "Mask 0G01";
-            }
-            isChanged = true;
             break;
             
         case Key::Num3:
         case Key::B:
-            if (channels == TextureChannels::ModeBBB1 || channels == TextureChannels::Mode00B1) {
-                channels = TextureChannels::ModeRGBA;
-                text = "Mask RGBA";
+            if (![self findButton:"B"].isHidden) {
+                if (channels == TextureChannels::ModeBBB1 || channels == TextureChannels::Mode00B1) {
+                    channels = TextureChannels::ModeRGBA;
+                    text = "Mask RGBA";
+                }
+                else {
+                    channels = isShiftKeyDown ? TextureChannels::ModeBBB1 : TextureChannels::Mode00B1;
+                    text = isShiftKeyDown ? "Mask BBB1" : "Mask 00B1";
+                }
+                isChanged = true;
             }
-            else {
-                channels = isShiftKeyDown ? TextureChannels::ModeBBB1 : TextureChannels::Mode00B1;
-                text = isShiftKeyDown ? "Mask BBB1" : "Mask 00B1";
-            }
-            isChanged = true;
             break;
             
         case Key::Num4:
         case Key::A:
-            if (channels == TextureChannels::ModeAAA1) {
-                channels = TextureChannels::ModeRGBA;
-                text = "Mask RGBA";
+            if (![self findButton:"A"].isHidden) {
+                if (channels == TextureChannels::ModeAAA1) {
+                    channels = TextureChannels::ModeRGBA;
+                    text = "Mask RGBA";
+                }
+                else {
+                    channels = TextureChannels::ModeAAA1;
+                    text = "Mask AAA1";
+                }
+                isChanged = true;
             }
-            else {
-                channels = TextureChannels::ModeAAA1;
-                text = "Mask AAA1";
-            }
-            isChanged = true;
             break;
             
         case Key::E: {
@@ -1510,10 +1541,12 @@ float4 toSnorm8(float4 c)
             
         // toggle checkerboard for transparency
         case Key::C:
-            _showSettings->isCheckerboardShown = !_showSettings->isCheckerboardShown;
-            isChanged = true;
-            text = "Checker ";
-            text += _showSettings->isCheckerboardShown ? "On" : "Off";
+            if (![self findButton:"C"].isHidden) {
+                _showSettings->isCheckerboardShown = !_showSettings->isCheckerboardShown;
+                isChanged = true;
+                text = "Checker ";
+                text += _showSettings->isCheckerboardShown ? "On" : "Off";
+            }
             break;
         
         // toggle pixel grid when magnified above 1 pixel, can happen from mipmap changes too
@@ -1574,11 +1607,14 @@ float4 toSnorm8(float4 c)
             break;
         }
         case Key::S:
-            // TODO: have drawAllMips, drawAllLevels, drawAllLevelsAndMips
-            _showSettings->isShowingAllLevelsAndMips = !_showSettings->isShowingAllLevelsAndMips;
-            isChanged = true;
-            text = "Show All ";
-            text += _showSettings->isShowingAllLevelsAndMips ? "On" : "Off";
+            if (![self findButton:"S"].isHidden) {
+            
+                // TODO: have drawAllMips, drawAllLevels, drawAllLevelsAndMips
+                _showSettings->isShowingAllLevelsAndMips = !_showSettings->isShowingAllLevelsAndMips;
+                isChanged = true;
+                text = "Show All ";
+                text += _showSettings->isShowingAllLevelsAndMips ? "On" : "Off";
+            }
             break;
             
         // toggle hud that shows name and pixel value under the cursor
@@ -1610,37 +1646,45 @@ float4 toSnorm8(float4 c)
             
         // toggle signed vs. unsigned
         case Key::N:
-            _showSettings->isSigned = !_showSettings->isSigned;
-            isChanged = true;
-            text = "Signed ";
-            text += _showSettings->isSigned ? "On" : "Off";
+            if (![self findButton:"N"].isHidden) {
+                _showSettings->isSigned = !_showSettings->isSigned;
+                isChanged = true;
+                text = "Signed ";
+                text += _showSettings->isSigned ? "On" : "Off";
+            }
             break;
             
         // toggle premul alpha vs. unmul
         case Key::P:
-            _showSettings->isPremul = !_showSettings->isPremul;
-            isChanged = true;
-            text = "Premul ";
-            text += _showSettings->isPremul ? "On" : "Off";
+            if (![self findButton:"P"].isHidden) {
+                _showSettings->isPremul = !_showSettings->isPremul;
+                isChanged = true;
+                text = "Premul ";
+                text += _showSettings->isPremul ? "On" : "Off";
+            }
             break;
             
         case Key::J:
-            if ([self advanceTextureFromAchive:!isShiftKeyDown]) {
-                isChanged = true;
-                text = "Loaded " + _showSettings->lastFilename;
+            if (![self findButton:"J"].isHidden) {
+                if ([self advanceTextureFromAchive:!isShiftKeyDown]) {
+                    isChanged = true;
+                    text = "Loaded " + _showSettings->lastFilename;
+                }
             }
             break;
             
         // mip up/down
         case Key::M:
-            if (isShiftKeyDown) {
-                _showSettings->mipLOD = MAX(_showSettings->mipLOD - 1, 0);
+            if (_showSettings->maxLOD > 1) {
+                if (isShiftKeyDown) {
+                    _showSettings->mipLOD = MAX(_showSettings->mipLOD - 1, 0);
+                }
+                else {
+                    _showSettings->mipLOD = MIN(_showSettings->mipLOD + 1, _showSettings->maxLOD - 1);
+                }
+                sprintf(text, "Mip %d/%d", _showSettings->mipLOD, _showSettings->maxLOD);
+                isChanged = true;
             }
-            else {
-                _showSettings->mipLOD = MIN(_showSettings->mipLOD + 1, _showSettings->maxLOD - 1);
-            }
-            sprintf(text, "Mip %d/%d", _showSettings->mipLOD, _showSettings->maxLOD);
-            isChanged = true;
             break;
            
         case Key::F:

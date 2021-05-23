@@ -612,7 +612,7 @@ using namespace simd;
 
 - (void)_updateGameState
 {
-    /// Update any game state before encoding renderint commands to our drawable
+    /// Update any game state before encoding rendering commands to our drawable
 
     Uniforms& uniforms = *(Uniforms*)_dynamicUniformBuffer[_uniformBufferIndex].contents;
 
