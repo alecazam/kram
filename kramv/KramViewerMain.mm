@@ -400,6 +400,7 @@ NSArray<NSString*>* pasteboardTypes = @[
 
 @implementation MyMTKView
 {
+    NSMenu* _viewMenu; // really the items
     NSStackView* _buttonStack;
     NSMutableArray<NSButton*>* _buttonArray;
     NSTextField* _hudLabel;
@@ -571,31 +572,42 @@ NSArray<NSString*>* pasteboardTypes = @[
     stackView.detachesHiddenViews = YES; // default, but why have to have _buttonArrary
     [self addSubview: stackView];
     
-#if 0
+#if 1
     // Want menus, so user can define their own shortcuts to commands
     // Also need to enable/disable this via validateUserInterfaceItem
     NSApplication* app = [NSApplication sharedApplication];
 
-    // TODO: add an edit menu in the storyboard
-    NSMenu* menu = app.windowsMenu;
-    [menu addItem:[NSMenuItem separatorItem]];
+    NSMenu* mainMenu = app.mainMenu;
+    NSMenuItem* viewMenuItem = mainMenu.itemArray[2];
+    _viewMenu = viewMenuItem.submenu;
+    
+    // TODO: add a view menu in the storyboard
+    //NSMenu* menu = app.windowsMenu;
+    //[menu addItem:[NSMenuItem separatorItem]];
 
     for (int32_t i = 0; i < numButtons; ++i) {
-        const char* icon = names[2*i+0];
-        const char* tip = names[2*i+1];
+        const char* icon = names[2*i+0]; // single char
+        const char* title = names[2*i+1];
     
-        NSString* shortcut = [NSString stringWithUTF8String:icon];
-        NSString* name = [NSString stringWithUTF8String:tip];
-        shortcut = @""; // for now, or AppKit turns key int cmd+shift+key
+        NSString* toolTip = [NSString stringWithUTF8String:icon];
+        NSString* name = [NSString stringWithUTF8String:title];
+        NSString* shortcut = @""; // for now, or AppKit turns key int cmd+shift+key
         
         if (icon[0] == '-') {
-            [menu addItem:[NSMenuItem separatorItem]];
+            [_viewMenu addItem:[NSMenuItem separatorItem]];
         }
         else {
-            NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:name action:@selector(handleAction) keyEquivalent:shortcut];
-            [menu addItem: menuItem];
+            NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:name action:@selector(handleAction:) keyEquivalent:shortcut];
+            menuItem.toolTip = toolTip; // use in findMenuItem
+            
+            // TODO: menus and buttons should reflect any toggle state
+            // menuItem.state = Mixed/Off/On;
+            
+            [_viewMenu addItem: menuItem];
         }
     }
+    
+    [_viewMenu addItem:[NSMenuItem separatorItem]];
 #endif
     
     return stackView;
@@ -1231,6 +1243,17 @@ float4 toSnorm8(float4 c)
     return nil;
 }
 
+- (NSMenuItem*)findMenuItem:(const char*)name {
+    NSString* title = [NSString stringWithUTF8String:name];
+    
+    for (NSMenuItem* menuItem in _viewMenu.itemArray) {
+        if (menuItem.toolTip == title)
+            return menuItem;
+    }
+    return nil;
+}
+
+
 - (void)updateUIAfterLoad {
     
     // TODO: move these to actions, and test their state instead of looking up buttons
@@ -1260,6 +1283,7 @@ float4 toSnorm8(float4 c)
    
     bool isSignedHidden = !isSignedFormat(_showSettings->originalFormat);
     
+    // buttons
     [self findButton:"Y"].hidden = isArrayHidden;
     [self findButton:"F"].hidden = isFaceSliceHidden;
     [self findButton:"M"].hidden = isMipHidden;
@@ -1273,6 +1297,21 @@ float4 toSnorm8(float4 c)
     [self findButton:"P"].hidden = isPremulHidden;
     [self findButton:"N"].hidden = isSignedHidden;
     [self findButton:"C"].hidden = isCheckerboardHidden;
+    
+    // menus (may want to disable, not hide)
+    [self findMenuItem:"Y"].hidden = isArrayHidden;
+    [self findMenuItem:"F"].hidden = isFaceSliceHidden;
+    [self findMenuItem:"M"].hidden = isMipHidden;
+    [self findMenuItem:"S"].hidden = isShowAllHidden;
+    [self findMenuItem:"J"].hidden = isJumpToNextHidden;
+    
+    [self findMenuItem:"G"].hidden = isGreenHidden;
+    [self findMenuItem:"B"].hidden = isBlueHidden;
+    [self findMenuItem:"A"].hidden = isAlphaHidden;
+    
+    [self findMenuItem:"P"].hidden = isPremulHidden;
+    [self findMenuItem:"N"].hidden = isSignedHidden;
+    [self findMenuItem:"C"].hidden = isCheckerboardHidden;
 }
 
 
@@ -1280,14 +1319,26 @@ float4 toSnorm8(float4 c)
 // move pan/zoom logic too.  Then use that as start of Win32 kramv.
 
 - (IBAction)handleAction:(id)sender {
-    // sender is the UI element/NSButton
-    // if (sender == )
-    NSButton* button = (NSButton*)sender;
     
     NSEvent* theEvent = [NSApp currentEvent];
     bool isShiftKeyDown = (theEvent.modifierFlags & NSEventModifierFlagShift);
     
-    string title = [button.title UTF8String];
+    string title;
+    
+    // sender is the UI element/NSButton
+    if ([sender isKindOfClass:[NSButton class]]) {
+        NSButton* button = (NSButton*)sender;
+        title = [button.title UTF8String];
+    }
+    else if ([sender isKindOfClass:[NSMenuItem class]]) {
+        NSMenuItem* menuItem = (NSMenuItem*)sender;
+        title = [menuItem.toolTip UTF8String];
+    }
+    else {
+        KLOGE("kram", "unknown UI element");
+        return;
+    }
+    
     int32_t keyCode = -1;
     
     if (title == "?")

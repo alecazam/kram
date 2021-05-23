@@ -92,6 +92,10 @@
                                     </items>
                                 </menu>
                             </menuItem>
+                            <menuItem title="View" id="69n-7z-Ieb" userLabel="View">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <menu key="submenu" title="View" id="yjc-yD-U6r"/>
+                            </menuItem>
                             <menuItem title="Window" id="aUF-d1-5bR">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <menu key="submenu" title="Window" systemMenu="window" id="Td7-aD-5lo">

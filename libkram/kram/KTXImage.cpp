@@ -1210,14 +1210,17 @@ void KTXImage::initMipLevels(size_t mipOffset)
 
         uint32_t levelSize = dataSize * numChunks;
 
+        // TODO: align mip offset to multiple of 4 bytes for KTX1, may need for kTX2
+        // make sure when adding up offsets with length to include this padding
+//        if (!skipImageLength) {
+//            offset += 3 - (offset & 3); // align level to 4 bytes
+//        }
+        
         // compute dataSize from header data
         if (!skipImageLength) {
             // advance past the length
             offset += sizeof(uint32_t);
         }
-
-        // TODO: Here is where offset alignment to 4 bytes may be needed
-        // but that also needs to be accounted for in allocation
         
         // level holds single texture size not level size, but offset reflects level start
         KTXImageLevel level = { offset, 0, dataSize };

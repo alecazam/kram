@@ -1020,7 +1020,7 @@ struct KTX2DescriptorChannelBlock {
     uint16_t bitOffset = 0;
     uint8_t bitLength = 0;
     uint8_t channelType : 4; // RED, GREEN, BLUE, RRR, GGG
-    uint8_t FSEL : 4; // l is low bit
+    uint8_t FSEL : 4; // L is low bit - Float, Signed, Exponent, Linear (used on Alpha)
     
     // 32-bits
     uint8_t samplePositions[4] = {0};
