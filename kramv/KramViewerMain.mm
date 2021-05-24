@@ -545,9 +545,15 @@ NSArray<NSString*>* pasteboardTypes = @[
         [button setToolTip:toolTip];
         button.hidden = NO;
         
-        // turn off rounded bezel
+#if 0
+        // can use this with border
+        // TODO: for some reason this breaks clicking on buttons
+        // TODO: eliminate the rounded border
+        button.showsBorderOnlyWhileMouseInside = YES;
+        button.bordered = YES;
+#else
         button.bordered = NO;
-        
+#endif
         [button setFrame:rect];
         
         // stackView seems to disperse the items evenly across the area, so this doesn't work
@@ -1272,12 +1278,16 @@ float4 toSnorm8(float4 c)
     
     bool isJumpToNextHidden = !_showSettings->isArchive;
     
+    bool isRedHidden = false;
     bool isGreenHidden = _showSettings->numChannels <= 1;
     bool isBlueHidden  = _showSettings->numChannels <= 2 && !_showSettings->isNormal; // reconstruct z = b on normals
     
     // TODO: also need a hasAlpha for pixels, since many compressed formats like ASTC always have 4 channels
     // but internally store R,RG01,... etc.  Can get more data from swizzle in the props.
     // Often alpha doesn't store anything useful to view.
+    
+    // TODO: may want to disable isPremul on block textures that already have premul in data
+    // or else premul is applied a second time to the visual
     
     bool hasAlpha = _showSettings->numChannels >= 3;
     
@@ -1294,6 +1304,7 @@ float4 toSnorm8(float4 c)
     [self findButton:"S"].hidden = isShowAllHidden;
     [self findButton:"J"].hidden = isJumpToNextHidden;
     
+    [self findButton:"R"].hidden = isRedHidden;
     [self findButton:"G"].hidden = isGreenHidden;
     [self findButton:"B"].hidden = isBlueHidden;
     [self findButton:"A"].hidden = isAlphaHidden;
@@ -1311,6 +1322,7 @@ float4 toSnorm8(float4 c)
     [self findMenuItem:"S"].hidden = isShowAllHidden;
     [self findMenuItem:"J"].hidden = isJumpToNextHidden;
     
+    [self findMenuItem:"R"].hidden = isRedHidden;
     [self findMenuItem:"G"].hidden = isGreenHidden;
     [self findMenuItem:"B"].hidden = isBlueHidden;
     [self findMenuItem:"A"].hidden = isAlphaHidden;
@@ -1318,6 +1330,69 @@ float4 toSnorm8(float4 c)
     [self findMenuItem:"P"].hidden = isPremulHidden;
     [self findMenuItem:"N"].hidden = isSignedHidden;
     [self findMenuItem:"C"].hidden = isCheckerboardHidden;
+    
+    // also need to call after each toggle
+    [self updateUIControlState];
+}
+
+- (void)updateUIControlState
+{
+    // there is also mixed
+    auto On = NSControlStateValueOn;
+    auto Off = NSControlStateValueOff;
+        
+    auto showAllState = _showSettings->isShowingAllLevelsAndMips ? On : Off;
+    auto premulState = _showSettings->isPremul ? On : Off;
+    auto signedState = _showSettings->isSigned ? On : Off;
+    auto checkerboardState = _showSettings->isCheckerboardShown ? On : Off;
+    auto previewState = _showSettings->isPreview ? On : Off;
+    auto gridState = _showSettings->isAnyGridShown() ? On : Off;
+    auto wrapState = _showSettings->isWrap ? On : Off;
+    auto debugState = (_showSettings->debugMode != DebugModeNone) ? On : Off;
+    
+    // buttons
+//    [self findButton:"Y"].state =
+//    [self findButton:"F"].state =
+//    [self findButton:"M"].state =
+//    [self findButton:"J"].state =
+//
+//    [self findButton:"R"].state =
+//    [self findButton:"G"].state =
+//    [self findButton:"B"].state =
+//    [self findButton:"A"].state =
+    
+    [self findButton:"S"].state = showAllState;
+    [self findButton:"O"].state = previewState;
+    [self findButton:"W"].state = wrapState;
+    [self findButton:"D"].state = gridState;
+    [self findButton:"E"].state = debugState;
+    
+    [self findButton:"P"].state = premulState;
+    [self findButton:"N"].state = signedState;
+    [self findButton:"C"].state = checkerboardState;
+    
+    // menus (may want to disable, not hide)
+    // problem is crashes since menu seems to strip hidden items
+    // enabled state has to be handled in validateUserInterfaceItem
+//    [self findMenuItem:"Y"].state =
+//    [self findMenuItem:"F"].state =
+//    [self findMenuItem:"M"].state =
+//    [self findMenuItem:"J"].state =
+//
+//    [self findMenuItem:"R"].state =
+//    [self findMenuItem:"G"].state =
+//    [self findMenuItem:"B"].state =
+//    [self findMenuItem:"A"].state =
+   
+    [self findMenuItem:"S"].state = showAllState;
+    [self findMenuItem:"O"].state = previewState;
+    [self findMenuItem:"W"].state = wrapState;
+    [self findMenuItem:"D"].state = gridState;
+    [self findMenuItem:"E"].state = debugState;
+    
+    [self findMenuItem:"P"].state = premulState;
+    [self findMenuItem:"N"].state = signedState;
+    [self findMenuItem:"C"].state = checkerboardState;
 }
 
 
@@ -1793,6 +1868,8 @@ float4 toSnorm8(float4 c)
     }
     
     if (isChanged) {
+        [self updateUIControlState];
+        
         self.needsDisplay = YES;
     }
 }
@@ -1880,7 +1957,7 @@ float4 toSnorm8(float4 c)
     if (!_zip.openForRead(_zipMmap.data(), _zipMmap.dataLength())) {
         return NO;
     }
-    
+
     // load the first entry in the archive
     _fileIndex = 0;
     
@@ -1988,8 +2065,12 @@ float4 toSnorm8(float4 c)
                 return NO;
             }
             
-            // store the
+            // store the archive url
             self.imageURL = url;
+
+            // add it to recent docs
+            NSDocumentController* dc = [NSDocumentController sharedDocumentController];
+            [dc noteNewRecentDocumentURL:url];
         }
        
         // now reload the filename if needed

@@ -81,6 +81,8 @@ public:
     bool isBlockGridShown = false;
     bool isAtlasGridShown = false;
    
+    bool isAnyGridShown() const { return isPixelGridShown || isBlockGridShown || isAtlasGridShown; }
+    
     // show all mips, faces, arrays all at once
     bool isShowingAllLevelsAndMips = false;
     
