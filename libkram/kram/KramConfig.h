@@ -379,7 +379,7 @@ inline half4 toHalf4(const float4& vv)
 //---------------------------------------
 
 
-inline void mipDown(int32_t& w, int32_t& h, int32_t& d)
+inline void mipDown(int32_t& w, int32_t& h, int32_t& d, uint32_t lod = 1)
 {
     // GL/D3D hobbled non-pow2 mips by only supporting round down, not round up
     // And then Metal followed OpenGL since it's the same hw and drivers.
@@ -388,9 +388,27 @@ inline void mipDown(int32_t& w, int32_t& h, int32_t& d)
     // http://download.nvidia.com/developer/Papers/2005/NP2_Mipmapping/NP2_Mipmap_Creation.pdf
     
     // round-down
-    w = w / 2;
-    h = h / 2;
-    d = h / 2;
+    w >>= (int32_t)lod;
+    h >>= (int32_t)lod;
+    d >>= (int32_t)lod;
+    
+    if (w < 1) w = 1;
+    if (h < 1) h = 1;
+    if (d < 1) d = 1;
+}
+
+inline void mipDown(uint32_t& w, uint32_t& h, uint32_t& d, uint32_t lod = 1)
+{
+    // GL/D3D hobbled non-pow2 mips by only supporting round down, not round up
+    // And then Metal followed OpenGL since it's the same hw and drivers.
+    // Round up adds an extra mip level to the chain, but results in much better filtering.
+    // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_non_power_of_two.txt
+    // http://download.nvidia.com/developer/Papers/2005/NP2_Mipmapping/NP2_Mipmap_Creation.pdf
+    
+    // round-down
+    w >>= lod;
+    h >>= lod;
+    d >>= lod;
     
     if (w < 1) w = 1;
     if (h < 1) h = 1;

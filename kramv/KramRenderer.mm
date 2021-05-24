@@ -742,7 +742,7 @@ using namespace simd;
 
         _uniformBufferIndex = (_uniformBufferIndex + 1) % MaxBuffersInFlight;
 
-        id <MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+        id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
         commandBuffer.label = @"MyCommand";
 
         __block dispatch_semaphore_t block_sema = _inFlightSemaphore;
@@ -758,18 +758,11 @@ using namespace simd;
         
         // also use to readback pixels
         // also use for async texture upload
-        bool needsBlit = _loader.isMipgenNeeded && _colorMap.mipmapLevelCount > 1;
-        if (needsBlit) {
-            id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
+        id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
+        if (blitEncoder)
+        {
             blitEncoder.label = @"MyBlitEncoder";
-            
-            // autogen mips will include srgb conversions, so toggling srgb on/off isn't quite correct
-            if (_loader.mipgenNeeded) {
-                [blitEncoder generateMipmapsForTexture:_colorMap];
-                
-                _loader.mipgenNeeded = NO;
-            }
-        
+            [_loader uploadTexturesIfNeeded:blitEncoder commandBuffer:commandBuffer];
             [blitEncoder endEncoding];
         }
         

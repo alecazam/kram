@@ -10,10 +10,11 @@
 #import <Foundation/Foundation.h>
 
 // protocol requires imports
+#import <Metal/MTLBlitCommandEncoder.h>
+#import <Metal/MTLCommandBuffer.h>
+#import <Metal/MTLDevice.h>
 #import <Metal/MTLPixelFormat.h>
 #import <Metal/MTLTexture.h>
-#import <Metal/MTLBlitCommandEncoder.h>
-#import <Metal/MTLDevice.h>
 
 #endif
 
@@ -31,18 +32,8 @@
 // from url (mmap)
 - (nullable id<MTLTexture>)loadTextureFromURL:(nonnull NSURL *)url originalFormat:(nullable MTLPixelFormat*)originalFormat;
 
-@property (retain, nonatomic, readwrite, nonnull) id<MTLDevice> device;
-
-// test this after load, and use a MTLBlitEncoder to autogen mips
-@property (nonatomic, readwrite, getter=isMipgenNeeded) BOOL mipgenNeeded;
-
-@end
-
-//-------------------------------------
-
-// This loads KTX and PNG data synchronously.  Will likely move to only loading KTX files, with a png -> ktx conversion.
-// The underlying KTXImage is not yet returned to the caller, but would be useful for prop queries.
-@interface KramBlitLoader : NSObject
+// handle auto-mipgen and upload mips from staging MTLBuffer to mips of various private MTLTexture
+- (void)uploadTexturesIfNeeded:(nonnull id<MTLBlitCommandEncoder>)blitEncoder commandBuffer:(nonnull id<MTLCommandBuffer>)commandBuffer;
 
 @property (retain, nonatomic, readwrite, nonnull) id<MTLDevice> device;
 

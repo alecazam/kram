@@ -1959,7 +1959,7 @@ float4 toSnorm8(float4 c)
         _noImageLoaded = NO;
     }
 
-    _showSettings->isArchive = false;
+    _showSettings->isArchive = true;
    
     // show/hide button
     [self updateUIAfterLoad];

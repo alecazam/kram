@@ -1417,7 +1417,6 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     header.bytesOfKeyValueData = 0;
     initProps(imageData + header2.kvdByteOffset, header2.kvdByteLength);
    
-    
     // skip parsing th elevels
     if (isInfoOnly) {
         skipImageLength = true;
@@ -1433,13 +1432,10 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
         // copy the original ktx2 levels, this includes mip compression
         bool isCompressed =
             (mipLevels[0].lengthCompressed > 0) &&
-            (mipLevels[0].length != mipLevels[0].lengthCompressed);
+            ((mipLevels[0].length * numChunks) != mipLevels[0].lengthCompressed);
         
-        for (auto& level : mipLevels) {
-            level.length /= numChunks;
-            
-            // this indicates not compressed
-            if (!isCompressed) {
+        if (!isCompressed) {
+            for (auto& level : mipLevels) {
                 level.lengthCompressed = 0;
             }
         }
@@ -1472,6 +1468,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
             
             // the offsets are reversed in ktx2 file
             level1.offset = level2.offset;
+            assert(level1.lengthCompressed == 0);
             
             if (level1.length != level2.length)
             {
@@ -1547,14 +1544,9 @@ bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* 
             case KTX2SupercompressionZstd: {
                 // decompress from zstd directly into ktx1 ordered chunk
                 // Note: decode fails with FSE_decompress.
-                ZSTD_DCtx* dctx = ZSTD_createDCtx();
-                if (!dctx)
-                    return false;
-                
-                auto dstDataSizeZstd = ZSTD_decompressDCtx(dctx,
+                size_t dstDataSizeZstd = ZSTD_decompress(
                     dstData, dstDataSize,
                     srcData, srcDataSize);
-                ZSTD_freeDCtx(dctx);
                 
                 if (ZSTD_isError(dstDataSizeZstd)) {
                     KLOGE("kram", "decode mip zstd failed");
