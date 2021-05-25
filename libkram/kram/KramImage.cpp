@@ -149,11 +149,13 @@ bool Image::loadImageFromKTX(const KTXImage& image)
     // so can call through to blockSize
     KTXHeader header;
     header.initFormatGL(image.pixelFormat);
-    int32_t blockSize = image.blockSize();
+    //int32_t blockSize = image.blockSize();
 
     _hasColor = isColorFormat(image.pixelFormat);
     _hasAlpha = isAlphaFormat(image.pixelFormat);
 
+    // TODO: this assumes 1,2,3 channel srcData has no rowPadding to say 4 bytes
+    
     switch (image.pixelFormat) {
         case MyMTLPixelFormatR8Unorm:
         case MyMTLPixelFormatRG8Unorm:
@@ -167,34 +169,28 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             const uint8_t* srcPixels =
                 image.fileData + image.mipLevels[0].offset;
 
-            int32_t numSrcChannels = blockSize / sizeof(uint8_t);
-            int32_t numDstChannels = 4;
-
+            int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
+           
             // Note: clearing unspecified channels to 0000, not 0001
             // can set swizzleText when encoding
             _pixels.resize(4 * _width * _height);
-            if (numSrcChannels != 4) {
-                memset(_pixels.data(), 0, _pixels.size());
-            }
+            
+            Color* dstPixels = (Color*)_pixels.data();
 
+            Color dstTemp = {0,0,0,0};
+            
             for (int32_t y = 0; y < _height; ++y) {
-                int32_t y0 = _width * y;
+                int32_t y0 = y * _width;
 
-                for (int32_t x = 0, xEnd = _width; x < xEnd; ++x) {
+                for (int32_t x = 0; x < _width; ++x) {
                     int32_t srcX = (y0 + x) * numSrcChannels;
-                    int32_t dstX = (y0 + x) * numDstChannels;
+                    int32_t dstX = (y0 + x); // * numDstChannels;
 
-                    switch (numSrcChannels) {
-                        // all fallthrough
-                        case 4:
-                            _pixels[dstX + 3] = srcPixels[srcX + 3];
-                        case 3:
-                            _pixels[dstX + 2] = srcPixels[srcX + 2];
-                        case 2:
-                            _pixels[dstX + 1] = srcPixels[srcX + 1];
-                        case 1:
-                            _pixels[dstX + 0] = srcPixels[srcX + 0];
+                    for (int32_t i = 0; i < numSrcChannels; ++i) {
+                        *(&dstTemp.r + i) = srcPixels[srcX + i];
                     }
+
+                    dstPixels[dstX] = dstTemp;
                 }
             }
 
@@ -209,16 +205,11 @@ bool Image::loadImageFromKTX(const KTXImage& image)
         case MyMTLPixelFormatRGB16Float_internal:
 #endif
         case MyMTLPixelFormatRGBA16Float: {
-            int32_t numSrcChannels = blockSize / 2;  // 2 = sizeof(_float16)
-            int32_t numDstChannels = 4;
-
+            int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
+            
             // Note: clearing unspecified channels to 0000, not 0001
             // can set swizzleText when encoding
             _pixelsFloat.resize(_width * _height);
-            if (numSrcChannels != 4) {
-                memset(_pixelsFloat.data(), 0,
-                       _pixelsFloat.size() * sizeof(float4));
-            }
 
             // treat as float for per channel copies
             float4* dstPixels = _pixelsFloat.data();
@@ -226,25 +217,22 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             const half* srcPixels =
                 (const half*)(image.fileData + image.mipLevels[0].offset);
 
-            half4 srcPixel;
-            for (int32_t i = 0; i < 4; ++i) {
-                srcPixel.v[i] = 0;
-            }
-
+            half4 dstTemp = half4((half)0);
+        
             for (int32_t y = 0; y < _height; ++y) {
-                int32_t y0 = _width * y;
+                int32_t y0 = y * _width;
 
-                for (int32_t x = 0, xEnd = _width; x < xEnd; ++x) {
+                for (int32_t x = 0; x < _width; ++x) {
                     int32_t srcX = (y0 + x) * numSrcChannels;
-                    int32_t dstX = (y0 + x) * numDstChannels;
+                    int32_t dstX = (y0 + x);
 
                     // copy in available values
                     for (int32_t i = 0; i < numSrcChannels; ++i) {
-                        srcPixel.v[i] = srcPixels[srcX + i];
+                        dstTemp.v[i] = srcPixels[srcX + i];
                     }
 
                     // use AVX to convert
-                    dstPixels[dstX] = toFloat4(srcPixel);
+                    dstPixels[dstX] = toFloat4(dstTemp);
                 }
             }
 
@@ -265,38 +253,28 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             const float* srcPixels =
                 (const float*)(image.fileData + image.mipLevels[0].offset);
 
-            int32_t numSrcChannels = blockSize / sizeof(float);
-            int32_t numDstChannels = 4;
-
+            int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
+           
             // Note: clearing unspecified channels to 0000, not 0001
             // can set swizzleText when encoding
             _pixelsFloat.resize(_width * _height);
-            if (numSrcChannels != 4) {
-                memset(_pixelsFloat.data(), 0,
-                       _pixelsFloat.size() * sizeof(float4));
-            }
-
+           
             // treat as float for per channel copies
-            float* dstPixels = (float*)(_pixelsFloat.data());
-
+            float4* dstPixels = _pixelsFloat.data();
+            float4 dstTemp = float4m(0.0f);
+           
             for (int32_t y = 0; y < _height; ++y) {
-                int32_t y0 = _width * y;
+                int32_t y0 = y * _width;
 
-                for (int32_t x = 0, xEnd = _width; x < xEnd; ++x) {
+                for (int32_t x = 0; x < _width; ++x) {
                     int32_t srcX = (y0 + x) * numSrcChannels;
-                    int32_t dstX = (y0 + x) * numDstChannels;
+                    int32_t dstX = (y0 + x);
 
-                    switch (numSrcChannels) {
-                        // all fallthrough
-                        case 4:
-                            dstPixels[dstX + 3] = srcPixels[srcX + 3];
-                        case 3:
-                            dstPixels[dstX + 2] = srcPixels[srcX + 2];
-                        case 2:
-                            dstPixels[dstX + 1] = srcPixels[srcX + 1];
-                        case 1:
-                            dstPixels[dstX + 0] = srcPixels[srcX + 0];
+                    for (int32_t i = 0; i < numSrcChannels; ++i) {
+                        dstTemp[i] = srcPixels[srcX + i];
                     }
+                    
+                    dstPixels[dstX] = dstTemp;
                 }
             }
 
