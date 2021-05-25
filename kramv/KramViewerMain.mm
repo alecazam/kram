@@ -2264,7 +2264,10 @@ float4 toSnorm8(float4 c)
     // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/TrackingAreaObjects/TrackingAreaObjects.html
     // this is better than requesting mousemoved events, they're only sent when cursor is inside
     _trackingArea = [[NSTrackingArea alloc] initWithRect:_view.bounds
-                options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveInKeyWindow )
+                options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved |
+                          NSTrackingActiveInActiveApp
+                          //NSTrackingActiveInKeyWindow
+                          )
                 owner:_view userInfo:nil];
     [_view addTrackingArea:_trackingArea];
     
