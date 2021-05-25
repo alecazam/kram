@@ -315,10 +315,12 @@ public:
     bool unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData);
     
     // helpers to work with the mipLevels array, mipLength and levelLength are important to get right
+    size_t mipLengthLargest() const { return mipLevels[0].length; }
     size_t mipLength(uint32_t mipNumber) const { return mipLevels[mipNumber].length; }
     size_t levelLength(uint32_t mipNumber) const { return mipLevels[mipNumber].length * totalChunks(); }
     size_t levelLengthCompressed(uint32_t mipNumber) const { return mipLevels[mipNumber].lengthCompressed; }
     size_t chunkOffset(uint32_t mipNumber, uint32_t chunkNumber) const { return mipLevels[mipNumber].offset + mipLevels[mipNumber].length * chunkNumber; }
+    
     
 private:
     bool openKTX2(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly);

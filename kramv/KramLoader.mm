@@ -78,33 +78,46 @@ struct KramBlit
 // on macOS/arm, the M1 supports all 3 encode formats
 #define DO_DECODE TARGET_CPU_X86_64
 
-- (BOOL)decodeImageIfNeeded:(KTXImage&)image imageDecoded:(KTXImage&)imageDecoded useImageDecoded:(bool&)useImageDecoded
-{
 #if DO_DECODE
-    useImageDecoded = false;
+
+// this means format isnt supported on platform, but can be decoded to rgba to display
+bool isDecodeImageNeeded(MyMTLPixelFormat pixelFormat) {
+    bool needsDecode = false;
     
+    if (isETCFormat(pixelFormat)) {
+        needsDecode = true;
+    }
+    else if (isASTCFormat(pixelFormat)) {
+        needsDecode = true;
+    }
+    
+    return needsDecode;
+}
+
+bool decodeImage(KTXImage& image, KTXImage& imageDecoded)
+{
     Image imageUnused; // TODO: move to only using KTXImage, decode needs to move there
     
     if (isETCFormat(image.pixelFormat)) {
         if (!imageUnused.decode(image, imageDecoded, kTexEncoderEtcenc, false, "")) {
             return NO;
         }
-        useImageDecoded = true;
     }
     else if (isASTCFormat(image.pixelFormat)) {
         if (!imageUnused.decode(image, imageDecoded, kTexEncoderAstcenc, false, "")) {
             return NO;
         }
-    
-        useImageDecoded = true;
+    }
+    else {
+        assert(false); // don't call this routine if decode not needed
     }
     
     // TODO: decode BC format on iOS when not supported, but viewer only on macOS for now
     
-#endif
-    
     return YES;
 }
+
+#endif
 
 #if SUPPORT_RGB
 
@@ -163,18 +176,17 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
     
     // see if it needs decode first
     bool needsDecode = false;
+    
     if (isInternalRGBFormat(image.pixelFormat)) {
         needsDecode = true;
     }
 #if DO_DECODE
-    else if (isETCFormat(image.pixelFormat)) {
-        needsDecode = true;
-    }
-    else if (isASTCFormat(image.pixelFormat)) {
+    else if (isDecodeImageNeeded(image.pixelFormat)) {
         needsDecode = true;
     }
 #endif
     
+    // open it again, but unpack the levels if supercompressed
     if (needsDecode) {
         isInfoOnly = false;
         
@@ -185,7 +197,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
     
 #if SUPPORT_RGB
     if (isInternalRGBFormat(image.pixelFormat)) {
-        // loads and converts image to RGBA version
+        // loads and converts image from RGB to RGBA
         Image rbgaImage;
         if (!rbgaImage.loadImageFromKTX(image))
             return nil;
@@ -207,7 +219,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
         }
         
         if (originalFormat != nullptr) {
-            *originalFormat = (MTLPixelFormat)rbgaImage2.pixelFormat;
+            *originalFormat = (MTLPixelFormat)rbgaImage2.pixelFormat; // TODO: should this return rgbaImage.pixelFormat ?
         }
         
         return [self loadTextureFromImage:rbgaImage2];
@@ -217,28 +229,29 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
     if (originalFormat != nullptr) {
         *originalFormat = (MTLPixelFormat)image.pixelFormat;
     }
-    
+#if DO_DECODE
     if (needsDecode) {
         KTXImage imageDecoded;
-        bool useImageDecoded = false;
-        if (![self decodeImageIfNeeded:image imageDecoded:imageDecoded useImageDecoded:useImageDecoded]) {
+        if (!decodeImage(image, imageDecoded)) {
             return nil;
         }
         
-        return [self loadTextureFromImage:useImageDecoded ? imageDecoded : image];
+        return [self loadTextureFromImage:imageDecoded];
     }
-    else {
+    else
+#endif
+    {
         // fast load path directly from mmap'ed data, decompress direct to staging
         return [self blitTextureFromImage:image];
     }
 }
 
-static int32_t numberOfMipmapLevels(const Image& image) {
-    int32_t w = image.width();
-    int32_t h = image.height();
-    int32_t maxDim = MAX(w,h);
+static uint32_t numberOfMipmapLevels(const Image& image) {
+    uint32_t w = image.width();
+    uint32_t h = image.height();
+    uint32_t maxDim = MAX(w,h);
     
-    int32_t numberOfMips = 1;
+    uint32_t numberOfMips = 1;
     while (maxDim > 1) {
         numberOfMips++;
         maxDim = maxDim >> 1;
@@ -249,6 +262,8 @@ static int32_t numberOfMipmapLevels(const Image& image) {
 - (nullable id<MTLTexture>)loadTextureFromPNGData:(const uint8_t*)data dataSize:(int32_t)dataSize isSRGB:(BOOL)isSRGB originalFormat:(nullable MTLPixelFormat*)originalFormat
 {
     // can only load 8u and 16u from png, no hdr formats, no premul either, no props
+    // this also doesn't handle strips like done in libkram.
+    
     Image sourceImage;
     bool isLoaded = LoadPng(data, dataSize, false, false, sourceImage);
     if (!isLoaded) {
@@ -279,14 +294,12 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     }
     
     // cpu copy the bytes from the data object into the texture
-    int32_t sliceOrArrayOrFace = 0;
-    
     const MTLRegion region = {
-        { 0, 0, (NSUInteger)sliceOrArrayOrFace }, // MTLOrigin
+        { 0, 0, 0 }, // MTLOrigin
         { static_cast<NSUInteger>(image.width), static_cast<NSUInteger>(image.height), 1 }  // MTLSize
     };
     
-    int32_t bytesPerRow = 4 * sourceImage.width();
+    size_t bytesPerRow = 4 * sourceImage.width();
     
     [texture replaceRegion:region
                 mipmapLevel:0
@@ -368,16 +381,6 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     if (isPrivate)
         textureDescriptor.storageMode = MTLStorageModePrivate;
     
-    // only do this for viewer
-    // but allows encoded textures to enable/disable their sRGB state.
-    // Since the view isn't accurate, will probably pull this out.
-    // Keep usageRead set by default.
-    //textureDescriptor.usage = MTLTextureUsageShaderRead;
-    
-    // this was so that could toggle srgb on/off, but mips are built linear and encoded as lin or srgb
-    // in the encoded formats so this wouldn't accurately reflect with/without srgb.
-    //textureDescriptor.usage |= MTLTextureUsagePixelFormatView;
-    
     // Create the texture from the device by using the descriptor
     id<MTLTexture> texture = [self.device newTextureWithDescriptor:textureDescriptor];
     if (!texture) {
@@ -411,11 +414,14 @@ static int32_t numberOfMipmapLevels(const Image& image) {
     
     // TODO: reuse staging _buffer and _bufferOffset here, these large allocations take time
     vector<uint8_t> mipStorage;
-    mipStorage.resize(image.mipLevels[0].length * numChunks); // enough to hold biggest mip
+    mipStorage.resize(image.mipLengthLargest() * numChunks); // enough to hold biggest mip
     
     //-----------------
     
     id<MTLTexture> texture = [self createTexture:image isPrivate:false];
+    if (!texture) {
+        return nil;
+    }
     
     const uint8_t* srcLevelData = image.fileData;
     
@@ -430,7 +436,9 @@ static int32_t numberOfMipmapLevels(const Image& image) {
         
         // unpack the whole level in-place
         if (image.isSupercompressed()) {
-            image.unpackLevel(mipLevelNumber, image.fileData + mipLevel.offset, mipStorage.data());
+            if (!image.unpackLevel(mipLevelNumber, image.fileData + mipLevel.offset, mipStorage.data())) {
+                return nil;
+            }
             srcLevelData = mipStorage.data();
             
             // going to upload from mipStorage temp array
@@ -445,8 +453,8 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                     uint32_t bytesPerRow = 0;
                     
                     // 1D/1DArray textures set bytesPerRow to 0
-                    if ((MTLTextureType)image.textureType != MTLTextureType1D &&
-                        (MTLTextureType)image.textureType != MTLTextureType1DArray)
+                    if (//image.textureType != MyMTLTextureType1D &&
+                        image.textureType != MyMTLTextureType1DArray)
                     {
                         // for compressed, bytesPerRow needs to be multiple of block size
                         // so divide by the number of blocks making up the height
@@ -491,60 +499,28 @@ static int32_t numberOfMipmapLevels(const Image& image) {
                         // Note: due to API limit we can only copy one chunk at a time.  With KramBlitLoader
                         // can copy the whole level to buffer, and then reference chunks within.
                         
-                        bool isCubemap = image.textureType == MyMTLTextureTypeCube ||
-                                         image.textureType == MyMTLTextureTypeCubeArray;
-                        bool is3D      = image.textureType == MyMTLTextureType3D;
-                        bool is2DArray = image.textureType == MyMTLTextureType2DArray;
-                        bool is1DArray = image.textureType == MyMTLTextureType1DArray;
-                        
+                        bool is3D = image.textureType == MyMTLTextureType3D;
+
                         // sync cpu copy the bytes from the data object into the texture
                         MTLRegion region = {
                             { 0, 0, 0 }, // MTLOrigin
                             { (NSUInteger)w,  (NSUInteger)h, 1 }  // MTLSize
                         };
                         
-                        if (is1DArray) {
-                            [texture replaceRegion:region
-                                        mipmapLevel:mipLevelNumber
-                                            slice:chunkNum
-                                          withBytes:srcBytes
-                                        bytesPerRow:bytesPerRow
-                                        bytesPerImage:0];
-                        }
-                        else if (isCubemap) {
-                            [texture replaceRegion:region
-                                        mipmapLevel:mipLevelNumber
-                                            slice:chunkNum
-                                          withBytes:srcBytes
-                                        bytesPerRow:bytesPerRow
-                                        bytesPerImage:0];
-                        }
-                        else if (is3D) {
+                        size_t bytesPerImage = 0;
+                        if (is3D) {
                             region.origin.z = chunkNum;
                             chunkNum = 0;
-                            
-                            [texture replaceRegion:region
-                                        mipmapLevel:mipLevelNumber
-                                             slice:chunkNum
-                                          withBytes:srcBytes
-                                        bytesPerRow:bytesPerRow
-                                     bytesPerImage:mipStorageSize]; // only for 3d
+                            bytesPerImage = mipStorageSize;
                         }
-                        else if (is2DArray) {
-                            [texture replaceRegion:region
-                                        mipmapLevel:mipLevelNumber
-                                             slice:chunkNum
-                                          withBytes:srcBytes
-                                        bytesPerRow:bytesPerRow
-                                     bytesPerImage:0];
-                        }
-                        else {
-
-                            [texture replaceRegion:region
-                                        mipmapLevel:mipLevelNumber
-                                          withBytes:srcBytes
-                                        bytesPerRow:bytesPerRow];
-                        }
+                    
+                        [texture replaceRegion:region
+                                    mipmapLevel:mipLevelNumber
+                                         slice:chunkNum
+                                      withBytes:srcBytes
+                                    bytesPerRow:bytesPerRow
+                                 bytesPerImage:bytesPerImage];
+                       
                     }
                 }
             }
@@ -648,7 +624,7 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment) {
 - (nullable id<MTLTexture>)blitTextureFromImage:(KTXImage &)image
 {
     if (_buffer == nil) {
-        // this is only 4k x 4x @ RGBA8u with mips, 8k x 8k compressed with mips
+        // this is enough to upload 4k x 4x @ RGBA8u with mips, 8k x 8k compressed with mips @96MB
         [self createStagingBufffer: 128*1024*1024];
     }
     
@@ -660,11 +636,11 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment) {
     }
     
     id<MTLTexture> texture = [self createTexture:image isPrivate:true];
+    if (!texture)
+        return nil;
     
-    // Note: always starting at 0 here, since kramv is only uploading 1 texture
-    // but a real uploader would upload until buffer full, and then reset this back to 0
-    // A circular buffer if large enough to support multiple uploads over time.
-    // This can be a lot of temporary memory and must complete upload before changing.
+    // this is index where texture will be added
+    uint32_t textureIndex = (uint32_t)_blitTextures.count;
     
     //--------------------------------
     // upload mip levels
@@ -692,8 +668,9 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment) {
     const uint8_t* mipData = (const uint8_t*)image.fileData;
     bufferOffsets.resize(image.mipLevels.size());
     
-    uint32_t bufferOffset = _bufferOffset;
     uint32_t numChunks = image.totalChunks();
+    
+    uint32_t bufferOffset = _bufferOffset;
     
     for (uint32_t i = 0; i < numMips; ++i) {
         const KTXImageLevel& mipLevel = image.mipLevels[i];
@@ -702,23 +679,20 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment) {
         bufferOffset = alignOffset(bufferOffset, blockSize);
         
         // this may have to decompress the level data
-        image.unpackLevel(i, mipData + mipLevel.offset, bufferData + bufferOffset);
+        if (!image.unpackLevel(i, mipData + mipLevel.offset, bufferData + bufferOffset)) {
+            return nil;
+        }
         
         bufferOffsets[i] = bufferOffset;
         bufferOffset += mipLevel.length * numChunks;
     }
     
+    // everything succeded, so advance the offset
+    _bufferOffset = bufferOffset;
+    [_blitTextures addObject: texture];
     
-    // Should this be split off after cpu upload, could code store enough
-    // in a vector to jettison the KTXImage.  Also need a queue of textures
-    // that are not fully loaded or haven't started if sharing the staging buffer.
-    // Note that it is just system ram, and can have allocations stored into it
-    // and can be viewed in the debugger and can do memcpy to it above.
     
-    //--------------------
-    
-    // blit encoder calls must all be submitted to an open MTLBlitCommandEncoder,
-    // but may not have to be on the render thread?
+    // defer the blits from buffer until start of render thread when BlitEncoder is available
     
     for (uint32_t mipLevelNumber = 0; mipLevelNumber < numMips; ++mipLevelNumber) {
         // there's a 4 byte levelSize for each mipLevel
@@ -735,8 +709,8 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment) {
                     uint32_t bytesPerRow = 0;
                     
                     // 1D/1DArray textures set bytesPerRow to 0
-                    if ((MTLTextureType)image.textureType != MTLTextureType1D &&
-                        (MTLTextureType)image.textureType != MTLTextureType1DArray)
+                    if (//image.textureType != MyMTLTextureType1D &&
+                        image.textureType != MyMTLTextureType1DArray)
                     {
                         // for compressed, bytesPerRow needs to be multiple of block size
                         // so divide by the number of blocks making up the height
@@ -784,7 +758,7 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment) {
                              mipStorageSize,
                              mipOffset,
                             
-                             (uint32_t)_blitTextures.count,
+                             textureIndex,
                              bytesPerRow,
                              is3D // could derive from textureIndex lookup
                         });
@@ -796,10 +770,7 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment) {
         mipDown(w, h, d);
     }
         
-    // everything succeded, so advance the offset
-    _bufferOffset = bufferOffset;
-    [_blitTextures addObject: texture];
-    
+   
     // this texture cannot be used until buffer uploads complete
     // but those happen at beginning of frame, so can attach to shaders, etc
     return texture;

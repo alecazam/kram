@@ -178,7 +178,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             }
 
             for (int32_t y = 0; y < _height; ++y) {
-                int32_t y0 = _height * y;
+                int32_t y0 = _width * y;
 
                 for (int32_t x = 0, xEnd = _width; x < xEnd; ++x) {
                     int32_t srcX = (y0 + x) * numSrcChannels;
@@ -232,7 +232,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             }
 
             for (int32_t y = 0; y < _height; ++y) {
-                int32_t y0 = _height * y;
+                int32_t y0 = _width * y;
 
                 for (int32_t x = 0, xEnd = _width; x < xEnd; ++x) {
                     int32_t srcX = (y0 + x) * numSrcChannels;
@@ -280,7 +280,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
             float* dstPixels = (float*)(_pixelsFloat.data());
 
             for (int32_t y = 0; y < _height; ++y) {
-                int32_t y0 = _height * y;
+                int32_t y0 = _width * y;
 
                 for (int32_t x = 0, xEnd = _width; x < xEnd; ++x) {
                     int32_t srcX = (y0 + x) * numSrcChannels;
@@ -1702,7 +1702,7 @@ bool Image::createMipsFromChunks(
     TextureData outputTexture;
     outputTexture.width = dstImage.width;
     outputTexture.height = dstImage.height;
-    outputTexture.data.resize(dstImage.mipLevels[0].length); // allocate to size of largest mip
+    outputTexture.data.resize(dstImage.mipLengthLargest());
 
     // This is for 8-bit data (pixelsFloat used for in-place mipgen)
     ImageData srcImage;
