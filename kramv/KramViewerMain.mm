@@ -545,6 +545,9 @@ NSArray<NSString*>* pasteboardTypes = @[
         [button setToolTip:toolTip];
         button.hidden = NO;
         
+        button.buttonType = NSButtonTypeToggle;
+        //NSButtonTypeOnOff
+        
 #if 0
         // can use this with border
         // TODO: for some reason this breaks clicking on buttons
@@ -1350,16 +1353,20 @@ float4 toSnorm8(float4 c)
     auto wrapState = _showSettings->isWrap ? On : Off;
     auto debugState = (_showSettings->debugMode != DebugModeNone) ? On : Off;
     
+    
     // buttons
-//    [self findButton:"Y"].state =
-//    [self findButton:"F"].state =
-//    [self findButton:"M"].state =
-//    [self findButton:"J"].state =
-//
-//    [self findButton:"R"].state =
-//    [self findButton:"G"].state =
-//    [self findButton:"B"].state =
-//    [self findButton:"A"].state =
+    [self findButton:"Y"].state = _showSettings->arrayNumber > 1 ? On : Off;
+    [self findButton:"F"].state = _showSettings->faceNumber > 1 ? On : Off;
+    [self findButton:"M"].state = _showSettings->mipLOD > 1 ? On : Off;
+
+    [self findButton:"J"].state = Off;
+    [self findButton:"U"].state = Off;
+
+    // TODO: want these to show highlight
+    [self findButton:"R"].state = Off;
+    [self findButton:"G"].state = Off;
+    [self findButton:"B"].state = Off;
+    [self findButton:"A"].state = Off;
     
     [self findButton:"S"].state = showAllState;
     [self findButton:"O"].state = previewState;
@@ -1511,6 +1518,10 @@ float4 toSnorm8(float4 c)
             
             _buttonStack.hidden = !_buttonStack.hidden;
             text = _buttonStack.hidden ? "Hide UI" : "Show UI";
+            
+            // for button control state update only
+            if (!_buttonStack.hidden)
+                isChanged = true;
             break;
             
         // rgba channels
