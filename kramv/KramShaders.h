@@ -63,9 +63,9 @@ typedef NS_ENUM(int32_t, ShaderTextureChannels)
     ShMode00B1 = 3,
     
     // see grayscale channels
-    ShModeRRR1 = 5,
-    ShModeGGG1 = 6,
-    ShModeBBB1 = 7,
+//    ShModeRRR1 = 5,
+//    ShModeGGG1 = 6,
+//    ShModeBBB1 = 7,
     ShModeAAA1 = 8,
 };
 

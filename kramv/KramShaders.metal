@@ -592,14 +592,16 @@ float4 DrawPixels(
     switch(uniforms.channels)
     {
         case ShModeRGBA: break;
+            
+        // with premul formats, already have ra,ga,ba
         case ShModeR001: c = float4(c.r,0,0,1); break;
         case ShMode0G01: c = float4(0,c.g,0,1); break;
         case ShMode00B1: c = float4(0,0,c.b,1); break;
             
-        case ShModeRRR1: c = float4(c.rrr,1); break;
-        case ShModeGGG1: c = float4(c.ggg,1); break;
-        case ShModeBBB1: c = float4(c.bbb,1); break;
-            
+//        case ShModeRRR1: c = float4(c.rrr,1); break;
+//        case ShModeGGG1: c = float4(c.ggg,1); break;
+//        case ShModeBBB1: c = float4(c.bbb,1); break;
+//
         case ShModeAAA1: c = float4(c.aaa,1); break;
     }
     

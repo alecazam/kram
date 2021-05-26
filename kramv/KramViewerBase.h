@@ -24,9 +24,10 @@ enum TextureChannels
     Mode00B1 = 3,
     
     // see grayscale channels
-    ModeRRR1 = 5,
-    ModeGGG1 = 6,
-    ModeBBB1 = 7,
+//    ModeRRR1 = 5,
+//    ModeGGG1 = 6,
+//    ModeBBB1 = 7,
+    
     ModeAAA1 = 8,
 };
 

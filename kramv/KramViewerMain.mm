@@ -1343,30 +1343,50 @@ float4 toSnorm8(float4 c)
     // there is also mixed
     auto On = NSControlStateValueOn;
     auto Off = NSControlStateValueOff;
-        
-    auto showAllState = _showSettings->isShowingAllLevelsAndMips ? On : Off;
-    auto premulState = _showSettings->isPremul ? On : Off;
-    auto signedState = _showSettings->isSigned ? On : Off;
-    auto checkerboardState = _showSettings->isCheckerboardShown ? On : Off;
-    auto previewState = _showSettings->isPreview ? On : Off;
-    auto gridState = _showSettings->isAnyGridShown() ? On : Off;
-    auto wrapState = _showSettings->isWrap ? On : Off;
-    auto debugState = (_showSettings->debugMode != DebugModeNone) ? On : Off;
+    #define toState(x) (x) ? On : Off
     
+    auto showAllState = toState(_showSettings->isShowingAllLevelsAndMips);
+    auto premulState =  toState(_showSettings->isPremul);
+    auto signedState =  toState(_showSettings->isSigned);
+    auto checkerboardState =  toState(_showSettings->isCheckerboardShown);
+    auto previewState = toState(_showSettings->isPreview);
+    auto gridState =  toState(_showSettings->isAnyGridShown());
+    auto wrapState = toState(_showSettings->isWrap);
+    auto debugState = toState(_showSettings->debugMode != DebugModeNone);
+    
+    TextureChannels& channels = _showSettings->channels;
+
+    auto redState = toState(channels == TextureChannels::ModeR001);
+    auto greenState = toState(channels == TextureChannels::Mode0G01);
+    auto blueState = toState(channels == TextureChannels::Mode00B1);
+    auto alphaState = toState(channels == TextureChannels::ModeAAA1);
+    
+    auto arrayState = toState(_showSettings->arrayNumber > 0);
+    auto faceState = toState(_showSettings->faceNumber > 0);
+    auto mipState = toState(_showSettings->mipLOD > 0);
+    
+    // TODO: UI state, and vertical state
+    auto uiState = toState(_buttonStack.hidden);
+    
+    auto helpState = Off;
+    auto infoState = Off;
+    auto jumpState = Off;
     
     // buttons
-    [self findButton:"Y"].state = _showSettings->arrayNumber > 0 ? On : Off;
-    [self findButton:"F"].state = _showSettings->faceNumber > 0 ? On : Off;
-    [self findButton:"M"].state = _showSettings->mipLOD > 0 ? On : Off;
+    [self findButton:"?"].state = helpState;
+    [self findButton:"I"].state = infoState;
+   
+    [self findButton:"Y"].state = arrayState;
+    [self findButton:"F"].state = faceState;
+    [self findButton:"M"].state = mipState;
 
-    [self findButton:"J"].state = Off;
-    [self findButton:"U"].state = Off;
+    [self findButton:"J"].state = jumpState;
+    [self findButton:"U"].state = Off; // always off
 
-    // TODO: want these to show highlight
-    [self findButton:"R"].state = Off;
-    [self findButton:"G"].state = Off;
-    [self findButton:"B"].state = Off;
-    [self findButton:"A"].state = Off;
+    [self findButton:"R"].state = redState;
+    [self findButton:"G"].state = greenState;
+    [self findButton:"B"].state = blueState;
+    [self findButton:"A"].state = alphaState;
     
     [self findButton:"S"].state = showAllState;
     [self findButton:"O"].state = previewState;
@@ -1381,15 +1401,21 @@ float4 toSnorm8(float4 c)
     // menus (may want to disable, not hide)
     // problem is crashes since menu seems to strip hidden items
     // enabled state has to be handled in validateUserInterfaceItem
-//    [self findMenuItem:"Y"].state =
-//    [self findMenuItem:"F"].state =
-//    [self findMenuItem:"M"].state =
-//    [self findMenuItem:"J"].state =
-//
-//    [self findMenuItem:"R"].state =
-//    [self findMenuItem:"G"].state =
-//    [self findMenuItem:"B"].state =
-//    [self findMenuItem:"A"].state =
+    
+    // when menu state is selected, it may not uncheck when advancing through state
+    [self findMenuItem:"?"].state = helpState;
+    [self findMenuItem:"I"].state = infoState;
+   
+    [self findMenuItem:"Y"].state = arrayState;
+    [self findMenuItem:"F"].state = faceState;
+    [self findMenuItem:"M"].state = mipState;
+    [self findMenuItem:"J"].state = jumpState;
+    [self findMenuItem:"U"].state = uiState;
+
+    [self findMenuItem:"R"].state = redState;
+    [self findMenuItem:"G"].state = greenState;
+    [self findMenuItem:"B"].state = blueState;
+    [self findMenuItem:"A"].state = alphaState;
    
     [self findMenuItem:"S"].state = showAllState;
     [self findMenuItem:"O"].state = previewState;
@@ -1494,8 +1520,8 @@ float4 toSnorm8(float4 c)
 - (void)handleKey:(uint32_t)keyCode isShiftKeyDown:(bool)isShiftKeyDown
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
-    TextureChannels& channels = _showSettings->channels;
     bool isChanged = false;
+    bool isStateChanged = false;
     
     // TODO: fix isChanged to only be set when value changes
     // f.e. clamped values don't need to re-render
@@ -1508,6 +1534,9 @@ float4 toSnorm8(float4 c)
             
             _buttonStack.orientation = isVertical ? NSUserInterfaceLayoutOrientationVertical : NSUserInterfaceLayoutOrientationHorizontal;
             text = isVertical ? "Vert UI" : "Horiz UI";
+            
+            // just to update toggle state to Off
+            isStateChanged = true;
             break;
         }
         case Key::U:
@@ -1519,22 +1548,23 @@ float4 toSnorm8(float4 c)
             _buttonStack.hidden = !_buttonStack.hidden;
             text = _buttonStack.hidden ? "Hide UI" : "Show UI";
             
-            // for button control state update only
-            if (!_buttonStack.hidden)
-                isChanged = true;
+            // just to update toggle state to Off
+            isStateChanged = true;
             break;
             
         // rgba channels
         case Key::Num1:
         case Key::R:
             if (![self findButton:"R"].isHidden) {
-                if (channels == TextureChannels::ModeRRR1 || channels == TextureChannels::ModeR001) {
+                TextureChannels& channels = _showSettings->channels;
+
+                if (channels == TextureChannels::ModeR001) {
                     channels = TextureChannels::ModeRGBA;
                     text = "Mask RGBA";
                 }
                 else {
-                    channels = isShiftKeyDown ? TextureChannels::ModeRRR1 : TextureChannels::ModeR001;
-                    text = isShiftKeyDown ? "Mask RRR1" : "Mask R001";
+                    channels = TextureChannels::ModeR001;
+                    text = "Mask R001";
                 }
                 isChanged = true;
             }
@@ -1544,13 +1574,15 @@ float4 toSnorm8(float4 c)
         case Key::Num2:
         case Key::G:
             if (![self findButton:"G"].isHidden) {
-                if (channels == TextureChannels::ModeGGG1 || channels == TextureChannels::Mode0G01) {
+                TextureChannels& channels = _showSettings->channels;
+
+                if (channels == TextureChannels::Mode0G01) {
                     channels = TextureChannels::ModeRGBA;
                     text = "Mask RGBA";
                 }
                 else {
-                    channels = isShiftKeyDown ? TextureChannels::ModeGGG1 : TextureChannels::Mode0G01;
-                    text = isShiftKeyDown ? "Mask GGG1" : "Mask 0G01";
+                    channels = TextureChannels::Mode0G01;
+                    text = "Mask 0G01";
                 }
                 isChanged = true;
             }
@@ -1559,14 +1591,17 @@ float4 toSnorm8(float4 c)
         case Key::Num3:
         case Key::B:
             if (![self findButton:"B"].isHidden) {
-                if (channels == TextureChannels::ModeBBB1 || channels == TextureChannels::Mode00B1) {
+                TextureChannels& channels = _showSettings->channels;
+
+                if (channels == TextureChannels::Mode00B1) {
                     channels = TextureChannels::ModeRGBA;
                     text = "Mask RGBA";
                 }
                 else {
-                    channels = isShiftKeyDown ? TextureChannels::ModeBBB1 : TextureChannels::Mode00B1;
-                    text = isShiftKeyDown ? "Mask BBB1" : "Mask 00B1";
+                    channels = TextureChannels::Mode00B1;
+                    text = "Mask 00B1";
                 }
+
                 isChanged = true;
             }
             break;
@@ -1574,6 +1609,8 @@ float4 toSnorm8(float4 c)
         case Key::Num4:
         case Key::A:
             if (![self findButton:"A"].isHidden) {
+                TextureChannels& channels = _showSettings->channels;
+
                 if (channels == TextureChannels::ModeAAA1) {
                     channels = TextureChannels::ModeRGBA;
                     text = "Mask RGBA";
@@ -1582,6 +1619,7 @@ float4 toSnorm8(float4 c)
                     channels = TextureChannels::ModeAAA1;
                     text = "Mask AAA1";
                 }
+
                 isChanged = true;
             }
             break;
@@ -1612,6 +1650,9 @@ float4 toSnorm8(float4 c)
                    "W-wrap, Premul, N-signed\n"
                    "⇧Mip, ⇧Face, ⇧Y-array/slice\n"
                    "⇧J-next bundle image\n";
+            
+            // just to update toggle state to Off
+            isStateChanged = true;
             break;
             
         case Key::Num0: { // scale and reset pan
@@ -1779,6 +1820,8 @@ float4 toSnorm8(float4 c)
             if (_showSettings->isHudShown) {
                 sprintf(text, "%s", isShiftKeyDown ? _showSettings->imageInfoVerbose.c_str() : _showSettings->imageInfo.c_str());
             }
+            // just to update toggle state to Off
+            isStateChanged = true;
             break;
         
         // toggle wrap/clamp
@@ -1878,9 +1921,11 @@ float4 toSnorm8(float4 c)
         [self setHudText:text.c_str()];
     }
     
-    if (isChanged) {
+    if (isChanged || isStateChanged) {
         [self updateUIControlState];
-        
+    }
+    
+    if (isChanged) {
         self.needsDisplay = YES;
     }
 }
