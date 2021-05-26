@@ -1355,9 +1355,9 @@ float4 toSnorm8(float4 c)
     
     
     // buttons
-    [self findButton:"Y"].state = _showSettings->arrayNumber > 1 ? On : Off;
-    [self findButton:"F"].state = _showSettings->faceNumber > 1 ? On : Off;
-    [self findButton:"M"].state = _showSettings->mipLOD > 1 ? On : Off;
+    [self findButton:"Y"].state = _showSettings->arrayNumber > 0 ? On : Off;
+    [self findButton:"F"].state = _showSettings->faceNumber > 0 ? On : Off;
+    [self findButton:"M"].state = _showSettings->mipLOD > 0 ? On : Off;
 
     [self findButton:"J"].state = Off;
     [self findButton:"U"].state = Off;
