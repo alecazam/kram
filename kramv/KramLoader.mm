@@ -96,15 +96,16 @@ bool isDecodeImageNeeded(MyMTLPixelFormat pixelFormat) {
 
 bool decodeImage(KTXImage& image, KTXImage& imageDecoded)
 {
-    Image imageUnused; // TODO: move to only using KTXImage, decode needs to move there
+    KramDecoderParams decoderParams;
+    KramDecoder decoder;
     
     if (isETCFormat(image.pixelFormat)) {
-        if (!imageUnused.decode(image, imageDecoded, kTexEncoderEtcenc, false, "")) {
+        if (!decoder.decode(image, imageDecoded, decoderParams)) {
             return NO;
         }
     }
     else if (isASTCFormat(image.pixelFormat)) {
-        if (!imageUnused.decode(image, imageDecoded, kTexEncoderAstcenc, false, "")) {
+        if (!decoder.decode(image, imageDecoded, decoderParams)) {
             return NO;
         }
     }
@@ -198,8 +199,8 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
 #if SUPPORT_RGB
     if (isInternalRGBFormat(image.pixelFormat)) {
         // loads and converts image from RGB to RGBA
-        Image rbgaImage;
-        if (!rbgaImage.loadImageFromKTX(image))
+        Image rgbaImage;
+        if (!rgbaImage.loadImageFromKTX(image))
             return nil;
         
         // re-encode it as a KTXImage, even though this is just a copy
@@ -214,7 +215,8 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
         ImageInfo dstImageInfo;
         dstImageInfo.initWithArgs(dstImageInfoArgs);
        
-        if (!rbgaImage.encode(dstImageInfo, rbgaImage2)) {
+        KramEncoder encoder;
+        if (!encoder.encode(dstImageInfo, rgbaImage, rbgaImage2)) {
             return nil;
         }
         
@@ -303,7 +305,7 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
     
     [texture replaceRegion:region
                 mipmapLevel:0
-                  withBytes:sourceImage.pixels()
+                  withBytes:sourceImage.pixels().data()
                 bytesPerRow:bytesPerRow];
     
     // have to schedule autogen inside render using MTLBlitEncoder

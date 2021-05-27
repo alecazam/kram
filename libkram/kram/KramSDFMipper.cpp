@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "KramMipper.h"
+#include "KTXImage.h" // for mipDown
 
 namespace kram {
 using namespace heman;
@@ -57,11 +58,8 @@ void SDFMipper::mipmap(ImageData& dstImage, int32_t mipLevel)
     int32_t h = srcBitmapImage.height;
     int32_t d = 1;
     
-    // can use shift with mip down, but this iterates
-    for (int32_t i = 0; i < mipLevel; ++i) {
-        mipDown(w, h, d);
-    }
-
+    mipDown(w, h, d, mipLevel);
+    
     dstImage.width = w;
     dstImage.height = h;
 

@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "KTXImage.h" // for mipDown
+
 namespace kram {
 
 using namespace std;

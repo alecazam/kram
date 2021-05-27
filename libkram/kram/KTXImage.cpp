@@ -554,6 +554,11 @@ bool isASTCFormat(MyMTLPixelFormat format)
     return it.isASTC();
 }
 
+bool isBlockFormat(MyMTLPixelFormat format)
+{
+    return isBCFormat(format) || isETCFormat(format) || isASTCFormat(format);
+}
+
 bool isExplicitFormat(MyMTLPixelFormat format)
 {
     const auto& it = formatInfo(format);
@@ -769,6 +774,16 @@ uint32_t KTXImage::mipLevelSize(uint32_t width_, uint32_t height_) const
     uint32_t count = blockCount(width_, height_);
     uint32_t size = blockSize();
     return count * size;
+}
+
+uint32_t KTXImage::mipLevelSize(uint32_t mipNumber) const
+{
+    uint32_t w = width;
+    uint32_t h = height;
+    uint32_t d = depth;
+    
+    mipDown(w, h, d, mipNumber);
+    return mipLevelSize(w, h);
 }
 
 uint32_t KTXImage::blockCountRows(uint32_t width_) const

@@ -1562,15 +1562,14 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     if (isVerbose) {
         // dump mips/dims, but this can be a lot of data on arrays
         int32_t mipLevel = 0;
-        int32_t w = srcImage.width;
-        int32_t h = srcImage.height;
-        int32_t d = srcImage.depth; 
         
         // num chunks
         append_sprintf(info, "chun: %d\n", numChunks);
         
         for (const auto& mip : srcImage.mipLevels) {
-
+            uint32_t w, h, d;
+            srcImage.mipDimensions(mipLevel, w, h, d);
+            
             switch (textureType) {
                 case MyMTLTextureType3D:
                 append_sprintf(info,
@@ -1605,9 +1604,6 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                     mip.length // only size of one mip right now, not mip * numChunks
                 );
             }
-            
-            // drop a mip level
-            mipDown(w, h, d);
         }
     }
 
@@ -1768,8 +1764,13 @@ static int32_t kramAppDecode(vector<const char*>& args)
               encoderName(textureDecoder));
     }
     
-    Image tmpImage;  // just to call decode
-    success = success && tmpImage.decode(srcImage, tmpFileHelper.pointer(), textureDecoder, isVerbose, swizzleText);
+    KramDecoderParams params;
+    params.isVerbose = isVerbose;
+    params.decoder = textureDecoder;
+    params.swizzleText = swizzleText;
+    
+    KramDecoder decoder;  // just to call decode
+    success = success && decoder.decode(srcImage, tmpFileHelper.pointer(), params);
 
     // rename to dest filepath, note this only occurs if above succeeded
     // so any existing files are left alone on failure.
@@ -2214,7 +2215,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
     // so now can complete validation knowing hdr vs. ldr input
     // this checks the dst format
     if (success) {
-        bool isHDR = srcImage.pixelsFloat() != nullptr;
+        bool isHDR = !srcImage.pixelsFloat().empty();
 
         if (isHDR) {
             MyMTLPixelFormat format = info.pixelFormat;
@@ -2272,7 +2273,8 @@ static int32_t kramAppEncode(vector<const char*>& args)
         }
         
         if (success) {
-            success = srcImage.encode(info, tmpFileHelper.pointer());
+            KramEncoder encoder;
+            success = encoder.encode(info, srcImage, tmpFileHelper.pointer());
             
             if (!success) {
                 KLOGE("Kram", "encode failed");

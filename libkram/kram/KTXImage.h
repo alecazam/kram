@@ -296,11 +296,7 @@ public:
     uint32_t blockCount(uint32_t width_, uint32_t height_) const;
     uint32_t blockCountRows(uint32_t width_) const;
     
-    // mip data depends on format
-    uint32_t mipLevelSize(uint32_t width_, uint32_t height_) const;
-    //int totalMipLevels() const;
-    uint32_t totalChunks() const;
-
+   
     // this is where KTXImage holds all mip data internally
     void reserveImageData();
     vector<uint8_t>& imageData();
@@ -315,10 +311,21 @@ public:
     bool unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData);
     
     // helpers to work with the mipLevels array, mipLength and levelLength are important to get right
+    // mip data depends on format
+    
+    // mip
+    void mipDimensions(uint32_t mipNumber, uint32_t& width_, uint32_t& height_, uint32_t& depth_) const;
+    uint32_t mipLevelSize(uint32_t width_, uint32_t height_) const;
+    uint32_t mipLevelSize(uint32_t mipNumber) const;
     size_t mipLengthLargest() const { return mipLevels[0].length; }
     size_t mipLength(uint32_t mipNumber) const { return mipLevels[mipNumber].length; }
+    
+    // level
     size_t levelLength(uint32_t mipNumber) const { return mipLevels[mipNumber].length * totalChunks(); }
     size_t levelLengthCompressed(uint32_t mipNumber) const { return mipLevels[mipNumber].lengthCompressed; }
+    
+    // chunk
+    uint32_t totalChunks() const;
     size_t chunkOffset(uint32_t mipNumber, uint32_t chunkNumber) const { return mipLevels[mipNumber].offset + mipLevels[mipNumber].length * chunkNumber; }
     
     
@@ -354,6 +361,45 @@ public:  // TODO: bury this
     const uint8_t* fileData;  // mmap data
 };
 
+// GL/D3D hobbled non-pow2 mips by only supporting round down, not round up
+// And then Metal followed OpenGL since it's the same hw and drivers.
+// Round up adds an extra mip level to the chain, but results in much better filtering.
+// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_non_power_of_two.txt
+// http://download.nvidia.com/developer/Papers/2005/NP2_Mipmapping/NP2_Mipmap_Creation.pdf
+inline void mipDown(int32_t& w, int32_t& h, int32_t& d, uint32_t lod = 1)
+{
+    // round-down
+    w >>= (int32_t)lod;
+    h >>= (int32_t)lod;
+    d >>= (int32_t)lod;
+    
+    if (w < 1) w = 1;
+    if (h < 1) h = 1;
+    if (d < 1) d = 1;
+}
+
+inline void mipDown(uint32_t& w, uint32_t& h, uint32_t& d, uint32_t lod = 1)
+{
+    // round-down
+    w >>= lod;
+    h >>= lod;
+    d >>= lod;
+    
+    if (w < 1) w = 1;
+    if (h < 1) h = 1;
+    if (d < 1) d = 1;
+}
+
+inline void KTXImage::mipDimensions(uint32_t mipNumber, uint32_t& width_, uint32_t& height_, uint32_t& depth_) const {
+    assert(mipNumber < mipLevels.size());
+           
+    width_ = width;
+    height_ = height;
+    depth_ = depth;
+    
+    mipDown(width_, height_, depth_, mipNumber);
+}
+
 const char* supercompressionName(KTX2Supercompression type);
 
 // Generic format helpers.  All based on the ubiquitous type.
@@ -368,6 +414,7 @@ bool isSignedFormat(MyMTLPixelFormat format);
 bool isBCFormat(MyMTLPixelFormat format);
 bool isETCFormat(MyMTLPixelFormat format);
 bool isASTCFormat(MyMTLPixelFormat format);
+bool isBlockFormat(MyMTLPixelFormat format);
 bool isExplicitFormat(MyMTLPixelFormat format);
 
 Int2 blockDimsOfFormat(MyMTLPixelFormat format);

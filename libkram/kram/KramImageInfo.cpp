@@ -1097,8 +1097,8 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
     // can only determine this after reading in the source texture
     int32_t w = sourceImage.width();
     int32_t h = sourceImage.height();
-    Color* srcPixels = (Color*)sourceImage.pixels();
-    float4* srcPixelsFloat = (float4*)sourceImage.pixelsFloat();
+    Color* srcPixels = (Color*)sourceImage.pixels().data();
+    float4* srcPixelsFloat = (float4*)sourceImage.pixelsFloat().data();
 
     isHDR = srcPixelsFloat != nullptr;
 

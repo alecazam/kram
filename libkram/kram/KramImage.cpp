@@ -322,7 +322,7 @@ bool Image::loadImageFromPixels(const vector<uint8_t>& pixels, int32_t width,
 // BC1nm + b average.  That way color endpoints are of some use rather than just
 // being set ot 0.  This runs counter to ASTC L+A mode though which eliminates
 // the endpoint storage.
-void Image::averageChannelsInBlock(
+void KramEncoder::averageChannelsInBlock(
     const char* averageChannels, const KTXImage& image, ImageData& srcImage,
     vector<Color>& tmpImageData8) const  // otherwise, it's BlueAlpha averaging
 {
@@ -413,19 +413,319 @@ static bool writeDataAtOffset(const uint8_t* data, size_t dataSize, size_t dataO
     return true;
 }
 
-bool Image::decode(const KTXImage& srcImage, FILE* dstFile, TexEncoder decoder, bool isVerbose, const string& swizzleText) const
+bool KramDecoder::decode(const KTXImage& srcImage, FILE* dstFile, const KramDecoderParams& params) const
 {
     KTXImage dstImage; // thrown out, data written to file
-    return decodeImpl(srcImage, dstFile, dstImage, decoder, isVerbose, swizzleText);
+    return decodeImpl(srcImage, dstFile, dstImage, params);
 }
 
-bool Image::decode(const KTXImage& srcImage, KTXImage& dstImage, TexEncoder decoder, bool isVerbose, const string& swizzleText) const
+bool KramDecoder::decode(const KTXImage& srcImage, KTXImage& dstImage, const KramDecoderParams& params) const
 {
-    return decodeImpl(srcImage, nullptr, dstImage, decoder, isVerbose, swizzleText);
+    return decodeImpl(srcImage, nullptr, dstImage, params);
 }
 
-bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstImage, TexEncoder decoder, bool isVerbose, const string& swizzleText) const
+bool KramDecoder::decodeBlocks(
+            int32_t w, int32_t h,
+            const uint8_t* blockData, uint32_t blockDataSize, MyMTLPixelFormat blockFormat,
+            vector<uint8_t>& outputTexture, // currently Color
+            const KramDecoderParams& params) const
 {
+    
+    bool success = false;
+    
+    // could tie use flags to format filter, or encoder settings
+    // or may want to disable if decoders don't gen correct output
+    TexEncoder decoder = params.decoder;
+#if COMPILE_ATE
+    // Encode/decode formats differ depending on library version
+    // but it's likely the fastest decoder.  Only on macOS/iOS.
+    bool useATE = decoder == kTexEncoderATE;
+#endif
+#if COMPILE_SQUISH
+    bool useSquish = decoder == kTexEncoderSquish;
+#endif
+#if COMPILE_BCENC
+    bool useBcenc = decoder == kTexEncoderBcenc;
+#endif
+#if COMPILE_ASTCENC
+    bool useAstcenc = decoder == kTexEncoderAstcenc;
+#endif
+    
+    // TODO: hook to block decode logic below
+    // copy srcData if using ATE, it says it needs 16-byte aligned data for encode
+    // and assume for decode too.  Output texture is already 16-byte aligned.
+    const uint8_t* srcData = blockData;
+    vector<uint8_t> srcTexture;
+    if (useATE && (((uintptr_t)srcData & 15) != 0)) {
+        srcTexture.resize(blockDataSize);
+        memcpy(srcTexture.data(), srcData, blockDataSize);
+        srcData = srcTexture.data();
+    }
+
+    Int2 blockDims = blockDimsOfFormat(blockFormat);
+    bool isVerbose = params.isVerbose;
+    const string& swizzleText = params.swizzleText;
+    bool isHDR = isHdrFormat(blockFormat);
+    
+    // start decoding after format pulled from KTX file
+    if (isBCFormat(blockFormat)) {
+        // bc via ate, or squish for bc1-5 if on other platforms
+        // bcenc also likely has decode for bc7
+        if (false) {
+            // just to chain if/else
+        }
+#if COMPILE_BCENC
+        else if (useBcenc) {
+            Color* dstPixels = (Color*)outputTexture.data();
+
+            const int32_t blockDim = 4;
+            int32_t blocks_x = (w + blockDim - 1) / blockDim;
+            //int32_t blocks_y = (h + blockDim - 1) / blockDim;
+            int32_t blockSize = blockSizeOfFormat(blockFormat);
+
+            for (int32_t y = 0; y < h; y += blockDim) {
+                for (int32_t x = 0; x < w; x += blockDim) {
+                    int32_t bbx = x / blockDim;
+                    int32_t bby = y / blockDim;
+                    int32_t bb0 = bby * blocks_x + bbx;
+                    const uint8_t* srcBlock = &srcData[bb0 * blockSize];
+
+                    // decode into temp 4x4 pixels
+                    Color pixels[blockDim * blockDim];
+
+                    success = true;
+
+                    switch (blockFormat) {
+                        case MyMTLPixelFormatBC1_RGBA:
+                        case MyMTLPixelFormatBC1_RGBA_sRGB:
+                            // Returns true if the block uses 3 color punchthrough alpha mode.
+                            rgbcx::unpack_bc1(srcBlock, pixels);
+                            break;
+                        case MyMTLPixelFormatBC3_RGBA_sRGB:
+                        case MyMTLPixelFormatBC3_RGBA:
+                            // Returns true if the block uses 3 color punchthrough alpha mode.
+                            rgbcx::unpack_bc3(srcBlock, pixels);
+                            break;
+                        case MyMTLPixelFormatBC4_RSnorm:
+                        case MyMTLPixelFormatBC4_RUnorm:
+                            rgbcx::unpack_bc4(srcBlock, (uint8_t*)pixels);
+                            break;
+                        case MyMTLPixelFormatBC5_RGSnorm:
+                        case MyMTLPixelFormatBC5_RGUnorm:
+                            rgbcx::unpack_bc5(srcBlock, pixels);
+                            break;
+
+                        case MyMTLPixelFormatBC7_RGBAUnorm:
+                        case MyMTLPixelFormatBC7_RGBAUnorm_sRGB:
+                            bc7decomp::unpack_bc7(srcBlock, (bc7decomp::color_rgba*)pixels);
+                            break;
+
+                        default:
+                            KLOGE("Image", "decode unsupported format");
+                            success = false;
+                            break;
+                    }
+
+                    if (!success) {
+                        return false;
+                    }
+
+                    // copy temp pixels to outputTexture
+                    for (int32_t by = 0; by < blockDim; ++by) {
+                        int32_t yy = y + by;
+                        if (yy >= h) {
+                            break;
+                        }
+
+                        for (int32_t bx = 0; bx < blockDim; ++bx) {
+                            int32_t xx = x + bx;
+                            if (xx >= w) {
+                                break;  // go to next y above
+                            }
+
+                            dstPixels[yy * w + xx] = pixels[by * blockDim + bx];
+                        }
+                    }
+                }
+            }
+        }
+#endif
+#if COMPILE_SQUISH
+        else if (useSquish) {
+            squish::TexFormat format = squish::kBC1;
+
+            success = true;
+
+            switch (blockFormat) {
+                case MyMTLPixelFormatBC1_RGBA:
+                case MyMTLPixelFormatBC1_RGBA_sRGB:
+                    format = squish::kBC1;
+                    break;
+                case MyMTLPixelFormatBC3_RGBA_sRGB:
+                case MyMTLPixelFormatBC3_RGBA:
+                    format = squish::kBC3;
+                    break;
+                case MyMTLPixelFormatBC4_RSnorm:
+                case MyMTLPixelFormatBC4_RUnorm:
+                    format = squish::kBC4;
+                    break;
+                case MyMTLPixelFormatBC5_RGSnorm:
+                case MyMTLPixelFormatBC5_RGUnorm:
+                    format = squish::kBC5;
+                    break;
+                default:
+                    KLOGE("Image", "decode unsupported format");
+                    success = false;
+                    break;
+            }
+
+            if (success) {
+                // only handles bc1,3,4,5
+                squish::DecompressImage(outputTexture.data(), w, h, srcData, format);
+                success = true;
+            }
+        }
+#endif
+#if COMPILE_ATE
+        else if (useATE) {
+            ATEEncoder encoder;
+            success = encoder.Decode(blockFormat, blockDataSize, blockDims.y,
+                                     isVerbose,
+                                     w, h, srcData, outputTexture.data());
+        }
+#endif
+    }
+    else if (isETCFormat(blockFormat)) {
+        // etc via etc2comp
+#if COMPILE_ETCENC
+        Etc::Image::Format format = Etc::Image::Format::R11;
+
+        success = true;
+
+        switch (blockFormat) {
+            case MyMTLPixelFormatEAC_R11Unorm:
+                format = Etc::Image::Format::R11;
+                break;
+            case MyMTLPixelFormatEAC_R11Snorm:
+                format = Etc::Image::Format::SIGNED_R11;
+                break;
+            case MyMTLPixelFormatEAC_RG11Unorm:
+                format = Etc::Image::Format::RG11;
+                break;
+            case MyMTLPixelFormatEAC_RG11Snorm:
+                format = Etc::Image::Format::SIGNED_RG11;
+                break;
+
+            case MyMTLPixelFormatETC2_RGB8:
+                format = Etc::Image::Format::RGB8;
+                break;
+            case MyMTLPixelFormatETC2_RGB8_sRGB:
+                format = Etc::Image::Format::SRGB8;
+                break;
+            case MyMTLPixelFormatEAC_RGBA8:
+                format = Etc::Image::Format::RGBA8;
+                break;
+            case MyMTLPixelFormatEAC_RGBA8_sRGB:
+                format = Etc::Image::Format::SRGBA8;
+                break;
+
+            default:
+                KLOGE("Image", "decode unsupported format");
+                success = false;
+                break;
+        }
+
+        if (success) {
+            Etc::Image etcImage(format, nullptr,
+                                w, h, Etc::ErrorMetric::NUMERIC);
+
+            success = etcImage.Decode(srcData, outputTexture.data()) == Etc::Image::SUCCESS;
+        }
+#endif
+    }
+    else if (isASTCFormat(blockFormat)) {
+        // ate can decode more than it encodes
+        if (false) {
+            // just to chain if/else
+        }
+#if COMPILE_ASTCENC
+        else if (useAstcenc) {
+            // decode the mip
+            astcenc_image dstImageASTC;
+            dstImageASTC.dim_x = w;
+            dstImageASTC.dim_y = h;
+            dstImageASTC.dim_z = 1;  // Not using 3D blocks, not supported on iOS
+            //dstImageASTC.dim_pad = 0;
+            dstImageASTC.data_type = ASTCENC_TYPE_U8;
+            
+            
+            // encode/encode still setup on array of 2d slices, so need address of data
+            uint8_t* outData = outputTexture.data();
+            dstImageASTC.data = (void**)&outData;
+
+            uint32_t srcDataLength = blockDataSize;
+           
+            astcenc_profile profile;
+            profile = ASTCENC_PRF_LDR;  // isSrgb ? ASTCENC_PRF_LDR_SRGB : ASTCENC_PRF_LDR;
+            if (isHDR) {
+                profile = ASTCENC_PRF_HDR;  // TODO: also ASTCENC_PRF_HDR_RGB_LDR_A
+            }
+
+            astcenc_config config;
+            astcenc_error error = astcenc_config_init(
+                profile, blockDims.x, blockDims.y, 1, ASTCENC_PRE_FAST, ASTCENC_FLG_DECOMPRESS_ONLY, &config);
+            if (error != ASTCENC_SUCCESS) {
+                return false;
+            }
+
+            astcenc_context* codec_context = nullptr;
+            error = astcenc_context_alloc(&config, 1, &codec_context);
+            if (error != ASTCENC_SUCCESS) {
+                return false;
+            }
+            // no swizzle
+            astcenc_swizzle swizzleDecode = {ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A};
+
+            error = astcenc_decompress_image(codec_context, srcData, srcDataLength, &dstImageASTC, swizzleDecode, 0);
+
+            astcenc_context_free(codec_context);
+
+            success = (error == ASTCENC_SUCCESS);
+        }
+#endif
+#if COMPILE_ATE
+        else if (useATE) {
+            // this decods all except hdr/bc6
+            ATEEncoder encoder;
+            success = encoder.Decode(blockFormat, blockDataSize, blockDims.y,
+                                     isVerbose,
+                                     w, h, srcData, outputTexture.data());
+        }
+#endif
+    }
+    else {
+        KLOGE("Image", "unsupported pixel format for decode");
+        success = false;
+    }
+
+    // stop processing mips, since failed above
+    if (!success) {
+        return false;
+    }
+
+    // swizzle the data back to a more viewable layout (f.e. gggr -> rg01)
+    // This swizzleText is currently explicit, but could be reversed from prop of content channels and preswizzle.
+    // It's hard to specify this swizzle for arbitrary content otherwise.
+    if (!swizzleText.empty()) {
+        ImageInfo::swizzleTextureLDR(w, h, (Color*)outputTexture.data(), swizzleText.c_str());
+    }
+    
+    return true;
+}
+
+bool KramDecoder::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstImage, const KramDecoderParams& params) const
+{
+    
     // read existing KTX file into mip offset, then start decoding the blocks
     // and write these to 8u,16f,32f ktx with mips
     // write out KTXHeader for the explicit image, this should be similar to other code
@@ -436,8 +736,7 @@ bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstIma
    
     MyMTLPixelFormat pixelFormat = srcImage.pixelFormat;
     bool isSrgb = isSrgbFormat(pixelFormat);
-    bool isHDR = isHdrFormat(pixelFormat);
-
+    
     // setup dstImage
     //KTXImage dstImage;
     dstImage = srcImage;  // copy src (name-value pairs copied too)
@@ -485,7 +784,6 @@ bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstIma
         headerCopy.pixelDepth = 0;
     }
     
-   
     // write the header out
     if (!writeDataAtOffset((const uint8_t*)&headerCopy, sizeof(KTXHeader), 0, dstFile, dstImage)) {
         return false;
@@ -500,305 +798,31 @@ bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstIma
 
     vector<uint8_t> outputTexture;
     vector<uint8_t> srcTexture;
-
-    // could tie use flags to format filter, or encoder settings
-    // or may want to disable if decoders don't gen correct output
-#if COMPILE_ATE
-    // Encode/decode formats differ depending on library version
-    // but it's likely the fastest decoder.  Only on macOS/iOS.
-    bool useATE = decoder == kTexEncoderATE;
-#endif
-#if COMPILE_SQUISH
-    bool useSquish = decoder == kTexEncoderSquish;
-#endif
-#if COMPILE_BCENC
-    bool useBcenc = decoder == kTexEncoderBcenc;
-#endif
-#if COMPILE_ASTCENC
-    bool useAstcenc = decoder == kTexEncoderAstcenc;
-#endif
-
+    
     // DONE: walk chunks here and seek to src and dst offsets in conversion
     // make sure to walk chunks in the exact same order they are written, array then face, or slice
     
-    int32_t w = 0;
-    int32_t h = 0;
-    int32_t d = 0;
-    
-    for (int32_t chunk = 0; chunk < numChunks; ++chunk) {
-        w = srcImage.width;
-        h = srcImage.height;
-        d = srcImage.depth;
+    for (uint32_t i = 0; i < srcImage.header.numberOfMipmapLevels; ++i) {
+        // TODO: to decode compressed KTX2 want to walk all chunks of a single level
+        // after decompressing the level.   This isn't doing unpackLevel and needs to here.
+        assert(!srcImage.isSupercompressed());
         
-        for (int32_t i = 0; i < (int32_t)srcImage.header.numberOfMipmapLevels; ++i) {
+        uint32_t w, h, d;
+        srcImage.mipDimensions(i, w, h, d);
+        
+        for (int32_t chunk = 0; chunk < numChunks; ++chunk) {
+      
             const KTXImageLevel& dstMipLevel = dstImage.mipLevels[i];
             outputTexture.resize(dstMipLevel.length);
 
             const KTXImageLevel& srcMipLevel = srcImage.mipLevels[i];
             const uint8_t* srcData = srcImage.fileData + srcMipLevel.offset + chunk * srcMipLevel.length;
             
-            // copy srcData if using ATE, it says it needs 16-byte aligned data for encode
-            // and assume for decode too.  Output texture is already 16-byte aligned.
-            if (((uintptr_t)srcData & 15) != 0) {
-                srcTexture.resize(srcMipLevel.length);
-                memcpy(srcTexture.data(), srcData, srcMipLevel.length);
-                srcData = srcTexture.data();
+            // decode the blocks to LDR RGBA8
+            if (!decodeBlocks(w, h, srcData, srcMipLevel.length, srcImage.pixelFormat, outputTexture, params)) {
+                return false;
             }
-
-            // start decoding after format pulled from KTX file
-            if (isBCFormat(pixelFormat)) {
-                // bc via ate, or squish for bc1-5 if on other platforms
-                // bcenc also likely has decode for bc7
-                if (false) {
-                    // just to chain if/else
-                }
-    #if COMPILE_BCENC
-                else if (useBcenc) {
-                    Color* dstPixels = (Color*)outputTexture.data();
-
-                    const int32_t blockDim = 4;
-                    int32_t blocks_x = (w + blockDim - 1) / blockDim;
-                    //int32_t blocks_y = (h + blockDim - 1) / blockDim;
-                    int32_t blockSize = blockSizeOfFormat(pixelFormat);
-
-                    for (int32_t y = 0; y < h; y += blockDim) {
-                        for (int32_t x = 0; x < w; x += blockDim) {
-                            int32_t bbx = x / blockDim;
-                            int32_t bby = y / blockDim;
-                            int32_t bb0 = bby * blocks_x + bbx;
-                            const uint8_t* srcBlock = &srcData[bb0 * blockSize];
-
-                            // decode into temp 4x4 pixels
-                            Color pixels[blockDim * blockDim];
-
-                            success = true;
-
-                            switch (pixelFormat) {
-                                case MyMTLPixelFormatBC1_RGBA:
-                                case MyMTLPixelFormatBC1_RGBA_sRGB:
-                                    // Returns true if the block uses 3 color punchthrough alpha mode.
-                                    rgbcx::unpack_bc1(srcBlock, pixels);
-                                    break;
-                                case MyMTLPixelFormatBC3_RGBA_sRGB:
-                                case MyMTLPixelFormatBC3_RGBA:
-                                    // Returns true if the block uses 3 color punchthrough alpha mode.
-                                    rgbcx::unpack_bc3(srcBlock, pixels);
-                                    break;
-                                case MyMTLPixelFormatBC4_RSnorm:
-                                case MyMTLPixelFormatBC4_RUnorm:
-                                    rgbcx::unpack_bc4(srcBlock, (uint8_t*)pixels);
-                                    break;
-                                case MyMTLPixelFormatBC5_RGSnorm:
-                                case MyMTLPixelFormatBC5_RGUnorm:
-                                    rgbcx::unpack_bc5(srcBlock, pixels);
-                                    break;
-
-                                case MyMTLPixelFormatBC7_RGBAUnorm:
-                                case MyMTLPixelFormatBC7_RGBAUnorm_sRGB:
-                                    bc7decomp::unpack_bc7(srcBlock, (bc7decomp::color_rgba*)pixels);
-                                    break;
-
-                                default:
-                                    KLOGE("Image", "decode unsupported format");
-                                    success = false;
-                                    break;
-                            }
-
-                            if (!success) {
-                                return false;
-                            }
-
-                            // copy temp pixels to outputTexture
-                            for (int32_t by = 0; by < blockDim; ++by) {
-                                int32_t yy = y + by;
-                                if (yy >= h) {
-                                    break;
-                                }
-
-                                for (int32_t bx = 0; bx < blockDim; ++bx) {
-                                    int32_t xx = x + bx;
-                                    if (xx >= w) {
-                                        break;  // go to next y above
-                                    }
-
-                                    dstPixels[yy * w + xx] = pixels[by * blockDim + bx];
-                                }
-                            }
-                        }
-                    }
-                }
-    #endif
-    #if COMPILE_SQUISH
-                else if (useSquish) {
-                    squish::TexFormat format = squish::kBC1;
-
-                    success = true;
-
-                    switch (pixelFormat) {
-                        case MyMTLPixelFormatBC1_RGBA:
-                        case MyMTLPixelFormatBC1_RGBA_sRGB:
-                            format = squish::kBC1;
-                            break;
-                        case MyMTLPixelFormatBC3_RGBA_sRGB:
-                        case MyMTLPixelFormatBC3_RGBA:
-                            format = squish::kBC3;
-                            break;
-                        case MyMTLPixelFormatBC4_RSnorm:
-                        case MyMTLPixelFormatBC4_RUnorm:
-                            format = squish::kBC4;
-                            break;
-                        case MyMTLPixelFormatBC5_RGSnorm:
-                        case MyMTLPixelFormatBC5_RGUnorm:
-                            format = squish::kBC5;
-                            break;
-                        default:
-                            KLOGE("Image", "decode unsupported format");
-                            success = false;
-                            break;
-                    }
-
-                    if (success) {
-                        // only handles bc1,3,4,5
-                        squish::DecompressImage(outputTexture.data(), w, h, srcData, format);
-                        success = true;
-                    }
-                }
-    #endif
-    #if COMPILE_ATE
-                else if (useATE) {
-                    ATEEncoder encoder;
-                    success = encoder.Decode(pixelFormat, (int32_t)srcMipLevel.length, srcImage.blockDims().y,
-                                             isVerbose,
-                                             w, h, srcData, outputTexture.data());
-                }
-    #endif
-            }
-            else if (isETCFormat(pixelFormat)) {
-                // etc via etc2comp
-    #if COMPILE_ETCENC
-                Etc::Image::Format format = Etc::Image::Format::R11;
-
-                success = true;
-
-                switch (pixelFormat) {
-                    case MyMTLPixelFormatEAC_R11Unorm:
-                        format = Etc::Image::Format::R11;
-                        break;
-                    case MyMTLPixelFormatEAC_R11Snorm:
-                        format = Etc::Image::Format::SIGNED_R11;
-                        break;
-                    case MyMTLPixelFormatEAC_RG11Unorm:
-                        format = Etc::Image::Format::RG11;
-                        break;
-                    case MyMTLPixelFormatEAC_RG11Snorm:
-                        format = Etc::Image::Format::SIGNED_RG11;
-                        break;
-
-                    case MyMTLPixelFormatETC2_RGB8:
-                        format = Etc::Image::Format::RGB8;
-                        break;
-                    case MyMTLPixelFormatETC2_RGB8_sRGB:
-                        format = Etc::Image::Format::SRGB8;
-                        break;
-                    case MyMTLPixelFormatEAC_RGBA8:
-                        format = Etc::Image::Format::RGBA8;
-                        break;
-                    case MyMTLPixelFormatEAC_RGBA8_sRGB:
-                        format = Etc::Image::Format::SRGBA8;
-                        break;
-
-                    default:
-                        KLOGE("Image", "decode unsupported format");
-                        success = false;
-                        break;
-                }
-
-                if (success) {
-                    Etc::Image etcImage(format, nullptr,
-                                        w, h, Etc::ErrorMetric::NUMERIC);
-
-                    success = etcImage.Decode(srcData, outputTexture.data()) == Etc::Image::SUCCESS;
-                }
-    #endif
-            }
-            else if (isASTCFormat(pixelFormat)) {
-                // ate can decode more than it encodes
-                if (false) {
-                    // just to chain if/else
-                }
-    #if COMPILE_ASTCENC
-                else if (useAstcenc) {
-                    // decode the mip
-                    astcenc_image dstImageASTC;
-                    dstImageASTC.dim_x = w;
-                    dstImageASTC.dim_y = h;
-                    dstImageASTC.dim_z = 1;  // Not using 3D blocks, not supported on iOS
-                    //dstImageASTC.dim_pad = 0;
-                    dstImageASTC.data_type = ASTCENC_TYPE_U8;
-                    
-                    
-                    // encode/encode still setup on array of 2d slices, so need address of data
-                    uint8_t* outData = outputTexture.data();
-                    dstImageASTC.data = (void**)&outData;
-
-                    int32_t srcDataLength = (int32_t)srcMipLevel.length;
-                    Int2 blockDims = srcImage.blockDims();
-
-                    astcenc_profile profile;
-                    profile = ASTCENC_PRF_LDR;  // isSrgb ? ASTCENC_PRF_LDR_SRGB : ASTCENC_PRF_LDR;
-                    if (isHDR) {
-                        profile = ASTCENC_PRF_HDR;  // TODO: also ASTCENC_PRF_HDR_RGB_LDR_A
-                    }
-
-                    astcenc_config config;
-                    astcenc_error error = astcenc_config_init(
-                        profile, blockDims.x, blockDims.y, 1, ASTCENC_PRE_FAST, ASTCENC_FLG_DECOMPRESS_ONLY, &config);
-                    if (error != ASTCENC_SUCCESS) {
-                        return false;
-                    }
-
-                    astcenc_context* codec_context = nullptr;
-                    error = astcenc_context_alloc(&config, 1, &codec_context);
-                    if (error != ASTCENC_SUCCESS) {
-                        return false;
-                    }
-                    // no swizzle
-                    astcenc_swizzle swizzleDecode = {ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A};
-
-                    error = astcenc_decompress_image(codec_context, srcData, srcDataLength, &dstImageASTC, swizzleDecode, 0);
-
-                    astcenc_context_free(codec_context);
-
-                    success = (error == ASTCENC_SUCCESS);
-                }
-    #endif
-    #if COMPILE_ATE
-                else if (useATE) {
-                    // this decods all except hdr/bc6
-                    ATEEncoder encoder;
-                    success = encoder.Decode(pixelFormat, (int32_t)srcMipLevel.length, srcImage.blockDims().y,
-                                             isVerbose,
-                                             w, h, srcData, outputTexture.data());
-                }
-    #endif
-            }
-            else {
-                KLOGE("Image", "unsupported pixel format for decode");
-                success = false;
-            }
-
-            // stop processing mips, since failed above
-            if (!success) {
-                break;
-            }
-
-            // swizzle the data back to a more viewable layout (f.e. gggr -> rg01)
-            // This swizzleText is currently explicit, but could be reversed from prop of content channels and preswizzle.
-            // It's hard to specify this swizzle for arbitrary content otherwise.
-            if (!swizzleText.empty()) {
-                ImageInfo::swizzleTextureLDR(w, h, (Color*)outputTexture.data(), swizzleText.c_str());
-            }
-
+            
             // write the mips out to the file, and code above can then decode into the same buffer
             // This isn't correct for cubes, arrays, and other types.  The mip length is only written out once for all mips.
             
@@ -823,9 +847,6 @@ bool Image::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstIma
             if (!writeDataAtOffset(outputTexture.data(), dstMipLevel.length, dstMipOffset, dstFile, dstImage)) {
                 return false;
             }
-            
-            // next mip level
-            mipDown(w, h, d);
         }
     }
     
@@ -875,17 +896,17 @@ bool Image::resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, Image
 }
 
 
-bool Image::encode(ImageInfo& info, KTXImage& dstImage) const
+bool KramEncoder::encode(ImageInfo& info, Image& singleImage,KTXImage& dstImage) const
 {
-    return encodeImpl(info, nullptr, dstImage);
+    return encodeImpl(info, singleImage, nullptr, dstImage);
 }
 
-bool Image::encode(ImageInfo& info, FILE* dstFile) const
+bool KramEncoder::encode(ImageInfo& info, Image& singleImage, FILE* dstFile) const
 {
     // dstImage will be ignored
     KTXImage dstImage;
     
-    return encodeImpl(info, dstFile, dstImage);
+    return encodeImpl(info, singleImage, dstFile, dstImage);
 }
 
 // Use this for in-place construction of mips
@@ -1181,7 +1202,7 @@ KTX2DescriptorFileBlock::KTX2DescriptorFileBlock(MyMTLPixelFormat format, bool i
     flags = isPremul ? KHR_DF_FLAG_ALPHA_PREMULTIPLIED : KHR_DF_FLAG_ALPHA_STRAIGHT;
 }
 
-void Image::addBaseProps(const ImageInfo& info, KTXImage& dstImage) const
+void KramEncoder::addBaseProps(const ImageInfo& info, KTXImage& dstImage) const
 {
     dstImage.addFormatProps();
 
@@ -1250,15 +1271,15 @@ private:
 };
 
 
-bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
+bool KramEncoder::encodeImpl(ImageInfo& info, Image& singleImage, FILE* dstFile, KTXImage& dstImage) const
 {
     KTXHeader& header = dstImage.header;
     MipConstructData mipConstructData;
     
     vector<Int2>& chunkOffsets = mipConstructData.chunkOffsets;
 
-    int32_t w = _width;
-    int32_t h = _height;
+    int32_t w = singleImage.width();
+    int32_t h = singleImage.height();
 
     // compute chunks, and adjust w/h based on that
     // the code allows a vertical or horizontal strip or grid of chunks
@@ -1325,7 +1346,7 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
         // A better way would be to do mips in-place, but in-order, and compressing the large
         // to small mips into an array of open compressor streams.  Then only need one mip instead of
         // all levels in memory.
-        if (!writeKTX1FileOrImage(info,  mipConstructData, propsData, nullptr, dstImage)) {
+        if (!writeKTX1FileOrImage(info, singleImage, mipConstructData, propsData, nullptr, dstImage)) {
             return false;
         }
         
@@ -1533,7 +1554,7 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
     }
     else {
         // this is purely ktx1 output path
-        if (!writeKTX1FileOrImage(info, mipConstructData, propsData, dstFile, dstImage)) {
+        if (!writeKTX1FileOrImage(info, singleImage, mipConstructData, propsData, dstFile, dstImage)) {
             return false;
         }
     }
@@ -1541,8 +1562,9 @@ bool Image::encodeImpl(ImageInfo& info, FILE* dstFile, KTXImage& dstImage) const
     return true;
 }
 
-bool Image::writeKTX1FileOrImage(
+bool KramEncoder::writeKTX1FileOrImage(
      ImageInfo& info,
+     Image& singleImage,
      MipConstructData& mipConstructData,
      const vector<uint8_t>& propsData,
      FILE* dstFile, KTXImage& dstImage) const
@@ -1590,7 +1612,7 @@ bool Image::writeKTX1FileOrImage(
     }
 
     // build and weite out the mip data
-    if (!createMipsFromChunks(info, mipConstructData, dstFile, dstImage)) {
+    if (!createMipsFromChunks(info, singleImage, mipConstructData, dstFile, dstImage)) {
         return false;
     }
     
@@ -1665,8 +1687,9 @@ void printBCBlock(const uint8_t* bcBlock, MyMTLPixelFormat format) {
     }
 }
 
-bool Image::createMipsFromChunks(
+bool KramEncoder::createMipsFromChunks(
     ImageInfo& info,
+    Image& singleImage,
     MipConstructData& data,
     FILE* dstFile,
     KTXImage& dstImage
@@ -1721,14 +1744,14 @@ bool Image::createMipsFromChunks(
             srcImage.pixelsFloat = floatImage.data();
         }
         else {
-            srcImage.pixelsFloat = (float4*)_pixelsFloat.data();
+            srcImage.pixelsFloat = (float4*)singleImage.pixelsFloat().data();
         }
 
         // run this across all the source data
         // do this in-place before mips are generated
         if (doPremultiply) {
             if (info.isPrezero) {
-                for (const auto& pixel : _pixelsFloat) {
+                for (const auto& pixel : singleImage.pixelsFloat()) {
                     float alpha = pixel.w;
                     float4& pixelChange = const_cast<float4&>(pixel);
                     
@@ -1740,7 +1763,7 @@ bool Image::createMipsFromChunks(
                 }
             }
             else {
-                for (const auto& pixel : _pixelsFloat) {
+                for (const auto& pixel : singleImage.pixelsFloat()) {
                     float alpha = pixel.w;
                     float4& pixelChange = const_cast<float4&>(pixel);
                     pixelChange *= alpha;
@@ -1756,7 +1779,7 @@ bool Image::createMipsFromChunks(
             srcImage.pixels = copyImage.data();
         }
         else {
-            srcImage.pixels = (Color*)_pixels.data();
+            srcImage.pixels = (Color*)singleImage.pixels().data();
         }
 
         // used to store premul and linear color
@@ -1799,12 +1822,12 @@ bool Image::createMipsFromChunks(
         
         if (info.isHDR) {
             if (isMultichunk) {
-                const float4* srcPixels = (const float4*)_pixelsFloat.data();
+                const float4* srcPixels = (const float4*)singleImage.pixelsFloat().data();
                 for (int32_t y = 0; y < h; ++y) {
                     int32_t y0 = y * w;
                     
                     // offset into original strip/atlas
-                    int32_t yOffset = (y + chunkOffset.y) * _width + chunkOffset.x;
+                    int32_t yOffset = (y + chunkOffset.y) * singleImage.width() + chunkOffset.x;
 
                     for (int32_t x = 0; x < w; ++x) {
                         float4 c0 = srcPixels[yOffset + x];
@@ -1816,12 +1839,12 @@ bool Image::createMipsFromChunks(
         }
         else {
             if (isMultichunk) {
-                const Color* srcPixels = (const Color*)_pixels.data();
+                const Color* srcPixels = (const Color*)singleImage.pixels().data();
                 for (int32_t y = 0; y < h; ++y) {
                     int32_t y0 = y * w;
                     
                     // offset into original strip/atlas
-                    int32_t yOffset = (y + chunkOffset.y) * _width + chunkOffset.x;
+                    int32_t yOffset = (y + chunkOffset.y) * singleImage.width() + chunkOffset.x;
 
                     for (int32_t x = 0; x < w; ++x) {
                         Color c0 = srcPixels[yOffset + x];
@@ -1966,7 +1989,7 @@ bool Image::createMipsFromChunks(
 }
 
 // TODO: try to elim KTXImage passed into this
-bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
+bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                              ImageData& mipImage, TextureData& outputTexture,
                              int32_t mipStorageSize) const
 {
@@ -1982,6 +2005,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
         switch (info.pixelFormat) {
             case MyMTLPixelFormatR8Unorm:
             case MyMTLPixelFormatRG8Unorm:
+            // no RGB8 writes
             case MyMTLPixelFormatRGBA8Unorm:
             case MyMTLPixelFormatRGBA8Unorm_sRGB: {
                 int32_t count = image.blockSize() / 1;
@@ -2010,6 +2034,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
 
             case MyMTLPixelFormatR16Float:
             case MyMTLPixelFormatRG16Float:
+            // no RGB16Float writes
             case MyMTLPixelFormatRGBA16Float: {
                 int32_t count = image.blockSize() / 2;
 
@@ -2036,6 +2061,7 @@ bool Image::compressMipLevel(const ImageInfo& info, KTXImage& image,
             }
             case MyMTLPixelFormatR32Float:
             case MyMTLPixelFormatRG32Float:
+            // no RGB32Float writes
             case MyMTLPixelFormatRGBA32Float: {
                 int32_t count = image.blockSize() / 4;
 
