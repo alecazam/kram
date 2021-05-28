@@ -436,6 +436,12 @@ bool KramDecoder::decodeBlocks(
     // could tie use flags to format filter, or encoder settings
     // or may want to disable if decoders don't gen correct output
     TexEncoder decoder = params.decoder;
+    
+    if (!validateFormatAndDecoder(MyMTLTextureType2D, blockFormat, decoder)) {
+        KLOGE("Kram", "block decode only supports specific block types");
+        return false;
+    }
+    
 #if COMPILE_ATE
     // Encode/decode formats differ depending on library version
     // but it's likely the fastest decoder.  Only on macOS/iOS.
@@ -774,8 +780,7 @@ bool KramDecoder::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& 
         dstImage.reserveImageData();
     }
     
-    bool success = false;
-
+    
     // 1d textures need to write out 0 width
     KTXHeader headerCopy = dstHeader;
     
@@ -802,21 +807,41 @@ bool KramDecoder::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& 
     // DONE: walk chunks here and seek to src and dst offsets in conversion
     // make sure to walk chunks in the exact same order they are written, array then face, or slice
     
+    bool success = true;
+
+    vector<uint8_t> mipStorage;
+    mipStorage.resize(srcImage.mipLengthLargest() * numChunks); // enough to hold biggest mip
+    
     for (uint32_t i = 0; i < srcImage.header.numberOfMipmapLevels; ++i) {
-        // TODO: to decode compressed KTX2 want to walk all chunks of a single level
+        // DONE: to decode compressed KTX2 want to walk all chunks of a single level
         // after decompressing the level.   This isn't doing unpackLevel and needs to here.
-        assert(!srcImage.isSupercompressed());
+        
+        const KTXImageLevel& srcMipLevel = srcImage.mipLevels[i];
+        
+        // this is offset to a given level
+        uint64_t mipBaseOffset = srcMipLevel.offset;
+        const uint8_t* srcLevelData = srcImage.fileData;
+        
+        if (srcImage.isSupercompressed()) {
+            
+            if (!srcImage.unpackLevel(i, srcLevelData + srcMipLevel.offset, mipStorage.data())) {
+                return false;
+            }
+            srcLevelData = mipStorage.data();
+            
+            // going to upload from mipStorage temp array
+            mipBaseOffset = 0;
+        }
         
         uint32_t w, h, d;
         srcImage.mipDimensions(i, w, h, d);
         
-        for (int32_t chunk = 0; chunk < numChunks; ++chunk) {
-      
-            const KTXImageLevel& dstMipLevel = dstImage.mipLevels[i];
-            outputTexture.resize(dstMipLevel.length);
+        const KTXImageLevel& dstMipLevel = dstImage.mipLevels[i];
+        outputTexture.resize(dstMipLevel.length);
 
-            const KTXImageLevel& srcMipLevel = srcImage.mipLevels[i];
-            const uint8_t* srcData = srcImage.fileData + srcMipLevel.offset + chunk * srcMipLevel.length;
+        
+        for (int32_t chunk = 0; chunk < numChunks; ++chunk) {
+            const uint8_t* srcData = srcLevelData + mipBaseOffset + chunk * srcMipLevel.length;
             
             // decode the blocks to LDR RGBA8
             if (!decodeBlocks(w, h, srcData, srcMipLevel.length, srcImage.pixelFormat, outputTexture, params)) {

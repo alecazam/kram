@@ -1538,7 +1538,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     return true;
 }
 
-bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData) {
+bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData) const {
     
     // uncompressed level
     uint32_t numChunks = totalChunks();

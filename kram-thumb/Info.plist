@@ -27,9 +27,12 @@
 		<key>NSExtensionAttributes</key>
 		<dict>
 			<key>QLSupportedContentTypes</key>
-			<array/>
+			<array>
+				<string>org.khronos.ktx</string>
+				<string>public.ktx2</string>
+			</array>
 			<key>QLThumbnailMinimumDimension</key>
-			<integer>0</integer>
+			<integer>64</integer>
 		</dict>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.quicklook.thumbnail</string>

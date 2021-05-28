@@ -308,7 +308,7 @@ public:
     bool isKTX2() const { return skipImageLength; }
     
     // can use on ktx1/2 files, does a decompress if needed
-    bool unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData);
+    bool unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData) const;
     
     // helpers to work with the mipLevels array, mipLength and levelLength are important to get right
     // mip data depends on format
@@ -327,7 +327,6 @@ public:
     // chunk
     uint32_t totalChunks() const;
     size_t chunkOffset(uint32_t mipNumber, uint32_t chunkNumber) const { return mipLevels[mipNumber].offset + mipLevels[mipNumber].length * chunkNumber; }
-    
     
 private:
     bool openKTX2(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly);

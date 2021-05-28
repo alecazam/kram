@@ -22,34 +22,53 @@ using namespace kram;
 
 @implementation KramThumbnailProvider
 
+void KLOGF(const char* format, ...) {
+    string str;
+    
+    va_list args;
+    va_start(args, format);
+    /* int32_t len = */ append_vsprintf(str, format, args);
+    va_end(args);
+    
+    // log here, so it can see it in Console
+    NSLog(@"%@", [NSString stringWithUTF8String: str.c_str()]);
+}
+
 - (void)provideThumbnailForFileRequest:(QLFileThumbnailRequest *)request completionHandler:(void (^)(QLThumbnailReply * _Nullable, NSError * _Nullable))handler {
 
     // This
     // Second way: Draw the thumbnail into a context passed to your block, set up with Core Graphics's coordinate system.
     handler([QLThumbnailReply replyWithContextSize:request.maximumSize drawingBlock:^BOOL(CGContextRef  _Nonnull context)
     {
-         const char* file = [request.fileURL fileSystemRepresentation];
+         const char* filename = [request.fileURL fileSystemRepresentation];
          
-         if (!(endsWith(file, ".ktx") || endsWith(file, ".ktx2"))) {
+         if (!(endsWith(filename, ".ktx") || endsWith(filename, ".ktx2"))) {
+             KLOGF("kramv %s only supports ktx/ktx2 files\n", filename);
              return NO;
          }
          
          // load the mmap file, and interpret it as a KTXImage
          MmapHelper mmapHelper;
-         if (!mmapHelper.open(file)) {
+         if (!mmapHelper.open(filename)) {
+             KLOGF("kramv %s failed to mmap\n", filename);
              return NO;
          }
+        
+         // TODO: might need to try FileHelper for non-local thumbnails
+        
          
          // open but leave the image compressed if KTX2 + zstd
          bool isInfoOnly = true;
          
          KTXImage image;
          if (!image.open(mmapHelper.data(), mmapHelper.dataLength(), isInfoOnly)) {
+             KLOGF("kramv %s failed to open\n", filename);
              return NO;
          }
          
         // no BC6 or ASTC HDR yet for thumbs, just do LDR first
         if (isHdrFormat(image.pixelFormat)) {
+            KLOGF("kramv %s doesn't support hdr thumbnails yet\n", filename);
             return NO;
         }
         
@@ -84,6 +103,7 @@ using namespace kram;
             mipData.resize(image.mipLevels[mipNumber].length * numChunks);
             uint8_t* dstData = mipData.data();
             if (!image.unpackLevel(mipNumber, srcData, dstData)) {
+                KLOGF("kramv %s failed to unpack mip\n", filename);
                 return NO;
             }
         }
@@ -108,6 +128,7 @@ using namespace kram;
             
             // want to just decode one chunk of the level that was unpacked abovve
             if (!decoder.decodeBlocks(w, h, mipData.data(), mipData.size(), image.pixelFormat, dstMipData, params)) {
+                KLOGF("kramv %s failed to decode blocks\n", filename);
                 return NO;
             }
             
@@ -125,9 +146,9 @@ using namespace kram;
 
         // Declare the pixel format for the vImage_Buffer
         vImage_CGImageFormat format = {
-         .bitsPerComponent = 8,
-         .bitsPerPixel = 32,
-         };
+            .bitsPerComponent   = 8,
+            .bitsPerPixel       = 32,
+        };
         
         format.bitmapInfo = kCGBitmapByteOrderDefault | (isPremul ? kCGImageAlphaPremultipliedLast: kCGImageAlphaLast);
         
@@ -139,7 +160,10 @@ using namespace kram;
         //CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
         vImage_Error err = 0;
         CGImageRef cgImage = vImageCreateCGImageFromBuffer( &buf, &format, NULL, NULL, kvImageNoAllocate, &err);
-
+        if (err) {
+            KLOGF("kramv %s failed create cgimage\n", filename);
+            return NO;
+        }
         CGRect rect = CGRectMake(0, 0, w, h);
 
         // The image is scaled—disproportionately, if necessary—to fit the bounds

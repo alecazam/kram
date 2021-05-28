@@ -48,7 +48,7 @@ void getErrorLogCaptureText(string& text) {
 // being parsed (f.e. mmapped Json) this can significantly slow a parser down.
 
 
-static int32_t append_vsprintf(string& str, const char* format, va_list args) 
+int32_t append_vsprintf(string& str, const char* format, va_list args) 
 {
     // for KLOGE("group", "%s", "text")
     if (strcmp(format, "%s") == 0) {

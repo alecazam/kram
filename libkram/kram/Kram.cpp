@@ -1751,7 +1751,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
 
     // TODO: for hdr decode, may need to walk blocks or ask caller to pass -hdr flag
     if (!validateFormatAndDecoder(srcImage.textureType, srcImage.pixelFormat, textureDecoder)) {
-        KLOGE("Kram", "format decode only supports ktx output");
+        KLOGE("Kram", "format decode only supports ktx and ktx2 output");
         return -1;
     }
 

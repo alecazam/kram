@@ -50,7 +50,9 @@ using namespace std;
 
 // when set true, the internal string is cleared
 void setErrorLogCapture(bool enable);
+
 bool isErrorLogCapture();
+
 // return the text
 void getErrorLogCaptureText(string& text);
 
@@ -60,7 +62,11 @@ int32_t sprintf(string& str, const char* format, ...) __printflike(2, 3);
 // returns length of chars appended, -1 if failure
 int32_t append_sprintf(string& str, const char* format, ...) __printflike(2, 3);
 
+// returns length of chars appended, -1 if failure
+int32_t append_vsprintf(string& str, const char* format, va_list args);
+
 bool startsWith(const char* str, const string& substring);
+
 bool endsWithExtension(const char* str, const string& substring);
 
 // https://stackoverflow.com/questions/874134/find-out-if-string-ends-with-another-string-in-c

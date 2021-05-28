@@ -177,18 +177,21 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
     
     // see if it needs decode first
     bool needsDecode = false;
+    bool needsConvert = false;
     
+#if SUPPORT_RGB
     if (isInternalRGBFormat(image.pixelFormat)) {
-        needsDecode = true;
+        needsConvert = true;
     }
+#endif
 #if DO_DECODE
-    else if (isDecodeImageNeeded(image.pixelFormat)) {
+    if (isDecodeImageNeeded(image.pixelFormat)) {
         needsDecode = true;
     }
 #endif
     
     // open it again, but unpack the levels if supercompressed
-    if (needsDecode) {
+    if (needsConvert) {
         isInfoOnly = false;
         
         if (!image.open(imageData, imageDataLength, isInfoOnly)) {
@@ -197,7 +200,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
     }
     
 #if SUPPORT_RGB
-    if (isInternalRGBFormat(image.pixelFormat)) {
+    if (needsConvert) {
         // loads and converts image from RGB to RGBA
         Image rgbaImage;
         if (!rgbaImage.loadImageFromKTX(image))
