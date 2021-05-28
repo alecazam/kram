@@ -340,9 +340,9 @@ public:  // TODO: bury this
 
     // copied out of header, but also may be 1 instead of 0
     // also these can be modified, and often are non-zero even if header is
-    uint32_t width;
-    uint32_t height;
-    uint32_t depth;
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t depth = 0;
 
     // for ktx2
     bool skipImageLength = false;
@@ -356,8 +356,8 @@ public:  // TODO: bury this
     vector<KTXImageLevel> mipLevels;  // offsets into fileData
 
     // this only holds data for mipLevels
-    size_t fileDataLength;
-    const uint8_t* fileData;  // mmap data
+    size_t fileDataLength = 0;
+    const uint8_t* fileData = nullptr;  // mmap data
 };
 
 // GL/D3D hobbled non-pow2 mips by only supporting round down, not round up

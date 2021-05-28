@@ -75,6 +75,7 @@ void KLOGF(const char* format, ...) {
         // TODO: hookup to whether content is already premul with alpha
         // will have to come from props. ASTC always 4 channels but may hold other daa.
         bool isPremul = numChannelsOfFormat(image.pixelFormat) >= 4;
+        bool isSrgb = isSrgbFormat(image.pixelFormat);
         
         // unpack a level to get the blocks
         uint32_t mipNumber = 0;
@@ -150,16 +151,16 @@ void KLOGF(const char* format, ...) {
             .bitsPerPixel       = 32,
         };
         
-        format.bitmapInfo = kCGBitmapByteOrderDefault | (isPremul ? kCGImageAlphaPremultipliedLast: kCGImageAlphaLast);
+        format.bitmapInfo = kCGBitmapByteOrderDefault | (isPremul ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast);
+        format.colorSpace = isSrgb ? CGColorSpaceCreateWithName(kCGColorSpaceSRGB) : CGColorSpaceCreateDeviceRGB();
         
         // don't need to allocate, can requse memory from mip
 
         // TODO: might want to convert to PNG, but maybe thumbnail system does that automatically?
         // see how big thumbs.db is after running this
         
-        //CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
         vImage_Error err = 0;
-        CGImageRef cgImage = vImageCreateCGImageFromBuffer( &buf, &format, NULL, NULL, kvImageNoAllocate, &err);
+        CGImageRef cgImage = vImageCreateCGImageFromBuffer(&buf, &format, NULL, NULL, kvImageNoAllocate, &err);
         if (err) {
             KLOGF("kramv %s failed create cgimage\n", filename);
             return NO;
