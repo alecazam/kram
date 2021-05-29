@@ -26,20 +26,24 @@
 typedef NS_ENUM(int32_t, BufferIndex)
 {
     // mesh
-    BufferIndexMeshPositions = 0, // pos
+    BufferIndexMeshPosition  = 0, // pos
     BufferIndexMeshUV0       = 1, // uv
+    BufferIndexMeshNormal    = 2, // normals
+    BufferIndexMeshTangent   = 3, // normals
     
-    BufferIndexUniforms      = 2,
-    BufferIndexUniformsLevel = 3,
+    BufferIndexUniforms      = 16,
+    BufferIndexUniformsLevel = 17,
     
     // for compute
-    BufferIndexUniformsCS = 0,
+    BufferIndexUniformsCS = 16,
 };
 
 typedef NS_ENUM(int32_t, VertexAttribute)
 {
     VertexAttributePosition  = 0,
     VertexAttributeTexcoord  = 1,
+    VertexAttributeNormal    = 2,
+    VertexAttributeTangent   = 3,
 };
 
 typedef NS_ENUM(int32_t, TextureIndex)

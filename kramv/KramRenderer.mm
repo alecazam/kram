@@ -77,6 +77,13 @@ using namespace simd;
     KramLoader *_loader;
     MTKMesh *_mesh;
     
+    MDLVertexDescriptor *_mdlVertexDescriptor;
+    
+    MTKMesh *_meshPlane; // really a thin gox
+    MTKMesh *_meshBox;
+    MTKMesh *_meshSphere;
+    MTKMesh *_meshCylinder;
+    MTKMeshBufferAllocator *_metalAllocator;
     
     ShowSettings* _showSettings;
 }
@@ -93,6 +100,8 @@ using namespace simd;
         _loader = [KramLoader new];
         _loader.device = _device;
         
+        _metalAllocator = [[MTKMeshBufferAllocator alloc] initWithDevice: _device];
+
         _inFlightSemaphore = dispatch_semaphore_create(MaxBuffersInFlight);
         [self _loadMetalWithView:view];
         [self _loadAssets];
@@ -139,6 +148,46 @@ using namespace simd;
     _colorMapSamplerBilinearWrap = [_device newSamplerStateWithDescriptor:samplerDescriptor];
 }
     
+- (void)_createVertexDescriptor
+{
+    _mtlVertexDescriptor = [[MTLVertexDescriptor alloc] init];
+
+    _mtlVertexDescriptor.attributes[VertexAttributePosition].format = MTLVertexFormatFloat3;
+    _mtlVertexDescriptor.attributes[VertexAttributePosition].offset = 0;
+    _mtlVertexDescriptor.attributes[VertexAttributePosition].bufferIndex = BufferIndexMeshPosition;
+
+    _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].format = MTLVertexFormatFloat2; // TODO: compress
+    _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].offset = 0;
+    _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].bufferIndex = BufferIndexMeshUV0;
+
+    _mtlVertexDescriptor.attributes[VertexAttributeNormal].format = MTLVertexFormatFloat3; // TODO: compress
+    _mtlVertexDescriptor.attributes[VertexAttributeNormal].offset = 0;
+    _mtlVertexDescriptor.attributes[VertexAttributeNormal].bufferIndex = BufferIndexMeshNormal;
+
+    _mtlVertexDescriptor.attributes[VertexAttributeTangent].format = MTLVertexFormatFloat4; // TODO: compress
+    _mtlVertexDescriptor.attributes[VertexAttributeTangent].offset = 0;
+    _mtlVertexDescriptor.attributes[VertexAttributeTangent].bufferIndex = BufferIndexMeshTangent;
+   
+    //_mtlVertexDescriptor.layouts[BufferIndexMeshPosition].stepRate = 1;
+    //_mtlVertexDescriptor.layouts[BufferIndexMeshPosition].stepFunction = MTLVertexStepFunctionPerVertex;
+
+    _mtlVertexDescriptor.layouts[BufferIndexMeshPosition].stride = 3*4;
+    _mtlVertexDescriptor.layouts[BufferIndexMeshUV0].stride = 2*4;
+    _mtlVertexDescriptor.layouts[BufferIndexMeshNormal].stride = 3*4;
+    _mtlVertexDescriptor.layouts[BufferIndexMeshTangent].stride = 4*4;
+    
+    //-----------------------
+    // for ModelIO
+    _mdlVertexDescriptor =
+        MTKModelIOVertexDescriptorFromMetal(_mtlVertexDescriptor);
+
+    _mdlVertexDescriptor.attributes[VertexAttributePosition].name  = MDLVertexAttributePosition;
+    _mdlVertexDescriptor.attributes[VertexAttributeTexcoord].name  = MDLVertexAttributeTextureCoordinate;
+    _mdlVertexDescriptor.attributes[VertexAttributeNormal].name    = MDLVertexAttributeNormal;
+    _mdlVertexDescriptor.attributes[VertexAttributeTangent].name   = MDLVertexAttributeTangent;
+
+}
+
 - (void)_loadMetalWithView:(nonnull MTKView *)view
 {
     /// Load Metal state objects and initialize renderer dependent view properties
@@ -151,24 +200,8 @@ using namespace simd;
     
     view.sampleCount = 1;
 
-    _mtlVertexDescriptor = [[MTLVertexDescriptor alloc] init];
-
-    _mtlVertexDescriptor.attributes[VertexAttributePosition].format = MTLVertexFormatFloat3;
-    _mtlVertexDescriptor.attributes[VertexAttributePosition].offset = 0;
-    _mtlVertexDescriptor.attributes[VertexAttributePosition].bufferIndex = BufferIndexMeshPositions;
-
-    _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].format = MTLVertexFormatFloat2;
-    _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].offset = 0;
-    _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].bufferIndex = BufferIndexMeshUV0;
-
-    _mtlVertexDescriptor.layouts[BufferIndexMeshPositions].stride = 12;
-    //_mtlVertexDescriptor.layouts[BufferIndexMeshPositions].stepRate = 1;
-    //_mtlVertexDescriptor.layouts[BufferIndexMeshPositions].stepFunction = MTLVertexStepFunctionPerVertex;
-
-    _mtlVertexDescriptor.layouts[BufferIndexMeshUV0].stride = 8;
-    //_mtlVertexDescriptor.layouts[BufferIndexMeshUV0].stepRate = 1;
-    //_mtlVertexDescriptor.layouts[BufferIndexMeshUV0].stepFunction = MTLVertexStepFunctionPerVertex;
-
+    [self _createVertexDescriptor];
+    
     [self _createRenderPipelines:view];
     
     //-----------------------
@@ -362,47 +395,78 @@ using namespace simd;
     _sampleTex = [_device newTextureWithDescriptor:textureDesc];
 }
 
+- (MTKMesh*)_createMeshAsset:(const char*)name mdlMesh:(MDLMesh*)mdlMesh
+{
+    NSError* error = nil;
+
+    //mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
+    
+    [mdlMesh addOrthTanBasisForTextureCoordinateAttributeNamed: MDLVertexAttributeTextureCoordinate
+                                          normalAttributeNamed: MDLVertexAttributeNormal
+                                         tangentAttributeNamed: MDLVertexAttributeTangent];
+    
+    mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
+    
+    // TODO: name the vertex attributes, can that be done in _mdlVertexDescriptor
+    // may have to set name on MTLBuffer range on IB and VB
+    
+    // now set it into mtk mesh
+    MTKMesh* mesh = [[MTKMesh alloc] initWithMesh:mdlMesh
+                                   device:_device
+                                    error:&error];
+    mesh.name = [NSString stringWithUTF8String:name];
+
+    if(!mesh || error)
+    {
+        NSLog(@"Error creating MetalKit mesh %@", error.localizedDescription);
+        return nil;
+    }
+
+    return mesh;
+}
+
 - (void)_loadAssets
 {
     /// Load assets into metal objects
-
-    NSError *error = nil;
-
-    MTKMeshBufferAllocator *metalAllocator = [[MTKMeshBufferAllocator alloc]
-                                              initWithDevice: _device];
-
-#if 1 // TODO: replace box with fsq or fst, or use thin box for perspective/rotation
-    MDLMesh *mdlMesh = [MDLMesh newBoxWithDimensions:(vector_float3){1, 1, 1}
+    
+    MDLMesh *mdlMesh;
+    
+    mdlMesh = [MDLMesh newBoxWithDimensions:(vector_float3){1, 1, 1}
                                             segments:(vector_uint3){1, 1, 1}
                                         geometryType:MDLGeometryTypeTriangles
                                        inwardNormals:NO
-                                           allocator:metalAllocator];
+                                           allocator:_metalAllocator];
     
-#endif
+    _meshBox = [self _createMeshAsset:"MeshBox" mdlMesh:mdlMesh];
     
-    MDLVertexDescriptor *mdlVertexDescriptor =
-    MTKModelIOVertexDescriptorFromMetal(_mtlVertexDescriptor);
-
-    mdlVertexDescriptor.attributes[VertexAttributePosition].name  = MDLVertexAttributePosition;
-    mdlVertexDescriptor.attributes[VertexAttributeTexcoord].name  = MDLVertexAttributeTextureCoordinate;
-
-    mdlMesh.vertexDescriptor = mdlVertexDescriptor;
-
-    _mesh = [[MTKMesh alloc] initWithMesh:mdlMesh
-                                   device:_device
-                                    error:&error];
-    _mesh.name = @"BoxMesh";
+    // TOOO: have more shape types - this is box, need thin box (plane), and sphere, and cylinder
+    // eventually load usdz and gltf2 custom model.  Need 3d manipulation of shape like arcball
+    // and eyedropper is more complex.
     
-    if(!_mesh || error)
-    {
-        NSLog(@"Error creating MetalKit mesh %@", error.localizedDescription);
-    }
+    mdlMesh = [MDLMesh newEllipsoidWithRadii:(vector_float3){0.5, 0.5, 0.5} radialSegments:16 verticalSegments:16 geometryType:MDLGeometryTypeTriangles inwardNormals:NO hemisphere:NO allocator:_metalAllocator];
+               
+    _meshSphere = [self _createMeshAsset:"MeshSphere" mdlMesh:mdlMesh];
+    
+    mdlMesh = [MDLMesh newCylinderWithHeight:1.0
+                                       radii:(vector_float2){0.5, 0.5}
+                                            radialSegments:16
+                                        verticalSegments:1
+                                        geometryType:MDLGeometryTypeTriangles
+                                       inwardNormals:NO
+                                           allocator:_metalAllocator];
+    
+    _meshCylinder = [self _createMeshAsset:"MeshCylinder" mdlMesh:mdlMesh];
+    
+    _mesh = _meshBox;
+    
 }
 
 - (BOOL)loadTextureFromData:(const string&)fullFilename timestamp:(double)timestamp imageData:(nonnull const uint8_t*)imageData imageDataLength:(uint64_t)imageDataLength
 {
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
+    
+    // Note that modstamp can change, but content data hash may be the same
     bool isTextureChanged =
         (fullFilename != _showSettings->lastFilename) ||
         (timestamp != _showSettings->lastTimestamp);
@@ -420,7 +484,7 @@ using namespace simd;
         // then can decode blocks in kramv
         
         KTXImage sourceImage;
-        if (!sourceImage.open(imageData,imageDataLength)) {
+        if (!sourceImage.open(imageData, imageDataLength)) {
             return NO;
         }
        
@@ -685,7 +749,12 @@ using namespace simd;
     // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
     _showSettings->projectionViewModelMatrix = projectionViewMatrix * _modelMatrix;
     
-   
+    // crude shape experiment
+    switch(_showSettings->meshNumber) {
+        case 0: _mesh = _meshBox; break;
+        case 1: _mesh = _meshSphere; break;
+        case 2: _mesh = _meshCylinder; break;
+    }
     
     //_rotation += .01;
 }

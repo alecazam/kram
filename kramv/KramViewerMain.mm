@@ -275,7 +275,11 @@ enum Key {
     Num2                 = 0x13,
     Num3                 = 0x14,
     Num4                 = 0x15,
-    // ...
+    Num5                 = 0x17,
+    Num6                 = 0x16,
+    Num7                 = 0x1A,
+    Num8                 = 0x1C,
+    Num9                 = 0x19,
     Num0                 = 0x1D,
     
     LeftBrace            = 0x21,
@@ -1861,6 +1865,24 @@ float4 toSnorm8(float4 c)
                 }
             }
             break;
+            
+        // test out different shapes, not offiical support yet
+        case Key::Num8:
+            if (_showSettings->meshCount > 1) {
+                if (isShiftKeyDown) {
+                    _showSettings->meshNumber = _showSettings->meshNumber + _showSettings->meshCount - 1;
+                }
+                else {
+                    _showSettings->meshNumber++;
+                }
+                _showSettings->meshNumber = _showSettings->meshNumber % _showSettings->meshCount;
+                
+                sprintf(text, "Mesh %d/%d", _showSettings->meshNumber, _showSettings->meshCount);
+                isChanged = true;
+            }
+            break;
+            
+        // TODO: should probably have these wrap and not clamp to count limits
             
         // mip up/down
         case Key::M:

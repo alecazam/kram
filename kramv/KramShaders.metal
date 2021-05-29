@@ -185,26 +185,34 @@ half3 toNormal(half3 n)
 
 // use mikktspace, gen bitan in frag shader with sign, don't normalize vb/vt
 // see http://www.mikktspace.com/
-half3 transformNormal(half4 tangent, half3 vertexNormal,
-                      texture2d<half> texture, sampler s, float2 uv, bool isSigned = true)
+half3 transformNormal(half4 tangent, half3 vertexNormal, half3 bumpNormal)
 {
     // Normalize tangent/vertexNormal in vertex shader
     // but don't renormalize interpolated tangent, vertexNormal in fragment shader
     // Reconstruct bitan in frag shader
     // https://bgolus.medium.com/generating-perfect-normal-maps-for-unity-f929e673fc57
 
-    half4 nmap = texture.sample(s, uv);
-    if (!isSigned) {
-        nmap.xy = toSnorm8(nmap.xy);
-    }
-    half3 normal = toNormal(nmap.xyz);
     
     // now transform by basis and normalize from any shearing, and since interpolated basis vectors
     // are not normalized
     half3x3 tbn = half3x3(tangent.xyz, tangent.w * cross(vertexNormal, tangent.xyz), vertexNormal);
-    normal = tbn * normal;
-    return normalize(normal);
+    bumpNormal = tbn * bumpNormal;
+    return normalize(bumpNormal);
 }
+
+half3 transformNormal(half4 tangent, half3 vertexNormal,
+                      texture2d<half> texture, sampler s, float2 uv, bool isSigned = true)
+{
+    half4 nmap = texture.sample(s, uv);
+    if (!isSigned) {
+        nmap.xy = toSnorm8(nmap.xy);
+    }
+    half3 bumpNormal = toNormal(nmap.xyz);
+   
+    return transformNormal(tangent, vertexNormal, bumpNormal);
+}
+
+
 
 // TODO: have more bones, or read from texture instead of uniforms
 // can then do instanced skining, but vfetch lookup slower
@@ -259,7 +267,7 @@ float3x3 toFloat3x3(float4x4 m)
     return float3x3(m[0].xyz, m[1].xyz, m[2].xyz);
 }
 
-// this is for vertex shader
+// this is for vertex shader if tangent supplied
 void transformBasis(thread float3& tangent, thread float3& normal,
                     float4x4 modelToWorldTfm, bool isScaled = false)
 {
@@ -309,6 +317,10 @@ struct Vertex
 {
     float4 position [[attribute(VertexAttributePosition)]];
     float2 texCoord [[attribute(VertexAttributeTexcoord)]];
+    
+    // basis
+    float3 normal [[attribute(VertexAttributeNormal)]];; // consider hallf
+    float4 tangent [[attribute(VertexAttributeTangent)]];; // tan + bitanSign
 };
 
 struct ColorInOut
@@ -317,6 +329,10 @@ struct ColorInOut
     float3 texCoordXYZ;
     float2 texCoord;
     float3 worldPos;
+    
+    // basis
+    half3 normal;
+    half4 tangent;
 };
 
 ColorInOut DrawImageFunc(
@@ -332,6 +348,21 @@ ColorInOut DrawImageFunc(
     
     float4 worldPos = uniforms.modelMatrix * position;
     
+    // deal with full basis
+    
+    if (uniforms.isNormal && uniforms.isPreview) {
+        float3 tangent = in.tangent.xyz;
+        float3 normal = in.normal;
+        transformBasis(tangent, normal, uniforms.modelMatrix, false);
+        
+        out.normal = toHalf(normal);
+        out.tangent.xyz = toHalf(tangent);
+        out.tangent.w = toHalf(in.tangent.w);
+    }
+    else {
+        out.normal = toHalf(in.normal);
+        out.tangent = toHalf(in.tangent);
+    }
     // try adding pixel offset to pixel values
     worldPos.xy += uniformsLevel.drawOffset;
     
@@ -480,6 +511,8 @@ float4 DrawPixels(
         else if (uniforms.isNormal) {
             // light the normal map
             
+            
+            
             // add swizzle for ASTC/BC5nm, other 2 channels format can only store 01 in ba
             if (uniforms.isSwizzleAGToRG) {
                 c = float4(c.ag, 0, 1);
@@ -497,6 +530,9 @@ float4 DrawPixels(
             float3 lightColor = float3(1,1,1);
             
             float3 n = c.xyz;
+            
+            // handle the basis here
+            n = toFloat(transformNormal(in.tangent, in.normal, toHalf(n)));
             
             // diffuse
             float dotNL = saturate(dot(n, lightDir));

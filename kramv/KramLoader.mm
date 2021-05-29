@@ -175,32 +175,15 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
         return nil;
     }
     
-    // see if it needs decode first
-    bool needsDecode = false;
-    bool needsConvert = false;
-    
 #if SUPPORT_RGB
     if (isInternalRGBFormat(image.pixelFormat)) {
-        needsConvert = true;
-    }
-#endif
-#if DO_DECODE
-    if (isDecodeImageNeeded(image.pixelFormat)) {
-        needsDecode = true;
-    }
-#endif
-    
-    // open it again, but unpack the levels if supercompressed
-    if (needsConvert) {
         isInfoOnly = false;
         
+        // reopen and unzip it all
         if (!image.open(imageData, imageDataLength, isInfoOnly)) {
             return nil;
         }
-    }
-    
-#if SUPPORT_RGB
-    if (needsConvert) {
+        
         // loads and converts image from RGB to RGBA
         Image rgbaImage;
         if (!rgbaImage.loadImageFromKTX(image))
@@ -234,8 +217,9 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
     if (originalFormat != nullptr) {
         *originalFormat = (MTLPixelFormat)image.pixelFormat;
     }
+    
 #if DO_DECODE
-    if (needsDecode) {
+    if (isDecodeImageNeeded(image.pixelFormat)) {
         KTXImage imageDecoded;
         if (!decodeImage(image, imageDecoded)) {
             return nil;
