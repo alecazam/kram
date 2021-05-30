@@ -461,13 +461,16 @@ bool KramDecoder::decodeBlocks(
     // copy srcData if using ATE, it says it needs 16-byte aligned data for encode
     // and assume for decode too.  Output texture is already 16-byte aligned.
     const uint8_t* srcData = blockData;
+    
+#if COMPILE_ATE
     vector<uint8_t> srcTexture;
     if (useATE && (((uintptr_t)srcData & 15) != 0)) {
         srcTexture.resize(blockDataSize);
         memcpy(srcTexture.data(), srcData, blockDataSize);
         srcData = srcTexture.data();
     }
-
+#endif
+    
     Int2 blockDims = blockDimsOfFormat(blockFormat);
     bool isVerbose = params.isVerbose;
     const string& swizzleText = params.swizzleText;
