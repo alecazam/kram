@@ -102,13 +102,12 @@ inline Color toGrayscaleRec709(Color c, const Mipper& mipper) {
 bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
 {
     KTXImage image;
-    if (!image.open(data, dataSize)) {
+    bool isInfoOnly = true; // don't decompress entire image, only going to unpack top level mip
+    if (!image.open(data, dataSize, isInfoOnly)) {
         return false;
     }
 
-    // many different types of KTX files, for now only import from 2D type
-    // and only pull the first mip, but want to be able to pull custom mips from
-    // many types
+    // this loads the top level into the sourceImage, caller must set chunkY to totalChunks
     return sourceImage.loadImageFromKTX(image);
 }
 
@@ -1291,7 +1290,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
     // handle png and ktx
     if (isPNG) {
         // This was taken out of SetupSourceImage, dont want to decode PNG yet
-        // just peek tha the header.
+        // just peek at the header.
         const uint8_t* data = nullptr;
         int32_t dataSize = 0;
 

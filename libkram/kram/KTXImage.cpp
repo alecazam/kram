@@ -765,7 +765,7 @@ const char* supercompressionName(KTX2Supercompression type)
 // https://docs.unity3d.com/ScriptReference/Experimental.Rendering.GraphicsFormat.html
 // Unity only handles 4,5,6,8,10,12 square block dimensions
 
-uint32_t KTXImage::mipLevelSize(uint32_t width_, uint32_t height_) const
+uint32_t KTXImage::mipLengthCalc(uint32_t width_, uint32_t height_) const
 {
     // TODO: ktx has 4 byte row alignment, fix that in calcs and code
     // data isn't fully packed on explicit formats like r8, rg8, r16f.
@@ -776,14 +776,14 @@ uint32_t KTXImage::mipLevelSize(uint32_t width_, uint32_t height_) const
     return count * size;
 }
 
-uint32_t KTXImage::mipLevelSize(uint32_t mipNumber) const
+uint32_t KTXImage::mipLengthCalc(uint32_t mipNumber) const
 {
     uint32_t w = width;
     uint32_t h = height;
     uint32_t d = depth;
     
     mipDown(w, h, d, mipNumber);
-    return mipLevelSize(w, h);
+    return mipLengthCalc(w, h);
 }
 
 uint32_t KTXImage::blockCountRows(uint32_t width_) const
@@ -1157,7 +1157,7 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
             (h >= mipMinSize && h <= mipMaxSize));
         
         if (keepMip) {
-            level.length = mipLevelSize(w, h);
+            level.length = mipLengthCalc(w, h);
             
             if (mipLevels.empty()) {
                 // adjust the top dimensions
@@ -1183,7 +1183,7 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
             
             if (keepMip && (mipLevels.size() < (size_t)maxMipLevels)) {
                 // length needs to be multiplied by chunk size before writing out
-                level.length = mipLevelSize(w, h);
+                level.length = mipLengthCalc(w, h);
                 
                 if (mipLevels.empty()) {
                     // adjust the top dimensions
@@ -1204,7 +1204,7 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
     }
     else {
         // length needs to be multiplied by chunk size before writing out
-        level.length = mipLevelSize(w, h);
+        level.length = mipLengthCalc(w, h);
         
         mipLevels.push_back(level);
     }
@@ -1233,7 +1233,7 @@ void KTXImage::initMipLevels(size_t mipOffset)
     int32_t d = depth;
     
     for (uint32_t i = 0; i < numMips; ++i) {
-        size_t dataSize = mipLevelSize(w, h);
+        size_t dataSize = mipLengthCalc(w, h);
 
         uint32_t levelSize = dataSize * numChunks;
 

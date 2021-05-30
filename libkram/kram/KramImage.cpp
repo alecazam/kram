@@ -131,6 +131,9 @@ bool Image::loadImageFromKTX(const KTXImage& image)
     _hasColor = isColorFormat(image.pixelFormat);
     _hasAlpha = isAlphaFormat(image.pixelFormat);
 
+    // preserve chunk count from the conversion
+    setChunksY(image.totalChunks());
+   
     // TODO: this assumes 1,2,3 channel srcData has no rowPadding to say 4 bytes
     return convertToFourChannel(image);
 }
@@ -144,10 +147,11 @@ bool Image::convertToFourChannel(const KTXImage& image) {
     uint64_t mipBaseOffset = srcMipLevel.offset;
     const uint8_t* srcLevelData = image.fileData;
     
+    
     vector<uint8_t> mipStorage;
     if (image.isSupercompressed()) {
         
-        mipStorage.resize(image.mipLevelSize(mipNumber));
+        mipStorage.resize(image.levelLength(mipNumber));
         if (!image.unpackLevel(mipNumber, srcLevelData + srcMipLevel.offset, mipStorage.data())) {
             return false;
         }
@@ -1994,19 +1998,23 @@ bool KramEncoder::createMipsFromChunks(
     return true;
 }
 
-// TODO: try to elim KTXImage passed into this
 bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                              ImageData& mipImage, TextureData& outputTexture,
                              int32_t mipStorageSize) const
 {
     int32_t w = mipImage.width;
-
+    int32_t h = mipImage.height;
+    
     const Color* srcPixelData = mipImage.pixels;
     const float4* srcPixelDataFloat4 = mipImage.pixelsFloat;
 
-    int32_t h = mipImage.height;
-    ;
-
+    // TODO: try to elim KTXImage passed into this
+    // only use of image (can determine this from format)
+    int32_t numBlocks = image.blockCount(w, h);
+    int32_t blockSize = image.blockSize();
+    int32_t mipLength = image.mipLengthCalc(w, h);
+    Int2    blockDims = image.blockDims();
+    
     if (info.isExplicit) {
         switch (info.pixelFormat) {
             case MyMTLPixelFormatR8Unorm:
@@ -2014,7 +2022,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
             // no RGB8 writes
             case MyMTLPixelFormatRGBA8Unorm:
             case MyMTLPixelFormatRGBA8Unorm_sRGB: {
-                int32_t count = image.blockSize() / 1;
+                int32_t count = blockSize / 1;
 
                 uint8_t* dst = (uint8_t*)outputTexture.data.data();
 
@@ -2042,7 +2050,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
             case MyMTLPixelFormatRG16Float:
             // no RGB16Float writes
             case MyMTLPixelFormatRGBA16Float: {
-                int32_t count = image.blockSize() / 2;
+                int32_t count = blockSize / 2;
 
                 half* dst = (half*)outputTexture.data.data();
 
@@ -2069,7 +2077,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
             case MyMTLPixelFormatRG32Float:
             // no RGB32Float writes
             case MyMTLPixelFormatRGBA32Float: {
-                int32_t count = image.blockSize() / 4;
+                int32_t count = blockSize / 4;
 
                 float* dst = (float*)outputTexture.data.data();
 
@@ -2276,11 +2284,8 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
             const int32_t blockDim = 4;
             int32_t blocks_x = (w + blockDim - 1) / blockDim;
             //int32_t blocks_y = (h + blockDim - 1) / blockDim;
-            int32_t blockSize = image.blockSize();
             for (int32_t y = 0; y < h; y += blockDim) {
                 for (int32_t x = 0; x < w; x += blockDim) {
-                    
-                    
                     
                     // Have to copy to temp block, since encode doesn't test w/h edges
                     // copy src to 4x4 clamping the edge pixels
@@ -2386,7 +2391,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
 
             ATEEncoder encoder;
             success = encoder.Encode(
-                (int32_t)metalType(pixelFormatRemap), image.mipLevelSize(w, h), image.blockDims().y,
+                (int32_t)metalType(pixelFormatRemap), mipLength, blockDims.y,
                 info.hasAlpha,
                 info.isColorWeighted, info.isVerbose, info.quality, w, h,
                 (const uint8_t*)srcPixelData, outputTexture.data.data());
@@ -2398,7 +2403,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
             
             // find the 8,1 block and print it
 //            uint32_t numRowBlocks = image.blockCountRows(w);
-//            const uint8_t* block = outputTexture.data.data() + (numRowBlocks * 1 + 8) * image.blockSize();
+//            const uint8_t* block = outputTexture.data.data() + (numRowBlocks * 1 + 8) * blockSize;
 //            printBCBlock(block, pixelFormatRemap);
         }
 #endif
@@ -2466,9 +2471,6 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
         // have to remap endpoints to signed values (-1,1) to (0,127) for
         // (0,1) and (-128,-127,0) for (-1,0)/                        else
         if (success && info.isSigned && doRemapSnormEndpoints) {
-            int32_t numBlocks = image.blockCount(w, h);
-            int32_t blockSize = image.blockSize();
-
             int32_t blockSize16 = blockSize / sizeof(uint16_t);
 
             uint16_t* blockPtr = (uint16_t*)outputTexture.data.data();
@@ -2506,7 +2508,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
         if (info.useATE) {
             ATEEncoder encoder;
             bool success = encoder.Encode(
-                (int32_t)metalType(info.pixelFormat), image.mipLevelSize(w, h), image.blockDims().y,
+                (int32_t)metalType(info.pixelFormat), mipLength, blockDims.y,
                 info.hasAlpha,
                 info.isColorWeighted, info.isVerbose, info.quality, w, h,
                 (const uint8_t*)srcPixelData, outputTexture.data.data());
@@ -2555,7 +2557,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
             }
 
             // not generating 3d ASTC ever, even for 3D textures
-            Int2 blockDims = image.blockDims();
+            //Int2 blockDims = image.blockDims();
 
             // setup flags
             uint32_t flags = 0;

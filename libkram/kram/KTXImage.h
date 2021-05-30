@@ -315,8 +315,8 @@ public:
     
     // mip
     void mipDimensions(uint32_t mipNumber, uint32_t& width_, uint32_t& height_, uint32_t& depth_) const;
-    uint32_t mipLevelSize(uint32_t width_, uint32_t height_) const;
-    uint32_t mipLevelSize(uint32_t mipNumber) const;
+    uint32_t mipLengthCalc(uint32_t width_, uint32_t height_) const;
+    uint32_t mipLengthCalc(uint32_t mipNumber) const;
     size_t mipLengthLargest() const { return mipLevels[0].length; }
     size_t mipLength(uint32_t mipNumber) const { return mipLevels[mipNumber].length; }
     

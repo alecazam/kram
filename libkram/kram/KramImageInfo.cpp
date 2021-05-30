@@ -1102,6 +1102,14 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
 
     isHDR = srcPixelsFloat != nullptr;
 
+    // transfer the chunk count, this was a ktx/2 import
+    if (sourceImage.chunksY() > 0) {
+        chunksX = 1;
+        
+        chunksY =
+        chunksCount = sourceImage.chunksY();;
+    }
+    
     // these come from png header, but hasn't walked pixels yet
     if (!sourceImage.hasAlpha()) {
         hasAlpha = false;

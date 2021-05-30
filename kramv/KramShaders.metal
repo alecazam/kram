@@ -469,6 +469,37 @@ vertex ColorInOut DrawVolumeVS(
     return out;
 }
 
+float4 doLighting(float4 albedo, float3 viewDir, float3 n) {
+    
+    float3 lightDir = normalize(float3(1,1,1));
+    float3 lightColor = float3(1,1,1);
+    
+    // diffuse
+    float dotNLUnsat = dot(n, lightDir);
+    float dotNL = saturate(dotNLUnsat);
+    float3 diffuse = lightColor.xyz * dotNL;
+
+    float3 specular = float3(0.0);
+
+    // TODO: this renders bright in one quadrant of wrap preview, hard in ortho view
+    // specular
+    bool doSpecular = false;
+    if (doSpecular) {
+        float3 ref = normalize(reflect(viewDir, n));
+        
+        // above can be interpolated
+        float dotRL = saturate(dot(ref, lightDir));
+        dotRL = pow(dotRL, 4.0); // * saturate(dotNL * 8.0);  // no spec without diffuse
+        specular = saturate(dotRL * lightColor.rgb);
+    }
+
+    // Note: don't have any albedo yet, need second texture input
+    float3 ambient = mix(0.1, 0.3, saturate(dotNLUnsat * 0.5 + 0.5));
+    albedo.xyz *= (ambient + diffuse + specular);
+    
+    return albedo;
+}
+
 
 // TODO: do more test shapes, but that affects eyedropper
 // generate and pass down tangents + bitanSign in the geometry
@@ -540,47 +571,27 @@ float4 DrawPixels(
                 in.tangent.w = -in.tangent.w;
             }
             
-            float3 lightDir = normalize(float3(1,1,1));
-            float3 lightColor = float3(1,1,1);
             
             float3 n = c.xyz;
             
             // handle the basis here
             n = toFloat(transformNormal(toHalf(n), in.tangent, in.normal));
             
-            // diffuse
-            float dotNLUnsat = dot(n, lightDir);
-            float dotNL = saturate(dotNLUnsat);
-            float3 diffuse = lightColor.xyz * dotNL;
-            
-            float3 specular = float3(0.0);
-            
-            // this renders bright in one quadrant of wrap preview, hard in ortho view
-            // specular
-            bool doSpecular = false;
-            if (doSpecular) {
-                float3 view = normalize(in.worldPos - uniforms.cameraPosition);
-                float3 ref = normalize(reflect(view, n));
-                
-                // above can be interpolated
-                float dotRL = saturate(dot(ref, lightDir));
-                dotRL = pow(dotRL, 4.0); // * saturate(dotNL * 8.0);  // no spec without diffuse
-                specular = saturate(dotRL * lightColor.rgb);
-            }
-            
-            // Note: don't have any albedo yet, need second texture input
-            float3 ambient = mix(0.1, 0.3, saturate(dotNLUnsat * 0.5 + 0.5));
-            c.xyz = ambient + diffuse + specular;
-            
+            float3 viewDir = normalize(in.worldPos - uniforms.cameraPosition);
+            c = doLighting(float4(1.0), viewDir, n);
+
             c.a = 1;
-            
-            // TODO: add some specular, can this be combined with albedo texture in same folder?
-            // may want to change perspective for that, and give light controls
         }
         else {
             // to unorm
             if (uniforms.isSigned) {
                 c.xyz = toUnorm(c.xyz);
+            }
+            
+            // need an isAlbedo test
+            if (!uniforms.isSigned) {
+                float3 viewDir = normalize(in.worldPos - uniforms.cameraPosition);
+                c = doLighting(c, viewDir, toFloat(in.normal));
             }
             
             // to premul, but also need to see without premul

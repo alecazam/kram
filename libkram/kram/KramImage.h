@@ -58,7 +58,11 @@ public:
 
     bool hasColor() const { return _hasColor; }
     bool hasAlpha() const { return _hasAlpha; }
-
+    
+    // if converted a KTX/2 image to Image, then this field will be non-zero
+    uint32_t chunksY() const { return _chunksY; }
+    void setChunksY(uint32_t chunksY) { _chunksY = chunksY; }
+    
 private:
     bool convertToFourChannel(const KTXImage& image);
 
@@ -77,6 +81,8 @@ private:
     vector<uint8_t> _pixels;  // TODO: change to Color?
     //vector<half4> _pixelsHalf; // TODO: add support to import fp16
     vector<float4> _pixelsFloat;
+    
+    uint32_t _chunksY = 0;
 };
 
 class KramDecoderParams {
