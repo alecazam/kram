@@ -481,9 +481,7 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n) {
 
     float3 specular = float3(0.0);
 
-    // TODO: this renders bright in one quadrant of wrap preview, hard in ortho view
-    // specular
-    bool doSpecular = false;
+    bool doSpecular = true;
     if (doSpecular) {
         float3 ref = normalize(reflect(viewDir, n));
         
@@ -493,9 +491,14 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n) {
         specular = saturate(dotRL * lightColor.rgb);
     }
 
-    // Note: don't have any albedo yet, need second texture input
     float3 ambient = mix(0.1, 0.3, saturate(dotNLUnsat * 0.5 + 0.5));
-    albedo.xyz *= (ambient + diffuse + specular);
+    
+    // attenuate, and not saturate below, so no HDR yet
+    specular *= 0.3;
+    diffuse *= 0.7;
+    //ambient *= 0.2;
+    
+    albedo.xyz *= saturate(ambient + diffuse + specular);
     
     return albedo;
 }
@@ -600,9 +603,10 @@ float4 DrawPixels(
             }
         }
         
+        // this allows viewing wrap
         bool doShowUV = false;
         if (doShowUV) {
-            c = float4(in.texCoord, 0.0, 1.0);
+            c = float4(fract(in.texCoord), 0.0, 1.0);
         }
     }
     else {
