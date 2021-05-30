@@ -195,8 +195,8 @@ half3 transformNormal(half3 bumpNormal, half4 tangent, half3 vertexNormal)
     half bitangentSign = tangent.w;
     
     // ModelIO not generating correct bitan sign
-    // TODO: flip this on srcData, and not here
-    bitangentSign = -bitangentSign;
+    // DONE: flip this on srcData, and not here
+    //bitangentSign = -bitangentSign;
     
     // now transform by basis and normalize from any shearing, and since interpolated basis vectors
     // are not normalized
@@ -210,9 +210,13 @@ half3 transformNormal(half4 tangent, half3 vertexNormal,
                       texture2d<half> texture, sampler s, float2 uv, bool isSigned = true)
 {
     half4 nmap = texture.sample(s, uv);
+    
+    // unorm-only formats like ASTC need to convert
     if (!isSigned) {
         nmap.xy = toSnorm8(nmap.xy);
     }
+    
+    // rebuild the z term
     half3 bumpNormal = toNormal(nmap.xyz);
    
     return transformNormal(bumpNormal,
@@ -276,7 +280,7 @@ float3x3 toFloat3x3(float4x4 m)
 
 // this is for vertex shader if tangent supplied
 void transformBasis(thread float3& normal, thread float3& tangent,
-                    float4x4 modelToWorldTfm, bool isScaled = false)
+                    float4x4 modelToWorldTfm, float3 invScale2)
 {
     
     float3x3 m = toFloat3x3(modelToWorldTfm);
@@ -289,25 +293,24 @@ void transformBasis(thread float3& normal, thread float3& tangent,
     // most apps assume m, but after averaging it can be just as off the surface as the normal
     tangent = m * tangent;
     
-    
     // have to apply invSquare of scale here to approximate invT
     // also make sure to identify inversion off determinant before instancing so that backfacing is correct
     // this is only needed if non-uniform scale present in modelToWorldTfm, could precompute scale2
-    if (isScaled)
-    {
-        // compute scale squared from rows
-        float3 scale2 = float3(
-            length_squared(m[0].xyz),
-            length_squared(m[1].xyz),
-            length_squared(m[2].xyz));
-        
-        // do a max(1e4), but really don't have scale be super small
-        scale2 = recip(max(0.0001 * 0.0001, scale2));
+//    if (isScaled)
+//    {
+//        // compute scale squared from rows
+//        float3 scale2 = float3(
+//            length_squared(m[0].xyz),
+//            length_squared(m[1].xyz),
+//            length_squared(m[2].xyz));
+//
+//        // do a max(1e4), but really don't have scale be super small
+//        scale2 = recip(max(0.0001 * 0.0001, scale2));
         
         // apply inverse
-        normal  *= scale2;
-        tangent *= scale2;
-    }
+        normal  *= invScale2;
+        tangent *= invScale2;
+//    }
     
     // vertex shader normalize, but the fragment shader should not
     normal  = normalize(normal);
@@ -358,7 +361,7 @@ ColorInOut DrawImageFunc(
     if (uniforms.isNormal && uniforms.isPreview) {
         float3 normal = in.normal;
         float3 tangent = in.tangent.xyz;
-        transformBasis(normal, tangent, uniforms.modelMatrix, false);
+        transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2);
         
         out.normal = toHalf(normal);
         out.tangent.xyz = toHalf(tangent);
@@ -546,7 +549,8 @@ float4 DrawPixels(
             n = toFloat(transformNormal(toHalf(n), in.tangent, in.normal));
             
             // diffuse
-            float dotNL = saturate(dot(n, lightDir));
+            float dotNLUnsat = dot(n, lightDir);
+            float dotNL = saturate(dotNLUnsat);
             float3 diffuse = lightColor.xyz * dotNL;
             
             float3 specular = float3(0.0);
@@ -565,7 +569,7 @@ float4 DrawPixels(
             }
             
             // Note: don't have any albedo yet, need second texture input
-            float3 ambient = float3(0.1);
+            float3 ambient = mix(0.1, 0.3, saturate(dotNLUnsat * 0.5 + 0.5));
             c.xyz = ambient + diffuse + specular;
             
             c.a = 1;

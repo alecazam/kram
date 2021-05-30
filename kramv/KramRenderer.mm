@@ -88,7 +88,8 @@ using namespace simd;
     //MTKMesh *_meshPlane; // really a thin gox
     MTKMesh *_meshBox;
     MTKMesh *_meshSphere;
-    MTKMesh *_meshCylinder;
+    //MTKMesh *_meshCylinder;
+    MTKMesh *_meshCapsule;
     MTKMeshBufferAllocator *_metalAllocator;
     bool _is3DView; // whether view is 3d for now
     
@@ -406,15 +407,15 @@ using namespace simd;
 {
     NSError* error = nil;
 
-    //mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
-    
-    
     mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
+    
+    // ModelIO has the uv going counterclockwise on sphere/cylinder, but not on the box.
+    // And it also has a flipped bitangent.w.
     
     // flip the u coordinate
     if (doFlipUV)
     {
-        id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[1];
+        id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
         float2* uvData = (float2*)uvs.map.bytes;
         
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
@@ -425,6 +426,18 @@ using namespace simd;
     [mdlMesh addOrthTanBasisForTextureCoordinateAttributeNamed: MDLVertexAttributeTextureCoordinate
                                           normalAttributeNamed: MDLVertexAttributeNormal
                                          tangentAttributeNamed: MDLVertexAttributeTangent];
+    
+    // DONE: flip the bitangent.w sign here, and remove the flip in the shader
+    bool doFlipBitangent = true;
+    if (doFlipBitangent)
+    {
+        id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshTangent];
+        float4* uvData = (float4*)uvs.map.bytes;
+        
+        for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
+            uvData[i].w = -uvData[i].w;
+        }
+    }
     
     // TODO: name the vertex attributes, can that be done in _mdlVertexDescriptor
     // may have to set name on MTLBuffer range on IB and VB
@@ -466,19 +479,34 @@ using namespace simd;
     // u is the opposite direction to the cube/plane, so need to flip those coords
     // I think this has also flipped the tangents the wrong way.
     
+    // All prims are viewed with +Y, not +Z up
+    
     mdlMesh = [MDLMesh newEllipsoidWithRadii:(vector_float3){0.5, 0.5, 0.5} radialSegments:16 verticalSegments:16 geometryType:MDLGeometryTypeTriangles inwardNormals:NO hemisphere:NO allocator:_metalAllocator];
     
     _meshSphere = [self _createMeshAsset:"MeshSphere" mdlMesh:mdlMesh doFlipUV:true];
     
-    mdlMesh = [MDLMesh newCylinderWithHeight:1.0
-                                       radii:(vector_float2){0.5, 0.5}
-                                            radialSegments:16
-                                        verticalSegments:1
-                                        geometryType:MDLGeometryTypeTriangles
-                                       inwardNormals:NO
-                                           allocator:_metalAllocator];
+// this maps 1/3rd of texture to the caps, and just isn't a very good uv mapping, using capsule nistead
+//    mdlMesh = [MDLMesh newCylinderWithHeight:1.0
+//                                       radii:(vector_float2){0.5, 0.5}
+//                                            radialSegments:16
+//                                        verticalSegments:1
+//                                        geometryType:MDLGeometryTypeTriangles
+//                                       inwardNormals:NO
+//                                           allocator:_metalAllocator];
+//
+//    _meshCylinder = [self _createMeshAsset:"MeshCylinder" mdlMesh:mdlMesh doFlipUV:true];
     
-    _meshCylinder = [self _createMeshAsset:"MeshCylinder" mdlMesh:mdlMesh doFlipUV:true];
+    mdlMesh = [MDLMesh newCapsuleWithHeight:1.0
+                                   radii:(vector_float2){0.5, 0.25} // vertical cap subtracted from height
+                          radialSegments:16
+                        verticalSegments:1
+                      hemisphereSegments:16
+                            geometryType:MDLGeometryTypeTriangles
+                           inwardNormals:NO
+                               allocator:_metalAllocator];
+
+    
+    _meshCapsule = [self _createMeshAsset:"MeshCapsule" mdlMesh:mdlMesh doFlipUV:true];
     
     _mesh = _meshBox;
     
@@ -686,10 +714,10 @@ using namespace simd;
     _modelMatrix = float4x4(float4m(scaleX, scaleY, 1.0f, 1.0f)); // non uniform scale
     _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0); // set z=-1 unit back
     
-    // squashed 3d primitive in z, throws off normals
+    // uniform scaled 3d primitiv
     float scale = MAX(scaleX, scaleY);
-    _modelMatrix3D = float4x4(float4m(scale, scale, 1.0f, 1.0f)); // non uniform scale
-    _modelMatrix3D = _modelMatrix3D * matrix4x4_translation(0.0f, 0.0f, -1.0); // set z=-1 unit back
+    _modelMatrix3D = float4x4(float4m(scale, scale, scale, 1.0f)); // uniform scale
+    _modelMatrix3D = _modelMatrix3D * matrix4x4_translation(0.0f, 0.0f, -1.0f); // set z=-1 unit back
     
     return YES;
 }
@@ -700,7 +728,7 @@ using namespace simd;
     
     // scale
     if (_is3DView) {
-        float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));  // non-uniform scale
+        float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));  // non-uniform scale is okay, affects ortho volume
         viewMatrix = panTransform * viewMatrix;
         
         return _projectionMatrix * viewMatrix * _modelMatrix3D;
@@ -711,6 +739,33 @@ using namespace simd;
         
         return _projectionMatrix * viewMatrix * _modelMatrix;
     }
+}
+
+bool almost_equal_elements(float3 v, float tol) {
+    return (fabs(v.x - v.y) < tol) && (fabs(v.x - v.z) < tol);
+}
+
+float3 inverseScaleSquared(float4x4 m) {
+    float3 scaleSquared = float3m(
+        length_squared(m.columns[0].xyz),
+        length_squared(m.columns[1].xyz),
+        length_squared(m.columns[2].xyz));
+    
+    // if uniform, then set scaleSquared all to 1
+    if (almost_equal_elements(scaleSquared, 1e-5)) {
+        scaleSquared = float3m(1.0);
+    }
+   
+    // don't divide by 0
+    float3 invScaleSquared = recip(simd::max(float3m(0.0001 * 0.0001), scaleSquared));
+        
+    // TODO: could also identify determinant here for flipping orient
+    
+    // Note: in 2D, scales is x,x,1, so always apply invScale2,
+    // and that messes up preview normals on sphere/cylinder.
+    // May be from trying to do all that math in half.
+    
+    return invScaleSquared;
 }
 
 - (void)_updateGameState
@@ -772,7 +827,8 @@ using namespace simd;
         case 0: _mesh = _meshBox; _is3DView = false; break;
         case 1: _mesh = _meshBox; break;
         case 2: _mesh = _meshSphere; break;
-        case 3: _mesh = _meshCylinder; break;
+        //case 3: _mesh = _meshCylinder; break;
+        case 3: _mesh = _meshCapsule; break;
     }
     
     // translate
@@ -794,6 +850,8 @@ using namespace simd;
         // works when only one texture, but switch to projectViewMatrix
         uniforms.modelMatrix = _modelMatrix3D;
        
+        uniforms.modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix3D);
+        
         // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
         _showSettings->projectionViewModelMatrix = uniforms.projectionViewMatrix * uniforms.modelMatrix;
         
@@ -813,6 +871,8 @@ using namespace simd;
         // works when only one texture, but switch to projectViewMatrix
         uniforms.modelMatrix = _modelMatrix;
        
+        uniforms.modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix);
+        
         // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
         _showSettings->projectionViewModelMatrix = uniforms.projectionViewMatrix * uniforms.modelMatrix ;
         
@@ -935,7 +995,7 @@ using namespace simd;
     [renderEncoder setCullMode:MTLCullModeBack];
     [renderEncoder setDepthStencilState:_depthStateFull];
 
-    [renderEncoder pushDebugGroup:@"DrawBox"];
+    [renderEncoder pushDebugGroup:@"DrawShape"];
 
     // set the mesh shape
     for (NSUInteger bufferIndex = 0; bufferIndex < _mesh.vertexBuffers.count; bufferIndex++)
@@ -1221,7 +1281,7 @@ using namespace simd;
     id<MTLComputeCommandEncoder> renderEncoder = [commandBuffer computeCommandEncoder];
     renderEncoder.label = @"SampleCompute";
 
-    [renderEncoder pushDebugGroup:@"DrawBox"];
+    [renderEncoder pushDebugGroup:@"DrawShape"];
 
     UniformsCS uniforms;
     uniforms.uv.x = lookupX;
@@ -1297,7 +1357,7 @@ using namespace simd;
     
     //float aspect = size.width / (float)size.height;
     //_projectionMatrix = perspective_rhs(45.0f * (M_PI / 180.0f), aspect, 0.1f, 100.0f);
-    _projectionMatrix = orthographic_rhs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f, 100.0f, _showSettings->isReverseZ);
+    _projectionMatrix = orthographic_rhs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f, 100000.0f, _showSettings->isReverseZ);
     
     // DONE: adjust zoom to fit the entire image to the window
     _showSettings->zoomFit = MIN((float)_showSettings->viewSizeX,  (float)_showSettings->viewSizeY) /
