@@ -177,14 +177,8 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
     
 #if SUPPORT_RGB
     if (isInternalRGBFormat(image.pixelFormat)) {
-        isInfoOnly = false;
-        
-        // reopen and unzip it all
-        if (!image.open(imageData, imageDataLength, isInfoOnly)) {
-            return nil;
-        }
-        
-        // loads and converts image from RGB to RGBA
+        // loads and converts top level mip from RGB to RGBA (RGB0)
+        // handles all texture types
         Image rgbaImage;
         if (!rgbaImage.loadImageFromKTX(image))
             return nil;
@@ -193,14 +187,21 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
         KTXImage rbgaImage2;
        
         ImageInfoArgs dstImageInfoArgs;
+        dstImageInfoArgs.textureType = image.textureType;
         dstImageInfoArgs.pixelFormat = remapInternalRGBFormat(image.pixelFormat);
-        dstImageInfoArgs.doMipmaps = false;
+        dstImageInfoArgs.doMipmaps = image.header.numberOfMipmapLevels > 1; // ignore 0
         dstImageInfoArgs.textureEncoder = kTexEncoderExplicit;
-        dstImageInfoArgs.swizzleText = "rgb1";
-        
+
+        // set chunk count, so it's explicit
+        // the chunks are loaded into a vertical strip
+        dstImageInfoArgs.chunksX = 1;
+        dstImageInfoArgs.chunksY =
+        dstImageInfoArgs.chunksCount = image.totalChunks();
+                                                         
         ImageInfo dstImageInfo;
         dstImageInfo.initWithArgs(dstImageInfoArgs);
        
+        // this will build mips if needed
         KramEncoder encoder;
         if (!encoder.encode(dstImageInfo, rgbaImage, rbgaImage2)) {
             return nil;

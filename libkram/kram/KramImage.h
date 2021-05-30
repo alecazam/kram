@@ -31,8 +31,9 @@ enum ImageResizeFilter {
 
 struct MipConstructData;
 
-// TODO: this can only holds one level of mips, so custom mips aren't possible.
+// TODO: this can only hold one level of mips, so custom mips aren't possible.
 // Mipmap generation is all in-place to this storage.
+// Multiple chunks are possible in strip or grid form.
 class Image {
 public:
     Image();
@@ -41,13 +42,14 @@ public:
     bool loadImageFromPixels(const vector<uint8_t>& pixels, int32_t width,
                              int32_t height, bool hasColor, bool hasAlpha);
 
+    // convert top level to single-image
     bool loadImageFromKTX(const KTXImage& image);
 
     
     // this is only for 2d images
     bool resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, ImageResizeFilter filter = kImageResizeFilterPoint);
 
-    // return state
+    // this is width and height of the strip/grid, chunks may be copied out of this
     int32_t width() const { return _width; }
     int32_t height() const { return _height; }
 
@@ -56,6 +58,9 @@ public:
 
     bool hasColor() const { return _hasColor; }
     bool hasAlpha() const { return _hasAlpha; }
+
+private:
+    bool convertToFourChannel(const KTXImage& image);
 
 private:
     // pixel size of image

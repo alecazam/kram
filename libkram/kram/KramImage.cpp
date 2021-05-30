@@ -114,47 +114,48 @@ Image::Image() : _width(0), _height(0), _hasColor(false), _hasAlpha(false)
 // this routine converts KTX to float4, but don't need if already matching 4 channels
 // could do other formata conversions here on more supported formats (101010A2, etc).
 
-// TODO: handle loading KTXImage with custom mips
-// TODO: handle loading KTXImage with other texture types (cube, array, etc)
-
 // TODO: image here is very specifically a single level of chunks of float4 or Color (RGBA8Unorm)
 // the encoder is only written to deal with those types.
-
-// TODO: for png need to turn grid/horizontal strip into a vertical strip if not already
-// that way can move through the chunks and overwrite them in-place.
-// That would avoid copying each chunk out in the encode, but have to do in reodering.
-// That way data is stored as KTX would instead of how PNG does.
 
 bool Image::loadImageFromKTX(const KTXImage& image)
 {
     // copy the data into a contiguous array
+    // a verticaly chunke image, will be converted to chunks in encode
     _width = image.width;
-    _height = image.height;
-
-    // TODO: handle more texture types with custom mips
-    if (image.textureType != MyMTLTextureType2D) {
-        KLOGE("Image", "Only support 2D texture type import for KTX");
-        return false;
-    }
-
-    // TODO: handle loading custom mips.  Save will currently box filter to build
-    // remaining mips but for SDF or coverage scaled alpha test, need to
-    // preserve original data.  Problem is that Image save to KTX/2 always does in-place
-    // mipgen.
+    _height = image.height * image.totalChunks();
     
     if (image.header.numberOfMipmapLevels > 1) {
-        KLOGW("Image", "Skipping custom mip levels from KTX load");
+        KLOGW("Image", "Skipping custom mip levels from KTX load, but will build them from top level");
     }
-
-    // so can call through to blockSize
-    KTXHeader header;
-    header.initFormatGL(image.pixelFormat);
-    //int32_t blockSize = image.blockSize();
 
     _hasColor = isColorFormat(image.pixelFormat);
     _hasAlpha = isAlphaFormat(image.pixelFormat);
 
     // TODO: this assumes 1,2,3 channel srcData has no rowPadding to say 4 bytes
+    return convertToFourChannel(image);
+}
+
+bool Image::convertToFourChannel(const KTXImage& image) {
+    
+    const uint32_t mipNumber = 0;
+    const auto& srcMipLevel = image.mipLevels[mipNumber];
+    
+    // this is offset to a given level
+    uint64_t mipBaseOffset = srcMipLevel.offset;
+    const uint8_t* srcLevelData = image.fileData;
+    
+    vector<uint8_t> mipStorage;
+    if (image.isSupercompressed()) {
+        
+        mipStorage.resize(image.mipLevelSize(mipNumber));
+        if (!image.unpackLevel(mipNumber, srcLevelData + srcMipLevel.offset, mipStorage.data())) {
+            return false;
+        }
+        srcLevelData = mipStorage.data();
+        
+        // going to upload from mipStorage temp array
+        mipBaseOffset = 0;
+    }
     
     switch (image.pixelFormat) {
         case MyMTLPixelFormatR8Unorm:
@@ -166,18 +167,15 @@ bool Image::loadImageFromKTX(const KTXImage& image)
         case MyMTLPixelFormatRGBA8Unorm_sRGB:
         case MyMTLPixelFormatRGBA8Unorm:
         {
-            const uint8_t* srcPixels =
-                image.fileData + image.mipLevels[0].offset;
-
+            const uint8_t* srcPixels = srcLevelData;
+          
             int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
            
-            // Note: clearing unspecified channels to 0000, not 0001
-            // can set swizzleText when encoding
             _pixels.resize(4 * _width * _height);
             
             Color* dstPixels = (Color*)_pixels.data();
 
-            Color dstTemp = {0,0,0,0};
+            Color dstTemp = {0,0,0,255};
             
             for (int32_t y = 0; y < _height; ++y) {
                 int32_t y0 = y * _width;
@@ -193,9 +191,6 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                     dstPixels[dstX] = dstTemp;
                 }
             }
-
-            // caller can use swizzle after loading data here, and even compress
-            // content
             break;
         }
 
@@ -207,17 +202,14 @@ bool Image::loadImageFromKTX(const KTXImage& image)
         case MyMTLPixelFormatRGBA16Float: {
             int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
             
-            // Note: clearing unspecified channels to 0000, not 0001
-            // can set swizzleText when encoding
             _pixelsFloat.resize(_width * _height);
 
             // treat as float for per channel copies
             float4* dstPixels = _pixelsFloat.data();
 
-            const half* srcPixels =
-                (const half*)(image.fileData + image.mipLevels[0].offset);
-
-            half4 dstTemp = half4((half)0);
+            const half* srcPixels = (const half*)srcLevelData;
+               
+            half4 dstTemp = toHalf4(float4m(0.0f, 0.0f, 0.0f, 1.0f));
         
             for (int32_t y = 0; y < _height; ++y) {
                 int32_t y0 = y * _width;
@@ -235,12 +227,6 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                     dstPixels[dstX] = toFloat4(dstTemp);
                 }
             }
-
-            // caller can swizzle
-            // caller can compress to BC6H or ASTC-HDR if encoders available
-            // some textures could even go to LDR, but would need to tonemap or
-            // clamp the values
-
             break;
         }
 
@@ -250,18 +236,15 @@ bool Image::loadImageFromKTX(const KTXImage& image)
         case MyMTLPixelFormatRGB32Float_internal:
 #endif
        case MyMTLPixelFormatRGBA32Float: {
-            const float* srcPixels =
-                (const float*)(image.fileData + image.mipLevels[0].offset);
+            const float* srcPixels = (const float*)srcLevelData;
 
             int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
            
-            // Note: clearing unspecified channels to 0000, not 0001
-            // can set swizzleText when encoding
             _pixelsFloat.resize(_width * _height);
            
             // treat as float for per channel copies
             float4* dstPixels = _pixelsFloat.data();
-            float4 dstTemp = float4m(0.0f);
+            float4 dstTemp = float4m(0.0f, 0.0f, 0.0f, 1.0f);
            
             for (int32_t y = 0; y < _height; ++y) {
                 int32_t y0 = y * _width;
@@ -277,12 +260,7 @@ bool Image::loadImageFromKTX(const KTXImage& image)
                     dstPixels[dstX] = dstTemp;
                 }
             }
-
-            // caller can swizzle
-            // caller can compress to BC6H or ASTC-HDR if encoders available
-            // some textures could even go to LDR, but would need to tonemap or
-            // clamp the values
-
+           
             break;
         }
         default:
