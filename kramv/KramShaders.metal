@@ -185,17 +185,21 @@ half3 toNormal(half3 n)
 
 // use mikktspace, gen bitan in frag shader with sign, don't normalize vb/vt
 // see http://www.mikktspace.com/
-half3 transformNormal(half4 tangent, half3 vertexNormal, half3 bumpNormal)
+half3 transformNormal(half3 bumpNormal, half4 tangent, half3 vertexNormal)
 {
     // Normalize tangent/vertexNormal in vertex shader
     // but don't renormalize interpolated tangent, vertexNormal in fragment shader
     // Reconstruct bitan in frag shader
     // https://bgolus.medium.com/generating-perfect-normal-maps-for-unity-f929e673fc57
 
+    // ModelIO not generating correct bitan sign
+    // TODO: flip this on srcData, and not here
+    half bitangentSign = -tangent.w;
     
     // now transform by basis and normalize from any shearing, and since interpolated basis vectors
     // are not normalized
-    half3x3 tbn = half3x3(tangent.xyz, tangent.w * cross(vertexNormal, tangent.xyz), vertexNormal);
+    half3 bitangent =  bitangentSign * cross(vertexNormal, tangent.xyz);
+    half3x3 tbn = half3x3(tangent.xyz, bitangent, vertexNormal);
     bumpNormal = tbn * bumpNormal;
     return normalize(bumpNormal);
 }
@@ -209,7 +213,8 @@ half3 transformNormal(half4 tangent, half3 vertexNormal,
     }
     half3 bumpNormal = toNormal(nmap.xyz);
    
-    return transformNormal(tangent, vertexNormal, bumpNormal);
+    return transformNormal(bumpNormal,
+                           tangent, vertexNormal);
 }
 
 
@@ -258,8 +263,8 @@ void skinPosAndBasis(thread float4& position, thread float3& tangent, thread flo
     // not dealing with non-uniform scale correction
     // see scale2 handling in transformBasis, a little different with transpose of 3x4
     
-    tangent = (float4(tangent, 0.0) * bindPoseToBoneTransform);
     normal  = (float4(normal, 0.0)  * bindPoseToBoneTransform);
+    tangent = (float4(tangent, 0.0) * bindPoseToBoneTransform);
 }
 
 float3x3 toFloat3x3(float4x4 m)
@@ -268,23 +273,21 @@ float3x3 toFloat3x3(float4x4 m)
 }
 
 // this is for vertex shader if tangent supplied
-void transformBasis(thread float3& tangent, thread float3& normal,
+void transformBasis(thread float3& normal, thread float3& tangent,
                     float4x4 modelToWorldTfm, bool isScaled = false)
 {
     
     float3x3 m = toFloat3x3(modelToWorldTfm);
     
+    // note this is RinvT * n = (Rt)t = R, this is for simple inverse, inv scale handled below
+    // but uniform scale already handled by normalize
+    normal = m * normal;
+       
     // question here of whether tangent is transformed by m or mInvT
     // most apps assume m, but after averaging it can be just as off the surface as the normal
-    bool useInverseOnTangent = true;
-    if (useInverseOnTangent)
-        tangent = tangent * m;
-    else
-        tangent = m * tangent;
+    tangent = m * tangent;
     
-    // note this is n * R = Rt * n, for simple affine transforms Rinv = Rt, invScale then handled below
-    normal = normal * m;
-       
+    
     // have to apply invSquare of scale here to approximate invT
     // also make sure to identify inversion off determinant before instancing so that backfacing is correct
     // this is only needed if non-uniform scale present in modelToWorldTfm, could precompute scale2
@@ -300,13 +303,13 @@ void transformBasis(thread float3& tangent, thread float3& normal,
         scale2 = recip(max(0.0001 * 0.0001, scale2));
         
         // apply inverse
-        tangent *= scale2;
         normal  *= scale2;
+        tangent *= scale2;
     }
     
     // vertex shader normalize, but the fragment shader should not
-    tangent = normalize(tangent);
     normal  = normalize(normal);
+    tangent = normalize(tangent);
     
     // make sure to preserve bitan sign in tangent.w
 }
@@ -351,9 +354,9 @@ ColorInOut DrawImageFunc(
     // deal with full basis
     
     if (uniforms.isNormal && uniforms.isPreview) {
-        float3 tangent = in.tangent.xyz;
         float3 normal = in.normal;
-        transformBasis(tangent, normal, uniforms.modelMatrix, false);
+        float3 tangent = in.tangent.xyz;
+        transformBasis(normal, tangent, uniforms.modelMatrix, false);
         
         out.normal = toHalf(normal);
         out.tangent.xyz = toHalf(tangent);
@@ -470,6 +473,7 @@ vertex ColorInOut DrawVolumeVS(
 
 float4 DrawPixels(
     ColorInOut in [[stage_in]],
+    bool facing [[front_facing]],
     constant Uniforms& uniforms,
     float4 c,
     float2 textureSize
@@ -511,8 +515,6 @@ float4 DrawPixels(
         else if (uniforms.isNormal) {
             // light the normal map
             
-            
-            
             // add swizzle for ASTC/BC5nm, other 2 channels format can only store 01 in ba
             if (uniforms.isSwizzleAGToRG) {
                 c = float4(c.ag, 0, 1);
@@ -526,13 +528,20 @@ float4 DrawPixels(
             
             c.rgb = toNormal(c.rgb);
             
+            // flip the normal if facing is flipped
+            // TODO: needed for tangent too?
+            if (!facing) {
+                c.xyz = -c.xyz;
+                in.tangent.w = -in.tangent.w;
+            }
+            
             float3 lightDir = normalize(float3(1,1,1));
             float3 lightColor = float3(1,1,1);
             
             float3 n = c.xyz;
             
             // handle the basis here
-            n = toFloat(transformNormal(in.tangent, in.normal, toHalf(n)));
+            n = toFloat(transformNormal(toHalf(n), in.tangent, in.normal));
             
             // diffuse
             float dotNL = saturate(dot(n, lightDir));
@@ -776,6 +785,7 @@ float4 DrawPixels(
 
 fragment float4 Draw1DArrayPS(
     ColorInOut in [[stage_in]],
+    bool facing [[front_facing]],
     constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
@@ -790,11 +800,12 @@ fragment float4 Draw1DArrayPS(
     float2 textureSize = float2(colorMap.get_width(0), 1);
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, uniforms, c, textureSize);
+    return DrawPixels(in, facing, uniforms, c, textureSize);
 }
 
 fragment float4 DrawImagePS(
     ColorInOut in [[stage_in]],
+    bool facing [[front_facing]],
     constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
@@ -808,11 +819,12 @@ fragment float4 DrawImagePS(
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, uniforms, c, textureSize);
+    return DrawPixels(in, facing, uniforms, c, textureSize);
 }
 
 fragment float4 DrawImageArrayPS(
     ColorInOut in [[stage_in]],
+    bool facing [[front_facing]],
     constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
@@ -826,12 +838,13 @@ fragment float4 DrawImageArrayPS(
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, uniforms, c, textureSize);
+    return DrawPixels(in, facing, uniforms, c, textureSize);
 }
 
 
 fragment float4 DrawCubePS(
     ColorInOut in [[stage_in]],
+    bool facing [[front_facing]],
     constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
@@ -846,11 +859,12 @@ fragment float4 DrawCubePS(
     float2 textureSize = float2(w, w);
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, uniforms, c, textureSize);
+    return DrawPixels(in, facing, uniforms, c, textureSize);
 }
 
 fragment float4 DrawCubeArrayPS(
     ColorInOut in [[stage_in]],
+    bool facing [[front_facing]],
     constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
@@ -865,12 +879,13 @@ fragment float4 DrawCubeArrayPS(
     float2 textureSize = float2(w, w);
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, uniforms, c, textureSize);
+    return DrawPixels(in, facing, uniforms, c, textureSize);
 }
 
 
 fragment float4 DrawVolumePS(
     ColorInOut in [[stage_in]],
+    bool facing [[front_facing]],
     constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
@@ -895,7 +910,7 @@ fragment float4 DrawVolumePS(
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, uniforms, c, textureSize);
+    return DrawPixels(in, facing, uniforms, c, textureSize);
 }
 
 //--------------------------------------------------
