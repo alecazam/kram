@@ -70,8 +70,14 @@ using namespace simd;
     uint8_t _uniformBufferIndex;
 
     float4x4 _projectionMatrix;
+    
+    // 2d versions
     float4x4 _viewMatrix;
     float4x4 _modelMatrix;
+    
+    // 3d versions
+    float4x4 _viewMatrix3D;
+    float4x4 _modelMatrix3D;
 
     //float _rotation;
     KramLoader *_loader;
@@ -79,11 +85,12 @@ using namespace simd;
     
     MDLVertexDescriptor *_mdlVertexDescriptor;
     
-    MTKMesh *_meshPlane; // really a thin gox
+    //MTKMesh *_meshPlane; // really a thin gox
     MTKMesh *_meshBox;
     MTKMesh *_meshSphere;
     MTKMesh *_meshCylinder;
     MTKMeshBufferAllocator *_metalAllocator;
+    bool _is3DView; // whether view is 3d for now
     
     ShowSettings* _showSettings;
 }
@@ -395,17 +402,29 @@ using namespace simd;
     _sampleTex = [_device newTextureWithDescriptor:textureDesc];
 }
 
-- (MTKMesh*)_createMeshAsset:(const char*)name mdlMesh:(MDLMesh*)mdlMesh
+- (MTKMesh*)_createMeshAsset:(const char*)name mdlMesh:(MDLMesh*)mdlMesh doFlipUV:(bool)doFlipUV
 {
     NSError* error = nil;
 
     //mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
     
+    
+    mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
+    
+    // flip the u coordinate
+    if (doFlipUV)
+    {
+        id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[1];
+        float2* uvData = (float2*)uvs.map.bytes;
+        
+        for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
+            uvData[i].x = 1.0f - uvData[i].x;
+        }
+    }
+    
     [mdlMesh addOrthTanBasisForTextureCoordinateAttributeNamed: MDLVertexAttributeTextureCoordinate
                                           normalAttributeNamed: MDLVertexAttributeNormal
                                          tangentAttributeNamed: MDLVertexAttributeTangent];
-    
-    mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
     
     // TODO: name the vertex attributes, can that be done in _mdlVertexDescriptor
     // may have to set name on MTLBuffer range on IB and VB
@@ -437,15 +456,19 @@ using namespace simd;
                                        inwardNormals:NO
                                            allocator:_metalAllocator];
     
-    _meshBox = [self _createMeshAsset:"MeshBox" mdlMesh:mdlMesh];
+    _meshBox = [self _createMeshAsset:"MeshBox" mdlMesh:mdlMesh doFlipUV:false];
     
     // TOOO: have more shape types - this is box, need thin box (plane), and sphere, and cylinder
     // eventually load usdz and gltf2 custom model.  Need 3d manipulation of shape like arcball
     // and eyedropper is more complex.
     
+    // The sphere/cylinder shapes are v increasing in -Y, and u increasing conterclockwise,
+    // u is the opposite direction to the cube/plane, so need to flip those coords
+    // I think this has also flipped the tangents the wrong way.
+    
     mdlMesh = [MDLMesh newEllipsoidWithRadii:(vector_float3){0.5, 0.5, 0.5} radialSegments:16 verticalSegments:16 geometryType:MDLGeometryTypeTriangles inwardNormals:NO hemisphere:NO allocator:_metalAllocator];
-               
-    _meshSphere = [self _createMeshAsset:"MeshSphere" mdlMesh:mdlMesh];
+    
+    _meshSphere = [self _createMeshAsset:"MeshSphere" mdlMesh:mdlMesh doFlipUV:true];
     
     mdlMesh = [MDLMesh newCylinderWithHeight:1.0
                                        radii:(vector_float2){0.5, 0.5}
@@ -455,7 +478,7 @@ using namespace simd;
                                        inwardNormals:NO
                                            allocator:_metalAllocator];
     
-    _meshCylinder = [self _createMeshAsset:"MeshCylinder" mdlMesh:mdlMesh];
+    _meshCylinder = [self _createMeshAsset:"MeshCylinder" mdlMesh:mdlMesh doFlipUV:true];
     
     _mesh = _meshBox;
     
@@ -492,6 +515,7 @@ using namespace simd;
         _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, sourceImage, true);
        
         _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
+        _showSettings->decodedFormat = (MyMTLPixelFormat)texture.pixelFormat;
         
         _showSettings->lastFilename = fullFilename;
         _showSettings->lastTimestamp = timestamp;
@@ -659,8 +683,13 @@ using namespace simd;
     // have one of these for each texture added to the viewer
     float scaleX = MAX(1, texture.width);
     float scaleY = MAX(1, texture.height);
-    _modelMatrix = float4x4(float4m(scaleX, scaleY, 1.0f, 1.0f));
-    _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0);
+    _modelMatrix = float4x4(float4m(scaleX, scaleY, 1.0f, 1.0f)); // non uniform scale
+    _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0); // set z=-1 unit back
+    
+    // squashed 3d primitive in z, throws off normals
+    float scale = MAX(scaleX, scaleY);
+    _modelMatrix3D = float4x4(float4m(scale, scale, 1.0f, 1.0f)); // non uniform scale
+    _modelMatrix3D = _modelMatrix3D * matrix4x4_translation(0.0f, 0.0f, -1.0); // set z=-1 unit back
     
     return YES;
 }
@@ -670,10 +699,18 @@ using namespace simd;
     float4x4 panTransform = matrix4x4_translation(-panX, panY, 0.0);
     
     // scale
-    float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));
-    viewMatrix = panTransform * viewMatrix;
-    
-    return _projectionMatrix * viewMatrix * _modelMatrix;
+    if (_is3DView) {
+        float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));  // non-uniform scale
+        viewMatrix = panTransform * viewMatrix;
+        
+        return _projectionMatrix * viewMatrix * _modelMatrix3D;
+    }
+    else {
+        float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f)); // non-uniform scale
+        viewMatrix = panTransform * viewMatrix;
+        
+        return _projectionMatrix * viewMatrix * _modelMatrix;
+    }
 }
 
 - (void)_updateGameState
@@ -729,33 +766,60 @@ using namespace simd;
     uniforms.debugMode = _showSettings->isPreview ? ShaderDebugMode::ShDebugModeNone : (ShaderDebugMode)_showSettings->debugMode;
     uniforms.channels = (ShaderTextureChannels)_showSettings->channels;
 
+    // crude shape experiment
+    _is3DView = true;
+    switch(_showSettings->meshNumber) {
+        case 0: _mesh = _meshBox; _is3DView = false; break;
+        case 1: _mesh = _meshBox; break;
+        case 2: _mesh = _meshSphere; break;
+        case 3: _mesh = _meshCylinder; break;
+    }
+    
     // translate
     float4x4 panTransform = matrix4x4_translation(-_showSettings->panX, _showSettings->panY, 0.0);
     
     // scale
-    _viewMatrix = float4x4(float4m(_showSettings->zoom, _showSettings->zoom, 1.0f, 1.0f));
-    _viewMatrix = panTransform * _viewMatrix;
+    float zoom = _showSettings->zoom;
     
-    // viewMatrix should typically be the inverse
-    //_viewMatrix = simd_inverse(_viewMatrix);
-    
-    float4x4 projectionViewMatrix = _projectionMatrix * _viewMatrix;
-    
-    uniforms.projectionViewMatrix = projectionViewMatrix;
-
-    // works when only one texture, but switch to projectViewMatrix
-    uniforms.modelMatrix = _modelMatrix;
-    
-    // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
-    _showSettings->projectionViewModelMatrix = projectionViewMatrix * _modelMatrix;
-    
-    // crude shape experiment
-    switch(_showSettings->meshNumber) {
-        case 0: _mesh = _meshBox; break;
-        case 1: _mesh = _meshSphere; break;
-        case 2: _mesh = _meshCylinder; break;
+    if (_is3DView) {
+        _viewMatrix3D = float4x4(float4m(zoom, zoom, 1.0f, 1.0f)); // non-uniform
+        _viewMatrix3D = panTransform * _viewMatrix3D;
+        
+        // viewMatrix should typically be the inverse
+        //_viewMatrix = simd_inverse(_viewMatrix3D);
+       
+        float4x4 projectionViewMatrix = _projectionMatrix * _viewMatrix3D;
+        uniforms.projectionViewMatrix = projectionViewMatrix;
+        
+        // works when only one texture, but switch to projectViewMatrix
+        uniforms.modelMatrix = _modelMatrix3D;
+       
+        // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
+        _showSettings->projectionViewModelMatrix = uniforms.projectionViewMatrix * uniforms.modelMatrix;
+        
+        // cache the camera position
+        uniforms.cameraPosition = inverse(_viewMatrix3D).columns[3].xyz; // this is all ortho
     }
-    
+    else {
+        _viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));
+        _viewMatrix = panTransform * _viewMatrix;
+        
+        // viewMatrix should typically be the inverse
+        //_viewMatrix = simd_inverse(_viewMatrix3D);
+       
+        float4x4 projectionViewMatrix = _projectionMatrix * _viewMatrix;
+        uniforms.projectionViewMatrix = projectionViewMatrix;
+        
+        // works when only one texture, but switch to projectViewMatrix
+        uniforms.modelMatrix = _modelMatrix;
+       
+        // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
+        _showSettings->projectionViewModelMatrix = uniforms.projectionViewMatrix * uniforms.modelMatrix ;
+        
+        // cache the camera position
+        uniforms.cameraPosition = inverse(_viewMatrix).columns[3].xyz; // this is all ortho
+    }
+
     //_rotation += .01;
 }
 

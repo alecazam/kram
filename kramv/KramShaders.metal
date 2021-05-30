@@ -192,9 +192,11 @@ half3 transformNormal(half3 bumpNormal, half4 tangent, half3 vertexNormal)
     // Reconstruct bitan in frag shader
     // https://bgolus.medium.com/generating-perfect-normal-maps-for-unity-f929e673fc57
 
+    half bitangentSign = tangent.w;
+    
     // ModelIO not generating correct bitan sign
     // TODO: flip this on srcData, and not here
-    half bitangentSign = -tangent.w;
+    bitangentSign = -bitangentSign;
     
     // now transform by basis and normalize from any shearing, and since interpolated basis vectors
     // are not normalized
@@ -549,14 +551,20 @@ float4 DrawPixels(
             
             float3 specular = float3(0.0);
             
-            // this renders bright in one quadrant of wrap preview
+            // this renders bright in one quadrant of wrap preview, hard in ortho view
             // specular
-            //float3 v = normalize(in.worldPos); //  - worldCameraPos); // or worldCameraDir
-            //float3 r = normalize(reflect(lightDir, n));
-            //float dotRV = saturate(dot(r, v));
-            //dotRV = pow(dotRV, 4.0); // * saturate(dotNL * 8.0);  // no spec without diffuse
-            //specular = saturate(dotRV * lightColor.rgb);
-
+            bool doSpecular = false;
+            if (doSpecular) {
+                float3 view = normalize(in.worldPos - uniforms.cameraPosition);
+                float3 ref = normalize(reflect(view, n));
+                
+                // above can be interpolated
+                float dotRL = saturate(dot(ref, lightDir));
+                dotRL = pow(dotRL, 4.0); // * saturate(dotNL * 8.0);  // no spec without diffuse
+                specular = saturate(dotRL * lightColor.rgb);
+            }
+            
+            // Note: don't have any albedo yet, need second texture input
             float3 ambient = float3(0.1);
             c.xyz = ambient + diffuse + specular;
             
@@ -575,6 +583,11 @@ float4 DrawPixels(
             if (uniforms.isPremul) {
                 c.xyz *= c.a;
             }
+        }
+        
+        bool doShowUV = false;
+        if (doShowUV) {
+            c = float4(in.texCoord, 0.0, 1.0);
         }
     }
     else {

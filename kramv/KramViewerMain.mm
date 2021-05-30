@@ -1014,10 +1014,9 @@ float4 toSnorm8(float4 c)
         int mipX = _showSettings->imageBoundsX;
         int mipY = _showSettings->imageBoundsY;
         
-        for (int i = 0; i < mipLOD; ++i) {
-            mipX = mipX >> 1;
-            mipY = mipY >> 1;
-        }
+        mipX = mipX >> mipLOD;
+        mipY = mipY >> mipLOD;
+        
         mipX = std::max(1, mipX);
         mipY = std::max(1, mipY);
         
@@ -1050,7 +1049,7 @@ float4 toSnorm8(float4 c)
         
         bool isDecodeSigned = isSignedFormat(_showSettings->decodedFormat);
         if (isSigned && !isDecodeSigned) {
-            c = toSnorm8(c.x);
+            c = toSnorm8(c);
         }
         
         if (isNormal) {

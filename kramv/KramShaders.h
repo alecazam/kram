@@ -96,7 +96,8 @@ struct Uniforms
 {
     simd::float4x4 projectionViewMatrix;
     simd::float4x4 modelMatrix;
-
+    simd::float3 cameraPosition; // world-space
+    
     bool isSigned;
     bool isNormal;
     bool isSwizzleAGToRG;

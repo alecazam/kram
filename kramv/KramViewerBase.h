@@ -147,7 +147,7 @@ public:
     
     // these control the view transform, zoomFit fits the image vertically to he view bound
     float zoomFit = 1.0f;
-    float zoom = 0.0f;
+    float zoom = 1.0f;
     float panX = 0.0f;
     float panY = 0.0f;
     
@@ -169,7 +169,7 @@ public:
     double lastTimestamp = 0.0;
     
     int32_t meshNumber = 0;
-    int32_t meshCount = 3;
+    int32_t meshCount = 4;
 };
 
 float4x4 matrix4x4_translation(float tx, float ty, float tz);
