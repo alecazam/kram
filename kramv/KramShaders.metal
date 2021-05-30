@@ -377,11 +377,18 @@ ColorInOut DrawImageFunc(
     out.position = uniforms.projectionViewMatrix * worldPos;
     
     // this is a 2d coord always which is 0 to 1, or 0 to 2
-    out.texCoord.xy = in.texCoord;
     if (uniforms.isWrap) {
         // can make this a repeat value uniform
         float wrapAmount = 2.0;
+        out.texCoord.xy = in.texCoord;
         out.texCoord.xy *= wrapAmount;
+    }
+    else {
+        // inset from edge by 1 texel, to avoid clamp boundary error
+        // does this have to adjust for mipLOD too?
+        float2 halfPixel = 0.5 * uniformsLevel.textureSize.zw;
+        
+        out.texCoord.xy = clamp(in.texCoord, halfPixel, float2(1.0) - halfPixel);
     }
    
     // potentially 3d coord, and may be -1 to 1

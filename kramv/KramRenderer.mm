@@ -417,9 +417,11 @@ using namespace simd;
     {
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
         float2* uvData = (float2*)uvs.map.bytes;
-        
+    
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
-            uvData[i].x = 1.0f - uvData[i].x;
+            float2& uv = uvData[i];
+            
+            uv.x = 1.0f - uv.x;
         }
     }
     
@@ -890,9 +892,11 @@ float3 inverseScaleSquared(float4x4 m) {
     uniforms.arrayOrSlice = 0;
     uniforms.face  = 0;
 
+    uniforms.textureSize = float4m(0.0f);
     MyMTLTextureType textureType = MyMTLTextureType2D;
     if (_colorMap) {
         textureType = (MyMTLTextureType)_colorMap.textureType;
+        uniforms.textureSize = float4m(_colorMap.width, _colorMap.height, 1.0f/_colorMap.width, 1.0f/_colorMap.height);
     }
     
     // TODO: set texture specific uniforms, but using single _colorMap for now

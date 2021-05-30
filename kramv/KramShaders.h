@@ -128,6 +128,7 @@ struct UniformsLevel {
     uint32_t face;
     uint32_t arrayOrSlice;
     simd::float2 drawOffset; // pixel offset to apply
+    simd::float4 textureSize; // width, height, 1/width, 1/height
 };
 
 // This is all tied to a single level sample
