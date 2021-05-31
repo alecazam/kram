@@ -45,6 +45,9 @@ public:
     static bool readBytes(FILE* fp, uint8_t* data, int dataSize);
     static bool writeBytes(FILE* fp, const uint8_t* data, int dataSize);
 
+    // return mod stamp on filename
+    static uint64_t modificationTimestamp(const char* filename);
+        
     static size_t pagesize();
 
 private:

@@ -277,4 +277,23 @@ int64_t FileHelper::size() const
     return (int64_t)stats.st_size;
 }
 
+uint64_t FileHelper::modificationTimestamp(const char* filename) {
+    struct stat stats;
+    if (stat(filename, &stats) < 0) {
+        return 0;
+    }
+    
+    // https://www.quora.com/What-is-the-difference-between-mtime-atime-and-ctime
+    // atime is last access time
+    // ctime when attributes change
+    // mtime when contents change
+    // folders mtime changes when files added/deleted
+    
+    // 32.32, only return seconds for now
+    // https://stackoverflow.com/questions/11373505/getting-the-last-modified-date-of-a-file-in-c
+    timespec timestamp = stats.st_mtimespec;
+    return timestamp.tv_sec;
+}
+
+
 }  // namespace kram

@@ -20,11 +20,14 @@
 #import "KramShaders.h"
 #include "KramLog.h"
 #include "KramMipper.h"
+
+#include "KramFileHelper.h"
 #include "KramMmapHelper.h"
+#include "KramZipHelper.h"
+
 #include "KramImage.h"
 #include "KramViewerBase.h"
 #include "KramVersion.h" // keep kramv version in sync with libkram
-#include "KramZipHelper.h"
 
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;
@@ -43,6 +46,8 @@ using namespace kram;
 
 //@property (nonatomic, readwrite, nullable) NSPanGestureRecognizer* panGesture;
 @property (retain, nonatomic, readwrite, nullable) NSMagnificationGestureRecognizer* zoomGesture;
+
+@property (nonatomic, readwrite) double lastArchiveTimestamp;
 
 - (BOOL)loadTextureFromURL:(NSURL*)url;
 
@@ -489,7 +494,7 @@ NSArray<NSString*>* pasteboardTypes = @[
 }
 
 - (NSStackView*)_addButtons {
-    const int32_t numButtons = 25; // 13;
+    const int32_t numButtons = 26; // 13;
     const char* names[numButtons*2] = {
         
         "?", "Help",
@@ -517,6 +522,7 @@ NSArray<NSString*>* pasteboardTypes = @[
         "J", "Next",
         "L", "Reload",
         "0", "Fit",
+        "8", "Shape",
         
         // TODO: need to shift hud over a little
         // "UI", - add to show/hide buttons
@@ -1497,6 +1503,8 @@ float4 toSnorm8(float4 c)
         keyCode = Key::L;
     else if (title == "0")
         keyCode = Key::Num0;
+    else if (title == "8")
+        keyCode = Key::Num8;
     
     else if (title == "R")
         keyCode = Key::R;
@@ -2030,8 +2038,6 @@ float4 toSnorm8(float4 c)
 
 -(BOOL)loadArchive:(const char*)zipFilename
 {
-    // TODO: avoid loading the zip again if name and/or timestamp hasn't changed on it
-    
     _zipMmap.close();
     if (!_zipMmap.open(zipFilename)) {
         return NO;
@@ -2144,23 +2150,40 @@ float4 toSnorm8(float4 c)
     }
     
     if (endsWithExtension(filename, ".zip")) {
-        if (!self.imageURL || ![self.imageURL isEqualTo:url]) {
-            BOOL isArchiveLoaded = [self loadArchive:filename];
+        auto archiveTimestamp = FileHelper::modificationTimestamp(filename);
+        
+        if (!self.imageURL || (!([self.imageURL isEqualTo:url])) || (self.lastArchiveTimestamp != archiveTimestamp)) {
             
+            // copy this out before it's replaced
+            string existingFilename;
+            if (self.lastArchiveTimestamp)
+                existingFilename = _zip.zipEntrys()[_fileIndex].filename;
+            
+            BOOL isArchiveLoaded = [self loadArchive:filename];
             if (!isArchiveLoaded) {
                 return NO;
             }
             
             // store the archive url
             self.imageURL = url;
-
+            self.lastArchiveTimestamp = archiveTimestamp;
+            
             // add it to recent docs
             NSDocumentController* dc = [NSDocumentController sharedDocumentController];
             [dc noteNewRecentDocumentURL:url];
+        
+            // now reload the filename if needed
+            const ZipEntry* formerEntry = _zip.zipEntry(existingFilename.c_str());
+            if (formerEntry) {
+                // lookup the index in the remapIndices table
+                _fileIndex = (uintptr_t)(formerEntry - &_zip.zipEntrys().front());
+            }
+            else {
+                _fileIndex = 0;
+            }
         }
-       
-        // now reload the filename if needed
-        const auto& entry = _zip.zipEntrys()[_fileIndex];
+        
+        const auto& entry =_zip.zipEntrys()[_fileIndex];
         const char* filename = entry.filename;
         double timestamp = entry.modificationDate;
         
