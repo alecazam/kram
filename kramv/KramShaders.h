@@ -49,7 +49,9 @@ typedef NS_ENUM(int32_t, VertexAttribute)
 typedef NS_ENUM(int32_t, TextureIndex)
 {
     TextureIndexColor = 0,
-    TextureIndexSamples = 1, // used for compute
+    TextureIndexNormal = 1,
+    
+    TextureIndexSamples = 2, // used for compute
 };
 
 typedef NS_ENUM(int32_t, SamplerIndex)
@@ -108,7 +110,12 @@ struct Uniforms
     bool isWrap;
     bool isSDF;
     bool isPreview;
+    
     bool is3DView;
+    bool isNormalMapPreview; // for isNormal or combined
+    
+    bool isNormalMapSigned;
+    bool isNormalMapSwizzleAGToRG;
     
     uint32_t numChannels;
     

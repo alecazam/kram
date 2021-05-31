@@ -183,6 +183,8 @@ half3 toNormal(half3 n)
     return n;
 }
 
+
+
 // use mikktspace, gen bitan in frag shader with sign, don't normalize vb/vt
 // see http://www.mikktspace.com/
 half3 transformNormal(half3 bumpNormal, half4 tangent, half3 vertexNormal)
@@ -219,11 +221,40 @@ half3 transformNormal(half4 tangent, half3 vertexNormal,
     // rebuild the z term
     half3 bumpNormal = toNormal(nmap.xyz);
    
-    return transformNormal(bumpNormal,
-                           tangent, vertexNormal);
+    return transformNormal(bumpNormal, tangent, vertexNormal);
 }
 
 
+float3 transformNormal(float4 nmap, half3 vertexNormal, half4 tangent,
+                        bool isSwizzleAGToRG, bool isSigned, bool isFrontFacing)
+{
+    // add swizzle for ASTC/BC5nm, other 2 channels format can only store 01 in ba
+    // could use hw swizzle for this
+    if (isSwizzleAGToRG) {
+        nmap = float4(nmap.ag, 0, 1);
+    }
+
+    // to signed, also for ASTC/BC5nm
+    if (!isSigned) {
+        // convert to signed normal to compute z
+        nmap.rg = toSnorm8(nmap.rg);
+    }
+    
+    float3 bumpNormal = nmap.xyz;
+    
+    bumpNormal = toNormal(bumpNormal);
+
+    // flip the normal if facing is flipped
+    // TODO: needed for tangent too?
+    if (!isFrontFacing) {
+        bumpNormal = -bumpNormal;
+        tangent.w = -tangent.w;
+    }
+    
+    // handle the basis here
+    bumpNormal = toFloat(transformNormal(toHalf(bumpNormal), tangent, vertexNormal));
+    return bumpNormal;
+}
 
 // TODO: have more bones, or read from texture instead of uniforms
 // can then do instanced skining, but vfetch lookup slower
@@ -358,7 +389,7 @@ ColorInOut DrawImageFunc(
     
     // deal with full basis
     
-    if (uniforms.isNormal && uniforms.isPreview) {
+    if (uniforms.isNormalMapPreview) {
         float3 normal = in.normal;
         float3 tangent = in.tangent.xyz;
         transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2);
@@ -383,11 +414,11 @@ ColorInOut DrawImageFunc(
         out.texCoord.xy = in.texCoord;
         out.texCoord.xy *= wrapAmount;
     }
-    else if (uniforms.is3DView) {
+    else if (uniforms.is3DView && !uniforms.isWrap) {
         // inset from edge by a fraction of a pixel, to avoid clamp boundary error
         // does this have to adjust for mipLOD too?
         float2 onePixel = uniformsLevel.textureSize.zw;
-        float2 halfPixel = (1.0/16.0) * onePixel;
+        float2 halfPixel = (1.0/4.0) * onePixel;
         
         out.texCoord.xy = clamp(in.texCoord, halfPixel, float2(1.0) - halfPixel);
     }
@@ -526,6 +557,7 @@ float4 DrawPixels(
     bool facing [[front_facing]],
     constant Uniforms& uniforms,
     float4 c,
+    float4 nmap,
     float2 textureSize
 )
 {
@@ -565,31 +597,9 @@ float4 DrawPixels(
         else if (uniforms.isNormal) {
             // light the normal map
             
-            // add swizzle for ASTC/BC5nm, other 2 channels format can only store 01 in ba
-            if (uniforms.isSwizzleAGToRG) {
-                c = float4(c.ag, 0, 1);
-            }
+            float3 n = transformNormal(c, in.normal, in.tangent,
+                                       uniforms.isSwizzleAGToRG, uniforms.isSigned, facing);
             
-            // to signed
-            if (!uniforms.isSigned) {
-                // convert to signed normal to compute z
-                c.rg = toSnorm8(c.rg);
-            }
-            
-            c.rgb = toNormal(c.rgb);
-            
-            // flip the normal if facing is flipped
-            // TODO: needed for tangent too?
-            if (!facing) {
-                c.xyz = -c.xyz;
-                in.tangent.w = -in.tangent.w;
-            }
-            
-            
-            float3 n = c.xyz;
-            
-            // handle the basis here
-            n = toFloat(transformNormal(toHalf(n), in.tangent, in.normal));
             
             float3 viewDir = normalize(in.worldPos - uniforms.cameraPosition);
             c = doLighting(float4(1.0), viewDir, n);
@@ -601,11 +611,18 @@ float4 DrawPixels(
             if (uniforms.isSigned) {
                 c.xyz = toUnorm(c.xyz);
             }
-            
-            // need an isAlbedo test
-            if (!uniforms.isSigned) {
+            else { // TODO: need an isAlbedo test
                 float3 viewDir = normalize(in.worldPos - uniforms.cameraPosition);
-                c = doLighting(c, viewDir, toFloat(in.normal));
+                
+                if (uniforms.isNormalMapPreview) {
+                    float3 n = transformNormal(nmap, in.normal, in.tangent,
+                                               uniforms.isNormalMapSwizzleAGToRG, uniforms.isNormalMapSigned, facing);
+                    
+                    c = doLighting(c, viewDir, n);
+                }
+                else {
+                    c = doLighting(c, viewDir, toFloat(in.normal));
+                }
             }
             
             // to premul, but also need to see without premul
@@ -843,7 +860,8 @@ fragment float4 Draw1DArrayPS(
     float2 textureSize = float2(colorMap.get_width(0), 1);
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, textureSize);
+    float4 n = float4(0,0,1,1);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize);
 }
 
 fragment float4 DrawImagePS(
@@ -852,17 +870,19 @@ fragment float4 DrawImagePS(
     constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
-    texture2d<float> colorMap [[ texture(TextureIndexColor) ]]
+    texture2d<float> colorMap [[ texture(TextureIndexColor) ]],
+    texture2d<float> normalMap [[ texture(TextureIndexNormal) ]]
 )
 {
     float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.xy);
-    
+    float4 n = normalMap.sample(colorSampler, in.texCoordXYZ.xy);
+   
     // here are the pixel dimensions of the lod
     uint lod = uniformsLevel.mipLOD;
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, textureSize);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize);
 }
 
 fragment float4 DrawImageArrayPS(
@@ -881,7 +901,8 @@ fragment float4 DrawImageArrayPS(
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, textureSize);
+    float4 n = float4(0,0,1,1);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize);
 }
 
 
@@ -902,7 +923,8 @@ fragment float4 DrawCubePS(
     float2 textureSize = float2(w, w);
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, textureSize);
+    float4 n = float4(0,0,1,1);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize);
 }
 
 fragment float4 DrawCubeArrayPS(
@@ -922,7 +944,8 @@ fragment float4 DrawCubeArrayPS(
     float2 textureSize = float2(w, w);
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, textureSize);
+    float4 n = float4(0,0,1,1);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize);
 }
 
 
@@ -953,7 +976,8 @@ fragment float4 DrawVolumePS(
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, textureSize);
+    float4 n = float4(0,0,1,1);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize);
 }
 
 //--------------------------------------------------

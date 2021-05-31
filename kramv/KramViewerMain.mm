@@ -2101,9 +2101,37 @@ float4 toSnorm8(float4 c)
         return NO;
     }
      
+    // see if this is albedo, and then search for normal map in the same archive
+    const uint8_t* imageNormalData = nullptr;
+    uint64_t imageNormalDataLength = 0;
+    
+    string normalFilename = filename;
+    
+    // first only do this on albedo/diffuse textures
+    string search = "-a.ktx";
+    auto searchPos = normalFilename.find(search);
+    bool isFound = searchPos != string::npos;
+    
+    if (!isFound) {
+        search = "-d.ktx";
+        searchPos = normalFilename.find(search);
+        isFound = searchPos != string::npos;
+    }
+    
+    if (isFound) {
+        normalFilename = normalFilename.replace(searchPos, search.length(), "-n.ktx"); // works for ktx or ktx2 file
+    
+        if (!_zip.extractRaw(normalFilename.c_str(), &imageNormalData, imageNormalDataLength)) {
+            // ignore failure case here, this is just guessing there's a -n file
+        }
+    }
+    
     string fullFilename = filename;
     Renderer* renderer = (Renderer*)self.delegate;
-    if (![renderer loadTextureFromData:fullFilename timestamp:(double)timestamp imageData:imageData imageDataLength:imageDataLength]) {
+    if (![renderer loadTextureFromData:fullFilename timestamp:(double)timestamp
+                             imageData:imageData imageDataLength:imageDataLength
+                             imageNormalData:imageNormalData imageNormalDataLength:imageNormalDataLength])
+    {
         return NO;
     }
     

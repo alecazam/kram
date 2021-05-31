@@ -56,7 +56,7 @@ using namespace simd;
 
     // TODO: Array< id<MTLTexture> > _textures;
     id <MTLTexture> _colorMap;
-    //id <MTLTexture> _colorMapView;
+    id <MTLTexture> _normalMap;
     
     id <MTLSamplerState> _colorMapSamplerWrap;
     id <MTLSamplerState> _colorMapSamplerClamp;
@@ -511,7 +511,13 @@ using namespace simd;
     
 }
 
-- (BOOL)loadTextureFromData:(const string&)fullFilename timestamp:(double)timestamp imageData:(nonnull const uint8_t*)imageData imageDataLength:(uint64_t)imageDataLength
+- (BOOL)loadTextureFromData:(const string&)fullFilename
+                  timestamp:(double)timestamp
+                  imageData:(nonnull const uint8_t*)imageData
+            imageDataLength:(uint64_t)imageDataLength
+            imageNormalData:(nullable const uint8_t*)imageNormalData
+      imageNormalDataLength:(uint64_t)imageNormalDataLength
+
 {
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
@@ -522,13 +528,22 @@ using namespace simd;
         (timestamp != _showSettings->lastTimestamp);
     
     if (isTextureChanged) {
-        // synchronously cpu upload from ktx file to texture
+        // synchronously cpu upload from ktx file to buffer, with eventual gpu blit from buffer to returned texture
         MTLPixelFormat originalFormatMTL = MTLPixelFormatInvalid;
         id<MTLTexture> texture = [_loader loadTextureFromData:imageData imageDataLength:imageDataLength originalFormat:&originalFormatMTL];
         if (!texture) {
             return NO;
         }
         
+        // hacking in the normal texture here, so can display them together during preview
+        id<MTLTexture> normalTexture;
+        if (imageNormalData) {
+            normalTexture = [_loader loadTextureFromData:imageNormalData imageDataLength:imageNormalDataLength originalFormat:nil];
+            if (!normalTexture) {
+                return NO;
+            }
+        }
+       
         // archive shouldn't contain png, so only support ktx/ktx2 here
         // TODO: have loader return KTXImage instead of parsing it again
         // then can decode blocks in kramv
@@ -550,6 +565,7 @@ using namespace simd;
         
         @autoreleasepool {
             _colorMap = texture;
+            _normalMap = normalTexture;
         }
     }
     
@@ -592,6 +608,7 @@ using namespace simd;
         
         @autoreleasepool {
             _colorMap = texture;
+            _normalMap = nil;
         }
     }
     
@@ -796,6 +813,16 @@ float3 inverseScaleSquared(float4x4 m) {
     
     uniforms.isPreview = _showSettings->isPreview;
     
+    uniforms.isNormalMapPreview = false;
+    if (uniforms.isPreview) {
+        uniforms.isNormalMapPreview = uniforms.isNormal || (_normalMap != nil);
+        
+        if (_normalMap != nil) {
+            uniforms.isNormalMapSigned = isSignedFormat((MyMTLPixelFormat)_normalMap.pixelFormat);
+            uniforms.isNormalMapSwizzleAGToRG = false; // TODO: need a prop for this
+        }
+    }
+        
     uniforms.gridX = 0;
     uniforms.gridY = 0;
     
@@ -1056,9 +1083,14 @@ float3 inverseScaleSquared(float4x4 m) {
 
         
         // set the texture up
-        id<MTLTexture> texture = _colorMap;
-        [renderEncoder setFragmentTexture:texture
+        [renderEncoder setFragmentTexture:_colorMap
                                   atIndex:TextureIndexColor];
+        
+        // setup normal map
+        if (_normalMap && _showSettings->isPreview && _colorMap.textureType == MTLTextureType2D) {
+            [renderEncoder setFragmentTexture:_normalMap
+                                      atIndex:TextureIndexNormal];
+        }
 
         
         

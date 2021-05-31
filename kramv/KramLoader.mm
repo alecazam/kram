@@ -53,7 +53,7 @@ struct KramBlit
     // only one of these for now
     id<MTLBuffer> _buffer;
     uint8_t* _data;
-    uint8_t _bufferOffset;
+    uint32_t _bufferOffset;
     
     vector<KramBlit> _blits;
     NSMutableArray<id<MTLTexture>>* _blitTextures;
@@ -621,9 +621,9 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment) {
     // TODO: first make sure have enough buffer to upload, otherwise need to queue this image
     // try not to load much until that's established
     // queue would need KTXImage and mmap to stay alive long enough for queue to be completed
-    if (_bufferOffset != 0) {
-        return nil;
-    }
+//    if (_bufferOffset != 0) {
+//        return nil;
+//    }
     
     id<MTLTexture> texture = [self createTexture:image isPrivate:true];
     if (!texture)

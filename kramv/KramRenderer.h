@@ -26,7 +26,13 @@ namespace kram {
 
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view settings:(nonnull kram::ShowSettings*)settings;
 
-- (BOOL)loadTextureFromData:(const std::string&)fullFilename timestamp:(double)timestamp imageData:(nonnull const uint8_t*)imageData imageDataLength:(uint64_t)imageDataLength;
+- (BOOL)loadTextureFromData:(const std::string&)fullFilename
+                  timestamp:(double)timestamp
+                  imageData:(nonnull const uint8_t*)imageData
+            imageDataLength:(uint64_t)imageDataLength
+            imageNormalData:(nullable const uint8_t*)imageNormalData
+      imageNormalDataLength:(uint64_t)imageNormalDataLength;
+
 
 - (BOOL)loadTexture:(nonnull NSURL *)url;
 
