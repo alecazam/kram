@@ -534,7 +534,8 @@ using namespace simd;
         // then can decode blocks in kramv
         
         KTXImage sourceImage;
-        if (!sourceImage.open(imageData, imageDataLength)) {
+        bool isInfoOnly = true;
+        if (!sourceImage.open(imageData, imageDataLength, isInfoOnly)) {
             return NO;
         }
        

@@ -278,11 +278,21 @@ int64_t FileHelper::size() const
 }
 
 uint64_t FileHelper::modificationTimestamp(const char* filename) {
-    struct stat stats;
-    if (stat(filename, &stats) < 0) {
+  
+    // Win has to rename all this, so make it happy using wrappers from miniz
+    #if defined(_MSC_VER) || defined(__MINGW64__)
+    #define MZ_FILE_STAT_STRUCT _stat64
+    #define MZ_FILE_STAT _stat64
+    #else
+    #define MZ_FILE_STAT_STRUCT stat
+    #define MZ_FILE_STAT stat
+    #endif
+
+    struct MZ_FILE_STAT_STRUCT stats;
+    if (MZ_FILE_STAT(filename, &stats) < 0) {
         return 0;
     }
-    
+       
     // https://www.quora.com/What-is-the-difference-between-mtime-atime-and-ctime
     // atime is last access time
     // ctime when attributes change
@@ -291,8 +301,7 @@ uint64_t FileHelper::modificationTimestamp(const char* filename) {
     
     // 32.32, only return seconds for now
     // https://stackoverflow.com/questions/11373505/getting-the-last-modified-date-of-a-file-in-c
-    timespec timestamp = stats.st_mtimespec;
-    return timestamp.tv_sec;
+    return stats.st_mtime;
 }
 
 
