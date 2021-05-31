@@ -418,7 +418,7 @@ ColorInOut DrawImageFunc(
         // inset from edge by a fraction of a pixel, to avoid clamp boundary error
         // does this have to adjust for mipLOD too?
         float2 onePixel = uniformsLevel.textureSize.zw;
-        float2 halfPixel = (1.0/4.0) * onePixel;
+        float2 halfPixel = 0.5 * onePixel;
         
         out.texCoord.xy = clamp(in.texCoord, halfPixel, float2(1.0) - halfPixel);
     }
