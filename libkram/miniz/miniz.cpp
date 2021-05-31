@@ -3417,6 +3417,13 @@ static mz_bool mz_zip_reader_init_internal(mz_zip_archive *pZip, mz_uint flags)
     return MZ_TRUE;
 }
 
+const mz_uint32* mz_zip_reader_sorted_file_indices(mz_zip_archive *pZip)
+{
+    // these aren't offsets, it's a sorted array of the file index elements
+    return (const mz_uint32*)(pZip->m_pState->m_sorted_central_dir_offsets.m_p);
+}
+
+
 static MZ_FORCEINLINE mz_bool mz_zip_reader_filename_less(const mz_zip_array *pCentral_dir_array, const mz_zip_array *pCentral_dir_offsets, mz_uint l_index, mz_uint r_index)
 {
     const mz_uint8 *pL = &MZ_ZIP_ARRAY_ELEMENT(pCentral_dir_array, mz_uint8, MZ_ZIP_ARRAY_ELEMENT(pCentral_dir_offsets, mz_uint32, l_index)), *pE;

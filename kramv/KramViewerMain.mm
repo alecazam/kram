@@ -1876,7 +1876,7 @@ float4 toSnorm8(float4 c)
                 }
                 _showSettings->meshNumber = _showSettings->meshNumber % _showSettings->meshCount;
                 
-                sprintf(text, "Mesh %d/%d", _showSettings->meshNumber, _showSettings->meshCount);
+                sprintf(text, "Mesh %d %s", _showSettings->meshNumber, "Shape"); // TODO: put meshName in _showSettings
                 isChanged = true;
             }
             break;
@@ -2057,7 +2057,7 @@ float4 toSnorm8(float4 c)
     if (increment)
         _fileIndex = (_fileIndex + 1) % numEntries;
     else
-        _fileIndex = (_fileIndex - 1 + numEntries) % numEntries;
+        _fileIndex = (_fileIndex + numEntries - 1) % numEntries;
 
     // now lookup the filename and data at that entry
     const auto& entry = _zip.zipEntrys()[_fileIndex];

@@ -1209,6 +1209,10 @@ mz_bool mz_zip_is_zip64(mz_zip_archive *pZip);
 /* The current max supported size is <= MZ_UINT32_MAX. */
 size_t mz_zip_get_central_dir_size(mz_zip_archive *pZip);
 
+/* Alec change - if files are sorted by filename, then this returns the remap table for each fileIndex */
+/* This was previously internal state, so use with caution.  It's an array of mz_uint32 */
+const mz_uint32* mz_zip_reader_sorted_file_indices(mz_zip_archive *pZip);
+
 /* Extracts a archive file to a memory buffer using no memory allocation. */
 /* There must be at least enough room on the stack to store the inflator's state (~34KB or so). */
 mz_bool mz_zip_reader_extract_to_mem_no_alloc(mz_zip_archive *pZip, mz_uint file_index, void *pBuf, size_t buf_size, mz_uint flags, void *pUser_read_buf, size_t user_read_buf_size);

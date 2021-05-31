@@ -66,6 +66,8 @@ void ZipHelper::initZipEntryTables() {
         totalFilenameSizes += mz_zip_reader_get_filename(zip.get(), i, nullptr, 0);
     }
         
+    const uint32_t* remappedIndices = mz_zip_reader_sorted_file_indices(zip.get());
+    
     allFilenames.resize(totalFilenameSizes);
 
     // allocate an array with the data from the archive that we care about
@@ -75,16 +77,18 @@ void ZipHelper::initZipEntryTables() {
     uint64_t length = 0;
     
     for (int32_t i = 0; i < numFiles; ++i) {
+        uint32_t sortedFileIndex = remappedIndices[i];
+        
         // file_stat does quite a bit of work, but only want a few fields out of it
         mz_zip_archive_file_stat stat;
-        mz_zip_reader_file_stat(zip.get(), i, &stat);
+        mz_zip_reader_file_stat(zip.get(), sortedFileIndex, &stat);
         if (stat.m_is_directory || !stat.m_is_supported) {
             continue;
         }
         
         // we may skip over directories above
         // so zipEntry array entry doesn't tie with fileIndex
-        assert((uint32_t)i == stat.m_file_index);
+        //assert((uint32_t)i == stat.m_file_index);
         
         // skipping directories and unsupported items
         
@@ -107,6 +111,7 @@ void ZipHelper::initZipEntryTables() {
         index++;
     }
          
+    
     // resize, since entries and filenames were skipped
     // this should change the addresses used above
     allFilenames.resize(length);
@@ -124,15 +129,16 @@ const ZipEntry* ZipHelper::zipEntry(const char* name) const {
         return nullptr;
     }
     
-    // have to search back until file index is found
+    // have to find the zipEntry, have skipped and sorted entries by filename
     // the array build skips directories, so those can throw off the fileIndex
-    int32_t numEntries = (int32_t)_zipEntrys.size();
-    int32_t search = index;
-    if (search >= numEntries) {
-        search = numEntries - 1;
-    }
     
-    for (int32_t i = search; i >= 0; --i) {
+    int32_t numEntries = (int32_t)_zipEntrys.size();
+//    int32_t search = index;
+//    if (search >= numEntries) {
+//        search = numEntries - 1;
+//    }
+    
+    for (int32_t i = 0; i < numEntries; ++i) {
         if (_zipEntrys[i].fileIndex == index) {
             return &_zipEntrys[i];
         }

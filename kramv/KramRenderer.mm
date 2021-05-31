@@ -473,13 +473,11 @@ using namespace simd;
     
     _meshBox = [self _createMeshAsset:"MeshBox" mdlMesh:mdlMesh doFlipUV:false];
     
-    // TOOO: have more shape types - this is box, need thin box (plane), and sphere, and cylinder
-    // eventually load usdz and gltf2 custom model.  Need 3d manipulation of shape like arcball
-    // and eyedropper is more complex.
-    
     // The sphere/cylinder shapes are v increasing in -Y, and u increasing conterclockwise,
     // u is the opposite direction to the cube/plane, so need to flip those coords
-    // I think this has also flipped the tangents the wrong way.
+    // I think this has also flipped the tangents the wrong way, but building tangents after
+    // flipping u direction doesn't flip the bitangent.  So bitangent.w is flipped.
+    // For sanity, Tangent is increasing u, and Bitangent is increasing v.
     
     // All prims are viewed with +Y, not +Z up
     
