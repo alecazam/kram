@@ -538,12 +538,19 @@ using namespace simd;
         // hacking in the normal texture here, so can display them together during preview
         id<MTLTexture> normalTexture;
         if (imageNormalData) {
-            normalTexture = [_loader loadTextureFromData:imageNormalData imageDataLength:imageNormalDataLength originalFormat:nil];
-            if (!normalTexture) {
-                return NO;
+            KTXImage imageNormal;
+            if (imageNormal.open(imageNormalData, imageNormalDataLength, true)) {
+                // only have shaders that expects diffuse/normal to be same texture type
+                if (imageNormal.textureType == (MyMTLTextureType)texture.textureType &&
+                    (imageNormal.textureType == MyMTLTextureType2D || imageNormal.textureType == MyMTLTextureType2DArray))
+                {
+                    normalTexture = [_loader loadTextureFromData:imageNormalData imageDataLength:imageNormalDataLength originalFormat:nil];
+                    if (!normalTexture) {
+                        return NO;
+                    }
+                }
             }
         }
-       
         // archive shouldn't contain png, so only support ktx/ktx2 here
         // TODO: have loader return KTXImage instead of parsing it again
         // then can decode blocks in kramv
@@ -1002,12 +1009,16 @@ float3 inverseScaleSquared(float4x4 m) {
     if (renderPassDescriptor == nil) {
         return;
     }
+    
     if (_colorMap == nil) {
         // this will clear target
         id<MTLRenderCommandEncoder> renderEncoder =
-        [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-        renderEncoder.label = @"MainRender";
-        [renderEncoder endEncoding];
+            [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+        
+        if (renderEncoder) {
+            renderEncoder.label = @"MainRender";
+            [renderEncoder endEncoding];
+        }
         
         return;
     }
@@ -1015,6 +1026,10 @@ float3 inverseScaleSquared(float4x4 m) {
     /// Final pass rendering code here
     id<MTLRenderCommandEncoder> renderEncoder =
     [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+    if (!renderEncoder) {
+        return;
+    }
+    
     renderEncoder.label = @"MainRender";
 
     // set raster state
@@ -1087,7 +1102,8 @@ float3 inverseScaleSquared(float4x4 m) {
                                   atIndex:TextureIndexColor];
         
         // setup normal map
-        if (_normalMap && _showSettings->isPreview && _colorMap.textureType == MTLTextureType2D) {
+        if (_normalMap && _showSettings->isPreview)
+        {
             [renderEncoder setFragmentTexture:_normalMap
                                       atIndex:TextureIndexNormal];
         }
@@ -1265,6 +1281,9 @@ float3 inverseScaleSquared(float4x4 m) {
     }
     
     id <MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+    if (!commandBuffer)
+        return;
+    
     commandBuffer.label = @"MyCommand";
 
     int32_t textureLookupX = _showSettings->textureLookupX;
@@ -1277,9 +1296,11 @@ float3 inverseScaleSquared(float4x4 m) {
     
     // Synchronize the managed texture.
     id <MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
-    [blitCommandEncoder synchronizeResource:_sampleTex];
-    [blitCommandEncoder endEncoding];
-
+    if (blitCommandEncoder) {
+        [blitCommandEncoder synchronizeResource:_sampleTex];
+        [blitCommandEncoder endEncoding];
+    }
+    
     // After synchonization, copy value back to the cpu
     id<MTLTexture> texture = _sampleTex;
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */)
@@ -1311,6 +1332,9 @@ float3 inverseScaleSquared(float4x4 m) {
     
     // Final pass rendering code here
     id<MTLComputeCommandEncoder> renderEncoder = [commandBuffer computeCommandEncoder];
+    if (!renderEncoder)
+        return;
+    
     renderEncoder.label = @"SampleCompute";
 
     [renderEncoder pushDebugGroup:@"DrawShape"];

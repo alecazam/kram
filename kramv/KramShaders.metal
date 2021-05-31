@@ -891,17 +891,18 @@ fragment float4 DrawImageArrayPS(
     constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
-    texture2d_array<float> colorMap [[ texture(TextureIndexColor) ]]
+    texture2d_array<float> colorMap [[ texture(TextureIndexColor) ]],
+    texture2d_array<float> normalMap [[ texture(TextureIndexNormal) ]]
 )
 {
     float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.xy, uniformsLevel.arrayOrSlice);
+    float4 n = normalMap.sample(colorSampler, in.texCoordXYZ.xy, uniformsLevel.arrayOrSlice);
     
     // here are the pixel dimensions of the lod
     uint lod = uniformsLevel.mipLOD;
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    float4 n = float4(0,0,1,1);
     return DrawPixels(in, facing, uniforms, c, n, textureSize);
 }
 
@@ -1077,7 +1078,7 @@ kernel void SampleImage1DArrayCS(
     texture1d_array<float, access::read> colorMap [[ texture(TextureIndexColor) ]],
     constant UniformsCS& uniforms [[ buffer(BufferIndexUniformsCS) ]],
     uint2 index [[thread_position_in_grid]],
-    texture2d<float, access::write> result
+    texture2d<float, access::write> result [[ texture(TextureIndexSamples) ]]
 )
 {
     // the for-loop is replaced with a collection of threads, each of which
@@ -1096,7 +1097,7 @@ kernel void SampleImageCS(
     texture2d<float, access::read> colorMap [[ texture(TextureIndexColor) ]],
     constant UniformsCS& uniforms [[ buffer(BufferIndexUniformsCS) ]],
     uint2 index [[thread_position_in_grid]],
-    texture2d<float, access::write> result
+    texture2d<float, access::write> result [[ texture(TextureIndexSamples) ]]
 )
 {
     // the for-loop is replaced with a collection of threads, each of which
@@ -1113,7 +1114,7 @@ kernel void SampleImageArrayCS(
     texture2d_array<float, access::read> colorMap [[ texture(TextureIndexColor) ]],
     constant UniformsCS& uniforms [[ buffer(BufferIndexUniformsCS) ]],
     uint2 index [[thread_position_in_grid]],
-    texture2d<float, access::write> result
+    texture2d<float, access::write> result [[ texture(TextureIndexSamples) ]]
 )
 {
     // the for-loop is replaced with a collection of threads, each of which
@@ -1132,7 +1133,7 @@ kernel void SampleCubeCS(
     texturecube<float, access::read> colorMap [[ texture(TextureIndexColor) ]],
     constant UniformsCS& uniforms [[ buffer(BufferIndexUniformsCS) ]],
     uint2 index [[thread_position_in_grid]],
-    texture2d<float, access::write> result
+    texture2d<float, access::write> result [[ texture(TextureIndexSamples) ]]
 )
 {
     // the for-loop is replaced with a collection of threads, each of which
@@ -1154,7 +1155,7 @@ kernel void SampleCubeArrayCS(
     texturecube_array<float, access::read> colorMap [[ texture(TextureIndexColor) ]],
     constant UniformsCS& uniforms [[ buffer(BufferIndexUniformsCS) ]],
     uint2 index [[thread_position_in_grid]],
-    texture2d<float, access::write> result
+    texture2d<float, access::write> result [[ texture(TextureIndexSamples) ]]
 )
 {
     // the for-loop is replaced with a collection of threads, each of which
@@ -1174,7 +1175,7 @@ kernel void SampleVolumeCS(
     texture3d<float, access::read> colorMap [[ texture(TextureIndexColor) ]],
     constant UniformsCS& uniforms [[ buffer(BufferIndexUniformsCS) ]],
     uint2 index [[thread_position_in_grid]],
-    texture2d<float, access::write> result
+    texture2d<float, access::write> result [[ texture(TextureIndexSamples) ]]
 )
 {
     // the for-loop is replaced with a collection of threads, each of which
