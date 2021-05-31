@@ -86,11 +86,8 @@ void ZipHelper::initZipEntryTables() {
             continue;
         }
         
-        // we may skip over directories above
-        // so zipEntry array entry doesn't tie with fileIndex
-        //assert((uint32_t)i == stat.m_file_index);
-        
         // skipping directories and unsupported items
+        // also the ordering here is in filename not fileIndex order
         
         // copy all filenames into fixed storage that's all
         // contguous, so that can alis the strings for lookup
@@ -131,13 +128,9 @@ const ZipEntry* ZipHelper::zipEntry(const char* name) const {
     
     // have to find the zipEntry, have skipped and sorted entries by filename
     // the array build skips directories, so those can throw off the fileIndex
+    // TODO: do a binary search here, and don't use mz_zip call?
     
     int32_t numEntries = (int32_t)_zipEntrys.size();
-//    int32_t search = index;
-//    if (search >= numEntries) {
-//        search = numEntries - 1;
-//    }
-    
     for (int32_t i = 0; i < numEntries; ++i) {
         if (_zipEntrys[i].fileIndex == index) {
             return &_zipEntrys[i];
@@ -195,7 +188,8 @@ bool ZipHelper::extract(int32_t fileIndex, void* buffer, uint64_t bufferSize) co
     mz_bool success = mz_zip_reader_extract_to_mem(
         zip.get(), fileIndex, buffer, bufferSize, 0);
     
-    /* TODO: alternative using optimized Apple library
+    /* TODO: alternative using optimized Apple library libCompression
+     
        this can do partial compression, so don't check uncompressedSize always
        f.e. can look at first 64-byte header on KTX files which is much faster.
      
@@ -225,13 +219,12 @@ bool ZipHelper::extractRaw(const char *filename, const uint8_t** bufferData, uin
         return false;
     }
     
-    // this should really be in stat data
+    // this should really be cached with zipEntry data
     const uint8_t* data = mz_zip_reader_get_raw_data(zip.get(), entry->fileIndex);
     if (!data) {
         return false;
     }
     
-    // not sure if this is start of
     *bufferData = data;
     bufferDataSize = stat.m_uncomp_size;
     

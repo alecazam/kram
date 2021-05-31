@@ -711,7 +711,8 @@ using namespace simd;
     // have one of these for each texture added to the viewer
     float scaleX = MAX(1, texture.width);
     float scaleY = MAX(1, texture.height);
-    _modelMatrix = float4x4(float4m(scaleX, scaleY, 1.0f, 1.0f)); // non uniform scale
+    float scaleZ = MAX(scaleX, scaleY); // don't want 1.0f, or specular is all off due to extreme scale differences
+    _modelMatrix = float4x4(float4m(scaleX, scaleY, scaleZ, 1.0f)); // non uniform scale
     _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0); // set z=-1 unit back
     
     // uniform scaled 3d primitiv
@@ -726,17 +727,15 @@ using namespace simd;
     // translate
     float4x4 panTransform = matrix4x4_translation(-panX, panY, 0.0);
     
+    // non-uniform scale is okay here, only affects ortho volume
+    float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));
+    viewMatrix = panTransform * viewMatrix;
+    
     // scale
     if (_is3DView) {
-        float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));  // non-uniform scale is okay, affects ortho volume
-        viewMatrix = panTransform * viewMatrix;
-        
         return _projectionMatrix * viewMatrix * _modelMatrix3D;
     }
     else {
-        float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f)); // non-uniform scale
-        viewMatrix = panTransform * viewMatrix;
-        
         return _projectionMatrix * viewMatrix * _modelMatrix;
     }
 }
@@ -759,11 +758,9 @@ float3 inverseScaleSquared(float4x4 m) {
     // don't divide by 0
     float3 invScaleSquared = recip(simd::max(float3m(0.0001 * 0.0001), scaleSquared));
         
-    // TODO: could also identify determinant here for flipping orient
-    
-    // Note: in 2D, scales is x,x,1, so always apply invScale2,
-    // and that messes up preview normals on sphere/cylinder.
-    // May be from trying to do all that math in half.
+    // TODO: could also identify determinant here for flipping orientation
+    // all shapes with negative determinant need orientation flipped for backfacing
+    // and need to be rendered together
     
     return invScaleSquared;
 }
