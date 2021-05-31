@@ -91,7 +91,6 @@ using namespace simd;
     //MTKMesh *_meshCylinder;
     MTKMesh *_meshCapsule;
     MTKMeshBufferAllocator *_metalAllocator;
-    bool _is3DView; // whether view is 3d for now
     
     ShowSettings* _showSettings;
 }
@@ -732,7 +731,7 @@ using namespace simd;
     viewMatrix = panTransform * viewMatrix;
     
     // scale
-    if (_is3DView) {
+    if (_showSettings->is3DView) {
         return _projectionMatrix * viewMatrix * _modelMatrix3D;
     }
     else {
@@ -819,22 +818,23 @@ float3 inverseScaleSquared(float4x4 m) {
     uniforms.channels = (ShaderTextureChannels)_showSettings->channels;
 
     // crude shape experiment
-    _is3DView = true;
+    _showSettings->is3DView = true;
     switch(_showSettings->meshNumber) {
-        case 0: _mesh = _meshBox; _is3DView = false; break;
+        case 0: _mesh = _meshBox; _showSettings->is3DView = false; break;
         case 1: _mesh = _meshBox; break;
         case 2: _mesh = _meshSphere; break;
         //case 3: _mesh = _meshCylinder; break;
         case 3: _mesh = _meshCapsule; break;
     }
-    
+    uniforms.is3DView = _showSettings->is3DView;
+   
     // translate
     float4x4 panTransform = matrix4x4_translation(-_showSettings->panX, _showSettings->panY, 0.0);
     
     // scale
     float zoom = _showSettings->zoom;
     
-    if (_is3DView) {
+    if (_showSettings->is3DView) {
         _viewMatrix3D = float4x4(float4m(zoom, zoom, 1.0f, 1.0f)); // non-uniform
         _viewMatrix3D = panTransform * _viewMatrix3D;
         

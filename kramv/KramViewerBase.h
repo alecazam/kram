@@ -99,6 +99,10 @@ public:
     // this mode shows the content with lighting or with bilinear/mips active
     bool isPreview = false;
     
+    // the 2d view doesn't want to inset pixels for clamp, or point sampling is thrown off
+    // expecially on small 4x4 textures
+    bool is3DView = false;
+    
     // TODO: Might eliminate this, since mips are either built with or without srgb
     // and disabling with a MTLView caused many flags to have to be set on MTLTexture
     //bool isSRGBShown = true;

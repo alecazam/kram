@@ -108,6 +108,7 @@ struct Uniforms
     bool isWrap;
     bool isSDF;
     bool isPreview;
+    bool is3DView;
     
     uint32_t numChannels;
     
