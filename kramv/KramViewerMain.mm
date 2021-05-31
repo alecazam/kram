@@ -1373,6 +1373,7 @@ float4 toSnorm8(float4 c)
     auto arrayState = toState(_showSettings->arrayNumber > 0);
     auto faceState = toState(_showSettings->faceNumber > 0);
     auto mipState = toState(_showSettings->mipLOD > 0);
+    auto meshState = toState(_showSettings->meshNumber > 0);
     
     // TODO: UI state, and vertical state
     auto uiState = toState(_buttonStack.hidden);
@@ -1380,6 +1381,7 @@ float4 toSnorm8(float4 c)
     auto helpState = Off;
     auto infoState = Off;
     auto jumpState = Off;
+    
     
     // buttons
     [self findButton:"?"].state = helpState;
@@ -1399,6 +1401,7 @@ float4 toSnorm8(float4 c)
     
     [self findButton:"S"].state = showAllState;
     [self findButton:"O"].state = previewState;
+    [self findButton:"8"].state = meshState;
     [self findButton:"W"].state = wrapState;
     [self findButton:"D"].state = gridState;
     [self findButton:"E"].state = debugState;
@@ -1428,6 +1431,7 @@ float4 toSnorm8(float4 c)
    
     [self findMenuItem:"S"].state = showAllState;
     [self findMenuItem:"O"].state = previewState;
+    [self findMenuItem:"8"].state = meshState;
     [self findMenuItem:"W"].state = wrapState;
     [self findMenuItem:"D"].state = gridState;
     [self findMenuItem:"E"].state = debugState;

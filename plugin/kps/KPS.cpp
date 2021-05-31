@@ -543,7 +543,7 @@ static void DoReadContinue(GlobalsPtr globals)
     }
     
     KTXImage srcImage;
-    if (!srcImage.open(data.data(), data.size())) {
+    if (!srcImage.open(data.data(), data.size())) { // TODO: consider using isInfoOnly
         HandleError(globals, "Read - Couldn't parse file");
         return;
     }
