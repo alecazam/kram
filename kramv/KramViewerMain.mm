@@ -1517,10 +1517,15 @@ float4 toSnorm8(float4 c)
     bool isShiftKeyDown = theEvent.modifierFlags & NSEventModifierFlagShift;
     uint32_t keyCode = theEvent.keyCode;
 
-    [self handleKey:keyCode isShiftKeyDown:isShiftKeyDown];
+    bool isHandled = [self handleKey:keyCode isShiftKeyDown:isShiftKeyDown];
+    if (!isHandled)
+    {
+        // this will bonk
+        [super keyDown:theEvent];
+    }
 }
 
-- (void)handleKey:(uint32_t)keyCode isShiftKeyDown:(bool)isShiftKeyDown
+- (bool)handleKey:(uint32_t)keyCode isShiftKeyDown:(bool)isShiftKeyDown
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
     bool isChanged = false;
@@ -1545,7 +1550,7 @@ float4 toSnorm8(float4 c)
         case Key::U:
             // this means no image loaded yet
             if (_noImageLoaded) {
-                return;
+                return true;
             }
             
             _buttonStack.hidden = !_buttonStack.hidden;
@@ -1936,6 +1941,9 @@ float4 toSnorm8(float4 c)
                 isChanged = true;
             }
             break;
+        default:
+            // non-handled key
+            return false;
     }
     
     if (!text.empty()) {
@@ -1949,6 +1957,7 @@ float4 toSnorm8(float4 c)
     if (isChanged) {
         self.needsDisplay = YES;
     }
+    return true;
 }
 
 
@@ -2342,6 +2351,8 @@ float4 toSnorm8(float4 c)
     // this is better than requesting mousemoved events, they're only sent when cursor is inside
     _trackingArea = [[NSTrackingArea alloc] initWithRect:_view.bounds
                 options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved |
+                          
+                          //NSTrackingActiveWhenFirstResponder
                           NSTrackingActiveInActiveApp
                           //NSTrackingActiveInKeyWindow
                           )
