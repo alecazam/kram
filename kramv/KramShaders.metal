@@ -553,8 +553,8 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n) {
     return albedo;
 }
 
-// TODO: eliminate the toUnorm() calls below, rendering to rgba16f
-// but also need to remove conversion code on cpu side expecting unorm in eyedropper
+// TODO: eliminate the toUnorm() calls below, rendering to rgba16f but then present
+// doesn't have enough info to remap 16F to the display.
 
 float4 DrawPixels(
     ColorInOut in [[stage_in]],
@@ -1109,7 +1109,7 @@ kernel void SampleImageCS(
     uint2 uv = uniforms.uv; // tie into texture lookup
     // uv >>= uniforms.mipLOD;
     
-    // the color returned is linear
+    // the color is returned to linear rgba32f
     float4 color = colorMap.read(uv, uniforms.mipLOD);
     result.write(color, index);
 }
@@ -1128,7 +1128,7 @@ kernel void SampleImageArrayCS(
     
     uint arrayOrSlice = uniforms.arrayOrSlice;
     
-    // the color returned is linear
+    // the color is returned to linear rgba32f
     float4 color = colorMap.read(uv, arrayOrSlice, uniforms.mipLOD);
     result.write(color, index);
 }
@@ -1147,9 +1147,7 @@ kernel void SampleCubeCS(
     
     uint face = uniforms.face;
     
-    // This writes out linear float32, can do srgb conversion on cpu side
-    
-    // the color returned is linear
+    // the color is returned to linear rgba32f
     float4 color = colorMap.read(uv, face, uniforms.mipLOD);
     result.write(color, index);
 }
@@ -1170,7 +1168,7 @@ kernel void SampleCubeArrayCS(
     uint face = uniforms.face;
     uint arrayOrSlice = uniforms.arrayOrSlice;
     
-    // the color returned is linear
+    // the color is returned to linear rgba32f
     float4 color = colorMap.read(uv, face, arrayOrSlice, uniforms.mipLOD);
     result.write(color, index);
 }
@@ -1187,7 +1185,7 @@ kernel void SampleVolumeCS(
     uint3 uv = uint3(uniforms.uv, uniforms.arrayOrSlice); // tie into texture lookup
     //uv >>= uniforms.mipLOD);
     
-    // the color returned is linear
+    // the color is returned to linear rgba32f
     float4 color = colorMap.read(uv, uniforms.mipLOD);
     result.write(color, index);
 }

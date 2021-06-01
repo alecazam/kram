@@ -128,7 +128,7 @@ void KLOGF(const char* format, ...) {
             vector<uint8_t> dstMipData;
             
             // want to just decode one chunk of the level that was unpacked abovve
-            if (!decoder.decodeBlocks(w, h, mipData.data(), mipData.size(), image.pixelFormat, dstMipData, params)) {
+            if (!decoder.decodeBlocks(w, h, mipData.data(), (int32_t)mipData.size(), image.pixelFormat, dstMipData, params)) {
                 KLOGF("kramv %s failed to decode blocks\n", filename);
                 return NO;
             }
