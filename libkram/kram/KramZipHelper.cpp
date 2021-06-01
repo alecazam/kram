@@ -9,6 +9,9 @@
 //#include <stdio.h>
 //#include <unistd.h>
 
+#include <algorithm> // for copy_if
+#include <vector>
+
 #include "miniz.h"
 
 namespace kram {
