@@ -9,7 +9,8 @@
 //#include <stdio.h>
 //#include <unistd.h>
 
-#include <algorithm> // for copy_if
+#include <algorithm> // for copy_if on Win
+#include <iterator> // for copy_if on Win
 #include <vector>
 
 #include "miniz.h"
