@@ -515,15 +515,15 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n) {
     
     float3 lightDir = normalize(float3(1,1,1));
     float3 lightColor = float3(1,1,1);
-    
-    // diffuse
-    float dotNLUnsat = dot(n, lightDir);
-    float dotNL = saturate(dotNLUnsat);
-    float3 diffuse = lightColor.xyz * dotNL;
 
     float3 specular = float3(0.0);
-
+    float3 diffuse = float3(0.0);
+    float3 ambient = float3(0.0);
+    
     bool doSpecular = true;
+    bool doDiffuse = true;
+    bool doAmbient = true;
+    
     if (doSpecular) {
         float3 ref = normalize(reflect(viewDir, n));
         
@@ -533,10 +533,18 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n) {
         specular = saturate(dotRL * lightColor.rgb);
     }
 
-    float3 ambient = mix(0.1, 0.3, saturate(dotNLUnsat * 0.5 + 0.5));
+    if (doDiffuse) {
+        float dotNL = saturate(dot(n, lightDir));
+        diffuse = dotNL * lightColor.rgb;
+    }
+    
+    if (doAmbient) {
+        float dotNLUnsat = dot(n, lightDir);
+        ambient = mix(0.1, 0.3, saturate(dotNLUnsat * 0.5 + 0.5));
+    }
     
     // attenuate, and not saturate below, so no HDR yet
-    specular *= 0.3;
+    specular *= 0.8;
     diffuse *= 0.7;
     //ambient *= 0.2;
     
@@ -544,10 +552,6 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n) {
     
     return albedo;
 }
-
-
-// TODO: do more test shapes, but that affects eyedropper
-// generate and pass down tangents + bitanSign in the geometry
 
 // TODO: eliminate the toUnorm() calls below, rendering to rgba16f
 // but also need to remove conversion code on cpu side expecting unorm in eyedropper

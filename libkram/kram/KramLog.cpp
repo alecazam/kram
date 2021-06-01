@@ -122,6 +122,8 @@ bool endsWith(const string& value, const string& ending)
     if (ending.size() > value.size()) {
         return false;
     }
+    
+    // reverse comparison at end of value
     return equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 

@@ -35,6 +35,9 @@ struct ZipHelper {
     bool openForRead(const uint8_t* zipData, uint64_t zipDataSize);
     void close();
     
+    // Only keep entries that match the extensions provided
+    void filterExtensions(const vector<string>& extensions);
+
     // buffer is resized if smaller, can use to lookat headers (f.e. ktx or mod)
     // the zip decodes only the length of the buffer passed in, and this should be small
     // since an iterator is called once to extract data

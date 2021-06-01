@@ -44,6 +44,22 @@ bool ZipHelper::openForRead(const uint8_t* zipData_, uint64_t zipDataSize) { // 
     return true;
 }
 
+void ZipHelper::filterExtensions(const vector<string>& extensions) {
+    
+    vector<ZipEntry> zipEntrysFiltered;
+    
+    std::copy_if(_zipEntrys.begin(), _zipEntrys.end(), std::back_inserter(zipEntrysFiltered), [&extensions](const auto& zipEntry) {
+        for (const auto& ext : extensions) {
+            if (endsWithExtension(zipEntry.filename, ext)) {
+                return true;
+            }
+        }
+        return false;
+    });
+    
+    _zipEntrys = zipEntrysFiltered;
+}
+
 void ZipHelper::close() {
     if (zip != nullptr) {
         mz_zip_end(zip.get());

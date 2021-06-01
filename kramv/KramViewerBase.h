@@ -110,8 +110,11 @@ public:
     // draw with reverseZ to better match perspective
     bool isReverseZ = true;
     
-    // whether files are pulled from disk or zip archive.
+    // whether files are pulled from zip archive.
     bool isArchive = false;
+    
+    // whether files are pulled from folder(s)
+    bool isFolder = false;
     
     // can have up to 5 channels (xyz as xy, 2 other channels)
     int32_t numChannels = 0;

@@ -421,8 +421,11 @@ NSArray<NSString*>* pasteboardTypes = @[
     // allow zip files to be dropped and opened, and can advance through bundle content
     ZipHelper _zip;
     MmapHelper _zipMmap;
-    int32_t _fileIndex;
+    int32_t _fileArchiveIndex;
     BOOL _noImageLoaded;
+    
+    vector<string> _folderFiles;
+    int32_t _fileFolderIndex;
 }
 
 - (void)awakeFromNib
@@ -1288,7 +1291,7 @@ float4 toSnorm8(float4 c)
     bool isFaceSliceHidden = _showSettings->faceCount <= 1 && _showSettings->sliceCount <= 1;
     bool isMipHidden = _showSettings->maxLOD <= 1;
     
-    bool isJumpToNextHidden = !_showSettings->isArchive;
+    bool isJumpToNextHidden = !(_showSettings->isArchive || _showSettings->isFolder);
     
     bool isRedHidden = false;
     bool isGreenHidden = _showSettings->numChannels <= 1;
@@ -1875,9 +1878,17 @@ float4 toSnorm8(float4 c)
             
         case Key::J:
             if (![self findButton:"J"].isHidden) {
-                if ([self advanceTextureFromAchive:!isShiftKeyDown]) {
-                    isChanged = true;
-                    text = "Loaded " + _showSettings->lastFilename;
+                if (_showSettings->isArchive) {
+                    if ([self advanceTextureFromAchive:!isShiftKeyDown]) {
+                        isChanged = true;
+                        text = "Loaded " + _showSettings->lastFilename;
+                    }
+                }
+                else if (_showSettings->isFolder) {
+                    if ([self advanceTextureFromFolder:!isShiftKeyDown]) {
+                        isChanged = true;
+                        text = "Loaded " + _showSettings->lastFilename;
+                    }
                 }
             }
             break;
@@ -2053,9 +2064,18 @@ float4 toSnorm8(float4 c)
     if (!_zip.openForRead(_zipMmap.data(), _zipMmap.dataLength())) {
         return NO;
     }
+    
+    // filter out unsupported extensions
+    
+    _zip.filterExtensions({".ktx", ".ktx2"});
 
+    // don't switch to empty archive
+    if (_zip.zipEntrys().empty()) {
+        return NO;
+    }
+    
     // load the first entry in the archive
-    _fileIndex = 0;
+    _fileArchiveIndex = 0;
     
     return YES;
 }
@@ -2067,27 +2087,156 @@ float4 toSnorm8(float4 c)
         return NO;
     }
     
-    // this advances through the fileIndex of a dropped
+    if (_zip.zipEntrys().empty()) {
+        return NO;
+    }
+   
     size_t numEntries = _zip.zipEntrys().size();
-    if (numEntries == 0) {
+    
+    if (increment)
+        _fileArchiveIndex++;
+    else
+        _fileArchiveIndex += numEntries - 1; // back 1
+
+    _fileArchiveIndex = _fileArchiveIndex % numEntries;
+    
+    return [self loadTextureFromArchive];
+}
+
+-(BOOL)advanceTextureFromFolder:(BOOL)increment
+{
+    if (_folderFiles.empty()) {
+        // no archive loaded
+        return NO;
+    }
+
+    size_t numEntries = _folderFiles.size();
+    if (increment)
+        _fileFolderIndex++;
+    else
+        _fileFolderIndex += numEntries - 1; // back 1
+
+    _fileFolderIndex = _fileFolderIndex % numEntries;
+    
+    return [self loadTextureFromFolder];
+}
+
+- (BOOL)loadTextureFromFolder
+{
+    // now lookup the filename and data at that entry
+    const char* filename = _folderFiles[_fileFolderIndex].c_str();
+    auto timestamp = FileHelper::modificationTimestamp(filename);
+    
+    // have already filtered filenames out, so this should never get hit
+    if (!(//endsWithExtension(filename, ".png") ||
+          endsWithExtension(filename, ".ktx") ||
+          endsWithExtension(filename, ".ktx2")) )
+    {
+        return NO;
+    }
+        
+    const uint8_t* imageData = nullptr;
+    uint64_t imageDataLength = 0;
+
+    // TODO: assuming can mmap here, but may need FileHelper fallback
+    MmapHelper imageMmap;
+    if (!imageMmap.open(filename)) {
         return NO;
     }
     
-    if (increment)
-        _fileIndex = (_fileIndex + 1) % numEntries;
-    else
-        _fileIndex = (_fileIndex + numEntries - 1) % numEntries;
+    imageData = imageMmap.data();
+    imageDataLength = imageMmap.dataLength();
+    
+    // see if this is albedo, and then search for normal map in the same archive
+    const uint8_t* imageNormalData = nullptr;
+    uint64_t imageNormalDataLength = 0;
+    MmapHelper imageNormalMmap;
+    
+    string normalFilename = filename;
+    
+    // first only do this on albedo/diffuse textures
+    string search = "-a.ktx";
+    auto searchPos = normalFilename.find(search);
+    bool isFound = searchPos != string::npos;
+    
+    if (!isFound) {
+        search = "-d.ktx";
+        searchPos = normalFilename.find(search);
+        isFound = searchPos != string::npos;
+    }
+    
+    if (isFound) {
+        normalFilename = normalFilename.replace(searchPos, search.length(), "-n.ktx"); // works for ktx or ktx2 file
+    
+        // binary search for the filename in the array, will have to be in same directory
+        isFound = false;
+        for (const auto& search : _folderFiles) {
+            if (search == normalFilename) {
+                isFound = true;
+                break;
+            }
+        }
+        
+        if (isFound) {
+            if (imageNormalMmap.open(normalFilename.c_str())) {
+                imageNormalData = imageNormalMmap.data();
+                imageNormalDataLength = imageNormalMmap.dataLength();
+            }
+        }
+    }
+    
+    string fullFilename = filename;
+    Renderer* renderer = (Renderer*)self.delegate;
+    if (![renderer loadTextureFromData:fullFilename timestamp:(double)timestamp
+                             imageData:imageData imageDataLength:imageDataLength
+                             imageNormalData:imageNormalData imageNormalDataLength:imageNormalDataLength])
+    {
+        return NO;
+    }
+    
+    // set title to filename, chop this to just file+ext, not directory
+    const char* filenameShort = strrchr(filename, '/');
+    if (filenameShort == nullptr) {
+        filenameShort = filename;
+    }
+    else {
+        filenameShort += 1;
+    }
+        
+    // was using subtitle, but that's macOS 11.0 feature.
+    string title = "kramv - ";
+    title += formatTypeName(_showSettings->originalFormat);
+    title += " - ";
+    title += filenameShort;
+    
+    self.window.title = [NSString stringWithUTF8String: title.c_str()];
+        
+    // doesn't set imageURL or update the recent document menu
+    
+    // show the controls
+    if (_noImageLoaded) {
+        _buttonStack.hidden = NO; // show controls
+        _noImageLoaded = NO;
+    }
 
+    _showSettings->isArchive = false;
+    _showSettings->isFolder = true;
+   
+    // show/hide button
+    [self updateUIAfterLoad];
+    
+    self.needsDisplay = YES;
+    return YES;
+}
+
+- (BOOL)loadTextureFromArchive
+{
     // now lookup the filename and data at that entry
-    const auto& entry = _zip.zipEntrys()[_fileIndex];
+    const auto& entry = _zip.zipEntrys()[_fileArchiveIndex];
     const char* filename = entry.filename;
     double timestamp = (double)entry.modificationDate;
     
-    return [self loadTextureFromArchive:filename timestamp:timestamp];
-}
-
-- (BOOL)loadTextureFromArchive:(const char*)filename timestamp:(double)timestamp
-{
+    // have already filtered filenames out, so this should never get hit
     if (!(//endsWithExtension(filename, ".png") ||
           endsWithExtension(filename, ".ktx") ||
           endsWithExtension(filename, ".ktx2")) )
@@ -2161,6 +2310,7 @@ float4 toSnorm8(float4 c)
     }
 
     _showSettings->isArchive = true;
+    _showSettings->isFolder = false;
    
     // show/hide button
     [self updateUIAfterLoad];
@@ -2181,6 +2331,128 @@ float4 toSnorm8(float4 c)
         return NO;
     }
     
+    // this likely means it's a local file directory
+    if (strchr(filename, '.') == nullptr) {
+        // make list of all file in the directory
+        
+        if (!self.imageURL || (!([self.imageURL isEqualTo:url]))) {
+            
+            
+            NSDirectoryEnumerator *directoryEnumerator = [[NSFileManager defaultManager] enumeratorAtURL:url includingPropertiesForKeys:[NSArray array] options:0 errorHandler://nil
+               ^BOOL(NSURL *url, NSError *error) {
+                macroUnusedVar(url);
+                macroUnusedVar(error);
+
+                // handle error
+                return NO;
+                }
+            ];
+
+            vector<string> files;
+            while (NSURL *fileOrDirectoryURL = [directoryEnumerator nextObject]) {
+                const char* name = fileOrDirectoryURL.fileSystemRepresentation;
+                
+                // filter only types that are supported
+                if (endsWithExtension(name, ".ktx") ||
+                    endsWithExtension(name, ".ktx2")
+                    // || endsWithExtension(name, ".png") // TODO: can't support with KTXImage load path, needs PNG loader
+                    
+                    )
+                {
+                    files.push_back(name);
+                }
+            }
+            
+            // don't change to this folder if it's devoid of content
+            if (files.empty()) {
+                return NO;
+            }
+            
+            // add it to recent docs
+            NSDocumentController* dc = [NSDocumentController sharedDocumentController];
+            [dc noteNewRecentDocumentURL:url];
+        
+            // sort them
+            sort(files.begin(), files.end());
+            
+            // replicate archive logic below
+            
+            self.imageURL = url;
+            
+            // preserve old folder
+            string existingFilename;
+            if (_fileFolderIndex < (int32_t)_folderFiles.size())
+                existingFilename = _folderFiles[_fileFolderIndex];
+            else
+                _fileFolderIndex = 0;
+            
+            _folderFiles = files;
+            
+            // TODO: preserve filename before load, and restore that index, by finding that name in refreshed folder list
+            
+            if (!existingFilename.empty()) {
+                uint32_t index = 0;
+                for (const auto& fileIt : _folderFiles) {
+                    if (fileIt == existingFilename) {
+                        break;
+                    }
+                }
+                
+                _fileFolderIndex = index;
+            }
+        }
+        
+        // now load image from directory
+        _showSettings->isArchive = false;
+        _showSettings->isFolder = true;
+           
+        // now load the file at the index
+        setErrorLogCapture(true);
+        
+        BOOL success = [self loadTextureFromFolder];
+        
+        if (!success) {
+            // get back error text from the failed load
+            string errorText;
+            getErrorLogCaptureText(errorText);
+            setErrorLogCapture(false);
+            
+            const string& filename = _folderFiles[_fileFolderIndex];
+            
+            // prepend filename
+            string finalErrorText;
+            append_sprintf(finalErrorText,
+                           "Could not load from folder:\n %s\n", filename.c_str());
+            finalErrorText += errorText;
+            
+            [self setHudText: finalErrorText.c_str()];
+        }
+        
+        setErrorLogCapture(false);
+        return success;
+    }
+    
+    //-------------------
+    
+    // file is not a supported extension
+    if (!(endsWithExtension(filename, ".zip") ||
+          endsWithExtension(filename, ".png") ||
+          endsWithExtension(filename, ".ktx") ||
+          endsWithExtension(filename, ".ktx2")) )
+    {
+        string errorText = "Unsupported file extension, must be .zip, .png, .ktx, ktx2\n";
+        
+        string finalErrorText;
+        append_sprintf(finalErrorText,
+                       "Could not load from file:\n %s\n", filename);
+        finalErrorText += errorText;
+        
+        [self setHudText: finalErrorText.c_str()];
+        return NO;
+    }
+    
+    //-------------------
+    
     if (endsWithExtension(filename, ".zip")) {
         auto archiveTimestamp = FileHelper::modificationTimestamp(filename);
         
@@ -2188,8 +2460,10 @@ float4 toSnorm8(float4 c)
             
             // copy this out before it's replaced
             string existingFilename;
-            if (self.lastArchiveTimestamp)
-                existingFilename = _zip.zipEntrys()[_fileIndex].filename;
+            if (_fileArchiveIndex < (int32_t)_zip.zipEntrys().size())
+                existingFilename = _zip.zipEntrys()[_fileArchiveIndex].filename;
+            else
+                _fileArchiveIndex = 0;
             
             BOOL isArchiveLoaded = [self loadArchive:filename];
             if (!isArchiveLoaded) {
@@ -2205,28 +2479,30 @@ float4 toSnorm8(float4 c)
             [dc noteNewRecentDocumentURL:url];
         
             // now reload the filename if needed
-            const ZipEntry* formerEntry = _zip.zipEntry(existingFilename.c_str());
-            if (formerEntry) {
-                // lookup the index in the remapIndices table
-                _fileIndex = (uintptr_t)(formerEntry - &_zip.zipEntrys().front());
-            }
-            else {
-                _fileIndex = 0;
+            if (!existingFilename.empty()) {
+                const ZipEntry* formerEntry = _zip.zipEntry(existingFilename.c_str());
+                if (formerEntry) {
+                    // lookup the index in the remapIndices table
+                    _fileArchiveIndex = (uintptr_t)(formerEntry - &_zip.zipEntrys().front());
+                }
+                else {
+                    _fileArchiveIndex = 0;
+                }
             }
         }
         
-        const auto& entry =_zip.zipEntrys()[_fileIndex];
-        const char* filename = entry.filename;
-        double timestamp = entry.modificationDate;
-        
         setErrorLogCapture(true);
         
-        BOOL success = [self loadTextureFromArchive:filename timestamp:timestamp];
+        BOOL success = [self loadTextureFromArchive];
         
         if (!success) {
+            // get back error text from the failed load
             string errorText;
             getErrorLogCaptureText(errorText);
             setErrorLogCapture(false);
+            
+            const auto& entry =_zip.zipEntrys()[_fileArchiveIndex];
+            const char* filename = entry.filename;
             
             // prepend filename
             string finalErrorText;
@@ -2241,27 +2517,15 @@ float4 toSnorm8(float4 c)
         return success;
     }
         
-    if (!(endsWithExtension(filename, ".png") ||
-          endsWithExtension(filename, ".ktx") ||
-          endsWithExtension(filename, ".ktx2")) )
-    {
-        string errorText = "Unsupported file extension, must be .zip, .png, .ktx, ktx2\n";
-        
-        string finalErrorText;
-        append_sprintf(finalErrorText,
-                       "Could not load from archive:\n %s\n", filename);
-        finalErrorText += errorText;
-        
-        [self setHudText: finalErrorText.c_str()];
-        return NO;
-    }
-        
+    //-------------------
+    
     Renderer* renderer = (Renderer*)self.delegate;
     setErrorLogCapture(true);
     
     BOOL success = [renderer loadTexture:url];
     
     if (!success) {
+        // get back error text from the failed load
         string errorText;
         getErrorLogCaptureText(errorText);
         setErrorLogCapture(false);
@@ -2310,6 +2574,7 @@ float4 toSnorm8(float4 c)
     }
     
     _showSettings->isArchive = false;
+    _showSettings->isFolder = false;
    
     // show/hide button
     [self updateUIAfterLoad];
