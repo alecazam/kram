@@ -167,7 +167,10 @@ bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
     
     // TODO: png has 16u format useful for heights
     
+    image.initMipLevels(sizeof(KTXHeader)); // TODO: could also make this ktx2 with zstd compress
     image.reserveImageData();
+    memcpy((uint8_t*)image.fileData, &image.header, sizeof(KTXHeader));
+    
     memcpy((uint8_t*)image.fileData + image.mipLevels[0].offset, singleImage.pixels().data(), image.levelLength(0));
     
     return true;
