@@ -216,7 +216,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
             *originalFormat = (MTLPixelFormat)rbgaImage2.pixelFormat; // TODO: should this return rgbaImage.pixelFormat ?
         }
         
-        return [self loadTextureFromImage:rbgaImage2];
+        return [self blitTextureFromImage:rbgaImage2];
     }
 #endif
    
@@ -231,7 +231,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
             return nil;
         }
         
-        return [self loadTextureFromImage:imageDecoded];
+        return [self blitTextureFromImage:imageDecoded];
     }
     else
 #endif
@@ -241,6 +241,8 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
     }
 }
 
+/*
+ 
 static uint32_t numberOfMipmapLevels(const Image& image) {
     uint32_t w = image.width();
     uint32_t h = image.height();
@@ -254,32 +256,22 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
     return numberOfMips;
 }
     
-- (nullable id<MTLTexture>)loadTextureFromPNGData:(const uint8_t*)data dataSize:(int32_t)dataSize isSRGB:(BOOL)isSRGB originalFormat:(nullable MTLPixelFormat*)originalFormat
+- (nullable id<MTLTexture>)_loadTextureFromPNGData:(const uint8_t*)data dataSize:(int32_t)dataSize isSRGB:(BOOL)isSRGB originalFormat:(nullable MTLPixelFormat*)originalFormat
 {
     // can only load 8u and 16u from png, no hdr formats, no premul either, no props
     // this also doesn't handle strips like done in libkram.
     
-    Image sourceImage;
-    bool isLoaded = LoadPng(data, dataSize, false, false, sourceImage);
+   // Image sourceImage;
+    bool isLoaded = LoadPng(data, dataSize, false, false, image);
     if (!isLoaded) {
         return nil;
     }
     
-    KTXImage image;
-    image.width = sourceImage.width();
-    image.height = sourceImage.height();
-    image.depth = 0;
-    
-    image.header.numberOfArrayElements = 0;
-    image.header.numberOfMipmapLevels = numberOfMipmapLevels(sourceImage);
-    
-    image.textureType = MyMTLTextureType2D;
-    image.pixelFormat = isSRGB ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
-    
+   
     // TODO: replace this with code that gens a KTXImage from png (and cpu mips)
     // instead of needing to use autogenmip that has it's own filters (probably a box)
     
-    id<MTLTexture> texture = [self createTexture:image isPrivate:false];
+    id<MTLTexture> texture = [self createTexture:image isPrivate:true];
     if (!texture) {
         return nil;
     }
@@ -287,6 +279,10 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
     if (originalFormat != nullptr) {
         *originalFormat = (MTLPixelFormat)image.pixelFormat;
     }
+    
+    // this means KTXImage must hold data
+    [self blitTextureFromImage:image];
+    
     
     // cpu copy the bytes from the data object into the texture
     const MTLRegion region = {
@@ -300,6 +296,7 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
                 mipmapLevel:0
                   withBytes:sourceImage.pixels().data()
                 bytesPerRow:bytesPerRow];
+  
     
     // have to schedule autogen inside render using MTLBlitEncoder
     if (image.header.numberOfMipmapLevels > 1) {
@@ -308,6 +305,7 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
     
     return texture;
 }
+*/
 
 - (nullable id<MTLTexture>)loadTextureFromURL:(nonnull NSURL *)url originalFormat:(nullable MTLPixelFormat*)originalFormat {
     
@@ -317,6 +315,9 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
     // files can be renamed to the incorrect extensions
     string filename = toLower(path);
 
+    KTXImage image;
+    KTXImageData imageDataKTX;
+    
     if (endsWithExtension(filename.c_str(), ".png")) {
         // set title to filename, chop this to just file+ext, not directory
         string filenameShort = filename;
@@ -339,21 +340,15 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
         }
         
         bool isSRGB = (!isNormal && !isSDF);
-        
-        MmapHelper mmapHelper;
-        if (!mmapHelper.open(path)) {
+
+        if (!imageDataKTX.openPNG(path, isSRGB, image)) {
             return nil;
         }
         
-        // TODO: need FileHelper fallback here
-        
-        return [self loadTextureFromPNGData:mmapHelper.data() dataSize:(int32_t)mmapHelper.dataLength() isSRGB:isSRGB originalFormat:originalFormat];
+        return [self loadTextureFromImage:image originalFormat:originalFormat];
     }
     else {
-        KTXImage image;
-        KTXImageData imageData;
-        
-        if (!imageData.open(path, image)) {
+        if (!imageDataKTX.open(path, image)) {
             return nil;
         }
         
@@ -396,6 +391,8 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
     return texture;
 }
 
+/* just for reference now
+ 
 // Has a synchronous upload via replaceRegion that only works for shared/managed (f.e. ktx),
 // and another path for private that uses a blitEncoder and must have block aligned data (f.e. ktxa, ktx2).
 // Could repack ktx data into ktxa before writing to temporary file, or when copying NSData into MTLBuffer.
@@ -536,6 +533,7 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
         
     return texture;
 }
+*/
 
 //--------------------------
 

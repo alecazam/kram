@@ -23,6 +23,8 @@ public:
     // class aliases data, so caller must keep alive.  Useful with bundle.
     bool open(const uint8_t* data, size_t dataSize, KTXImage& image);
     
+    bool openPNG(const char* filename, bool isSrgb, KTXImage& image);
+
 private:
     MmapHelper mmapHelper;
     vector<uint8_t> fileData;

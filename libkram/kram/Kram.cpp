@@ -59,20 +59,89 @@ bool KTXImageData::open(const char* filename, KTXImage& image) {
         }
     }
     
-    // read the KTXImage in from the data, it will alias mmap or fileData
+    const uint8_t* data;
+    size_t dataSize;
     if (useMmap) {
-        if (!image.open(mmapHelper.data(), mmapHelper.dataLength(), isInfoOnly)) {
-            return false;
-        }
+        data = mmapHelper.data();
+        dataSize = mmapHelper.dataLength();
     }
     else {
-        if (!image.open(fileData.data(), fileData.size(), isInfoOnly)) {
-            return false;
-        }
+        data = fileData.data();
+        dataSize = fileData.size();
+    }
+    
+    // read the KTXImage in from the data, it will alias mmap or fileData
+    if (!image.open(data, dataSize, isInfoOnly)) {
+        return false;
     }
     
     return true;
 }
+
+bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
+    bool useMmap = true;
+    if (!mmapHelper.open(filename)) {
+        useMmap = false;
+        
+        // open file, copy it to memory, then close it
+        FileHelper fileHelper;
+        if (!fileHelper.open(filename, "rb")) {
+            return false;
+        }
+        
+        // read the file into memory
+        size_t size = fileHelper.size();
+        if (size == (size_t)-1) {
+            return false;
+        }
+        
+        fileData.resize(size);
+        if (!fileHelper.read(fileData.data(), size)) {
+            return false;
+        }
+    }
+    
+    const uint8_t* data;
+    size_t dataSize;
+    if (useMmap) {
+        data = mmapHelper.data();
+        dataSize = mmapHelper.dataLength();
+    }
+    else {
+        data = fileData.data();
+        dataSize = fileData.size();
+    }
+    
+    // the mmap/filehelper point to the png data
+    // use Image to 
+    
+    Image singleImage;
+    bool isLoaded = LoadPng(data, dataSize, false, false, singleImage);
+    if (!isLoaded) {
+        return false;
+    }
+    
+    // now move the png pixels into the KTXImage
+
+    image.width = singleImage.width();
+    image.height = singleImage.height();
+    image.depth = 0;
+
+    image.header.numberOfArrayElements = 0;
+    image.header.numberOfMipmapLevels = 1;
+    image.textureType = MyMTLTextureType2D;
+    image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+    
+    // TODO: support mips with blitEncoder or Mipper
+    // TODO: support chunks, but may need to copy horizontal to vertical
+    // TODO: png has 16u format useful for heights
+    
+    image.reserveImageData();
+    memcpy((uint8_t*)image.fileData + image.mipLevels[0].offset, singleImage.pixels().data(), image.levelLength(0));
+    
+    return true;
+}
+
 
 bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image)
 {
