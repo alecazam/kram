@@ -6,6 +6,9 @@
 
 using namespace metal;
 
+// whether to use model tangents or generate from normal in fragment shader
+constant bool useTangent = false;
+
 //---------------------------------
 // helpers
 
@@ -184,10 +187,46 @@ half3 toNormal(half3 n)
 }
 
 
+// https://www.gamasutra.com/blogs/RobertBasler/20131122/205462/Three_Normal_Mapping_Techniques_Explained_For_the_Mathematically_Uninclined.php?print=1
+// http://www.thetenthplanet.de/archives/1180
+// This generates the TBN from vertex normal and p and uv derivatives
+// Then transforms the bumpNormal to that space.  No tangent is needed.
+// The downside is this must all be fp32, and all done in fragment shader and use derivatives.
+// Derivatives are known to be caclulated differently depending on hw and different precision.
+half3 transformNormalByBasis(half3 vertexNormal, half3 bumpNormal, float3 worldPos, float2 uv)
+{
+    float3 N = toFloat(vertexNormal);
+    
+    // for OpenGL +Y convention, flip N.y
+    // but this doesn't match explicit tangents case, see if those are wrong.
+    //N.y = -N.y;
+    
+    // get edge vectors of the pixel triangle
+    float3 dp1 = dfdx(worldPos);
+    float3 dp2 = dfdy(worldPos);
+    float2 duv1 = dfdx(uv);
+    float2 duv2 = dfdy(uv);
+
+    // solve the linear system
+    float3 dp2perp = cross(dp2, N);
+    float3 dp1perp = cross(N, dp1);
+    float3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+    float3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+    float invmax = rsqrt(max(length_squared(T), length_squared(B)));
+    
+    // keeps relative magnitude of two vectors, they're not both unit vecs
+    T *= invmax;
+    B *= invmax;
+    
+    // construct a scale-invariant frame
+    // drop to half to match other call
+    bumpNormal = half3x3(toHalf(T), toHalf(B), vertexNormal) * bumpNormal;
+    return bumpNormal;
+}
 
 // use mikktspace, gen bitan in frag shader with sign, don't normalize vb/vt
 // see http://www.mikktspace.com/
-half3 transformNormal(half3 bumpNormal, half4 tangent, half3 vertexNormal)
+half3 transformNormalByBasis(half3 bumpNormal, half4 tangent, half3 vertexNormal)
 {
     // Normalize tangent/vertexNormal in vertex shader
     // but don't renormalize interpolated tangent, vertexNormal in fragment shader
@@ -208,7 +247,8 @@ half3 transformNormal(half3 bumpNormal, half4 tangent, half3 vertexNormal)
     return normalize(bumpNormal);
 }
 
-half3 transformNormal(half4 tangent, half3 vertexNormal,
+
+half3 transformNormal(half4 tangent, half3 vertexNormal, float3 worldPos,
                       texture2d<half> texture, sampler s, float2 uv, bool isSigned = true)
 {
     half4 nmap = texture.sample(s, uv);
@@ -221,17 +261,23 @@ half3 transformNormal(half4 tangent, half3 vertexNormal,
     // rebuild the z term
     half3 bumpNormal = toNormal(nmap.xyz);
    
-    return transformNormal(bumpNormal, tangent, vertexNormal);
+    if (useTangent)
+         bumpNormal = transformNormalByBasis(bumpNormal, tangent, vertexNormal);
+    else
+        bumpNormal = transformNormalByBasis(bumpNormal, vertexNormal, worldPos, uv);
+  
+    return bumpNormal;
 }
 
 
-float3 transformNormal(float4 nmap, half3 vertexNormal, half4 tangent,
+half3 transformNormal(half4 nmap, half3 vertexNormal, half4 tangent,
+                      float3 worldPos, float2 uv, // to gen TBN
                         bool isSwizzleAGToRG, bool isSigned, bool isFrontFacing)
 {
     // add swizzle for ASTC/BC5nm, other 2 channels format can only store 01 in ba
     // could use hw swizzle for this
     if (isSwizzleAGToRG) {
-        nmap = float4(nmap.ag, 0, 1);
+        nmap = half4(nmap.ag, 0, 1);
     }
 
     // to signed, also for ASTC/BC5nm
@@ -240,21 +286,29 @@ float3 transformNormal(float4 nmap, half3 vertexNormal, half4 tangent,
         nmap.rg = toSnorm8(nmap.rg);
     }
     
-    float3 bumpNormal = nmap.xyz;
+    half3 bumpNormal = nmap.xyz;
     
     bumpNormal = toNormal(bumpNormal);
 
-    // flip the normal if facing is flipped
-    // TODO: needed for tangent too?
-    if (!isFrontFacing) {
-        bumpNormal = -bumpNormal;
-        tangent.w = -tangent.w;
+    // handle the basis here (need worldPos and uv for other path)
+    if (useTangent) {
+        // flip the normal if facing is flipped
+        // TODO: needed for tangent too?
+        if (!isFrontFacing) {
+            bumpNormal = -bumpNormal;
+            tangent.w = -tangent.w;
+        }
+    
+        bumpNormal = transformNormalByBasis(bumpNormal, tangent, vertexNormal);
+    }
+    else {
+        bumpNormal = transformNormalByBasis(bumpNormal, vertexNormal, worldPos, uv);
     }
     
-    // handle the basis here
-    bumpNormal = toFloat(transformNormal(toHalf(bumpNormal), tangent, vertexNormal));
     return bumpNormal;
 }
+
+
 
 // TODO: have more bones, or read from texture instead of uniforms
 // can then do instanced skining, but vfetch lookup slower
@@ -301,7 +355,9 @@ void skinPosAndBasis(thread float4& position, thread float3& tangent, thread flo
     // see scale2 handling in transformBasis, a little different with transpose of 3x4
     
     normal  = (float4(normal, 0.0)  * bindPoseToBoneTransform);
-    tangent = (float4(tangent, 0.0) * bindPoseToBoneTransform);
+    
+    if (useTangent)
+        tangent = (float4(tangent, 0.0) * bindPoseToBoneTransform);
 }
 
 float3x3 toFloat3x3(float4x4 m)
@@ -319,33 +375,16 @@ void transformBasis(thread float3& normal, thread float3& tangent,
     // note this is RinvT * n = (Rt)t = R, this is for simple inverse, inv scale handled below
     // but uniform scale already handled by normalize
     normal = m * normal;
-       
+    normal *= invScale2;
+    normal = normalize(normal);
+   
     // question here of whether tangent is transformed by m or mInvT
     // most apps assume m, but after averaging it can be just as off the surface as the normal
-    tangent = m * tangent;
-    
-    // have to apply invSquare of scale here to approximate invT
-    // also make sure to identify inversion off determinant before instancing so that backfacing is correct
-    // this is only needed if non-uniform scale present in modelToWorldTfm, could precompute scale2
-//    if (isScaled)
-//    {
-//        // compute scale squared from rows
-//        float3 scale2 = float3(
-//            length_squared(m[0].xyz),
-//            length_squared(m[1].xyz),
-//            length_squared(m[2].xyz));
-//
-//        // do a max(1e4), but really don't have scale be super small
-//        scale2 = recip(max(0.0001 * 0.0001, scale2));
-        
-        // apply inverse
-        normal  *= invScale2;
+    if (useTangent) {
+        tangent = m * tangent;
         tangent *= invScale2;
-//    }
-    
-    // vertex shader normalize, but the fragment shader should not
-    normal  = normalize(normal);
-    tangent = normalize(tangent);
+        tangent = normalize(tangent);
+    }
     
     // make sure to preserve bitan sign in tangent.w
 }
@@ -395,6 +434,8 @@ ColorInOut DrawImageFunc(
         transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2);
         
         out.normal = toHalf(normal);
+        
+        // may be invalid if useTangent is false
         out.tangent.xyz = toHalf(tangent);
         out.tangent.w = toHalf(in.tangent.w);
     }
@@ -600,13 +641,15 @@ float4 DrawPixels(
         }
         else if (uniforms.isNormal) {
             // light the normal map
+            half4 nmapH = toHalf(c);
             
-            float3 n = transformNormal(c, in.normal, in.tangent,
+            half3 n = transformNormal(nmapH, in.normal, in.tangent,
+                                       in.worldPos, in.texCoord, // to build TBN
                                        uniforms.isSwizzleAGToRG, uniforms.isSigned, facing);
             
             
             float3 viewDir = normalize(in.worldPos - uniforms.cameraPosition);
-            c = doLighting(float4(1.0), viewDir, n);
+            c = doLighting(float4(1.0), viewDir, toFloat(n));
 
             c.a = 1;
         }
@@ -619,10 +662,13 @@ float4 DrawPixels(
                 float3 viewDir = normalize(in.worldPos - uniforms.cameraPosition);
                 
                 if (uniforms.isNormalMapPreview) {
-                    float3 n = transformNormal(nmap, in.normal, in.tangent,
+                    half4 nmapH = toHalf(nmap);
+                   
+                    half3 n = transformNormal(nmapH, in.normal, in.tangent,
+                                               in.worldPos, in.texCoord, // to build TBN
                                                uniforms.isNormalMapSwizzleAGToRG, uniforms.isNormalMapSigned, facing);
                     
-                    c = doLighting(c, viewDir, n);
+                    c = doLighting(c, viewDir, toFloat(n));
                 }
                 else {
                     c = doLighting(c, viewDir, toFloat(in.normal));

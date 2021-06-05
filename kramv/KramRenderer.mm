@@ -542,7 +542,8 @@ using namespace simd;
             }
         }
         
-        // archive shouldn't contain png, so only support ktx/ktx2 here
+        // if archive contained png, then it's been converted to ktx
+        // so the info below may not reflect original data
         
         _showSettings->imageInfo = kramInfoKTXToString(fullFilename, image, false);
         _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, image, true);
@@ -598,6 +599,8 @@ using namespace simd;
         
         // this is not the png data, but info on converted png to ktx level
         // But this avoids loading the image 2 more times
+        // Size of png is very different than decompressed or recompressed ktx
+        
         _showSettings->imageInfo = kramInfoKTXToString(fullFilename, image, false);
         _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, image, true);
         
