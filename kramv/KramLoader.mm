@@ -94,7 +94,7 @@ bool isDecodeImageNeeded(MyMTLPixelFormat pixelFormat) {
     return needsDecode;
 }
 
-bool decodeImage(KTXImage& image, KTXImage& imageDecoded)
+bool decodeImage(const KTXImage& image, KTXImage& imageDecoded)
 {
     KramDecoderParams decoderParams;
     KramDecoder decoder;
@@ -174,7 +174,12 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format) {
     if (!image.open(imageData, imageDataLength, isInfoOnly)) {
         return nil;
     }
-    
+
+    return [self loadTextureFromImage:image originalFormat:originalFormat];
+}
+
+- (nullable id<MTLTexture>)loadTextureFromImage:(const KTXImage&)image originalFormat:(nullable MTLPixelFormat*)originalFormat
+{
 #if SUPPORT_RGB
     if (isInternalRGBFormat(image.pixelFormat)) {
         // loads and converts top level mip from RGB to RGBA (RGB0)
@@ -311,12 +316,7 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
     // TODO: could also ignore extension, and look at header/signature instead
     // files can be renamed to the incorrect extensions
     string filename = toLower(path);
-    
-    MmapHelper mmapHelper;
-    if (!mmapHelper.open(path)) {
-        return nil;
-    }
-               
+
     if (endsWithExtension(filename.c_str(), ".png")) {
         // set title to filename, chop this to just file+ext, not directory
         string filenameShort = filename;
@@ -340,14 +340,29 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
         
         bool isSRGB = (!isNormal && !isSDF);
         
+        MmapHelper mmapHelper;
+        if (!mmapHelper.open(path)) {
+            return nil;
+        }
+        
+        // TODO: need FileHelper fallback here
+        
         return [self loadTextureFromPNGData:mmapHelper.data() dataSize:(int32_t)mmapHelper.dataLength() isSRGB:isSRGB originalFormat:originalFormat];
     }
-    
-    // route all data through the version that copies or does sync upload
-    return [self loadTextureFromData:mmapHelper.data() imageDataLength:(int32_t)mmapHelper.dataLength() originalFormat:originalFormat];
+    else {
+        KTXImage image;
+        KTXImageData imageData;
+        
+        if (!imageData.open(path, image)) {
+            return nil;
+        }
+        
+        // route all data through the version that copies or does sync upload
+        return [self loadTextureFromImage:image originalFormat:originalFormat];
+    }
 }
 
-- (nullable id<MTLTexture>)createTexture:(KTXImage&)image isPrivate:(bool)isPrivate {
+- (nullable id<MTLTexture>)createTexture:(const KTXImage&)image isPrivate:(bool)isPrivate {
     MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
 
     // Indicate that each pixel has a blue, green, red, and alpha channel, where each channel is
@@ -611,7 +626,7 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment) {
 // Has a synchronous upload via replaceRegion that only works for shared/managed (f.e. ktx),
 // and another path for private that uses a blitEncoder and must have block aligned data (f.e. ktxa, ktx2).
 // Could repack ktx data into ktxa before writing to temporary file, or when copying NSData into MTLBuffer.
-- (nullable id<MTLTexture>)blitTextureFromImage:(KTXImage &)image
+- (nullable id<MTLTexture>)blitTextureFromImage:(const KTXImage &)image
 {
     if (_buffer == nil) {
         // this is enough to upload 4k x 4x @ RGBA8u with mips, 8k x 8k compressed with mips @96MB

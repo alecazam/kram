@@ -8,7 +8,6 @@
 #import "KramThumbnailProvider.h"
 
 #include "Kram.h"
-#include "KramMmapHelper.h"
 #include "KramLog.h"
 #include "KTXImage.h"
 #include "KramImage.h" // for KramDecoder
@@ -40,32 +39,20 @@ void KLOGF(const char* format, ...) {
     // Second way: Draw the thumbnail into a context passed to your block, set up with Core Graphics's coordinate system.
     handler([QLThumbnailReply replyWithContextSize:request.maximumSize drawingBlock:^BOOL(CGContextRef  _Nonnull context)
     {
-         const char* filename = [request.fileURL fileSystemRepresentation];
-         
-         if (!(endsWith(filename, ".ktx") || endsWith(filename, ".ktx2"))) {
-             KLOGF("kramv %s only supports ktx/ktx2 files\n", filename);
-             return NO;
-         }
-         
-         // load the mmap file, and interpret it as a KTXImage
-         MmapHelper mmapHelper;
-         if (!mmapHelper.open(filename)) {
-             KLOGF("kramv %s failed to mmap\n", filename);
-             return NO;
-         }
+        const char* filename = [request.fileURL fileSystemRepresentation];
+
+        if (!(endsWith(filename, ".ktx") || endsWith(filename, ".ktx2"))) {
+            KLOGF("kramv %s only supports ktx/ktx2 files\n", filename);
+            return NO;
+        }
+             
+        KTXImage image;
+        KTXImageData imageData;
         
-         // TODO: might need to try FileHelper for non-local thumbnails
-        
-         
-         // open but leave the image compressed if KTX2 + zstd
-         bool isInfoOnly = true;
-         
-         KTXImage image;
-         if (!image.open(mmapHelper.data(), mmapHelper.dataLength(), isInfoOnly)) {
-             KLOGF("kramv %s failed to open\n", filename);
-             return NO;
-         }
-         
+        if (!imageData.open(filename, image)) {
+            KLOGF("kramv %s coould not open file\n", filename);
+            
+        }
         // no BC6 or ASTC HDR yet for thumbs, just do LDR first
         if (isHdrFormat(image.pixelFormat)) {
             KLOGF("kramv %s doesn't support hdr thumbnails yet\n", filename);
