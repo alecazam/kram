@@ -2262,7 +2262,7 @@ float4 toSnorm8(float4 c)
     }
     
     if (isFound) {
-        normalFilename = normalFilename.replace(searchPos, search.length(), "-n.ktx"); // works for
+        normalFilename = normalFilename.replace(searchPos, search.length(), "-n.ktx");
     }
     
     //---------------------------

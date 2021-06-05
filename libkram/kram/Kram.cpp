@@ -34,12 +34,19 @@ namespace kram {
 
 using namespace std;
 
+template<typename T>
+void releaseVector(vector<T>& v) {
+    v.clear();
+    v.shrink_to_fit();
+}
 
 
 bool KTXImageData::open(const char* filename, KTXImage& image) {
-    bool useMmap = true;
+    close();
+    
+    isMmap = true;
     if (!mmapHelper.open(filename)) {
-        useMmap = false;
+        isMmap = false;
         
         // open file, copy it to memory, then close it
         FileHelper fileHelper;
@@ -61,7 +68,7 @@ bool KTXImageData::open(const char* filename, KTXImage& image) {
     
     const uint8_t* data;
     size_t dataSize;
-    if (useMmap) {
+    if (isMmap) {
         data = mmapHelper.data();
         dataSize = mmapHelper.dataLength();
     }
@@ -71,17 +78,34 @@ bool KTXImageData::open(const char* filename, KTXImage& image) {
     }
     
     // read the KTXImage in from the data, it will alias mmap or fileData
-    if (!image.open(data, dataSize, isInfoOnly)) {
+    bool isLoaded = image.open(data, dataSize, isInfoOnly);
+    
+    // this means KTXImage is using it's own storage
+    if (!isLoaded || image.fileData != data) {
+        close();
+    }
+    
+    if (!isLoaded) {
         return false;
     }
     
     return true;
 }
 
+void KTXImageData::close() {
+    // don't need these anymore, singleImage holds the data
+    mmapHelper.close();
+    releaseVector(fileData);
+    isMmap = false;
+}
+
+
 bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
-    bool useMmap = true;
+    close();
+    
+    isMmap = true;
     if (!mmapHelper.open(filename)) {
-        useMmap = false;
+        isMmap = false;
         
         // open file, copy it to memory, then close it
         FileHelper fileHelper;
@@ -103,7 +127,7 @@ bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
     
     const uint8_t* data;
     size_t dataSize;
-    if (useMmap) {
+    if (isMmap) {
         data = mmapHelper.data();
         dataSize = mmapHelper.dataLength();
     }
@@ -117,6 +141,10 @@ bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
     
     Image singleImage;
     bool isLoaded = LoadPng(data, dataSize, false, false, singleImage);
+    
+    // don't need png data anymore
+    close();
+    
     if (!isLoaded) {
         return false;
     }
@@ -132,8 +160,11 @@ bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
     image.textureType = MyMTLTextureType2D;
     image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
     
-    // TODO: support mips with blitEncoder or Mipper
-    // TODO: support chunks, but may need to copy horizontal to vertical
+    // TODO: support mips with blitEncoder but tha confuses mipCount in KTXImage
+    //     Mipper can also generate on cpu side.  Mipped can do premul conversion though.
+    
+    // TODO: support chunks and striped png, but may need to copy horizontal to vertical
+    
     // TODO: png has 16u format useful for heights
     
     image.reserveImageData();
@@ -145,6 +176,10 @@ bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
 
 bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image)
 {
+    close();
+    
+    // image will likely alias incoming data, so KTXImageData is unused
+    
     if (!image.open(data, dataSize, isInfoOnly)) {
         return false;
     }
@@ -335,9 +370,7 @@ bool SetupTmpFile(FileHelper& tmpFileHelper, const char* suffix)
     return tmpFileHelper.openTemporaryFile(suffix, "w+b");
 }
 
-bool SetupSourceImage(//MmapHelper& mmapHelper, FileHelper& fileHelper,
-                      //vector<uint8_t>& fileBuffer,
-                      const string& srcFilename, Image& sourceImage,
+bool SetupSourceImage(const string& srcFilename, Image& sourceImage,
                       bool isPremulSrgb = false, bool isGray = false)
 {
     bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
@@ -349,15 +382,19 @@ bool SetupSourceImage(//MmapHelper& mmapHelper, FileHelper& fileHelper,
         return false;
     }
 
-    // TODO: really KTXImageData
+    // TODO: basically KTXImageData, but the encode can't take in a KTXImage yet
+    // so here it's generate a single Image.  Also here the LoadKTX converts
+    // 1/2/3/4 channel formats to 4.
+    
     MmapHelper mmapHelper;
-    FileHelper fileHelper;
     vector<uint8_t> fileData;
 
     // first try mmap, and then use file -> buffer
-    bool useMmap = true;
+    bool isMmap = true;
     if (!mmapHelper.open(srcFilename.c_str())) {
-        useMmap = false;
+        isMmap = false;
+        
+        FileHelper fileHelper;
         
         // fallback to opening file if no mmap support or it didn't work
         if (!fileHelper.open(srcFilename.c_str(), "rb")) {
@@ -379,30 +416,27 @@ bool SetupSourceImage(//MmapHelper& mmapHelper, FileHelper& fileHelper,
         }
     }
     
+    const uint8_t* data;
+    size_t dataSize;
+    if (isMmap) {
+        data = mmapHelper.data();
+        dataSize = mmapHelper.dataLength();
+    }
+    else {
+        data = fileData.data();
+        dataSize = fileData.size();
+    }
+    
+    //-----------------------
+    
     if (isPNG) {
-        if (useMmap) {
-            if (!LoadPng(mmapHelper.data(), mmapHelper.dataLength(), isPremulSrgb, isGray,
-                     sourceImage)) {
-                return false;  // error
-            }
-        }
-        else {
-            if (!LoadPng(fileData.data(), fileData.size(), isPremulSrgb, isGray,
-                         sourceImage)) {
-                return false;  // error
-            }
+        if (!LoadPng(data, dataSize, isPremulSrgb, isGray, sourceImage)) {
+            return false;  // error
         }
     }
     else {
-        if (useMmap) {
-            if (!LoadKtx(mmapHelper.data(), mmapHelper.dataLength(), sourceImage)) {
-                return false;  // error
-            }
-        }
-        else {
-            if (!LoadKtx(fileData.data(), fileData.size(), sourceImage)) {
-                return false;  // error
-            }
+        if (!LoadKtx(data, dataSize, sourceImage)) {
+            return false;  // error
         }
     }
     

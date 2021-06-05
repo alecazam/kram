@@ -580,18 +580,29 @@ using namespace simd;
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
     if (isTextureChanged) {
+        // TODO: hold onto these, so can reference block data
+        KTXImage image;
+        KTXImageData imageData;
+        
+        if (![_loader loadImageFromURL:url image:image imageData:imageData]) {
+            return NO;
+        }
         
         MTLPixelFormat originalFormatMTL = MTLPixelFormatInvalid;
-        id<MTLTexture> texture = [_loader loadTextureFromURL:url originalFormat:&originalFormatMTL];
+        id<MTLTexture> texture = [_loader loadTextureFromImage:image originalFormat:&originalFormatMTL];
         if (!texture) {
             return NO;
         }
         
         // This doesn't look for or load corresponding normal map, but should
         
-        // TODO:: this reloads KTXImage twice over
-        _showSettings->imageInfo = kramInfoToString(fullFilename, false);
-        _showSettings->imageInfoVerbose = kramInfoToString(fullFilename, true);
+        // this is not the png data, but info on converted png to ktx level
+        // But this avoids loading the image 2 more times
+        _showSettings->imageInfo = kramInfoKTXToString(fullFilename, image, false);
+        _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, image, true);
+        
+        //_showSettings->imageInfo = kramInfoToString(fullFilename, image, false);
+        //_showSettings->imageInfoVerbose = kramInfoToString(fullFilename, image, true);
         
         _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
         _showSettings->decodedFormat = (MyMTLPixelFormat)texture.pixelFormat;

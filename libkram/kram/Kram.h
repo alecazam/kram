@@ -13,8 +13,8 @@ using namespace std;
 class Image;
 class KTXImage;
 
-// This helper needs to stay alive since KTXImage aliases it
-// May be able to fold these into KTXImage since it has an internal vector already
+// This helper needs to stay alive since KTXImage may alias the data.
+// KTXImage also has an internal vector already, but fileData may point to the mmap or vector here.
 class KTXImageData {
 public:
     // class keeps the data alive in mmapHelper or fileData
@@ -23,11 +23,17 @@ public:
     // class aliases data, so caller must keep alive.  Useful with bundle.
     bool open(const uint8_t* data, size_t dataSize, KTXImage& image);
     
+    // Open png image into a KTXImage as a single-level mip
+    // Only handles 2d case and only srgba/rgba conversion.
     bool openPNG(const char* filename, bool isSrgb, KTXImage& image);
 
+    // This releases all memory associated with this class
+    void close();
+    
 private:
     MmapHelper mmapHelper;
     vector<uint8_t> fileData;
+    bool isMmap = false;
     bool isInfoOnly = true;
 };
 

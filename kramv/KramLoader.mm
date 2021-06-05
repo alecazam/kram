@@ -307,17 +307,14 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
 }
 */
 
-- (nullable id<MTLTexture>)loadTextureFromURL:(nonnull NSURL *)url originalFormat:(nullable MTLPixelFormat*)originalFormat {
-    
+- (BOOL)loadImageFromURL:(nonnull NSURL *)url image:(KTXImage&)image imageData:(KTXImageData&)imageData
+{
     const char *path = [url.absoluteURL.path UTF8String];
 
     // TODO: could also ignore extension, and look at header/signature instead
     // files can be renamed to the incorrect extensions
     string filename = toLower(path);
 
-    KTXImage image;
-    KTXImageData imageDataKTX;
-    
     if (endsWithExtension(filename.c_str(), ".png")) {
         // set title to filename, chop this to just file+ext, not directory
         string filenameShort = filename;
@@ -341,20 +338,29 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
         
         bool isSRGB = (!isNormal && !isSDF);
 
-        if (!imageDataKTX.openPNG(path, isSRGB, image)) {
-            return nil;
+        if (!imageData.openPNG(path, isSRGB, image)) {
+            return NO;
         }
-        
-        return [self loadTextureFromImage:image originalFormat:originalFormat];
     }
     else {
-        if (!imageDataKTX.open(path, image)) {
-            return nil;
+        if (!imageData.open(path, image)) {
+            return NO;
         }
-        
-        // route all data through the version that copies or does sync upload
-        return [self loadTextureFromImage:image originalFormat:originalFormat];
     }
+    
+    return YES;
+}
+
+- (nullable id<MTLTexture>)loadTextureFromURL:(nonnull NSURL *)url originalFormat:(nullable MTLPixelFormat*)originalFormat
+{
+    KTXImage image;
+    KTXImageData imageData;
+   
+    if (![self loadImageFromURL:url image:image imageData:imageData]) {
+        return nil;
+    }
+        
+    return [self loadTextureFromImage:image originalFormat:originalFormat];
 }
 
 - (nullable id<MTLTexture>)createTexture:(const KTXImage&)image isPrivate:(bool)isPrivate {

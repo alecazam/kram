@@ -20,10 +20,10 @@
 
 namespace kram {
 class KTXImage;
+class KTXImageData;
 }
 
-// This loads KTX and PNG data synchronously.  Will likely move to only loading KTX files, with a png -> ktx conversion.
-// The underlying KTXImage is not yet returned to the caller, but would be useful for prop queries.
+// This loads KTX/2 and PNG data.  Moving towards KTX/2 files only, with a PNG to KTX/2 conversion.
 @interface KramLoader : NSObject
 
 // from mem,  copied to MTLBuffer if available, if not caller must keep mem alive
@@ -33,7 +33,10 @@ class KTXImage;
 - (nullable id<MTLTexture>)loadTextureFromData:(nonnull NSData*)imageData originalFormat:(nullable MTLPixelFormat*)originalFormat;
 
 // load from a KTXImage
-- (nullable id<MTLTexture>)loadTextureFromImage:(const kram::KTXImage&)image  originalFormat:(nullable MTLPixelFormat*)originalFormat;
+- (nullable id<MTLTexture>)loadTextureFromImage:(const kram::KTXImage&)image originalFormat:(nullable MTLPixelFormat*)originalFormat;
+
+// load into KTXImage and KTXImageData, can use with loadTextureFromImage
+- (BOOL)loadImageFromURL:(nonnull NSURL *)url image:(kram::KTXImage&)image imageData:(kram::KTXImageData&)imageData;
 
 // from url (mmap)
 - (nullable id<MTLTexture>)loadTextureFromURL:(nonnull NSURL *)url originalFormat:(nullable MTLPixelFormat*)originalFormat;
