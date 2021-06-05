@@ -299,6 +299,7 @@ public:
    
     // this is where KTXImage holds all mip data internally
     void reserveImageData();
+    void reserveImageData(size_t totalSize);
     vector<uint8_t>& imageData();
 
     // for KTX2 files, the mips can be compressed using various encoders
@@ -332,7 +333,7 @@ private:
     bool openKTX2(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly);
 
     // ktx2 mips are uncompressed to convert back to ktx1, but without the image offset
-    vector<uint8_t> imageDataFromKTX2;
+    vector<uint8_t> _imageData;
     
 public:  // TODO: bury this
     MyMTLTextureType textureType = MyMTLTextureType2D;

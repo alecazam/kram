@@ -34,6 +34,67 @@ namespace kram {
 
 using namespace std;
 
+
+
+bool KTXImageData::open(const char* filename, KTXImage& image) {
+    bool useMmap = true;
+    if (!mmapHelper.open(filename)) {
+        useMmap = false;
+        
+        // open file, copy it to memory, then close it
+        FileHelper fileHelper;
+        if (!fileHelper.open(filename, "rb")) {
+            return false;
+        }
+        
+        // read the file into memory
+        size_t size = fileHelper.size();
+        if (size == (size_t)-1) {
+            return false;
+        }
+        
+        fileData.resize(size);
+        if (!fileHelper.read(fileData.data(), size)) {
+            return false;
+        }
+    }
+    
+    // read the KTXImage in from the data, it will alias mmap or fileData
+    if (useMmap) {
+        if (!image.open(mmapHelper.data(), mmapHelper.dataLength(), isInfoOnly)) {
+            return false;
+        }
+    }
+    else {
+        if (!image.open(fileData.data(), fileData.size(), isInfoOnly)) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image)
+{
+    if (!image.open(data, dataSize, isInfoOnly)) {
+        return false;
+    }
+    return true;
+}
+
+// decoding reads a ktx file into KTXImage (not Image)
+bool SetupSourceKTX(KTXImageData& srcImageData,
+                    const string& srcFilename,
+                    KTXImage& sourceImage)
+{
+    if (!srcImageData.open(srcFilename.c_str(), sourceImage)) {
+        KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
+              srcFilename.c_str());
+        return false;
+    }
+    return true;
+}
+
 // Twiddle pixels or blocks into Morton order.  Usually this is done during the upload of
 // linear-order block textures.  But on some platforms may be able to directly use the block
 // and pixel data if organized in the exact twiddle order the hw uses.
@@ -205,8 +266,8 @@ bool SetupTmpFile(FileHelper& tmpFileHelper, const char* suffix)
     return tmpFileHelper.openTemporaryFile(suffix, "w+b");
 }
 
-bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
-                      vector<uint8_t>& fileBuffer,
+bool SetupSourceImage(//MmapHelper& mmapHelper, FileHelper& fileHelper,
+                      //vector<uint8_t>& fileBuffer,
                       const string& srcFilename, Image& sourceImage,
                       bool isPremulSrgb = false, bool isGray = false)
 {
@@ -219,28 +280,17 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
         return false;
     }
 
+    // TODO: really KTXImageData
+    MmapHelper mmapHelper;
+    FileHelper fileHelper;
+    vector<uint8_t> fileData;
+
     // first try mmap, and then use file -> buffer
     bool useMmap = true;
     if (!mmapHelper.open(srcFilename.c_str())) {
-        // fallback to opening file if no mmap support or it didn't work
         useMmap = false;
-    }
-
-    if (useMmap) {
-        if (isKTX) {  // really want endsWidth
-            if (!LoadKtx(mmapHelper.data(), mmapHelper.dataLength(),
-                         sourceImage)) {
-                return false;  // error
-            }
-        }
-        else if (isPNG) {
-            if (!LoadPng(mmapHelper.data(), mmapHelper.dataLength(), isPremulSrgb, isGray,
-                         sourceImage)) {
-                return false;  // error
-            }
-        }
-    }
-    else {
+        
+        // fallback to opening file if no mmap support or it didn't work
         if (!fileHelper.open(srcFilename.c_str(), "rb")) {
             KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
                   srcFilename.c_str());
@@ -249,67 +299,49 @@ bool SetupSourceImage(MmapHelper& mmapHelper, FileHelper& fileHelper,
 
         // read entire png into memory
         size_t size = fileHelper.size();
-        fileBuffer.resize(size);
-
-        if (!fileHelper.read(fileBuffer.data(), size)) {
+        if (size == (size_t)-1) {
             return false;
         }
+        
+        fileData.resize(size);
 
-        if (isKTX) {
-            if (!LoadKtx(fileBuffer.data(), fileBuffer.size(),
-                         sourceImage)) {
+        if (!fileHelper.read(fileData.data(), size)) {
+            return false;
+        }
+    }
+    
+    if (isPNG) {
+        if (useMmap) {
+            if (!LoadPng(mmapHelper.data(), mmapHelper.dataLength(), isPremulSrgb, isGray,
+                     sourceImage)) {
                 return false;  // error
             }
         }
-        else if (isPNG) {
-            if (!LoadPng(fileBuffer.data(), fileHelper.size(), isPremulSrgb, isGray,
+        else {
+            if (!LoadPng(fileData.data(), fileData.size(), isPremulSrgb, isGray,
                          sourceImage)) {
                 return false;  // error
             }
-        }
-    }
-
-    return true;
-}
-
-// decoding reads a ktx file into KTXImage (not Image)
-bool SetupSourceKTX(MmapHelper& mmapHelper, FileHelper& fileHelper,
-                    vector<uint8_t>& fileBuffer,
-                    const string& srcFilename, KTXImage& sourceImage, bool isInfoOnly = false)
-{
-    // first try mmap, and then use file -> buffer
-    bool useMmap = true;
-    if (!mmapHelper.open(srcFilename.c_str())) {
-        // fallback to file system if no mmap or failed
-        useMmap = false;
-    }
-
-    if (useMmap) {
-        if (!sourceImage.open(mmapHelper.data(), mmapHelper.dataLength(), isInfoOnly)) {
-            return false;
         }
     }
     else {
-        if (!fileHelper.open(srcFilename.c_str(), "rb")) {
-            KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
-                  srcFilename.c_str());
-            return false;
+        if (useMmap) {
+            if (!LoadKtx(mmapHelper.data(), mmapHelper.dataLength(), sourceImage)) {
+                return false;  // error
+            }
         }
-
-        // read entire ktx into memory
-        size_t size = fileHelper.size();
-        fileBuffer.resize(size);
-        if (!fileHelper.read(fileBuffer.data(), size)) {
-            return false;
-        }
-
-        if (!sourceImage.open(fileBuffer.data(), (int32_t)fileBuffer.size(), isInfoOnly)) {
-            return false;
+        else {
+            if (!LoadKtx(fileData.data(), fileData.size(), sourceImage)) {
+                return false;  // error
+            }
         }
     }
-
+    
+    
     return true;
 }
+
+
 
 // better countof in C++11, https://www.g-truc.net/post-0708.html
 template <typename T, size_t N>
@@ -1281,65 +1313,65 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
     bool isPNG = endsWith(srcFilename, ".png");
     bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
 
-    MmapHelper srcMmapHelper;
-    FileHelper srcFileHelper;
-    vector<uint8_t> srcFileBuffer;
-
     string info;
 
     // handle png and ktx
     if (isPNG) {
+        MmapHelper srcMmapHelper;
+        vector<uint8_t> srcFileBuffer;
+
         // This was taken out of SetupSourceImage, dont want to decode PNG yet
         // just peek at the header.
-        const uint8_t* data = nullptr;
-        int32_t dataSize = 0;
-
+        
         // first try mmap, and then use file -> buffer
         bool useMmap = true;
         if (!srcMmapHelper.open(srcFilename.c_str())) {
             // fallback to file system if no mmap or it failed
             useMmap = false;
-        }
-
-        if (useMmap) {
-            data = srcMmapHelper.data();
-            dataSize = (int32_t)srcMmapHelper.dataLength();
-        }
-        else {
+            
+            FileHelper srcFileHelper;
             if (!srcFileHelper.open(srcFilename.c_str(), "rb")) {
-                KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
+                KLOGE("Kram", "File input \"%s\" could not be opened for info read.\n",
                       srcFilename.c_str());
                 return "";
             }
 
             // read entire png into memory
             // even though really just want to peek at header
-            int64_t size = srcFileHelper.size();
-            if (size < 0) return "";
+            uint64_t size = srcFileHelper.size();
+            if (size == (size_t)-1) {
+                return "";
+            }
             
             srcFileBuffer.resize(size);
             if (!srcFileHelper.read(srcFileBuffer.data(), size)) {
                 return "";
             }
-
-            data = srcFileBuffer.data();
-            dataSize = (int32_t)srcFileBuffer.size();
         }
+
+        const uint8_t* data = nullptr;
+        size_t dataSize = 0;
+
+        if (useMmap) {
+            data = srcMmapHelper.data();
+            dataSize = srcMmapHelper.dataLength();
+        }
+        else {
+            data = srcFileBuffer.data();
+            dataSize = srcFileBuffer.size();
+        }
+        
         info = kramInfoPNGToString(srcFilename, data, dataSize, isVerbose);
         
     }
     else if (isKTX) {
         KTXImage srcImage;
-
-        // This means don't convert to KTX1, keep original data/offsets
-        // and also skip decompressing the mips
-        bool isInfoOnly = true;
+        KTXImageData srcImageData;
         
-        // Note: could change to not read any mips
-        bool success = SetupSourceKTX(srcMmapHelper, srcFileHelper, srcFileBuffer,
-                                      srcFilename, srcImage, isInfoOnly);
+        bool success = SetupSourceKTX(srcImageData, srcFilename, srcImage);
         if (!success) {
-            KLOGE("Kram", "info couldn't open ktx file");
+            KLOGE("Kram", "File input \"%s\" could not be opened for info read.\n",
+                  srcFilename.c_str());
             return "";
         }
         
@@ -1740,13 +1772,10 @@ static int32_t kramAppDecode(vector<const char*>& args)
     }
 
     KTXImage srcImage;
-    MmapHelper srcMmapHelper;
-    FileHelper srcFileHelper;
+    KTXImageData srcImageData;
     FileHelper tmpFileHelper;
-    vector<uint8_t> srcFileBuffer;
-
-    bool success = SetupSourceKTX(srcMmapHelper, srcFileHelper, srcFileBuffer,
-                                  srcFilename, srcImage);
+    
+    bool success = SetupSourceKTX(srcImageData, srcFilename, srcImage);
 
     // TODO: for hdr decode, may need to walk blocks or ask caller to pass -hdr flag
     if (!validateFormatAndDecoder(srcImage.textureType, srcImage.pixelFormat, textureDecoder)) {
@@ -2195,13 +2224,9 @@ static int32_t kramAppEncode(vector<const char*>& args)
     // The helper keeps ktx mips in mmap alive in case want to read them
     // incrementally. Fallback to read into fileBuffer if mmap fails.
     Image srcImage;
-    MmapHelper srcMmapHelper;
-    FileHelper srcFileHelper;
     FileHelper tmpFileHelper;
-    vector<uint8_t> srcFileBuffer;
-
-    bool success = SetupSourceImage(srcMmapHelper, srcFileHelper, srcFileBuffer,
-                                    srcFilename, srcImage, isPremulRgb, isGray);
+    
+    bool success = SetupSourceImage(srcFilename, srcImage, isPremulRgb, isGray);
 
     if (success) {
         success = SetupTmpFile(tmpFileHelper, isDstKTX2 ? ".ktx2" : ".ktx");

@@ -511,13 +511,10 @@ using namespace simd;
     
 }
 
-- (BOOL)loadTextureFromData:(const string&)fullFilename
-                  timestamp:(double)timestamp
-                  imageData:(nonnull const uint8_t*)imageData
-            imageDataLength:(uint64_t)imageDataLength
-            imageNormalData:(nullable const uint8_t*)imageNormalData
-      imageNormalDataLength:(uint64_t)imageNormalDataLength
-
+- (BOOL)loadTextureFromImage:(const string&)fullFilename
+                   timestamp:(double)timestamp
+                       image:(kram::KTXImage&)image
+                 imageNormal:(kram::KTXImage*)imageNormal
 {
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
@@ -527,42 +524,28 @@ using namespace simd;
         (fullFilename != _showSettings->lastFilename) ||
         (timestamp != _showSettings->lastTimestamp);
     
-    if (isTextureChanged) {
-        // synchronously cpu upload from ktx file to buffer, with eventual gpu blit from buffer to returned texture
+    if (isTextureChanged) {     
+        // synchronously cpu upload from ktx file to buffer, with eventual gpu blit from buffer to returned texture.  TODO: If buffer is full, then something needs to keep KTXImage and data alive.  This load may also decode the texture to RGBA8.
+        
         MTLPixelFormat originalFormatMTL = MTLPixelFormatInvalid;
-        id<MTLTexture> texture = [_loader loadTextureFromData:imageData imageDataLength:imageDataLength originalFormat:&originalFormatMTL];
+        id<MTLTexture> texture = [_loader loadTextureFromImage:image originalFormat:&originalFormatMTL];
         if (!texture) {
             return NO;
         }
         
         // hacking in the normal texture here, so can display them together during preview
         id<MTLTexture> normalTexture;
-        if (imageNormalData) {
-            KTXImage imageNormal;
-            if (imageNormal.open(imageNormalData, imageNormalDataLength, true)) {
-                // only have shaders that expects diffuse/normal to be same texture type
-                if (imageNormal.textureType == (MyMTLTextureType)texture.textureType &&
-                    (imageNormal.textureType == MyMTLTextureType2D || imageNormal.textureType == MyMTLTextureType2DArray))
-                {
-                    normalTexture = [_loader loadTextureFromData:imageNormalData imageDataLength:imageNormalDataLength originalFormat:nil];
-                    if (!normalTexture) {
-                        return NO;
-                    }
-                }
+        if (imageNormal) {
+            normalTexture = [_loader loadTextureFromImage:*imageNormal originalFormat:nil];
+            if (!normalTexture) {
+                return NO;
             }
         }
-        // archive shouldn't contain png, so only support ktx/ktx2 here
-        // TODO: have loader return KTXImage instead of parsing it again
-        // then can decode blocks in kramv
         
-        KTXImage sourceImage;
-        bool isInfoOnly = true;
-        if (!sourceImage.open(imageData, imageDataLength, isInfoOnly)) {
-            return NO;
-        }
-       
-        _showSettings->imageInfo = kramInfoKTXToString(fullFilename, sourceImage, false);
-        _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, sourceImage, true);
+        // archive shouldn't contain png, so only support ktx/ktx2 here
+        
+        _showSettings->imageInfo = kramInfoKTXToString(fullFilename, image, false);
+        _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, image, true);
        
         _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
         _showSettings->decodedFormat = (MyMTLPixelFormat)texture.pixelFormat;
@@ -597,13 +580,16 @@ using namespace simd;
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
     if (isTextureChanged) {
-        // synchronously cpu upload from ktx file to texture
+        
         MTLPixelFormat originalFormatMTL = MTLPixelFormatInvalid;
         id<MTLTexture> texture = [_loader loadTextureFromURL:url originalFormat:&originalFormatMTL];
         if (!texture) {
             return NO;
         }
         
+        // This doesn't look for or load corresponding normal map, but should
+        
+        // TODO:: this reloads KTXImage twice over
         _showSettings->imageInfo = kramInfoToString(fullFilename, false);
         _showSettings->imageInfoVerbose = kramInfoToString(fullFilename, true);
         

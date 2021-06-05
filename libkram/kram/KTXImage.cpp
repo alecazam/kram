@@ -1502,11 +1502,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
         
         // compute the decompressed size
         // Note: initMipLevels computes but doesn't store this
-        fileDataLength = mipLevels.back().offset + mipLevels.back().length * numChunks;
-        
-        // DONE: this memory is held in the class to keep it alive, mmap is no longer used
-        imageDataFromKTX2.resize(fileDataLength, 0);
-        fileData = imageDataFromKTX2.data();
+        reserveImageData();
         
         // TODO: may need to fill out length field in fileData
         
@@ -1601,22 +1597,33 @@ bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* 
 }
 
 vector<uint8_t>& KTXImage::imageData() {
-    return imageDataFromKTX2;
+    return _imageData;
 }
 
 void KTXImage::reserveImageData() {
     int32_t numChunks = totalChunks();
     
     // on KTX1 the last mip is the smallest and last in the file
+    // on KTX2 the first mip is the largest and last in the file
+    const auto& firstMip = mipLevels[0];
     const auto& lastMip = mipLevels[header.numberOfMipmapLevels-1];
-    size_t totalKTXSize =
-        lastMip.offset + lastMip.length * numChunks;
-    imageDataFromKTX2.resize(totalKTXSize);
-    memset(imageDataFromKTX2.data(), 0, totalKTXSize);
     
-    fileDataLength = totalKTXSize;
-    fileData = imageDataFromKTX2.data();
+    size_t firstMipOffset =
+        firstMip.offset + firstMip.length * numChunks;
+    size_t lastMipOffset =
+        lastMip.offset + lastMip.length * numChunks;
+    size_t totalSize = max(firstMipOffset, lastMipOffset);
+    
+    reserveImageData(totalSize);
 }
 
+void KTXImage::reserveImageData(size_t totalSize) {
+    
+    _imageData.resize(totalSize);
+    memset(_imageData.data(), 0, totalSize);
+    
+    fileDataLength = totalSize;
+    fileData = _imageData.data();
+}
 
 }  // namespace kram

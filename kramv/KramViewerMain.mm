@@ -21,6 +21,7 @@
 #include "KramLog.h"
 #include "KramMipper.h"
 
+#include "Kram.h"
 #include "KramFileHelper.h"
 #include "KramMmapHelper.h"
 #include "KramZipHelper.h"
@@ -2134,27 +2135,10 @@ float4 toSnorm8(float4 c)
     {
         return NO;
     }
-        
-    const uint8_t* imageData = nullptr;
-    uint64_t imageDataLength = 0;
-
-    // TODO: assuming can mmap here, but may need FileHelper fallback
-    MmapHelper imageMmap;
-    if (!imageMmap.open(filename)) {
-        return NO;
-    }
-    
-    imageData = imageMmap.data();
-    imageDataLength = imageMmap.dataLength();
-    
-    // see if this is albedo, and then search for normal map in the same archive
-    const uint8_t* imageNormalData = nullptr;
-    uint64_t imageNormalDataLength = 0;
-    MmapHelper imageNormalMmap;
-    
-    string normalFilename = filename;
     
     // first only do this on albedo/diffuse textures
+    string normalFilename = filename;
+    
     string search = "-a.ktx";
     auto searchPos = normalFilename.find(search);
     bool isFound = searchPos != string::npos;
@@ -2177,22 +2161,42 @@ float4 toSnorm8(float4 c)
             }
         }
         
-        if (isFound) {
-            if (imageNormalMmap.open(normalFilename.c_str())) {
-                imageNormalData = imageNormalMmap.data();
-                imageNormalDataLength = imageNormalMmap.dataLength();
-            }
+        if (!isFound) {
+            normalFilename.clear();
         }
     }
     
+    //-------------------------------
+    
+    KTXImage image;
+    KTXImageData imageDataKTX;
+    
+    KTXImage imageNormal;
+    KTXImageData imageNormalDataKTX;
+    bool hasNormal = false;
+    
     string fullFilename = filename;
-    Renderer* renderer = (Renderer*)self.delegate;
-    if (![renderer loadTextureFromData:fullFilename timestamp:(double)timestamp
-                             imageData:imageData imageDataLength:imageDataLength
-                             imageNormalData:imageNormalData imageNormalDataLength:imageNormalDataLength])
-    {
+    if (!imageDataKTX.open(fullFilename.c_str(), image)) {
         return NO;
     }
+    
+    if (isFound && imageNormalDataKTX.open(normalFilename.c_str(), imageNormal)) {
+        
+        // shaders only pull from albedo + normal on these texture types
+        if (imageNormal.textureType == image.textureType &&
+            (imageNormal.textureType == MyMTLTextureType2D ||
+             imageNormal.textureType == MyMTLTextureType2DArray))
+        {
+            hasNormal = true;
+        }
+    }
+    
+    Renderer* renderer = (Renderer*)self.delegate;
+    if (![renderer loadTextureFromImage:fullFilename timestamp:timestamp image:image imageNormal:hasNormal ? &imageNormal : nullptr]) {
+        return NO;
+    }
+
+    //-------------------------------
     
     // set title to filename, chop this to just file+ext, not directory
     const char* filenameShort = strrchr(filename, '/');
@@ -2244,16 +2248,6 @@ float4 toSnorm8(float4 c)
         return NO;
     }
         
-    const uint8_t* imageData = nullptr;
-    uint64_t imageDataLength = 0;
-    if (!_zip.extractRaw(filename, &imageData, imageDataLength)) {
-        return NO;
-    }
-     
-    // see if this is albedo, and then search for normal map in the same archive
-    const uint8_t* imageNormalData = nullptr;
-    uint64_t imageNormalDataLength = 0;
-    
     string normalFilename = filename;
     
     // first only do this on albedo/diffuse textures
@@ -2268,21 +2262,61 @@ float4 toSnorm8(float4 c)
     }
     
     if (isFound) {
-        normalFilename = normalFilename.replace(searchPos, search.length(), "-n.ktx"); // works for ktx or ktx2 file
+        normalFilename = normalFilename.replace(searchPos, search.length(), "-n.ktx"); // works for
+    }
     
+    //---------------------------
+    
+    const uint8_t* imageData = nullptr;
+    uint64_t imageDataLength = 0;
+    
+    if (!_zip.extractRaw(filename, &imageData, imageDataLength)) {
+        return NO;
+    }
+     
+    const uint8_t* imageNormalData = nullptr;
+    uint64_t imageNormalDataLength = 0;
+    
+    // see if this is albedo, and then search for normal map in the same archive
+    if (isFound) {
         if (!_zip.extractRaw(normalFilename.c_str(), &imageNormalData, imageNormalDataLength)) {
             // ignore failure case here, this is just guessing there's a -n file
         }
     }
     
+    //---------------------------
+    
+    // files in archive are just offsets into the mmap
+    // That's why we can't just pass filenames to the renderer
+    KTXImage image;
+    KTXImageData imageDataKTX;
+    if (!imageDataKTX.open(imageData, imageDataLength, image)) {
+        return NO;
+    }
+    
+    KTXImage imageNormal;
+    KTXImageData imageNormalDataKTX;
+    bool hasNormal = false;
+    if (isFound && imageNormalDataKTX.open(imageNormalData, imageNormalDataLength, imageNormal)) {
+            
+        // shaders only pull from albedo + normal on these texture types
+        if (imageNormal.textureType == image.textureType &&
+            (imageNormal.textureType == MyMTLTextureType2D ||
+             imageNormal.textureType == MyMTLTextureType2DArray))
+        {
+            hasNormal = true;
+        }
+    }
+    
     string fullFilename = filename;
     Renderer* renderer = (Renderer*)self.delegate;
-    if (![renderer loadTextureFromData:fullFilename timestamp:(double)timestamp
-                             imageData:imageData imageDataLength:imageDataLength
-                             imageNormalData:imageNormalData imageNormalDataLength:imageNormalDataLength])
+    if (![renderer loadTextureFromImage:fullFilename timestamp:(double)timestamp
+                             image:image imageNormal:hasNormal ? &imageNormal : nullptr])
     {
         return NO;
     }
+    
+    //---------------------------------
     
     // set title to filename, chop this to just file+ext, not directory
     const char* filenameShort = strrchr(filename, '/');

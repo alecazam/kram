@@ -32,18 +32,18 @@ public:
 
     void close();
 
-    // returns -1 if stat call fails
-    int64_t size() const;
+    // returns (size_t)-1 if stat call fails
+    size_t size() const;
 
     FILE* pointer() { return _fp; }
 
     // safe calls that test bytes read/written
-    bool read(uint8_t* data, int dataSize);
-    bool write(const uint8_t* data, int dataSize);
+    bool read(uint8_t* data, size_t dataSize);
+    bool write(const uint8_t* data, size_t dataSize);
 
     // if caller only has FILE* then can use these
-    static bool readBytes(FILE* fp, uint8_t* data, int dataSize);
-    static bool writeBytes(FILE* fp, const uint8_t* data, int dataSize);
+    static bool readBytes(FILE* fp, uint8_t* data, size_t dataSize);
+    static bool writeBytes(FILE* fp, const uint8_t* data, size_t dataSize);
 
     // return mod stamp on filename
     static uint64_t modificationTimestamp(const char* filename);

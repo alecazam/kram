@@ -56,16 +56,16 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
     return true;
 }
 
-bool FileHelper::read(uint8_t* data, int dataSize)
+bool FileHelper::read(uint8_t* data, size_t dataSize)
 {
     return FileHelper::readBytes(_fp, data, dataSize);
 }
-bool FileHelper::write(const uint8_t* data, int dataSize)
+bool FileHelper::write(const uint8_t* data, size_t dataSize)
 {
     return FileHelper::writeBytes(_fp, data, dataSize);
 }
 
-bool FileHelper::readBytes(FILE* fp, uint8_t* data, int dataSize)
+bool FileHelper::readBytes(FILE* fp, uint8_t* data, size_t dataSize)
 {
     size_t elementsRead = fread(data, 1, dataSize, fp);
     if (elementsRead != (size_t)dataSize) {
@@ -73,7 +73,7 @@ bool FileHelper::readBytes(FILE* fp, uint8_t* data, int dataSize)
     }
     return true;
 }
-bool FileHelper::writeBytes(FILE* fp, const uint8_t* data, int dataSize)
+bool FileHelper::writeBytes(FILE* fp, const uint8_t* data, size_t dataSize)
 {
     size_t elementsWritten = fwrite(data, 1, dataSize, fp);
     if (elementsWritten != (size_t)dataSize) {
@@ -107,14 +107,14 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
     // since we're not closing, need to flush output
     fflush(_fp);
 
-    int size_ = size();
-    if (size_ < 0) {
+    size_t size_ = size();
+    if (size_ == (size_t)-1) {
         return false;
     }
     
     // DONE: copy in smaller buffered chunks
-    int maxBufferSize = 256*1024;
-    int bufferSize = min(size_, maxBufferSize);
+    size_t maxBufferSize = 256*1024;
+    size_t bufferSize = min(size_, maxBufferSize);
     vector<uint8_t> tmpBuf;
     tmpBuf.resize(bufferSize);
 
@@ -136,7 +136,7 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
         return false;
     }
     
-    int bytesRemaining = size_;
+    size_t bytesRemaining = size_;
     while(bytesRemaining > 0) {
         int bytesToRead = min(bufferSize, bytesRemaining);
         bytesRemaining -= bytesToRead;
@@ -153,84 +153,6 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
     
     return true;
 }
-
-/* This code was original attempt to move file, but it interfered with unlink of the file
-    since a closed file was needed for rename() and many many other issues.
- 
-bool FileHelper::moveTemporaryFileTo(const char* dstFilename)
-{
-    if (!_fp) return false;
-    if (_filename.empty()) return false;
-
-#if USE_TMPFILEPLUS
-    fclose(_fp);
-
-    // windows doesn't remove any existing file, so have to do it explicitly
-    //remove(dstFilename);
-    //
-    // now do the rename
-    // rename on Windows does a copy if different volumes, but no way to identify if it did or moved the file
-    // so tmp file would need to be auto deleted then.  Could call MoveFileEx twice, with and without COPY
-    // if the move failed.
-    //bool success = (rename(_filename.c_str(), dstFilename) == 0);
-
-    // this is probably better than remove/rename, and maybe works across volumes/partitions
-    // this can't replace directories and will fail, only for files
-    bool success = MoveFileEx(_filename.c_str(), dstFilename, MOVEFILE_REPLACE_EXISTING) == 0;
-    if (!success) {
-        MoveFileEx(_filename.c_str(), dstFilename, MOVEFILE_COPY_ALLOWED);
-        
-        // since move was expected, delete the source, it's had fclose already called
-        remove(_filename.c_str());
-    }
-    
-    // so that close doesn't do another fclose()
-    _fp = nullptr;
-    _isTmpFile = false;
-    _filename.clear();
-
-#else
-    // since we're not closing, need to flush output
-    fflush(_fp);
-
-    // somehow even though the file isn't closed, can rename it
-    // if an open temp file is closed, then the following fails since the fd/fp are released.
-
-    // rename() only works if tmp and filename are on same volume
-    // and must have an actual filename to call this, which tmpfile() doesn't supply
-    // this removes any old file present
-    bool success = (rename(_filename.c_str(), dstFilename) == 0);
-    
-    // Some impls of rename don't work with directories, but that's all the docs say.
-    // This is to fix rename also failing on mac/linux if going cross volume, win does copy behind the scenes
-    // but using USE_TMPFILEPLUS code above instead on Win.
-    if (!success) {
-        
-        size_t size_ = size();
-        vector<uint8_t> tmpBuf;
-        tmpBuf.resize(size_);
-        
-        rewind(_fp);
-        if (!read(tmpBuf.data(), size_)) {
-            return false;
-        }
-        // need to fopen file on other volume, then buffer copy the contents over to the over drive
-        FileHelper moveHelper;
-        if (!moveHelper.open(dstFilename, "w+b")) {
-            return false;
-        }
-        if (!moveHelper.write(tmpBuf.data(), size_)) {
-            return false;
-        }
-        
-        // close() should delete the original file
-    }
-#endif
-    // Note: this doesn't change _filename to dstFilename
-
-    return success;
-}
-*/
 
 bool FileHelper::open(const char* filename, const char* access)
 {
@@ -258,11 +180,11 @@ void FileHelper::close()
     _fp = nullptr;
 }
 
-int64_t FileHelper::size() const
+size_t FileHelper::size() const
 {
     // returns -1, so can't return size_t
     if (!_fp) {
-        return -1;
+        return (size_t)-1;
     }
 
     // otherwise fstat won't extract the size
@@ -272,7 +194,7 @@ int64_t FileHelper::size() const
 
     struct stat stats;
     if (fstat(fd, &stats) < 0) {
-        return -1;
+        return (size_t)-1;
     }
     return (int64_t)stats.st_size;
 }

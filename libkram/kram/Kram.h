@@ -5,12 +5,29 @@
 #pragma once
 
 #include <string>
+#include "KramMmapHelper.h"
 
 namespace kram {
 using namespace std;
 
 class Image;
 class KTXImage;
+
+// This helper needs to stay alive since KTXImage aliases it
+// May be able to fold these into KTXImage since it has an internal vector already
+class KTXImageData {
+public:
+    // class keeps the data alive in mmapHelper or fileData
+    bool open(const char* filename, KTXImage& image);
+    
+    // class aliases data, so caller must keep alive.  Useful with bundle.
+    bool open(const uint8_t* data, size_t dataSize, KTXImage& image);
+    
+private:
+    MmapHelper mmapHelper;
+    vector<uint8_t> fileData;
+    bool isInfoOnly = true;
+};
 
 // helpers to source from a png or single level of a ktx
 bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage);
