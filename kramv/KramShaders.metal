@@ -885,7 +885,17 @@ float4 DrawPixels(
             // Just visualize the grid lines directly
             float lineIntensity = 1.0 - min(line, 1.0);
             
-            c.rgb = float3(lineIntensity) + (1.0 - lineIntensity) * c.rgb;
+            // determine proximity of white color to pixel
+            // and ensure contrast on this blend
+            float cDist = distance(float3(1.0), c.rgb);
+            
+            float lineColor = 1.0;
+            if (cDist < 0.2) {
+                lineColor = 0.5;
+            }
+            
+            c.rgb = mix(c.rgb, float3(lineColor), lineIntensity);
+            
             // nothing for alpha?
         }
     }
