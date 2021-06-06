@@ -6,8 +6,10 @@
 
 using namespace metal;
 
-// whether to use model tangents or generate from normal in fragment shader
-constant bool useTangent = false;
+// Whether to use model tangents (true) or generate tangents from normal in fragment shader (false).
+// When set false, the algorithm doesn't adjust for mirrored uv
+// See meshSphereMirrored and set this to false.
+constant bool useTangent = true;
 
 //---------------------------------
 // helpers
@@ -193,7 +195,7 @@ half3 toNormal(half3 n)
 // Then transforms the bumpNormal to that space.  No tangent is needed.
 // The downside is this must all be fp32, and all done in fragment shader and use derivatives.
 // Derivatives are known to be caclulated differently depending on hw and different precision.
-half3 transformNormalByBasis(half3 vertexNormal, half3 bumpNormal, float3 worldPos, float2 uv)
+half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldPos, float2 uv)
 {
     float3 N = toFloat(vertexNormal);
     
@@ -220,7 +222,8 @@ half3 transformNormalByBasis(half3 vertexNormal, half3 bumpNormal, float3 worldP
     
     // construct a scale-invariant frame
     // drop to half to match other call
-    bumpNormal = half3x3(toHalf(T), toHalf(B), vertexNormal) * bumpNormal;
+    bumpNormal = toHalf(float3x3(T, B, N) * toFloat(bumpNormal));
+    
     return bumpNormal;
 }
 
@@ -233,15 +236,23 @@ half3 transformNormalByBasis(half3 bumpNormal, half4 tangent, half3 vertexNormal
     // Reconstruct bitan in frag shader
     // https://bgolus.medium.com/generating-perfect-normal-maps-for-unity-f929e673fc57
 
-    half bitangentSign = tangent.w;
     
+    // so if eyevector
+    
+    
+    // TODO: there's facing too, could be inside model
+    
+    
+    half bitangentSign = tangent.w;
+    half3 bitangent =  bitangentSign * cross(vertexNormal, tangent.xyz);
+    
+   
     // ModelIO not generating correct bitan sign
     // DONE: flip this on srcData, and not here
     //bitangentSign = -bitangentSign;
     
     // now transform by basis and normalize from any shearing, and since interpolated basis vectors
     // are not normalized
-    half3 bitangent =  bitangentSign * cross(vertexNormal, tangent.xyz);
     half3x3 tbn = half3x3(tangent.xyz, bitangent, vertexNormal);
     bumpNormal = tbn * bumpNormal;
     return normalize(bumpNormal);
@@ -552,18 +563,19 @@ vertex ColorInOut DrawVolumeVS(
     return out;
 }
 
-float4 doLighting(float4 albedo, float3 viewDir, float3 n) {
+float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) {
     
-    float3 lightDir = normalize(float3(1,1,1));
+    float3 lightDir = normalize(float3(1,1,1)); // looking down -Z axis
     float3 lightColor = float3(1,1,1);
 
     float3 specular = float3(0.0);
     float3 diffuse = float3(0.0);
     float3 ambient = float3(0.0);
     
-    bool doSpecular = true;
+    bool doSpecular = false; // this is a bit too bright, and can confuse
     bool doDiffuse = true;
     bool doAmbient = true;
+    
     
     if (doSpecular) {
         float3 ref = normalize(reflect(viewDir, n));
@@ -575,11 +587,20 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n) {
     }
 
     if (doDiffuse) {
+        
         float dotNL = saturate(dot(n, lightDir));
+        
+        // soften the terminator off the vertNormal
+        // this is so no diffuse if normal completely off from vertex normal
+        // also limiting diffuse lighting bump to lighting by vertex normal
+        float dotVertex = saturate(dot(vertexNormal, n));
+        dotNL *= saturate(9.0 * dotVertex);
+        
         diffuse = dotNL * lightColor.rgb;
     }
     
     if (doAmbient) {
+        // can misconstrue as diffuse with this, but make dark side not look flat
         float dotNLUnsat = dot(n, lightDir);
         ambient = mix(0.1, 0.3, saturate(dotNLUnsat * 0.5 + 0.5));
     }
@@ -649,7 +670,7 @@ float4 DrawPixels(
             
             
             float3 viewDir = normalize(in.worldPos - uniforms.cameraPosition);
-            c = doLighting(float4(1.0), viewDir, toFloat(n));
+            c = doLighting(float4(1.0), viewDir, toFloat(n), toFloat(in.normal));
 
             c.a = 1;
         }
@@ -668,10 +689,10 @@ float4 DrawPixels(
                                                in.worldPos, in.texCoord, // to build TBN
                                                uniforms.isNormalMapSwizzleAGToRG, uniforms.isNormalMapSigned, facing);
                     
-                    c = doLighting(c, viewDir, toFloat(n));
+                    c = doLighting(c, viewDir, toFloat(n), toFloat(in.normal));
                 }
                 else {
-                    c = doLighting(c, viewDir, toFloat(in.normal));
+                    c = doLighting(c, viewDir, toFloat(in.normal), toFloat(in.normal));
                 }
             }
             

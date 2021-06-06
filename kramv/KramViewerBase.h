@@ -176,7 +176,7 @@ public:
     double lastTimestamp = 0.0;
     
     int32_t meshNumber = 0;
-    int32_t meshCount = 4;
+    int32_t meshCount = 5;
 };
 
 float4x4 matrix4x4_translation(float tx, float ty, float tz);

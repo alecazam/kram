@@ -88,6 +88,7 @@ using namespace simd;
     //MTKMesh *_meshPlane; // really a thin gox
     MTKMesh *_meshBox;
     MTKMesh *_meshSphere;
+    MTKMesh *_meshSphereMirrored;
     //MTKMesh *_meshCylinder;
     MTKMesh *_meshCapsule;
     MTKMeshBufferAllocator *_metalAllocator;
@@ -415,10 +416,10 @@ using namespace simd;
     if (doFlipUV)
     {
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
-        float2* uvData = (float2*)uvs.map.bytes;
+        packed_float2* uvData = (packed_float2*)uvs.map.bytes;
     
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
-            float2& uv = uvData[i];
+            auto& uv = uvData[i];
             
             uv.x = 1.0f - uv.x;
         }
@@ -433,9 +434,14 @@ using namespace simd;
     if (doFlipBitangent)
     {
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshTangent];
-        float4* uvData = (float4*)uvs.map.bytes;
+        packed_float4* uvData = (packed_float4*)uvs.map.bytes;
         
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
+            if (uvData[i].w != -1.0f && uvData[i].w != 1.0f) {
+                int bp = 0;
+                bp = bp;
+            }
+            
             uvData[i].w = -uvData[i].w;
         }
     }
@@ -457,6 +463,11 @@ using namespace simd;
 
     return mesh;
 }
+
+// why isn't this defined in simd lib?
+struct packed_float3 {
+    float x,y,z;
+};
 
 - (void)_loadAssets
 {
@@ -481,8 +492,124 @@ using namespace simd;
     // All prims are viewed with +Y, not +Z up
     
     mdlMesh = [MDLMesh newEllipsoidWithRadii:(vector_float3){0.5, 0.5, 0.5} radialSegments:16 verticalSegments:16 geometryType:MDLGeometryTypeTriangles inwardNormals:NO hemisphere:NO allocator:_metalAllocator];
+
+    float angle = M_PI * 0.5; // TODO: + or -
+    float2 cosSin = float2m(cos(angle), sin(angle));
+    
+    {
+        mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
+        
+        id<MDLMeshBuffer> pos = mdlMesh.vertexBuffers[BufferIndexMeshPosition];
+        packed_float3* posData = (packed_float3*)pos.map.bytes;
+        
+        id<MDLMeshBuffer> normals = mdlMesh.vertexBuffers[BufferIndexMeshNormal];
+        packed_float3* normalData = (packed_float3*)normals.map.bytes;
+        
+        // vertexCount reports 306, but vertex 289+ are garbage
+        uint32_t numVertices = 289; // mdlMesh.vertexCount
+        
+        for (uint32_t i = 0; i < numVertices; ++i) {
+            {
+                auto& pos = posData[i];
+            
+                // dumb rotate about Y-axis
+                auto copy = pos;
+                
+                pos.x = copy.x * cosSin.x - copy.z * cosSin.y;
+                pos.z = copy.x * cosSin.y + copy.z * cosSin.x;
+            }
+            
+            {
+                auto& normal = normalData[i];
+                auto copy = normal;
+                normal.x = copy.x * cosSin.x - copy.z * cosSin.y;
+                normal.z = copy.x * cosSin.y + copy.z * cosSin.x;
+            }
+        }
+            
+    }
     
     _meshSphere = [self _createMeshAsset:"MeshSphere" mdlMesh:mdlMesh doFlipUV:true];
+       
+    
+    mdlMesh = [MDLMesh newEllipsoidWithRadii:(vector_float3){0.5, 0.5, 0.5} radialSegments:16 verticalSegments:16 geometryType:MDLGeometryTypeTriangles inwardNormals:NO hemisphere:NO allocator:_metalAllocator];
+    
+    
+    // ModelIO has the uv going counterclockwise on sphere/cylinder, but not on the box.
+    // And it also has a flipped bitangent.w.
+    
+    // flip the u coordinate
+    bool doFlipUV = true;
+    if (doFlipUV)
+    {
+        mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
+        
+        id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
+        packed_float2* uvData = (packed_float2*)uvs.map.bytes;
+    
+        // this is all aos
+        
+        id<MDLMeshBuffer> pos = mdlMesh.vertexBuffers[BufferIndexMeshPosition];
+        packed_float3* posData = (packed_float3*)pos.map.bytes;
+        
+        id<MDLMeshBuffer> normals = mdlMesh.vertexBuffers[BufferIndexMeshNormal];
+        packed_float3* normalData = (packed_float3*)normals.map.bytes;
+        
+        
+        // vertexCount reports 306, but vertex 289+ are garbage
+        uint32_t numVertices = 289; // mdlMesh.vertexCount
+        
+        for (uint32_t i = 0; i < numVertices; ++i) {
+            {
+                auto& pos = posData[i];
+                
+                // dumb rotate about Y-axis
+                auto copy = pos;
+                pos.x = copy.x * cosSin.x - copy.z * cosSin.y;
+                pos.z = copy.x * cosSin.y + copy.z * cosSin.x;
+            }
+            
+            {
+                auto& normal = normalData[i];
+                auto copy = normal;
+                normal.x = copy.x * cosSin.x - copy.z * cosSin.y;
+                normal.z = copy.x * cosSin.y + copy.z * cosSin.x;
+            }
+            
+            auto& uv = uvData[i];
+        
+            if (uv.x < 0.0 || uv.x > 1.0) {
+                int bp = 0;
+                bp = bp;
+            }
+            
+            // this makes it counterclockwise 0 to 1
+            float x = uv.x;
+            
+            x = 1.0f - x;
+            
+            // -1 to 1 counterclockwise
+            x = 2.0f * x - 1.0f;
+
+            if (x <= 0) {
+                // now -1 to 0 is 0 to 1 clockwise with 1 in back
+                x = 1.0f + x;
+            }
+            else {
+                // 0 to 1, now 1 to 0 with 1 in back
+                x = 1.0f - x;
+            }
+            
+            uv.x = x;
+        }
+        
+        // TODO: may need to flip tangent on the inverted side
+        // otherwise lighting is just wrong, but tangents generated in _createMeshAsset
+        // move that here, and flip the tangents in the loop
+    }
+        
+    _meshSphereMirrored = [self _createMeshAsset:"MeshSphereMirrored" mdlMesh:mdlMesh doFlipUV:false];
+    
     
 // this maps 1/3rd of texture to the caps, and just isn't a very good uv mapping, using capsule nistead
 //    mdlMesh = [MDLMesh newCylinderWithHeight:1.0
@@ -858,8 +985,9 @@ float3 inverseScaleSquared(float4x4 m) {
         case 0: _mesh = _meshBox; _showSettings->is3DView = false; break;
         case 1: _mesh = _meshBox; break;
         case 2: _mesh = _meshSphere; break;
+        case 3: _mesh = _meshSphereMirrored; break;
         //case 3: _mesh = _meshCylinder; break;
-        case 3: _mesh = _meshCapsule; break;
+        case 4: _mesh = _meshCapsule; break;
     }
     uniforms.is3DView = _showSettings->is3DView;
    
