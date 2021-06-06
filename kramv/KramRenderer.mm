@@ -416,7 +416,9 @@ using namespace simd;
     if (doFlipUV)
     {
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
-        packed_float2* uvData = (packed_float2*)uvs.map.bytes;
+        MDLMeshBufferMap *uvsMap = [uvs map];
+        
+        packed_float2* uvData = (packed_float2*)uvsMap.bytes;
     
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
             auto& uv = uvData[i];
@@ -434,7 +436,8 @@ using namespace simd;
     if (doFlipBitangent)
     {
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshTangent];
-        packed_float4* uvData = (packed_float4*)uvs.map.bytes;
+        MDLMeshBufferMap *uvsMap = [uvs map];
+        packed_float4* uvData = (packed_float4*)uvsMap.bytes;
         
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
             if (uvData[i].w != -1.0f && uvData[i].w != 1.0f) {
@@ -493,17 +496,19 @@ struct packed_float3 {
     
     mdlMesh = [MDLMesh newEllipsoidWithRadii:(vector_float3){0.5, 0.5, 0.5} radialSegments:16 verticalSegments:16 geometryType:MDLGeometryTypeTriangles inwardNormals:NO hemisphere:NO allocator:_metalAllocator];
 
-    float angle = M_PI * 0.5; // TODO: + or -
+    float angle = M_PI * 0.5;
     float2 cosSin = float2m(cos(angle), sin(angle));
     
     {
         mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
         
         id<MDLMeshBuffer> pos = mdlMesh.vertexBuffers[BufferIndexMeshPosition];
-        packed_float3* posData = (packed_float3*)pos.map.bytes;
+        MDLMeshBufferMap *posMap = [pos map];
+        packed_float3* posData = (packed_float3*)posMap.bytes;
         
         id<MDLMeshBuffer> normals = mdlMesh.vertexBuffers[BufferIndexMeshNormal];
-        packed_float3* normalData = (packed_float3*)normals.map.bytes;
+        MDLMeshBufferMap *normalsMap = [normals map];
+        packed_float3* normalData = (packed_float3*)normalsMap.bytes;
         
         // vertexCount reports 306, but vertex 289+ are garbage
         uint32_t numVertices = 289; // mdlMesh.vertexCount
@@ -545,15 +550,18 @@ struct packed_float3 {
         mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
         
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
-        packed_float2* uvData = (packed_float2*)uvs.map.bytes;
+        MDLMeshBufferMap *uvsMap = [uvs map];
+        packed_float2* uvData = (packed_float2*)uvsMap.bytes;
     
         // this is all aos
         
         id<MDLMeshBuffer> pos = mdlMesh.vertexBuffers[BufferIndexMeshPosition];
-        packed_float3* posData = (packed_float3*)pos.map.bytes;
+        MDLMeshBufferMap *posMap = [pos map];
+        packed_float3* posData = (packed_float3*)posMap.bytes;
         
         id<MDLMeshBuffer> normals = mdlMesh.vertexBuffers[BufferIndexMeshNormal];
-        packed_float3* normalData = (packed_float3*)normals.map.bytes;
+        MDLMeshBufferMap *normalsMap = [normals map];
+        packed_float3* normalData = (packed_float3*)normalsMap.bytes;
         
         
         // vertexCount reports 306, but vertex 289+ are garbage
@@ -859,6 +867,8 @@ struct packed_float3 {
     // be supported debugMode for new texture
     _showSettings->debugMode = DebugMode::DebugModeNone;
     
+    _showSettings->shapeChannel = ShapeChannel::ShapeChannelNone;
+    
     // have one of these for each texture added to the viewer
     float scaleX = MAX(1, texture.width);
     float scaleY = MAX(1, texture.height);
@@ -976,9 +986,16 @@ float3 inverseScaleSquared(float4x4 m) {
     }
     
     // no debug mode when preview kicks on, make it possible to toggle back and forth more easily
-    uniforms.debugMode = _showSettings->isPreview ? ShaderDebugMode::ShDebugModeNone : (ShaderDebugMode)_showSettings->debugMode;
+    uniforms.debugMode = (ShaderDebugMode)_showSettings->debugMode;
+    uniforms.shapeChannel = (ShaderShapeChannel)_showSettings->shapeChannel;
     uniforms.channels = (ShaderTextureChannels)_showSettings->channels;
 
+    // turn these off in preview mode, but they may be useful?
+    if (_showSettings->isPreview) {
+        uniforms.debugMode = ShaderDebugMode::ShDebugModeNone;
+        uniforms.shapeChannel = ShaderShapeChannel::ShShapeChannelNone;
+    }
+   
     // crude shape experiment
     _showSettings->is3DView = true;
     switch(_showSettings->meshNumber) {

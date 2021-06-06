@@ -48,6 +48,22 @@ enum DebugMode
     DebugModeCount
 };
 
+enum ShapeChannel
+{
+    ShapeChannelNone = 0,
+    
+    ShapeChannelDepth,
+    
+    ShapeChannelUV0,
+    
+    ShapeChannelNormal,
+    ShapeChannelTangent,
+    ShapeChannelBitangent,
+    
+    ShapeChannelCount
+};
+
+
 class ShowSettings {
 public:
     // Can mask various channels (r/g/b/a only, vs. all), may also add toggle of channel
@@ -160,6 +176,8 @@ public:
     
     DebugMode debugMode = DebugModeNone;
     
+    ShapeChannel shapeChannel = ShapeChannelNone;
+    
     float4x4 projectionViewModelMatrix;
     
     // cached on load, raw info about the texture from libkram
@@ -170,8 +188,9 @@ public:
     MyMTLPixelFormat originalFormat;
     MyMTLPixelFormat decodedFormat;
     
-    void advanceDebugMode(bool isShiftKeyDown);
-    
+    void advanceDebugMode(bool decrement);
+    void advanceShapeChannel(bool decrement);
+
     string lastFilename;
     double lastTimestamp = 0.0;
     

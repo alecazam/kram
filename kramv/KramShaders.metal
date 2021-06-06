@@ -9,6 +9,7 @@ using namespace metal;
 // Whether to use model tangents (true) or generate tangents from normal in fragment shader (false).
 // When set false, the algorithm doesn't adjust for mirrored uv
 // See meshSphereMirrored and set this to false.
+// TODO: hook this up to uniform and pass into calls
 constant bool useTangent = true;
 
 //---------------------------------
@@ -329,8 +330,8 @@ half3 transformNormal(half4 nmap, half3 vertexNormal, half4 tangent,
 void skinPosAndBasis(thread float4& position, thread float3& tangent, thread float3& normal,
                      uint4 indices, float4 weights, float3x4 bones[maxBones])
 {
-    // TODO: might do this as up to 12x vtex lookup, fetch from buffer texture
-    // but uniforms after setup would be faster if many bones
+    // TODO: might do this as up to 3x vtex lookup per bone, fetch from buffer texture
+    // but uniforms after setup would be faster if many bones.  Could support 1-n bones with vtex.
     // instances use same bones, but different indices/weights already
     // but could draw skinned variants with vtex lookup and not have so much upload prep
     
@@ -576,7 +577,6 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) 
     bool doDiffuse = true;
     bool doAmbient = true;
     
-    
     if (doSpecular) {
         float3 ref = normalize(reflect(viewDir, n));
         
@@ -763,6 +763,30 @@ float4 DrawPixels(
         }
     }
     
+    if (uniforms.shapeChannel != ShShapeChannelNone) {
+        // TODO: Really hard to interpret direction from color
+        // see about use the vector flow fields
+        
+        if (uniforms.shapeChannel == ShShapeChannelUV0) {
+            c.rgb = fract(in.texCoordXYZ);
+        }
+        else if (uniforms.shapeChannel == ShShapeChannelNormal) {
+            c.rgb = toUnorm(toFloat(in.normal));
+        }
+        else if (useTangent && uniforms.shapeChannel == ShShapeChannelTangent) {
+            // TODO: make this work with useTangent = false
+            c.rgb = toUnorm(toFloat(in.tangent.xyz));
+        }
+        else if (uniforms.shapeChannel == ShShapeChannelBitangent) {
+            // TODO: make this work with useTangent = false
+            half3 bitangent = cross(in.tangent.xyz, in.normal) * in.tangent.w;
+            c.rgb = toUnorm(toFloat(bitangent));
+        }
+        else if (uniforms.shapeChannel == ShShapeChannelDepth) {
+            c.rgb = saturate(in.position.z / in.position.w);
+        }
+    }
+    
     // mask to see one channel in isolation, this is really 0'ing out other channels
     // would be nice to be able to keep this set on each channel independently.
     switch(uniforms.channels)
@@ -798,11 +822,11 @@ float4 DrawPixels(
         float selector = sign(fmod(checker.x + checker.y, 2.0));
         float cb = mix(float(1), float(222.0/255.0), selector);
         
-        c.rgb = c.rgb + (1-c.a) * cb;
+        c.rgb = c.rgb + (1.0 - c.a) * cb;
         // nothing for alpha?
     }
 
-    
+   
     
     if (uniforms.debugMode != ShDebugModeNone && c.a != 0.0) {
         

@@ -10,14 +10,35 @@ int32_t ShowSettings::totalChunks() const {
     return std::max(one, faceCount) * std::max(one, arrayCount) * std::max(one, sliceCount);
 }
 
-void ShowSettings::advanceDebugMode(bool isShiftKeyDown) {
-    int32_t numEnums = DebugModeCount;
-    if (isShiftKeyDown) {
-        debugMode = (DebugMode)(((int32_t)debugMode - 1 + numEnums) % numEnums);
+void ShowSettings::advanceShapeChannel(bool decrement) {
+    int32_t numEnums = ShapeChannelCount;
+    int32_t mode = shapeChannel;
+    if (decrement) {
+        mode += numEnums - 1;
     }
     else {
-        debugMode = (DebugMode)(((int32_t)debugMode + 1) % numEnums);
+        mode += 1;
     }
+    
+    shapeChannel = (ShapeChannel)(mode % numEnums);
+    
+    // skip this channel for now, in ortho it's mostly pure white
+    if (shapeChannel == ShapeChannelDepth) {
+        advanceShapeChannel(decrement);
+    }
+}
+    
+void ShowSettings::advanceDebugMode(bool decrement) {
+    int32_t numEnums = DebugModeCount;
+    int32_t mode = debugMode;
+    if (decrement) {
+        mode += numEnums - 1;
+    }
+    else {
+        mode += 1;
+    }
+    
+    debugMode = (DebugMode)(mode % numEnums);
     
     MyMTLPixelFormat format = (MyMTLPixelFormat)originalFormat;
     bool isHdr = isHdrFormat(format);
@@ -27,20 +48,20 @@ void ShowSettings::advanceDebugMode(bool isShiftKeyDown) {
     bool isColor = isColorFormat(format);
     
     if (debugMode == DebugModeTransparent && (numChannels <= 3 || !isAlpha)) {
-        advanceDebugMode(isShiftKeyDown);
+        advanceDebugMode(decrement);
     }
     
-    // 2 channel textures don't really color or grayscale pixels
+    // 2 channel textures don't really have color or grayscale pixels
     if (debugMode == DebugModeColor && (numChannels <= 2 || !isColor)) {
-        advanceDebugMode(isShiftKeyDown);
+        advanceDebugMode(decrement);
     }
     
     if (debugMode == DebugModeGray && numChannels <= 2) {
-        advanceDebugMode(isShiftKeyDown);
+        advanceDebugMode(decrement);
     }
     
     if (debugMode == DebugModeHDR && !isHdr) {
-        advanceDebugMode(isShiftKeyDown);
+        advanceDebugMode(decrement);
     }
     
     // for 3 and for channel textures could skip these with more info about image (hasColor)
@@ -48,13 +69,13 @@ void ShowSettings::advanceDebugMode(bool isShiftKeyDown) {
 
     // for normals show directions
     if (debugMode == DebugModePosX && !(isNormal || isSDF)) {
-        advanceDebugMode(isShiftKeyDown);
+        advanceDebugMode(decrement);
     }
     if (debugMode == DebugModePosY && !(isNormal)) {
-        advanceDebugMode(isShiftKeyDown);
+        advanceDebugMode(decrement);
     }
     if (debugMode == DebugModeCircleXY && !(isNormal)) {
-        advanceDebugMode(isShiftKeyDown);
+        advanceDebugMode(decrement);
     }
     
     // TODO: have a clipping mode against a variable range too, only show pixels within that range

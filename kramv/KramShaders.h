@@ -92,6 +92,21 @@ typedef NS_ENUM(int32_t, ShaderDebugMode)
     ShDebugModeCount
 };
 
+// keep in sync with enum ShapeChannel
+typedef NS_ENUM(int32_t, ShaderShapeChannel)
+{
+    ShShapeChannelNone = 0,
+
+    ShShapeChannelDepth,
+    
+    ShShapeChannelUV0,
+    
+    ShShapeChannelNormal,
+    ShShapeChannelTangent,
+    ShShapeChannelBitangent
+};
+
+
 // TODO: placement of these elements in the struct breaks transfer
 // of data. This seems to work.  Alignment issues with mixing these differently.
 struct Uniforms
@@ -123,9 +138,13 @@ struct Uniforms
     uint32_t gridX;
     uint32_t gridY;
     
-    // can look at pixels that meet criteria of the debugMode
+    // View pixels that meet criteria of the debugMode
     ShaderDebugMode debugMode;
     
+    // View various aspects of shape geometry (depth, normal, tangent, ...)
+    ShaderShapeChannel shapeChannel;
+    
+    // View the r,g,b,a channels of the texture
     ShaderTextureChannels channels; // mask
 };
 

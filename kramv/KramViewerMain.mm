@@ -498,7 +498,7 @@ NSArray<NSString*>* pasteboardTypes = @[
 }
 
 - (NSStackView*)_addButtons {
-    const int32_t numButtons = 26; // 13;
+    const int32_t numButtons = 27; // 13;
     const char* names[numButtons*2] = {
         
         "?", "Help",
@@ -527,6 +527,7 @@ NSArray<NSString*>* pasteboardTypes = @[
         "L", "Reload",
         "0", "Fit",
         "8", "Shape",
+        "6", "Shape Channel",
         
         // TODO: need to shift hud over a little
         // "UI", - add to show/hide buttons
@@ -1378,6 +1379,7 @@ float4 toSnorm8(float4 c)
     auto faceState = toState(_showSettings->faceNumber > 0);
     auto mipState = toState(_showSettings->mipLOD > 0);
     auto meshState = toState(_showSettings->meshNumber > 0);
+    auto meshChannelState = toState(_showSettings->shapeChannel > 0); // TODO: rename to meshChannel
     
     // TODO: UI state, and vertical state
     auto uiState = toState(_buttonStack.hidden);
@@ -1406,6 +1408,7 @@ float4 toSnorm8(float4 c)
     [self findButton:"S"].state = showAllState;
     [self findButton:"O"].state = previewState;
     [self findButton:"8"].state = meshState;
+    [self findButton:"6"].state = meshChannelState;
     [self findButton:"W"].state = wrapState;
     [self findButton:"D"].state = gridState;
     [self findButton:"E"].state = debugState;
@@ -1436,6 +1439,8 @@ float4 toSnorm8(float4 c)
     [self findMenuItem:"S"].state = showAllState;
     [self findMenuItem:"O"].state = previewState;
     [self findMenuItem:"8"].state = meshState;
+    [self findMenuItem:"6"].state = meshChannelState;
+    
     [self findMenuItem:"W"].state = wrapState;
     [self findMenuItem:"D"].state = gridState;
     [self findMenuItem:"E"].state = debugState;
@@ -1509,11 +1514,14 @@ float4 toSnorm8(float4 c)
         keyCode = Key::J;
     else if (title == "L")
         keyCode = Key::L;
+    
     else if (title == "0")
         keyCode = Key::Num0;
     else if (title == "8")
         keyCode = Key::Num8;
-    
+    else if (title == "6")
+        keyCode = Key::Num6;
+   
     else if (title == "R")
         keyCode = Key::R;
     else if (title == "G")
@@ -1522,8 +1530,7 @@ float4 toSnorm8(float4 c)
         keyCode = Key::B;
     else if (title == "A")
         keyCode = Key::A;
-    
-    
+   
     if (keyCode >= 0)
         [self handleKey:keyCode isShiftKeyDown:isShiftKeyDown];
 }
@@ -1648,6 +1655,22 @@ float4 toSnorm8(float4 c)
             }
             break;
             
+        case Key::Num6: {
+            _showSettings->advanceShapeChannel(isShiftKeyDown);
+            
+            switch(_showSettings->shapeChannel) {
+                case ShapeChannelNone: text = "Show Off"; break;
+                case ShapeChannelUV0: text = "Show UV0"; break;
+                case ShapeChannelNormal: text = "Show Normal"; break;
+                case ShapeChannelTangent: text = "Show Tangent"; break;
+                case ShapeChannelBitangent: text = "Show Bitangent"; break;
+                case ShapeChannelDepth: text = "Show Depth"; break;
+                default: break;
+            }
+            
+            isChanged = true;
+            break;
+        }
         case Key::E: {
             _showSettings->advanceDebugMode(isShiftKeyDown);
             
