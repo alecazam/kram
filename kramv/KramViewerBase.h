@@ -186,6 +186,7 @@ public:
     ShapeChannel shapeChannel = ShapeChannelNone;
     
     float4x4 projectionViewModelMatrix;
+    bool isInverted;
     
     // cached on load, raw info about the texture from libkram
     string imageInfo;

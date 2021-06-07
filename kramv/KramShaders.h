@@ -117,7 +117,7 @@ struct Uniforms
 {
     simd::float4x4 projectionViewMatrix;
     simd::float4x4 modelMatrix;
-    simd::float3 modelMatrixInvScale2; // to supply inverse
+    simd::float4 modelMatrixInvScale2; // to supply inverse, w is determinant
     simd::float3 cameraPosition; // world-space
     
     bool isSigned;

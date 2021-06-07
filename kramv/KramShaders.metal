@@ -459,7 +459,7 @@ ColorInOut DrawImageFunc(
     if (uniforms.isNormalMapPreview) {
         float3 normal = in.normal;
         float3 tangent = in.tangent.xyz;
-        transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2, uniforms.useTangent);
+        transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2.xyz, uniforms.useTangent);
         
         out.normal = toHalf(normal);
         

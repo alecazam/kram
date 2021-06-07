@@ -467,10 +467,10 @@ using namespace simd;
         packed_float4* uvData = (packed_float4*)uvsMap.bytes;
         
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
-            if (uvData[i].w != -1.0f && uvData[i].w != 1.0f) {
-                int bp = 0;
-                bp = bp;
-            }
+//            if (uvData[i].w != -1.0f && uvData[i].w != 1.0f) {
+//                int bp = 0;
+//                bp = bp;
+//            }
             
             uvData[i].w = -uvData[i].w;
         }
@@ -484,7 +484,7 @@ using namespace simd;
     mesh.name = [NSString stringWithUTF8String:name];
 
     
-    // these range names may onl show up when looking at geometry in capture
+    // these range names may only show up when looking at geometry in capture
     // These don't seem to appear as the buffer name that is suballocated from
     {
         // name the vertex range on the vb
@@ -639,10 +639,10 @@ struct packed_float3 {
             
             auto& uv = uvData[i];
         
-            if (uv.x < 0.0 || uv.x > 1.0) {
-                int bp = 0;
-                bp = bp;
-            }
+//            if (uv.x < 0.0 || uv.x > 1.0) {
+//                int bp = 0;
+//                bp = bp;
+//            }
             
             // this makes it counterclockwise 0 to 1
             float x = uv.x;
@@ -678,7 +678,7 @@ struct packed_float3 {
     _meshSphereMirrored = [self _createMeshAsset:"MeshSphereMirrored" mdlMesh:mdlMesh doFlipUV:false];
     
     
-// this maps 1/3rd of texture to the caps, and just isn't a very good uv mapping, using capsule nistead
+// this maps 1/3rd of texture to the caps, and just isn't a very good uv mapping, using capsule instead
 //    mdlMesh = [MDLMesh newCylinderWithHeight:1.0
 //                                       radii:(vector_float2){0.5, 0.5}
 //                                            radialSegments:16
@@ -928,16 +928,19 @@ struct packed_float3 {
     
     _showSettings->shapeChannel = ShapeChannel::ShapeChannelNone;
     
+    // test rendering with inversion and mirroring
+    bool doInvertX = false;
+    
     // have one of these for each texture added to the viewer
     float scaleX = MAX(1, texture.width);
     float scaleY = MAX(1, texture.height);
     float scaleZ = MAX(scaleX, scaleY); // don't want 1.0f, or specular is all off due to extreme scale differences
-    _modelMatrix = float4x4(float4m(scaleX, scaleY, scaleZ, 1.0f)); // non uniform scale
+    _modelMatrix = float4x4(float4m(doInvertX ? -scaleX : scaleX, scaleY, scaleZ, 1.0f)); // non uniform scale
     _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0); // set z=-1 unit back
     
     // uniform scaled 3d primitiv
     float scale = MAX(scaleX, scaleY);
-    _modelMatrix3D = float4x4(float4m(scale, scale, scale, 1.0f)); // uniform scale
+    _modelMatrix3D = float4x4(float4m(doInvertX ? -scale : scale, scale, scale, 1.0f)); // uniform scale
     _modelMatrix3D = _modelMatrix3D * matrix4x4_translation(0.0f, 0.0f, -1.0f); // set z=-1 unit back
     
     return YES;
@@ -948,6 +951,8 @@ struct packed_float3 {
     float4x4 panTransform = matrix4x4_translation(-panX, panY, 0.0);
     
     // non-uniform scale is okay here, only affects ortho volume
+    // setting this to uniform zoom and object is not visible, zoom can be 20x in x and y
+    
     float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));
     viewMatrix = panTransform * viewMatrix;
     
@@ -964,7 +969,11 @@ bool almost_equal_elements(float3 v, float tol) {
     return (fabs(v.x - v.y) < tol) && (fabs(v.x - v.z) < tol);
 }
 
-float3 inverseScaleSquared(float4x4 m) {
+const float3x3& toFloat3x3(const float4x4& m) {
+    return (const float3x3&)m;
+}
+
+float4 inverseScaleSquared(const float4x4& m) {
     float3 scaleSquared = float3m(
         length_squared(m.columns[0].xyz),
         length_squared(m.columns[1].xyz),
@@ -978,11 +987,12 @@ float3 inverseScaleSquared(float4x4 m) {
     // don't divide by 0
     float3 invScaleSquared = recip(simd::max(float3m(0.0001 * 0.0001), scaleSquared));
         
-    // TODO: could also identify determinant here for flipping orientation
+    // identify determinant here for flipping orientation
     // all shapes with negative determinant need orientation flipped for backfacing
-    // and need to be rendered together
+    // and need to be grouned together if rendering with instancing
+    float det = determinant(toFloat3x3(m));
     
-    return invScaleSquared;
+    return float4m(invScaleSquared, det);
 }
 
 - (void)_updateGameState
@@ -1028,7 +1038,7 @@ float3 inverseScaleSquared(float4x4 m) {
     
     // TODO: tie to UI
     // a few things to fix before enabling this
-    uniforms.useTangent = false;
+    uniforms.useTangent = true;
         
     uniforms.gridX = 0;
     uniforms.gridY = 0;
@@ -1092,6 +1102,8 @@ float3 inverseScaleSquared(float4x4 m) {
        
         uniforms.modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix3D);
         
+        _showSettings->isInverted = uniforms.modelMatrixInvScale2.w < 0.0f;
+        
         // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
         _showSettings->projectionViewModelMatrix = uniforms.projectionViewMatrix * uniforms.modelMatrix;
         
@@ -1112,6 +1124,8 @@ float3 inverseScaleSquared(float4x4 m) {
         uniforms.modelMatrix = _modelMatrix;
        
         uniforms.modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix);
+        
+        _showSettings->isInverted = uniforms.modelMatrixInvScale2.w < 0.0f;
         
         // this was stored so view could use it, but now that code calcs the transform via computeImageTransform
         _showSettings->projectionViewModelMatrix = uniforms.projectionViewMatrix * uniforms.modelMatrix ;
@@ -1241,7 +1255,8 @@ float3 inverseScaleSquared(float4x4 m) {
     renderEncoder.label = @"MainRender";
 
     // set raster state
-    [renderEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
+    [renderEncoder setFrontFacingWinding:_showSettings->isInverted ?
+                        MTLWindingCounterClockwise : MTLWindingCounterClockwise];
     [renderEncoder setCullMode:MTLCullModeBack];
     [renderEncoder setDepthStencilState:_depthStateFull];
 
