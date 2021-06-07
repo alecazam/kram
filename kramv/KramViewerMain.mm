@@ -780,7 +780,11 @@ NSArray<NSString*>* pasteboardTypes = @[
     //pt1 /= pt1.w;
     
     // see that rectangle intersects the view, view is -1 to 1
-    CGRect imageRect = CGRectMake(pt0.x, pt0.y, pt1.x - pt0.x, pt1.y - pt0.y);
+    // this handles inversion
+    float2 ptOrigin = simd::min(pt0.xy, pt1.xy);
+    float2 ptSize = abs(pt0.xy - pt1.xy);
+    
+    CGRect imageRect = CGRectMake(ptOrigin.x, ptOrigin.y, ptSize.x, ptSize.y);
     CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
    
     int32_t numTexturesX = _showSettings->totalChunks();
@@ -1210,8 +1214,11 @@ float4 toSnorm8(float4 c)
     //pt0 /= pt0.w;
     //pt1 /= pt1.w;
     
+    float2 ptOrigin = simd::min(pt0.xy, pt1.xy);
+    float2 ptSize = abs(pt0.xy - pt1.xy);
+    
     // see that rectangle intersects the view, view is -1 to 1
-    CGRect imageRect = CGRectMake(pt0.x, pt0.y, pt1.x - pt0.x, pt1.y - pt0.y);
+    CGRect imageRect = CGRectMake(ptOrigin.x, ptOrigin.y, ptSize.x, ptSize.y);
     CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
    
     int32_t numTexturesX = _showSettings->totalChunks();
