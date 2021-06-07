@@ -101,9 +101,13 @@ typedef NS_ENUM(int32_t, ShaderShapeChannel)
     
     ShShapeChannelUV0,
     
+    ShShapeChannelFaceNormal,
+    
     ShShapeChannelNormal,
     ShShapeChannelTangent,
-    ShShapeChannelBitangent
+    ShShapeChannelBitangent,
+    
+    // ShShapeChannelBumpNormal,
 };
 
 
@@ -131,6 +135,9 @@ struct Uniforms
     
     bool isNormalMapSigned;
     bool isNormalMapSwizzleAGToRG;
+    
+    // this means pull tangent from vertex
+    bool useTangent;
     
     uint32_t numChannels;
     

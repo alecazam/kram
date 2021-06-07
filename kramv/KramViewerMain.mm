@@ -1657,35 +1657,13 @@ float4 toSnorm8(float4 c)
             
         case Key::Num6: {
             _showSettings->advanceShapeChannel(isShiftKeyDown);
-            
-            switch(_showSettings->shapeChannel) {
-                case ShapeChannelNone: text = "Show Off"; break;
-                case ShapeChannelUV0: text = "Show UV0"; break;
-                case ShapeChannelNormal: text = "Show Normal"; break;
-                case ShapeChannelTangent: text = "Show Tangent"; break;
-                case ShapeChannelBitangent: text = "Show Bitangent"; break;
-                case ShapeChannelDepth: text = "Show Depth"; break;
-                default: break;
-            }
-            
+            text = _showSettings->shapeChannelText();
             isChanged = true;
             break;
         }
         case Key::E: {
             _showSettings->advanceDebugMode(isShiftKeyDown);
-            
-            switch(_showSettings->debugMode) {
-                case DebugModeNone: text = "Debug Off"; break;
-                case DebugModeTransparent: text = "Debug Transparent"; break;
-                case DebugModeNonZero: text = "Debug NonZero"; break;
-                case DebugModeColor: text = "Debug Color"; break;
-                case DebugModeGray: text = "Debug Gray"; break;
-                case DebugModeHDR: text = "Debug HDR"; break;
-                case DebugModePosX: text = "Debug +X"; break;
-                case DebugModePosY: text = "Debug +Y"; break;
-                case DebugModeCircleXY: text = "Debug XY>=1"; break;
-                default: break;
-            }
+            text = _showSettings->debugModeText();
             isChanged = true;
             break;
         }

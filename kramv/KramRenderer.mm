@@ -58,11 +58,18 @@ using namespace simd;
     id <MTLTexture> _colorMap;
     id <MTLTexture> _normalMap;
     
-    id <MTLSamplerState> _colorMapSamplerWrap;
-    id <MTLSamplerState> _colorMapSamplerClamp;
+    // border is a better edge sample, but at edges it filters in the transparent color
+    // around the border which is undesirable.  It would be better if the hw did
+    // clamp to edge until uv outside 0 to 1.  This results in having to inset the uv by 0.5 px
+    // to avoid this artifact, but on small texturs that are 4x4, a 1 px inset is noticeable.
     
-    id <MTLSamplerState> _colorMapSamplerBilinearWrap;
-    id <MTLSamplerState> _colorMapSamplerBilinearClamp;
+    id <MTLSamplerState> _colorMapSamplerNearestWrap;
+    id <MTLSamplerState> _colorMapSamplerNearestBorder;
+    id <MTLSamplerState> _colorMapSamplerNearestEdge;
+    
+    id <MTLSamplerState> _colorMapSamplerFilterWrap;
+    id <MTLSamplerState> _colorMapSamplerFilterBorder;
+    id <MTLSamplerState> _colorMapSamplerFilterEdge;
     
     //id<MTLTexture> _sampleRT;
     id<MTLTexture> _sampleTex;
@@ -128,32 +135,52 @@ using namespace simd;
     samplerDescriptor.sAddressMode = MTLSamplerAddressModeRepeat;
     samplerDescriptor.tAddressMode = MTLSamplerAddressModeRepeat;
     samplerDescriptor.rAddressMode = MTLSamplerAddressModeRepeat;
-    samplerDescriptor.label = @"colorMapSamplerWrap";
+    samplerDescriptor.label = @"colorMapSamplerNearestWrap";
     
-    _colorMapSamplerWrap = [_device newSamplerStateWithDescriptor:samplerDescriptor];
+    _colorMapSamplerNearestWrap = [_device newSamplerStateWithDescriptor:samplerDescriptor];
     
     samplerDescriptor.sAddressMode = MTLSamplerAddressModeClampToBorderColor;
     samplerDescriptor.tAddressMode = MTLSamplerAddressModeClampToBorderColor;
     samplerDescriptor.rAddressMode = MTLSamplerAddressModeClampToBorderColor;
-    samplerDescriptor.label = @"colorMapSamplerClamp";
+    samplerDescriptor.label = @"colorMapSamplerNearestBorder";
    
-    _colorMapSamplerClamp = [_device newSamplerStateWithDescriptor:samplerDescriptor];
+    _colorMapSamplerNearestBorder = [_device newSamplerStateWithDescriptor:samplerDescriptor];
+    
+    samplerDescriptor.sAddressMode = MTLSamplerAddressModeClampToEdge;
+    samplerDescriptor.tAddressMode = MTLSamplerAddressModeClampToEdge;
+    samplerDescriptor.rAddressMode = MTLSamplerAddressModeClampToEdge;
+    samplerDescriptor.label = @"colorMapSamplerNearsetEdge";
+    
+    _colorMapSamplerNearestEdge = [_device newSamplerStateWithDescriptor:samplerDescriptor];
+    
+    // -----
     
     // these are for preview mode
     // use the mips, and specify linear for min/mag for SDF case
     samplerDescriptor.minFilter = MTLSamplerMinMagFilterLinear;
     samplerDescriptor.magFilter = MTLSamplerMinMagFilterLinear;
     samplerDescriptor.mipFilter = MTLSamplerMipFilterLinear;
-    samplerDescriptor.label = @"colorMapSamplerBilinearClamp";
+    
+    samplerDescriptor.sAddressMode = MTLSamplerAddressModeClampToBorderColor;
+    samplerDescriptor.tAddressMode = MTLSamplerAddressModeClampToBorderColor;
+    samplerDescriptor.rAddressMode = MTLSamplerAddressModeClampToBorderColor;
+    samplerDescriptor.label = @"colorMapSamplerFilterBorder";
    
-    _colorMapSamplerBilinearClamp = [_device newSamplerStateWithDescriptor:samplerDescriptor];
+    _colorMapSamplerFilterBorder = [_device newSamplerStateWithDescriptor:samplerDescriptor];
+    
+    samplerDescriptor.sAddressMode = MTLSamplerAddressModeClampToEdge;
+    samplerDescriptor.tAddressMode = MTLSamplerAddressModeClampToEdge;
+    samplerDescriptor.rAddressMode = MTLSamplerAddressModeClampToEdge;
+    samplerDescriptor.label = @"colorMapSamplerFilterEdge";
+   
+    _colorMapSamplerFilterEdge = [_device newSamplerStateWithDescriptor:samplerDescriptor];
     
     samplerDescriptor.sAddressMode = MTLSamplerAddressModeRepeat;
     samplerDescriptor.tAddressMode = MTLSamplerAddressModeRepeat;
     samplerDescriptor.rAddressMode = MTLSamplerAddressModeRepeat;
     samplerDescriptor.label = @"colorMapSamplerBilinearWrap";
     
-    _colorMapSamplerBilinearWrap = [_device newSamplerStateWithDescriptor:samplerDescriptor];
+    _colorMapSamplerFilterWrap = [_device newSamplerStateWithDescriptor:samplerDescriptor];
 }
     
 - (void)_createVertexDescriptor
@@ -449,15 +476,35 @@ using namespace simd;
         }
     }
     
-    // TODO: name the vertex attributes, can that be done in _mdlVertexDescriptor
-    // may have to set name on MTLBuffer range on IB and VB
-    
+   
     // now set it into mtk mesh
     MTKMesh* mesh = [[MTKMesh alloc] initWithMesh:mdlMesh
                                    device:_device
                                     error:&error];
     mesh.name = [NSString stringWithUTF8String:name];
 
+    
+    // these range names may onl show up when looking at geometry in capture
+    // These don't seem to appear as the buffer name that is suballocated from
+    {
+        // name the vertex range on the vb
+        MTKMeshBuffer* pos = mesh.vertexBuffers[BufferIndexMeshPosition];
+        MTKMeshBuffer* uvs = mesh.vertexBuffers[BufferIndexMeshUV0];
+        MTKMeshBuffer* normals = mesh.vertexBuffers[BufferIndexMeshNormal];
+        MTKMeshBuffer* tangents = mesh.vertexBuffers[BufferIndexMeshTangent];
+    
+        [pos.buffer addDebugMarker:@"Pos" range:NSMakeRange(pos.offset, pos.length)];
+        [uvs.buffer addDebugMarker:@"UV" range:NSMakeRange(uvs.offset, uvs.length)];
+        [normals.buffer addDebugMarker:@"Nor" range:NSMakeRange(normals.offset, normals.length)];
+        [tangents.buffer addDebugMarker:@"Tan" range:NSMakeRange(tangents.offset, tangents.length)];
+        
+        // This seems to already be named "ellisoid-Indices",
+        // need to do for ib as well
+        for (MTKSubmesh* submesh in mesh.submeshes) {
+            [submesh.indexBuffer.buffer addDebugMarker:mesh.name range:NSMakeRange(submesh.indexBuffer.offset, submesh.indexBuffer.length)];
+        }
+    }
+    
     if(!mesh || error)
     {
         NSLog(@"Error creating MetalKit mesh %@", error.localizedDescription);
@@ -530,6 +577,12 @@ struct packed_float3 {
                 normal.x = copy.x * cosSin.x - copy.z * cosSin.y;
                 normal.z = copy.x * cosSin.y + copy.z * cosSin.x;
             }
+        }
+        
+        // Hack - knock out all bogus tris from ModelIO that lead to garbage tris
+        for (uint32_t i = numVertices; i < mdlMesh.vertexCount; ++i) {
+            auto& pos = posData[i];
+            pos.x = NAN;
         }
             
     }
@@ -609,6 +662,12 @@ struct packed_float3 {
             }
             
             uv.x = x;
+        }
+        
+        // Hack - knock out all bogus tris from ModelIO that lead to garbage tris
+        for (uint32_t i = numVertices; i < mdlMesh.vertexCount; ++i) {
+            auto& pos = posData[i];
+            pos.x = NAN;
         }
         
         // TODO: may need to flip tangent on the inverted side
@@ -966,6 +1025,10 @@ float3 inverseScaleSquared(float4x4 m) {
             uniforms.isNormalMapSwizzleAGToRG = false; // TODO: need a prop for this
         }
     }
+    
+    // TODO: tie to UI
+    // a few things to fix before enabling this
+    uniforms.useTangent = false;
         
     uniforms.gridX = 0;
     uniforms.gridY = 0;
@@ -1272,7 +1335,7 @@ float3 inverseScaleSquared(float4x4 m) {
             
             // use exisiting lod, and mip
             [renderEncoder setFragmentSamplerState:
-                                  (canWrap && _showSettings->isWrap) ? _colorMapSamplerBilinearWrap : _colorMapSamplerBilinearClamp
+                                  (canWrap && _showSettings->isWrap) ? _colorMapSamplerFilterWrap : _colorMapSamplerFilterBorder
                                   atIndex:SamplerIndexColor];
             
             for(MTKSubmesh *submesh in _mesh.submeshes)
@@ -1347,7 +1410,7 @@ float3 inverseScaleSquared(float4x4 m) {
                     
                     // force lod, and don't mip
                     [renderEncoder setFragmentSamplerState:
-                                          (canWrap && _showSettings->isWrap) ? _colorMapSamplerWrap : _colorMapSamplerClamp
+                                          (canWrap && _showSettings->isWrap) ? _colorMapSamplerNearestWrap : _colorMapSamplerNearestBorder
                                           lodMinClamp:mip
                                           lodMaxClamp:mip + 1
                                           atIndex:SamplerIndexColor];
@@ -1384,7 +1447,7 @@ float3 inverseScaleSquared(float4x4 m) {
             
             // force lod, and don't mip
             [renderEncoder setFragmentSamplerState:
-                                  (canWrap && _showSettings->isWrap) ? _colorMapSamplerWrap : _colorMapSamplerClamp
+                                  (canWrap && _showSettings->isWrap) ? _colorMapSamplerNearestWrap : _colorMapSamplerNearestBorder
                                   lodMinClamp:mip
                                   lodMaxClamp:mip + 1
                                   atIndex:SamplerIndexColor];

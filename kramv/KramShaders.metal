@@ -6,11 +6,10 @@
 
 using namespace metal;
 
-// Whether to use model tangents (true) or generate tangents from normal in fragment shader (false).
-// When set false, the algorithm doesn't adjust for mirrored uv
-// See meshSphereMirrored and set this to false.
-// TODO: hook this up to uniform and pass into calls
-constant bool useTangent = true;
+// TODO: Getting weird triangle artifacts on AMC 5500m on 16" MBP with useTangent = false.
+// Seems that uv derivatives used for basis generation are 0 in gpu capture
+// even though the uv itself are not.  That shouldn't be possible.
+// This results in large triangular artitfacts at the bottom of the sphere/capsule.
 
 //---------------------------------
 // helpers
@@ -189,6 +188,14 @@ half3 toNormal(half3 n)
     return n;
 }
 
+// This will result in comlier failed XPC_ERROR_CONNECTION_INTERRUPTED
+// was based on forum suggestion.  assert() does nothing in Metal.
+//#define myMetalAssert(x) \
+//    if (!(x)) { \
+//        device float* f = 0; \
+//        *f = 12; \
+//    }
+//#define myMetalAssert(x) assert(x)
 
 // https://www.gamasutra.com/blogs/RobertBasler/20131122/205462/Three_Normal_Mapping_Techniques_Explained_For_the_Mathematically_Uninclined.php?print=1
 // http://www.thetenthplanet.de/archives/1180
@@ -210,6 +217,13 @@ half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldP
     float2 duv1 = dfdx(uv);
     float2 duv2 = dfdy(uv);
 
+    // getting non-zere uv with 0 length duv1/2 on MBP 16", this leaves missing bump artifacts
+    // in large triangle error so this is a patch to avoid that.
+    if ((length_squared(duv1) < 1e-12) &&
+        (length_squared(duv2) < 1e-12)) {
+        return vertexNormal;
+    }
+    
     // solve the linear system
     float3 dp2perp = cross(dp2, N);
     float3 dp1perp = cross(N, dp1);
@@ -218,7 +232,7 @@ half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldP
     float invmax = rsqrt(max(length_squared(T), length_squared(B)));
     
     // keeps relative magnitude of two vectors, they're not both unit vecs
-    T *= invmax;
+    T *= -invmax; // had to flip this sign to get correct lighting
     B *= invmax;
     
     // construct a scale-invariant frame
@@ -261,6 +275,7 @@ half3 transformNormalByBasis(half3 bumpNormal, half4 tangent, half3 vertexNormal
 
 
 half3 transformNormal(half4 tangent, half3 vertexNormal, float3 worldPos,
+                      bool useTangent,
                       texture2d<half> texture, sampler s, float2 uv, bool isSigned = true)
 {
     half4 nmap = texture.sample(s, uv);
@@ -283,8 +298,8 @@ half3 transformNormal(half4 tangent, half3 vertexNormal, float3 worldPos,
 
 
 half3 transformNormal(half4 nmap, half3 vertexNormal, half4 tangent,
-                      float3 worldPos, float2 uv, // to gen TBN
-                        bool isSwizzleAGToRG, bool isSigned, bool isFrontFacing)
+                      float3 worldPos, float2 uv, bool useTangent, // to gen TBN from normal
+                      bool isSwizzleAGToRG, bool isSigned, bool isFrontFacing)
 {
     // add swizzle for ASTC/BC5nm, other 2 channels format can only store 01 in ba
     // could use hw swizzle for this
@@ -368,7 +383,8 @@ void skinPosAndBasis(thread float4& position, thread float3& tangent, thread flo
     
     normal  = (float4(normal, 0.0)  * bindPoseToBoneTransform);
     
-    if (useTangent)
+    // compiler will deadstrip if tangent unused by caller
+    //if (useTangent)
         tangent = (float4(tangent, 0.0) * bindPoseToBoneTransform);
 }
 
@@ -379,7 +395,7 @@ float3x3 toFloat3x3(float4x4 m)
 
 // this is for vertex shader if tangent supplied
 void transformBasis(thread float3& normal, thread float3& tangent,
-                    float4x4 modelToWorldTfm, float3 invScale2)
+                    float4x4 modelToWorldTfm, float3 invScale2, bool useTangent)
 {
     
     float3x3 m = toFloat3x3(modelToWorldTfm);
@@ -443,7 +459,7 @@ ColorInOut DrawImageFunc(
     if (uniforms.isNormalMapPreview) {
         float3 normal = in.normal;
         float3 tangent = in.tangent.xyz;
-        transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2);
+        transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2, uniforms.useTangent);
         
         out.normal = toHalf(normal);
         
@@ -665,7 +681,7 @@ float4 DrawPixels(
             half4 nmapH = toHalf(c);
             
             half3 n = transformNormal(nmapH, in.normal, in.tangent,
-                                       in.worldPos, in.texCoord, // to build TBN
+                                       in.worldPos, in.texCoord, uniforms.useTangent, // to build TBN
                                        uniforms.isSwizzleAGToRG, uniforms.isSigned, facing);
             
             
@@ -686,7 +702,7 @@ float4 DrawPixels(
                     half4 nmapH = toHalf(nmap);
                    
                     half3 n = transformNormal(nmapH, in.normal, in.tangent,
-                                               in.worldPos, in.texCoord, // to build TBN
+                                               in.worldPos, in.texCoord, uniforms.useTangent, // to build TBN
                                                uniforms.isNormalMapSwizzleAGToRG, uniforms.isNormalMapSigned, facing);
                     
                     c = doLighting(c, viewDir, toFloat(n), toFloat(in.normal));
@@ -773,18 +789,35 @@ float4 DrawPixels(
         else if (uniforms.shapeChannel == ShShapeChannelNormal) {
             c.rgb = toUnorm(toFloat(in.normal));
         }
-        else if (useTangent && uniforms.shapeChannel == ShShapeChannelTangent) {
+        else if (uniforms.useTangent && uniforms.shapeChannel == ShShapeChannelTangent) {
             // TODO: make this work with useTangent = false
+            // may have to call routine again, or pass back basis
+            
             c.rgb = toUnorm(toFloat(in.tangent.xyz));
         }
         else if (uniforms.shapeChannel == ShShapeChannelBitangent) {
             // TODO: make this work with useTangent = false
+            // may have to call routine again, or pass back basis
+            
             half3 bitangent = cross(in.tangent.xyz, in.normal) * in.tangent.w;
             c.rgb = toUnorm(toFloat(bitangent));
         }
         else if (uniforms.shapeChannel == ShShapeChannelDepth) {
             c.rgb = saturate(in.position.z / in.position.w);
         }
+        else if (uniforms.shapeChannel == ShShapeChannelFaceNormal) {
+            float3 faceNormal = -cross(dfdx(in.worldPos), dfdy(in.worldPos));
+            faceNormal = normalize(faceNormal);
+            
+            // TODO: incorporate facing?
+            
+            c.rgb = saturate(toUnorm(faceNormal));
+        }
+//        else if (uniforms.shapeChannel == ShShapeChannelBumpNormal) {
+//            c.rgb = saturate(bumpNormal);
+//        }
+        
+        c.a = 1.0;
     }
     
     // mask to see one channel in isolation, this is really 0'ing out other channels
@@ -826,8 +859,6 @@ float4 DrawPixels(
         // nothing for alpha?
     }
 
-   
-    
     if (uniforms.debugMode != ShDebugModeNone && c.a != 0.0) {
         
         bool isHighlighted = false;

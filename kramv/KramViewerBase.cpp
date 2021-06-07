@@ -10,6 +10,42 @@ int32_t ShowSettings::totalChunks() const {
     return std::max(one, faceCount) * std::max(one, arrayCount) * std::max(one, sliceCount);
 }
 
+const char* ShowSettings::shapeChannelText() const {
+    const char* text = "";
+    
+    switch(shapeChannel) {
+        case ShapeChannelNone: text = "Show Off"; break;
+        case ShapeChannelUV0: text = "Show UV0"; break;
+        case ShapeChannelNormal: text = "Show Normal"; break;
+        case ShapeChannelTangent: text = "Show Tangent"; break;
+        case ShapeChannelBitangent: text = "Show Bitangent"; break;
+        case ShapeChannelDepth: text = "Show Depth"; break;
+        case ShapeChannelFaceNormal: text = "Show Faces"; break;
+        //case ShapeChannelBumpNormal: text = "Show Bumps"; break;
+        default: break;
+    }
+    
+    return text;
+}
+
+const char* ShowSettings::debugModeText() const {
+    const char* text = "";
+    
+    switch(debugMode) {
+        case DebugModeNone: text = "Debug Off"; break;
+        case DebugModeTransparent: text = "Debug Transparent"; break;
+        case DebugModeNonZero: text = "Debug NonZero"; break;
+        case DebugModeColor: text = "Debug Color"; break;
+        case DebugModeGray: text = "Debug Gray"; break;
+        case DebugModeHDR: text = "Debug HDR"; break;
+        case DebugModePosX: text = "Debug +X"; break;
+        case DebugModePosY: text = "Debug +Y"; break;
+        case DebugModeCircleXY: text = "Debug XY>=1"; break;
+        default: break;
+    }
+    return text;
+}
+
 void ShowSettings::advanceShapeChannel(bool decrement) {
     int32_t numEnums = ShapeChannelCount;
     int32_t mode = shapeChannel;

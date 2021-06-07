@@ -56,9 +56,16 @@ enum ShapeChannel
     
     ShapeChannelUV0,
     
-    ShapeChannelNormal,
+    ShapeChannelFaceNormal, // gen from dfdx and dfdy
+    
+    ShapeChannelNormal, // vertex normal
     ShapeChannelTangent,
     ShapeChannelBitangent,
+    
+    // don't need bump, since can already see it, but what if combined diffuse + normal
+    // ShapeChannelBumpNormal,
+    
+    // ShapeChannelMipLevel, // can estimate mip chose off dfdx/dfdy, and pseudocolor
     
     ShapeChannelCount
 };
@@ -190,6 +197,9 @@ public:
     
     void advanceDebugMode(bool decrement);
     void advanceShapeChannel(bool decrement);
+
+    const char* shapeChannelText() const;
+    const char* debugModeText() const;
 
     string lastFilename;
     double lastTimestamp = 0.0;
