@@ -10,6 +10,21 @@ int32_t ShowSettings::totalChunks() const {
     return std::max(one, faceCount) * std::max(one, arrayCount) * std::max(one, sliceCount);
 }
 
+const char* ShowSettings::meshNumberText() const {
+    const char* text = "";
+    
+    switch(meshNumber) {
+        case 0: text = "Shape Plane"; break;
+        case 1: text = "Shape Box"; break;
+        case 2: text = "Shape Sphere"; break;
+        case 3: text = "Shape Sphere MirrorU"; break;
+        case 4: text = "Shape Capsule"; break;
+        default: break;
+    }
+    
+    return text;
+}
+
 const char* ShowSettings::shapeChannelText() const {
     const char* text = "";
     
@@ -44,6 +59,19 @@ const char* ShowSettings::debugModeText() const {
         default: break;
     }
     return text;
+}
+
+void ShowSettings::advanceMeshNumber(bool decrement) {
+    int32_t numEnums = meshCount;
+    int32_t number = meshNumber;
+    if (decrement) {
+        number += numEnums - 1;
+    }
+    else {
+        number += 1;
+    }
+    
+    meshNumber = number % numEnums;
 }
 
 void ShowSettings::advanceShapeChannel(bool decrement) {

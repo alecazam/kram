@@ -136,6 +136,9 @@ struct Uniforms
     bool isNormalMapSigned;
     bool isNormalMapSwizzleAGToRG;
     
+    // this is used on wrap-around objects to avoid black transparent using clampToZero
+    bool isInsetByHalfPixel;
+    
     // this means pull tangent from vertex
     bool useTangent;
     

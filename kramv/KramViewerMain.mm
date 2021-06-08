@@ -1905,15 +1905,8 @@ float4 toSnorm8(float4 c)
         // test out different shapes, not offiical support yet
         case Key::Num8:
             if (_showSettings->meshCount > 1) {
-                if (isShiftKeyDown) {
-                    _showSettings->meshNumber = _showSettings->meshNumber + _showSettings->meshCount - 1;
-                }
-                else {
-                    _showSettings->meshNumber++;
-                }
-                _showSettings->meshNumber = _showSettings->meshNumber % _showSettings->meshCount;
-                
-                sprintf(text, "Mesh %d %s", _showSettings->meshNumber, "Shape"); // TODO: put meshName in _showSettings
+                _showSettings->advanceMeshNumber(isShiftKeyDown);
+                text = _showSettings->meshNumberText();
                 isChanged = true;
             }
             break;
@@ -2200,7 +2193,7 @@ float4 toSnorm8(float4 c)
     }
     
     Renderer* renderer = (Renderer*)self.delegate;
-    if (![renderer loadTextureFromImage:fullFilename timestamp:timestamp image:image imageNormal:hasNormal ? &imageNormal : nullptr]) {
+    if (![renderer loadTextureFromImage:fullFilename timestamp:timestamp image:image imageNormal:hasNormal ? &imageNormal : nullptr isArchive:NO]) {
         return NO;
     }
 
@@ -2319,7 +2312,7 @@ float4 toSnorm8(float4 c)
     string fullFilename = filename;
     Renderer* renderer = (Renderer*)self.delegate;
     if (![renderer loadTextureFromImage:fullFilename timestamp:(double)timestamp
-                             image:image imageNormal:hasNormal ? &imageNormal : nullptr])
+                             image:image imageNormal:hasNormal ? &imageNormal : nullptr isArchive:YES])
     {
         return NO;
     }

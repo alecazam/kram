@@ -30,7 +30,8 @@ namespace kram {
 - (BOOL)loadTextureFromImage:(const std::string&)fullFilename
                    timestamp:(double)timestamp
                        image:(kram::KTXImage&)image
-                 imageNormal:(nullable kram::KTXImage*)imageNormal;
+                 imageNormal:(nullable kram::KTXImage*)imageNormal
+                   isArchive:(BOOL)isArchive;
 
 
 - (BOOL)loadTexture:(nonnull NSURL *)url;

@@ -705,18 +705,23 @@ struct packed_float3 {
     
 }
 
+static bool isPNGFilename(const char* filename) {
+    // should really lookg at first 4 bytes of data
+    return endsWithExtension(filename, ".png") || endsWithExtension(filename, ".PNG");
+}
+
 - (BOOL)loadTextureFromImage:(const string&)fullFilename
                    timestamp:(double)timestamp
                        image:(kram::KTXImage&)image
                  imageNormal:(kram::KTXImage*)imageNormal
+                    isArchive:(BOOL)isArchive
 {
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
     
     // Note that modstamp can change, but content data hash may be the same
-    bool isTextureChanged =
-        (fullFilename != _showSettings->lastFilename) ||
-        (timestamp != _showSettings->lastTimestamp);
+    bool isNewFile = (fullFilename != _showSettings->lastFilename);
+    bool isTextureChanged = isNewFile || (timestamp != _showSettings->lastTimestamp);
     
     if (isTextureChanged) {     
         // synchronously cpu upload from ktx file to buffer, with eventual gpu blit from buffer to returned texture.  TODO: If buffer is full, then something needs to keep KTXImage and data alive.  This load may also decode the texture to RGBA8.
@@ -738,10 +743,19 @@ struct packed_float3 {
         
         // if archive contained png, then it's been converted to ktx
         // so the info below may not reflect original data
+        // Would need original png data to look at header
+        // This is only info on image, not on imageNormal
         
-        _showSettings->imageInfo = kramInfoKTXToString(fullFilename, image, false);
-        _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, image, true);
-       
+        bool isPNG = isPNGFilename(fullFilename.c_str());
+        if (!isArchive && isPNG) {
+            _showSettings->imageInfo = kramInfoToString(fullFilename, false);
+            _showSettings->imageInfoVerbose = kramInfoToString(fullFilename, true);
+        }
+        else {
+            _showSettings->imageInfo = kramInfoKTXToString(fullFilename, image, false);
+            _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, image, true);
+        }
+        
         _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
         _showSettings->decodedFormat = (MyMTLPixelFormat)texture.pixelFormat;
         
@@ -752,9 +766,13 @@ struct packed_float3 {
             _colorMap = texture;
             _normalMap = normalTexture;
         }
+        
+        [self updateImageSettings:fullFilename image:image];
     }
     
-    return [self loadTextureImpl:fullFilename isTextureChanged:isTextureChanged];
+    [self resetSomeImageSettings:isNewFile];
+    
+    return YES;
 }
     
 - (BOOL)loadTexture:(nonnull NSURL *)url
@@ -768,9 +786,9 @@ struct packed_float3 {
     
     // DONE: tie this to url and modstamp differences
     double timestamp = fileDate.timeIntervalSince1970;
-    bool isTextureChanged =
-        (fullFilename != _showSettings->lastFilename) ||
-        (timestamp != _showSettings->lastTimestamp);
+    bool isNewFile =  (fullFilename != _showSettings->lastFilename);
+    
+    bool isTextureChanged = isNewFile || (timestamp != _showSettings->lastTimestamp);
     
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
@@ -794,12 +812,15 @@ struct packed_float3 {
         // this is not the png data, but info on converted png to ktx level
         // But this avoids loading the image 2 more times
         // Size of png is very different than decompressed or recompressed ktx
-        
-        _showSettings->imageInfo = kramInfoKTXToString(fullFilename, image, false);
-        _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, image, true);
-        
-        //_showSettings->imageInfo = kramInfoToString(fullFilename, image, false);
-        //_showSettings->imageInfoVerbose = kramInfoToString(fullFilename, image, true);
+        bool isPNG = isPNGFilename(fullFilename.c_str());
+        if (isPNG) {
+            _showSettings->imageInfo = kramInfoToString(fullFilename, false);
+            _showSettings->imageInfoVerbose = kramInfoToString(fullFilename, true);
+        }
+        else {
+            _showSettings->imageInfo = kramInfoKTXToString(fullFilename, image, false);
+            _showSettings->imageInfoVerbose = kramInfoKTXToString(fullFilename, image, true);
+        }
         
         _showSettings->originalFormat = (MyMTLPixelFormat)originalFormatMTL;
         _showSettings->decodedFormat = (MyMTLPixelFormat)texture.pixelFormat;
@@ -811,39 +832,33 @@ struct packed_float3 {
             _colorMap = texture;
             _normalMap = nil;
         }
+        
+        [self updateImageSettings:fullFilename image:image];
     }
     
-    return [self loadTextureImpl:fullFilename isTextureChanged:isTextureChanged];
+    [self resetSomeImageSettings:isNewFile];
+    
+    return YES;
 }
 
-
-
-- (BOOL)loadTextureImpl:(const string&)fullFilename isTextureChanged:(BOOL)isTextureChanged
+// only called on new or modstamp-changed image
+- (void)updateImageSettings:(const string&)fullFilename image:(KTXImage&)image
 {
-    if (isTextureChanged) {
-        Int2 blockDims = blockDimsOfFormat(_showSettings->originalFormat);
-        _showSettings->blockX = blockDims.x;
-        _showSettings->blockY = blockDims.y;
-    }
-    
+    // this is the actual format, may have been decoded
     id<MTLTexture> texture = _colorMap;
-    
     MyMTLPixelFormat format = (MyMTLPixelFormat)texture.pixelFormat;
-    MyMTLPixelFormat originalFormat = _showSettings->originalFormat;
     
-    // based on original or transcode?
+    // format may be trancoded to gpu-friendly format
+    MyMTLPixelFormat originalFormat = image.pixelFormat;
+    
+    _showSettings->blockX = image.blockDims().x;
+    _showSettings->blockY = image.blockDims().y;
+    
     _showSettings->isSigned = isSignedFormat(format);
     
-    // need a way to get at KTXImage, but would need to keep mmap alive
-    // this doesn't handle normals that are ASTC, so need more data from loader
     string fullFilenameCopy = fullFilename;
-
-    // this is so unreadable
     string filename = toLower(fullFilenameCopy);
 
-    // could cycle between rrr1 and r001.
-    int32_t numChannels = numChannelsOfFormat(originalFormat);
-    
     // set title to filename, chop this to just file+ext, not directory
     string filenameShort = filename;
     const char* filenameSlash = strrchr(filenameShort.c_str(), '/');
@@ -857,6 +872,9 @@ struct packed_float3 {
     bool isAlbedo = false;
     bool isNormal = false;
     bool isSDF = false;
+    
+    // could cycle between rrr1 and r001.
+    int32_t numChannels = numChannelsOfFormat(originalFormat);
     
     // note that decoded textures are 3/4 channel even though they are normal/sdf originally, so test those first
     if (numChannels == 2 || endsWith(filenameShort, "-n") || endsWith(filenameShort, "_normal")) {
@@ -878,8 +896,7 @@ struct packed_float3 {
     if (isAlbedo && endsWithExtension(filename.c_str(), ".png")) {
         _showSettings->isPremul = true; // convert to premul in shader, so can see other channels
     }
-        
-    if (isNormal || isSDF) {
+    else if (isNormal || isSDF) {
         _showSettings->isPremul = false;
     }
         
@@ -891,28 +908,51 @@ struct packed_float3 {
     
     _showSettings->isSwizzleAGToRG = false;
 
+// For best sdf and normal reconstruct from ASTC or BC3, must use RRR1 and GGGR or RRRG
+// BC1nm multiply r*a in the shader, but just use BC5 anymore.
 //    if (isASTCFormat(originalFormat) && isNormal) {
 //        // channels after = "ag01"
 //        _showSettings->isSwizzleAGToRG = true;
 //    }
         
-    // then can manipulate this after loading
-    _showSettings->mipLOD = 0;
-    _showSettings->faceNumber = 0;
-    _showSettings->arrayNumber = 0;
-    _showSettings->sliceNumber = 0;
-    
     // can derive these from texture queries
-    _showSettings->maxLOD = (int32_t)texture.mipmapLevelCount;
-    _showSettings->faceCount = (texture.textureType == MTLTextureTypeCube ||
-                               texture.textureType == MTLTextureTypeCubeArray) ? 6 : 0;
-    _showSettings->arrayCount = (int32_t)texture.arrayLength;
-    _showSettings->sliceCount = (int32_t)texture.depth;
+    _showSettings->maxLOD = (int32_t)image.header.numberOfMipmapLevels;
+    _showSettings->faceCount = (image.textureType == MyMTLTextureTypeCube ||
+                               image.textureType == MyMTLTextureTypeCubeArray) ? 6 : 0;
+    _showSettings->arrayCount = (int32_t)image.header.numberOfArrayElements;
+    _showSettings->sliceCount = (int32_t)image.depth;
     
-    _showSettings->channels = TextureChannels::ModeRGBA;
+    _showSettings->imageBoundsX = (int32_t)image.width;
+    _showSettings->imageBoundsY = (int32_t)image.height;
+}
+
+- (void)resetSomeImageSettings:(BOOL)isNewFile {
     
-    _showSettings->imageBoundsX = (int32_t)texture.width;
-    _showSettings->imageBoundsY = (int32_t)texture.height;
+    // only reset these on new texture, but have to revalidate
+    if (isNewFile) {
+        // then can manipulate this after loading
+        _showSettings->mipLOD = 0;
+        _showSettings->faceNumber = 0;
+        _showSettings->arrayNumber = 0;
+        _showSettings->sliceNumber = 0;
+        
+        
+        _showSettings->channels = TextureChannels::ModeRGBA;
+        
+        // wish could keep existing setting, but new texture might not
+        // be supported debugMode for new texture
+        _showSettings->debugMode = DebugMode::DebugModeNone;
+        
+        _showSettings->shapeChannel = ShapeChannel::ShapeChannelNone;
+    }
+    else {
+        // reloaded file may have different limits
+        _showSettings->mipLOD = std::min(_showSettings->mipLOD, _showSettings->maxLOD);
+        _showSettings->faceNumber = std::min(_showSettings->faceNumber, _showSettings->faceCount);
+        _showSettings->arrayNumber = std::min(_showSettings->arrayNumber, _showSettings->arrayCount);
+        _showSettings->sliceNumber = std::min(_showSettings->sliceNumber, _showSettings->sliceCount);
+    }
+
     
     [self updateViewTransforms];
     
@@ -922,18 +962,12 @@ struct packed_float3 {
     
     _showSettings->zoom = _showSettings->zoomFit;
     
-    // wish could keep existing setting, but new texture might not
-    // be supported debugMode for new texture
-    _showSettings->debugMode = DebugMode::DebugModeNone;
-    
-    _showSettings->shapeChannel = ShapeChannel::ShapeChannelNone;
-    
     // test rendering with inversion and mirroring
     bool doInvertX = false;
     
     // have one of these for each texture added to the viewer
-    float scaleX = MAX(1, texture.width);
-    float scaleY = MAX(1, texture.height);
+    float scaleX = MAX(1, _showSettings->imageBoundsX);
+    float scaleY = MAX(1, _showSettings->imageBoundsY);
     float scaleZ = MAX(scaleX, scaleY); // don't want 1.0f, or specular is all off due to extreme scale differences
     _modelMatrix = float4x4(float4m(doInvertX ? -scaleX : scaleX, scaleY, scaleZ, 1.0f)); // non uniform scale
     _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0); // set z=-1 unit back
@@ -942,8 +976,6 @@ struct packed_float3 {
     float scale = MAX(scaleX, scaleY);
     _modelMatrix3D = float4x4(float4m(doInvertX ? -scale : scale, scale, scale, 1.0f)); // uniform scale
     _modelMatrix3D = _modelMatrix3D * matrix4x4_translation(0.0f, 0.0f, -1.0f); // set z=-1 unit back
-    
-    return YES;
 }
 
 - (float4x4)computeImageTransform:(float)panX panY:(float)panY zoom:(float)zoom {
@@ -1017,12 +1049,12 @@ float4 inverseScaleSquared(const float4x4& m) {
     }
     
     uniforms.isCheckerboardShown = _showSettings->isCheckerboardShown;
-    bool canWrap = true;
-    if (textureType == MyMTLTextureTypeCube || textureType == MyMTLTextureTypeCubeArray) {
-        canWrap = false;
-    }
     
-    uniforms.isWrap = canWrap ? _showSettings->isWrap : false;
+    // addressing mode
+    bool isCube = (textureType == MyMTLTextureTypeCube || textureType == MyMTLTextureTypeCubeArray);
+    bool doWrap = !isCube &&  _showSettings->isWrap;
+    bool doEdge = !doWrap;
+    uniforms.isWrap = doWrap ? _showSettings->isWrap : false;
     
     uniforms.isPreview = _showSettings->isPreview;
     
@@ -1081,6 +1113,13 @@ float4 inverseScaleSquared(const float4x4& m) {
     }
     uniforms.is3DView = _showSettings->is3DView;
    
+    // on small textures can really see missing pixel (3 instead of 4 pixels)
+    // so only do this on the sphere/capsule which wrap-around uv space
+    uniforms.isInsetByHalfPixel = false;
+    if (_showSettings->meshNumber >= 2 && doEdge) {
+        uniforms.isInsetByHalfPixel = true;
+    }
+    
     // translate
     float4x4 panTransform = matrix4x4_translation(-_showSettings->panX, _showSettings->panY, 0.0);
     
@@ -1224,8 +1263,8 @@ float4 inverseScaleSquared(const float4x4& m) {
 }
 
 - (void)drawMain:(id<MTLCommandBuffer>)commandBuffer view:(nonnull MTKView *)view {
-    /// Delay getting the currentRenderPassDescriptor until absolutely needed. This avoids
-    ///   holding onto the drawable and blocking the display pipeline any longer than necessary
+    // Delay getting the currentRenderPassDescriptor until absolutely needed. This avoids
+    //   holding onto the drawable and blocking the display pipeline any longer than necessary
     MTLRenderPassDescriptor* renderPassDescriptor = view.currentRenderPassDescriptor;
 
     if (renderPassDescriptor == nil) {
@@ -1245,7 +1284,7 @@ float4 inverseScaleSquared(const float4x4& m) {
         return;
     }
     
-    /// Final pass rendering code here
+    // Final pass rendering code here
     id<MTLRenderCommandEncoder> renderEncoder =
     [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
     if (!renderEncoder) {
@@ -1274,12 +1313,29 @@ float4 inverseScaleSquared(const float4x4& m) {
         }
     }
 
+    //---------------------------------------
+    // figure out the sampler
+
+    id <MTLSamplerState> sampler;
+
+    MyMTLTextureType textureType = (MyMTLTextureType)_colorMap.textureType;
+    
+    bool isCube = (textureType == MyMTLTextureTypeCube || textureType == MyMTLTextureTypeCubeArray);
+    bool doWrap = !isCube && _showSettings->isWrap;
+    bool doEdge = !doWrap;
+    
+    if (_showSettings->isPreview) {
+        sampler = doWrap ? _colorMapSamplerFilterWrap : (doEdge ? _colorMapSamplerFilterEdge : _colorMapSamplerFilterBorder);
+    }
+    else {
+        sampler = doWrap ? _colorMapSamplerNearestWrap : (doEdge ? _colorMapSamplerNearestEdge : _colorMapSamplerNearestBorder);
+    }
+    
+    //---------------------------------------
     //for (texture in _textures) // TODO: setup
     //if (_colorMap)
     {
         // TODO: set texture specific uniforms, but using single _colorMap for now
-        bool canWrap = true;
-        
         switch(_colorMap.textureType) {
             case MTLTextureType1DArray:
                 [renderEncoder setRenderPipelineState:_pipelineState1DArray];
@@ -1298,11 +1354,8 @@ float4 inverseScaleSquared(const float4x4& m) {
                 break;
             case MTLTextureTypeCube:
                 [renderEncoder setRenderPipelineState:_pipelineStateCube];
-                canWrap = false;
-                
                 break;
             case MTLTextureTypeCubeArray:
-                canWrap = false;
                 [renderEncoder setRenderPipelineState:_pipelineStateCubeArray];
                 break;
                 
@@ -1331,8 +1384,6 @@ float4 inverseScaleSquared(const float4x4& m) {
                                       atIndex:TextureIndexNormal];
         }
 
-        
-        
         UniformsLevel uniformsLevel;
         uniformsLevel.drawOffset = float2m(0.0f);
         
@@ -1349,9 +1400,7 @@ float4 inverseScaleSquared(const float4x4& m) {
                                      atIndex:BufferIndexUniformsLevel];
             
             // use exisiting lod, and mip
-            [renderEncoder setFragmentSamplerState:
-                                  (canWrap && _showSettings->isWrap) ? _colorMapSamplerFilterWrap : _colorMapSamplerFilterBorder
-                                  atIndex:SamplerIndexColor];
+            [renderEncoder setFragmentSamplerState:sampler atIndex:SamplerIndexColor];
             
             for(MTKSubmesh *submesh in _mesh.submeshes)
             {
@@ -1368,16 +1417,6 @@ float4 inverseScaleSquared(const float4x4& m) {
             int32_t h = _colorMap.height;
             //int32_t d = _colorMap.depth;
                         
-            MyMTLTextureType textureType = MyMTLTextureType2D;
-            if (_colorMap) {
-                textureType = (MyMTLTextureType)_colorMap.textureType;
-            }
-            
-            bool isCube = false;
-            if (textureType == MyMTLTextureTypeCube || textureType == MyMTLTextureTypeCubeArray) {
-                isCube = true;
-            }
-            
             // gap the contact sheet, note this 2 pixels is scaled on small textures by the zoom
             int32_t gap = _showSettings->showAllPixelGap; // * _showSettings->viewContentScaleFactor;
             
@@ -1424,11 +1463,10 @@ float4 inverseScaleSquared(const float4x4& m) {
                                              atIndex:BufferIndexUniformsLevel];
                     
                     // force lod, and don't mip
-                    [renderEncoder setFragmentSamplerState:
-                                          (canWrap && _showSettings->isWrap) ? _colorMapSamplerNearestWrap : _colorMapSamplerNearestBorder
-                                          lodMinClamp:mip
-                                          lodMaxClamp:mip + 1
-                                          atIndex:SamplerIndexColor];
+                    [renderEncoder setFragmentSamplerState:sampler
+                                               lodMinClamp:mip
+                                               lodMaxClamp:mip + 1
+                                                   atIndex:SamplerIndexColor];
                 
 
                     // TODO: since this isn't a preview, have mode to display all faces and mips on on screen
@@ -1461,11 +1499,10 @@ float4 inverseScaleSquared(const float4x4& m) {
                                      atIndex:BufferIndexUniformsLevel];
             
             // force lod, and don't mip
-            [renderEncoder setFragmentSamplerState:
-                                  (canWrap && _showSettings->isWrap) ? _colorMapSamplerNearestWrap : _colorMapSamplerNearestBorder
-                                  lodMinClamp:mip
-                                  lodMaxClamp:mip + 1
-                                  atIndex:SamplerIndexColor];
+            [renderEncoder setFragmentSamplerState:sampler
+                                       lodMinClamp:mip
+                                       lodMaxClamp:mip + 1
+                                           atIndex:SamplerIndexColor];
         
 
             // TODO: since this isn't a preview, have mode to display all faces and mips on on screen

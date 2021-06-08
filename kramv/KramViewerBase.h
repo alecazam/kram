@@ -195,10 +195,12 @@ public:
     // format before any transcode to supported formats
     MyMTLPixelFormat originalFormat;
     MyMTLPixelFormat decodedFormat;
-    
+   
+    void advanceMeshNumber(bool decrement);
     void advanceDebugMode(bool decrement);
     void advanceShapeChannel(bool decrement);
 
+    const char* meshNumberText() const;
     const char* shapeChannelText() const;
     const char* debugModeText() const;
 

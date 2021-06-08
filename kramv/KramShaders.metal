@@ -483,7 +483,7 @@ ColorInOut DrawImageFunc(
         out.texCoord.xy = in.texCoord;
         out.texCoord.xy *= wrapAmount;
     }
-    else if (uniforms.is3DView && !uniforms.isWrap) {
+    else if (uniforms.is3DView && uniforms.isInsetByHalfPixel) {
         // inset from edge by a fraction of a pixel, to avoid clamp boundary error
         // does this have to adjust for mipLOD too?
         float2 onePixel = uniformsLevel.textureSize.zw;
