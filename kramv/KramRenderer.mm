@@ -1054,6 +1054,7 @@ float4 inverseScaleSquared(const float4x4& m) {
     bool isCube = (textureType == MyMTLTextureTypeCube || textureType == MyMTLTextureTypeCubeArray);
     bool doWrap = !isCube &&  _showSettings->isWrap;
     bool doEdge = !doWrap;
+    bool doZero = !doEdge;
     uniforms.isWrap = doWrap ? _showSettings->isWrap : false;
     
     uniforms.isPreview = _showSettings->isPreview;
@@ -1116,7 +1117,7 @@ float4 inverseScaleSquared(const float4x4& m) {
     // on small textures can really see missing pixel (3 instead of 4 pixels)
     // so only do this on the sphere/capsule which wrap-around uv space
     uniforms.isInsetByHalfPixel = false;
-    if (_showSettings->meshNumber >= 2 && doEdge) {
+    if (_showSettings->meshNumber >= 2 && doZero) {
         uniforms.isInsetByHalfPixel = true;
     }
     
