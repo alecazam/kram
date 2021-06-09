@@ -232,8 +232,11 @@ half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldP
     float invmax = rsqrt(max(length_squared(T), length_squared(B)));
     
     // keeps relative magnitude of two vectors, they're not both unit vecs
-    T *= -invmax; // had to flip this sign to get correct lighting
+    T *= invmax;
     B *= invmax;
+    
+    // had to flip this sign to get lighting to match vertex data
+    T = -T;
     
     // construct a scale-invariant frame
     // drop to half to match other call
@@ -251,17 +254,11 @@ half3 transformNormalByBasis(half3 bumpNormal, half4 tangent, half3 vertexNormal
     // Reconstruct bitan in frag shader
     // https://bgolus.medium.com/generating-perfect-normal-maps-for-unity-f929e673fc57
 
-    
-    // so if eyevector
-    
-    
     // TODO: there's facing too, could be inside model
-    
     
     half bitangentSign = tangent.w;
     half3 bitangent =  bitangentSign * cross(vertexNormal, tangent.xyz);
     
-   
     // ModelIO not generating correct bitan sign
     // DONE: flip this on srcData, and not here
     //bitangentSign = -bitangentSign;
@@ -272,30 +269,6 @@ half3 transformNormalByBasis(half3 bumpNormal, half4 tangent, half3 vertexNormal
     bumpNormal = tbn * bumpNormal;
     return normalize(bumpNormal);
 }
-
-
-half3 transformNormal(half4 tangent, half3 vertexNormal, float3 worldPos,
-                      bool useTangent,
-                      texture2d<half> texture, sampler s, float2 uv, bool isSigned = true)
-{
-    half4 nmap = texture.sample(s, uv);
-    
-    // unorm-only formats like ASTC need to convert
-    if (!isSigned) {
-        nmap.xy = toSnorm8(nmap.xy);
-    }
-    
-    // rebuild the z term
-    half3 bumpNormal = toNormal(nmap.xyz);
-   
-    if (useTangent)
-         bumpNormal = transformNormalByBasis(bumpNormal, tangent, vertexNormal);
-    else
-        bumpNormal = transformNormalByBasis(bumpNormal, vertexNormal, worldPos, uv);
-  
-    return bumpNormal;
-}
-
 
 half3 transformNormal(half4 nmap, half3 vertexNormal, half4 tangent,
                       float3 worldPos, float2 uv, bool useTangent, // to gen TBN from normal
@@ -335,7 +308,17 @@ half3 transformNormal(half4 nmap, half3 vertexNormal, half4 tangent,
     return bumpNormal;
 }
 
-
+half3 transformNormal(half4 tangent, half3 vertexNormal, float3 worldPos,
+                      bool useTangent,
+                      texture2d<half> texture, sampler s, float2 uv,
+                      bool isSigned, bool isSwizzleAGToRG, bool isFrontFacing)
+{
+    half4 nmap = texture.sample(s, uv);
+    
+    return transformNormal(nmap, vertexNormal, tangent,
+                           worldPos, uv, useTangent,
+                           isSwizzleAGToRG, isSigned, isFrontFacing);
+}
 
 // TODO: have more bones, or read from texture instead of uniforms
 // can then do instanced skining, but vfetch lookup slower

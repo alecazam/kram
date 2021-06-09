@@ -1068,9 +1068,8 @@ float4 inverseScaleSquared(const float4x4& m) {
         }
     }
     
-    // TODO: tie to UI
     // a few things to fix before enabling this
-    uniforms.useTangent = true;
+    uniforms.useTangent = _showSettings->useTangent;
         
     uniforms.gridX = 0;
     uniforms.gridY = 0;

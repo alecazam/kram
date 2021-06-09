@@ -130,6 +130,9 @@ public:
     // and disabling with a MTLView caused many flags to have to be set on MTLTexture
     //bool isSRGBShown = true;
     
+    // whether to use normal to tangent (false), or vertex tangents (true)
+    bool useTangent = true;
+    
     // draw with reverseZ to better match perspective
     bool isReverseZ = true;
     
