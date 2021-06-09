@@ -23,19 +23,26 @@ public:
     // class aliases data, so caller must keep alive.  Useful with bundle.
     bool open(const uint8_t* data, size_t dataSize, KTXImage& image);
     
-    // Open png image into a KTXImage as a single-level mip
-    // Only handles 2d case and only srgba/rgba conversion.
-    bool openPNG(const char* filename, bool isSrgb, KTXImage& image);
-
     // This releases all memory associated with this class
     void close();
-    
+
+private:
+    // Open png image into a KTXImage as a single-level mip
+    // Only handles 2d case and only srgba/rgba conversion.
+    // Only returns non-srgb RGBA8, but format can be changed after for srgb
+    bool openPNG(const char* filename, KTXImage& image);
+
+    // The data version
+    bool openPNG(const uint8_t* data, size_t dataSize, KTXImage& image);
+
 private:
     MmapHelper mmapHelper;
     vector<uint8_t> fileData;
     bool isMmap = false;
     bool isInfoOnly = true;
 };
+
+bool isPNGFilename(const char* filename);
 
 // helpers to source from a png or single level of a ktx
 bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage);

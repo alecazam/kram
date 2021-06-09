@@ -2069,7 +2069,7 @@ float4 toSnorm8(float4 c)
     
     // filter out unsupported extensions
     
-    _zip.filterExtensions({".ktx", ".ktx2"});
+    _zip.filterExtensions({".ktx", ".ktx2", ".png"});
 
     // don't switch to empty archive
     if (_zip.zipEntrys().empty()) {
@@ -2123,14 +2123,29 @@ float4 toSnorm8(float4 c)
     return [self loadTextureFromFolder];
 }
 
+- (BOOL)findFilenameInFolders:(const string&)filename {
+    // TODO: binary search for the filename in the array, but would have to be in same directory
+    
+    bool isFound = false;
+    for (const auto& search : _folderFiles) {
+        if (search == filename) {
+            isFound = true;
+            break;
+        }
+    }
+    return isFound;
+}
+
 - (BOOL)loadTextureFromFolder
 {
     // now lookup the filename and data at that entry
     const char* filename = _folderFiles[_fileFolderIndex].c_str();
+    string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
     
     // have already filtered filenames out, so this should never get hit
-    if (!(//endsWithExtension(filename, ".png") ||
+    bool isPNG = isPNGFilename(filename);
+    if (!(isPNG ||
           endsWithExtension(filename, ".ktx") ||
           endsWithExtension(filename, ".ktx2")) )
     {
@@ -2138,29 +2153,47 @@ float4 toSnorm8(float4 c)
     }
     
     // first only do this on albedo/diffuse textures
-    string normalFilename = filename;
+    string normalFilename;
     
-    string search = "-a.ktx";
-    auto searchPos = normalFilename.find(search);
-    bool isFound = searchPos != string::npos;
+    string search;
+    bool isFound = false;
+    string::size_type searchPos;
     
-    if (!isFound) {
-        search = "-d.ktx";
-        searchPos = normalFilename.find(search);
+    if (isPNG) {
+        // find matching png
+        search = "-a.png";
+        searchPos = fullFilename.find(search);
         isFound = searchPos != string::npos;
+        
+        if (!isFound) {
+            search = "-d.png";
+            searchPos = fullFilename.find(search);
+            isFound = searchPos != string::npos;
+        }
+    }
+    else {
+        // find matching ktx/2
+        search = "-a.ktx";
+        searchPos = fullFilename.find(search);
+        isFound = searchPos != string::npos;
+        
+        if (!isFound) {
+            search = "-d.ktx";
+            searchPos = fullFilename.find(search);
+            isFound = searchPos != string::npos;
+        }
     }
     
-    if (isFound) {
-        normalFilename = normalFilename.replace(searchPos, search.length(), "-n.ktx"); // works for ktx or ktx2 file
+    bool isSrgb = isFound;
     
-        // binary search for the filename in the array, will have to be in same directory
-        isFound = false;
-        for (const auto& search : _folderFiles) {
-            if (search == normalFilename) {
-                isFound = true;
-                break;
-            }
-        }
+    if (isFound) {
+        // stupid stl mods fullFilename in the replace if not a copy
+        normalFilename = fullFilename;
+        
+        // this won't work for mix of png/ktx files, but that's okay
+        normalFilename = normalFilename.replace(searchPos, search.length(), isPNG ? "-n.png" : "-n.ktx");
+        
+        isFound = [self findFilenameInFolders:normalFilename];
         
         if (!isFound) {
             normalFilename.clear();
@@ -2176,7 +2209,7 @@ float4 toSnorm8(float4 c)
     KTXImageData imageNormalDataKTX;
     bool hasNormal = false;
     
-    string fullFilename = filename;
+    // this requires decode and conversion to RGBA8u
     if (!imageDataKTX.open(fullFilename.c_str(), image)) {
         return NO;
     }
@@ -2190,6 +2223,10 @@ float4 toSnorm8(float4 c)
         {
             hasNormal = true;
         }
+    }
+    
+    if (isPNG && isSrgb) {
+        image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
     }
     
     Renderer* renderer = (Renderer*)self.delegate;
@@ -2239,49 +2276,73 @@ float4 toSnorm8(float4 c)
     // now lookup the filename and data at that entry
     const auto& entry = _zip.zipEntrys()[_fileArchiveIndex];
     const char* filename = entry.filename;
+    string fullFilename = filename;
     double timestamp = (double)entry.modificationDate;
     
     // have already filtered filenames out, so this should never get hit
-    if (!(//endsWithExtension(filename, ".png") ||
+    bool isPNG = isPNGFilename(filename);
+
+    if (!(isPNG ||
           endsWithExtension(filename, ".ktx") ||
           endsWithExtension(filename, ".ktx2")) )
     {
         return NO;
     }
         
-    string normalFilename = filename;
+    string normalFilename;
     
     // first only do this on albedo/diffuse textures
-    string search = "-a.ktx";
-    auto searchPos = normalFilename.find(search);
-    bool isFound = searchPos != string::npos;
     
-    if (!isFound) {
-        search = "-d.ktx";
-        searchPos = normalFilename.find(search);
+    string search;
+    bool isFound = false;
+    string::size_type searchPos;
+    
+    if (isPNG) {
+        search = "-a.png";
+        searchPos = fullFilename.find(search);
         isFound = searchPos != string::npos;
+        
+        if (!isFound) {
+            search = "-d.png";
+            searchPos = fullFilename.find(search);
+            isFound = searchPos != string::npos;
+        }
+    }
+    else {
+        search = "-a.ktx";
+        searchPos = fullFilename.find(search);
+        isFound = searchPos != string::npos;
+        
+        if (!isFound) {
+            search = "-d.ktx";
+            searchPos = fullFilename.find(search);
+            isFound = searchPos != string::npos;
+        }
     }
     
-    if (isFound) {
-        normalFilename = normalFilename.replace(searchPos, search.length(), "-n.ktx");
-    }
+    bool isSrgb = isFound;
     
     //---------------------------
     
     const uint8_t* imageData = nullptr;
     uint64_t imageDataLength = 0;
-    
+   
+    const uint8_t* imageNormalData = nullptr;
+    uint64_t imageNormalDataLength = 0;
+   
+    // search for main file - can be albedo or normal
     if (!_zip.extractRaw(filename, &imageData, imageDataLength)) {
         return NO;
     }
      
-    const uint8_t* imageNormalData = nullptr;
-    uint64_t imageNormalDataLength = 0;
-    
-    // see if this is albedo, and then search for normal map in the same archive
+    // search for normal map in the same archive
     if (isFound) {
+        normalFilename = fullFilename;
+        
+        normalFilename = normalFilename.replace(searchPos, search.length(), isPNG ? "-n.png" : "-n.ktx");
+        
         if (!_zip.extractRaw(normalFilename.c_str(), &imageNormalData, imageNormalDataLength)) {
-            // ignore failure case here, this is just guessing there's a -n file
+            // ignore failure case here, this is just guessing there's a related normal file
         }
     }
     
@@ -2291,12 +2352,14 @@ float4 toSnorm8(float4 c)
     // That's why we can't just pass filenames to the renderer
     KTXImage image;
     KTXImageData imageDataKTX;
+    
+    KTXImage imageNormal;
+    KTXImageData imageNormalDataKTX;
+
     if (!imageDataKTX.open(imageData, imageDataLength, image)) {
         return NO;
     }
     
-    KTXImage imageNormal;
-    KTXImageData imageNormalDataKTX;
     bool hasNormal = false;
     if (isFound && imageNormalDataKTX.open(imageNormalData, imageNormalDataLength, imageNormal)) {
             
@@ -2309,7 +2372,10 @@ float4 toSnorm8(float4 c)
         }
     }
     
-    string fullFilename = filename;
+    if (isPNG && isSrgb) {
+        image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
+    }
+    
     Renderer* renderer = (Renderer*)self.delegate;
     if (![renderer loadTextureFromImage:fullFilename timestamp:(double)timestamp
                              image:image imageNormal:hasNormal ? &imageNormal : nullptr isArchive:YES])
@@ -2388,11 +2454,11 @@ float4 toSnorm8(float4 c)
                 const char* name = fileOrDirectoryURL.fileSystemRepresentation;
                 
                 // filter only types that are supported
-                if (endsWithExtension(name, ".ktx") ||
-                    endsWithExtension(name, ".ktx2")
-                    // || endsWithExtension(name, ".png") // TODO: can't support with KTXImage load path, needs PNG loader
-                    
-                    )
+                bool isPNG = isPNGFilename(name);
+
+                if (isPNG ||
+                    endsWithExtension(name, ".ktx") ||
+                    endsWithExtension(name, ".ktx2"))
                 {
                     files.push_back(name);
                 }
@@ -2471,7 +2537,7 @@ float4 toSnorm8(float4 c)
     
     // file is not a supported extension
     if (!(endsWithExtension(filename, ".zip") ||
-          endsWithExtension(filename, ".png") ||
+          isPNGFilename(filename) ||
           endsWithExtension(filename, ".ktx") ||
           endsWithExtension(filename, ".ktx2")) )
     {

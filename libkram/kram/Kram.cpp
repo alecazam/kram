@@ -41,9 +41,33 @@ void releaseVector(vector<T>& v) {
 }
 
 
+bool isPNGFilename(const char* filename) {
+    // should really lookg at first 4 bytes of data
+    return endsWithExtension(filename, ".png");
+}
+
+bool isPNGFilename(const uint8_t* data, size_t dataSize) {
+    // read the 4 chars at the beginning of the file
+    const uint32_t numChars = 8;
+    if (dataSize < numChars)
+        return false;
+    
+    const uint8_t kPngSignature[numChars] = { 137, 80, 78, 71, 13, 10, 26, 10 };
+    if (memcmp(data, kPngSignature, sizeof(kPngSignature)) != 0) {
+        return false;
+    }
+    
+    return true;
+}
+
+
 bool KTXImageData::open(const char* filename, KTXImage& image) {
     close();
     
+    if (isPNGFilename(filename)) {
+        return openPNG(filename, image);
+    }
+        
     isMmap = true;
     if (!mmapHelper.open(filename)) {
         isMmap = false;
@@ -100,8 +124,8 @@ void KTXImageData::close() {
 }
 
 
-bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
-    close();
+bool KTXImageData::openPNG(const char* filename, KTXImage& image) {
+    //close();
     
     isMmap = true;
     if (!mmapHelper.open(filename)) {
@@ -135,9 +159,15 @@ bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
         data = fileData.data();
         dataSize = fileData.size();
     }
-    
+
+    return openPNG(data, dataSize, image);
+}
+
+bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image) {
+    //close();
+        
     // the mmap/filehelper point to the png data
-    // use Image to 
+    // use Image to
     
     Image singleImage;
     bool isLoaded = LoadPng(data, dataSize, false, false, singleImage);
@@ -158,7 +188,7 @@ bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
     image.header.numberOfArrayElements = 0;
     image.header.numberOfMipmapLevels = 1;
     image.textureType = MyMTLTextureType2D;
-    image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+    image.pixelFormat = /*isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : */ MyMTLPixelFormatRGBA8Unorm;
     
     // TODO: support mips with blitEncoder but tha confuses mipCount in KTXImage
     //     Mipper can also generate on cpu side.  Mipped can do premul conversion though.
@@ -176,11 +206,14 @@ bool KTXImageData::openPNG(const char* filename, bool isSrgb, KTXImage& image) {
     return true;
 }
 
-
 bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image)
 {
     close();
     
+    if (isPNGFilename(data, dataSize)) {
+        return openPNG(data, dataSize, image);
+    }
+      
     // image will likely alias incoming data, so KTXImageData is unused
     
     if (!image.open(data, dataSize, isInfoOnly)) {

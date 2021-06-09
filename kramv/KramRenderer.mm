@@ -705,10 +705,7 @@ struct packed_float3 {
     
 }
 
-static bool isPNGFilename(const char* filename) {
-    // should really lookg at first 4 bytes of data
-    return endsWithExtension(filename, ".png") || endsWithExtension(filename, ".PNG");
-}
+
 
 - (BOOL)loadTextureFromImage:(const string&)fullFilename
                    timestamp:(double)timestamp
@@ -892,8 +889,10 @@ static bool isPNGFilename(const char* filename) {
     
     // textures are already premul, so don't need to premul in shader
     // should really have 3 modes, unmul, default, premul
+    bool isPNG = isPNGFilename(filename.c_str());
+    
     _showSettings->isPremul = false;
-    if (isAlbedo && endsWithExtension(filename.c_str(), ".png")) {
+    if (isAlbedo && isPNG) {
         _showSettings->isPremul = true; // convert to premul in shader, so can see other channels
     }
     else if (isNormal || isSDF) {

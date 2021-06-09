@@ -338,8 +338,13 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
         
         bool isSRGB = (!isNormal && !isSDF);
 
-        if (!imageData.openPNG(path, isSRGB, image)) {
+        if (!imageData.open(path, image)) {
             return NO;
+        }
+        
+        // have to adjust the format if srgb
+        if (isSRGB) {
+            image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
         }
     }
     else {
