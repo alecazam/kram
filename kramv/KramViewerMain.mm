@@ -2174,52 +2174,37 @@ float4 toSnorm8(float4 c)
         return NO;
     }
     
+    const char* ext = strrchr(filename, '.');
+    
     // first only do this on albedo/diffuse textures
-    string normalFilename;
     
-    string search;
-    bool isFound = false;
-    string::size_type searchPos;
+    // find matching png
+    string search = "-a";
+    search += ext;
     
-    if (isPNG) {
-        // find matching png
-        search = "-a.png";
+    auto searchPos = fullFilename.find(search);
+    bool isFound = searchPos != string::npos;
+    
+    if (!isFound) {
+        search = "-d";
+        search += ext;
+        
         searchPos = fullFilename.find(search);
         isFound = searchPos != string::npos;
-        
-        if (!isFound) {
-            search = "-d.png";
-            searchPos = fullFilename.find(search);
-            isFound = searchPos != string::npos;
-        }
-    }
-    else {
-        // find matching ktx/2
-        search = "-a.ktx";
-        searchPos = fullFilename.find(search);
-        isFound = searchPos != string::npos;
-        
-        if (!isFound) {
-            search = "-d.ktx";
-            searchPos = fullFilename.find(search);
-            isFound = searchPos != string::npos;
-        }
     }
     
     bool isSrgb = isFound;
     
+    string normalFilename;
+    bool hasNormal = false;
+    
     if (isFound) {
-        // stupid stl mods fullFilename in the replace if not a copy
         normalFilename = fullFilename;
+        normalFilename = normalFilename.erase(searchPos);
+        normalFilename += "-n";
+        normalFilename += ext;
         
-        // this won't work for mix of png/ktx files, but that's okay
-        normalFilename = normalFilename.replace(searchPos, search.length(), isPNG ? "-n.png" : "-n.ktx");
-        
-        isFound = [self findFilenameInFolders:normalFilename];
-        
-        if (!isFound) {
-            normalFilename.clear();
-        }
+        hasNormal = [self findFilenameInFolders:normalFilename];
     }
     
     //-------------------------------
@@ -2229,21 +2214,22 @@ float4 toSnorm8(float4 c)
     
     KTXImage imageNormal;
     KTXImageData imageNormalDataKTX;
-    bool hasNormal = false;
     
     // this requires decode and conversion to RGBA8u
     if (!imageDataKTX.open(fullFilename.c_str(), image)) {
         return NO;
     }
     
-    if (isFound && imageNormalDataKTX.open(normalFilename.c_str(), imageNormal)) {
-        
+    if (hasNormal && imageNormalDataKTX.open(normalFilename.c_str(), imageNormal)) {
         // shaders only pull from albedo + normal on these texture types
         if (imageNormal.textureType == image.textureType &&
             (imageNormal.textureType == MyMTLTextureType2D ||
              imageNormal.textureType == MyMTLTextureType2DArray))
         {
-            hasNormal = true;
+            //hasNormal = true;
+        }
+        else {
+            hasNormal = false;
         }
     }
     
@@ -2310,36 +2296,24 @@ float4 toSnorm8(float4 c)
     {
         return NO;
     }
-        
-    string normalFilename;
+     
+    const char* ext = strrchr(filename, '.');
+    
     
     // first only do this on albedo/diffuse textures
     
-    string search;
-    bool isFound = false;
-    string::size_type searchPos;
+    string search = "-a";
+    search += ext;
     
-    if (isPNG) {
-        search = "-a.png";
+    auto searchPos = fullFilename.find(search);
+    bool isFound = searchPos != string::npos;
+    
+    if (!isFound) {
+        search = "-d";
+        search += ext;
+        
         searchPos = fullFilename.find(search);
         isFound = searchPos != string::npos;
-        
-        if (!isFound) {
-            search = "-d.png";
-            searchPos = fullFilename.find(search);
-            isFound = searchPos != string::npos;
-        }
-    }
-    else {
-        search = "-a.ktx";
-        searchPos = fullFilename.find(search);
-        isFound = searchPos != string::npos;
-        
-        if (!isFound) {
-            search = "-d.ktx";
-            searchPos = fullFilename.find(search);
-            isFound = searchPos != string::npos;
-        }
     }
     
     bool isSrgb = isFound;
@@ -2358,14 +2332,16 @@ float4 toSnorm8(float4 c)
     }
      
     // search for normal map in the same archive
+    string normalFilename;
+    bool hasNormal = false;
+    
     if (isFound) {
         normalFilename = fullFilename;
+        normalFilename = normalFilename.erase(searchPos);
+        normalFilename += "-n";
+        normalFilename += ext;
         
-        normalFilename = normalFilename.replace(searchPos, search.length(), isPNG ? "-n.png" : "-n.ktx");
-        
-        if (!_zip.extractRaw(normalFilename.c_str(), &imageNormalData, imageNormalDataLength)) {
-            // ignore failure case here, this is just guessing there's a related normal file
-        }
+        hasNormal = _zip.extractRaw(normalFilename.c_str(), &imageNormalData, imageNormalDataLength);
     }
     
     //---------------------------
@@ -2382,15 +2358,17 @@ float4 toSnorm8(float4 c)
         return NO;
     }
     
-    bool hasNormal = false;
-    if (isFound && imageNormalDataKTX.open(imageNormalData, imageNormalDataLength, imageNormal)) {
-            
+    if (hasNormal && imageNormalDataKTX.open(imageNormalData, imageNormalDataLength, imageNormal)) {
+        
         // shaders only pull from albedo + normal on these texture types
         if (imageNormal.textureType == image.textureType &&
             (imageNormal.textureType == MyMTLTextureType2D ||
              imageNormal.textureType == MyMTLTextureType2DArray))
         {
-            hasNormal = true;
+            //hasNormal = true;
+        }
+        else {
+            hasNormal = false;
         }
     }
     
