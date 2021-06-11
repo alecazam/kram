@@ -37,6 +37,7 @@ const char* ShowSettings::shapeChannelText() const {
         case ShapeChannelDepth: text = "Show Depth"; break;
         case ShapeChannelFaceNormal: text = "Show Faces"; break;
         //case ShapeChannelBumpNormal: text = "Show Bumps"; break;
+        case ShapeChannelMipLevel: text = "Show Mip Levels"; break;
         default: break;
     }
     

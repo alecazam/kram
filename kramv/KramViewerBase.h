@@ -62,10 +62,10 @@ enum ShapeChannel
     ShapeChannelTangent,
     ShapeChannelBitangent,
     
+    ShapeChannelMipLevel, // can estimate mip chose off dfdx/dfdy, and pseudocolor
+    
     // don't need bump, since can already see it, but what if combined diffuse + normal
     // ShapeChannelBumpNormal,
-    
-    // ShapeChannelMipLevel, // can estimate mip chose off dfdx/dfdy, and pseudocolor
     
     ShapeChannelCount
 };

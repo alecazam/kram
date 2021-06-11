@@ -160,6 +160,7 @@ using namespace simd;
     samplerDescriptor.minFilter = MTLSamplerMinMagFilterLinear;
     samplerDescriptor.magFilter = MTLSamplerMinMagFilterLinear;
     samplerDescriptor.mipFilter = MTLSamplerMipFilterLinear;
+    samplerDescriptor.maxAnisotropy = 4; // 1,2,4,8,16 are choices
     
     samplerDescriptor.sAddressMode = MTLSamplerAddressModeClampToBorderColor;
     samplerDescriptor.tAddressMode = MTLSamplerAddressModeClampToBorderColor;

@@ -107,6 +107,8 @@ typedef NS_ENUM(int32_t, ShaderShapeChannel)
     ShShapeChannelTangent,
     ShShapeChannelBitangent,
     
+    ShShapeChannelMipLevel,
+    
     // ShShapeChannelBumpNormal,
 };
 

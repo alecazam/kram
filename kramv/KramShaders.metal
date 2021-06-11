@@ -144,6 +144,50 @@ float4 toFloat(half4 c)
 //-------------------------------------------
 // functions
 
+// https://bgolus.medium.com/anti-aliased-alpha-test-the-esoteric-alpha-to-coverage-8b177335ae4f
+float toMipLevel(float2 uv)
+{
+    float2 dx = dfdx(uv);
+    float2 dy = dfdy(uv);
+    
+    // a better approximation than fwidth
+    float deltaSquared = max(length_squared(dx), length_squared(dy));
+    
+    // 0.5 because squared, find mip level
+    return max(0.0, 0.5 * log2(deltaSquared));
+}
+
+// Also see here:
+// https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-28-mipmap-level-measurement
+//  100 percent, 25 percent, 6.3 percent, and 1.6 percent)
+
+float4 toMipLevelColor(float2 uv)
+{
+    // yellow, blue, green, red, black/transparent
+    // 1, 0.75, 0.5, 0.25, 0
+    // point sample from a texture with unique mip level colors
+    float lev = toMipLevel(uv);
+    float clev = saturate(lev / 4.0);
+    float alpha = saturate(1.0 - clev);
+    
+    const float3 colors[5] = {
+        float3(1,1,0), // yellow
+        float3(0,0,1), // blue
+        float3(0,1,0), // green
+        float3(1,0,0), // red
+        float3(0,0,0), // black
+    };
+    
+    float clev4 = clev * 4.0;
+    float3 low = colors[int(floor(clev4))];
+    float3 hi  = colors[int(round(clev4))];
+                  
+    float3 color = mix(low, hi, fract(clev4));
+    
+    // grayscale for now, but use colors so can see mips
+    return float4(color, alpha);
+}
+            
 // reconstruct normal from xy, n.z ignored
 float3 toNormal(float3 n)
 {
@@ -796,11 +840,16 @@ float4 DrawPixels(
             
             c.rgb = saturate(toUnorm(faceNormal));
         }
+        else if (uniforms.shapeChannel == ShShapeChannelMipLevel) {
+            c = toMipLevelColor(in.texCoord * textureSize.xy); // only for 2d textures
+        }
 //        else if (uniforms.shapeChannel == ShShapeChannelBumpNormal) {
 //            c.rgb = saturate(bumpNormal);
 //        }
         
-        c.a = 1.0;
+        if (uniforms.shapeChannel != ShShapeChannelMipLevel) {
+            c.a = 1.0;
+        }
     }
     
     // mask to see one channel in isolation, this is really 0'ing out other channels
