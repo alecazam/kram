@@ -138,6 +138,15 @@ float4 toFloat(half4 c)
     return float4(c);
 }
 
+float4 toPremul(float4 c) {
+    c.rgb *= c.a;
+    return c;
+}
+half4 toPremul(half4 c) {
+    c.rgb *= c.a;
+    return c;
+}
+
 // TODO: note that Metal must pass the same half3 from vertex to fragment shader
 // so can't mix a float vs with half fs.
 
@@ -182,10 +191,10 @@ float4 toMipLevelColor(float2 uv)
     float3 low = colors[int(floor(clev4))];
     float3 hi  = colors[int(round(clev4))];
                   
+    // lerp in unmul space
     float3 color = mix(low, hi, fract(clev4));
     
-    // grayscale for now, but use colors so can see mips
-    return float4(color, alpha);
+    return toPremul(float4(color, alpha));
 }
             
 // reconstruct normal from xy, n.z ignored
