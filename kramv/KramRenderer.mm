@@ -30,50 +30,52 @@ using namespace simd;
 @implementation Renderer
 {
     dispatch_semaphore_t _inFlightSemaphore;
-    id <MTLDevice> _device;
-    id <MTLCommandQueue> _commandQueue;
+    id<MTLDevice> _device;
+    id<MTLCommandQueue> _commandQueue;
 
-    id <MTLBuffer> _dynamicUniformBuffer[MaxBuffersInFlight];
+    id<MTLBuffer> _dynamicUniformBuffer[MaxBuffersInFlight];
     
-    id <MTLRenderPipelineState> _pipelineState1DArray;
-    id <MTLRenderPipelineState> _pipelineStateImage;
-    id <MTLRenderPipelineState> _pipelineStateImageArray;
-    id <MTLRenderPipelineState> _pipelineStateCube;
-    id <MTLRenderPipelineState> _pipelineStateCubeArray;
-    id <MTLRenderPipelineState> _pipelineStateVolume;
+    id<MTLRenderPipelineState> _pipelineState1DArray;
+    id<MTLRenderPipelineState> _pipelineStateImage;
+    id<MTLRenderPipelineState> _pipelineStateImageArray;
+    id<MTLRenderPipelineState> _pipelineStateCube;
+    id<MTLRenderPipelineState> _pipelineStateCubeArray;
+    id<MTLRenderPipelineState> _pipelineStateVolume;
     
-    id <MTLComputePipelineState> _pipelineState1DArrayCS;
-    id <MTLComputePipelineState> _pipelineStateImageCS;
-    id <MTLComputePipelineState> _pipelineStateImageArrayCS;
-    id <MTLComputePipelineState> _pipelineStateCubeCS;
-    id <MTLComputePipelineState> _pipelineStateCubeArrayCS;
-    id <MTLComputePipelineState> _pipelineStateVolumeCS;
+    id<MTLComputePipelineState> _pipelineState1DArrayCS;
+    id<MTLComputePipelineState> _pipelineStateImageCS;
+    id<MTLComputePipelineState> _pipelineStateImageArrayCS;
+    id<MTLComputePipelineState> _pipelineStateCubeCS;
+    id<MTLComputePipelineState> _pipelineStateCubeArrayCS;
+    id<MTLComputePipelineState> _pipelineStateVolumeCS;
     
-    id <MTLDepthStencilState> _depthStateFull;
-    id <MTLDepthStencilState> _depthStateNone;
+    id<MTLDepthStencilState> _depthStateFull;
+    id<MTLDepthStencilState> _depthStateNone;
    
     MTLVertexDescriptor *_mtlVertexDescriptor;
 
     // TODO: Array< id<MTLTexture> > _textures;
-    id <MTLTexture> _colorMap;
-    id <MTLTexture> _normalMap;
+    id<MTLTexture> _colorMap;
+    id<MTLTexture> _normalMap;
+    id<MTLTexture> _lastDrawableTexture;
     
     // border is a better edge sample, but at edges it filters in the transparent color
     // around the border which is undesirable.  It would be better if the hw did
     // clamp to edge until uv outside 0 to 1.  This results in having to inset the uv by 0.5 px
     // to avoid this artifact, but on small texturs that are 4x4, a 1 px inset is noticeable.
     
-    id <MTLSamplerState> _colorMapSamplerNearestWrap;
-    id <MTLSamplerState> _colorMapSamplerNearestBorder;
-    id <MTLSamplerState> _colorMapSamplerNearestEdge;
+    id<MTLSamplerState> _colorMapSamplerNearestWrap;
+    id<MTLSamplerState> _colorMapSamplerNearestBorder;
+    id<MTLSamplerState> _colorMapSamplerNearestEdge;
     
-    id <MTLSamplerState> _colorMapSamplerFilterWrap;
-    id <MTLSamplerState> _colorMapSamplerFilterBorder;
-    id <MTLSamplerState> _colorMapSamplerFilterEdge;
+    id<MTLSamplerState> _colorMapSamplerFilterWrap;
+    id<MTLSamplerState> _colorMapSamplerFilterBorder;
+    id<MTLSamplerState> _colorMapSamplerFilterEdge;
     
     //id<MTLTexture> _sampleRT;
-    id<MTLTexture> _sampleTex;
-    
+    id<MTLTexture> _sampleComputeTex;
+    id<MTLTexture> _sampleRenderTex;
+   
     uint8_t _uniformBufferIndex;
 
     float4x4 _projectionMatrix;
@@ -423,12 +425,23 @@ using namespace simd;
 
 - (void)_createSampleRender
 {
-    // writing to this texture
-    MTLTextureDescriptor* textureDesc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:1 height:1 mipmapped:NO];
+    {
+        // writing to this texture
+        MTLTextureDescriptor* textureDesc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:1 height:1 mipmapped:NO];
+        
+        textureDesc.usage = MTLTextureUsageShaderWrite | MTLTextureUsageShaderRead;
+        textureDesc.storageMode = MTLStorageModeManaged;
+        _sampleComputeTex = [_device newTextureWithDescriptor:textureDesc];
+    }
     
-    textureDesc.usage = MTLTextureUsageShaderWrite | MTLTextureUsageShaderRead;
-    textureDesc.storageMode = MTLStorageModeManaged;
-    _sampleTex = [_device newTextureWithDescriptor:textureDesc];
+    {
+        // this must match drawable format due to using a blit to copy pixel out of drawable
+        MTLTextureDescriptor* textureDesc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA16Float width:1 height:1 mipmapped:NO];
+        //textureDesc.usage = MTLTextureUsageShaderWrite | MTLTextureUsageShaderRead;
+        textureDesc.storageMode = MTLStorageModeManaged;
+
+        _sampleRenderTex = [_device newTextureWithDescriptor:textureDesc];
+    }
 }
 
 - (MTKMesh*)_createMeshAsset:(const char*)name mdlMesh:(MDLMesh*)mdlMesh doFlipUV:(bool)doFlipUV
@@ -916,7 +929,7 @@ struct packed_float3 {
 //    }
         
     // can derive these from texture queries
-    _showSettings->maxLOD = (int32_t)image.header.numberOfMipmapLevels;
+    _showSettings->mipCount = (int32_t)image.header.numberOfMipmapLevels;
     _showSettings->faceCount = (image.textureType == MyMTLTextureTypeCube ||
                                image.textureType == MyMTLTextureTypeCubeArray) ? 6 : 0;
     _showSettings->arrayCount = (int32_t)image.header.numberOfArrayElements;
@@ -931,7 +944,7 @@ struct packed_float3 {
     // only reset these on new texture, but have to revalidate
     if (isNewFile) {
         // then can manipulate this after loading
-        _showSettings->mipLOD = 0;
+        _showSettings->mipNumber = 0;
         _showSettings->faceNumber = 0;
         _showSettings->arrayNumber = 0;
         _showSettings->sliceNumber = 0;
@@ -947,7 +960,7 @@ struct packed_float3 {
     }
     else {
         // reloaded file may have different limits
-        _showSettings->mipLOD = std::min(_showSettings->mipLOD, _showSettings->maxLOD);
+        _showSettings->mipNumber = std::min(_showSettings->mipNumber, _showSettings->mipCount);
         _showSettings->faceNumber = std::min(_showSettings->faceNumber, _showSettings->faceCount);
         _showSettings->arrayNumber = std::min(_showSettings->arrayNumber, _showSettings->arrayCount);
         _showSettings->sliceNumber = std::min(_showSettings->sliceNumber, _showSettings->sliceCount);
@@ -1257,6 +1270,9 @@ float4 inverseScaleSquared(const float4x4& m) {
         
         [self drawMain:commandBuffer view:view];
         
+        // hold onto this for sampling from it via eyedropper
+        _lastDrawableTexture = view.currentDrawable.texture;
+        
         [commandBuffer presentDrawable:view.currentDrawable];
         [commandBuffer commit];
     }
@@ -1389,7 +1405,7 @@ float4 inverseScaleSquared(const float4x4& m) {
         
         if (_showSettings->isPreview) {
             // upload this on each face drawn, since want to be able to draw all mips/levels at once
-            [self _setUniformsLevel:uniformsLevel mipLOD:_showSettings->mipLOD];
+            [self _setUniformsLevel:uniformsLevel mipLOD:_showSettings->mipNumber];
             
             [renderEncoder setVertexBytes:&uniformsLevel
                                     length:sizeof(uniformsLevel)
@@ -1420,7 +1436,7 @@ float4 inverseScaleSquared(const float4x4& m) {
             // gap the contact sheet, note this 2 pixels is scaled on small textures by the zoom
             int32_t gap = _showSettings->showAllPixelGap; // * _showSettings->viewContentScaleFactor;
             
-            for (int32_t mip = 0; mip < _showSettings->maxLOD; ++mip) {
+            for (int32_t mip = 0; mip < _showSettings->mipCount; ++mip) {
                 
                 // upload this on each face drawn, since want to be able to draw all mips/levels at once
                 [self _setUniformsLevel:uniformsLevel mipLOD:mip];
@@ -1485,7 +1501,7 @@ float4 inverseScaleSquared(const float4x4& m) {
             }
         }
         else {
-            int32_t mip = _showSettings->mipLOD;
+            int32_t mip = _showSettings->mipNumber;
             
             // upload this on each face drawn, since want to be able to draw all mips/levels at once
             [self _setUniformsLevel:uniformsLevel mipLOD:mip];
@@ -1531,11 +1547,6 @@ float4 inverseScaleSquared(const float4x4& m) {
 // want to run samples independent of redrawing the main view
 - (void)drawSample
 {
-    // Note: this is failing when running via Cmake
-    bool doSample = true;
-    if (!doSample) {
-        return;
-    }
     if (_colorMap == nil) {
         return;
     }
@@ -1546,25 +1557,57 @@ float4 inverseScaleSquared(const float4x4& m) {
     
     commandBuffer.label = @"MyCommand";
 
+    // this reads directly from compressed texture via a compute shader
     int32_t textureLookupX = _showSettings->textureLookupX;
     int32_t textureLookupY = _showSettings->textureLookupY;
     
-    int32_t textureLookupMipX = _showSettings->textureLookupMipX;
-    int32_t textureLookupMipY = _showSettings->textureLookupMipY;
+    bool isDrawableBlit = _showSettings->isEyedropperFromDrawable();
     
-    [self drawSamples:commandBuffer lookupX:textureLookupMipX lookupY:textureLookupMipY];
-    
-    // Synchronize the managed texture.
-    id <MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
-    if (blitCommandEncoder) {
-        [blitCommandEncoder synchronizeResource:_sampleTex];
-        [blitCommandEncoder endEncoding];
+    // TODO: only don't blit for plane + no debug or shape
+    // otherwise want the pixel under the cursor, but this may include grid mixed in and other debug overlays
+    if (isDrawableBlit) {
+        MTLOrigin srcOrigin = MTLOriginMake(_showSettings->cursorX, _showSettings->cursorY, 0);
+        srcOrigin.x *= _showSettings->viewContentScaleFactor;
+        srcOrigin.y *= _showSettings->viewContentScaleFactor;
+       
+        // Note: here we don't know the uv in original texture, would have to write that out to another
+        // texture.  Also on shapes, texel may not change but lighting might.
+        
+        // can simply blit the color out of the render buffer
+        id <MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
+        if (blitCommandEncoder) {
+            [blitCommandEncoder copyFromTexture:_lastDrawableTexture
+                                    sourceSlice:0 sourceLevel:0 sourceOrigin:srcOrigin sourceSize:MTLSizeMake(1,1,1)
+                                      toTexture:_sampleRenderTex
+                               destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0,0,0)
+            ];
+            [blitCommandEncoder synchronizeResource:_sampleRenderTex];
+            [blitCommandEncoder endEncoding];
+        }
+    }
+    else {
+        
+        int32_t textureLookupMipX = _showSettings->textureLookupMipX;
+        int32_t textureLookupMipY = _showSettings->textureLookupMipY;
+        
+        [self drawSamples:commandBuffer lookupX:textureLookupMipX lookupY:textureLookupMipY];
+        
+        // Synchronize the managed texture.
+        id <MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
+        if (blitCommandEncoder) {
+            [blitCommandEncoder synchronizeResource:_sampleComputeTex];
+            [blitCommandEncoder endEncoding];
+        }
     }
     
     // After synchonization, copy value back to the cpu
-    id<MTLTexture> texture = _sampleTex;
-    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */)
+    id<MTLTexture> texture = isDrawableBlit ? _sampleRenderTex : _sampleComputeTex;
+    
+    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer)
     {
+        if (buffer.error != nil) {
+            return;
+        }
         // only 1 pixel in the texture right now
         float4 data;
         
@@ -1574,7 +1617,14 @@ float4 inverseScaleSquared(const float4x4& m) {
             { 1, 1, 1 }  // MTLSize
         };
         
-        [texture getBytes:&data bytesPerRow:16 fromRegion:region mipmapLevel:0];
+        if (isDrawableBlit) {
+            half4 data16f;
+            [texture getBytes:&data16f bytesPerRow:8 fromRegion:region mipmapLevel:0];
+            data = toFloat4(data16f);
+        }
+        else {
+            [texture getBytes:&data bytesPerRow:16 fromRegion:region mipmapLevel:0];
+        }
         
         // return the value at the sample
         _showSettings->textureResult = data;
@@ -1608,7 +1658,7 @@ float4 inverseScaleSquared(const float4x4& m) {
     if (_showSettings->sliceNumber) {
         uniforms.arrayOrSlice = _showSettings->sliceNumber;
     }
-    uniforms.mipLOD = _showSettings->mipLOD;
+    uniforms.mipLOD = _showSettings->mipNumber;
     
     // run compute here, don't need a shape
     switch(_colorMap.textureType) {
@@ -1642,7 +1692,7 @@ float4 inverseScaleSquared(const float4x4& m) {
     [renderEncoder setTexture:_colorMap
                               atIndex:TextureIndexColor];
     
-    [renderEncoder setTexture:_sampleTex
+    [renderEncoder setTexture:_sampleComputeTex
                       atIndex:TextureIndexSamples];
     
     [renderEncoder setBytes:&uniforms length:sizeof(UniformsCS) atIndex:BufferIndexUniformsCS];

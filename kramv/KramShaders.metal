@@ -270,10 +270,11 @@ half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldP
     float2 duv1 = dfdx(uv);
     float2 duv2 = dfdy(uv);
 
-    // getting non-zere uv with 0 length duv1/2 on MBP 16", this leaves missing bump artifacts
+    // getting non-zero uv with 0 length duv1/2 on MBP 16", this leaves missing bump artifacts
     // in large triangle error so this is a patch to avoid that.
-    if ((length_squared(duv1) < 1e-12) &&
-        (length_squared(duv2) < 1e-12)) {
+    if ((length_squared(duv1) < 1e-10) &&
+        (length_squared(duv2) < 1e-10)) {
+        //return 0.0h; // flag pixels with no bump
         return vertexNormal;
     }
     

@@ -80,8 +80,8 @@ public:
     int32_t showAllPixelGap = 2;
     
     // These control which texture is viewed in single texture mode
-    int32_t mipLOD = 0;
-    int32_t maxLOD = 1;
+    int32_t mipNumber = 0;
+    int32_t mipCount = 1;
     
     int32_t faceNumber = 0;
     int32_t faceCount = 0;
@@ -142,6 +142,9 @@ public:
     // whether files are pulled from folder(s)
     bool isFolder = false;
     
+    // can sample from drawable or from single source texture
+    bool isEyedropperFromDrawable();
+    
     // can have up to 5 channels (xyz as xy, 2 other channels)
     int32_t numChannels = 0;
     
@@ -160,6 +163,9 @@ public:
     // for eyedropper, lookup this pixel value, and return it to CPU
     int32_t textureLookupX = 0;
     int32_t textureLookupY = 0;
+    
+    int32_t lastCursorX = 0;
+    int32_t lastCursorY = 0;
     
     // exact pixel in the mip level
     int32_t textureLookupMipX = 0;

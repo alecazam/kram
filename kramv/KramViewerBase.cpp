@@ -62,6 +62,11 @@ const char* ShowSettings::debugModeText() const {
     return text;
 }
 
+bool ShowSettings::isEyedropperFromDrawable() {
+    return meshNumber > 0 || isPreview || isShowingAllLevelsAndMips || shapeChannel > 0;
+}
+
+
 void ShowSettings::advanceMeshNumber(bool decrement) {
     int32_t numEnums = meshCount;
     int32_t number = meshNumber;

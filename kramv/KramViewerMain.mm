@@ -710,7 +710,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     float minY = -0.5f;
     if (_showSettings->isShowingAllLevelsAndMips) {
         maxX += 1.0f * (_showSettings->totalChunks() - 1);
-        minY -= 1.0f * (_showSettings->maxLOD - 1);
+        minY -= 1.0f * (_showSettings->mipCount - 1);
     }
     
     // that's in model space (+/0.5f, +/0.5f), so convert to texture space
@@ -792,7 +792,7 @@ NSArray<NSString*>* pasteboardTypes = @[
     CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
    
     int32_t numTexturesX = _showSettings->totalChunks();
-    int32_t numTexturesY = _showSettings->maxLOD;
+    int32_t numTexturesY = _showSettings->mipCount;
     
     if (_showSettings->isShowingAllLevelsAndMips) {
         imageRect.origin.y -= (numTexturesY - 1 ) * imageRect.size.height;
@@ -906,6 +906,12 @@ float4 toSnorm8(float4 c)
     return (255.0 / 127.0) * c - (128 / 127.0);
 }
 
+float4 toSnorm(float4 c)
+{
+    return 2.0f * c - 1.0f;
+}
+
+
 
 - (void)updateEyedropper {
     if ((!_showSettings->isHudShown)) {
@@ -919,6 +925,32 @@ float4 toSnorm8(float4 c)
     
     // don't wait on renderer to update this matrix
     Renderer* renderer = (Renderer*)self.delegate;
+    
+    if (_showSettings->isEyedropperFromDrawable()) {
+        // this only needs the cursor location, but can't supply uv to displayPixelData
+        
+        if (_showSettings->lastCursorX != _showSettings->cursorX ||
+            _showSettings->lastCursorY != _showSettings->cursorY)
+        {
+            // TODO: this means pan/zoom doesn't update data, may want to track some absolute
+            // location in virtal canvas.
+            
+            _showSettings->lastCursorX = _showSettings->cursorX;
+            _showSettings->lastCursorY = _showSettings->cursorY;
+            
+            // This just samples from drawable, so no re-render is needed
+            [self showEyedropperData:float2m(0,0)];
+            
+            // TODO: remove this, but only way to get drawSamples to execute right now, but then
+            // entire texture re-renders and that's not power efficient.  Really just want to sample
+            // from the already rendered texture since content isn't animated.
+            
+            self.needsDisplay = YES;
+        }
+        
+        return;
+    }
+        
     float4x4 projectionViewModelMatrix = [renderer computeImageTransform:_showSettings->panX panY:_showSettings->panY zoom:_showSettings->zoom];
 
     // convert to clip space, or else need to apply additional viewport transform
@@ -952,8 +984,7 @@ float4 toSnorm8(float4 c)
     pixel.x *= 0.999f;
     pixel.y *= 0.999f;
     
-    float uvX = pixel.x;
-    float uvY = pixel.y;
+    float2 uv = pixel.xy;
     
     // pixels are 0 based
     pixel.x *= _showSettings->imageBoundsX;
@@ -962,7 +993,7 @@ float4 toSnorm8(float4 c)
 // TODO: finish this logic, need to account for gaps too, and then isolate to a given level and mip to sample
 //    if (_showSettings->isShowingAllLevelsAndMips) {
 //        pixel.x *= _showSettings->totalChunks();
-//        pixel.y *= _showSettings->maxLOD;
+//        pixel.y *= _showSettings->mipCount;
 //    }
     
     // TODO: clearing out the last px visited makes it hard to gather data
@@ -985,6 +1016,7 @@ float4 toSnorm8(float4 c)
         return;
     }
 
+    
     // Note: fromView: nil returns isFlipped coordinate, fromView:self flips it back.
 
     int32_t newX = (int32_t)pixel.x;
@@ -996,21 +1028,96 @@ float4 toSnorm8(float4 c)
         // Note: this only samples from the original texture via compute shaders
         // so preview mode pixel colors are not conveyed.  But can see underlying data driving preview.
         
-        MyMTLPixelFormat format = (MyMTLPixelFormat)_showSettings->originalFormat;
-        
-        // DONE: use these to format the text
-        bool isSrgb = isSrgbFormat(format);
-        bool isSigned = isSignedFormat(format);
-        bool isHdr = isHdrFormat(format);
-        int32_t numChannels = _showSettings->numChannels;
-        
         // %.0f rounds the value, but want truncation
         _showSettings->textureLookupX = newX;
         _showSettings->textureLookupY = newY;
+
+        [self showEyedropperData:uv];
         
+        // TODO: remove this, but only way to get drawSamples to execute right now, but then
+        // entire texture re-renders and that's not power efficient.
+        self.needsDisplay = YES;
+
+    }
+}
+
+- (void)showEyedropperData:(float2)uv {
+    string text;
+    string tmp;
+    
+    float4 c = _showSettings->textureResult;
+    
+    // DONE: use these to format the text
+    MyMTLPixelFormat format = _showSettings->originalFormat;
+    bool isSrgb = isSrgbFormat(format);
+    bool isSigned = isSignedFormat(format);
+    
+    bool isHdr = isHdrFormat(format);
+    bool isFloat = isHdr;
+    
+    int32_t numChannels = _showSettings->numChannels;
+    
+    bool isNormal = _showSettings->isNormal;
+    bool isColor = !isNormal;
+    
+    bool isDirection = false;
+    bool isValue = false;
+    
+    if (_showSettings->isEyedropperFromDrawable()) {
+        
+        // TODO: could write barycentric, then lookup uv from that
+        // then could show the block info.
+        
+        // interpret based on shapeChannel, debugMode, etc
+        switch(_showSettings->shapeChannel) {
+            case ShapeChannelDepth:
+                isValue = true;
+                isFloat = true;
+                numChannels = 1;
+                break;
+            case ShapeChannelUV0:
+                isValue = true;
+                isSigned = true;
+                numChannels = 2; // TODO: fix for 3d uvw
+                isFloat = true;
+                break;
+                
+            case ShapeChannelFaceNormal:
+            case ShapeChannelNormal:
+            case ShapeChannelTangent:
+            case ShapeChannelBitangent:
+                isSigned = false; // writing to 16f as unorm, so need conversion below
+                isDirection = true;
+                numChannels = 3;
+            
+                // convert unorm to snnorm
+                c = toSnorm(c);
+                break;
+                
+            case ShapeChannelMipLevel:
+                isValue = true;
+                isSigned = false;
+                isFloat = true;
+                
+                // viz is mipNumber as alpha
+                numChannels = 1;
+                c.r = 4.0 - (c.a * 4.0);
+                break;
+                
+            default:
+                break;
+        }
+        
+        // debug mode
+        
+        // preview vs. not
+        
+        
+    }
+    else {
+    
         // this will be out of sync with gpu eval, so may want to only display px from returned lookup
         // this will always be a linear color
-        float4 c = _showSettings->textureResult;
         
         int32_t x = _showSettings->textureResultX;
         int32_t y = _showSettings->textureResultY;
@@ -1025,10 +1132,7 @@ float4 toSnorm8(float4 c)
         append_sprintf(text, "px:%d %d\n", x, y);
         
         // show block num
-        int mipLOD = _showSettings->mipLOD;
-        
-        // TODO: these block numbers are not accurate on Toof at 4x4
-        // there is resizing going on to the dimensions
+        int mipLOD = _showSettings->mipNumber;
         
         int mipX = _showSettings->imageBoundsX;
         int mipY = _showSettings->imageBoundsY;
@@ -1039,8 +1143,8 @@ float4 toSnorm8(float4 c)
         mipX = std::max(1, mipX);
         mipY = std::max(1, mipY);
         
-        mipX = (int32_t)(uvX * mipX);
-        mipY = (int32_t)(uvY * mipY);
+        mipX = (int32_t)(uv.x * mipX);
+        mipY = (int32_t)(uv.y * mipY);
         
         _showSettings->textureLookupMipX = mipX;
         _showSettings->textureLookupMipY = mipY;
@@ -1063,96 +1167,102 @@ float4 toSnorm8(float4 c)
         
         // TODO: more criteria here, can have 2 channel PBR metal-roughness
         // also have 4 channel normals where zw store other data.
-        bool isNormal = _showSettings->isNormal;
-        bool isFloat = isHdr;
         
         bool isDecodeSigned = isSignedFormat(_showSettings->decodedFormat);
         if (isSigned && !isDecodeSigned) {
             c = toSnorm8(c);
         }
+    }
+
+    if (isValue) {
+        printChannels(tmp, "val: ", c, numChannels, isFloat, isSigned);
+        text += tmp;
+    }
+    else if (isDirection) {
+        // print direction
+        isFloat = true;
+        isSigned = true;
         
-        if (isNormal) {
-            float nx = c.x;
-            float ny = c.y;
+        printChannels(tmp, "dir: ", c, numChannels, isFloat, isSigned);
+        text += tmp;
+    }
+    else if (isNormal) {
+        float nx = c.x;
+        float ny = c.y;
+        
+        // unorm -> snorm
+        if (!isSigned) {
+            nx = toSnorm8(nx);
+            ny = toSnorm8(ny);
+        }
+        
+        // Note: not clamping nx,ny to < 1 like in shader
+        
+        // this is always postive on tan-space normals
+        // assuming we're not viewing world normals
+        const float maxLen2 = 0.999 * 0.999;
+        float len2 = nx * nx + ny * ny;
+        if (len2 > maxLen2)
+            len2 = maxLen2;
+        
+        float nz = sqrt(1.0f - len2);
+        
+        // print the underlying color (some nmaps are xy in 4 channels)
+        printChannels(tmp, "lin: ", c, numChannels, isFloat, isSigned);
+        text += tmp;
+        
+        // print direction
+        float4 d = float4m(nx,ny,nz,0.0f);
+        isFloat = true;
+        isSigned = true;
+        printChannels(tmp, "dir: ", d, 3, isFloat, isSigned);
+        text += tmp;
+    }
+    else if (isColor) {
+        // DONE: write some print helpers based on float4 and length
+        printChannels(tmp, "lin: ", c, numChannels, isFloat, isSigned);
+        text += tmp;
+        
+        if (isSrgb) {
+            // this saturates the value, so don't use for extended srgb
+            float4 s = linearToSRGB(c);
             
-            // unorm -> snorm
-            if (!isSigned) {
-                nx = toSnorm8(nx);
-                ny = toSnorm8(ny);
-            }
-            
-            // Note: not clamping nx,ny to < 1 like in shader
-            
-            // this is always postive on tan-space normals
-            // assuming we're not viewing world normals
-            const float maxLen2 = 0.999 * 0.999;
-            float len2 = nx * nx + ny * ny;
-            if (len2 > maxLen2)
-                len2 = maxLen2;
-            
-            float nz = sqrt(1.0f - len2);
-            
-            // print the underlying color (some nmaps are xy in 4 channels)
-            string tmp;
-            printChannels(tmp, "ln: ", c, numChannels, isFloat, isSigned);
-            text += tmp;
-            
-            // print direction
-            float4 d = float4m(nx,ny,nz,0.0f);
-            isFloat = true;
-            isSigned = true;
-            printChannels(tmp, "dr: ", d, 3, isFloat, isSigned);
+            printChannels(tmp, "srg: ", s, numChannels, isFloat, isSigned);
             text += tmp;
         }
-        else {
-            // DONE: write some print helpers based on float4 and length
-            string tmp;
-            printChannels(tmp, "ln: ", c, numChannels, isFloat, isSigned);
+        
+        // display the premul values too, but not fully transparent pixels
+        if (c.a > 0.0 && c.a < 1.0f)
+        {
+            printChannels(tmp, "lnp: ", toPremul(c), numChannels, isFloat, isSigned);
             text += tmp;
             
+            // TODO: do we need the premul srgb color too?
             if (isSrgb) {
                 // this saturates the value, so don't use for extended srgb
                 float4 s = linearToSRGB(c);
                 
-                printChannels(tmp, "sr: ", s, numChannels, isFloat, isSigned);
+                printChannels(tmp, "srp: ", toPremul(s), numChannels, isFloat, isSigned);
                 text += tmp;
-            }
-            
-            // display the premul values too, but not fully transparent pixels
-            if (c.a > 0.0 && c.a < 1.0f)
-            {
-                printChannels(tmp, "lnp: ", toPremul(c), numChannels, isFloat, isSigned);
-                text += tmp;
-                
-                // TODO: do we need the premul srgb color too?
-                if (isSrgb) {
-                    // this saturates the value, so don't use for extended srgb
-                    float4 s = linearToSRGB(c);
-                    
-                    printChannels(tmp, "srp: ", toPremul(s), numChannels, isFloat, isSigned);
-                    text += tmp;
-                }
             }
         }
-        
-        [self setEyedropperText:text.c_str()];
-
-        // TODO: range display of pixels is useful, only showing pixels that fall
-        // within a given range, but would need slider then, and determine range of pixels.
-        // TODO: Auto-range is also useful for depth (ignore far plane of 0 or 1).
-        
-        // TOOD: display histogram from compute, bin into buffer counts of pixels
-        
-        // DONE: stop clobbering hud text, need another set of labels
-        // and a zoom preview of the pixels under the cursor.
-        // Otherwise, can't really see the underlying color.
-        
-        // TODO: Stuff these on clipboard with a click, or use cmd+C?
-
-        // TODO: remove this, but only way to get drawSamples to execute right now, but then
-        // entire texture re-renders and that's not power efficient.
-        self.needsDisplay = YES;
     }
+    
+    [self setEyedropperText:text.c_str()];
+
+    // TODO: range display of pixels is useful, only showing pixels that fall
+    // within a given range, but would need slider then, and determine range of pixels.
+    // TODO: Auto-range is also useful for depth (ignore far plane of 0 or 1).
+    
+    // TOOD: display histogram from compute, bin into buffer counts of pixels
+    
+    // DONE: stop clobbering hud text, need another set of labels
+    // and a zoom preview of the pixels under the cursor.
+    // Otherwise, can't really see the underlying color.
+    
+    // TODO: Stuff these on clipboard with a click, or use cmd+C?
+
+
 }
 
 - (void)setEyedropperText:(const char*)text {
@@ -1226,7 +1336,7 @@ float4 toSnorm8(float4 c)
     CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
    
     int32_t numTexturesX = _showSettings->totalChunks();
-    int32_t numTexturesY = _showSettings->maxLOD;
+    int32_t numTexturesY = _showSettings->mipCount;
     
     if (_showSettings->isShowingAllLevelsAndMips) {
         imageRect.origin.y -= (numTexturesY - 1 ) * imageRect.size.height;
@@ -1298,11 +1408,11 @@ float4 toSnorm8(float4 c)
     // here and in HandleKey.
     
     // base on showSettings, hide some fo the buttons
-    bool isShowAllHidden = _showSettings->totalChunks() <= 1 && _showSettings->maxLOD <= 1;
+    bool isShowAllHidden = _showSettings->totalChunks() <= 1 && _showSettings->mipCount <= 1;
     
     bool isArrayHidden = _showSettings->arrayCount <= 1;
     bool isFaceSliceHidden = _showSettings->faceCount <= 1 && _showSettings->sliceCount <= 1;
-    bool isMipHidden = _showSettings->maxLOD <= 1;
+    bool isMipHidden = _showSettings->mipCount <= 1;
     
     bool isJumpToNextHidden = !(_showSettings->isArchive || _showSettings->isFolder);
     
@@ -1388,7 +1498,7 @@ float4 toSnorm8(float4 c)
     
     auto arrayState = toState(_showSettings->arrayNumber > 0);
     auto faceState = toState(_showSettings->faceNumber > 0);
-    auto mipState = toState(_showSettings->mipLOD > 0);
+    auto mipState = toState(_showSettings->mipNumber > 0);
     
     auto meshState = toState(_showSettings->meshNumber > 0);
     auto meshChannelState = toState(_showSettings->shapeChannel > 0);
@@ -1723,7 +1833,7 @@ float4 toSnorm8(float4 c)
             // This zoom needs to be checked against zoom limits
             // there's a cap on the zoom multiplier.
             // This is reducing zoom which expands the image.
-            zoom *= 1.0f / (1 << _showSettings->mipLOD);
+            zoom *= 1.0f / (1 << _showSettings->mipNumber);
             
             // even if zoom same, still do this since it resets the pan
             _showSettings->zoom = zoom;
@@ -1937,14 +2047,14 @@ float4 toSnorm8(float4 c)
             
         // mip up/down
         case Key::M:
-            if (_showSettings->maxLOD > 1) {
+            if (_showSettings->mipCount > 1) {
                 if (isShiftKeyDown) {
-                    _showSettings->mipLOD = MAX(_showSettings->mipLOD - 1, 0);
+                    _showSettings->mipNumber = MAX(_showSettings->mipNumber - 1, 0);
                 }
                 else {
-                    _showSettings->mipLOD = MIN(_showSettings->mipLOD + 1, _showSettings->maxLOD - 1);
+                    _showSettings->mipNumber = MIN(_showSettings->mipNumber + 1, _showSettings->mipCount - 1);
                 }
-                sprintf(text, "Mip %d/%d", _showSettings->mipLOD, _showSettings->maxLOD);
+                sprintf(text, "Mip %d/%d", _showSettings->mipNumber, _showSettings->mipCount);
                 isChanged = true;
             }
             break;
@@ -2752,7 +2862,11 @@ float4 toSnorm8(float4 c)
     [super viewDidLoad];
 
     _view = (MyMTKView *)self.view;
-
+    
+    // have to disable this since reading back from textures
+    // that slows the blit to the screen
+    _view.framebufferOnly = NO;
+    
     _view.device = MTLCreateSystemDefaultDevice();
 
     if(!_view.device)
