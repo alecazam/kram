@@ -1071,22 +1071,24 @@ float4 toSnorm(float4 c)
         // interpret based on shapeChannel, debugMode, etc
         switch(_showSettings->shapeChannel) {
             case ShapeChannelDepth:
+                isSigned = false; // using fract on uv
+                
                 isValue = true;
                 isFloat = true;
                 numChannels = 1;
                 break;
             case ShapeChannelUV0:
+                isSigned = false; // using fract on uv
+                
                 isValue = true;
-                isSigned = true;
-                numChannels = 2; // TODO: fix for 3d uvw
                 isFloat = true;
+                numChannels = 2; // TODO: fix for 3d uvw
                 break;
                 
             case ShapeChannelFaceNormal:
             case ShapeChannelNormal:
             case ShapeChannelTangent:
             case ShapeChannelBitangent:
-                isSigned = false; // writing to 16f as unorm, so need conversion below
                 isDirection = true;
                 numChannels = 3;
             

@@ -975,19 +975,30 @@ struct packed_float3 {
     
     _showSettings->zoom = _showSettings->zoomFit;
     
-    // test rendering with inversion and mirroring
+    // test rendering with inversion and mirroring and non-uniform scale
     bool doInvertX = false;
+    bool doScaleX = false;
     
     // have one of these for each texture added to the viewer
     float scaleX = MAX(1, _showSettings->imageBoundsX);
     float scaleY = MAX(1, _showSettings->imageBoundsY);
     float scaleZ = MAX(scaleX, scaleY); // don't want 1.0f, or specular is all off due to extreme scale differences
-    _modelMatrix = float4x4(float4m(doInvertX ? -scaleX : scaleX, scaleY, scaleZ, 1.0f)); // non uniform scale
+    
+    float tmpScaleX = scaleX;
+    if (doInvertX) {
+        tmpScaleX = -tmpScaleX;
+    }
+    if (doScaleX) {
+        tmpScaleX *= 2.0f;
+    }
+    
+    _modelMatrix = float4x4(float4m(tmpScaleX, scaleY, scaleZ, 1.0f)); // non uniform scale
     _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0); // set z=-1 unit back
     
     // uniform scaled 3d primitiv
     float scale = MAX(scaleX, scaleY);
-    _modelMatrix3D = float4x4(float4m(doInvertX ? -scale : scale, scale, scale, 1.0f)); // uniform scale
+    
+    _modelMatrix3D = float4x4(float4m((doScaleX || doInvertX) ? tmpScaleX : scale, scale, scale, 1.0f)); // uniform scale
     _modelMatrix3D = _modelMatrix3D * matrix4x4_translation(0.0f, 0.0f, -1.0f); // set z=-1 unit back
 }
 

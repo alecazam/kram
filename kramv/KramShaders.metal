@@ -257,13 +257,14 @@ half3 toNormal(half3 n)
 // The downside is this must all be fp32, and all done in fragment shader and use derivatives.
 // Derivatives are known to be caclulated differently depending on hw and different precision.
 
-float3x3 generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float2 uv)
+float3x3 generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float2 uv, thread bool& success)
 {
+    // normalizing this didn't help the reconstruction
     float3 N = toFloat(vertexNormal);
     
     // for OpenGL +Y convention, flip N.y
     // but this doesn't match explicit tangents case, see if those are wrong.
-    //N.y = -N.y;
+    // N.y = -N.y;
     
     // get edge vectors of the pixel triangle
     float3 dpx = dfdx(worldPos);
@@ -271,24 +272,64 @@ float3x3 generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float
     float2 duvx = dfdx(uv);
     float2 duvy = dfdy(uv);
 
-    // getting non-zero uv with 0 length duv1/2 on MBP 16", this leaves missing bump artifacts
-    // in large triangle error so this is a patch to avoid that.
-//    if ((length_squared(duvx) < 1e-10) &&
-//        (length_squared(duvy) < 1e-10)) {
-//        //return 0.0h; // flag pixels with no bump
-//        //return vertexNormal;
-//    }
+    // May be pixel noise from this when up close and the derivatives exceed float precision
+    // so this to identify one failure case where the uv derivatives are clamped to zero.
     
     // solve the linear system
     float3 dp2perp = cross(dpy, N);
     float3 dp1perp = cross(N, dpx);
     float3 T = dp2perp * duvx.x + dp1perp * duvy.x;
     float3 B = dp2perp * duvx.y + dp1perp * duvy.y;
-    float invmax = rsqrt(max(length_squared(T), length_squared(B)));
+   
+    // The author talks about preserving non-uniform scale of the worldPos, but the problem is that
+    // the duvx/y also can be scaled with respect to one another, and the code doesn't
+    // knock that out.  So with uniform scale and non-uniform uv, invmax also causes non-uniform scale of T/B.
+    // The normalize code below eliminates non-uniform worldPos scale and non-uniform uv scale.
+    // But we have a vertNormal that is also normalized.
     
+    float Tlen = length_squared(T);
+    float Blen = length_squared(B);
+    
+    if (Tlen < 1e-10 || Blen < 1e-10) {
+        success = false;
+        return float3x3(0.0f);
+    }
+    
+    success = true;
+    
+#if 1
+    // Still see some less smooth gradation across sphere compared with vertex tangents
+    // Maybe N needs to be interpolated as float3 instead of half3 to use this?  Bitan looks
+    // smoother than the tangent.
+    
+    // Eliminate scale invariance to match vertex basis which is normalized before interpolation.
+    // This loses that hemisphere is 1x v vertically, and u is 2x rate around the sphere.  Tan = 1/2 B then.
+    // Blocky triangles from this algorithm are because worldPos is linearly interpolated across
+    // the face of the flat poly, where vertex normals are smoothly interpolated across 3 points of triangle.
+
+    
+    // Tangent looks much more blocky than Bitangent across the sphere.  Why is that?
+
+    T *= rsqrt(Tlen);
+    B *= rsqrt(Blen);
+
+#else
+    // math seems off when sphere u is 2x the rate, tangent is calculated as 0.5 length
+    // but the stretch is already accounted for by position vs. uv rate.
+    // Don't want to scale N.x by 0.5, since it's really v that is more squished on model.
+
+    // Seeing tan/bitan that are 0.5 instead of 1.0 in length compared to the vertex tangents.
+    // This changes the lighting intensities since N is unit length.   See explanation above.
+    
+    // Note: min gens larger than 1 directions, but the normals look more correct
+    // like it's the inverse normal transform.  But lighting shifts.
+    
+    float invmax = rsqrt(max(Tlen, Blen));
+   
     // keeps relative magnitude of two vectors, they're not both unit vecs
     T *= invmax;
     B *= invmax;
+#endif
     
     // had to flip this sign to get lighting to match vertex data
     T = -T;
@@ -299,7 +340,12 @@ float3x3 generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float
 
 half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldPos, float2 uv)
 {
-    float3x3 basis = generateFragmentTangentBasis(vertexNormal, worldPos, uv);
+    bool success = false;
+    float3x3 basis = generateFragmentTangentBasis(vertexNormal, worldPos, uv, success);
+    
+    if (!success) {
+        return vertexNormal;
+    }
     
     // construct a scale-invariant frame
     // drop to half to match other call
@@ -502,7 +548,14 @@ ColorInOut DrawImageFunc(
     
     // deal with full basis
     
-    if (uniforms.isNormalMapPreview) {
+    bool needsBasis =
+        uniforms.isNormalMapPreview ||
+        // these need normal transformed to world space
+        uniforms.shapeChannel == ShaderShapeChannel::ShShapeChannelTangent ||
+        uniforms.shapeChannel == ShaderShapeChannel::ShShapeChannelNormal ||
+        uniforms.shapeChannel == ShaderShapeChannel::ShShapeChannelBitangent;
+
+    if (needsBasis) {
         float3 normal = in.normal;
         float3 tangent = in.tangent.xyz;
         transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2.xyz, uniforms.useTangent);
@@ -835,26 +888,40 @@ float4 DrawPixels(
             c.rgb = fract(in.texCoordXYZ);
         }
         else if (uniforms.shapeChannel == ShShapeChannelNormal) {
-            c.rgb = toUnorm(toFloat(in.normal));
+            c.rgb = toFloat(in.normal);
+            
+            c.rgb = toUnorm(c.rgb);
         }
         else if (uniforms.shapeChannel == ShShapeChannelTangent) {
             if (uniforms.useTangent) {
-                c.rgb = toUnorm(toFloat(in.tangent.xyz));
+                c.rgb = toFloat(in.tangent.xyz);
             }
             else {
-                float3x3 basis = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord);
-                c.rgb = toUnorm(basis[0]);
+                bool success = false;
+                float3x3 basis = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord, success);
+                if (!success)
+                    c.rgb = 0;
+                else
+                    c.rgb = basis[0];
             }
+            
+            c.rgb = toUnorm(c.rgb);
         }
         else if (uniforms.shapeChannel == ShShapeChannelBitangent) {
             if (uniforms.useTangent) {
                 half3 bitangent = cross(in.normal, in.tangent.xyz) * in.tangent.w;
-                c.rgb = toUnorm(toFloat(bitangent));
+                c.rgb = toFloat(bitangent);
             }
             else {
-                float3x3 basis = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord);
-                c.rgb = toUnorm(basis[1]); // bitan
+                bool success = false;
+                float3x3 basis = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord, success);
+                if (!success)
+                    c.rgb = 0;
+                else
+                    c.rgb = basis[1]; // bitan
             }
+            
+            c.rgb = toUnorm(c.rgb);
         }
         else if (uniforms.shapeChannel == ShShapeChannelDepth) {
             c.rgb = saturate(in.position.z / in.position.w);
@@ -865,7 +932,7 @@ float4 DrawPixels(
             
             // TODO: incorporate facing?
             
-            c.rgb = saturate(toUnorm(faceNormal));
+            c.rgb = toUnorm(faceNormal);
         }
         else if (uniforms.shapeChannel == ShShapeChannelMipLevel) {
             c = toMipLevelColor(in.texCoord * textureSize.xy); // only for 2d textures
