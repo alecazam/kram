@@ -256,7 +256,8 @@ half3 toNormal(half3 n)
 // Then transforms the bumpNormal to that space.  No tangent is needed.
 // The downside is this must all be fp32, and all done in fragment shader and use derivatives.
 // Derivatives are known to be caclulated differently depending on hw and different precision.
-half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldPos, float2 uv)
+
+float3x3 generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float2 uv)
 {
     float3 N = toFloat(vertexNormal);
     
@@ -265,24 +266,24 @@ half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldP
     //N.y = -N.y;
     
     // get edge vectors of the pixel triangle
-    float3 dp1 = dfdx(worldPos);
-    float3 dp2 = dfdy(worldPos);
-    float2 duv1 = dfdx(uv);
-    float2 duv2 = dfdy(uv);
+    float3 dpx = dfdx(worldPos);
+    float3 dpy = dfdy(worldPos);
+    float2 duvx = dfdx(uv);
+    float2 duvy = dfdy(uv);
 
     // getting non-zero uv with 0 length duv1/2 on MBP 16", this leaves missing bump artifacts
     // in large triangle error so this is a patch to avoid that.
-    if ((length_squared(duv1) < 1e-10) &&
-        (length_squared(duv2) < 1e-10)) {
-        //return 0.0h; // flag pixels with no bump
-        return vertexNormal;
-    }
+//    if ((length_squared(duvx) < 1e-10) &&
+//        (length_squared(duvy) < 1e-10)) {
+//        //return 0.0h; // flag pixels with no bump
+//        //return vertexNormal;
+//    }
     
     // solve the linear system
-    float3 dp2perp = cross(dp2, N);
-    float3 dp1perp = cross(N, dp1);
-    float3 T = dp2perp * duv1.x + dp1perp * duv2.x;
-    float3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+    float3 dp2perp = cross(dpy, N);
+    float3 dp1perp = cross(N, dpx);
+    float3 T = dp2perp * duvx.x + dp1perp * duvy.x;
+    float3 B = dp2perp * duvx.y + dp1perp * duvy.y;
     float invmax = rsqrt(max(length_squared(T), length_squared(B)));
     
     // keeps relative magnitude of two vectors, they're not both unit vecs
@@ -292,9 +293,17 @@ half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldP
     // had to flip this sign to get lighting to match vertex data
     T = -T;
     
+    float3x3 basis = float3x3(T, B, N);
+    return basis;
+}
+
+half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldPos, float2 uv)
+{
+    float3x3 basis = generateFragmentTangentBasis(vertexNormal, worldPos, uv);
+    
     // construct a scale-invariant frame
     // drop to half to match other call
-    bumpNormal = toHalf(float3x3(T, B, N) * toFloat(bumpNormal));
+    bumpNormal = toHalf(basis * toFloat(bumpNormal));
     
     return bumpNormal;
 }
@@ -817,27 +826,35 @@ float4 DrawPixels(
     }
     
     if (uniforms.shapeChannel != ShShapeChannelNone) {
-        // TODO: Really hard to interpret direction from color
-        // see about use the vector flow fields
+        // Hard to interpret direction from color, but have eyedropper to decipher render color.
+        // See about using the vector flow fields to see values across render, but needs fsqd pass.
         
         if (uniforms.shapeChannel == ShShapeChannelUV0) {
+            // fract so wrap will show repeating uv in 0,1, and never negative or large values
+            // don't have mirror address modes yet.
             c.rgb = fract(in.texCoordXYZ);
         }
         else if (uniforms.shapeChannel == ShShapeChannelNormal) {
             c.rgb = toUnorm(toFloat(in.normal));
         }
-        else if (uniforms.useTangent && uniforms.shapeChannel == ShShapeChannelTangent) {
-            // TODO: make this work with useTangent = false
-            // may have to call routine again, or pass back basis
-            
-            c.rgb = toUnorm(toFloat(in.tangent.xyz));
+        else if (uniforms.shapeChannel == ShShapeChannelTangent) {
+            if (uniforms.useTangent) {
+                c.rgb = toUnorm(toFloat(in.tangent.xyz));
+            }
+            else {
+                float3x3 basis = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord);
+                c.rgb = toUnorm(basis[0]);
+            }
         }
         else if (uniforms.shapeChannel == ShShapeChannelBitangent) {
-            // TODO: make this work with useTangent = false
-            // may have to call routine again, or pass back basis
-            
-            half3 bitangent = cross(in.tangent.xyz, in.normal) * in.tangent.w;
-            c.rgb = toUnorm(toFloat(bitangent));
+            if (uniforms.useTangent) {
+                half3 bitangent = cross(in.normal, in.tangent.xyz) * in.tangent.w;
+                c.rgb = toUnorm(toFloat(bitangent));
+            }
+            else {
+                float3x3 basis = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord);
+                c.rgb = toUnorm(basis[1]); // bitan
+            }
         }
         else if (uniforms.shapeChannel == ShShapeChannelDepth) {
             c.rgb = saturate(in.position.z / in.position.w);
