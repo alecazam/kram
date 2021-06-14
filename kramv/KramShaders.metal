@@ -548,14 +548,15 @@ ColorInOut DrawImageFunc(
     
     // deal with full basis
     
-    bool needsBasis =
-        uniforms.isNormalMapPreview ||
+    bool needsWorldBasis =
+        uniforms.isPreview ||
+        //uniforms.isNormalMapPreview ||
         // these need normal transformed to world space
         uniforms.shapeChannel == ShaderShapeChannel::ShShapeChannelTangent ||
         uniforms.shapeChannel == ShaderShapeChannel::ShShapeChannelNormal ||
         uniforms.shapeChannel == ShaderShapeChannel::ShShapeChannelBitangent;
 
-    if (needsBasis) {
+    if (needsWorldBasis) {
         float3 normal = in.normal;
         float3 tangent = in.tangent.xyz;
         transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2.xyz, uniforms.useTangent);
