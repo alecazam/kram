@@ -295,7 +295,9 @@ float3x3 generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float
     float Tlen = length_squared(T);
     float Blen = length_squared(B);
     
-    if (Tlen < 1e-10 || Blen < 1e-10) {
+    // Tried 1e-10 tolerance here, but code hits that when zooming in closely to a shape.  Normal map doesn't look good using vertNormal
+    // so instead only check for the zero case.
+    if (Tlen == 0.0 || Blen == 0.0) {
         success = false;
         return float3x3(0.0f);
     }
@@ -696,7 +698,10 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) 
     float3 diffuse = float3(0.0);
     float3 ambient = float3(0.0);
     
-    bool doSpecular = true; // can confuse lighting review
+    // Need lighting control in UI, otherwise specular just adds a big bright
+    // circle to all texture previews since it's additive.
+    
+    bool doSpecular = false; // can confuse lighting review
     bool doDiffuse = true;
     bool doAmbient = true;
     
