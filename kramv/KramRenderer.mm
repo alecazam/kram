@@ -939,6 +939,8 @@ struct packed_float3 {
     _showSettings->imageBoundsY = (int32_t)image.height;
 }
 
+float zoom3D = 1.0f;
+
 - (void)resetSomeImageSettings:(BOOL)isNewFile {
     
     // only reset these on new texture, but have to revalidate
@@ -995,8 +997,16 @@ struct packed_float3 {
     _modelMatrix = float4x4(float4m(tmpScaleX, scaleY, scaleZ, 1.0f)); // non uniform scale
     _modelMatrix = _modelMatrix * matrix4x4_translation(0.0f, 0.0f, -1.0); // set z=-1 unit back
     
-    // uniform scaled 3d primitiv
+    // uniform scaled 3d primitive
     float scale = MAX(scaleX, scaleY);
+    
+    // store the zoom into thew view matrix
+    // fragment tangents seem to break down at high model scale due to precision differences between worldPos and uv
+    static bool useZoom3D = false;
+    if (useZoom3D) {
+        zoom3D = scale; // * _showSettings->viewSizeX / 2.0f;
+        scale = 1.0;
+    }
     
     _modelMatrix3D = float4x4(float4m((doScaleX || doInvertX) ? tmpScaleX : scale, scale, scale, 1.0f)); // uniform scale
     _modelMatrix3D = _modelMatrix3D * matrix4x4_translation(0.0f, 0.0f, -1.0f); // set z=-1 unit back
@@ -1008,6 +1018,9 @@ struct packed_float3 {
     
     // non-uniform scale is okay here, only affects ortho volume
     // setting this to uniform zoom and object is not visible, zoom can be 20x in x and y
+    if (_showSettings->is3DView) {
+        zoom *= zoom3D;
+    }
     
     float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));
     viewMatrix = panTransform * viewMatrix;

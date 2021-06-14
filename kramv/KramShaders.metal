@@ -276,8 +276,13 @@ float3x3 generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float
     // so this to identify one failure case where the uv derivatives are clamped to zero.
     
     // solve the linear system
-    float3 dp2perp = cross(dpy, N);
     float3 dp1perp = cross(N, dpx);
+    float3 dp2perp = cross(dpy, N);
+    
+    // When one of the duvx or duvy is 0 or close to it, then that's when I see
+    // tangent differences to the vertex tangents.  dp2perp is knocked out by this.
+    // These artifacts are still present even moving scale into view matrix.
+    
     float3 T = dp2perp * duvx.x + dp1perp * duvy.x;
     float3 B = dp2perp * duvx.y + dp1perp * duvy.y;
    
@@ -681,6 +686,8 @@ vertex ColorInOut DrawVolumeVS(
 }
 
 float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) {
+    if (albedo.a == 0.0)
+        return albedo;
     
     float3 lightDir = normalize(float3(1,1,1)); // looking down -Z axis
     float3 lightColor = float3(1,1,1);
@@ -689,22 +696,24 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) 
     float3 diffuse = float3(0.0);
     float3 ambient = float3(0.0);
     
-    bool doSpecular = false; // this is a bit too bright, and can confuse
+    bool doSpecular = true; // can confuse lighting review
     bool doDiffuse = true;
     bool doAmbient = true;
+    
+    float dotNL = dot(n, lightDir);
     
     if (doSpecular) {
         float3 ref = normalize(reflect(viewDir, n));
         
         // above can be interpolated
         float dotRL = saturate(dot(ref, lightDir));
-        dotRL = pow(dotRL, 4.0); // * saturate(dotNL * 8.0);  // no spec without diffuse
-        specular = saturate(dotRL * lightColor.rgb);
+        dotRL = pow(dotRL, 8.0) * saturate(dotNL * 8.0);  // no spec without diffuse
+        specular = dotRL * lightColor.rgb;
     }
 
     if (doDiffuse) {
         
-        float dotNL = saturate(dot(n, lightDir));
+        float dotNLSat = saturate(dotNL);
         
         // soften the terminator off the vertNormal
         // this is so no diffuse if normal completely off from vertex normal
@@ -712,13 +721,13 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) 
         float dotVertex = saturate(dot(vertexNormal, n));
         dotNL *= saturate(9.0 * dotVertex);
         
-        diffuse = dotNL * lightColor.rgb;
+        diffuse = dotNLSat * lightColor.rgb;
     }
     
     if (doAmbient) {
         // can misconstrue as diffuse with this, but make dark side not look flat
-        float dotNLUnsat = dot(n, lightDir);
-        ambient = mix(0.1, 0.3, saturate(dotNLUnsat * 0.5 + 0.5));
+        float dotNLUnsat = dotNL;
+        ambient = mix(0.1, 0.2, saturate(dotNLUnsat * 0.5 + 0.5));
     }
     
     // attenuate, and not saturate below, so no HDR yet
@@ -726,7 +735,14 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) 
     diffuse *= 0.7;
     //ambient *= 0.2;
     
+#if 0
+    // attenuating albedo with specular knocks it all out
     albedo.xyz *= saturate(ambient + diffuse + specular);
+#else
+    albedo.xyz *= saturate(diffuse + ambient);
+    albedo.xyz += specular;
+    albedo.xyz = saturate(albedo.xyz);
+#endif
     
     return albedo;
 }
