@@ -1575,6 +1575,10 @@ float4 inverseScaleSquared(const float4x4& m) {
         return;
     }
     
+    // this can occur during a resize
+    if (!_lastDrawableTexture)
+        return;
+    
     id <MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
     if (!commandBuffer)
         return;
@@ -1593,20 +1597,25 @@ float4 inverseScaleSquared(const float4x4& m) {
         MTLOrigin srcOrigin = MTLOriginMake(_showSettings->cursorX, _showSettings->cursorY, 0);
         srcOrigin.x *= _showSettings->viewContentScaleFactor;
         srcOrigin.y *= _showSettings->viewContentScaleFactor;
-       
-        // Note: here we don't know the uv in original texture, would have to write that out to another
-        // texture.  Also on shapes, texel may not change but lighting might.
         
-        // can simply blit the color out of the render buffer
-        id <MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
-        if (blitCommandEncoder) {
-            [blitCommandEncoder copyFromTexture:_lastDrawableTexture
-                                    sourceSlice:0 sourceLevel:0 sourceOrigin:srcOrigin sourceSize:MTLSizeMake(1,1,1)
-                                      toTexture:_sampleRenderTex
-                               destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0,0,0)
-            ];
-            [blitCommandEncoder synchronizeResource:_sampleRenderTex];
-            [blitCommandEncoder endEncoding];
+        if ((srcOrigin.x >= 0 && srcOrigin.x < _lastDrawableTexture.width) &&
+            (srcOrigin.y >= 0 && srcOrigin.y < _lastDrawableTexture.height))
+        {
+            
+            // Note: here we don't know the uv in original texture, would have to write that out to another
+            // texture.  Also on shapes, texel may not change but lighting might.
+            
+            // can simply blit the color out of the render buffer
+            id <MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
+            if (blitCommandEncoder) {
+                [blitCommandEncoder copyFromTexture:_lastDrawableTexture
+                                        sourceSlice:0 sourceLevel:0 sourceOrigin:srcOrigin sourceSize:MTLSizeMake(1,1,1)
+                                          toTexture:_sampleRenderTex
+                                   destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0,0,0)
+                ];
+                [blitCommandEncoder synchronizeResource:_sampleRenderTex];
+                [blitCommandEncoder endEncoding];
+            }
         }
     }
     else {
@@ -1731,6 +1740,9 @@ float4 inverseScaleSquared(const float4x4& m) {
 
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
+    // Don't crashing trying to readback from the cached drawable during a resize.
+    _lastDrawableTexture = nil;
+    
     /// Respond to drawable size or orientation changes here
     _showSettings->viewSizeX = size.width;
     _showSettings->viewSizeY = size.height;

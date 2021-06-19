@@ -256,99 +256,70 @@ half3 toNormal(half3 n)
 // Then transforms the bumpNormal to that space.  No tangent is needed.
 // The downside is this must all be fp32, and all done in fragment shader and use derivatives.
 // Derivatives are known to be caclulated differently depending on hw and different precision.
+float length_squared(float x) {
+    return x * x;
+}
 
-float3x3 generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float2 uv, thread bool& success)
+bool generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float2 uv, thread float3x3& basis)
 {
-    // normalizing this didn't help the reconstruction
     float3 N = toFloat(vertexNormal);
     
-    // for OpenGL +Y convention, flip N.y
-    // but this doesn't match explicit tangents case, see if those are wrong.
-    // N.y = -N.y;
+    // normalizing this didn't help the reconstruction
+    //N = normalize(N);
     
     // get edge vectors of the pixel triangle
     float3 dpx = dfdx(worldPos);
     float3 dpy = dfdy(worldPos);
+    
+    // could also pass isFrontFacing, should this almost always be true
+    //float3 faceNormal = cross(dpy, dpx); // because dpy is down on screen
+    //bool isFlipped = dot(faceNormal, N) > 0;
+    
+    // These are much smaller in magnitude than the position derivatives
     float2 duvx = dfdx(uv);
     float2 duvy = dfdy(uv);
 
-    // May be pixel noise from this when up close and the derivatives exceed float precision
-    // so this to identify one failure case where the uv derivatives are clamped to zero.
-    
     // solve the linear system
-    float3 dp1perp = cross(N, dpx);
-    float3 dp2perp = cross(dpy, N);
-    
+    float3 dp1perp = cross(N, dpx); // vertical
+    float3 dp2perp = cross(dpy, N); // horizontal
+      
     // When one of the duvx or duvy is 0 or close to it, then that's when I see
     // tangent differences to the vertex tangents.  dp2perp is knocked out by this.
     // These artifacts are still present even moving scale into view matrix.
     
-    float3 T = dp2perp * duvx.x + dp1perp * duvy.x;
-    float3 B = dp2perp * duvx.y + dp1perp * duvy.y;
-   
-    // The author talks about preserving non-uniform scale of the worldPos, but the problem is that
-    // the duvx/y also can be scaled with respect to one another, and the code doesn't
-    // knock that out.  So with uniform scale and non-uniform uv, invmax also causes non-uniform scale of T/B.
-    // The normalize code below eliminates non-uniform worldPos scale and non-uniform uv scale.
-    // But we have a vertNormal that is also normalized.
     
-    float Tlen = length_squared(T);
+    float3 B = dp2perp * duvx.y + dp1perp * duvy.y;
     float Blen = length_squared(B);
     
-    // Tried 1e-10 tolerance here, but code hits that when zooming in closely to a shape.  Normal map doesn't look good using vertNormal
-    // so instead only check for the zero case.
-    if (Tlen == 0.0 || Blen == 0.0) {
-        success = false;
-        return float3x3(0.0f);
-    }
+    // could use B = dp1perp
+    if (Blen == 0.0)
+        return false;
     
-    success = true;
+   // float x = length_squared(duvx.x) + length_squared(duvy.x); // used for tangent
+   // float y = length_squared(duvx.y) + length_squared(duvy.y); // used for bitangent
     
-#if 1
-    // Still see some less smooth gradation across sphere compared with vertex tangents
-    // Maybe N needs to be interpolated as float3 instead of half3 to use this?  Bitan looks
-    // smoother than the tangent.
-    
-    // Eliminate scale invariance to match vertex basis which is normalized before interpolation.
-    // This loses that hemisphere is 1x v vertically, and u is 2x rate around the sphere.  Tan = 1/2 B then.
-    // Blocky triangles from this algorithm are because worldPos is linearly interpolated across
-    // the face of the flat poly, where vertex normals are smoothly interpolated across 3 points of triangle.
-
-    
-    // Tangent looks much more blocky than Bitangent across the sphere.  Why is that?
-
-    T *= rsqrt(Tlen);
-    B *= rsqrt(Blen);
-
-#else
-    // math seems off when sphere u is 2x the rate, tangent is calculated as 0.5 length
-    // but the stretch is already accounted for by position vs. uv rate.
-    // Don't want to scale N.x by 0.5, since it's really v that is more squished on model.
-
-    // Seeing tan/bitan that are 0.5 instead of 1.0 in length compared to the vertex tangents.
-    // This changes the lighting intensities since N is unit length.   See explanation above.
-    
-    // Note: min gens larger than 1 directions, but the normals look more correct
-    // like it's the inverse normal transform.  But lighting shifts.
-    
-    float invmax = rsqrt(max(Tlen, Blen));
+    float3 T;
+    //if (x <= y) {
+        B *= rsqrt(Blen);
+        T = cross(B, N);
+ //   }
+//    else {
+//        T = dp2perp * duvx.x + dp1perp * duvy.x;
+//        float Tlen = length_squared(T);
+//
+//        T *= rsqrt(Tlen);
+//        T = -T;
+//        B = cross(N, T);
+//    }
    
-    // keeps relative magnitude of two vectors, they're not both unit vecs
-    T *= invmax;
-    B *= invmax;
-#endif
-    
-    // had to flip this sign to get lighting to match vertex data
-    T = -T;
-    
-    float3x3 basis = float3x3(T, B, N);
-    return basis;
+    basis = float3x3(T, B, N);
+    return true;
 }
 
 half3 transformNormalByBasis(half3 bumpNormal, half3 vertexNormal, float3 worldPos, float2 uv)
 {
-    bool success = false;
-    float3x3 basis = generateFragmentTangentBasis(vertexNormal, worldPos, uv, success);
+    float3x3 basis;
+    bool success = generateFragmentTangentBasis(vertexNormal, worldPos, uv, basis);
     
     if (!success) {
         return vertexNormal;
@@ -919,8 +890,8 @@ float4 DrawPixels(
                 c.rgb = toFloat(in.tangent.xyz);
             }
             else {
-                bool success = false;
-                float3x3 basis = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord, success);
+                float3x3 basis;
+                bool success = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord, basis);
                 if (!success)
                     c.rgb = 0;
                 else
@@ -935,8 +906,8 @@ float4 DrawPixels(
                 c.rgb = toFloat(bitangent);
             }
             else {
-                bool success = false;
-                float3x3 basis = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord, success);
+                float3x3 basis;
+                bool success = generateFragmentTangentBasis(in.normal, in.worldPos, in.texCoord, basis);
                 if (!success)
                     c.rgb = 0;
                 else
