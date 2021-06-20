@@ -6,11 +6,6 @@
 
 using namespace metal;
 
-// TODO: Getting weird triangle artifacts on AMC 5500m on 16" MBP with useTangent = false.
-// Seems that uv derivatives used for basis generation are 0 in gpu capture
-// even though the uv itself are not.  That shouldn't be possible.
-// This results in large triangular artitfacts at the bottom of the sphere/capsule.
-
 //---------------------------------
 // helpers
 
@@ -672,7 +667,7 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) 
     // Need lighting control in UI, otherwise specular just adds a big bright
     // circle to all texture previews since it's additive.
     
-    bool doSpecular = false; // can confuse lighting review
+    bool doSpecular = false; // can confuse lighting review, make option to enable or everything has bright white spot
     bool doDiffuse = true;
     bool doAmbient = true;
     
@@ -722,6 +717,15 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) 
     
     return albedo;
 }
+
+float3 calculateViewDir(float3 worldPos, float3 cameraPosition) {
+    // ortho case
+    return float3(0,0,-1);
+    
+    // TODO: need perspective preview
+    //return normalize(worldPos - cameraPosition);
+}
+
 
 // TODO: eliminate the toUnorm() calls below, rendering to rgba16f but then present
 // doesn't have enough info to remap 16F to the display.
@@ -777,7 +781,7 @@ float4 DrawPixels(
                                        uniforms.isSwizzleAGToRG, uniforms.isSigned, facing);
             
             
-            float3 viewDir = normalize(in.worldPos - uniforms.cameraPosition);
+            float3 viewDir = calculateViewDir(in.worldPos, uniforms.cameraPosition);
             c = doLighting(float4(1.0), viewDir, toFloat(n), toFloat(in.normal));
 
             c.a = 1;
@@ -788,7 +792,7 @@ float4 DrawPixels(
                 c.xyz = toUnorm(c.xyz);
             }
             else { // TODO: need an isAlbedo test
-                float3 viewDir = normalize(in.worldPos - uniforms.cameraPosition);
+                float3 viewDir = calculateViewDir(in.worldPos, uniforms.cameraPosition);
                 
                 if (uniforms.isNormalMapPreview) {
                     half4 nmapH = toHalf(nmap);
