@@ -9,6 +9,8 @@ using namespace metal;
 //---------------------------------
 // helpers
 
+//constant float PI = 3.1415927;
+
 float toUnorm8(float c)
 {
     return (127.0 / 255.0) * c + (128.0 / 255.0);
@@ -255,6 +257,11 @@ float length_squared(float x) {
     return x * x;
 }
 
+// how is this not a built-in?
+float cross(float2 lhs, float2 rhs) {
+    return lhs.x * rhs.y - rhs.x * lhs.y;
+}
+
 bool generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float2 uv, thread float3x3& basis)
 {
     float3 N = toFloat(vertexNormal);
@@ -262,11 +269,24 @@ bool generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float2 uv
     // normalizing this didn't help the reconstruction
     //N = normalize(N);
     
+    // Original code pases viewDir, but that is constant for ortho view and would only work for perspective.
+    // Comment was that cameraPos drops out since it's constant, but perspective viewDir is also typically normalized too.
+    // Here using worldPos but it has much larger magnitude than uv then.
+    
     // get edge vectors of the pixel triangle
     float3 dpx = dfdx(worldPos);
     float3 dpy = dfdy(worldPos);
     
+    //N = normalize(cross(dpy, dpx));
+    
+    //dpx.y = -dpx.y;
+    //dpy.y = -dpy.y;
+    
     // could also pass isFrontFacing, should this almost always be true
+    
+    // The math problem here seems related to that we're using the planar dpx/dpy.
+    // but the normal is interpolated on the sphere, and plane is likely closer to dNx/dNy.
+    
     //float3 faceNormal = cross(dpy, dpx); // because dpy is down on screen
     //bool isFlipped = dot(faceNormal, N) > 0;
     
@@ -274,39 +294,65 @@ bool generateFragmentTangentBasis(half3 vertexNormal, float3 worldPos, float2 uv
     float2 duvx = dfdx(uv);
     float2 duvy = dfdy(uv);
 
+    // flip T based on uv direction to handle mirrored UV
+    float uvPlaneSign = sign(cross(duvy, duvx));
+    
+#if 1
+    
+    // can't really tell this from using N
+    float3 useN;
+    
+    //float3 faceNormal = cross(dpy, dpx);
+    //useN = faceNormal;
+    
+    useN = N;
+    
     // solve the linear system
-    float3 dp1perp = cross(N, dpx); // vertical
-    float3 dp2perp = cross(dpy, N); // horizontal
-      
-    // When one of the duvx or duvy is 0 or close to it, then that's when I see
-    // tangent differences to the vertex tangents.  dp2perp is knocked out by this.
-    // These artifacts are still present even moving scale into view matrix.
-    
-    
-    float3 B = dp2perp * duvx.y + dp1perp * duvy.y;
-    float Blen = length_squared(B);
+    float3 dp1perp = cross(useN, dpx); // vertical
+    float3 dp2perp = cross(dpy, useN); // horizontal
+#else
+    float3 dp1perp = -dpy;
+    float3 dp2perp = dpx;
+#endif
     
     // could use B = dp1perp
-    if (Blen == 0.0)
-        return false;
+    //if (Blen == 0.0)
+    //    return false;
     
-   // float x = length_squared(duvx.x) + length_squared(duvy.x); // used for tangent
-   // float y = length_squared(duvx.y) + length_squared(duvy.y); // used for bitangent
+    float3 T, B;
+
+#if 0
+    B = normalize(dp1perp);
+    T = -normalize(dp2perp);
+#elif 1
+    B = dp2perp * duvx.y + dp1perp * duvy.y;
+    float Blen = length_squared(B);
+
+    // vertical ridges with T.y flipping sign
+    B *= rsqrt(Blen);
+    T = cross(B, N);
     
-    float3 T;
-    //if (x <= y) {
-        B *= rsqrt(Blen);
-        T = cross(B, N);
- //   }
-//    else {
-//        T = dp2perp * duvx.x + dp1perp * duvy.x;
-//        float Tlen = length_squared(T);
-//
-//        T *= rsqrt(Tlen);
-//        T = -T;
-//        B = cross(N, T);
-//    }
-   
+    // This switches to lhcs on left side of mirrored sphere
+    // May just be that ModelIO has generated bad basis on that left side.
+    T *= -uvPlaneSign;
+    
+#elif 0
+    // This calc just doesn't look as good
+    
+    // trapezoidal pattern wih T.y flipping sign
+    T = dp2perp * duvx.x + dp1perp * duvy.x;
+    float Tlen = length_squared(T);
+
+    T *= rsqrt(Tlen);
+    
+    //T = -T;
+    
+    // Fixes tangent on mirrored sphere but Bitangent is wrong, does this mean uv wrap switches to lhcs instead of rhcs?
+    T *= uvPlaneSign;
+    
+    B = cross(N, T);
+#endif
+    
     basis = float3x3(T, B, N);
     return true;
 }
@@ -653,7 +699,7 @@ vertex ColorInOut DrawVolumeVS(
     return out;
 }
 
-float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) {
+float4 doLighting(float4 albedo, float3 viewDir, float3 bumpNormal, float3 vertexNormal) {
     if (albedo.a == 0.0)
         return albedo;
     
@@ -666,20 +712,55 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) 
     
     // Need lighting control in UI, otherwise specular just adds a big bright
     // circle to all texture previews since it's additive.
-    
+    bool doBlinnPhongSpecular = false;
     bool doSpecular = false; // can confuse lighting review, make option to enable or everything has bright white spot
     bool doDiffuse = true;
     bool doAmbient = true;
     
-    float dotNL = dot(n, lightDir);
+    // see here about energy normalization, not going to GGX just yet
+    // http://www.thetenthplanet.de/archives/255
+    float dotVertexNL = dot(vertexNormal, lightDir);
+    
+    float dotNL = dot(bumpNormal, lightDir);
     
     if (doSpecular) {
-        float3 ref = normalize(reflect(viewDir, n));
-        
-        // above can be interpolated
-        float dotRL = saturate(dot(ref, lightDir));
-        dotRL = pow(dotRL, 8.0) * saturate(dotNL * 8.0);  // no spec without diffuse
-        specular = dotRL * lightColor.rgb;
+        if (dotVertexNL > 0.0) {
+            float specularAmount;
+            
+            // in lieu of a roughness map, do this
+            // fake energy conservation by multiply with gloss
+            // https://www.youtube.com/watch?v=E4PHFnvMzFc&t=946s
+            float gloss = 0.6;
+            float specularExp = exp2(gloss * 11.0) + 2.0;
+            float energyNormalization = gloss;
+            
+            if (doBlinnPhongSpecular) {
+                // this doesn't look so good as a highlight in ortho at least
+                float3 E = -viewDir;
+                float3 H = normalize(lightDir + E);
+                float dotHN = saturate(dot(H, bumpNormal));
+                specularAmount = dotHN;
+                
+                // to make dotHN look like dotRL
+                // https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_reflection_model
+                specularExp *= 4.0;
+                
+                //energyNormalization = (specularExp + 1.0) / (2.0 * PI);
+            }
+            else {
+                // phong
+                // and seem to recall a conversion to above but H = (L+V)/2, the normalize knocks out the 1/2
+                float3 ref = normalize(reflect(viewDir, bumpNormal));
+                float dotRL = saturate(dot(ref, lightDir));
+                specularAmount = dotRL;
+                
+                //energyNormalization = (specularExp + 1.0) / (2.0 * PI);
+            }
+            
+            // above can be interpolated
+            specularAmount = pow(specularAmount, specularExp) * energyNormalization;
+            specular = specularAmount * lightColor.rgb;
+        }
     }
 
     if (doDiffuse) {
@@ -689,7 +770,7 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 n, float3 vertexNormal) 
         // soften the terminator off the vertNormal
         // this is so no diffuse if normal completely off from vertex normal
         // also limiting diffuse lighting bump to lighting by vertex normal
-        float dotVertex = saturate(dot(vertexNormal, n));
+        float dotVertex = saturate(dot(vertexNormal, bumpNormal));
         dotNL *= saturate(9.0 * dotVertex);
         
         diffuse = dotNLSat * lightColor.rgb;
@@ -726,9 +807,8 @@ float3 calculateViewDir(float3 worldPos, float3 cameraPosition) {
     //return normalize(worldPos - cameraPosition);
 }
 
-
-// TODO: eliminate the toUnorm() calls below, rendering to rgba16f but then present
-// doesn't have enough info to remap 16F to the display.
+// This is writing out to 16F and could write snorm data, but then that couldn't be displayed.
+// So code first converts to Unorm.
 
 float4 DrawPixels(
     ColorInOut in [[stage_in]],
@@ -1242,12 +1322,12 @@ fragment float4 DrawVolumePS(
 
 //--------------------------------------------------
 
+
 /* not using this yet, need a fsq and some frag coord to sample the normal map at discrete points
  
 // https://www.shadertoy.com/view/4s23DG
 // 2D vector field visualization by Morgan McGuire, @morgan3d, http://casual-effects.com
 
-constant float PI = 3.1415927;
 
 constant int   ARROW_V_STYLE = 1;
 constant int   ARROW_LINE_STYLE = 2;
