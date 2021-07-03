@@ -62,6 +62,17 @@ const char* ShowSettings::debugModeText() const {
     return text;
 }
 
+const char* ShowSettings::lightingModeText() const {
+    const char* text = "";
+    
+    switch(lightingMode) {
+        case LightingModeDiffuse: text = "Light Diffuse"; break;
+        case LightingModeSpecular: text = "Light Specular"; break;
+        default: break;
+    }
+    return text;
+}
+
 bool ShowSettings::isEyedropperFromDrawable() {
     return meshNumber > 0 || isPreview || isShowingAllLevelsAndMips || shapeChannel > 0;
 }
@@ -98,6 +109,20 @@ void ShowSettings::advanceShapeChannel(bool decrement) {
     }
 }
     
+void ShowSettings::advanceLightingMode(bool decrement) {
+    int32_t numEnums = LightingModeCount;
+    int32_t number = lightingMode;
+    if (decrement) {
+        number += numEnums - 1;
+    }
+    else {
+        number += 1;
+    }
+    
+    lightingMode = (LightingMode)(number % numEnums);
+}
+
+
 void ShowSettings::advanceDebugMode(bool decrement) {
     int32_t numEnums = DebugModeCount;
     int32_t mode = debugMode;

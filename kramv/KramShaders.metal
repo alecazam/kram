@@ -699,7 +699,31 @@ vertex ColorInOut DrawVolumeVS(
     return out;
 }
 
-float4 doLighting(float4 albedo, float3 viewDir, float3 bumpNormal, float3 vertexNormal) {
+
+float3 reflectIQ(float3 v, float3 n)
+{
+#if 0
+    // traditional refect
+    // v - 2 * n * dot(v n)
+    float3 r = reflect(v, n);
+    
+    return r;
+#else
+    // Not sure why IQ uses the r notation
+    float3 r = n;
+    
+    // https://iquilezles.org/www/articles/dontflip/dontflip.htm
+    // works for any dimension
+    // also article has a clamp forumulation
+    
+    float k = dot(v, r);
+    
+    // reflect v if it's in the negative half plane defined by r
+    return (k > 0.0) ? v : (v - 2.0 * r * k);
+#endif
+}
+
+float4 doLighting(float4 albedo, float3 viewDir, float3 bumpNormal, float3 vertexNormal, ShaderLightingMode lightingMode) {
     if (albedo.a == 0.0)
         return albedo;
     
@@ -713,24 +737,35 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 bumpNormal, float3 verte
     // Need lighting control in UI, otherwise specular just adds a big bright
     // circle to all texture previews since it's additive.
     bool doBlinnPhongSpecular = false;
-    bool doSpecular = false; // can confuse lighting review, make option to enable or everything has bright white spot
+    
+    bool doSpecular = true; // can confuse lighting review, make option to enable or everything has bright white spot
     bool doDiffuse = true;
     bool doAmbient = true;
     
+    if (lightingMode == ShLightingModeDiffuse)
+    {
+        doSpecular = false;
+    }
+    
     // see here about energy normalization, not going to GGX just yet
     // http://www.thetenthplanet.de/archives/255
-    float dotVertexNL = dot(vertexNormal, lightDir);
+    
+    // Note: this isn't the same as the faceNormal, the vertexNormal is interpolated
+    // see iq's trick for flipping lighting in reflectIQ.
+    
+    // Use reflectIQ to flip specular, 
+    //float dotVertexNL = dot(vertexNormal, lightDir);
     
     float dotNL = dot(bumpNormal, lightDir);
     
     if (doSpecular) {
-        if (dotVertexNL > 0.0) {
+        //if (dotVertexNL > 0.0) {
             float specularAmount;
             
             // in lieu of a roughness map, do this
             // fake energy conservation by multiply with gloss
             // https://www.youtube.com/watch?v=E4PHFnvMzFc&t=946s
-            float gloss = 0.6;
+            float gloss = 0.3;
             float specularExp = exp2(gloss * 11.0) + 2.0;
             float energyNormalization = gloss;
             
@@ -750,7 +785,7 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 bumpNormal, float3 verte
             else {
                 // phong
                 // and seem to recall a conversion to above but H = (L+V)/2, the normalize knocks out the 1/2
-                float3 ref = normalize(reflect(viewDir, bumpNormal));
+                float3 ref = normalize(reflectIQ(viewDir, bumpNormal));
                 float dotRL = saturate(dot(ref, lightDir));
                 specularAmount = dotRL;
                 
@@ -760,7 +795,7 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 bumpNormal, float3 verte
             // above can be interpolated
             specularAmount = pow(specularAmount, specularExp) * energyNormalization;
             specular = specularAmount * lightColor.rgb;
-        }
+       // }
     }
 
     if (doDiffuse) {
@@ -862,7 +897,7 @@ float4 DrawPixels(
             
             
             float3 viewDir = calculateViewDir(in.worldPos, uniforms.cameraPosition);
-            c = doLighting(float4(1.0), viewDir, toFloat(n), toFloat(in.normal));
+            c = doLighting(float4(1.0), viewDir, toFloat(n), toFloat(in.normal), uniforms.lightingMode);
 
             c.a = 1;
         }
@@ -881,10 +916,10 @@ float4 DrawPixels(
                                                in.worldPos, in.texCoord, uniforms.useTangent, // to build TBN
                                                uniforms.isNormalMapSwizzleAGToRG, uniforms.isNormalMapSigned, facing);
                     
-                    c = doLighting(c, viewDir, toFloat(n), toFloat(in.normal));
+                    c = doLighting(c, viewDir, toFloat(n), toFloat(in.normal), uniforms.lightingMode);
                 }
                 else {
-                    c = doLighting(c, viewDir, toFloat(in.normal), toFloat(in.normal));
+                    c = doLighting(c, viewDir, toFloat(in.normal), toFloat(in.normal), uniforms.lightingMode);
                 }
             }
             

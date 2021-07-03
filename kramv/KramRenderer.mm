@@ -1077,6 +1077,7 @@ float4 inverseScaleSquared(const float4x4& m) {
     
     uniforms.isSDF = _showSettings->isSDF;
     uniforms.numChannels = _showSettings->numChannels;
+    uniforms.lightingMode = (ShaderLightingMode)_showSettings->lightingMode;
     
     MyMTLTextureType textureType = MyMTLTextureType2D;
     MyMTLPixelFormat textureFormat = MyMTLPixelFormatInvalid;

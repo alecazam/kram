@@ -112,6 +112,11 @@ typedef NS_ENUM(int32_t, ShaderShapeChannel)
     // ShShapeChannelBumpNormal,
 };
 
+typedef NS_ENUM(int32_t, ShaderLightingMode)
+{
+    ShLightingModeDiffuse = 0,
+    ShLightingModeSpecular,
+};
 
 // TODO: placement of these elements in the struct breaks transfer
 // of data. This seems to work.  Alignment issues with mixing these differently.
@@ -158,6 +163,9 @@ struct Uniforms
     
     // View the r,g,b,a channels of the texture
     ShaderTextureChannels channels; // mask
+    
+    // Can turn on/off specular
+    ShaderLightingMode lightingMode;
 };
 
 // uploaded separately, so multiple mips, faces, array can be drawn to the screen at one time

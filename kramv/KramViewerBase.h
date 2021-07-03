@@ -70,6 +70,13 @@ enum ShapeChannel
     ShapeChannelCount
 };
 
+enum LightingMode
+{
+    LightingModeDiffuse = 0, // amb + diffuse
+    LightingModeSpecular = 1,  // amb + diffuse + specular
+    
+    LightingModeCount,
+};
 
 class ShowSettings {
 public:
@@ -194,6 +201,8 @@ public:
     
     ShapeChannel shapeChannel = ShapeChannelNone;
     
+    LightingMode lightingMode = LightingModeDiffuse;
+    
     float4x4 projectionViewModelMatrix;
     bool isInverted;
     
@@ -208,10 +217,12 @@ public:
     void advanceMeshNumber(bool decrement);
     void advanceDebugMode(bool decrement);
     void advanceShapeChannel(bool decrement);
+    void advanceLightingMode(bool decrement);
 
     const char* meshNumberText() const;
     const char* shapeChannelText() const;
     const char* debugModeText() const;
+    const char* lightingModeText() const;
 
     string lastFilename;
     double lastTimestamp = 0.0;

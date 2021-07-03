@@ -498,7 +498,7 @@ NSArray<NSString*>* pasteboardTypes = @[
 }
 
 - (NSStackView*)_addButtons {
-    const int32_t numButtons = 29; // 13;
+    const int32_t numButtons = 30;
     const char* names[numButtons*2] = {
         
         "?", "Help",
@@ -531,6 +531,7 @@ NSArray<NSString*>* pasteboardTypes = @[
         
         "8", "Shape",
         "6", "Shape Channel",
+        "5", "Lighting",
         "T", "Tangents",
         
         // TODO: need to shift hud over a little
@@ -1504,8 +1505,9 @@ float4 toSnorm(float4 c)
     
     auto meshState = toState(_showSettings->meshNumber > 0);
     auto meshChannelState = toState(_showSettings->shapeChannel > 0);
+    auto lightingState = toState(_showSettings->lightingMode != LightingModeDiffuse);
     auto tangentState = toState(_showSettings->useTangent);
-   
+    
     // TODO: UI state, and vertical state
     auto uiState = toState(_buttonStack.hidden);
     
@@ -1534,6 +1536,7 @@ float4 toSnorm(float4 c)
     [self findButton:"O"].state = previewState;
     [self findButton:"8"].state = meshState;
     [self findButton:"6"].state = meshChannelState;
+    [self findButton:"5"].state = lightingState;
     [self findButton:"W"].state = wrapState;
     [self findButton:"D"].state = gridState;
     [self findButton:"E"].state = debugState;
@@ -1566,6 +1569,7 @@ float4 toSnorm(float4 c)
     [self findMenuItem:"O"].state = previewState;
     [self findMenuItem:"8"].state = meshState;
     [self findMenuItem:"6"].state = meshChannelState;
+    [self findMenuItem:"5"].state = lightingState;
     [self findMenuItem:"T"].state = tangentState;
    
     [self findMenuItem:"W"].state = wrapState;
@@ -1651,6 +1655,8 @@ float4 toSnorm(float4 c)
         keyCode = Key::Num8;
     else if (title == "6")
         keyCode = Key::Num6;
+    else if (title == "5")
+        keyCode = Key::Num5;
     else if (title == "T")
         keyCode = Key::T;
    
@@ -1790,6 +1796,12 @@ float4 toSnorm(float4 c)
         case Key::Num6: {
             _showSettings->advanceShapeChannel(isShiftKeyDown);
             text = _showSettings->shapeChannelText();
+            isChanged = true;
+            break;
+        }
+        case Key::Num5: {
+            _showSettings->advanceLightingMode(isShiftKeyDown);
+            text = _showSettings->lightingModeText();
             isChanged = true;
             break;
         }
