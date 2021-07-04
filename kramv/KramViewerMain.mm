@@ -1595,11 +1595,11 @@ float4 toSnorm(float4 c)
     // sender is the UI element/NSButton
     if ([sender isKindOfClass:[NSButton class]]) {
         NSButton* button = (NSButton*)sender;
-        title = [button.title UTF8String];
+        title = button.title.UTF8String;
     }
     else if ([sender isKindOfClass:[NSMenuItem class]]) {
         NSMenuItem* menuItem = (NSMenuItem*)sender;
-        title = [menuItem.toolTip UTF8String];
+        title = menuItem.toolTip.UTF8String;
     }
     else {
         KLOGE("kram", "unknown UI element");

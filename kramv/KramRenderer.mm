@@ -327,63 +327,47 @@ struct ViewFramebufferData {
     return YES;
 }
 
-- (void)_createComputePipelines
+- (id<MTLComputePipelineState>)_createComputePipeline:(const char*)name
 {
-    NSError *error = NULL;
-    id<MTLFunction> computeFunction;
+    NSString* nameNS = [NSString stringWithUTF8String:name];
+    NSError *error = nil;
+    id<MTLFunction> computeFunction = [_shaderLibrary newFunctionWithName:nameNS];
     
-    //-----------------------
-   
-    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleImageCS"];
-    _pipelineStateImageCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
-    if (!_pipelineStateImageCS)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
+    id<MTLComputePipelineState> pipe;
+    if (computeFunction) {
+        computeFunction.label = nameNS;
+        
+        pipe = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
+    }
+
+    if (!pipe) {
+        KLOGE("kramv", "Failed to create compute pipeline state for %s, error %s", name, error ? error.localizedDescription.UTF8String : "");
+        return nil;
     }
     
-    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleImageArrayCS"];
-    _pipelineStateImageArrayCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
-    if (!_pipelineStateImageArrayCS)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
-    
-    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleVolumeCS"];
-    _pipelineStateVolumeCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
-    if (!_pipelineStateVolumeCS)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
-    
-    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleCubeCS"];
-    _pipelineStateCubeCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
-    if (!_pipelineStateCubeCS)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
-    
-    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleCubeArrayCS"];
-    _pipelineStateCubeArrayCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
-    if (!_pipelineStateCubeArrayCS)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
-    
-    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleImage1DArrayCS"];
-    _pipelineState1DArrayCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
-    if (!_pipelineState1DArrayCS)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
+    return pipe;
 }
 
-- (void)_createRenderPipelines
+- (void)_createComputePipelines
 {
+    _pipelineStateImageCS       = [self _createComputePipeline:"SampleImageCS"];
+    _pipelineStateImageArrayCS  = [self _createComputePipeline:"SampleImageArrayCS"];
+    _pipelineStateVolumeCS      = [self _createComputePipeline:"SampleVolumeCS"];
+    _pipelineStateCubeCS        = [self _createComputePipeline:"SampleCubeCS"];
+    _pipelineStateCubeArrayCS   = [self _createComputePipeline:"SampleCubeArrayCS"];
+    _pipelineState1DArrayCS     = [self _createComputePipeline:"SampleImage1DArrayCS"];
+}
+
+- (id<MTLRenderPipelineState>)_createRenderPipeline:(const char*)vs fs:(const char*)fs
+{
+    NSString* vsNameNS = [NSString stringWithUTF8String:vs];
+    NSString* fsNameNS = [NSString stringWithUTF8String:fs];
+   
     id <MTLFunction> vertexFunction;
     id <MTLFunction> fragmentFunction;
     
     MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
-    pipelineStateDescriptor.label = @"DrawImagePipeline";
+    pipelineStateDescriptor.label = fsNameNS;
     pipelineStateDescriptor.sampleCount = _viewFramebuffer.sampleCount;
     pipelineStateDescriptor.vertexDescriptor = _mtlVertexDescriptor;
     pipelineStateDescriptor.colorAttachments[0].pixelFormat = _viewFramebuffer.colorPixelFormat;
@@ -397,81 +381,38 @@ struct ViewFramebufferData {
     
     //-----------------------
    
-    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawImageVS"];
-    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawImagePS"];
-    pipelineStateDescriptor.vertexFunction = vertexFunction;
-    pipelineStateDescriptor.fragmentFunction = fragmentFunction;
+    vertexFunction = [_shaderLibrary newFunctionWithName:vsNameNS];
+    fragmentFunction = [_shaderLibrary newFunctionWithName:fsNameNS];
     
-    _pipelineStateImage = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-    if (!_pipelineStateImage)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
+    id<MTLRenderPipelineState> pipe;
+    
+    if (vertexFunction && fragmentFunction) {
+        vertexFunction.label = vsNameNS;
+        fragmentFunction.label = fsNameNS;
+       
+        pipelineStateDescriptor.vertexFunction = vertexFunction;
+        pipelineStateDescriptor.fragmentFunction = fragmentFunction;
+        
+        pipe = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
     }
+    
+    if (!pipe)
+    {
+        KLOGE("kramv", "Failed to create render pipeline state for %s, error %s", fs, error ? error.description.UTF8String : "");
+        return nil;
+    }
+    
+    return pipe;
+}
 
-    //-----------------------
-   
-    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawImageVS"]; // reused
-    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawImageArrayPS"];
-    pipelineStateDescriptor.vertexFunction = vertexFunction;
-    pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-    
-    _pipelineStateImageArray = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-    if (!_pipelineStateImageArray)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
-
-    //-----------------------
-   
-    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawImageVS"];
-    fragmentFunction = [_shaderLibrary newFunctionWithName:@"Draw1DArrayPS"];
-    pipelineStateDescriptor.vertexFunction = vertexFunction;
-    pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-    
-    _pipelineState1DArray = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-    if (!_pipelineState1DArray)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
-    
-    //-----------------------
-   
-    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawCubeVS"];
-    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawCubePS"];
-    pipelineStateDescriptor.vertexFunction = vertexFunction;
-    pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-    
-    _pipelineStateCube = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-    if (!_pipelineStateCube)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
-    
-    //-----------------------
-   
-    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawCubeVS"]; // reused
-    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawCubeArrayPS"];
-    pipelineStateDescriptor.vertexFunction = vertexFunction;
-    pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-    
-    _pipelineStateCubeArray = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-    if (!_pipelineStateCubeArray)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
-    
-    //-----------------------
-    
-    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawVolumeVS"];
-    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawVolumePS"];
-    pipelineStateDescriptor.vertexFunction = vertexFunction;
-    pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-    
-    _pipelineStateVolume = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-    if (!_pipelineStateVolume)
-    {
-        NSLog(@"Failed to create pipeline state, error %@", error);
-    }
+- (void)_createRenderPipelines
+{
+    _pipelineStateImage         = [self _createRenderPipeline:"DrawImageVS" fs:"DrawImagePS"];
+    _pipelineStateImageArray    = [self _createRenderPipeline:"DrawImageVS" fs:"DrawImageArrayPS"];
+    _pipelineState1DArray       = [self _createRenderPipeline:"DrawImageVS" fs:"Draw1DArrayPS"];
+    _pipelineStateCube          = [self _createRenderPipeline:"DrawCubeVS" fs:"DrawCubePS"];
+    _pipelineStateCubeArray     = [self _createRenderPipeline:"DrawCubeVS" fs:"DrawCubeArrayPS"];
+    _pipelineStateVolume        = [self _createRenderPipeline:"DrawVolumeVS" fs:"DrawVolumePS"];
 }
 
 - (void)_createSampleRender
@@ -572,7 +513,7 @@ struct ViewFramebufferData {
     
     if(!mesh || error)
     {
-        NSLog(@"Error creating MetalKit mesh %@", error.localizedDescription);
+        KLOGE("kramv", "Error creating MetalKit mesh %s", error.localizedDescription.UTF8String);
         return nil;
     }
 
@@ -839,7 +780,7 @@ struct packed_float3 {
     
 - (BOOL)loadTexture:(nonnull NSURL *)url
 {
-    string fullFilename = [url.path UTF8String];
+    string fullFilename = url.path.UTF8String;
     
     // can use this to pull, or use fstat on FileHelper
     NSDate *fileDate = nil;

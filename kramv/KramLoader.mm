@@ -28,7 +28,7 @@ using namespace std;
 using namespace simd;
 
 string kram::toLower(const string& text) {
-    return string([[[NSString stringWithUTF8String:text.c_str()] lowercaseString] UTF8String]);
+    return string([NSString stringWithUTF8String:text.c_str()].lowercaseString.UTF8String);
 }
 
 // defer data need to blit staging MTLBuffer to MTLTexture at the start of rendering
@@ -309,7 +309,7 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
 
 - (BOOL)loadImageFromURL:(nonnull NSURL *)url image:(KTXImage&)image imageData:(KTXImageData&)imageData
 {
-    const char *path = [url.absoluteURL.path UTF8String];
+    const char *path = url.absoluteURL.path.UTF8String;
 
     // TODO: could also ignore extension, and look at header/signature instead
     // files can be renamed to the incorrect extensions
