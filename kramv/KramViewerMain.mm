@@ -2659,6 +2659,21 @@ float4 toSnorm(float4 c)
     
     //-------------------
     
+    if (endsWithExtension(filename, ".metallib")) {
+       
+        Renderer* renderer = (Renderer*)self.delegate;
+        if ([renderer hotloadShaders: filename]) {
+            NSURL* metallibFileURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
+
+            // add to recent docs, so can reload quickly
+            NSDocumentController* dc = [NSDocumentController sharedDocumentController];
+            [dc noteNewRecentDocumentURL:metallibFileURL];
+        
+            return YES;
+        }
+        return NO;
+    }
+          
     // file is not a supported extension
     if (!(endsWithExtension(filename, ".zip") ||
           isPNGFilename(filename) ||

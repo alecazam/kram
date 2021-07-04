@@ -38,6 +38,8 @@ namespace kram {
 
 - (simd::float4x4)computeImageTransform:(float)panX panY:(float)panY zoom:(float)zoom;
 
+- (BOOL)hotloadShaders:(nonnull const char*)filename;
+
 @end
 
 

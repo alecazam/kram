@@ -27,6 +27,13 @@ static const NSUInteger MaxBuffersInFlight = 3;
 using namespace kram;
 using namespace simd;
 
+// Capture what we need to build the renderPieplines, without needing view
+struct ViewFramebufferData {
+    MTLPixelFormat colorPixelFormat = MTLPixelFormatInvalid;
+    MTLPixelFormat depthStencilPixelFormat = MTLPixelFormatInvalid;
+    uint32_t sampleCount = 0;
+};
+
 @implementation Renderer
 {
     dispatch_semaphore_t _inFlightSemaphore;
@@ -101,6 +108,11 @@ using namespace simd;
     //MTKMesh *_meshCylinder;
     MTKMesh *_meshCapsule;
     MTKMeshBufferAllocator *_metalAllocator;
+    
+    id<MTLLibrary> _shaderLibrary;
+    NSURL* _metallibFileURL;
+    NSDate* _metallibFileDate;
+    ViewFramebufferData _viewFramebuffer;
     
     ShowSettings* _showSettings;
 }
@@ -223,24 +235,29 @@ using namespace simd;
     _mdlVertexDescriptor.attributes[VertexAttributeTexcoord].name  = MDLVertexAttributeTextureCoordinate;
     _mdlVertexDescriptor.attributes[VertexAttributeNormal].name    = MDLVertexAttributeNormal;
     _mdlVertexDescriptor.attributes[VertexAttributeTangent].name   = MDLVertexAttributeTangent;
-
 }
+
+
 
 - (void)_loadMetalWithView:(nonnull MTKView *)view
 {
     /// Load Metal state objects and initialize renderer dependent view properties
 
-    view.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-    //view.colorPixelFormat = MTLPixelFormatBGRA8Unorm_sRGB; // TODO: adjust this to draw srgb or not, prefer RGBA
-    
-    // have a mix of linear color and normals, don't want srgb conversion until displayed
     view.colorPixelFormat = MTLPixelFormatRGBA16Float;
-    
+    view.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
     view.sampleCount = 1;
 
+    _viewFramebuffer.colorPixelFormat = view.colorPixelFormat;
+    _viewFramebuffer.depthStencilPixelFormat = view.depthStencilPixelFormat;
+    _viewFramebuffer.sampleCount = view.sampleCount;
+    
     [self _createVertexDescriptor];
     
-    [self _createRenderPipelines:view];
+    // first time use the default library, if reload is called then use different library
+    _shaderLibrary = [_device newDefaultLibrary];
+
+    
+    [self _createRenderPipelines];
     
     //-----------------------
    
@@ -272,51 +289,87 @@ using namespace simd;
     [self _createSampleRender];
 }
 
+- (BOOL)hotloadShaders:(const char*)filename
+{
+    NSURL* _metallibFileURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
+
+    NSError* err = nil;
+    NSDate *fileDate = nil;
+    [_metallibFileURL getResourceValue:&fileDate forKey:NSURLContentModificationDateKey error:&err];
+
+    // only reload if the metallib changed timestamp, otherwise default.metallib has most recent copy
+    if (err != nil || [_metallibFileDate isEqualToDate:fileDate]) {
+        return NO;
+    }
+    _metallibFileDate = fileDate;
+    
+    // Now dynamically load the metallib
+    NSData* dataNS = [NSData dataWithContentsOfURL:_metallibFileURL options:NSDataReadingMappedIfSafe
+ error:&err];
+    if (dataNS == nil) {
+        return NO;
+    }
+    dispatch_data_t data = dispatch_data_create(dataNS.bytes, dataNS.length, dispatch_get_main_queue(), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+    
+    id<MTLLibrary> shaderLibrary = [_device newLibraryWithData:data error:&err];
+    if (err != nil) {
+        return NO;
+    }
+    _shaderLibrary = shaderLibrary;
+    
+    // rebuild the shaders and pipelines that use the shader
+    [self _createRenderPipelines];
+
+    [self _createComputePipelines];
+   
+    [self _createSampleRender];
+    
+    return YES;
+}
+
 - (void)_createComputePipelines
 {
-    id<MTLLibrary> defaultLibrary = [_device newDefaultLibrary];
-
     NSError *error = NULL;
     id<MTLFunction> computeFunction;
     
     //-----------------------
    
-    computeFunction = [defaultLibrary newFunctionWithName:@"SampleImageCS"];
+    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleImageCS"];
     _pipelineStateImageCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
     if (!_pipelineStateImageCS)
     {
         NSLog(@"Failed to create pipeline state, error %@", error);
     }
     
-    computeFunction = [defaultLibrary newFunctionWithName:@"SampleImageArrayCS"];
+    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleImageArrayCS"];
     _pipelineStateImageArrayCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
     if (!_pipelineStateImageArrayCS)
     {
         NSLog(@"Failed to create pipeline state, error %@", error);
     }
     
-    computeFunction = [defaultLibrary newFunctionWithName:@"SampleVolumeCS"];
+    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleVolumeCS"];
     _pipelineStateVolumeCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
     if (!_pipelineStateVolumeCS)
     {
         NSLog(@"Failed to create pipeline state, error %@", error);
     }
     
-    computeFunction = [defaultLibrary newFunctionWithName:@"SampleCubeCS"];
+    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleCubeCS"];
     _pipelineStateCubeCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
     if (!_pipelineStateCubeCS)
     {
         NSLog(@"Failed to create pipeline state, error %@", error);
     }
     
-    computeFunction = [defaultLibrary newFunctionWithName:@"SampleCubeArrayCS"];
+    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleCubeArrayCS"];
     _pipelineStateCubeArrayCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
     if (!_pipelineStateCubeArrayCS)
     {
         NSLog(@"Failed to create pipeline state, error %@", error);
     }
     
-    computeFunction = [defaultLibrary newFunctionWithName:@"SampleImage1DArrayCS"];
+    computeFunction = [_shaderLibrary newFunctionWithName:@"SampleImage1DArrayCS"];
     _pipelineState1DArrayCS = [_device newComputePipelineStateWithFunction:computeFunction error:&error];
     if (!_pipelineState1DArrayCS)
     {
@@ -324,30 +377,28 @@ using namespace simd;
     }
 }
 
-- (void)_createRenderPipelines:(MTKView*)view
+- (void)_createRenderPipelines
 {
-    id<MTLLibrary> defaultLibrary = [_device newDefaultLibrary];
-
     id <MTLFunction> vertexFunction;
     id <MTLFunction> fragmentFunction;
     
     MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
     pipelineStateDescriptor.label = @"DrawImagePipeline";
-    pipelineStateDescriptor.sampleCount = view.sampleCount;
+    pipelineStateDescriptor.sampleCount = _viewFramebuffer.sampleCount;
     pipelineStateDescriptor.vertexDescriptor = _mtlVertexDescriptor;
-    pipelineStateDescriptor.colorAttachments[0].pixelFormat = view.colorPixelFormat;
+    pipelineStateDescriptor.colorAttachments[0].pixelFormat = _viewFramebuffer.colorPixelFormat;
     
     // TODO: could drop these for images, but want a 3D preview of content
     // or might make these memoryless.
-    pipelineStateDescriptor.depthAttachmentPixelFormat = view.depthStencilPixelFormat;
-    pipelineStateDescriptor.stencilAttachmentPixelFormat = view.depthStencilPixelFormat;
+    pipelineStateDescriptor.depthAttachmentPixelFormat = _viewFramebuffer.depthStencilPixelFormat;
+    pipelineStateDescriptor.stencilAttachmentPixelFormat = _viewFramebuffer.depthStencilPixelFormat;
 
     NSError *error = NULL;
     
     //-----------------------
    
-    vertexFunction = [defaultLibrary newFunctionWithName:@"DrawImageVS"];
-    fragmentFunction = [defaultLibrary newFunctionWithName:@"DrawImagePS"];
+    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawImageVS"];
+    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawImagePS"];
     pipelineStateDescriptor.vertexFunction = vertexFunction;
     pipelineStateDescriptor.fragmentFunction = fragmentFunction;
     
@@ -359,8 +410,8 @@ using namespace simd;
 
     //-----------------------
    
-    vertexFunction = [defaultLibrary newFunctionWithName:@"DrawImageVS"]; // reused
-    fragmentFunction = [defaultLibrary newFunctionWithName:@"DrawImageArrayPS"];
+    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawImageVS"]; // reused
+    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawImageArrayPS"];
     pipelineStateDescriptor.vertexFunction = vertexFunction;
     pipelineStateDescriptor.fragmentFunction = fragmentFunction;
     
@@ -372,8 +423,8 @@ using namespace simd;
 
     //-----------------------
    
-    vertexFunction = [defaultLibrary newFunctionWithName:@"DrawImageVS"];
-    fragmentFunction = [defaultLibrary newFunctionWithName:@"Draw1DArrayPS"];
+    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawImageVS"];
+    fragmentFunction = [_shaderLibrary newFunctionWithName:@"Draw1DArrayPS"];
     pipelineStateDescriptor.vertexFunction = vertexFunction;
     pipelineStateDescriptor.fragmentFunction = fragmentFunction;
     
@@ -385,8 +436,8 @@ using namespace simd;
     
     //-----------------------
    
-    vertexFunction = [defaultLibrary newFunctionWithName:@"DrawCubeVS"];
-    fragmentFunction = [defaultLibrary newFunctionWithName:@"DrawCubePS"];
+    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawCubeVS"];
+    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawCubePS"];
     pipelineStateDescriptor.vertexFunction = vertexFunction;
     pipelineStateDescriptor.fragmentFunction = fragmentFunction;
     
@@ -398,8 +449,8 @@ using namespace simd;
     
     //-----------------------
    
-    vertexFunction = [defaultLibrary newFunctionWithName:@"DrawCubeVS"]; // reused
-    fragmentFunction = [defaultLibrary newFunctionWithName:@"DrawCubeArrayPS"];
+    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawCubeVS"]; // reused
+    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawCubeArrayPS"];
     pipelineStateDescriptor.vertexFunction = vertexFunction;
     pipelineStateDescriptor.fragmentFunction = fragmentFunction;
     
@@ -411,8 +462,8 @@ using namespace simd;
     
     //-----------------------
     
-    vertexFunction = [defaultLibrary newFunctionWithName:@"DrawVolumeVS"];
-    fragmentFunction = [defaultLibrary newFunctionWithName:@"DrawVolumePS"];
+    vertexFunction = [_shaderLibrary newFunctionWithName:@"DrawVolumeVS"];
+    fragmentFunction = [_shaderLibrary newFunctionWithName:@"DrawVolumePS"];
     pipelineStateDescriptor.vertexFunction = vertexFunction;
     pipelineStateDescriptor.fragmentFunction = fragmentFunction;
     
@@ -1259,6 +1310,7 @@ float4 inverseScaleSquared(const float4x4& m) {
 - (void)drawInMTKView:(nonnull MTKView *)view
 {
     @autoreleasepool {
+        
         /// Per frame updates here
 
         // TODO: move this out, needs to get called off mouseMove, but don't want to call drawMain
