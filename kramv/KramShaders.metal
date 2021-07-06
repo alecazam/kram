@@ -536,8 +536,8 @@ struct Vertex
     float2 texCoord [[attribute(VertexAttributeTexcoord)]];
     
     // basis
-    float3 normal [[attribute(VertexAttributeNormal)]];; // consider hallf
-    float4 tangent [[attribute(VertexAttributeTangent)]];; // tan + bitanSign
+    float3 normal [[attribute(VertexAttributeNormal)]]; // consider half
+    float4 tangent [[attribute(VertexAttributeTangent)]]; // tan + bitanSign
 };
 
 struct ColorInOut
@@ -847,7 +847,7 @@ float3 calculateViewDir(float3 worldPos, float3 cameraPosition) {
 
 float4 DrawPixels(
     ColorInOut in [[stage_in]],
-    bool facing [[front_facing]],
+    bool facing,
     constant Uniforms& uniforms,
     float4 c,
     float4 nmap,
@@ -882,7 +882,7 @@ float4 DrawPixels(
             // distance to edge in pixels (scalar)
             float pixelDist = dist * onePixel;
 
-            // typicaly source recommends smoothstep, so that get a soft instead of hard ramp of alpha at edges
+            // typically source recommends smoothstep, so that get a soft instead of hard ramp of alpha at edges
             
             // store as preml alpha
             c.rgba = saturate(pixelDist);

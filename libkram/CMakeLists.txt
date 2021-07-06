@@ -61,7 +61,7 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
 	"${SOURCE_DIR}/astc-encoder/*.cpp"
 	"${SOURCE_DIR}/astc-encoder/*.h"
 
-    # ATE is Apple specifi+ macOS)
+    # ATE is Apple specific to macOS)
     "${SOURCE_DIR}/ate/*.mm"
     "${SOURCE_DIR}/ate/*.h"
 
