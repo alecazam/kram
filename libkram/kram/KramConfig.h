@@ -252,6 +252,16 @@ public:
 
 }  // namespace simd
 
+#if !USE_EASTL
+
+namespace std
+{
+inline float clamp(float x, float minValue, float maxValue) { return min(max(x, minValue), maxValue); }
+inline double clamp(double x, double minValue, double maxValue) { return min(max(x, minValue), maxValue); }
+}
+
+#endif
+
 #if USE_SIMDLIB
 #include "simd/simd.h"
 #else
@@ -298,17 +308,25 @@ inline float4 float4m(float x)
     return x;
 }
 
+inline float saturate(float v)
+{
+    return NAMESPACE_STL::clamp(v, 0.0f, 1.0f);
+}
+inline double saturate(double v)
+{
+    return NAMESPACE_STL::clamp(v, 0.0, 1.0);
+}
 inline float2 saturate(const float2& v)
 {
-    return simd_clamp( v, 0.0f, 1.0f );
+    return simd_clamp(v, 0.0f, 1.0f);
 }
 inline float3 saturate(const float3& v)
 {
-    return simd_clamp( v, 0.0f, 1.0f );
+    return simd_clamp(v, 0.0f, 1.0f);
 }
 inline float4 saturate(const float4& v)
 {
-    return simd_clamp( v, 0.0f, 1.0f );
+    return simd_clamp(v, 0.0f, 1.0f);
 }
 
 #endif
