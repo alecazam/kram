@@ -38,6 +38,7 @@ static bool doPrintPanZoom = true;
 
 using namespace simd;
 using namespace kram;
+using namespace NAMESPACE_STL;
 
 //-------------
 
@@ -715,8 +716,8 @@ NSArray<NSString*>* pasteboardTypes = @[
     }
     
     // that's in model space (+/0.5f, +/0.5f), so convert to texture space
-    pixel.x = clamp(pixel.x, -0.5f, maxX);
-    pixel.y = clamp(pixel.y, minY, 0.5f);
+    pixel.x = NAMESPACE_STL::clamp(pixel.x, -0.5f, maxX);
+    pixel.y = NAMESPACE_STL::clamp(pixel.y, minY, 0.5f);
     
     // now that's the point that we want to zoom towards
     // No checkson this zoom
@@ -2362,7 +2363,7 @@ float4 toSnorm(float4 c)
     }
     
     Renderer* renderer = (Renderer*)self.delegate;
-    if (![renderer loadTextureFromImage:fullFilename timestamp:timestamp image:image imageNormal:hasNormal ? &imageNormal : nullptr isArchive:NO]) {
+    if (![renderer loadTextureFromImage:fullFilename.c_str() timestamp:timestamp image:image imageNormal:hasNormal ? &imageNormal : nullptr isArchive:NO]) {
         return NO;
     }
 
@@ -2501,7 +2502,7 @@ float4 toSnorm(float4 c)
     }
     
     Renderer* renderer = (Renderer*)self.delegate;
-    if (![renderer loadTextureFromImage:fullFilename timestamp:(double)timestamp
+    if (![renderer loadTextureFromImage:fullFilename.c_str() timestamp:(double)timestamp
                              image:image imageNormal:hasNormal ? &imageNormal : nullptr isArchive:YES])
     {
         return NO;
@@ -2598,8 +2599,11 @@ float4 toSnorm(float4 c)
             [dc noteNewRecentDocumentURL:url];
         
             // sort them
-            sort(files.begin(), files.end());
-            
+#if USE_EASTL
+            NAMESPACE_STL::quick_sort(files.begin(), files.end());
+#else
+            NAMESPACE_STL::sort(files.begin(), files.end());
+#endif
             // replicate archive logic below
             
             self.imageURL = url;

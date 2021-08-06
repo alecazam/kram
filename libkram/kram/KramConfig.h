@@ -107,9 +107,10 @@
 #define USE_NEON 0
 #endif
 
-// not using simd/simd.h on Win or Linux, but clang would support
+// clang can compile simd/simd.h code on other platforms
+// this provides vector extensions from gcc that were setup for OpenCL shaders
 #ifndef USE_SIMDLIB
-#if KRAM_MAC || KRAM_IOS
+#if defined(__clang__)
 #define USE_SIMDLIB 1
 #else
 #define USE_SIMDLIB 0
@@ -151,6 +152,40 @@
 #define SUPPORT_RGB 1
 #endif
 
+#define USE_EASTL 0
+#if USE_EASTL
+
+// this probably breaks all STL debugging
+#include "EASTL/algorithm.h"  // for max
+#include "EASTL/atomic.h" 
+#include "EASTL/deque.h"
+#include "EASTL/functional.h"
+#include "EASTL/iterator.h" // for copy_if on Win
+#include "EASTL/shared_ptr.h" // includes thread/mutex
+#include "EASTL/sort.h"
+#include "EASTL/string.h"
+#include "EASTL/unique_ptr.h"
+#include "EASTL/unordered_map.h"
+#include "EASTL/vector.h"
+
+#define NAMESPACE_STL eastl
+
+#else
+
+#include <algorithm>  // for max
+#include <atomic>
+#include <deque>
+#include <functional>
+#include <iterator> // for copy_if on Win
+#include <memory> // for shared_ptr
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#define NAMESPACE_STL std
+
+#endif
+
 // includes that are usable across all files
 #include "KramLog.h"
 
@@ -163,8 +198,11 @@
 #endif
 
 // TODO: move half4 to it's own file, but always include it
-// Apple's SIMD doesn't have a half4 tpe.
+// Apple's files don't have a half4 type.
 namespace simd {
+
+// This has spotty support on Android.  They left out hw support
+// for _Float16 on many of the devices.  So there would need this fallback.
 
 #if USE_FLOAT16
 using half = _Float16;
@@ -224,40 +262,7 @@ public:
 namespace simd
 {
 
-#if !USE_SIMDLIB
-
-
-// don't have float2/float3 type yet
-//// use instead of simd_make_float
-//inline float2 float2m(float x)
-//{
-//    return float2(x);
-//}
-//
-//inline float3 float3m(float x)
-//{
-//    return float3(x);
-//}
-//inline float3 float3m(float x, float y, float z)
-//{
-//    return float3(x, y, z);
-//}
-
-inline float4 float4m(float x)
-{
-    return float4(x);
-}
-
-inline float4 float4m(float x, float y, float z, float w)
-{
-    return float4(x, y, z, w);
-}
-//inline float4 float4m(const float3& v float w)
-//{
-//    return float4(v, w);
-//}
-
-#else
+#if USE_SIMDLIB
 
 // functional ctor
 inline float4 float4m(float3 v, float w)
@@ -280,27 +285,34 @@ inline float4 float4m(float x, float y, float z, float w)
 
 inline float2 float2m(float x)
 {
-    return float2m(x,x);
+    return x;
 }
 
 inline float3 float3m(float x)
 {
-    return float3m(x,x,x);
+    return x;
 }
 
 inline float4 float4m(float x)
 {
-    return float4m(x,x,x,x);
+    return x;
+}
+
+inline float2 saturate(const float2& v)
+{
+    return simd_clamp( v, 0.0f, 1.0f );
+}
+inline float3 saturate(const float3& v)
+{
+    return simd_clamp( v, 0.0f, 1.0f );
+}
+inline float4 saturate(const float4& v)
+{
+    return simd_clamp( v, 0.0f, 1.0f );
 }
 
 #endif
 
-inline float4 saturate(const float4& v)
-{
-    const float4 kZero = float4m(0.0f, 0.0f, 0.0f, 0.0f);
-    const float4 kOne = float4m(1.0f, 1.0f, 1.0f, 1.0f);
-    return min(max(v, kZero), kOne);
-}
 
 #if USE_FLOAT16
 
@@ -378,14 +390,21 @@ inline half4 toHalf4(const float4& vv)
 
 //---------------------------------------
 
-// Use this on vectors
-#include <vector>
 
+
+
+namespace kram
+{
+using namespace NAMESPACE_STL;
+
+// Use this on vectors
 template<typename T>
-inline size_t vsizeof(const std::vector<T>& v)
+inline size_t vsizeof(const vector<T>& v)
 {
     return sizeof(T) * v.size();
 }
+}
+
 
 
 

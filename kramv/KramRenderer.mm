@@ -713,7 +713,7 @@ struct packed_float3 {
 
 
 
-- (BOOL)loadTextureFromImage:(const string&)fullFilename
+- (BOOL)loadTextureFromImage:(nonnull const char*)fullFilenameString
                    timestamp:(double)timestamp
                        image:(kram::KTXImage&)image
                  imageNormal:(kram::KTXImage*)imageNormal
@@ -721,6 +721,7 @@ struct packed_float3 {
 {
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
+    string fullFilename = fullFilenameString;
     
     // Note that modstamp can change, but content data hash may be the same
     bool isNewFile = (fullFilename != _showSettings->lastFilename);

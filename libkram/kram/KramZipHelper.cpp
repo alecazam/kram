@@ -9,13 +9,14 @@
 //#include <stdio.h>
 //#include <unistd.h>
 
-#include <algorithm> // for copy_if on Win
-#include <iterator> // for copy_if on Win
-#include <vector>
+//#include <algorithm> // for copy_if on Win
+//#include <iterator> // for copy_if on Win
+//#include <vector>
 
 #include "miniz.h"
 
 namespace kram {
+using namespace NAMESPACE_STL;
 
 ZipHelper::ZipHelper() {
     
@@ -34,7 +35,7 @@ bool ZipHelper::openForRead(const uint8_t* zipData_, uint64_t zipDataSize) { // 
     
     zipData = zipData_;
     
-    zip = std::make_unique<mz_zip_archive>();
+    zip = make_unique<mz_zip_archive>();
     mz_zip_zero_struct(zip.get());
     
     mz_uint flags = 0;
@@ -160,7 +161,7 @@ const ZipEntry* ZipHelper::zipEntry(const char* name) const {
     return nullptr;
 }
 
-bool ZipHelper::extract(const char *filename, std::vector<uint8_t>& buffer) const {
+bool ZipHelper::extract(const char *filename, vector<uint8_t>& buffer) const {
     auto entry = zipEntry(filename);
     if (!entry) {
         return false;
@@ -174,7 +175,7 @@ bool ZipHelper::extract(const char *filename, std::vector<uint8_t>& buffer) cons
     return true;
 }
 
-bool ZipHelper::extractPartial(const char *filename, std::vector<uint8_t>& buffer) const {
+bool ZipHelper::extractPartial(const char *filename, vector<uint8_t>& buffer) const {
     if (buffer.size() == 0) {
         assert(false);
         return false;

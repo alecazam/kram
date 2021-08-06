@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <vector>
+//#include <vector>
 
 #include "KramConfig.h"
 #include "heman/hedistance.h"
 
 namespace kram {
-using namespace std;
+using namespace NAMESPACE_STL;
 
 class ImageData;
 

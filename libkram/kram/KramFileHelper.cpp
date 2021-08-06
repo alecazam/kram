@@ -9,8 +9,8 @@
 #include <sys/stat.h>
 
 // Use this for consistent tmp file handling
-#include <algorithm> // for min
-#include <vector>
+//#include <algorithm> // for min
+//#include <vector>
 
 #include "tmpfileplus/tmpfileplus.h"
 
@@ -22,7 +22,7 @@
 #endif
 
 namespace kram {
-using namespace std;
+using namespace NAMESPACE_STL;
 
 FileHelper::~FileHelper() { close(); }
 

@@ -7,12 +7,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <string>
+//#include <string>
 
 #include "KramConfig.h"
 
 namespace kram {
-using namespace std;
+using namespace NAMESPACE_STL;
 
 // Use this to help open/close files, since dtor is scoped, or caller can close()
 // Also allows write to temp file, then rename over the destination file.  This

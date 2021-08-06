@@ -1,9 +1,9 @@
 #pragma once
 
-#include <memory>
+//#include <memory>
 #include <stdint.h>
-#include <vector>
-#include <unordered_map>
+//#include <vector>
+//#include <unordered_map>
 
 //#include "Images/HashHelper.h"
 
@@ -14,7 +14,7 @@ struct mz_zip_archive;
 namespace kram {
 
 //struct MmapHelper;
-using namespace std;
+using namespace NAMESPACE_STL;
 
 struct ZipEntry {
     const char *filename; // max 512, aliased

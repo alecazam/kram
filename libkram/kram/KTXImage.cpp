@@ -29,7 +29,7 @@ const char* kPropChannels = "KramChannels";
 const char* kPropAddress = "KramAddress";
 const char* kPropFilter = "KramFilter";
 
-using namespace std;
+using namespace NAMESPACE_STL;
 
 // These start each KTX file to indicate the type
 const uint8_t kKTXIdentifier[kKTXIdentifierSize] = {

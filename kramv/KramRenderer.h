@@ -12,7 +12,11 @@
 #import <simd/simd.h>
 #endif
 
+#if USE_EASTL
+#include "EASTL/string.h"
+#else
 #include <string>
+#endif
 
 #import "KramShaders.h" // for TextureChannels
 
@@ -27,7 +31,7 @@ namespace kram {
 
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view settings:(nonnull kram::ShowSettings*)settings;
 
-- (BOOL)loadTextureFromImage:(const std::string&)fullFilename
+- (BOOL)loadTextureFromImage:(nonnull const char*)fullFilenameString
                    timestamp:(double)timestamp
                        image:(kram::KTXImage&)image
                  imageNormal:(nullable kram::KTXImage*)imageNormal

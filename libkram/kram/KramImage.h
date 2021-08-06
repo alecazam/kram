@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+//#include <string>
+//#include <vector>
 
 #include "KTXImage.h"  // for MyMTLTextureType
 #include "KramMipper.h"
@@ -14,7 +14,7 @@
 
 namespace kram {
 
-using namespace std;
+using namespace NAMESPACE_STL;
 using namespace simd;
 
 class Mipper;

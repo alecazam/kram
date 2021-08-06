@@ -5,14 +5,14 @@
 #include "KTXImage.h" // for MyMTLPixelFormat
 
 #include <cstdint>
-#include <string>
+//#include <string>
 #include <simd/simd.h>
 
 // All portable C++ code.
 
 namespace kram {
 
-using namespace std;
+using namespace NAMESPACE_STL;
 using namespace simd;
 
 enum TextureChannels

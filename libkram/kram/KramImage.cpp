@@ -35,8 +35,8 @@
 
 #include <cassert>
 #include <cstdio>
-#include <string>
-#include <algorithm>
+//#include <string>
+//#include <algorithm>
 
 #include "KTXImage.h"
 #include "KramMipper.h"
@@ -56,7 +56,7 @@
 
 namespace kram {
 
-using namespace std;
+using namespace NAMESPACE_STL;
 using namespace simd;
 using namespace heman;
 

@@ -12,8 +12,8 @@
 #import <simd/simd.h>
 #endif
 
-#include <vector>
-#include <algorithm> // for max
+//#include <vector>
+//#include <algorithm> // for max
 #include <mm_malloc.h>
 
 #include "Kram.h"
@@ -24,7 +24,7 @@
 #include "KTXImage.h"
 
 using namespace kram;
-using namespace std;
+using namespace NAMESPACE_STL;
 using namespace simd;
 
 string kram::toLower(const string& text) {

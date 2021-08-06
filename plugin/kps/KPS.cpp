@@ -52,7 +52,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <vector>
+//#include <vector>
 
 #ifdef __PIMac__
 #include <mach/mach.h>
@@ -87,6 +87,7 @@ extern MyMTLPixelFormat FormatToPixelFormat(DDS_Format fmt);
 // global needed by a bunch of Photoshop SDK routines
 SPBasicSuite *sSPBasic = NULL;
 
+using namespace NAMESPACE_STL;
 
 const char* kBundleIdentifier = "com.ba.kram-ps";
 
@@ -534,7 +535,7 @@ static void DoReadContinue(GlobalsPtr globals)
     uint64_t size = stream.size();
     
     // read entire ktx/2 into memory (ideally mmap it)
-    std::vector<uint8_t> data;
+    vector<uint8_t> data;
     data.resize(size);
     
     if (!stream.read(data.data(), data.size())) {
@@ -899,7 +900,7 @@ static void DoWriteStart(GlobalsPtr globals)
     int height = gStuff->imageSize32.v;
 	
     // this is a potentiall large memory allocation for one level of the image
-    std::vector<uint8_t> pixels;
+    vector<uint8_t> pixels;
     if (!CopyImageRectFromPS(globals, pixels, numPlanes, width, height)) {
         //return;
     }

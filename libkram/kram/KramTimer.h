@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <cassert>
-
 #include "KramConfig.h"
+
+#include <cassert>
 
 namespace kram {
 // Can obtain a timestamp to nanosecond accuracy.

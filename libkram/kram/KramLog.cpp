@@ -4,23 +4,28 @@
 
 #include "KramLog.h"
 
-#include <string>
+//#include <string>
 
 // for Win
 #include <stdarg.h>
 
 #include <mutex>
 
-namespace kram {
-using namespace std;
 
-static mutex gLogLock;
+namespace kram {
+
+using mymutex = std::mutex;
+using lock_t = std::unique_lock<mymutex>;
+
+using namespace NAMESPACE_STL;
+
+static mymutex gLogLock;
 static string gErrorLogCaptureText;
 static bool gIsErrorLogCapture = false;
 void setErrorLogCapture(bool enable) {
     gIsErrorLogCapture = enable;
     if (enable) {
-        unique_lock<mutex> lock(gLogLock);
+        lock_t lock(gLogLock);
         gErrorLogCaptureText.clear();
     }
 }
@@ -30,7 +35,7 @@ bool isErrorLogCapture() { return gIsErrorLogCapture; }
 // return the text
 void getErrorLogCaptureText(string& text) {
     if (gIsErrorLogCapture) {
-        unique_lock<mutex> lock(gLogLock);
+        lock_t lock(gLogLock);
         text = gErrorLogCaptureText;
     }
     else {
@@ -227,7 +232,7 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
     }
 
     // stdout isn't thread safe, so to prevent mixed output put this under mutex
-    unique_lock<mutex> lock(gLogLock);
+    lock_t lock(gLogLock);
 
     // this means caller needs to know all errors to display in the hud
     if (gIsErrorLogCapture && logLevel == LogLevelError) {

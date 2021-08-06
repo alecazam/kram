@@ -4,12 +4,21 @@
 
 #include "KramTimer.h"
 
+#if USE_EASTL
+#include "EASTL/chrono.h"
+#else
 #include <chrono>
+#endif
 
 namespace kram {
 
-using namespace std;
-using namespace chrono;
+using namespace NAMESPACE_STL;
+
+#if USE_EASTL
+using namespace eastl::chrono;
+#else
+using namespace std::chrono;
+#endif
 
 double currentTimestamp()
 {

@@ -7,7 +7,7 @@
 #include "KramConfig.h"
 
 // This is only meant to emulate float4 when lib not available
-// (f.e. win or linux) but may move off simd lib to this.  So
+// (f.e. win or linux w/o clang) but may move off simd lib to this.  So
 // many open source projets skip SIMD, or only do SSE.  This is
 // how to support ARM and Neon from one codebase.  This uses
 // SSE2Neon.h to translate _mm calls to Neon calls
@@ -401,6 +401,51 @@ inline float4 normalize(const float4& vv)
     return float4(vv) /= length(vv);
 }
 
-};  // namespace simd
+inline float4 float4m(float x)
+{
+    return float4(x);
+}
+
+inline float4 float4m(float x, float y, float z, float w)
+{
+    return float4(x, y, z, w);
+}
+
+// need a float3 for this
+//inline float4 float4m(const float3& v float w)
+//{
+//    return float4(v, w);
+//}
+
+inline float4 saturate(const float4& v)
+{
+    return min(max(v, float4m(0.0f)), float4m(1.0f));
+}
+
+
+
+// don't have float2/float3 type yet
+//// use instead of simd_make_float
+//inline float2 float2m(float x)
+//{
+//    return float2(x);
+//}
+
+
+//inline float3 float3m(float x)
+//{
+//    return float3(x);
+//}
+//inline float3 float3m(float x, float y, float z)
+//{
+//    return float3(x, y, z);
+//}
+//inline float3 saturate(const float3& v)
+//{
+//    return min(max(v, float3m(0.0f)), float3m(1.0f));
+//}
+
+
+}  // namespace simd
 
 #endif

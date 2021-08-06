@@ -3,7 +3,7 @@
 namespace kram
 {
 using namespace simd;
-using namespace std;
+using namespace NAMESPACE_STL;
 
 int32_t ShowSettings::totalChunks() const {
     int32_t one = 1;

@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+//#include <string>
+//#include <vector>
 
 #include "KramConfig.h"
 
 namespace kram {
 
-using namespace std;
+using namespace NAMESPACE_STL;
 
 // TODO: abstract MyMTLPixelFormat and move to readable/neutral type
 enum MyMTLPixelFormat {

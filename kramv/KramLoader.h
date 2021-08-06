@@ -2,6 +2,8 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
+#include "KramConfig.h"
+
 #if __has_feature(modules)
 @import Foundation;
 @import Metal;
@@ -51,10 +53,10 @@ class KTXImageData;
 //-------------------------------------
 
 // for toLower
-#include <string>
+//#include <string>
 
 namespace kram {
-    using namespace std;
+    using namespace NAMESPACE_STL;
 
     // provide access to lowercase strings
     string toLower(const string& text);

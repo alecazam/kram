@@ -77,6 +77,10 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/kram/*.cpp"
     "${SOURCE_DIR}/kram/*.h"
 
+    # other libraries
+    "${SOURCE_DIR}/eastl/*.cpp"
+    "${SOURCE_DIR}/eastl/*.h"
+    
     "${SOURCE_DIR}/lodepng/*.cpp"
     "${SOURCE_DIR}/lodepng/*.h"
 
@@ -86,12 +90,12 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/tmpfileplus/*.cpp"
     "${SOURCE_DIR}/tmpfileplus/*.h"
     
-    # decoder unity file
+    # partial zstd decode-only unity file
     # cd zstd/build/single_file_libs
     # ./combine.sh -r ../../lib -o zstddeclib.c zstddeclib-in.c
     # "${SOURCE_DIR}/zstd/zstddeclib.cpp"
     
-    # full unity file
+    # full zstd encode/decode unity file
     # cd zstd/build/single_file_libs
     # ./combine.sh -r ../../lib -o zstd.c zstd-in.c
     "${SOURCE_DIR}/zstd/zstd.h"
@@ -141,6 +145,7 @@ target_include_directories(${myTargetLib} PRIVATE
     )
  
 target_include_directories(${myTargetLib} PUBLIC
+    "${SOURCE_DIR}/eastl/include/"
     "${SOURCE_DIR}/miniz/"
     )
     

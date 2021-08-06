@@ -6,13 +6,13 @@
 
 #include <sys/stat.h>
 
-#include <algorithm>  // for max
-#include <atomic>
+//#include <atomic>
 #include <cmath>
 #include <ctime>
 #include <inttypes.h>
-#include <string>
-#include <vector>
+//#include <algorithm>  // for max
+//#include <string>
+//#include <vector>
 
 #include "KTXImage.h"
 #include "KramFileHelper.h"
@@ -23,6 +23,20 @@
 #include "TaskSystem.h"
 #include "lodepng/lodepng.h"
 
+// one .cpp must supply these new overrides
+#if USE_EASTL
+void* __cdecl operator new[](size_t size, const char* name, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return new uint8_t[size];
+}
+
+void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return new uint8_t[size]; // TODO: honor alignment
+}
+
+#endif
+
 //--------------------------------------
 
 // name change on Win
@@ -32,7 +46,7 @@
 
 namespace kram {
 
-using namespace std;
+using namespace NAMESPACE_STL;
 
 template<typename T>
 void releaseVector(vector<T>& v) {

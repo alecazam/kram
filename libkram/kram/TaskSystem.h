@@ -7,35 +7,35 @@
 
 /**************************************************************************************************/
 
-#include <algorithm>
-#include <atomic>
-#include <deque>
-#include <functional>
-#include <memory>
+//#include <algorithm>
+//#include <atomic>
+//#include <deque>
+//#include <functional>
+//#include <memory>
 #include <mutex>
 #include <thread>
-#include <vector>
+//#include <vector>
 
 /**************************************************************************************************/
 
 namespace kram {
-
-using namespace std;
+using namespace NAMESPACE_STL;
 
 /**************************************************************************************************/
 
-using lock_t = unique_lock<mutex>;
+using mymutex = std::mutex; // for mutex
+using lock_t = std::unique_lock<mymutex>;
 
 class notification_queue {
     deque<function<void()>> _q;
     bool _done = false;
-    mutex _mutex;
-    condition_variable _ready;
+    mymutex _mutex;
+    std::condition_variable _ready;
 
 public:
     bool try_pop(function<void()>& x)
     {
-        lock_t lock{_mutex, try_to_lock};
+        lock_t lock{_mutex, std::try_to_lock};
         if (!lock || _q.empty()) {
             return false;
         }
@@ -66,7 +66,7 @@ public:
     bool try_push(F&& f)
     {
         {
-            lock_t lock{_mutex, try_to_lock};
+            lock_t lock{_mutex, std::try_to_lock};
             if (!lock) {
                 return false;
             }
@@ -79,11 +79,13 @@ public:
     template <typename F>
     void push(F&& f)
     {
+// TODO: fix this construct, it's saying no matching sctor for eastl::deque<eastl::function<void ()>>>
+#if !USE_EASTL
         {
             lock_t lock{_mutex};
             _q.emplace_back(forward<F>(f));
         }
-
+#endif
         // allow a waiting pop() to awaken
         _ready.notify_one();
     }
@@ -91,7 +93,7 @@ public:
     // has queue been marked done or not
     bool is_done() const
     {
-        lock_t lock{const_cast<mutex&>(_mutex)};  // ugh
+        lock_t lock{const_cast<mymutex&>(_mutex)};  // ugh
         bool done_ = _done;
         return done_;
     }
@@ -117,7 +119,7 @@ class task_system {
     NOT_COPYABLE(task_system);
 
     const int32_t _count;
-    vector<thread> _threads;
+    vector<std::thread> _threads;
 
     // currently one queue to each thread, but can steal from other queues
     vector<notification_queue> _q;
@@ -171,7 +173,7 @@ class task_system {
     }
 
 public:
-    task_system(int32_t count = 1) : _count(std::min(count, (int32_t)thread::hardware_concurrency())), _q{(size_t)_count}, _index(0)
+    task_system(int32_t count = 1) : _count(std::min(count, (int32_t)std::thread::hardware_concurrency())), _q{(size_t)_count}, _index(0)
     {
         // start up the threads
         for (int32_t threadIndex = 0; threadIndex != _count; ++threadIndex) {

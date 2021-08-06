@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <string>
+//#include <string>
 #include "KramMmapHelper.h"
 
 namespace kram {
-using namespace std;
+using namespace NAMESPACE_STL;
 
 class Image;
 class KTXImage;
