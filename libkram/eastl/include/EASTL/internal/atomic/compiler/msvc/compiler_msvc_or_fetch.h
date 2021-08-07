@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_OR_FETCH_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_OR_FETCH_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 #if defined(EA_PROCESSOR_X86_64)
@@ -117,5 +112,3 @@
 #define EASTL_COMPILER_ATOMIC_OR_FETCH_SEQ_CST_64(type, ret, ptr, val)	\
 	EASTL_MSVC_ATOMIC_OR_FETCH_64(type, ret, ptr, val, SEQ_CST)
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_OR_FETCH_H */

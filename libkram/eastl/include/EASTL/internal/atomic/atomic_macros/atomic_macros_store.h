@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_MACROS_STORE_H
-#define EASTL_ATOMIC_INTERNAL_MACROS_STORE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -63,6 +57,3 @@
 
 #define EASTL_ATOMIC_STORE_SEQ_CST_128(type, ptr, val)					\
 	EASTL_ATOMIC_CHOOSE_OP_IMPL(ATOMIC_STORE_SEQ_CST_128)(type, ptr, val)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_MACROS_STORE_H */

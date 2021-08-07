@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_FLAG_STANDALONE_H
-#define EASTL_ATOMIC_INTERNAL_FLAG_STANDALONE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 namespace eastl
@@ -65,5 +60,3 @@ EASTL_FORCE_INLINE bool atomic_flag_test_explicit(eastl::atomic_flag* atomicObj,
 
 } // namespace eastl
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_FLAG_STANDALONE_H */

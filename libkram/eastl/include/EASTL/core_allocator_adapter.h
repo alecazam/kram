@@ -7,18 +7,12 @@
 // However, this header file is not dependent on ICoreAllocator or its package.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_CORE_ALLOCATOR_ADAPTER_H
-#define EASTL_CORE_ALLOCATOR_ADAPTER_H
+#pragma once
 
 #if EASTL_CORE_ALLOCATOR_ENABLED
 
 
 #include <EASTL/internal/config.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
 
 /// EASTL_CORE_ALLOCATOR_ADAPTER_GET_DEFAULT_CORE_ALLOCATOR
 ///
@@ -357,7 +351,6 @@ namespace EA
 
 
 #endif // EASTL_CORE_ALLOCATOR_ENABLED
-#endif // Header include guard
 
 
 

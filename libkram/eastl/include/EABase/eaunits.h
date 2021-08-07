@@ -5,14 +5,9 @@
  *---------------------------------------------------------------------------*/
 
 
-#ifndef INCLUDED_eaunits_h
-#define INCLUDED_eaunits_h
+#pragma once
 
 #include <EABase/eabase.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
 
 // Defining common SI unit macros.
 //
@@ -46,8 +41,6 @@
 #define EA_TEBIBYTE(x) (size_t(x) * 1024 * 1024 * 1024 * 1024)
 #define EA_PEBIBYTE(x) (size_t(x) * 1024 * 1024 * 1024 * 1024 * 1024)
 #define EA_EXBIBYTE(x) (size_t(x) * 1024 * 1024 * 1024 * 1024 * 1024 * 1024)
-
-#endif // INCLUDED_earesult_H
 
 
 

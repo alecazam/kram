@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_LOAD_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_LOAD_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -134,6 +128,3 @@
 
 #define EASTL_COMPILER_ATOMIC_LOAD_READ_DEPENDS_32_AVAILABLE 1
 #define EASTL_COMPILER_ATOMIC_LOAD_READ_DEPENDS_64_AVAILABLE 1
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_LOAD_H */

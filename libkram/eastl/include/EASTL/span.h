@@ -16,12 +16,7 @@
 // http://eel.is/c++draft/views#span.syn
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_SPAN_H
-#define EASTL_SPAN_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once 
-#endif
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/type_traits.h>
@@ -423,5 +418,3 @@ namespace eastl
 		return (sz >= 0 && sz < size());
 	}
 }
-
-#endif // EASTL_SPAN_H  

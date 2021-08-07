@@ -29,9 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_VECTOR_H
-#define EASTL_VECTOR_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/allocator.h>
@@ -59,11 +57,6 @@ EA_DISABLE_VC_WARNING(4530 4480 4571);
 // 4244 - Argument: conversion from 'int' to 'const eastl::vector<T>::value_type', possible loss of data
 // 4127 - Conditional expression is constant
 EA_DISABLE_VC_WARNING(4345 4244 4127);
-
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
 
 #if EASTL_NOMINMAX
 	#ifdef min
@@ -2050,6 +2043,3 @@ namespace eastl
 
 EA_RESTORE_VC_WARNING();
 EA_RESTORE_VC_WARNING();
-
-
-#endif // Header include guard

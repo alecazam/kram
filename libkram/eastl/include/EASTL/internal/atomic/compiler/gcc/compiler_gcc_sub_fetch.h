@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_GCC_SUB_FETCH_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_GCC_SUB_FETCH_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 #define EASTL_GCC_ATOMIC_SUB_FETCH_N(integralType, type, ret, ptr, val, gccMemoryOrder) \
@@ -114,5 +109,3 @@
 #define EASTL_COMPILER_ATOMIC_SUB_FETCH_SEQ_CST_128(type, ret, ptr, val) \
 	EASTL_GCC_ATOMIC_SUB_FETCH_128(type, ret, ptr, val, __ATOMIC_SEQ_CST)
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_GCC_SUB_FETCH_H */

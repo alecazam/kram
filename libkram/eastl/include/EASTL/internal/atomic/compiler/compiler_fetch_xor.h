@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_FETCH_XOR_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_FETCH_XOR_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -170,4 +165,3 @@
 #endif
 
 
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_FETCH_XOR_H */

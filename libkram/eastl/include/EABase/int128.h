@@ -5,8 +5,7 @@
  *---------------------------------------------------------------------------*/
 
 
-#ifndef INCLUDED_int128_h
-#define INCLUDED_int128_h
+#pragma once
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1261,8 +1260,4 @@ EA_RESTORE_VC_WARNING()
 /* EA_CONSTEXPR */ inline uint128_t UINT128_C(uint64_t nPart1, uint64_t nPart0) { return uint128_t(nPart0, nPart1); }
 /* EA_CONSTEXPR */ inline int128_t INT128_C(int64_t nPart1, int64_t nPart0) { return int128_t(static_cast<uint64_t>(nPart0), static_cast<uint64_t>(nPart1)); }
 
-
-
-
-#endif // INCLUDED_int128_h
 

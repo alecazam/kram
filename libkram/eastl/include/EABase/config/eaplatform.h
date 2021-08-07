@@ -5,6 +5,9 @@
  *-----------------------------------------------------------------------------
  * Currently supported platform indentification defines include:
  */
+
+#pragma once
+
 #ifdef EA_PLATFORM_PS4 // ifdef for code stripping purposes 
 // EA_PLATFORM_PS4 (EA_PLATFORM_KETTLE)
 #endif
@@ -75,9 +78,6 @@
 
 */
 
-
-#ifndef INCLUDED_eaplatform_H
-#define INCLUDED_eaplatform_H
 
 
 // Cygwin
@@ -674,9 +674,7 @@
 #ifndef EA_PLATFORM_MIN_MALLOC_ALIGNMENT
 	#if defined(EA_PLATFORM_APPLE)
 		#define EA_PLATFORM_MIN_MALLOC_ALIGNMENT 16
-	#elif defined(EA_PLATFORM_ANDROID) && defined(EA_PROCESSOR_ARM)
-		#define EA_PLATFORM_MIN_MALLOC_ALIGNMENT 8
-	#elif defined(EA_PLATFORM_ANDROID) && defined(EA_PROCESSOR_X86_64)
+	#elif defined(EA_PLATFORM_ANDROID)
 		#define EA_PLATFORM_MIN_MALLOC_ALIGNMENT 8
 	#else
 		#define EA_PLATFORM_MIN_MALLOC_ALIGNMENT (EA_PLATFORM_PTR_SIZE * 2)
@@ -724,9 +722,6 @@
 		#define EA_CACHE_LINE_SIZE 64    // This is the minimum possible value
 	#endif
 #endif
-
-
-#endif // INCLUDED_eaplatform_H
 
 
 

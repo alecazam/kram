@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_SUB_FETCH_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_SUB_FETCH_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #define EASTL_MSVC_SUB_FETCH_PRE_INTRIN_COMPUTE(ret, val) \
 	ret = EASTL_ATOMIC_NEGATE_OPERAND((val))
@@ -102,6 +96,3 @@
 
 #define EASTL_COMPILER_ATOMIC_SUB_FETCH_SEQ_CST_64(type, ret, ptr, val)	\
 	EASTL_MSVC_ATOMIC_SUB_FETCH_64(type, ret, ptr, val, SEQ_CST)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_SUB_FETCH_H */

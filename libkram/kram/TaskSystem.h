@@ -80,12 +80,12 @@ public:
     void push(F&& f)
     {
 // TODO: fix this construct, it's saying no matching sctor for eastl::deque<eastl::function<void ()>>>
-#if !USE_EASTL
+//#if !USE_EASTL
         {
             lock_t lock{_mutex};
             _q.emplace_back(forward<F>(f));
         }
-#endif
+//#endif
         // allow a waiting pop() to awaken
         _ready.notify_one();
     }

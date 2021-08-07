@@ -98,16 +98,10 @@
 ---------------------------------------------------------------------------*/
 
 
-#ifndef INCLUDED_eahave_H
-#define INCLUDED_eahave_H
-
+#pragma once
 
 #include <EABase/eabase.h>
 
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
 
 /* EA_HAVE_XXX_FEATURE */
 
@@ -869,9 +863,6 @@
 #ifdef EABASE_USER_HAVE_HEADER
 	#include EABASE_USER_HAVE_HEADER
 #endif
-
-
-#endif /* Header include guard */
 
 
 

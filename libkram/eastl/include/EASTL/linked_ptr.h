@@ -3,20 +3,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_LINKED_PTR_H
-#define EASTL_LINKED_PTR_H
-
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/internal/smart_ptr.h>   // Defines smart_ptr_deleter
 #include <EASTL/allocator.h>
 #include <stddef.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
 
 
 namespace eastl
@@ -401,9 +393,6 @@ namespace eastl
 
 
 } // namespace eastl
-
-
-#endif // Header include guard
 
 
 

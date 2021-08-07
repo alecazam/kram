@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_MACROS_MEMORY_BARRIER_H
-#define EASTL_ATOMIC_INTERNAL_MACROS_MEMORY_BARRIER_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -34,5 +28,3 @@
 #define EASTL_ATOMIC_CPU_RMB()						\
 	EASTL_ATOMIC_CHOOSE_OP_IMPL(ATOMIC_CPU_RMB)()
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_MACROS_MEMORY_BARRIER_H */

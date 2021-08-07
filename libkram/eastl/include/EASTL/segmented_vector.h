@@ -2,12 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_SEGMENTED_VECTOR_H
-#define EASTL_SEGMENTED_VECTOR_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once 
-#endif
+#pragma once
 
 #include <EASTL/internal/config.h>
 
@@ -519,5 +514,3 @@ namespace eastl
         return a.mCurrent != b.mCurrent;
     }
 }
-
-#endif

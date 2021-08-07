@@ -3,15 +3,9 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_INTERNAL_MOVE_HELP_H
-#define EASTL_INTERNAL_MOVE_HELP_H
-
+#pragma once
 
 #include <EABase/eabase.h>
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
 #include <EASTL/internal/config.h>
 #include <EASTL/type_traits.h>
 
@@ -143,8 +137,6 @@ namespace eastl
 	#endif
 
 } // namespace eastl
-
-#endif // Header include guard
 
 
 

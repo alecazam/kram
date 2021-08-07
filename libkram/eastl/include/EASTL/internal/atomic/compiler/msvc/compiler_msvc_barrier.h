@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_BARRIER_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_BARRIER_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -27,5 +21,3 @@
 	EASTL_COMPILER_ATOMIC_COMPILER_BARRIER_DATA_DEPENDENCY_FUNC(const_cast<type*>(eastl::addressof((val)))); \
 	EASTL_ATOMIC_COMPILER_BARRIER()
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_BARRIER_H */

@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_MACROS_LOAD_H
-#define EASTL_ATOMIC_INTERNAL_MACROS_LOAD_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +65,3 @@
 
 #define EASTL_ATOMIC_LOAD_READ_DEPENDS_64(type, ret, ptr)				\
 	EASTL_ATOMIC_CHOOSE_OP_IMPL(ATOMIC_LOAD_READ_DEPENDS_64)(type, ret, ptr)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_MACROS_LOAD_H */

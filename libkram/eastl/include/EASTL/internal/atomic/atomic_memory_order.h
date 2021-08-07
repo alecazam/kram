@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_MEMORY_ORDER_H
-#define EASTL_ATOMIC_INTERNAL_MEMORY_ORDER_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 namespace eastl
 {
@@ -39,6 +33,3 @@ EASTL_CPP17_INLINE_VARIABLE constexpr auto memory_order_seq_cst = internal::memo
 
 
 } // namespace eastl
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_MEMORY_ORDER_H */

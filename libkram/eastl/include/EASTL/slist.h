@@ -20,9 +20,7 @@
 
 
 
-#ifndef EASTL_SLIST_H
-#define EASTL_SLIST_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/allocator.h>
@@ -47,12 +45,6 @@ EA_DISABLE_SN_WARNING(828); // The EDG SN compiler has a bug in its handling of 
 // 4345 - Behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized
 // 4571 - catch(...) semantics changed since Visual C++ 7.1; structured exceptions (SEH) are no longer caught.
 EA_DISABLE_VC_WARNING(4530 4345 4571);
-
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
 
 
 namespace eastl
@@ -1925,6 +1917,3 @@ namespace eastl
 EA_RESTORE_SN_WARNING()
 
 EA_RESTORE_VC_WARNING();
-
-
-#endif // Header include guard

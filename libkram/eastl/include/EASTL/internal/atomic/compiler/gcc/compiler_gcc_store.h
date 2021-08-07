@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_GCC_STORE_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_GCC_STORE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 #define EASTL_GCC_ATOMIC_STORE_N(integralType, ptr, val, gccMemoryOrder) \
@@ -84,6 +79,3 @@
 
 #define EASTL_COMPILER_ATOMIC_STORE_SEQ_CST_128(type, ptr, val)	\
 	EASTL_GCC_ATOMIC_STORE_128(ptr, val, __ATOMIC_SEQ_CST)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_GCC_STORE_H */

@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_GCC_BARRIER_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_GCC_BARRIER_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -26,5 +20,3 @@
 #define EASTL_COMPILER_ATOMIC_COMPILER_BARRIER_DATA_DEPENDENCY(val, type) \
 	__asm__ __volatile__ ("" : /* Output Operands */ : "r"(&(val)) : "memory")
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_GCC_BARRIER_H */

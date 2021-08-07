@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_CASTS_H
-#define EASTL_ATOMIC_INTERNAL_CASTS_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 #include <EASTL/internal/type_transformations.h>
@@ -186,5 +181,3 @@ EASTL_FORCE_INLINE ptrdiff_t AtomicNegateOperand(ptrdiff_t val) EA_NOEXCEPT
 #define EASTL_ATOMIC_NEGATE_OPERAND(val)		\
 	eastl::internal::AtomicNegateOperand((val))
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_CASTS_H */

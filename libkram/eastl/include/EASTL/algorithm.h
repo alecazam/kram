@@ -232,9 +232,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ALGORITHM_H
-#define EASTL_ALGORITHM_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/type_traits.h>
@@ -258,12 +256,6 @@ EA_DISABLE_ALL_VC_WARNINGS();
 	#include <string.h> // memcpy, memcmp, memmove
 
 EA_RESTORE_ALL_VC_WARNINGS();
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // min/max workaround
@@ -4202,8 +4194,6 @@ namespace eastl
 
 } // namespace eastl
 
-
-#endif // Header include guard
 
 
 

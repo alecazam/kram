@@ -2,8 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_TUPLE_FWD_DECLS_H
-#define EASTL_TUPLE_FWD_DECLS_H
+#pragma once
 
 #include <EASTL/internal/config.h>
 
@@ -52,5 +51,3 @@ namespace eastl
 }
 
 #endif  // EASTL_VARIADIC_TEMPLATES_ENABLED
-
-#endif  // EASTL_TUPLE_FWD_DECLS_H

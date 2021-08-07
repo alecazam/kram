@@ -187,8 +187,7 @@
  *
  *---------------------------------------------------------------------------*/
 
-#ifndef INCLUDED_eacompiler_H
-#define INCLUDED_eacompiler_H
+#pragma once
 
 	#include <EABase/config/eaplatform.h>
 
@@ -1768,9 +1767,6 @@
 			#define EA_COMPILER_NO_THREAD_LOCAL 1
 		#endif
 	#endif
-
-
-#endif // INCLUDED_eacompiler_H
 
 
 

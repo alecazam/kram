@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_MACROS_CMPXCHG_WEAK_H
-#define EASTL_ATOMIC_INTERNAL_MACROS_CMPXCHG_WEAK_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -240,6 +235,3 @@
 
 #define EASTL_ATOMIC_CMPXCHG_WEAK_SEQ_CST_128(type, ret, ptr, expected, desired) \
 	EASTL_ATOMIC_CHOOSE_OP_IMPL(ATOMIC_CMPXCHG_WEAK_SEQ_CST_128)(type, ret, ptr, expected, desired)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_MACROS_CMPXCHG_WEAK_H */

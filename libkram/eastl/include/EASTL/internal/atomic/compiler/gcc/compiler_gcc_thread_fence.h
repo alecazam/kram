@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_GCC_THREAD_FENCE_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_GCC_THREAD_FENCE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 #define EASTL_GCC_ATOMIC_THREAD_FENCE(gccMemoryOrder) \
@@ -33,6 +28,3 @@
 
 #define EASTL_COMPILER_ATOMIC_THREAD_FENCE_SEQ_CST()	\
 	EASTL_GCC_ATOMIC_THREAD_FENCE(__ATOMIC_SEQ_CST)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_GCC_THREAD_FENCE_H */

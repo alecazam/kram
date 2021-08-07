@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_ADD_FETCH_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_ADD_FETCH_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -168,6 +162,3 @@
 #else
 	#define EASTL_COMPILER_ATOMIC_ADD_FETCH_SEQ_CST_128_AVAILABLE 0
 #endif
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_ADD_FETCH_H */

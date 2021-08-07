@@ -3,9 +3,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ITERATOR_H
-#define EASTL_ITERATOR_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/internal/move_help.h>
@@ -31,12 +29,6 @@ EA_RESTORE_ALL_VC_WARNINGS();
 
 EA_DISABLE_VC_WARNING(4619); // There is no warning number 'number'.
 EA_DISABLE_VC_WARNING(4217); // Member template functions cannot be used for copy-assignment or copy-construction.
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
-
 
 namespace eastl
 {
@@ -1189,4 +1181,3 @@ namespace eastl
 EA_RESTORE_VC_WARNING();
 EA_RESTORE_VC_WARNING();
 
-#endif // Header include guard

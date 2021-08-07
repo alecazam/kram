@@ -86,8 +86,7 @@
  *---------------------------------------------------------------------------*/
 
 
-#ifndef INCLUDED_eacompilertraits_H
-#define INCLUDED_eacompilertraits_H
+#pragma once
 
 	#include <EABase/config/eaplatform.h>
 	#include <EABase/config/eacompiler.h>
@@ -1851,61 +1850,6 @@
 		#endif
 	#endif
 
-
-	// ------------------------------------------------------------------------
-	// EA_PRAGMA_ONCE_SUPPORTED
-	// 
-	// This is a wrapper for the #pragma once preprocessor directive.
-	// It allows for some compilers (in particular VC++) to implement signifcantly
-	// faster include file preprocessing. #pragma once can be used to replace 
-	// header include guards or to augment them. However, #pragma once isn't 
-	// necessarily supported by all compilers and isn't guaranteed to be so in
-	// the future, so using #pragma once to replace traditional include guards 
-	// is not strictly portable. Note that a direct #define for #pragma once is
-	// impossible with VC++, due to limitations, but can be done with other 
-	// compilers/preprocessors via _Pragma("once").
-	// 
-	// Example usage (which includes traditional header guards for portability):
-	//    #ifndef SOMEPACKAGE_SOMEHEADER_H
-	//    #define SOMEPACKAGE_SOMEHEADER_H
-	//
-	//    #if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	//        #pragma once
-	//    #endif
-	//
-	//    <user code> 
-	//
-	//    #endif
-	//
-	#if defined(_MSC_VER) || defined(__GNUC__) || defined(__EDG__) || defined(__APPLE__)
-		#define EA_PRAGMA_ONCE_SUPPORTED 1
-	#endif
-
-
-
-	// ------------------------------------------------------------------------
-	// EA_ONCE
-	// 
-	// Example usage (which includes traditional header guards for portability):
-	//    #ifndef SOMEPACKAGE_SOMEHEADER_H
-	//    #define SOMEPACKAGE_SOMEHEADER_H
-	//
-	//    EA_ONCE()
-	//
-	//    <user code> 
-	//
-	//    #endif
-	//
-	#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-		#if defined(_MSC_VER)
-			#define EA_ONCE() __pragma(once)
-		#else
-			#define EA_ONCE() // _Pragma("once")   It turns out that _Pragma("once") isn't supported by many compilers.
-		#endif
-	#endif
-
-
-
 	// ------------------------------------------------------------------------
 	// EA_OVERRIDE
 	// 
@@ -2547,8 +2491,6 @@
 	// and their corresponding compilers do this.
 	//
 	// <No current platform fails to propogate sign bits on right signed shifts>
-
-#endif // Header include guard
 
 
 

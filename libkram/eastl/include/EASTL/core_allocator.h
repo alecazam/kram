@@ -2,8 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_CORE_ALLOCATOR_H
-#define EASTL_CORE_ALLOCATOR_H
+#pragma once
 
 #if EASTL_CORE_ALLOCATOR_ENABLED
 
@@ -66,5 +65,4 @@ namespace EA
 }
 
 #endif // EASTL_CORE_ALLOCATOR_ENABLED
-#endif // EASTL_CORE_ALLOCATOR_H
 

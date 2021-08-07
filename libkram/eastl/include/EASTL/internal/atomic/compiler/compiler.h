@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -115,6 +109,3 @@ extern EASTL_API volatile CompilerBarrierDataDependencyFuncPtr gCompilerBarrierD
 #include "compiler_signal_fence.h"
 
 #include "compiler_thread_fence.h"
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_H */

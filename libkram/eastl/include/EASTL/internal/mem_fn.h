@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_INTERNAL_MEM_FN_H
-#define EASTL_INTERNAL_MEM_FN_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
 #pragma once
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // The code in this file is a modification of the libcxx implementation.  We copy
@@ -300,5 +295,3 @@ namespace eastl
 	{ return mem_fn_impl<R (T::*)(A0, A1, A2) const volatile>(pm); }
 
 } // namespace eastl
-
-#endif // EASTL_INTERNAL_MEM_FN_H

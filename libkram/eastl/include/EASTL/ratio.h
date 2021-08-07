@@ -14,12 +14,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_RATIO_H
-#define EASTL_RATIO_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once 
-#endif
+#pragma once
 
 #include <EABase/eabase.h>
 
@@ -316,5 +311,3 @@ namespace eastl
 	// typedef ratio<1000000000000000000000, 1   > zetta;  // not supported, too big for intmax_t
 	// typedef ratio<1000000000000000000000000, 1> yotta;  // not supported, too big for intmax_t
 }
-
-#endif // EASTL_RATIO_H

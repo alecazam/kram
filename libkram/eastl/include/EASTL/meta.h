@@ -2,15 +2,10 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_META_H
-#define EASTL_META_H
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/type_traits.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // This file contains meta programming utilities that are internal to EASTL. We reserve
@@ -218,5 +213,4 @@ namespace eastl
 	} // namespace meta 
 } // namespace eastl
 
-#endif // EASTL_META_H
 

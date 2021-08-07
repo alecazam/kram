@@ -20,8 +20,7 @@
 // Consult doc/Bonus/tuple_vector_readme.md for more information.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_TUPLEVECTOR_H
-#define EASTL_TUPLEVECTOR_H
+#pragma once
 
 #include <EASTL/bonus/compressed_pair.h>
 #include <EASTL/internal/config.h>
@@ -29,10 +28,6 @@
 #include <EASTL/memory.h>
 #include <EASTL/tuple.h>
 #include <EASTL/utility.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
 
 EA_DISABLE_VC_WARNING(4244) // warning C4244: 'conversion from '___' to '___', possible loss of data
 EA_DISABLE_VC_WARNING(4623) // warning C4623: default constructor was implicitly defined as deleted
@@ -1588,5 +1583,3 @@ EA_RESTORE_VC_WARNING()
 EA_RESTORE_VC_WARNING()
 EA_RESTORE_VC_WARNING()
 EA_RESTORE_VC_WARNING()
-
-#endif  // EASTL_TUPLEVECTOR_H

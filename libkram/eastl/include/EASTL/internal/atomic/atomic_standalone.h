@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_STANDALONE_H
-#define EASTL_ATOMIC_INTERNAL_STANDALONE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 namespace eastl
@@ -466,5 +461,3 @@ EASTL_FORCE_INLINE bool atomic_is_lock_free(const eastl::atomic<T>* atomicObj) E
 
 } // namespace eastl
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_STANDALONE_H */

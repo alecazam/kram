@@ -20,9 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_BITSET_H
-#define EASTL_BITSET_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/algorithm.h>
@@ -43,11 +41,6 @@ EA_RESTORE_ALL_VC_WARNINGS();
 #endif
 
 EA_DISABLE_VC_WARNING(4127); // Conditional expression is constant
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
 
 
 namespace eastl
@@ -2229,4 +2222,3 @@ EA_RESTORE_GCC_WARNING()
 
 EA_RESTORE_VC_WARNING();
 
-#endif // Header include guard

@@ -3,16 +3,11 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_INTERNAL_SMART_PTR_H
-#define EASTL_INTERNAL_SMART_PTR_H
-
+#pragma once
 
 #include <EABase/eabase.h>
 #include <EASTL/type_traits.h>
 #include <EASTL/memory.h>
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
 
 
 namespace eastl
@@ -242,9 +237,6 @@ namespace eastl
 
 
 } // namespace eastl
-
-
-#endif // Header include guard
 
 
 

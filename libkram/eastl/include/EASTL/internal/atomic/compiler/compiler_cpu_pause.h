@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_CPU_PAUSE_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_CPU_PAUSE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -27,6 +22,3 @@
 	#define EASTL_COMPILER_ATOMIC_CPU_PAUSE_AVAILABLE 1
 
 #endif
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_CPU_PAUSE_H */

@@ -2,12 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_STRING_HASH_MAP_H
-#define EASTL_STRING_HASH_MAP_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once 
-#endif
+#pragma once
 
 #include <EASTL/hash_map.h>
 #include <EASTL/string.h>
@@ -185,5 +180,3 @@ string_hash_map<T, Hash, Predicate, Allocator>::strduplicate(const char* str)
 
 
 }
-
-#endif

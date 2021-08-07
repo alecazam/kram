@@ -2,15 +2,10 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_FIXEDTUPLEVECTOR_H
-#define EASTL_FIXEDTUPLEVECTOR_H
+#pragma once
 
 #include <EASTL/bonus/tuple_vector.h>
 #include <EASTL/internal/fixed_pool.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
 
 namespace eastl
 {
@@ -207,4 +202,3 @@ inline void swap(fixed_tuple_vector<nodeCount, bEnableOverflow, Ts...>& a,
 
 }  // namespace eastl
 
-#endif  // EASTL_TUPLEVECTOR_H

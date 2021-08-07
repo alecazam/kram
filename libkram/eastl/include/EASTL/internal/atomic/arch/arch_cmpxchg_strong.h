@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_ARCH_CMPXCHG_STRONG_H
-#define EASTL_ATOMIC_INTERNAL_ARCH_CMPXCHG_STRONG_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -426,5 +420,3 @@
 #define EASTL_ARCH_ATOMIC_CMPXCHG_STRONG_SEQ_CST_128(type, ret, ptr, expected, desired) \
 	EASTL_ARCH_ATOMIC_CMPXCHG_STRONG_SEQ_CST_SEQ_CST_128(type, ret, ptr, expected, desired)
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_ARCH_CMPXCHG_STRONG_H */

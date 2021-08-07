@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_MACROS_OR_FETCH_H
-#define EASTL_ATOMIC_INTERNAL_MACROS_OR_FETCH_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -93,6 +87,3 @@
 
 #define EASTL_ATOMIC_OR_FETCH_SEQ_CST_128(type, ret, ptr, val)			\
 	EASTL_ATOMIC_CHOOSE_OP_IMPL(ATOMIC_OR_FETCH_SEQ_CST_128)(type, ret, ptr, val)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_MACROS_OR_FETCH_H */

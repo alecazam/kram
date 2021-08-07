@@ -3,18 +3,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_SAFEPTR_H
-#define EASTL_SAFEPTR_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <stddef.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
-
 
 namespace eastl
 {
@@ -466,8 +458,6 @@ inline bool operator<(const eastl::safe_ptr<T>& safePtrA, const eastl::safe_ptr<
 
 
 
-
-#endif // Header include guard
 
 
 

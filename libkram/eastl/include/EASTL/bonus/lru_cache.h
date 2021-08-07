@@ -21,12 +21,7 @@
 // entries as a user scrolls through the entries.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_LRUCACHE_H
-#define EASTL_LRUCACHE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
 #pragma once
-#endif
 
 #include <EASTL/list.h>
 #include <EASTL/unordered_map.h>
@@ -418,7 +413,3 @@ namespace eastl
 		delete_callback_type	m_delete_callback;
 	};
 }
-
-
-
-#endif

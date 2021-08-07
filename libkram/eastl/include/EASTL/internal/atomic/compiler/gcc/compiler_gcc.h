@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_GCC_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_GCC_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /**
  * NOTE:
@@ -149,6 +143,3 @@ static_assert(__atomic_always_lock_free(4, 0), "eastl::atomic<T> where sizeof(T)
 #include "compiler_gcc_signal_fence.h"
 
 #include "compiler_gcc_thread_fence.h"
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_GCC_H */

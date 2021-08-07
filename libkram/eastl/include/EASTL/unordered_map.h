@@ -2,15 +2,10 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_UNORDERED_MAP_H
-#define EASTL_UNORDERED_MAP_H
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/hash_map.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
 
 namespace eastl
 {
@@ -50,6 +45,4 @@ namespace eastl
     #endif
 
 } // namespace eastl
-
-#endif // Header include guard
 

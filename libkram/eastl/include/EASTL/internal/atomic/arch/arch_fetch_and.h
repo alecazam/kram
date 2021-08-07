@@ -2,14 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////////
 
-
-#ifndef EASTL_ATOMIC_INTERNAL_ARCH_FETCH_AND_H
-#define EASTL_ATOMIC_INTERNAL_ARCH_FETCH_AND_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -169,5 +162,3 @@
 	#define EASTL_ARCH_ATOMIC_FETCH_AND_SEQ_CST_128_AVAILABLE 0
 #endif
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_ARCH_FETCH_AND_H */

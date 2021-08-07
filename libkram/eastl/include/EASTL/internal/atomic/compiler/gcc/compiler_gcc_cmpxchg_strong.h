@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_GCC_CMPXCHG_STRONG_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_GCC_CMPXCHG_STRONG_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #define EASTL_GCC_ATOMIC_CMPXCHG_STRONG_N(integralType, type, ret, ptr, expected, desired, successOrder, failOrder) \
 	EASTL_GCC_ATOMIC_CMPXCHG_INTRIN_N(integralType, type, ret, ptr, expected, desired, false, successOrder, failOrder)
@@ -178,5 +172,3 @@
 #define EASTL_COMPILER_ATOMIC_CMPXCHG_STRONG_SEQ_CST_SEQ_CST_128(type, ret, ptr, expected, desired) \
 	EASTL_GCC_ATOMIC_CMPXCHG_STRONG_128(type, ret, ptr, expected, desired, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_GCC_CMPXCHG_STRONG_H */

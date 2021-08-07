@@ -7,13 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_RANDOM_H
-#define EASTL_RANDOM_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/numeric_limits.h>
@@ -243,8 +237,6 @@ namespace eastl
 
 } // namespace eastl
 
-
-#endif // Header include guard
 
 
 

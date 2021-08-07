@@ -9,9 +9,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_FIXED_ALLOCATOR_H
-#define EASTL_FIXED_ALLOCATOR_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/internal/fixed_pool.h>
@@ -27,11 +25,6 @@ EA_DISABLE_ALL_VC_WARNINGS();
 EA_RESTORE_ALL_VC_WARNINGS();
 
 EA_DISABLE_VC_WARNING(4275); // non dll-interface class used as base for DLL-interface classkey 'identifier'
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
 
 
 namespace eastl
@@ -451,5 +444,3 @@ namespace eastl
 
 
 EA_RESTORE_VC_WARNING();
-
-#endif // Header include guard

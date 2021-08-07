@@ -2,12 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_FUNCTION_DETAIL_H
-#define EASTL_FUNCTION_DETAIL_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 #include <EABase/eabase.h>
 #include <EABase/nullptr.h>
@@ -669,5 +664,3 @@ namespace eastl
 	} // namespace internal
 
 } // namespace eastl
-
-#endif // EASTL_FUNCTION_DETAIL_H

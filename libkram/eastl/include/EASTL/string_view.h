@@ -9,12 +9,7 @@
 // http://en.cppreference.com/w/cpp/header/string_view
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_STRING_VIEW_H
-#define EASTL_STRING_VIEW_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/internal/char_traits.h>
@@ -628,4 +623,3 @@ namespace eastl
 } // namespace eastl
 
 EA_RESTORE_VC_WARNING()
-#endif // EASTL_STRING_VIEW_H

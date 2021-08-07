@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_FETCH_ADD_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_FETCH_ADD_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #define EASTL_MSVC_ATOMIC_FETCH_ADD_N(integralType, addIntrinsic, type, ret, ptr, val, MemoryOrder) \
 	EASTL_MSVC_ATOMIC_FETCH_OP_N(integralType, addIntrinsic, type, ret, ptr, val, MemoryOrder, \
@@ -96,6 +90,3 @@
 
 #define EASTL_COMPILER_ATOMIC_FETCH_ADD_SEQ_CST_64(type, ret, ptr, val)	\
 	EASTL_MSVC_ATOMIC_FETCH_ADD_64(type, ret, ptr, val, SEQ_CST)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_FETCH_ADD_H */

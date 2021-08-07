@@ -25,8 +25,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_OPTIONAL_H
-#define EASTL_OPTIONAL_H
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/initializer_list.h>
@@ -705,4 +704,3 @@ namespace eastl
 EA_RESTORE_VC_WARNING()
 
 #endif  // EASTL_OPTIONAL_ENABLED
-#endif  // EASTL_OPTIONAL_H

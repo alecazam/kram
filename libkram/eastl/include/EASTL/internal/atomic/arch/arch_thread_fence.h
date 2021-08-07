@@ -2,14 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////////
 
-
-#ifndef EASTL_ATOMIC_INTERNAL_ARCH_THREAD_FENCE_H
-#define EASTL_ATOMIC_INTERNAL_ARCH_THREAD_FENCE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -44,6 +37,3 @@
 #else
 	#define EASTL_ARCH_ATOMIC_THREAD_FENCE_SEQ_CST_AVAILABLE 0
 #endif
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_ARCH_THREAD_FENCE_H */

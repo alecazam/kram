@@ -3,15 +3,9 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_INTERNAL_TYPE_PROPERTIES_H
-#define EASTL_INTERNAL_TYPE_PROPERTIES_H
-
+#pragma once
 
 #include <EABase/eabase.h>
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
 #include <limits.h>
 #include <EASTL/internal/type_compound.h>
 
@@ -375,6 +369,3 @@ namespace eastl
 	#endif
 
 } // namespace eastl
-
-
-#endif // Header include guard

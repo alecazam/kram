@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 EA_DISABLE_ALL_VC_WARNINGS();
@@ -255,6 +250,3 @@ struct FixedWidth128
 #include "compiler_msvc_cpu_pause.h"
 
 #include "compiler_msvc_signal_fence.h"
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_H */

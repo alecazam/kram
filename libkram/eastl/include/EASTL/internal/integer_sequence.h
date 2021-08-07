@@ -2,8 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_INTEGER_SEQUENCE_H
-#define EASTL_INTEGER_SEQUENCE_H
+#pragma once
 
 #include <EABase/config/eacompiler.h>
 #include <EASTL/internal/config.h>
@@ -71,4 +70,3 @@ using index_sequence_for = make_index_sequence<sizeof...(T)>;
 
 }  // namespace eastl
 
-#endif  // EASTL_INTEGER_SEQUENCE_H

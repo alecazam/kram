@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_STATIC_ASSERTS_H
-#define EASTL_ATOMIC_INTERNAL_STATIC_ASSERTS_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #define EASTL_ATOMIC_STATIC_ASSERT_VOLATILE_MEM_FN(type)				\
 	static_assert(!eastl::is_same<type, type>::value, "eastl::atomic<T> : volatile eastl::atomic<T> is not what you expect! Read the docs in EASTL/atomic.h! Use the memory orders to access the atomic object!");
@@ -70,6 +64,3 @@ namespace internal
 
 
 } // namespace eastl
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_STATIC_ASSERTS_H */

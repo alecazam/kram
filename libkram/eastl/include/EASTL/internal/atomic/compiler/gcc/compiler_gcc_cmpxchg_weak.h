@@ -3,12 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_GCC_CMPXCHG_WEAK_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_GCC_CMPXCHG_WEAK_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma oncef
 
 
 #define EASTL_GCC_ATOMIC_CMPXCHG_WEAK_N(integralType, type, ret, ptr, expected, desired, successOrder, failOrder) \
@@ -177,6 +172,3 @@
 
 #define EASTL_COMPILER_ATOMIC_CMPXCHG_WEAK_SEQ_CST_SEQ_CST_128(type, ret, ptr, expected, desired) \
 	EASTL_GCC_ATOMIC_CMPXCHG_WEAK_128(type, ret, ptr, expected, desired, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_GCC_CMPXCHG_WEAK_H */

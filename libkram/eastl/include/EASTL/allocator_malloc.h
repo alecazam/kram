@@ -3,9 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ALLOCATOR_MALLOC_H
-#define EASTL_ALLOCATOR_MALLOC_H
-
+#pragma once
 
 #include <EABase/eahave.h>
 #include <EASTL/allocator.h>
@@ -116,9 +114,6 @@ namespace eastl
 
 } // namespace eastl
 
-
-
-#endif // Header include guard
 
 
 

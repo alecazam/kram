@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_BASE_WIDTH_H
-#define EASTL_ATOMIC_INTERNAL_BASE_WIDTH_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #include "atomic_push_compiler_options.h"
 
@@ -342,5 +336,3 @@ namespace internal
 
 #include "atomic_pop_compiler_options.h"
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_BASE_WIDTH_H */

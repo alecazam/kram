@@ -2,10 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-
-#ifndef EASTL_UTILITY_H
-#define EASTL_UTILITY_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/type_traits.h>
@@ -24,11 +21,6 @@
 // 4217 - Member template functions cannot be used for copy-assignment or copy-construction.
 // 4512 - 'class' : assignment operator could not be generated.  // This disabling would best be put elsewhere.
 EA_DISABLE_VC_WARNING(4619 4217 4512);
-
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
 
 
 
@@ -867,6 +859,3 @@ namespace eastl
 
 
 EA_RESTORE_VC_WARNING();
-
-
-#endif // Header include guard

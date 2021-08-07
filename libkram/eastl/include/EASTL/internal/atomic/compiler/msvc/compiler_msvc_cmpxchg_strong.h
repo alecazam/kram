@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_CMPXCHG_STRONG_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_CMPXCHG_STRONG_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #if defined(EA_PROCESSOR_X86_64)
 
@@ -190,6 +184,3 @@
 
 #define EASTL_COMPILER_ATOMIC_CMPXCHG_STRONG_SEQ_CST_SEQ_CST_128(type, ret, ptr, expected, desired) \
 	EASTL_MSVC_ATOMIC_CMPXCHG_STRONG_128(type, ret, ptr, expected, desired, SEQ_CST)
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_CMPXCHG_STRONG_H */

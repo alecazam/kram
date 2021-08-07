@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_ADD_FETCH_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_ADD_FETCH_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #define EASTL_MSVC_ADD_FETCH_POST_INTRIN_COMPUTE(ret, val, addend)	\
 	ret = (val) + (addend)
@@ -101,4 +95,4 @@
 	EASTL_MSVC_ATOMIC_ADD_FETCH_64(type, ret, ptr, val, SEQ_CST)
 
 
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_MSVC_ADD_FETCH_H */
+

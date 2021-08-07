@@ -5,8 +5,7 @@
  *---------------------------------------------------------------------------*/
 
 
-#ifndef INCLUDED_eastdarg_H
-#define INCLUDED_eastdarg_H
+#pragma once
 
 
 #include <EABase/eabase.h>
@@ -92,8 +91,6 @@
 
 
 
-
-#endif /* Header include guard */
 
 
 

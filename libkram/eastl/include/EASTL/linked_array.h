@@ -8,19 +8,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_LINKED_ARRAY_H
-#define EASTL_LINKED_ARRAY_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/internal/smart_ptr.h>   // Defines smart_array_deleter
 #include <EASTL/linked_ptr.h>           // Defines linked_ptr_base 
 #include <stddef.h>                     // Definition of ptrdiff_t
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
 
 
 namespace eastl
@@ -323,8 +316,6 @@ namespace eastl
 
 } // namespace eastl
 
-
-#endif // Header include guard
 
 
 

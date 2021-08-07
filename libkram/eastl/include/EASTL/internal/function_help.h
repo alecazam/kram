@@ -2,12 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_INTERNAL_FUNCTION_HELP_H
-#define EASTL_INTERNAL_FUNCTION_HELP_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/type_traits.h>
@@ -46,6 +41,4 @@ namespace eastl
 
 	} // namespace internal
 } // namespace eastl
-
-#endif // Header include guard
 

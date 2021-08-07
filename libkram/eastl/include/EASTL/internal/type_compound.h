@@ -3,14 +3,9 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_INTERNAL_TYPE_COMPOUND_H
-#define EASTL_INTERNAL_TYPE_COMPOUND_H
-
+#pragma once
 
 #include <EABase/eabase.h>
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
 
 
 // Until we revise the code below to handle EDG warnings, we don't have much choice but to disable them.
@@ -791,9 +786,6 @@ namespace eastl
 		EA_CONSTEXPR bool is_aggregate_v = is_aggregate<T>::value;
 	#endif
 } // namespace eastl
-
-
-#endif // Header include guard
 
 
 

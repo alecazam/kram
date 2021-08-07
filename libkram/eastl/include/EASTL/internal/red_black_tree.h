@@ -3,15 +3,9 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_RED_BLACK_TREE_H
-#define EASTL_RED_BLACK_TREE_H
-
+#pragma once
 
 #include <EABase/eabase.h>
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
 #include <EASTL/internal/config.h>
 #include <EASTL/type_traits.h>
 #include <EASTL/allocator.h>
@@ -2395,6 +2389,3 @@ namespace eastl
 
 
 EA_RESTORE_VC_WARNING();
-
-
-#endif // Header include guard

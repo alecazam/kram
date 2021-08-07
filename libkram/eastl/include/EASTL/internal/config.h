@@ -3,8 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_INTERNAL_CONFIG_H
-#define EASTL_INTERNAL_CONFIG_H
+#pragma once
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -57,15 +56,12 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#pragma once
+
 #ifndef EASTL_EABASE_DISABLED
 	#include <EABase/eabase.h>
 #endif
 #include <EABase/eahave.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // EASTL_VERSION
@@ -1652,11 +1648,11 @@ typedef EASTL_SSIZE_T eastl_ssize_t; // Signed version of eastl_size_t. Concept 
 // Identifies the minimum alignment that EASTL should assume system allocations
 // from malloc and new will have.
 #if !defined(EASTL_SYSTEM_ALLOCATOR_MIN_ALIGNMENT)
-	#if defined(EA_PLATFORM_MICROSOFT) || defined(EA_PLATFORM_APPLE)
+	//#if defined(EA_PLATFORM_MICROSOFT) || defined(EA_PLATFORM_APPLE)
 		#define EASTL_SYSTEM_ALLOCATOR_MIN_ALIGNMENT 16
-	#else
-		#define EASTL_SYSTEM_ALLOCATOR_MIN_ALIGNMENT (EA_PLATFORM_PTR_SIZE * 2)
-	#endif
+	//#else
+	//	#define EASTL_SYSTEM_ALLOCATOR_MIN_ALIGNMENT (EA_PLATFORM_PTR_SIZE * 2)
+	//#endif
 #endif
 
 
@@ -1872,6 +1868,3 @@ typedef EASTL_SSIZE_T eastl_ssize_t; // Signed version of eastl_size_t. Concept 
 #else
 	#define EASTL_SYSTEM_LITTLE_ENDIAN_STATEMENT(...)
 #endif
-
-
-#endif // Header include guard

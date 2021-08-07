@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_ATOMIC_MACROS_H
-#define EASTL_ATOMIC_INTERNAL_ATOMIC_MACROS_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #include "atomic_macros_base.h"
 
@@ -140,6 +134,3 @@
 	#define EASTL_ATOMIC_FIXED_WIDTH_TYPE_128 EASTL_COMPILER_ATOMIC_FIXED_WIDTH_TYPE_128
 
 #endif
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_ATOMIC_MACROS_H */

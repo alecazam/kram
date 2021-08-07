@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_MACROS_BASE_H
-#define EASTL_ATOMIC_INTERNAL_MACROS_BASE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 #define EASTL_ATOMIC_INTERNAL_COMPILER_AVAILABLE(op)					\
 	EA_PREPROCESSOR_JOIN(EA_PREPROCESSOR_JOIN(EASTL_COMPILER_, op), _AVAILABLE)
@@ -61,5 +55,3 @@
 		op												\
 		)
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_MACROS_BASE_H */

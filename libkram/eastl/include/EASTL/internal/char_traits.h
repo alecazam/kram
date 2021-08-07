@@ -11,12 +11,7 @@
 // http://en.cppreference.com/w/cpp/string/char_traits
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_CHAR_TRAITS_H
-#define EASTL_CHAR_TRAITS_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/type_traits.h>
@@ -460,5 +455,3 @@ namespace eastl
 		return pDestination;
 	}
 } // namespace eastl
-
-#endif // EASTL_CHAR_TRAITS_H

@@ -21,12 +21,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ANY_H
-#define EASTL_ANY_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/internal/in_place_t.h>
@@ -649,4 +644,3 @@ namespace eastl
 
 } // namespace eastl
 
-#endif // EASTL_ANY_H

@@ -9,19 +9,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_INTRUSIVE_SLIST_H
-#define EASTL_INTRUSIVE_SLIST_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/iterator.h>
 #include <EASTL/algorithm.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
-
 
 namespace eastl
 {
@@ -292,9 +284,6 @@ namespace eastl
 	}
 
 } // namespace eastl
-
-
-#endif // Header include guard
 
 
 

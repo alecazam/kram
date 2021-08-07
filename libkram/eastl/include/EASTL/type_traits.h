@@ -234,19 +234,10 @@
 
 
 
-#ifndef EASTL_TYPE_TRAITS_H
-#define EASTL_TYPE_TRAITS_H
-
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <stddef.h>                 // Is needed for size_t usage by some traits.
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
-
 
 namespace eastl
 {
@@ -1056,5 +1047,3 @@ namespace eastl
 #include <EASTL/internal/type_compound.h>
 #include <EASTL/internal/type_pod.h>
 
-
-#endif // Header include guard

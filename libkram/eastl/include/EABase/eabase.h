@@ -5,9 +5,7 @@
  *---------------------------------------------------------------------------*/
 
 
-#ifndef INCLUDED_eabase_H
-#define INCLUDED_eabase_H
-
+#pragma once
 
 // Identify the compiler and declare the EA_COMPILER_xxxx defines
 #include <EABase/config/eacompiler.h>
@@ -17,10 +15,6 @@
 
 // Identify the platform and declare the EA_xxxx defines
 #include <EABase/config/eaplatform.h>
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
 
 // Always include version.h for backwards compatibility.
 #include <EABase/version.h>
@@ -1003,8 +997,6 @@
 #ifdef __cplusplus
 	#include <EABase/int128.h>
 #endif
-
-#endif // Header include guard
 
 
 

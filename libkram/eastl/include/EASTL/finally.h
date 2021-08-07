@@ -24,12 +24,7 @@
 // * https://www.bfilipek.com/2017/04/finalact.html
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_FINALLY_H
-#define EASTL_FINALLY_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/internal/move_help.h>
@@ -90,4 +85,3 @@ namespace eastl
 	}
 }
 
-#endif // EASTL_FINALLY_H

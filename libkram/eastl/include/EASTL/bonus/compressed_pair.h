@@ -56,17 +56,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_COMPRESSED_PAIR_H
-#define EASTL_COMPRESSED_PAIR_H
-
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/type_traits.h>     
-#include <EASTL/bonus/call_traits.h>     
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
+#include <EASTL/bonus/call_traits.h>
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)  // VS2015 or later
 	EA_DISABLE_VC_WARNING(4626 5027) // warning C4626: 'eastl::compressed_pair_imp<T1,T2,0>': assignment operator was implicitly defined as deleted because a base class assignment operator is inaccessible or deleted
@@ -453,8 +447,6 @@ namespace eastl
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)  // VS2015 or later
 	EA_RESTORE_VC_WARNING()
 #endif
-
-#endif // Header include guard
 
 
 

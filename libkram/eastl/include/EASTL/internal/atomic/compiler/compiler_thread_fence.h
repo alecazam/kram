@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_COMPILER_THREAD_FENCE_H
-#define EASTL_ATOMIC_INTERNAL_COMPILER_THREAD_FENCE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -44,6 +38,3 @@
 #else
 	#define EASTL_COMPILER_ATOMIC_THREAD_FENCE_SEQ_CST_AVAILABLE 0
 #endif
-
-
-#endif /* EASTL_ATOMIC_INTERNAL_COMPILER_THREAD_FENCE_H */

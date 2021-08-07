@@ -4,8 +4,7 @@
  * Copyright (c) Electronic Arts Inc. All rights reserved.
  *---------------------------------------------------------------------------*/
 
-#ifndef INCLUDED_EABASE_VERSION_H
-#define INCLUDED_EABASE_VERSION_H
+#pragma once
 
 ///////////////////////////////////////////////////////////////////////////////
 // EABASE_VERSION
@@ -33,4 +32,3 @@
     #define EABASE_VERSION_N 20912
 #endif
 
-#endif

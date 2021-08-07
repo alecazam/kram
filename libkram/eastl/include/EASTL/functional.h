@@ -2,9 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_FUNCTIONAL_H
-#define EASTL_FUNCTIONAL_H
-
+#pragma once
 
 #include <EABase/eabase.h>
 #include <EASTL/internal/config.h>
@@ -12,12 +10,6 @@
 #include <EASTL/type_traits.h>
 #include <EASTL/internal/functional_base.h>
 #include <EASTL/internal/mem_fn.h>
-
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
-#endif
-
 
 
 namespace eastl
@@ -1255,8 +1247,6 @@ namespace eastl
 } // namespace eastl
 
 #include <EASTL/internal/function.h>
-
-#endif // Header include guard
 
 
 

@@ -2,13 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////////
 
-
-#ifndef EASTL_ATOMIC_INTERNAL_MACROS_SIGNAL_FENCE_H
-#define EASTL_ATOMIC_INTERNAL_MACROS_SIGNAL_FENCE_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
+#pragma once
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -30,5 +24,3 @@
 #define EASTL_ATOMIC_SIGNAL_FENCE_SEQ_CST()						\
 	EASTL_ATOMIC_CHOOSE_OP_IMPL(ATOMIC_SIGNAL_FENCE_SEQ_CST)()
 
-
-#endif /* EASTL_ATOMIC_INTERNAL_MACROS_SIGNAL_FENCE_H */

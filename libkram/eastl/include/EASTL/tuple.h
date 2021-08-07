@@ -2,8 +2,7 @@
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef EASTL_TUPLE_H
-#define EASTL_TUPLE_H
+#pragma once
 
 #include <EASTL/internal/config.h>
 #include <EASTL/functional.h>
@@ -1003,4 +1002,3 @@ EA_CONSTEXPR decltype(auto) apply(F&& f, Tuple&& t)
 EA_RESTORE_VC_WARNING()
 EA_RESTORE_VC_WARNING()
 EA_RESTORE_VC_WARNING()
-#endif  // EASTL_TUPLE_H

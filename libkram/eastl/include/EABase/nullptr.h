@@ -4,14 +4,10 @@
  * Copyright (c) Electronic Arts Inc. All rights reserved.
  *---------------------------------------------------------------------------*/
 
+#pragma once
 
 #include <EABase/eabase.h>
 #include <EABase/eahave.h>
-
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once /* Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result. */
-#endif
 
 
 #if defined(EA_COMPILER_CPP11_ENABLED) && !defined(EA_COMPILER_NO_NULLPTR) && !defined(EA_HAVE_nullptr_t_IMPL)

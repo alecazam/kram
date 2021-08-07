@@ -3,9 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_LIST_MAP_H
-#define EASTL_LIST_MAP_H
-
+#pragma once
 
 #include <EASTL/map.h>
 
@@ -925,7 +923,6 @@ namespace eastl
 } // namespace eastl
 
 
-#endif // Header include guard
 
 
 

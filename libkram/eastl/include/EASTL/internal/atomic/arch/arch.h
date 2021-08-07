@@ -3,13 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef EASTL_ATOMIC_INTERNAL_ARCH_H
-#define EASTL_ATOMIC_INTERNAL_ARCH_H
-
-#if defined(EA_PRAGMA_ONCE_SUPPORTED)
-	#pragma once
-#endif
-
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -62,4 +56,3 @@
 #include "arch_thread_fence.h"
 
 
-#endif /* EASTL_ATOMIC_INTERNAL_ARCH_H */
