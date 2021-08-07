@@ -127,6 +127,10 @@ list(FILTER libSources EXCLUDE REGEX ".astcenccli_platform_dependents.cpp$")
 list(FILTER libSources EXCLUDE REGEX ".astcenccli_toplevel_help.cpp$")
 list(FILTER libSources EXCLUDE REGEX ".astcenccli_toplevel.cpp$")
 
+# this EASTL file is causing problems on Windows with the x86/arch_x86.h include
+list(FILTER libSources EXCLUDE REGEX ".atomic.h$")
+list(FILTER libSources EXCLUDE REGEX ".atomic.cpp$")
+
 # this will preserve hierarchy of sources in a build project
 source_group(TREE "${SOURCE_DIR}" PREFIX "source" FILES ${libSources})
 
