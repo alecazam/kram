@@ -123,7 +123,7 @@ class task_system {
 
     // currently one queue to each thread, but can steal from other queues
     vector<notification_queue> _q;
-    atomic<int32_t> _index;
+    std::atomic<int32_t> _index;
 
     void run(int32_t threadIndex)
     {

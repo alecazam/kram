@@ -157,7 +157,8 @@
 
 // this probably breaks all STL debugging
 #include "EASTL/algorithm.h"  // for max
-#include "EASTL/atomic.h" 
+//#include "EASTL/atomic.h"
+#include <atomic>
 #include "EASTL/deque.h"
 #include "EASTL/functional.h"
 #include "EASTL/iterator.h" // for copy_if on Win
