@@ -4,11 +4,6 @@
 
 #include "KramConfig.h"
 
-#if __has_feature(modules)
-@import Foundation;
-@import Metal;
-#else
-
 #import <Foundation/Foundation.h>
 
 // protocol requires imports
@@ -17,8 +12,6 @@
 #import <Metal/MTLDevice.h>
 #import <Metal/MTLPixelFormat.h>
 #import <Metal/MTLTexture.h>
-
-#endif
 
 namespace kram {
 class KTXImage;

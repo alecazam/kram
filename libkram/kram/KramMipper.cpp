@@ -4,7 +4,7 @@
 
 #include "KramMipper.h"
 
-#include <algorithm>
+//#include <algorithm>
 #include <cassert>
 
 #include "KTXImage.h" // for mipDown

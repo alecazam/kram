@@ -4,20 +4,14 @@
 
 #import <TargetConditionals.h>
 
-#if __has_feature(modules)
-@import Cocoa;
-@import Metal;
-@import MetalKit;
-@import simd;
-#else
 #import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
-#include <simd/simd.h>
-#endif
 
 #import "KramRenderer.h"
 #import "KramShaders.h"
+
+// C++
 #include "KramLog.h"
 #include "KramMipper.h"
 

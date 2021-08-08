@@ -6,7 +6,9 @@
 
 #include <cstdint>
 //#include <string>
-#include <simd/simd.h>
+//#include <simd/simd.h>
+
+#include "KramConfig.h"
 
 // All portable C++ code.
 

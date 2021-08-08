@@ -6,13 +6,7 @@
 
 #import <TargetConditionals.h>
 
-#if __has_feature(modules)
-@import simd;
-@import ModelIO;
-#else
-#import <simd/simd.h>
 #import <ModelIO/ModelIO.h>
-#endif
 
 // Include header shared between C code here, which executes Metal API commands, and .metal files
 #import "KramShaders.h"

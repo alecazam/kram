@@ -5,18 +5,12 @@
 #ifndef ShaderTypes_h
 #define ShaderTypes_h
 
-#if __has_feature(modules)
-@import Foundation;
-@import simd;
-@import Metal
-#else
 #ifndef __METAL_VERSION__
 #import <Foundation/Foundation.h>
 #else
 #include <metal_stdlib>
 #endif
 #import <simd/simd.h>
-#endif
 
 #ifdef __METAL_VERSION__
     #define NS_ENUM(_type, _name) enum _name : _type _name; enum _name : _type

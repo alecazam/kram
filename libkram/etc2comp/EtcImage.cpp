@@ -29,7 +29,6 @@ Image is an array of 4x4 blocks that represent the encoding of the source image
 //#include <windows.h>
 //#endif
 
-#include <stdlib.h>
 
 #include "EtcImage.h"
 
@@ -39,14 +38,15 @@ Image is an array of 4x4 blocks that represent the encoding of the source image
 #include "EtcBlock4x4Encoding_R11.h"
 #include "EtcBlock4x4Encoding_RG11.h"
 
-#include <algorithm>
+#include <stdlib.h>
+//#include <algorithm>
 #include <ctime>
 #include <chrono>
 //#include <future>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include <vector>
+//#include <vector>
 
 #define ETCCOMP_MIN_EFFORT_LEVEL (0.0f)
 #define ETCCOMP_DEFAULT_EFFORT_LEVEL (40.0f)

@@ -2,22 +2,11 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-#if __has_feature(modules)
-@import Foundaton;
-@import simd;
-@import MetalKit;
-#else
+
 #import <MetalKit/MetalKit.h>
 #import <Foundation/NSURL.h>
-#import <simd/simd.h>
-#endif
 
-#if USE_EASTL
-#include "EASTL/string.h"
-#else
-#include <string>
-#endif
-
+#include "KramConfig.h"
 #import "KramShaders.h" // for TextureChannels
 
 namespace kram {

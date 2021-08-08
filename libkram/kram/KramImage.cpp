@@ -41,12 +41,11 @@
 #include "KTXImage.h"
 #include "KramMipper.h"
 #include "KramFileHelper.h"
+#include "KramZipHelper.h"
 #include "KramSDFMipper.h"
 #include "KramTimer.h"
 
-#if KRAM_MAC || KRAM_LINUX
-#include <sys/errno.h>
-#endif
+#include <errno.h>
 
 // for zlib compress
 #include "miniz.h"

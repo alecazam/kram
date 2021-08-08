@@ -6,12 +6,6 @@
 
 #import <TargetConditionals.h>
 
-#if __has_feature(modules)
-@import simd;
-#else
-#import <simd/simd.h>
-#endif
-
 //#include <vector>
 //#include <algorithm> // for max
 #include <mm_malloc.h>

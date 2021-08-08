@@ -8,9 +8,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
-#if KRAM_MAC || KRAM_LINUX
-#include <sys/errno.h>
-#endif
+#include <errno.h>
 
 // Use this for consistent tmp file handling
 //#include <algorithm> // for min
@@ -39,12 +37,7 @@ static void mkdirRecursive(char *path) {
         *sep = '/';
     }
     
-    if (*path != '\0' && mkdir(path, 0755)
-// TODO: win needs to be able to find errno.h
-#if  KRAM_MAC || KRAM_IOS || KRAM_LINUX
-        && errno != EEXIST
-#endif
-    )
+    if (*path != '\0' && mkdir(path, 0755) && errno != EEXIST)
     {
         KLOGE("kram", "error while trying to create '%s'" nl
                "%s" nl,

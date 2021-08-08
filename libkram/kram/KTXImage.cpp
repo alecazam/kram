@@ -6,9 +6,9 @@
 
 #include <stdio.h>
 
-#include <algorithm>
-#include <map>
-#include <unordered_map>
+//#include <algorithm>
+//#include <map>
+//#include <unordered_map>
 
 // for zlib decompress
 #include "miniz.h"
