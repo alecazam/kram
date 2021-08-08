@@ -10,7 +10,7 @@
 
 #if KRAM_MAC || KRAM_LINUX
 #include <sys/errno.h>
-#endf
+#endif
 
 // Use this for consistent tmp file handling
 //#include <algorithm> // for min
