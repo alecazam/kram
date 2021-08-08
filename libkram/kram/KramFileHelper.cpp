@@ -7,7 +7,10 @@
 // here's how to mmmap data, but NSData may have another way
 #include <stdio.h>
 #include <sys/stat.h>
+
+#if KRAM_MAC || KRAM_LINUX
 #include <sys/errno.h>
+#endf
 
 // Use this for consistent tmp file handling
 //#include <algorithm> // for min
@@ -36,7 +39,13 @@ static void mkdirRecursive(char *path) {
         *sep = '/';
     }
     
-    if (*path != '\0' && mkdir(path, 0755) && errno != EEXIST) {
+    if (*path != '\0' && mkdir(path, 0755)
+// TODO: win needs to be able to find errno.h
+#if  KRAM_MAC || KRAM_IOS || KRAM_LINUX
+        && errno != EEXIST
+#endif
+    )
+    {
         KLOGE("kram", "error while trying to create '%s'" nl
                "%s" nl,
                path, strerror(errno)); // same as %m
@@ -189,8 +198,7 @@ bool FileHelper::open(const char* filename, const char* access)
 {
     close();
 
-    if (access[0] == 'w') {
-        KLOGI("kram", "opening file for write");
+    if (strstr(access, "w") != nullptr) {
         _fp = fopen_mkdir(filename, access);
     }
     else {
@@ -198,7 +206,6 @@ bool FileHelper::open(const char* filename, const char* access)
     }
     
     if (!_fp) {
-        KLOGE("kram", "couldn't open file %s", filename);
         return false;
     }
 
