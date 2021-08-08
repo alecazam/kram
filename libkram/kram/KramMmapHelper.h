@@ -13,6 +13,7 @@
 class MmapHelper {
 public:
     MmapHelper();
+    MmapHelper(MmapHelper&& rhs);
     ~MmapHelper();
 
     bool open(const char *filename);

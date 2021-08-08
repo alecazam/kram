@@ -18,6 +18,14 @@
 #endif
 
 MmapHelper::MmapHelper() {}
+MmapHelper::MmapHelper(MmapHelper&& rhs) {
+    addr = rhs.addr;
+    length = rhs.length;
+    
+    // prevent close after move
+    rhs.addr = nullptr;
+    rhs.length = 0;
+}
 
 MmapHelper::~MmapHelper() { close(); }
 

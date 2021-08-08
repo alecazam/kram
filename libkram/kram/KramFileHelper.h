@@ -21,6 +21,8 @@ class FileHelper {
 public:
     ~FileHelper();
 
+    bool exists(const char* filenae) const;
+
     bool open(const char* filename, const char* access);
 
     // this file is auto-deleted by close(), is that okay with renameFile use?

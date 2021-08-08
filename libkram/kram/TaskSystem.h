@@ -79,13 +79,15 @@ public:
     template <typename F>
     void push(F&& f)
     {
-// TODO: fix this construct, it's saying no matching sctor for eastl::deque<eastl::function<void ()>>>
-//#if !USE_EASTL
         {
             lock_t lock{_mutex};
+            // TODO: fix this construct, it's saying no matching sctor for eastl::deque<eastl::function<void ()>>>::value_type
+#if USE_EASTL
             _q.emplace_back(forward<F>(f));
+#else
+            _q.emplace_back(forward<F>(f));
+#endif
         }
-//#endif
         // allow a waiting pop() to awaken
         _ready.notify_one();
     }

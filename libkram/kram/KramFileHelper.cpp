@@ -7,6 +7,7 @@
 // here's how to mmmap data, but NSData may have another way
 #include <stdio.h>
 #include <sys/stat.h>
+#include <sys/errno.h>
 
 // Use this for consistent tmp file handling
 //#include <algorithm> // for min
@@ -23,6 +24,36 @@
 
 namespace kram {
 using namespace NAMESPACE_STL;
+
+#define nl "\n"
+
+// https://stackoverflow.com/questions/7430248/creating-a-new-directory-in-c
+static void mkdirRecursive(char *path) {
+    char *sep = strrchr(path, '/');
+    if (sep != NULL) {
+        *sep = 0;
+        mkdirRecursive(path);
+        *sep = '/';
+    }
+    
+    if (*path != '\0' && mkdir(path, 0755) && errno != EEXIST) {
+        KLOGE("kram", "error while trying to create '%s'" nl
+               "%s" nl,
+               path, strerror(errno)); // same as %m
+    }
+}
+
+static FILE *fopen_mkdir(const char *path, const char *mode) {
+    const char *sep = strrchr(path, '/');
+    if(sep) {
+        char *path0 = strdup(path);
+        path0[ sep - path ] = 0;
+        mkdirRecursive(path0);
+        free(path0);
+    }
+    
+    return fopen(path,mode);
+}
 
 FileHelper::~FileHelper() { close(); }
 
@@ -43,7 +74,7 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
     // can't rename with this set to 0, but it will autodelete tmp file
     int keep = 0;
 
-    // Note: can't pass access either, always opened as rw
+    // Note: can't pass . either, always opened as rw
     _fp = tmpfileplus("/tmp/", "kramimage-", suffix, &pathname, keep);
     if (!_fp) {
         return false;
@@ -158,8 +189,16 @@ bool FileHelper::open(const char* filename, const char* access)
 {
     close();
 
-    _fp = fopen(filename, access);
+    if (access[0] == 'w') {
+        KLOGI("kram", "opening file for write");
+        _fp = fopen_mkdir(filename, access);
+    }
+    else {
+        _fp = fopen(filename, access);
+    }
+    
     if (!_fp) {
+        KLOGE("kram", "couldn't open file %s", filename);
         return false;
     }
 
@@ -197,6 +236,15 @@ size_t FileHelper::size() const
         return (size_t)-1;
     }
     return (int64_t)stats.st_size;
+}
+
+bool FileHelper::exists(const char* filename) const
+{
+    struct stat stats;
+    if (stat(filename, &stats) < 0) {
+        return false;
+    }
+    return true;
 }
 
 uint64_t FileHelper::modificationTimestamp(const char* filename) {
