@@ -14,7 +14,7 @@
 //#include <algorithm> // for min
 //#include <vector>
 
-#include "tmpfileplus/tmpfileplus.h"
+#include "tmpfileplus.h"
 
 #if KRAM_MAC || KRAM_IOS || KRAM_LINUX
 #include <unistd.h>  // for getpagesize()

@@ -7,7 +7,7 @@
 //#include <vector>
 
 #include "KramConfig.h"
-#include "heman/hedistance.h"
+#include "hedistance.h"
 
 namespace kram {
 using namespace NAMESPACE_STL;

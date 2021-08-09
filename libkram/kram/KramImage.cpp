@@ -5,7 +5,7 @@
 #include "KramImage.h"
 
 #if COMPILE_ATE
-#include "ate/ateencoder.h"  // astc/bc encoder, apple only
+#include "ateencoder.h"  // astc/bc encoder, apple only
 #endif
 
 #if COMPILE_ETCENC
@@ -13,7 +13,7 @@
 #endif
 
 #if COMPILE_SQUISH
-#include "squish/squish.h"  // bc encoder
+#include "squish.h"  // bc encoder
 #endif
 
 #if COMPILE_BCENC
@@ -21,13 +21,13 @@
 #define RGBCX_IMPLEMENTATION 1
 #define RGBCX_USE_SMALLER_TABLES 1
 
-#include "bc7enc/bc7decomp.h"
-#include "bc7enc/bc7enc.h"  // bc encoder
-#include "bc7enc/rgbcx.h"
+#include "bc7decomp.h"
+#include "bc7enc.h"  // bc encoder
+#include "rgbcx.h"
 #endif
 
 #if COMPILE_ASTCENC
-#include "astc-encoder/astcenc.h"  // astc encoder
+#include "astcenc.h"  // astc encoder
 
 // hack to improve block generation on L1 and LA encoding
 //extern thread_local int32_t gAstcenc_UniqueChannelsInPartitioning;

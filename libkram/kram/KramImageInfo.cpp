@@ -8,7 +8,7 @@
 
 #if COMPILE_ATE
 // encode/decode formats vary with version
-#include "ate/ateencoder.h"
+#include "ateencoder.h"
 #endif
 
 namespace kram {

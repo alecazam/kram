@@ -147,12 +147,16 @@
 #define COMPILE_ASTCENC 0
 #endif
 
+#ifndef COMPILE_EASTL
+#define COMPILE_EASTL 0
+#endif
+
 // rgb8/16f/32f formats only supported for import, Metal doesn't expose these formats
 #ifndef SUPPORT_RGB
 #define SUPPORT_RGB 1
 #endif
 
-#define USE_EASTL 0
+#define USE_EASTL COMPILE_EASTL
 #if USE_EASTL
 
 // this probably breaks all STL debugging

@@ -21,7 +21,7 @@
 #include "KramTimer.h"
 #include "KramVersion.h"
 #include "TaskSystem.h"
-#include "lodepng/lodepng.h"
+#include "lodepng.h"
 
 // one .cpp must supply these new overrides
 #if USE_EASTL

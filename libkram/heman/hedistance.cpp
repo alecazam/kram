@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "heman/hedistance.h"
+#include "hedistance.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>

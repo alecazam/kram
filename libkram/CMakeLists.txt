@@ -8,6 +8,7 @@ option(ETCENC "Compile ETC2Comp Encoder" ON)
 option(SQUISH "Compile Squish Encoder" ON)
 option(ASTCENC "Compile ASTCenc Encoder" ON)
 option(BCENC "Compile BCenc Encoder" ON)
+option(EASTL "Compile EASTL" OFF)
 
 # convert ON to 1, UGH
 set(COMPILE_ATE 0)
@@ -36,6 +37,13 @@ if (ASTCENC)
     set(COMPILE_ASTCENC 1)
 endif()
 
+# this isn't an encoder, but replaces stl with eastl
+set(COMPILE_EASTL 0)
+
+if (EASTL)
+    set(COMPILE_EASTL 1)
+endif()
+
 #-----------------------------------------------------
 # libkram
 
@@ -46,8 +54,25 @@ set(myTargetLib libkram)
 # can also use OBJECT or SHARED, object cuts compile time
 add_library(${myTargetLib} STATIC)
 
+# nay only want to do on macOS, can be SHARED or STATIC
+#set_target_properties(${myTargetLib} PROPERTIES
+#    FRAMWORK TRUE
+#    FRAMEWORK_VERSION A
+#
+#    MACOSX_FRAMEWORK_IDENTIFIER com.ba.kram
+#    #MACOSX_FRAMEWORK_INFO_PLIST Info.plist
+#
+#    # "current version" in semantic format in Mach-O binary file
+#    VERSION 16.4.0
+#    # "compatibility version" in semantic format in Mach-O binary file
+#    SOVERSION 1.0.0
+#
+#    #PUBLIC_HEADER "${SOURCE_DIR}/kram.h"
+#    #XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+#)
+    
 # turn off pch
-set_target_properties(${myTargetLib} PROPERTIES 
+set_target_properties(${myTargetLib} PROPERTIES
     # rename lib to kram, libkram will then be the output
     OUTPUT_NAME kram
 
@@ -62,8 +87,8 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
 	"${SOURCE_DIR}/astc-encoder/*.h"
 
     # ATE is Apple specific to macOS)
-    "${SOURCE_DIR}/ate/*.mm"
-    "${SOURCE_DIR}/ate/*.h"
+    "${SOURCE_DIR}/ate/ateencoder.mm"
+    "${SOURCE_DIR}/ate/ateencoder.h"
 
     "${SOURCE_DIR}/bc7enc/*.cpp"
     "${SOURCE_DIR}/bc7enc/*.h"
@@ -71,8 +96,8 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/etc2comp/*.cpp"
     "${SOURCE_DIR}/etc2comp/*.h"
 
-    "${SOURCE_DIR}/heman/*.cpp"
-    "${SOURCE_DIR}/heman/*.h"
+    "${SOURCE_DIR}/heman/hedistance.cpp"
+    "${SOURCE_DIR}/heman/hedistance.h"
 
     "${SOURCE_DIR}/kram/*.cpp"
     "${SOURCE_DIR}/kram/*.h"
@@ -81,14 +106,14 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/eastl/*.cpp"
     "${SOURCE_DIR}/eastl/*.h"
     
-    "${SOURCE_DIR}/lodepng/*.cpp"
-    "${SOURCE_DIR}/lodepng/*.h"
+    "${SOURCE_DIR}/lodepng/lodepng.cpp"
+    "${SOURCE_DIR}/lodepng/lodepng.h"
 
     "${SOURCE_DIR}/squish/*.cpp"
     "${SOURCE_DIR}/squish/*.h"
 
-    "${SOURCE_DIR}/tmpfileplus/*.cpp"
-    "${SOURCE_DIR}/tmpfileplus/*.h"
+    "${SOURCE_DIR}/tmpfileplus/tmpfileplus.cpp"
+    "${SOURCE_DIR}/tmpfileplus/tmpfileplus.h"
     
     # partial zstd decode-only unity file
     # cd zstd/build/single_file_libs
@@ -136,23 +161,24 @@ source_group(TREE "${SOURCE_DIR}" PREFIX "source" FILES ${libSources})
 
 target_include_directories(${myTargetLib} PUBLIC
     "${SOURCE_DIR}/kram/"
+    
+    # why are these public, must be in public headers
+    "${SOURCE_DIR}/eastl/include/"
 )
 
 target_include_directories(${myTargetLib} PRIVATE
-    "${SOURCE_DIR}/"
-    #"${SOURCE_DIR}/kram/"
-    #"${SOURCE_DIR}/squish/"
-    #"${SOURCE_DIR}/lodepng"
     "${SOURCE_DIR}/astc-encoder/"
+    "${SOURCE_DIR}/ate/"
+    "${SOURCE_DIR}/bc7enc/"
     "${SOURCE_DIR}/etc2comp/"
+    "${SOURCE_DIR}/heman/"
+    "${SOURCE_DIR}/lodepng"
+    "${SOURCE_DIR}/miniz/"
+    "${SOURCE_DIR}/squish/"
+    "${SOURCE_DIR}/tmpfileplus/"
     "${SOURCE_DIR}/zstd/"
     )
- 
-target_include_directories(${myTargetLib} PUBLIC
-    "${SOURCE_DIR}/eastl/include/"
-    "${SOURCE_DIR}/miniz/"
-    )
-    
+     
 # only add sources to the library
 target_sources(${myTargetLib} PRIVATE ${libSources})
 
@@ -205,4 +231,5 @@ target_compile_definitions(${myTargetLib} PUBLIC
     "-DCOMPILE_ETCENC=${COMPILE_ETCENC}"
     "-DCOMPILE_SQUISH=${COMPILE_SQUISH}"
     "-DCOMPILE_ASTCENC=${COMPILE_ASTCENC}"
+    "-DCOMPILE_EASTL=${COMPILE_EASTL}"
 )
