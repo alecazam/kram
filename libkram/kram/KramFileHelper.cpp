@@ -19,8 +19,12 @@
 #if KRAM_MAC || KRAM_IOS || KRAM_LINUX
 #include <unistd.h>  // for getpagesize()
 #endif
+
 #if KRAM_WIN
 #include <windows.h>  // for GetNativeSystemInfo()
+#include <direct.h> // direct-ory for _mkdir, _rmdir
+#define mkdir _mkdir
+#define rmdir _rmdir
 #endif
 
 namespace kram {
