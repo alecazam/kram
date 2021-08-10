@@ -23,8 +23,10 @@
 #if KRAM_WIN
 #include <windows.h>  // for GetNativeSystemInfo()
 #include <direct.h> // direct-ory for _mkdir, _rmdir
-#define mkdir _mkdir
-#define rmdir _rmdir
+
+// Windows mkdir doesn't take permission
+#define mkdir(fname, permission) _mkdir(fname)
+#define rmdir(fname) _rmdir(fname)
 #endif
 
 namespace kram {
