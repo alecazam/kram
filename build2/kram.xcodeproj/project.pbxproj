@@ -298,6 +298,7 @@
 		706EF1DB26D166C5001C950E /* tmpfileplus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE5826D1583F001C950E /* tmpfileplus.cpp */; };
 		706EF1DD26D166C5001C950E /* libate.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF12A26D159F9001C950E /* libate.tbd */; };
 		706EF26426D17DCC001C950E /* ateencoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF926D1583E001C950E /* ateencoder.mm */; };
+		706EFC2426D1C39B001C950E /* ateencoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF926D1583E001C950E /* ateencoder.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -1105,6 +1106,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				706EFC2426D1C39B001C950E /* ateencoder.mm in Sources */,
 				706EF19826D166C5001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */,
 				706EF19926D166C5001C950E /* EtcImage.cpp in Sources */,
 				706EF19A26D166C5001C950E /* EtcDifferentialTrys.cpp in Sources */,
@@ -1218,6 +1220,8 @@
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -1276,6 +1280,8 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -1306,8 +1312,6 @@
 				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
-				GCC_ENABLE_CPP_EXCEPTIONS = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "$(PROJECT_DIR)/../libkram/kram/KramConfig.h";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
@@ -1348,8 +1352,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = NO;
 				EXECUTABLE_PREFIX = lib;
-				GCC_ENABLE_CPP_EXCEPTIONS = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "$(PROJECT_DIR)/../libkram/kram/KramConfig.h";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
@@ -1382,8 +1384,6 @@
 				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
-				GCC_ENABLE_CPP_EXCEPTIONS = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "$(PROJECT_DIR)/../libkram/kram/KramConfig.h";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
@@ -1417,8 +1417,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = NO;
 				EXECUTABLE_PREFIX = lib;
-				GCC_ENABLE_CPP_EXCEPTIONS = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "$(PROJECT_DIR)/../libkram/kram/KramConfig.h";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;

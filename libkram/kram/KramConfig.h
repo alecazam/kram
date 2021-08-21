@@ -263,6 +263,15 @@ namespace std
 {
 inline float clamp(float x, float minValue, float maxValue) { return min(max(x, minValue), maxValue); }
 inline double clamp(double x, double minValue, double maxValue) { return min(max(x, minValue), maxValue); }
+
+inline double clamp(int8_t x, int8_t minValue, int8_t maxValue) { return min(max(x, minValue), maxValue); }
+inline double clamp(uint8_t x, uint8_t minValue, uint8_t maxValue) { return min(max(x, minValue), maxValue); }
+
+inline double clamp(int16_t x, int16_t minValue, int16_t maxValue) { return min(max(x, minValue), maxValue); }
+inline double clamp(uint16_t x, uint16_t minValue, uint16_t maxValue) { return min(max(x, minValue), maxValue); }
+
+inline double clamp(int32_t x, int32_t minValue, int32_t maxValue) { return min(max(x, minValue), maxValue); }
+inline double clamp(int64_t x, int64_t minValue, int64_t maxValue) { return min(max(x, minValue), maxValue); }
 }
 
 #endif
