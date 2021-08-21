@@ -57,7 +57,6 @@ namespace kram {
 
 using namespace NAMESPACE_STL;
 using namespace simd;
-using namespace heman;
 
 template <typename T>
 void pointFilterImage(int32_t w, int32_t h, const T* srcImage,

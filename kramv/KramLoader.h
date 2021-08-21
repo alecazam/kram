@@ -2,7 +2,7 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-#include "KramConfig.h"
+#include "KramLib.h"
 
 #import <Foundation/Foundation.h>
 

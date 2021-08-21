@@ -10,12 +10,12 @@
 //#include <algorithm> // for max
 #include <mm_malloc.h>
 
-#include "Kram.h"
-#include "KramLog.h"
-#include "KramImage.h"
-#include "KramFileHelper.h"
-#include "KramMmapHelper.h"
-#include "KTXImage.h"
+#include "KramLib.h"
+//#include "KramLog.h"
+//#include "KramImage.h"
+//#include "KramFileHelper.h"
+//#include "KramMmapHelper.h"
+//#include "KTXImage.h"
 
 using namespace kram;
 using namespace NAMESPACE_STL;

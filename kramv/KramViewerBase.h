@@ -2,13 +2,11 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-#include "KTXImage.h" // for MyMTLPixelFormat
+#include "KramLib.h" // for MyMTLPixelFormat
 
 #include <cstdint>
 //#include <string>
 //#include <simd/simd.h>
-
-#include "KramConfig.h"
 
 // All portable C++ code.
 

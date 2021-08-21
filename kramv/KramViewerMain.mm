@@ -12,17 +12,18 @@
 #import "KramShaders.h"
 
 // C++
-#include "KramLog.h"
-#include "KramMipper.h"
-
-#include "Kram.h"
-#include "KramFileHelper.h"
-#include "KramMmapHelper.h"
-#include "KramZipHelper.h"
-
-#include "KramImage.h"
-#include "KramViewerBase.h"
+#include "KramLib.h"
 #include "KramVersion.h" // keep kramv version in sync with libkram
+
+//#include "KramMipper.h"
+
+//#include "Kram.h"
+//#include "KramFileHelper.h"
+//#include "KramMmapHelper.h"
+//#include "KramZipHelper.h"
+
+//#include "KramImage.h"
+#include "KramViewerBase.h"
 
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;

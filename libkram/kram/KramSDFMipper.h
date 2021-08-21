@@ -7,12 +7,18 @@
 //#include <vector>
 
 #include "KramConfig.h"
-#include "hedistance.h"
 
 namespace kram {
 using namespace NAMESPACE_STL;
 
 class ImageData;
+
+struct my_image {
+    int32_t width;
+    int32_t height;
+    int32_t numChannels;
+    uint8_t* data;
+};
 
 class SDFMipper {
 public:
@@ -25,7 +31,7 @@ private:
     uint8_t threshold = 120;
     float maxD = 0.0;
     bool isVerbose = false;
-    heman::my_image srcBitmapImage;
+    my_image srcBitmapImage;
     vector<uint8_t> srcBitmap;
 };
 

@@ -6,7 +6,7 @@
 #import <MetalKit/MetalKit.h>
 #import <Foundation/NSURL.h>
 
-#include "KramConfig.h"
+#include "KramLib.h"
 #import "KramShaders.h" // for TextureChannels
 
 namespace kram {

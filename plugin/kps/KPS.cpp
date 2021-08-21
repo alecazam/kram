@@ -62,10 +62,7 @@
 #define MIN(A,B)            ( (A) < (B) ? (A) : (B))
 #endif
         
-#include "Kram.h"
-#include "KTXImage.h"
-#include "KramImage.h"
-#include "KramImageInfo.h"
+#include "KramLib.h"
 
 // this is only on macOS
 #include <sys/stat.h>

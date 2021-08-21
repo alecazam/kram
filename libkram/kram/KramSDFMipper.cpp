@@ -8,6 +8,7 @@
 
 #include "KramMipper.h"
 #include "KTXImage.h" // for mipDown
+#include "hedistance.h"
 
 namespace kram {
 using namespace heman;
@@ -70,7 +71,7 @@ void SDFMipper::mipmap(ImageData& dstImage, int32_t mipLevel)
 
     my_image dst = {w, h, 1, (uint8_t*)pixels};
 
-    heman_distance_create_sdf(&srcBitmapImage, &dst, maxD, isVerbose);
+    heman_distance_create_sdf((const heman::my_image*)&srcBitmapImage, (heman::my_image*)&dst, maxD, isVerbose);
 
     const uint8_t* srcImageData = (const uint8_t*)pixels;  // 1 byte
 

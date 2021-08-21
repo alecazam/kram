@@ -12,8 +12,6 @@
 #import "KramShaders.h"
 #import "KramLoader.h"
 
-#include "KTXImage.h"
-#include "Kram.h"
 #include "KramViewerBase.h"
 
 static const NSUInteger MaxBuffersInFlight = 3;

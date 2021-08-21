@@ -56,4 +56,4 @@
 #include "compiler/compiler.h"
 #include "arch/arch.h"
 
-#include "atomic_macros/atomic_macros.h"
+#include "atomic_macros/atomic_macros_all.h"
