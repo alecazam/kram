@@ -503,10 +503,10 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                     }
 
                     // overwrite rgba8u version, since this is what is encoded
-                    Color c = Unormfloat4ToColor(cFloat);
+                    Color color = Unormfloat4ToColor(cFloat);
 
                     // can only skip this if cSrc = cDst
-                    cDstColor[dstIndex] = c;
+                    cDstColor[dstIndex] = color;
                 }
             }
             else if (srcFloat) {
@@ -525,15 +525,15 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                     // Overwrite the RGBA8u image too (this will go out to
                     // encoder) that means BC/ASTC are linearly fit to
                     // non-linear srgb colors - ick
-                    Color c = Unormfloat4ToColor(cFloat);
-                    cDstColor[dstIndex] = c;
+                    Color color = Unormfloat4ToColor(cFloat);
+                    cDstColor[dstIndex] = color;
                 }
             }
             else {
 
                 // can overwrite memory on linear image, some precision loss, but fast
-                Color c = Unormfloat4ToColor(cFloat);
-                cDstColor[dstIndex] = c;
+                Color color = Unormfloat4ToColor(cFloat);
+                cDstColor[dstIndex] = color;
             }
 
             dstIndex++;

@@ -22,7 +22,7 @@
 //#if defined(__BIG_ENDIAN__) || defined(_BIG_ENDIAN) || defined(BIG_ENDIAN)
 //	#define BASISD_IS_BIG_ENDIAN (1)
 //#else
-	#define BASISD_IS_BIG_ENDIAN (0)
+constexpr bool BASISD_IS_BIG_ENDIAN = false;
 //#endif
 #endif
 
@@ -10778,7 +10778,7 @@ namespace basist
 			return false;
 		}
 
-		const bool transcode_alpha_data_to_opaque_formats = (decode_flags & cDecodeFlagsTranscodeAlphaDataToOpaqueFormats) != 0;
+		//const bool transcode_alpha_data_to_opaque_formats = (decode_flags & cDecodeFlagsTranscodeAlphaDataToOpaqueFormats) != 0;
 
 		if (decode_flags & cDecodeFlagsPVRTCDecodeToNextPow2)
 		{

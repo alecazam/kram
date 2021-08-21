@@ -434,8 +434,8 @@ bool isSupportedFormat(TexEncoder encoder, MyMTLPixelFormat format)
         case kTexEncoderATE: {
             bool isBCSupported = false;
 #if COMPILE_ATE
-            ATEEncoder encoder;
-            isBCSupported = encoder.isBCSupported();
+            ATEEncoder ateEncoder;
+            isBCSupported = ateEncoder.isBCSupported();
 #endif
             table = isBCSupported ? kEncodingFormatsATEv2 : kEncodingFormatsATEv1;
             tableSize = isBCSupported ? countof(kEncodingFormatsATEv2) : countof(kEncodingFormatsATEv1);

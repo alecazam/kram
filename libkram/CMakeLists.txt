@@ -2,6 +2,29 @@
 
 #-----------------------------------------------------
 
+set(BUILD_IOS FALSE)
+set(BUILD_MAC FALSE)
+set(BUILD_WIN FALSE)
+set(BUILD_UNIX FALSE)
+
+if (APPLE)
+    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        message("build for iOS")
+        set(BUILD_IOS TRUE)
+    else()
+        message("build for macOS")
+        set(BUILD_MAC TRUE)
+    endif()
+elseif (WIN32)
+    message("build for win x64")
+    set(BUILD_WIN TRUE)
+elseif (UNIX AND NOT APPLE)
+    message("build for unix")
+    set(BUILD_UNIX TRUE)
+endif()
+
+#-----------------------------------------------------
+
 # TODO: hook these up to added code below, and pass to as command line settings
 option(ATE "Compile ATE Encoder" ON)
 option(ETCENC "Compile ETC2Comp Encoder" ON)
@@ -17,7 +40,7 @@ set(COMPILE_ETCENC 0)
 set(COMPILE_SQUISH 0)
 set(COMPILE_ASTCENC 0)
 
-if (ATE AND APPLE)
+if (ATE AND (BUILD_MAC OR BUILD_IOS))
     set(COMPILE_ATE 1)
 endif()
 
@@ -54,28 +77,24 @@ set(myTargetLib libkram)
 # can also use OBJECT or SHARED, object cuts compile time
 add_library(${myTargetLib} STATIC)
 
-# nay only want to do on macOS, can be SHARED or STATIC
-#set_target_properties(${myTargetLib} PROPERTIES
-#    FRAMWORK TRUE
-#    FRAMEWORK_VERSION A
-#
-#    MACOSX_FRAMEWORK_IDENTIFIER com.ba.kram
-#    #MACOSX_FRAMEWORK_INFO_PLIST Info.plist
-#
-#    # "current version" in semantic format in Mach-O binary file
-#    VERSION 16.4.0
-#    # "compatibility version" in semantic format in Mach-O binary file
-#    SOVERSION 1.0.0
-#
-#    #PUBLIC_HEADER "${SOURCE_DIR}/kram.h"
-#    #XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
-#)
-    
-# turn off pch
-set_target_properties(${myTargetLib} PROPERTIES
-    # rename lib to kram, libkram will then be the output
-    OUTPUT_NAME kram
+if (CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    set(DEBUG 1)
+endif()
 
+if (DEBUG)
+    set_target_properties(${myTargetLib} PROPERTIES
+        # rename lib to kramd, libkramd will then be the output or kramd.lib
+        OUTPUT_NAME kramd
+    )
+else()
+    set_target_properties(${myTargetLib} PROPERTIES
+        # rename lib to kram, libkram will then be the output
+        OUTPUT_NAME kram
+    )
+endif()
+
+set_target_properties(${myTargetLib} PROPERTIES
+    # turn off pch
     DISABLE_PRECOMPILE_HEADERS ON
 )
 
@@ -131,10 +150,10 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
 )
 
 # no objc on win or linux
-if (WIN32)
+if (BUILD_WIN)
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.mm$")
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.h$")
-elseif (UNIXBUILD)
+elseif (BUILD_UNIX)
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.mm$")
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.h$")
 endif()
@@ -182,14 +201,14 @@ target_include_directories(${myTargetLib} PRIVATE
 # only add sources to the library
 target_sources(${myTargetLib} PRIVATE ${libSources})
 
-if (APPLE)
+if (BUILD_MAC)
     set_target_properties(${myTargetLib} PROPERTIES
         # Note: match this up with CXX version
         # c++11 min
         XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14"
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
 
-        # avx1
+        # avx1 (ignored by universal?)
         XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx"
         
         # turn off exceptions/rtti
@@ -201,7 +220,28 @@ if (APPLE)
     )
 
     target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h -W -Wall)
-elseif (WIN32)
+    
+elseif (BUILD_IOS)
+    set_target_properties(${myTargetLib} PROPERTIES
+        # Note: match this up with CXX version
+        # c++11 min
+        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14"
+        XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
+
+        # avx1
+        #XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx"
+        
+        # turn off exceptions/rtti
+        XCODE_ATTRIBUTE_GCC_ENABLE_CPP_EXCEPTIONS NO
+        XCODE_ATTRIBUTE_GCC_ENABLE_CPP_RTTI NO
+        
+        # can't believe this isn't on by default in CMAKE
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+    )
+
+    target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h -W -Wall)
+    
+elseif (BUILD_WIN)
     
     # TODO: switch to add_target_definitions
 
@@ -218,7 +258,7 @@ elseif (WIN32)
     # fix STL
     target_compile_definitions(${myTargetLib} PRIVATE "-D_D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
     
-elseif (UNIXBUILD)
+elseif (BUILD_UNIX)
     # TODO: finish this
     
     target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h -W -Wall)

@@ -1445,7 +1445,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
         mipLevels = levels;
         
         // copy the original ktx2 levels, this includes mip compression
-        bool isCompressed =
+        isCompressed =
             (mipLevels[0].lengthCompressed > 0) &&
             ((mipLevels[0].length * numChunks) != mipLevels[0].lengthCompressed);
         

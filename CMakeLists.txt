@@ -7,23 +7,25 @@ endif()
 
 #-----------------------------------------------------
 
-# https://cmake.org/cmake/help/latest/policy/CMP0077.html#policy:CMP0077
-#cmake_policy(SET CMP0077 NEW)
-
-set(BUILD_UNIX FALSE)
 set(BUILD_IOS FALSE)
+set(BUILD_MAC FALSE)
+set(BUILD_WIN FALSE)
+set(BUILD_UNIX FALSE)
+
 if (APPLE)
     if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
         message("build for iOS")
         set(BUILD_IOS TRUE)
     else()
         message("build for macOS")
+        set(BUILD_MAC TRUE)
     endif()
 elseif (WIN32)
     message("build for win x64")
+    set(BUILD_WIN TRUE)
 elseif (UNIX AND NOT APPLE)
     message("build for unix")
-    set(UNIXBUILD TRUE)
+    set(BUILD_UNIX TRUE)
 endif()
 
 #-----------------------------------------------------
@@ -52,20 +54,25 @@ set(CMAKE_CXX_EXTENSIONS NO)
 # set(CMAKE_OSX_SYSROOT macos)  # this doesn't work
 
 # CMAKE_OSX_DEPLOYMENT_TARGET must be set as a CACHE variable, or it will be stripped
-if (APPLE)
-    if (BUILD_IOS)
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum iOS")
-        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)" CACHE STRING "Architecture iOS")
-    else()
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS")
-        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)" CACHE STRING "Architecture macOS")
-    endif()
+if (BUILD_IOS)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0" CACHE STRING "Minimum iOS")
+    set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Architecture iOS")
+elseif (BUILD_MAC)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS")
+    set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)" CACHE STRING "Architecture macOS")
 endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 set(CMAKE_BUILD_TYPE Release)
 
-set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
+if (BUILD_MAC)
+    set(CMAKE_DEFAULT_STARTUP_PROJECT "libkram")
+elseif (BUILD_IOS)
+    set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
+elseif (BUILD_WIN)
+    set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
+endif()
+
 
 #-----------------------------------------------------
 
@@ -73,9 +80,9 @@ set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
 # No way to make xcode workspaces, but could do manually.
 set(myTargetWorkspace kramWorkspace)
 
-if (APPLE)
+if (BUILD_MAC OR BUILD_IOS)
     project(${myTargetWorkspace} LANGUAGES C CXX OBJCXX)
-else()
+elseif (BUILD_WIN)
     project(${myTargetWorkspace} LANGUAGES C CXX)
 endif()
 
@@ -87,12 +94,12 @@ add_subdirectory(libkram)
 add_subdirectory(kram)
 
 # the viewer is only written for macOS Intel/ARM currently, uses libkram
-if (APPLE)
+if (BUILD_MAC)
     add_subdirectory(kramv)
 endif()
 
 # ps plugin that uses libkram
-if (APPLE)
+if (BUILD_MAC)
     add_subdirectory(plugin)
 endif()
 
@@ -101,7 +108,7 @@ endif()
 # https://discourse.cmake.org/t/specifying-cmake-osx-sysroot-breaks-xcode-projects-but-no-other-choice/2532/8
 # use snipet from Alian Martin to validate SDK
 
-if (APPLE)
+if (BUILD_MAC OR BUILD_IOS)
     if(NOT DEFINED CMAKE_OSX_SYSROOT)
         message(FATAL_ERROR "Cannot check SDK version if CMAKE_OSX_SYSROOT is not defined."
     )
@@ -132,7 +139,8 @@ if (APPLE)
             message(FATAL_ERROR "This project requires at least iPhoneOS ${XCODE_MIN_SDK_IOS}"
         )
         endif()
-    else()
+        
+    elseif (BUILD_MAC)
         message("macOS SDK ${SDK_VERSION}")
         message("macOS deploy ${CMAKE_OSX_DEPLOYMENT_TARGET}")
         message("macOS arch ${CMAKE_OSX_ARCHITECTURES}")
@@ -146,7 +154,13 @@ endif()
 
 #-----------------------------------------------------
 
-set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
+if (BUILD_IOS)
+    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/ios)
+elseif (BUILD_MAC)
+    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/mac)
+elseif (BUILD_WIN)
+    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/win)
+endif()
 
 # So by default install depends on ALL_BUILD target, but that will fail if plugin
 # does not have everything setup to build (or like now is not building).
@@ -155,12 +169,17 @@ set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
 
 # install doesn't seem to do anything on WIN32, the build elements are not copied
 install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
-install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
-if (APPLE)
+
+if (BUILD_MAC OR BUILD_WIN)
+    install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
+endif()
+
+if (BUILD_MAC)
 	install(TARGETS kramv BUNDLE DESTINATION ${BIN_DIR})
 endif()
-# don't install this
-#if (APPLE)
+
+# don't install this yet
+#if (BUILD_MAC)
 #    install(TARGETS kram-ps BUNDLE DESTINATION ${BIN_DIR})
 #endif()
 

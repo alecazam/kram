@@ -1,20 +1,39 @@
 #cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
 
 #-----------------------------------------------------
+
+set(BUILD_IOS FALSE)
+set(BUILD_MAC FALSE)
+set(BUILD_WIN FALSE)
+set(BUILD_UNIX FALSE)
+
+if (APPLE)
+    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        message("build for iOS")
+        set(BUILD_IOS TRUE)
+    else()
+        message("build for macOS")
+        set(BUILD_MAC TRUE)
+    endif()
+elseif (WIN32)
+    message("build for win x64")
+    set(BUILD_WIN TRUE)
+elseif (UNIX AND NOT APPLE)
+    message("build for unix")
+    set(BUILD_UNIX TRUE)
+endif()
+
+#-----------------------------------------------------
 # kram 
 
 # now setup the app project, and link to libkram
 set(myTargetApp kram)
 
 # not using version in cmake anymore, this is pulled in by KramVersion.h
-if (APPLE)
-project(${myTargetApp} LANGUAGES C CXX OBJCXX
-    #VERSION 0.9.0
-)
-else()
-project(${myTargetApp} LANGUAGES C CXX
-    #VERSION 0.9.0
-)
+if (BUILD_MAC)
+    project(${myTargetApp} LANGUAGES C CXX OBJCXX)
+elseif (BUILD_WIN)
+    project(${myTargetApp} LANGUAGES C CXX)
 endif()
 
 # **** this the executable target ****, for a CLI App
@@ -22,7 +41,7 @@ add_executable(${myTargetApp})
 
 #-----------------------------------------------------
     
-if (APPLE)
+if (BUILD_MAC)
     # ate is a macOS/iOS only library, and it varies in encode support by OS revision
     target_link_libraries(${myTargetApp}
         ate
@@ -65,7 +84,7 @@ if (APPLE)
 
     target_compile_options(${myTargetApp} PRIVATE -W -Wall)
 
-elseif (WIN32)
+elseif (BUILD_WIN)
     target_link_libraries(${myTargetApp} libkram)
 
     # When Win rebuilds library, it doesn't relink app to correct code when you
@@ -104,7 +123,7 @@ elseif (WIN32)
     
     endif()
     
-elseif (UNIXBUILD)
+elseif (BUILD_UNIX)
     target_link_libraries(${myTargetApp} libkram)
 
     # TODO: finish this

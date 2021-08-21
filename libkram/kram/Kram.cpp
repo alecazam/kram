@@ -360,9 +360,6 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
         case LCT_PALETTE:  // ?
             hasColor = true;
             break;
-        
-            hasColor = false;
-            break;;
     }
 
     switch (state.info_png.color.colortype) {

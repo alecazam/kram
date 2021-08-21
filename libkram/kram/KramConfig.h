@@ -160,18 +160,18 @@
 #if USE_EASTL
 
 // this probably breaks all STL debugging
-#include "EASTL/algorithm.h"  // for max
+#include <EASTL/algorithm.h"  // for max
 //#include "EASTL/atomic.h"
 #include <atomic>
-#include "EASTL/deque.h"
-#include "EASTL/functional.h"
-#include "EASTL/iterator.h" // for copy_if on Win
-#include "EASTL/shared_ptr.h" // includes thread/mutex
-#include "EASTL/sort.h"
-#include "EASTL/string.h"
-#include "EASTL/unique_ptr.h"
-#include "EASTL/unordered_map.h"
-#include "EASTL/vector.h"
+#include <EASTL/deque.h>
+#include <EASTL/functional.h>
+#include <EASTL/iterator.h> // for copy_if on Win
+#include <EASTL/shared_ptr.h> // includes thread/mutex
+#include <EASTL/sort.h>
+#include <EASTL/string.h>
+#include <EASTL/unique_ptr.h>
+#include <EASTL/unordered_map.h>
+#include <EASTL/vector.h>
 
 #define NAMESPACE_STL eastl
 
