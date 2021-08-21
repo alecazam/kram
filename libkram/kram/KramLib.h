@@ -24,8 +24,3 @@
 #include "KramMipper.h"
 #include "KramSDFMipper.h"
 
-#include "sse2neon.h"
-#include "float4a.h"
-#include "TaskSystem.h"
-
-
