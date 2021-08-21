@@ -5,6 +5,9 @@
       location = "group:kram.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:kramc.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "container:kramv.xcodeproj">
    </FileRef>
 </Workspace>
