@@ -871,12 +871,13 @@ struct packed_float3 {
     
     // could cycle between rrr1 and r001.
     int32_t numChannels = numChannelsOfFormat(originalFormat);
+    bool isSigned = isSignedFormat(originalFormat);
     
     // note that decoded textures are 3/4 channel even though they are normal/sdf originally, so test those first
     if (numChannels == 2 || endsWith(filenameShort, "-n") || endsWith(filenameShort, "_normal")) {
         isNormal = true;
     }
-    else if (numChannels == 1 || endsWith(filenameShort, "-sdf")) {
+    else if ((numChannels == 1 && isSigned) || endsWith(filenameShort, "-sdf")) {
         isSDF = true;
     }
     else if (numChannels == 3 || numChannels == 4 || endsWith(filenameShort, "-a") || endsWith(filenameShort, "_basecolor")) {
