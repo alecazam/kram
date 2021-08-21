@@ -297,6 +297,7 @@
 		706EF1DA26D166C5001C950E /* lodepng.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE5626D1583F001C950E /* lodepng.cpp */; };
 		706EF1DB26D166C5001C950E /* tmpfileplus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE5826D1583F001C950E /* tmpfileplus.cpp */; };
 		706EF1DD26D166C5001C950E /* libate.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF12A26D159F9001C950E /* libate.tbd */; };
+		706EF26426D17DCC001C950E /* ateencoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF926D1583E001C950E /* ateencoder.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -1028,6 +1029,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				706EF26426D17DCC001C950E /* ateencoder.mm in Sources */,
 				706EEF7F26D1595D001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */,
 				706EEF8026D1595D001C950E /* EtcImage.cpp in Sources */,
 				706EEF8126D1595D001C950E /* EtcDifferentialTrys.cpp in Sources */,
