@@ -283,7 +283,7 @@ struct ViewFramebufferData {
 
 - (BOOL)hotloadShaders:(const char*)filename
 {
-    NSURL* _metallibFileURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
+    _metallibFileURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
 
     NSError* err = nil;
     NSDate *fileDate = nil;
@@ -547,12 +547,12 @@ struct packed_float3 {
     {
         mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
         
-        id<MDLMeshBuffer> pos = mdlMesh.vertexBuffers[BufferIndexMeshPosition];
-        MDLMeshBufferMap *posMap = [pos map];
+        id<MDLMeshBuffer> posBuffer = mdlMesh.vertexBuffers[BufferIndexMeshPosition];
+        MDLMeshBufferMap *posMap = [posBuffer map];
         packed_float3* posData = (packed_float3*)posMap.bytes;
         
-        id<MDLMeshBuffer> normals = mdlMesh.vertexBuffers[BufferIndexMeshNormal];
-        MDLMeshBufferMap *normalsMap = [normals map];
+        id<MDLMeshBuffer> normalBuffer = mdlMesh.vertexBuffers[BufferIndexMeshNormal];
+        MDLMeshBufferMap *normalsMap = [normalBuffer map];
         packed_float3* normalData = (packed_float3*)normalsMap.bytes;
         
         // vertexCount reports 306, but vertex 289+ are garbage
@@ -600,18 +600,18 @@ struct packed_float3 {
     {
         mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
         
-        id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
-        MDLMeshBufferMap *uvsMap = [uvs map];
+        id<MDLMeshBuffer> uvsBuffer = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
+        MDLMeshBufferMap *uvsMap = [uvsBuffer map];
         packed_float2* uvData = (packed_float2*)uvsMap.bytes;
     
         // this is all aos
         
-        id<MDLMeshBuffer> pos = mdlMesh.vertexBuffers[BufferIndexMeshPosition];
-        MDLMeshBufferMap *posMap = [pos map];
+        id<MDLMeshBuffer> posBuffer = mdlMesh.vertexBuffers[BufferIndexMeshPosition];
+        MDLMeshBufferMap *posMap = [posBuffer map];
         packed_float3* posData = (packed_float3*)posMap.bytes;
         
-        id<MDLMeshBuffer> normals = mdlMesh.vertexBuffers[BufferIndexMeshNormal];
-        MDLMeshBufferMap *normalsMap = [normals map];
+        id<MDLMeshBuffer> normalsBuffe = mdlMesh.vertexBuffers[BufferIndexMeshNormal];
+        MDLMeshBufferMap *normalsMap = [normalsBuffe map];
         packed_float3* normalData = (packed_float3*)normalsMap.bytes;
         
         
@@ -1648,9 +1648,9 @@ float4 inverseScaleSquared(const float4x4& m) {
         }
         
         // return the value at the sample
-        _showSettings->textureResult = data;
-        _showSettings->textureResultX = textureLookupX;
-        _showSettings->textureResultY = textureLookupY;
+        self->_showSettings->textureResult = data;
+        self->_showSettings->textureResultX = textureLookupX;
+        self->_showSettings->textureResultY = textureLookupY;
         
         //printf("Color %f %f %f %f\n", data.x, data.y, data.z, data.w);
     }];

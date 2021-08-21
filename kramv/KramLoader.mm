@@ -557,7 +557,8 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
                                             length:dataSize
                                            options:MTLResourceStorageModeShared
                                        deallocator: ^(void *macroUnusedArg(pointer), NSUInteger macroUnusedArg(length)) {
-                                            delete _data;
+                                            delete self->_data;
+                                            self->_data = nullptr;
                                             }
     ];
 }
@@ -616,8 +617,8 @@ static uint32_t numberOfMipmapLevels(const Image& image) {
          {
             // can only reset this once gpu completes the blits above
             // also guard against addding to this in blitTextureFromImage when completion handler will reset to 0
-            if (_bufferOffset == bufferOffsetCopy)
-                _bufferOffset = 0;
+            if (self->_bufferOffset == bufferOffsetCopy)
+                self->_bufferOffset = 0;
         }];
     }
 }

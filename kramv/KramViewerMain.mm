@@ -86,7 +86,7 @@ using namespace NAMESPACE_STL;
 }
 
 
-- (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
+- (NSData *)dataOfType:(nonnull NSString *)typeName error:(NSError * _Nullable *)outError {
     // Insert code here to write your document to data of the specified type. If outError != NULL, ensure that you create and set an appropriate error if you return nil.
     // Alternatively, you could remove this method and override -fileWrapperOfType:error:, -writeToURL:ofType:error:, or -writeToURL:ofType:forSaveOperation:originalContentsURL:error: instead.
     [NSException raise:@"UnimplementedMethod" format:@"%@ is unimplemented", NSStringFromSelector(_cmd)];
@@ -94,7 +94,7 @@ using namespace NAMESPACE_STL;
 }
 
 
-- (BOOL)readFromURL:(NSURL *)url ofType:(NSString *)typeName error:(NSError **)outError {
+- (BOOL)readFromURL:(nonnull NSURL *)url ofType:(nonnull NSString *)typeName error:(NSError * _Nullable*)outError {
     
     
     // called from OpenRecent documents menu
@@ -2560,8 +2560,8 @@ float4 toSnorm(float4 c)
             
             
             NSDirectoryEnumerator *directoryEnumerator = [[NSFileManager defaultManager] enumeratorAtURL:url includingPropertiesForKeys:[NSArray array] options:0 errorHandler://nil
-               ^BOOL(NSURL *url, NSError *error) {
-                macroUnusedVar(url);
+               ^BOOL(NSURL *urlArg, NSError *error) {
+                macroUnusedVar(urlArg);
                 macroUnusedVar(error);
 
                 // handle error
@@ -2641,12 +2641,12 @@ float4 toSnorm(float4 c)
             getErrorLogCaptureText(errorText);
             setErrorLogCapture(false);
             
-            const string& filename = _folderFiles[_fileFolderIndex];
+            const string& folder = _folderFiles[_fileFolderIndex];
             
             // prepend filename
             string finalErrorText;
             append_sprintf(finalErrorText,
-                           "Could not load from folder:\n %s\n", filename.c_str());
+                           "Could not load from folder:\n %s\n", folder.c_str());
             finalErrorText += errorText;
             
             [self setHudText: finalErrorText.c_str()];
@@ -2741,12 +2741,12 @@ float4 toSnorm(float4 c)
             setErrorLogCapture(false);
             
             const auto& entry =_zip.zipEntrys()[_fileArchiveIndex];
-            const char* filename = entry.filename;
+            const char* archiveFilename = entry.filename;
             
             // prepend filename
             string finalErrorText;
             append_sprintf(finalErrorText,
-                           "Could not load from archive:\n %s\n", filename);
+                           "Could not load from archive:\n %s\n", archiveFilename);
             finalErrorText += errorText;
             
             [self setHudText: finalErrorText.c_str()];
