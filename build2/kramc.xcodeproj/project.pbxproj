@@ -26,7 +26,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		706EF27226D18082001C950E /* kramc */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = kramc; sourceTree = BUILT_PRODUCTS_DIR; };
+		706EF27226D18082001C950E /* kram */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = kram; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EF28026D18223001C950E /* KramMain.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramMain.cpp; sourceTree = "<group>"; };
 		706EF28226D18251001C950E /* libkram.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libkram.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EF28426D18257001C950E /* libate.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libate.tbd; path = usr/lib/libate.tbd; sourceTree = SDKROOT; };
@@ -59,7 +59,7 @@
 		706EF27326D18082001C950E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				706EF27226D18082001C950E /* kramc */,
+				706EF27226D18082001C950E /* kram */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,7 +100,7 @@
 			);
 			name = kramc;
 			productName = kramc;
-			productReference = 706EF27226D18082001C950E /* kramc */;
+			productReference = 706EF27226D18082001C950E /* kram */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -275,7 +275,7 @@
 				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/kram";
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = kram;
 			};
 			name = Debug;
 		};
@@ -298,7 +298,7 @@
 				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/kram";
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = kram;
 			};
 			name = Release;
 		};

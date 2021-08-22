@@ -154,13 +154,16 @@ endif()
 
 #-----------------------------------------------------
 
-if (BUILD_IOS)
-    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/ios)
-elseif (BUILD_MAC)
-    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/mac)
-elseif (BUILD_WIN)
-    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/win)
-endif()
+# was considering platform-specific builds, but mac/win don't conflict
+set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
+    
+#if (BUILD_IOS)
+#    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/ios)
+#elseif (BUILD_MAC)
+#    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/mac)
+#elseif (BUILD_WIN)
+#    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/win)
+#endif()
 
 # So by default install depends on ALL_BUILD target, but that will fail if plugin
 # does not have everything setup to build (or like now is not building).
