@@ -2,9 +2,9 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-#include "KramLib.h"
-
 #import <Foundation/Foundation.h>
+
+#include "KramLib.h"
 
 // protocol requires imports
 #import <Metal/MTLBlitCommandEncoder.h>

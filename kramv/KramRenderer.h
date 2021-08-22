@@ -6,7 +6,7 @@
 #import <MetalKit/MetalKit.h>
 
 #include "KramLib.h"
-#import "KramShaders.h" // for TextureChannels
+#import "KramShaders.h"  // for TextureChannels
 
 namespace kram {
 class ShowSettings;

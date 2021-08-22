@@ -12,7 +12,7 @@ format_file() {
   fi
 }
 
-for file in `git diff-index --cached --name-only HEAD | grep -iE '\Kram*.(cpp|h|mm)$' ` ; do
+for file in `git diff-index --cached --name-only HEAD | grep -iE '\Kram*.(cpp|h|m|mm)$' ` ; do
   format_file "${file}"
 done
 

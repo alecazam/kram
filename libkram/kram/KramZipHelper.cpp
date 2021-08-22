@@ -28,7 +28,7 @@ ZipHelper::~ZipHelper()
 }
 
 bool ZipHelper::openForRead(const uint8_t* zipData_, uint64_t zipDataSize)
-{   // const char* filename) {
+{  // const char* filename) {
     //    mmap = std::make_unique<MmapHelper>();
     //    if (!mmap->openForRead(filename)) {
     //        close();
