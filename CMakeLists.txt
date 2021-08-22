@@ -66,11 +66,11 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 set(CMAKE_BUILD_TYPE Release)
 
 if (BUILD_MAC)
-    set(CMAKE_DEFAULT_STARTUP_PROJECT "libkram")
+    set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
 elseif (BUILD_IOS)
-    set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
+    set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
 elseif (BUILD_WIN)
-    set(CMAKE_DEFAULT_STARTUP_PROJECT "kram")
+    set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
 endif()
 
 
@@ -91,7 +91,7 @@ endif()
 add_subdirectory(libkram)
 
 # the CLI app for Mac/Win that can build content for other platforms, uses libkram
-add_subdirectory(kram)
+add_subdirectory(kramc)
 
 # the viewer is only written for macOS Intel/ARM currently, uses libkram
 if (BUILD_MAC)
