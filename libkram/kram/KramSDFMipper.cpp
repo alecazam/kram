@@ -6,8 +6,8 @@
 
 //#include <algorithm>
 
+#include "KTXImage.h"  // for mipDown
 #include "KramMipper.h"
-#include "KTXImage.h" // for mipDown
 #include "hedistance.h"
 
 namespace kram {
@@ -58,9 +58,9 @@ void SDFMipper::mipmap(ImageData& dstImage, int32_t mipLevel)
     int32_t w = srcBitmapImage.width;
     int32_t h = srcBitmapImage.height;
     int32_t d = 1;
-    
+
     mipDown(w, h, d, mipLevel);
-    
+
     dstImage.width = w;
     dstImage.height = h;
 

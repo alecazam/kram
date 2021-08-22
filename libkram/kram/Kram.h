@@ -19,10 +19,10 @@ class KTXImageData {
 public:
     // class keeps the data alive in mmapHelper or fileData
     bool open(const char* filename, KTXImage& image);
-    
+
     // class aliases data, so caller must keep alive.  Useful with bundle.
     bool open(const uint8_t* data, size_t dataSize, KTXImage& image);
-    
+
     // This releases all memory associated with this class
     void close();
 

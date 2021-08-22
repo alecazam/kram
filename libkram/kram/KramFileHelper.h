@@ -49,7 +49,7 @@ public:
 
     // return mod stamp on filename
     static uint64_t modificationTimestamp(const char* filename);
-        
+
     static size_t pagesize();
 
 private:

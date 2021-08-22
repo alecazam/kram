@@ -21,15 +21,15 @@ enum LogLevel {
 // these validate the inputs to any sprintf like format + args
 // these come from sys/cdefs.h on Apple, but need to be define for __clang__ on other platforms
 #ifndef __printflike
-    #define __printflike(fmtIndex, varargIndex)
+#define __printflike(fmtIndex, varargIndex)
 #endif
 #ifndef __scanflike
-    #define __scanflike(fmtIndex, varargIndex)
+#define __scanflike(fmtIndex, varargIndex)
 #endif
 
 extern int32_t logMessage(const char* group, int32_t logLevel,
-                      const char* file, int32_t line, const char* func,
-                      const char* fmt, ...) __printflike(6, 7);
+                          const char* file, int32_t line, const char* func,
+                          const char* fmt, ...) __printflike(6, 7);
 
 // verify leaves conditional code in the build
 #if KRAM_DEBUG
@@ -71,6 +71,5 @@ bool endsWithExtension(const char* str, const string& substring);
 
 // https://stackoverflow.com/questions/874134/find-out-if-string-ends-with-another-string-in-c
 bool endsWith(const string& value, const string& ending);
-
 
 }  // namespace kram

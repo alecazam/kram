@@ -55,7 +55,7 @@ public:
     int32_t width = 0;
     int32_t height = 0;
     int32_t depth = 0;
-    
+
     bool isSRGB = false;
     bool isHDR = false;  // only updates pixelsFloat
 };
@@ -77,17 +77,17 @@ public:
     // these use table lookups, so need to be class members
     float toLinear(uint8_t srgb) const { return srgbToLinear[srgb]; }
     float toAlphaFloat(uint8_t alpha) const { return alphaToFloat[alpha]; }
-    
-    float4 toLinear(const Color& c) const { return float4m(toLinear(c.r), toLinear(c.g), toLinear(c.b), toAlphaFloat(c.a)); }
-    
+
+    float4 toLinear(const Color &c) const { return float4m(toLinear(c.r), toLinear(c.g), toLinear(c.b), toAlphaFloat(c.a)); }
+
     uint8_t toPremul(uint8_t channelIntensity, uint8_t alpha) const { return ((uint32_t)channelIntensity * (uint32_t)alpha) / 255; }
-    
+
 private:
     void initTables();
 
     void mipmapLevel(const ImageData &srcImage, ImageData &dstImage) const;
-    
-    void mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) const;
+
+    void mipmapLevelOdd(const ImageData &srcImage, ImageData &dstImage) const;
 };
 
 }  // namespace kram

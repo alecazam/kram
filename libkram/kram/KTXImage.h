@@ -100,9 +100,9 @@ enum MyMTLPixelFormat {
     MyMTLPixelFormatRG32Float = 105,
     MyMTLPixelFormatRGBA32Float = 125,
 
-    // TODO: also need rgb9e5 for fallback if ASTC HDR/6H not supported
-    // That is Unity's fallback if alpha not needed, otherwise RGBA16F.
-    
+// TODO: also need rgb9e5 for fallback if ASTC HDR/6H not supported
+// That is Unity's fallback if alpha not needed, otherwise RGBA16F.
+
 #if SUPPORT_RGB
     // Can import files from KTX/KTX2 with RGB data, but convert right away to RGBA.
     // These are not export formats.  Watch alignment on these too.  These
@@ -116,7 +116,7 @@ enum MyMTLPixelFormat {
 
 enum MyMTLTextureType {
     // MyMTLTextureType1D = 0,   // not twiddled or compressed, more like a buffer but with texture limits
-    MyMTLTextureType1DArray = 1, // not twiddled or compressed, more like a buffer but with texture limits
+    MyMTLTextureType1DArray = 1,  // not twiddled or compressed, more like a buffer but with texture limits
     MyMTLTextureType2D = 2,
     MyMTLTextureType2DArray = 3,
     // MyMTLTextureType2DMultisample = 4,
@@ -143,7 +143,8 @@ public:
     // As such, this doesn't have much functionality, other than to hold the header.
 
     // 64-byte header
-    uint8_t identifier[kKTXIdentifierSize] = { // same is kKTXIdentifier
+    uint8_t identifier[kKTXIdentifierSize] = {
+        // same is kKTXIdentifier
         0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
         //'«', 'K', 'T', 'X', ' ', '1', '1', '»', '\r', '\n', '\x1A', '\n'
     };
@@ -193,14 +194,15 @@ public:
 // and this stores an array of supercompressed levels, and has dfds.
 class KTX2Header {
 public:
-     uint8_t identifier[kKTXIdentifierSize] = { // same is kKTX2Identifier
+    uint8_t identifier[kKTXIdentifierSize] = {
+        // same is kKTX2Identifier
         0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
         // '«', 'K', 'T', 'X', ' ', '2', '0', '»', '\r', '\n', '\x1A', '\n'
     };
 
-    uint32_t vkFormat = 0; // invalid format
+    uint32_t vkFormat = 0;  // invalid format
     uint32_t typeSize = 1;
-    
+
     uint32_t pixelWidth = 1;
     uint32_t pixelHeight = 0;
     uint32_t pixelDepth = 0;
@@ -237,16 +239,16 @@ public:
 // and the offsts include a 4 byte length at the start of each level.
 class KTXImageLevel {
 public:
-    uint64_t offset = 0; //  differ in ordering - ktx largest first, ktx2 smallest first
-    uint64_t lengthCompressed = 0; // set to 0 if not compresseds
-    uint64_t length = 0; // numChunks * mipSize when written for non cube on KTX1 or all KTX2, internally only stores mipSize
+    uint64_t offset = 0;            //  differ in ordering - ktx largest first, ktx2 smallest first
+    uint64_t lengthCompressed = 0;  // set to 0 if not compresseds
+    uint64_t length = 0;            // numChunks * mipSize when written for non cube on KTX1 or all KTX2, internally only stores mipSize
 };
 
 enum KTX2Supercompression {
     KTX2SupercompressionNone = 0,
-    KTX2SupercompressionBasisLZ = 1, // can transcode, but can't gen from KTX file using ktxsc, uses sgdByteLength
-    KTX2SupercompressionZstd = 2, // faster deflate, ktxsc support
-    KTX2SupercompressionZlib = 3, // deflate, no ktxsc support (use miniz)
+    KTX2SupercompressionBasisLZ = 1,  // can transcode, but can't gen from KTX file using ktxsc, uses sgdByteLength
+    KTX2SupercompressionZstd = 2,     // faster deflate, ktxsc support
+    KTX2SupercompressionZlib = 3,     // deflate, no ktxsc support (use miniz)
     // TODO: Need LZFSE?
     // TODO: need Kraken for PS4
     // TODO: need Xbox format
@@ -254,14 +256,12 @@ enum KTX2Supercompression {
 
 struct KTX2Compressor {
     KTX2Supercompression compressorType = KTX2SupercompressionNone;
-    float compressorLevel = 0.0f; // 0.0 is default
-    
+    float compressorLevel = 0.0f;  // 0.0 is default
+
     bool isCompressed() const { return compressorType != KTX2SupercompressionNone; }
 };
 
 //---------------------------------------------
-
-
 
 // Since can't add anything to KTXHeader without throwing off KTXHeader size,
 // this holds any mutable data for reading/writing KTX images.
@@ -269,14 +269,14 @@ class KTXImage {
 public:
     // this calls init calls
     bool open(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly = false);
-    
+
     void initProps(const uint8_t* propsData, size_t propDataSize);
-    
+
     void initMipLevels(size_t mipOffset);
     void initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize, int32_t mipSkip, uint32_t& numSkippedMips);
 
     bool validateMipLevels() const;
-    
+
     // props handling
     void toPropsData(vector<uint8_t>& propsData);
 
@@ -295,8 +295,7 @@ public:
     Int2 blockDims() const;
     uint32_t blockCount(uint32_t width_, uint32_t height_) const;
     uint32_t blockCountRows(uint32_t width_) const;
-    
-   
+
     // this is where KTXImage holds all mip data internally
     void reserveImageData();
     void reserveImageData(size_t totalSize);
@@ -304,37 +303,37 @@ public:
 
     // for KTX2 files, the mips can be compressed using various encoders
     bool isSupercompressed() const { return isKTX2() && mipLevels[0].lengthCompressed != 0; }
-    
+
     bool isKTX1() const { return !skipImageLength; }
     bool isKTX2() const { return skipImageLength; }
-    
+
     // can use on ktx1/2 files, does a decompress if needed
     bool unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData) const;
-    
+
     // helpers to work with the mipLevels array, mipLength and levelLength are important to get right
     // mip data depends on format
-    
+
     // mip
     void mipDimensions(uint32_t mipNumber, uint32_t& width_, uint32_t& height_, uint32_t& depth_) const;
     uint32_t mipLengthCalc(uint32_t width_, uint32_t height_) const;
     uint32_t mipLengthCalc(uint32_t mipNumber) const;
     size_t mipLengthLargest() const { return mipLevels[0].length; }
     size_t mipLength(uint32_t mipNumber) const { return mipLevels[mipNumber].length; }
-    
+
     // level
     size_t levelLength(uint32_t mipNumber) const { return mipLevels[mipNumber].length * totalChunks(); }
     size_t levelLengthCompressed(uint32_t mipNumber) const { return mipLevels[mipNumber].lengthCompressed; }
-    
+
     // chunk
     uint32_t totalChunks() const;
     size_t chunkOffset(uint32_t mipNumber, uint32_t chunkNumber) const { return mipLevels[mipNumber].offset + mipLevels[mipNumber].length * chunkNumber; }
-    
+
 private:
     bool openKTX2(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly);
 
     // ktx2 mips are uncompressed to convert back to ktx1, but without the image offset
     vector<uint8_t> _imageData;
-    
+
 public:  // TODO: bury this
     MyMTLTextureType textureType = MyMTLTextureType2D;
     MyMTLPixelFormat pixelFormat = MyMTLPixelFormatInvalid;
@@ -348,7 +347,7 @@ public:  // TODO: bury this
     // for ktx2
     bool skipImageLength = false;
     KTX2Supercompression supercompressionType = KTX2SupercompressionNone;
-    
+
     KTXHeader header;  // copy of KTXHeader, so can be modified and then written back
 
     // write out only string/string props, for easy of viewing
@@ -372,7 +371,7 @@ inline void mipDown(int32_t& w, int32_t& h, int32_t& d, uint32_t lod = 1)
     w >>= (int32_t)lod;
     h >>= (int32_t)lod;
     d >>= (int32_t)lod;
-    
+
     if (w < 1) w = 1;
     if (h < 1) h = 1;
     if (d < 1) d = 1;
@@ -384,19 +383,20 @@ inline void mipDown(uint32_t& w, uint32_t& h, uint32_t& d, uint32_t lod = 1)
     w >>= lod;
     h >>= lod;
     d >>= lod;
-    
+
     if (w < 1) w = 1;
     if (h < 1) h = 1;
     if (d < 1) d = 1;
 }
 
-inline void KTXImage::mipDimensions(uint32_t mipNumber, uint32_t& width_, uint32_t& height_, uint32_t& depth_) const {
+inline void KTXImage::mipDimensions(uint32_t mipNumber, uint32_t& width_, uint32_t& height_, uint32_t& depth_) const
+{
     assert(mipNumber < mipLevels.size());
-           
+
     width_ = width;
     height_ = height;
     depth_ = depth;
-    
+
     mipDown(width_, height_, depth_, mipNumber);
 }
 
@@ -429,8 +429,8 @@ const char* metalTypeName(MyMTLPixelFormat format);
 
 // vuklan
 const char* vulkanTypeName(MyMTLPixelFormat format);
-uint32_t vulkanType(MyMTLPixelFormat format);  // really VKFormat
-MyMTLPixelFormat vulkanToMetalFormat(uint32_t format); // really VKFormat
+uint32_t vulkanType(MyMTLPixelFormat format);           // really VKFormat
+MyMTLPixelFormat vulkanToMetalFormat(uint32_t format);  // really VKFormat
 
 // gl
 const char* glTypeName(MyMTLPixelFormat format);

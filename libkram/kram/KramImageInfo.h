@@ -8,8 +8,8 @@
 //#include <vector>
 
 #include "KTXImage.h"
-#include "KramMipper.h"  // for Color
 #include "KramConfig.h"
+#include "KramMipper.h"  // for Color
 
 namespace kram {
 class Image;
@@ -49,13 +49,13 @@ public:
     int32_t mipMinSize = 1;
     int32_t mipMaxSize = 32 * 1024;
     int32_t mipSkip = 0;
-    
+
     int32_t quality = 49;  // may want float
 
     // ktx2 has a compression type and level
     KTX2Compressor compressor;
     bool isKTX2 = false;
-    
+
     //bool skipImageLength = false;
     bool doMipmaps = true;  // default to mips on
     bool isVerbose = false;
@@ -63,7 +63,7 @@ public:
     bool isPremultiplied = false;
     bool isPrezero = false;
     bool isNormal = false;  // signed, but may be stored unorm and swizzled (f.e. astc/bc3nm gggr or rrrg)
-    
+
     // can pick a smaller format if alpha = 1 (only for bc and etc)
     bool optimizeFormatForOpaque = false;
 
@@ -77,10 +77,10 @@ public:
     bool isHeight = false;
     bool isWrap = false;
     float heightScale = 1.0f;
-    
+
     string swizzleText;
     string averageChannels;
-    
+
     // count of chunks to help turn 2d texture into 2d array, 3d, cubearray
     int32_t chunksX = 0;
     int32_t chunksY = 0;
@@ -101,12 +101,13 @@ public:
                                   const char* swizzleText);
     static void swizzleTextureLDR(int32_t w, int32_t h, Color* srcPixels_,
                                   const char* swizzleText);
-    
+
     // convert x field to normals
     static void heightToNormals(int32_t w, int32_t h,
                                 float4* srcPixelsFloat_,
                                 Color* srcPixels_,
                                 float scale, bool isWrap = false);
+
 private:
     // this walks pixels for hasColor and hasAlpha if not already set to false
     void updateImageTraitsHDR(int32_t w, int32_t h,
@@ -127,7 +128,7 @@ public:
     // ktx2 has a compression type and level
     KTX2Compressor compressor;
     bool isKTX2 = false;
-    
+
     // output image state
     // Note: difference between input srgb and output srgb, but it's mingled
     // here a bit
@@ -168,13 +169,13 @@ public:
     bool isHeight = false;
     bool isWrap = false;
     float heightScale = 1.0f;
-    
+
     int32_t quality = 49;
 
     int32_t mipMinSize = 1;
     int32_t mipMaxSize = 32 * 1024;
-    int32_t mipSkip = 0; // count of large mips to skip
-    
+    int32_t mipSkip = 0;  // count of large mips to skip
+
     int32_t chunksX = 0;
     int32_t chunksY = 0;
     int32_t chunksCount = 0;

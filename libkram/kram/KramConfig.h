@@ -48,7 +48,7 @@
 // Disable warnings
 // can set disable, once, or error
 
-#pragma warning( disable : 4530 4305 4267 4996 4244 4305 )
+#pragma warning(disable : 4530 4305 4267 4996 4244 4305)
 
 /* Couldn't seem to place these inside the open parens
     4530 // C++ exception handler used, but unwind semantics are not enabled. Specify /EHsc
@@ -58,7 +58,6 @@
     4244 // 'initializing': conversion from 'int32_t' to 'float', possible loss of data
     4305 // '*=': truncation from 'double' to 'float'
 */
-
 
 #endif
 
@@ -162,16 +161,17 @@
 // this probably breaks all STL debugging
 #include <EASTL/algorithm.h"  // for max
 //#include "EASTL/atomic.h"
-#include <atomic>
 #include <EASTL/deque.h>
 #include <EASTL/functional.h>
-#include <EASTL/iterator.h> // for copy_if on Win
-#include <EASTL/shared_ptr.h> // includes thread/mutex
+#include <EASTL/iterator.h>    // for copy_if on Win
+#include <EASTL/shared_ptr.h>  // includes thread/mutex
 #include <EASTL/sort.h>
 #include <EASTL/string.h>
 #include <EASTL/unique_ptr.h>
 #include <EASTL/unordered_map.h>
 #include <EASTL/vector.h>
+
+#include <atomic>
 
 #define NAMESPACE_STL eastl
 
@@ -181,8 +181,8 @@
 #include <atomic>
 #include <deque>
 #include <functional>
-#include <iterator> // for copy_if on Win
-#include <memory> // for shared_ptr
+#include <iterator>  // for copy_if on Win
+#include <memory>    // for shared_ptr
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -259,8 +259,7 @@ public:
 
 #if !USE_EASTL
 
-namespace std
-{
+namespace std {
 inline float clamp(float x, float minValue, float maxValue) { return min(max(x, minValue), maxValue); }
 inline double clamp(double x, double minValue, double maxValue) { return min(max(x, minValue), maxValue); }
 
@@ -272,7 +271,7 @@ inline double clamp(uint16_t x, uint16_t minValue, uint16_t maxValue) { return m
 
 inline double clamp(int32_t x, int32_t minValue, int32_t maxValue) { return min(max(x, minValue), maxValue); }
 inline double clamp(int64_t x, int64_t minValue, int64_t maxValue) { return min(max(x, minValue), maxValue); }
-}
+}  // namespace std
 
 #endif
 
@@ -283,8 +282,7 @@ inline double clamp(int64_t x, int64_t minValue, int64_t maxValue) { return min(
 #include "float4a.h"
 #endif
 
-namespace simd
-{
+namespace simd {
 
 #if USE_SIMDLIB
 
@@ -296,15 +294,15 @@ inline float4 float4m(float3 v, float w)
 
 inline float2 float2m(float x, float y)
 {
-    return { x, y };
+    return {x, y};
 }
 inline float3 float3m(float x, float y, float z)
 {
-    return { x, y, z };
+    return {x, y, z};
 }
 inline float4 float4m(float x, float y, float z, float w)
 {
-    return { x, y, z, w };
+    return {x, y, z, w};
 }
 
 inline float2 float2m(float x)
@@ -344,7 +342,6 @@ inline float4 saturate(const float4& v)
 }
 
 #endif
-
 
 #if USE_FLOAT16
 
@@ -419,24 +416,15 @@ inline half4 toHalf4(const float4& vv)
 // this just strips args
 #define macroUnusedVar(x) (void)x
 
-
 //---------------------------------------
 
-
-
-
-namespace kram
-{
+namespace kram {
 using namespace NAMESPACE_STL;
 
 // Use this on vectors
-template<typename T>
+template <typename T>
 inline size_t vsizeof(const vector<T>& v)
 {
     return sizeof(T) * v.size();
 }
-}
-
-
-
-
+}  // namespace kram

@@ -7,9 +7,10 @@
 #include <sys/stat.h>
 
 //#include <atomic>
+#include <inttypes.h>
+
 #include <cmath>
 #include <ctime>
-#include <inttypes.h>
 //#include <algorithm>  // for max
 //#include <string>
 //#include <vector>
@@ -32,7 +33,7 @@ void* __cdecl operator new[](size_t size, const char* name, int flags, unsigned 
 
 void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
 {
-    return new uint8_t[size]; // TODO: honor alignment
+    return new uint8_t[size];  // TODO: honor alignment
 }
 
 #endif
@@ -48,62 +49,64 @@ namespace kram {
 
 using namespace NAMESPACE_STL;
 
-template<typename T>
-void releaseVector(vector<T>& v) {
+template <typename T>
+void releaseVector(vector<T>& v)
+{
     v.clear();
     v.shrink_to_fit();
 }
 
-
-bool isPNGFilename(const char* filename) {
+bool isPNGFilename(const char* filename)
+{
     // should really lookg at first 4 bytes of data
     return endsWithExtension(filename, ".png");
 }
 
-bool isPNGFilename(const uint8_t* data, size_t dataSize) {
+bool isPNGFilename(const uint8_t* data, size_t dataSize)
+{
     // read the 4 chars at the beginning of the file
     const uint32_t numChars = 8;
     if (dataSize < numChars)
         return false;
-    
-    const uint8_t kPngSignature[numChars] = { 137, 80, 78, 71, 13, 10, 26, 10 };
+
+    const uint8_t kPngSignature[numChars] = {137, 80, 78, 71, 13, 10, 26, 10};
     if (memcmp(data, kPngSignature, sizeof(kPngSignature)) != 0) {
         return false;
     }
-    
+
     return true;
 }
 
-
-bool KTXImageData::open(const char* filename, KTXImage& image) {
+bool KTXImageData::open(const char* filename, KTXImage& image)
+{
     close();
-    
+
     if (isPNGFilename(filename)) {
         return openPNG(filename, image);
     }
-        
+
     isMmap = true;
     if (!mmapHelper.open(filename)) {
         isMmap = false;
-        
+
         // open file, copy it to memory, then close it
         FileHelper fileHelper;
         if (!fileHelper.open(filename, "rb")) {
             return false;
         }
-        
+
         // read the file into memory
         size_t size = fileHelper.size();
         if (size == (size_t)-1) {
             return false;
         }
-        
+
         fileData.resize(size);
         if (!fileHelper.read(fileData.data(), size)) {
             return false;
         }
     }
-    
+
     const uint8_t* data;
     size_t dataSize;
     if (isMmap) {
@@ -114,55 +117,56 @@ bool KTXImageData::open(const char* filename, KTXImage& image) {
         data = fileData.data();
         dataSize = fileData.size();
     }
-    
+
     // read the KTXImage in from the data, it will alias mmap or fileData
     bool isLoaded = image.open(data, dataSize, isInfoOnly);
-    
+
     // this means KTXImage is using it's own storage
     if (!isLoaded || image.fileData != data) {
         close();
     }
-    
+
     if (!isLoaded) {
         return false;
     }
-    
+
     return true;
 }
 
-void KTXImageData::close() {
+void KTXImageData::close()
+{
     // don't need these anymore, singleImage holds the data
     mmapHelper.close();
     releaseVector(fileData);
     isMmap = false;
 }
 
-
-bool KTXImageData::openPNG(const char* filename, KTXImage& image) {
+bool KTXImageData::openPNG(const char* filename, KTXImage& image)
+{
     //close();
-    
+
     isMmap = true;
     if (!mmapHelper.open(filename)) {
         isMmap = false;
-        
+
         // open file, copy it to memory, then close it
         FileHelper fileHelper;
         if (!fileHelper.open(filename, "rb")) {
             return false;
         }
-        
+
         // read the file into memory
         size_t size = fileHelper.size();
         if (size == (size_t)-1) {
             return false;
         }
-        
+
         fileData.resize(size);
         if (!fileHelper.read(fileData.data(), size)) {
             return false;
         }
     }
-    
+
     const uint8_t* data;
     size_t dataSize;
     if (isMmap) {
@@ -177,22 +181,23 @@ bool KTXImageData::openPNG(const char* filename, KTXImage& image) {
     return openPNG(data, dataSize, image);
 }
 
-bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image) {
+bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image)
+{
     //close();
-        
+
     // the mmap/filehelper point to the png data
     // use Image to
-    
+
     Image singleImage;
     bool isLoaded = LoadPng(data, dataSize, false, false, singleImage);
-    
+
     // don't need png data anymore
     close();
-    
+
     if (!isLoaded) {
         return false;
     }
-    
+
     // now move the png pixels into the KTXImage
 
     image.width = singleImage.width();
@@ -203,33 +208,33 @@ bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image
     image.header.numberOfMipmapLevels = 1;
     image.textureType = MyMTLTextureType2D;
     image.pixelFormat = /*isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : */ MyMTLPixelFormatRGBA8Unorm;
-    
+
     // TODO: support mips with blitEncoder but tha confuses mipCount in KTXImage
     //     Mipper can also generate on cpu side.  Mipped can do premul conversion though.
-    
+
     // TODO: support chunks and striped png, but may need to copy horizontal to vertical
-    
+
     // TODO: png has 16u format useful for heights
-    
-    image.initMipLevels(sizeof(KTXHeader)); // TODO: could also make this ktx2 with zstd compress
+
+    image.initMipLevels(sizeof(KTXHeader));  // TODO: could also make this ktx2 with zstd compress
     image.reserveImageData();
     memcpy((uint8_t*)image.fileData, &image.header, sizeof(KTXHeader));
-    
+
     memcpy((uint8_t*)image.fileData + image.mipLevels[0].offset, singleImage.pixels().data(), image.levelLength(0));
-    
+
     return true;
 }
 
 bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image)
 {
     close();
-    
+
     if (isPNGFilename(data, dataSize)) {
         return openPNG(data, dataSize, image);
     }
-      
+
     // image will likely alias incoming data, so KTXImageData is unused
-    
+
     if (!image.open(data, dataSize, isInfoOnly)) {
         return false;
     }
@@ -253,41 +258,40 @@ bool SetupSourceKTX(KTXImageData& srcImageData,
 // linear-order block textures.  But on some platforms may be able to directly use the block
 // and pixel data if organized in the exact twiddle order the hw uses.
 // Code adapted from KTX doc example.
-class MortonOrder
-{
+class MortonOrder {
 public:
-MortonOrder(uint32_t width, uint32_t height) {
-    minDim = (width <= height) ? width : height;
-    
-    // Smaller size must be a power of 2
-    assert((minDim & (minDim - 1)) == 0);
+    MortonOrder(uint32_t width, uint32_t height)
+    {
+        minDim = (width <= height) ? width : height;
 
-    // Larger size must be a multiple of the smaller
-    assert(width % minDim == 0 && height % minDim == 0);
-}
-    
-// For a given xy block in a mip level, find the block offset in morton order
-uint32_t mortonOffset(uint32_t x, uint32_t y)
-{
-    uint32_t offset = 0, shift = 0;
+        // Smaller size must be a power of 2
+        assert((minDim & (minDim - 1)) == 0);
 
-    for (uint32_t mask = 1; mask < minDim; mask <<= 1) {
-        offset |= (((y & mask) << 1) | (x & mask)) << shift;
-        shift++;
+        // Larger size must be a multiple of the smaller
+        assert(width % minDim == 0 && height % minDim == 0);
     }
 
-    // At least one of width and height will have run out of most-significant bits
-    offset |= ((x | y) >> shift) << (shift * 2);
-    return offset;
-}
-    
+    // For a given xy block in a mip level, find the block offset in morton order
+    uint32_t mortonOffset(uint32_t x, uint32_t y)
+    {
+        uint32_t offset = 0, shift = 0;
+
+        for (uint32_t mask = 1; mask < minDim; mask <<= 1) {
+            offset |= (((y & mask) << 1) | (x & mask)) << shift;
+            shift++;
+        }
+
+        // At least one of width and height will have run out of most-significant bits
+        offset |= ((x | y) >> shift) << (shift * 2);
+        return offset;
+    }
+
 private:
     uint32_t minDim = 0;
 };
 
-
-
-inline Color toPremul(Color c) {
+inline Color toPremul(Color c)
+{
     // these are really all fractional, but try this
     c.r = ((uint32_t)c.r * (uint32_t)c.a) / 255;
     c.g = ((uint32_t)c.g * (uint32_t)c.a) / 255;
@@ -297,18 +301,18 @@ inline Color toPremul(Color c) {
 
 // rec709
 // https://en.wikipedia.org/wiki/Grayscale
-inline Color toGrayscaleRec709(Color c, const Mipper& mipper) {
-    
-    const float4 kRec709Conversion = float4m(0.2126f, 0.7152f, 0.0722f, 0.0f); // really a float3
-    
+inline Color toGrayscaleRec709(Color c, const Mipper& mipper)
+{
+    const float4 kRec709Conversion = float4m(0.2126f, 0.7152f, 0.0722f, 0.0f);  // really a float3
+
     // convert to linear, do luminance, then back to srgb primary
-    
+
     float4 clin = mipper.toLinear(c);
     float luminance = dot(clin, kRec709Conversion);
-    luminance = std::min(luminance, 1.0f); // to avoid assert if math goes above 1.0
-    
+    luminance = std::min(luminance, 1.0f);  // to avoid assert if math goes above 1.0
+
     c.r = (uint8_t)(roundf(linearToSRGBFunc(luminance) * 255.0f));
-    
+
     // can just copy into the other 3 terms
     c.g = c.b = c.r;
     return c;
@@ -317,7 +321,7 @@ inline Color toGrayscaleRec709(Color c, const Mipper& mipper) {
 bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
 {
     KTXImage image;
-    bool isInfoOnly = true; // don't decompress entire image, only going to unpack top level mip
+    bool isInfoOnly = true;  // don't decompress entire image, only going to unpack top level mip
     if (!image.open(data, dataSize, isInfoOnly)) {
         return false;
     }
@@ -383,32 +387,31 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
         return false;
     }
 
-    
     // convert to grasycale on load
     // better if could do this later in pipeline to stay in linear fp16 color
     if (hasColor && isGray) {
         Mipper mipper;
-            
+
         Color* colors = (Color*)pixels.data();
-        for (int32_t i = 0, iEnd = width*height; i < iEnd; ++i) {
+        for (int32_t i = 0, iEnd = width * height; i < iEnd; ++i) {
             colors[i] = toGrayscaleRec709(colors[i], mipper);
         }
-        
+
         hasColor = false;
     }
-    
+
     // apply premul srgb right away, don't use with -premul or alpha is applied twice
     // this may throw off the props.  Note this ignores srgb conversion.
     // This is hack to look like Photoshop and Apple Preview, where they process srgb wrong
     // on premul PNG data on load, and colors look much darker.
-    
+
     if (hasAlpha && isPremulRgb) {
         Color* colors = (Color*)pixels.data();
-        for (int32_t i = 0, iEnd = width*height; i < iEnd; ++i) {
+        for (int32_t i = 0, iEnd = width * height; i < iEnd; ++i) {
             colors[i] = toPremul(colors[i]);
         }
     }
-    
+
     return sourceImage.loadImageFromPixels(pixels, width, height, hasColor, hasAlpha);
 }
 
@@ -432,7 +435,7 @@ bool SetupSourceImage(const string& srcFilename, Image& sourceImage,
     // TODO: basically KTXImageData, but the encode can't take in a KTXImage yet
     // so here it's generate a single Image.  Also here the LoadKTX converts
     // 1/2/3/4 channel formats to 4.
-    
+
     MmapHelper mmapHelper;
     vector<uint8_t> fileData;
 
@@ -440,9 +443,9 @@ bool SetupSourceImage(const string& srcFilename, Image& sourceImage,
     bool isMmap = true;
     if (!mmapHelper.open(srcFilename.c_str())) {
         isMmap = false;
-        
+
         FileHelper fileHelper;
-        
+
         // fallback to opening file if no mmap support or it didn't work
         if (!fileHelper.open(srcFilename.c_str(), "rb")) {
             KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
@@ -455,14 +458,14 @@ bool SetupSourceImage(const string& srcFilename, Image& sourceImage,
         if (size == (size_t)-1) {
             return false;
         }
-        
+
         fileData.resize(size);
 
         if (!fileHelper.read(fileData.data(), size)) {
             return false;
         }
     }
-    
+
     const uint8_t* data;
     size_t dataSize;
     if (isMmap) {
@@ -473,9 +476,9 @@ bool SetupSourceImage(const string& srcFilename, Image& sourceImage,
         data = fileData.data();
         dataSize = fileData.size();
     }
-    
+
     //-----------------------
-    
+
     if (isPNG) {
         if (!LoadPng(data, dataSize, isPremulSrgb, isGray, sourceImage)) {
             return false;  // error
@@ -486,12 +489,9 @@ bool SetupSourceImage(const string& srcFilename, Image& sourceImage,
             return false;  // error
         }
     }
-    
-    
+
     return true;
 }
-
-
 
 // better countof in C++11, https://www.g-truc.net/post-0708.html
 template <typename T, size_t N>
@@ -765,7 +765,7 @@ string formatInputAndOutput(int32_t testNumber, const char* srcFilename, MyMTLPi
     size_t extSeparator = dst.rfind('.');
     assert(extSeparator != string::npos);
     dst.erase(extSeparator);
-    dst.append(".ktx"); // TODO: test ktx2 too
+    dst.append(".ktx");  // TODO: test ktx2 too
 
     cmd += dst;
 
@@ -1139,7 +1139,7 @@ void kramDecodeUsage(bool showVersion = true)
           "\t -i/nput .ktx\n"
           "\t -o/utput .ktx\n"
           "\n",
-          showVersion ? usageName : "" );
+          showVersion ? usageName : "");
 }
 
 void kramInfoUsage(bool showVersion = true)
@@ -1174,24 +1174,24 @@ void kramEncodeUsage(bool showVersion = true)
     const char* ateEnabled = "";
     const char* etcencEnabled = "";
     const char* astcencEnabled = "";
-    
-    // prerocessor in MSVC can't handle this
-    #if !COMPILE_SQUISH
+
+// prerocessor in MSVC can't handle this
+#if !COMPILE_SQUISH
     squishEnabled = "(DISABLED)";
-    #endif
-    #if !COMPILE_BCENC
+#endif
+#if !COMPILE_BCENC
     bcencEnabled = "(DISABLED)";
-    #endif
-    #if !COMPILE_ATE
+#endif
+#if !COMPILE_ATE
     ateEnabled = "(DISABLED)";
-    #endif
-    #if !COMPILE_ASTCENC
+#endif
+#if !COMPILE_ASTCENC
     astcencEnabled = "(DISABLED)";
-    #endif
-    #if !COMPILE_ETCENC
+#endif
+#if !COMPILE_ETCENC
     etcencEnabled = "(DISABLED)";
-    #endif
-    
+#endif
+
     KLOGI("Kram",
           "%s\n"
           "Usage: kram encode\n"
@@ -1239,22 +1239,22 @@ void kramEncodeUsage(bool showVersion = true)
 
           // can force an encoder when there is overlap
           "\t-encoder squish"
-          "\tbc[1,3,4,5] %s\n" // can be disabled
-          
+          "\tbc[1,3,4,5] %s\n"  // can be disabled
+
           "\t-encoder bcenc"
-          "\tbc[1,3,4,5,7] %s\n" // can be disabled
-          
+          "\tbc[1,3,4,5,7] %s\n"  // can be disabled
+
           "\t-encoder ate"
-          "\tbc[1,4,5,7] %s\n" // can be disabled
-          
+          "\tbc[1,4,5,7] %s\n"  // can be disabled
+
           "\t-encoder ate"
-          "\tastc[4x4,8x8] %s\n" // can be disabled
+          "\tastc[4x4,8x8] %s\n"  // can be disabled
 
           "\t-encoder astcenc"
-          "\tastc[4x4,5x5,6x6,8x8] ldr/hdr support %s\n" // can be disabled
+          "\tastc[4x4,5x5,6x6,8x8] ldr/hdr support %s\n"  // can be disabled
 
           "\t-encoder etcenc"
-          "\tetc2[r,rg,rgb,rgba] %s\n" // can be disabled
+          "\tetc2[r,rg,rgb,rgba] %s\n"  // can be disabled
 
           "\t-encoder explicit"
           "\tr|rg|rgba[8|16f|32f]\n"
@@ -1266,14 +1266,14 @@ void kramEncodeUsage(bool showVersion = true)
 
           "\t-mipmin size"
           "\tOnly output mips >= size px\n"
-          
+
           "\t-mipmax size"
           "\tOnly output mips <= size px\n"
-          
+
           "\t-mipskip count"
           "\tOnly output largest mips >= count, similar to mipmax but with count instead of size px\n"
           "\n"
-          
+
           // tex to normal
           "\t-height"
           "\tConvert height.x to normal.xy\n"
@@ -1291,39 +1291,39 @@ void kramEncodeUsage(bool showVersion = true)
           "\tNormal map rg storage signed for etc/bc (rg01), only unsigned astc L+A (gggr).\n"
           "\t-sdf"
           "\tGenerate single-channel SDF from a bitmap, can mip and drop large mips. Encode to r8, bc4, etc2r, astc4x4 (Unorm LLL1) to encode\n"
-          
+
           "\t-gray"
           "\tConvert to grayscale before premul\n"
-          
+
           // premul is not on by default, but really should be or textures aren't sampled correctly
           // but this really only applies to color channel textures, so off by default.
           "\t-premul"
           "\tPremultiplied alpha to src pixels before output\n"
-          
+
           // This is meant to work with shaders that (incorrectly) premul after sampling.
           // limits the rgb bleed in regions that should not display colors.  Can stil have black color halos.
           "\t-prezero"
           "\tPremultiplied alpha to src pixels before output but only where a=0\n"
-          
+
           // This emulates Photoshop premul only on png files.  Multiplies  srgbColor.rgb * a.
           "\t-premulrgb"
           "\tPremultiplied alpha to src pixels at load to emulate Photoshop srgbColor.rgb * a, don't use with -premul\n"
           "\n"
-          
+
           "\t-optopaque"
           "\tChange format from bc7/3 to bc1, or etc2rgba to rgba if opaque\n"
           "\n"
 
           "\t-chunks 4x4"
           "\tSpecifies how many chunks to split up texture into 2darray\n"
-          
+
           // ktx2 specific settings
           "\tktx2 mip compression, if not present then no compresion used\n"
           "\t-zstd 0"
           "\tktx2 with zstd mip compressor, 0 for default, 0 to 100\n"
           "\t-zlib 0"
           "\tktx2 with zlib mip compressor, 0 for default, 0 to 11\n"
-          
+
           "\t-swizzle [rgba01 x4]"
           "\tSpecifies pre-encode swizzle pattern\n"
           "\t-avg [rgba]"
@@ -1333,22 +1333,21 @@ void kramEncodeUsage(bool showVersion = true)
           "\tVerbose encoding output\n"
           "\n",
           showVersion ? usageName : "",
-          
+
           squishEnabled,
           bcencEnabled,
           ateEnabled,
           ateEnabled,
           astcencEnabled,
-          etcencEnabled
-          );
+          etcencEnabled);
 }
 
 void kramUsage()
 {
     KLOGI("Kram",
-          usageName "\n"
-          "SYNTAX\nkram [encode | decode | info | script | ...]\n"
-          );
+          usageName
+          "\n"
+          "SYNTAX\nkram [encode | decode | info | script | ...]\n");
 
     kramEncodeUsage(false);
     kramInfoUsage(false);
@@ -1364,7 +1363,7 @@ static int32_t kramAppInfo(vector<const char*>& args)
         kramInfoUsage();
         return 0;
     }
-    
+
     string srcFilename;
     string dstFilename;
 
@@ -1472,13 +1471,13 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
         // This was taken out of SetupSourceImage, dont want to decode PNG yet
         // just peek at the header.
-        
+
         // first try mmap, and then use file -> buffer
         bool useMmap = true;
         if (!srcMmapHelper.open(srcFilename.c_str())) {
             // fallback to file system if no mmap or it failed
             useMmap = false;
-            
+
             FileHelper srcFileHelper;
             if (!srcFileHelper.open(srcFilename.c_str(), "rb")) {
                 KLOGE("Kram", "File input \"%s\" could not be opened for info read.\n",
@@ -1492,7 +1491,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
             if (size == (size_t)-1) {
                 return "";
             }
-            
+
             srcFileBuffer.resize(size);
             if (!srcFileHelper.read(srcFileBuffer.data(), size)) {
                 return "";
@@ -1510,27 +1509,25 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
             data = srcFileBuffer.data();
             dataSize = srcFileBuffer.size();
         }
-        
+
         info = kramInfoPNGToString(srcFilename, data, dataSize, isVerbose);
-        
     }
     else if (isKTX) {
         KTXImage srcImage;
         KTXImageData srcImageData;
-        
+
         bool success = SetupSourceKTX(srcImageData, srcFilename, srcImage);
         if (!success) {
             KLOGE("Kram", "File input \"%s\" could not be opened for info read.\n",
                   srcFilename.c_str());
             return "";
         }
-        
+
         info = kramInfoKTXToString(srcFilename, srcImage, isVerbose);
     }
-    
+
     return info;
 }
-
 
 string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint64_t dataSize, bool /* isVerbose */)
 {
@@ -1550,7 +1547,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     }
 
     string info;
-    
+
     bool hasColor = true;
     bool hasAlpha = true;
     bool hasPalette = state.info_png.color.colortype == LCT_PALETTE;
@@ -1585,7 +1582,8 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     bool isMB = (dataSize > (512 * 1024));
     sprintf(tmp,
             "file: %s\n"
-            "size: %" PRIu64 "\n"
+            "size: %" PRIu64
+            "\n"
             "sizm: %0.3f %s\n",
             srcFilename.c_str(),
             dataSize,
@@ -1612,15 +1610,15 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
 
     // optional block with ppi
     // TODO: inspect doesn't parse this block, only decode call does
-//        if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
-//            float metersToInches = 39.37;
-//            sprintf(tmp,
-//                    "ppix: %d\n"
-//                    "ppiy: %d\n",
-//                    (int32_t)(state.info_png.phys_x * metersToInches),
-//                    (int32_t)(state.info_png.phys_y * metersToInches));
-//            info += tmp;
-//        }
+    //        if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
+    //            float metersToInches = 39.37;
+    //            sprintf(tmp,
+    //                    "ppix: %d\n"
+    //                    "ppiy: %d\n",
+    //                    (int32_t)(state.info_png.phys_x * metersToInches),
+    //                    (int32_t)(state.info_png.phys_y * metersToInches));
+    //            info += tmp;
+    //        }
 
     // TODO: also bkgd blocks.
     // TODO: sRGB, cHRM, gAMA and other colorspace blocks aren't supported by lodepng,
@@ -1631,7 +1629,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
 string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, bool isVerbose)
 {
     string info;
-    
+
     // for now driving everything off metal type, but should switch to neutral
     MyMTLPixelFormat metalFormat = srcImage.pixelFormat;
 
@@ -1640,16 +1638,16 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     //string tmp;
     bool isMB = (dataSize > (512 * 1024));
     append_sprintf(info,
-            "file: %s\n"
-            "size: %d\n"
-            "sizm: %0.3f %s\n",
-            srcFilename.c_str(),
-            dataSize,
-            isMB ? dataSize / (1024.0f * 1024.0f) : dataSize / 1024.0f,
-            isMB ? "MB" : "KB");
-    
+                   "file: %s\n"
+                   "size: %d\n"
+                   "sizm: %0.3f %s\n",
+                   srcFilename.c_str(),
+                   dataSize,
+                   isMB ? dataSize / (1024.0f * 1024.0f) : dataSize / 1024.0f,
+                   isMB ? "MB" : "KB");
+
     int32_t numChunks = srcImage.totalChunks();
-    
+
     // add up lengths and lengthCompressed
     if (srcImage.isSupercompressed()) {
         uint64_t length = 0;
@@ -1659,35 +1657,33 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
             length += level.length;
             lengthCompressed += level.lengthCompressed;
         }
-        
+
         length *= numChunks;
         uint64_t percent = (100 * lengthCompressed) / length;
-       
+
         isMB = (length > (512 * 1024));
         double lengthF = isMB ? length / (1024.0f * 1024.0f) : length / 1024.0f;
         double lengthCompressedF = isMB ? lengthCompressed / (1024.0f * 1024.0f) : lengthCompressed / 1024.0f;
-    
+
         append_sprintf(info,
-            "sizc: %0.3f,%0.3f %s %d%%\n"
-            "comp: %s\n",
-            lengthF, lengthCompressedF,
-            isMB ? "MB" : "KB",
-            (int)percent,
-            supercompressionName(srcImage.supercompressionType)
-        );
+                       "sizc: %0.3f,%0.3f %s %d%%\n"
+                       "comp: %s\n",
+                       lengthF, lengthCompressedF,
+                       isMB ? "MB" : "KB",
+                       (int)percent,
+                       supercompressionName(srcImage.supercompressionType));
     }
-                           
-    
+
     float numPixels = srcImage.width * srcImage.height;
     numPixels *= (float)numChunks;
-    
+
     if (srcImage.header.numberOfMipmapLevels > 1) {
-        numPixels *= 4.0 / 3.0f; // TODO: estimate for now
+        numPixels *= 4.0 / 3.0f;  // TODO: estimate for now
     }
-    
+
     // to megapixels
     numPixels /= (1000.0f * 1000.0f);
-    
+
     auto textureType = srcImage.header.metalTextureType();
     switch (textureType) {
         case MyMTLTextureType1DArray:
@@ -1696,93 +1692,92 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
         case MyMTLTextureTypeCubeArray:
         case MyMTLTextureType2DArray:
             append_sprintf(info,
-                    "type: %s\n"
-                    "dims: %dx%d\n"
-                    "dimm: %0.3f MP\n"
-                    "mips: %d\n",
-                    textureTypeName(srcImage.header.metalTextureType()),
-                    srcImage.width, srcImage.height,
-                    numPixels,
-                    srcImage.header.numberOfMipmapLevels);
+                           "type: %s\n"
+                           "dims: %dx%d\n"
+                           "dimm: %0.3f MP\n"
+                           "mips: %d\n",
+                           textureTypeName(srcImage.header.metalTextureType()),
+                           srcImage.width, srcImage.height,
+                           numPixels,
+                           srcImage.header.numberOfMipmapLevels);
             break;
         case MyMTLTextureType3D:
             append_sprintf(info,
-                    "type: %s\n"
-                    "dims: %dx%dx%d\n"
-                    "dimm: %0.3f MP\n"
-                    "mips: %d\n",
-                    textureTypeName(srcImage.header.metalTextureType()),
-                    srcImage.width, srcImage.height, srcImage.depth,
-                    numPixels,
-                    srcImage.header.numberOfMipmapLevels);
+                           "type: %s\n"
+                           "dims: %dx%dx%d\n"
+                           "dimm: %0.3f MP\n"
+                           "mips: %d\n",
+                           textureTypeName(srcImage.header.metalTextureType()),
+                           srcImage.width, srcImage.height, srcImage.depth,
+                           numPixels,
+                           srcImage.header.numberOfMipmapLevels);
             break;
     }
-    
+
     // print out the array
     if (srcImage.header.numberOfArrayElements > 1) {
         append_sprintf(info,
-                "arry: %d\n",
-                srcImage.header.numberOfArrayElements);
+                       "arry: %d\n",
+                       srcImage.header.numberOfArrayElements);
     }
 
     append_sprintf(info,
-            "fmtk: %s\n"
-            "fmtm: %s (%d)\n"
-            "fmtv: %s (%d)\n"
-            "fmtg: %s (0x%04X)\n",
-            formatTypeName(metalFormat),
-            metalTypeName(metalFormat), metalFormat,
-            vulkanTypeName(metalFormat), vulkanType(metalFormat),
-            glTypeName(metalFormat), glType(metalFormat));
+                   "fmtk: %s\n"
+                   "fmtm: %s (%d)\n"
+                   "fmtv: %s (%d)\n"
+                   "fmtg: %s (0x%04X)\n",
+                   formatTypeName(metalFormat),
+                   metalTypeName(metalFormat), metalFormat,
+                   vulkanTypeName(metalFormat), vulkanType(metalFormat),
+                   glTypeName(metalFormat), glType(metalFormat));
 
     // report any props
     for (const auto& prop : srcImage.props) {
         append_sprintf(info, "prop: %s %s\n", prop.first.c_str(), prop.second.c_str());
     }
-    
+
     if (isVerbose) {
         // dump mips/dims, but this can be a lot of data on arrays
         int32_t mipLevel = 0;
-        
+
         // num chunks
         append_sprintf(info, "chun: %d\n", numChunks);
-        
+
         for (const auto& mip : srcImage.mipLevels) {
             uint32_t w, h, d;
             srcImage.mipDimensions(mipLevel, w, h, d);
-            
+
             switch (textureType) {
                 case MyMTLTextureType3D:
-                append_sprintf(info,
-                   "mipl: %d %dx%dx%d ",
-                    mipLevel++,
-                   w, h, d);
-                   break;
+                    append_sprintf(info,
+                                   "mipl: %d %dx%dx%d ",
+                                   mipLevel++,
+                                   w, h, d);
+                    break;
                 default:
-                   append_sprintf(info,
-                    "mipl: %d %dx%d ",
-                    mipLevel++,
-                    w, h);
-                   break;
+                    append_sprintf(info,
+                                   "mipl: %d %dx%d ",
+                                   mipLevel++,
+                                   w, h);
+                    break;
             }
-                           
+
             if (mip.lengthCompressed != 0) {
                 uint64_t levelSize = mip.length * numChunks;
                 uint64_t percent = (100 * mip.lengthCompressed) / levelSize;
-                
+
                 append_sprintf(info,
-                    "%" PRIu64 ",%" PRIu64 ",%" PRIu64 " %d%%\n",
-                    mip.offset,
-                    levelSize,
-                    mip.lengthCompressed,
-                    (int)percent
-                );
+                               "%" PRIu64 ",%" PRIu64 ",%" PRIu64 " %d%%\n",
+                               mip.offset,
+                               levelSize,
+                               mip.lengthCompressed,
+                               (int)percent);
             }
             else {
                 append_sprintf(info,
-                    "%" PRIu64 ",%" PRIu64 "\n",
-                    mip.offset,
-                    mip.length // only size of one mip right now, not mip * numChunks
+                               "%" PRIu64 ",%" PRIu64 "\n",
+                               mip.offset,
+                               mip.length  // only size of one mip right now, not mip * numChunks
                 );
             }
         }
@@ -1799,7 +1794,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
         kramDecodeUsage();
         return 0;
     }
-    
+
     // decode and write out to ktx file for now
     // all mips, or no mips, can preserve name-value pairs in original
 
@@ -1924,7 +1919,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
     KTXImage srcImage;
     KTXImageData srcImageData;
     FileHelper tmpFileHelper;
-    
+
     bool success = SetupSourceKTX(srcImageData, srcFilename, srcImage);
 
     // TODO: for hdr decode, may need to walk blocks or ask caller to pass -hdr flag
@@ -1941,12 +1936,12 @@ static int32_t kramAppDecode(vector<const char*>& args)
               metalTypeName(srcImage.pixelFormat),
               encoderName(textureDecoder));
     }
-    
+
     KramDecoderParams params;
     params.isVerbose = isVerbose;
     params.decoder = textureDecoder;
     params.swizzleText = swizzleText;
-    
+
     KramDecoder decoder;  // just to call decode
     success = success && decoder.decode(srcImage, tmpFileHelper.pointer(), params);
 
@@ -1965,7 +1960,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
         kramEncodeUsage();
         return 0;
     }
-    
+
     // parse the command-line
     string srcFilename;
     string dstFilename;
@@ -1975,7 +1970,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
     bool isPremulRgb = false;
     bool isGray = false;
-    
+
     bool error = false;
     for (int32_t i = 0; i < argc; ++i) {
         // check for options
@@ -1999,7 +1994,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             isGray = true;
             //continue;
         }
-        
+
         // mip setting
         else if (isStringEqual(word, "-mipmax")) {
             ++i;
@@ -2015,7 +2010,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-            
+
             //continue;
         }
         else if (isStringEqual(word, "-mipmin")) {
@@ -2048,7 +2043,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-            
+
             //continue;
         }
         else if (isStringEqual(word, "-mipnone")) {
@@ -2064,10 +2059,10 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-            
+
             infoArgs.isHeight = true;
             infoArgs.heightScale = atof(args[i]);
-            
+
             // Note: caller can negate scale, but don't allow scale 0.
             if (infoArgs.heightScale == 0.0f) {
                 KLOGE("Kram", "heightScale arg cannot be 0");
@@ -2085,8 +2080,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             infoArgs.isWrap = true;
             //continue;
         }
-        
-        
+
         else if (isStringEqual(word, "-e") ||
                  isStringEqual(word, "-encoder")) {
             ++i;
@@ -2134,17 +2128,17 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-            
+
             // this is a count of how many chunks (tiles) across and down
             // currently assuming all slots contain data, but may need a total count
             // also an assumption that texture dimensions evenly divisible by count
             infoArgs.chunksX = chunksX;
             infoArgs.chunksY = chunksY;
             infoArgs.chunksCount = chunksX * chunksY;
-            
+
             //continue;
         }
-        
+
         else if (isStringEqual(word, "-avg")) {
             ++i;
             const char* channelString = args[i];
@@ -2254,7 +2248,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             isPremulRgb = true;
             //continue;
         }
-        
+
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
             infoArgs.isVerbose = true;
@@ -2272,7 +2266,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
             infoArgs.formatString = args[i];
             //continue;
         }
-        
+
         // compressor for ktx2 mips
         // TODO: need level control
         else if (isStringEqual(word, "-zstd")) {
@@ -2284,7 +2278,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
             infoArgs.compressor.compressorLevel = atoi(args[i]);
-            
+
             //continue;
         }
         else if (isStringEqual(word, "-zlib")) {
@@ -2353,7 +2347,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
     // allow ktx and ktx2 output
     bool isDstKTX = endsWith(dstFilename, ".ktx");
     bool isDstKTX2 = endsWith(dstFilename, ".ktx2");
-   
+
     if (!(isDstKTX || isDstKTX2)) {
         KLOGE("Kram", "encode only supports ktx and ktx2 output");
         error = true;
@@ -2365,7 +2359,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
     }
 
     infoArgs.isKTX2 = isDstKTX2;
-    
+
     // Any new settings just go into this struct which is passed into enoder
     ImageInfo info;
     info.initWithArgs(infoArgs);
@@ -2375,7 +2369,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
     // incrementally. Fallback to read into fileBuffer if mmap fails.
     Image srcImage;
     FileHelper tmpFileHelper;
-    
+
     bool success = SetupSourceImage(srcFilename, srcImage, isPremulRgb, isGray);
 
     if (success) {
@@ -2445,11 +2439,11 @@ static int32_t kramAppEncode(vector<const char*>& args)
                   formatTypeName(info.pixelFormat),
                   encoderName(info.textureEncoder));
         }
-        
+
         if (success) {
             KramEncoder encoder;
             success = encoder.encode(info, srcImage, tmpFileHelper.pointer());
-            
+
             if (!success) {
                 KLOGE("Kram", "encode failed");
             }
@@ -2478,7 +2472,7 @@ int32_t kramAppScript(vector<const char*>& args)
         kramScriptUsage();
         return 0;
     }
-    
+
     string srcFilename;
 
     bool isVerbose = false;
@@ -2703,12 +2697,13 @@ CommandType parseCommandType(const char* command)
     return commandType;
 }
 
-void PSTest() {
+void PSTest()
+{
     static bool doTest = false;
     if (!doTest) {
         return;
     }
-    
+
     // So it looks like Photoshop is doing srgb * alpha right away on PNG import. This results in dimmer colors
     // when they are read on the GPU, since then the gpu does srgb to linear conversion.  values2
     // is that case below.  Also note that the Photoshop color picker shows only srgb intensities, not the linear.
@@ -2726,8 +2721,7 @@ void PSTest() {
     //
     // Here's Photoshop I think:
     // PNG unmul alpha -> srgbToLinear(rgb * alpha) -> linarToSrgb( c ) -> toUnmul( c/alpha ) -> Png
-    
-    
+
     Mipper mipper;
 
     // 1. srgb 8-bit values
@@ -2746,9 +2740,9 @@ void PSTest() {
     // now convert those values to linear color (float)
     for (int32_t i = 0; i < 256; ++i) {
         float value = mipper.toLinear(values1[i]);
-        
+
         values2[i] = uint8_t(roundf(value * 255.0f));
-        
+
         //KLOGI("srgb", "[%d] = %g\n", i, value);
     }
 
@@ -2756,23 +2750,22 @@ void PSTest() {
     for (int32_t i = 0; i < 256; ++i) {
         float value = mipper.toLinear(i);
         value *= alphaF;
-        
+
         values3[i] = uint8_t(roundf(value * 255.0));
     }
 
     // log them side-by-side for comparison
-    KLOGI("srgb", "premul by %0.3f", 200.0/255.0);
+    KLOGI("srgb", "premul by %0.3f", 200.0 / 255.0);
     for (int32_t i = 0; i < 256; ++i) {
         KLOGI("srgb", "[%d] = %u, %u, %u",
               i, values1[i], values2[i], values3[i]);
     }
 }
 
-
 int32_t kramAppCommand(vector<const char*>& args)
 {
     PSTest();
-    
+
     // make sure next arg is a valid command type
     CommandType commandType = kCommandTypeUnknown;
     if (args.size() >= 1) {

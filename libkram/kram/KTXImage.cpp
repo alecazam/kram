@@ -41,7 +41,6 @@ const uint8_t kKTX2Identifier[kKTXIdentifierSize] = {
     // '«', 'K', 'T', 'X', ' ', '2', '0', '»', '\r', '\n', '\x1A', '\n'
 };
 
-
 //---------------------------------------------------
 
 enum GLFormat {
@@ -151,12 +150,12 @@ enum GLFormat {
     GL_RGBA32F = 0x8814,
 
 #if SUPPORT_RGB
-    GL_RGB8   = 0x8051,
-    GL_SRGB8  = 0x8C41,
+    GL_RGB8 = 0x8051,
+    GL_SRGB8 = 0x8C41,
     GL_RGB16F = 0x881B,
     GL_RGB32F = 0x8815
 #endif
-    
+
     /* These are all of the variants of ASTC, ugh.  Only way to identify them is to
  walk blocks and it's unclear how to convert from 3D to 2D blocks or whether hw
  supports sliced 3D.
@@ -275,36 +274,36 @@ enum VKFormat {
     VK_FORMAT_ASTC_8x8_UNORM_BLOCK = 171,
     VK_FORMAT_ASTC_8x8_SRGB_BLOCK = 172,
 
-    // not support these
-    //    VK_FORMAT_ASTC_5x4_UNORM_BLOCK = 159,
-    //    VK_FORMAT_ASTC_5x4_SRGB_BLOCK = 160,
-    //    VK_FORMAT_ASTC_6x5_UNORM_BLOCK = 163,
-    //    VK_FORMAT_ASTC_6x5_SRGB_BLOCK = 164,
-    //    VK_FORMAT_ASTC_8x5_UNORM_BLOCK = 167,
-    //    VK_FORMAT_ASTC_8x5_SRGB_BLOCK = 168,
-    //    VK_FORMAT_ASTC_8x6_UNORM_BLOCK = 169,
-    //    VK_FORMAT_ASTC_8x6_SRGB_BLOCK = 170,
+// not support these
+//    VK_FORMAT_ASTC_5x4_UNORM_BLOCK = 159,
+//    VK_FORMAT_ASTC_5x4_SRGB_BLOCK = 160,
+//    VK_FORMAT_ASTC_6x5_UNORM_BLOCK = 163,
+//    VK_FORMAT_ASTC_6x5_SRGB_BLOCK = 164,
+//    VK_FORMAT_ASTC_8x5_UNORM_BLOCK = 167,
+//    VK_FORMAT_ASTC_8x5_SRGB_BLOCK = 168,
+//    VK_FORMAT_ASTC_8x6_UNORM_BLOCK = 169,
+//    VK_FORMAT_ASTC_8x6_SRGB_BLOCK = 170,
 
-    //    VK_FORMAT_ASTC_10x5_UNORM_BLOCK = 173,
-    //    VK_FORMAT_ASTC_10x5_SRGB_BLOCK = 174,
-    //    VK_FORMAT_ASTC_10x6_UNORM_BLOCK = 175,
-    //    VK_FORMAT_ASTC_10x6_SRGB_BLOCK = 176,
-    //    VK_FORMAT_ASTC_10x8_UNORM_BLOCK = 177,
-    //    VK_FORMAT_ASTC_10x8_SRGB_BLOCK = 178,
-    //    VK_FORMAT_ASTC_10x10_UNORM_BLOCK = 179,
-    //    VK_FORMAT_ASTC_10x10_SRGB_BLOCK = 180,
-    //    VK_FORMAT_ASTC_12x10_UNORM_BLOCK = 181,
-    //    VK_FORMAT_ASTC_12x10_SRGB_BLOCK = 182,
-    //    VK_FORMAT_ASTC_12x12_UNORM_BLOCK = 183,
-    //    VK_FORMAT_ASTC_12x12_SRGB_BLOCK = 184,
+//    VK_FORMAT_ASTC_10x5_UNORM_BLOCK = 173,
+//    VK_FORMAT_ASTC_10x5_SRGB_BLOCK = 174,
+//    VK_FORMAT_ASTC_10x6_UNORM_BLOCK = 175,
+//    VK_FORMAT_ASTC_10x6_SRGB_BLOCK = 176,
+//    VK_FORMAT_ASTC_10x8_UNORM_BLOCK = 177,
+//    VK_FORMAT_ASTC_10x8_SRGB_BLOCK = 178,
+//    VK_FORMAT_ASTC_10x10_UNORM_BLOCK = 179,
+//    VK_FORMAT_ASTC_10x10_SRGB_BLOCK = 180,
+//    VK_FORMAT_ASTC_12x10_UNORM_BLOCK = 181,
+//    VK_FORMAT_ASTC_12x10_SRGB_BLOCK = 182,
+//    VK_FORMAT_ASTC_12x12_UNORM_BLOCK = 183,
+//    VK_FORMAT_ASTC_12x12_SRGB_BLOCK = 184,
 
 #if SUPPORT_RGB
     // import only
-    VK_FORMAT_R8G8B8_UNORM      = 23,
-    VK_FORMAT_R8G8B8_SRGB       = 29,
-    VK_FORMAT_R16G16B16_SFLOAT  = 90,
-    VK_FORMAT_R32G32B32_SFLOAT   = 106,
-   
+    VK_FORMAT_R8G8B8_UNORM = 23,
+    VK_FORMAT_R8G8B8_SRGB = 29,
+    VK_FORMAT_R16G16B16_SFLOAT = 90,
+    VK_FORMAT_R32G32B32_SFLOAT = 106,
+
 #endif
 };
 
@@ -423,9 +422,9 @@ static bool initFormatsIfNeeded()
     if (gFormatTable) {
         return true;
     }
-    
+
     gFormatTable = new unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo>();
-    
+
 // the following table could be included multiple ties to build switch statements, but instead use a hashmap
 #define KTX_FORMAT(fmt, metalType, vulkanType, glType, glBase, x, y, blockSize, numChannels, flags) \
     (*gFormatTable)[(uint32_t)metalType] = KTXFormatInfo(                                           \
@@ -505,7 +504,7 @@ static bool initFormatsIfNeeded()
     KTX_FORMAT(EXPrgb16f, MyMTLPixelFormatRGB16Float_internal, VK_FORMAT_R16G16B16_SFLOAT, GL_RGB16F, GL_RGB, 1, 1, 6, 3, FLAG_16F)
     KTX_FORMAT(EXPrgb32f, MyMTLPixelFormatRGB32Float_internal, VK_FORMAT_R32G32B32_SFLOAT, GL_RGB32F, GL_RGB, 1, 1, 12, 3, FLAG_32F)
 #endif
-    
+
     return true;
 }
 
@@ -516,7 +515,7 @@ static bool initFormatsIfNeeded()
 const KTXFormatInfo& formatInfo(MyMTLPixelFormat format)
 {
     initFormatsIfNeeded();
-    
+
     const auto& it = gFormatTable->find(format);
     if (it == gFormatTable->end()) {
         return gFormatTable->find(MyMTLPixelFormatInvalid)->second;
@@ -622,7 +621,7 @@ uint32_t metalType(MyMTLPixelFormat format)
 const char* metalTypeName(MyMTLPixelFormat format)
 {
     const auto& it = formatInfo(format);
-    return it.metalName + 2; // strlen("My"); 
+    return it.metalName + 2;  // strlen("My");
 }
 
 const char* formatTypeName(MyMTLPixelFormat format)
@@ -658,7 +657,7 @@ uint32_t glType(MyMTLPixelFormat format)
 MyMTLPixelFormat glToMetalFormat(uint32_t format)
 {
     initFormatsIfNeeded();
-    
+
     for (const auto& it : *gFormatTable) {
         // this isn't 1:1, since ASTC_HDR aren't unique types, prefer ldr type
         const KTXFormatInfo& info = it.second;
@@ -673,7 +672,7 @@ MyMTLPixelFormat glToMetalFormat(uint32_t format)
 MyMTLPixelFormat vulkanToMetalFormat(uint32_t format)
 {
     initFormatsIfNeeded();
-    
+
     for (const auto& it : *gFormatTable) {
         // this isn't 1:1, since ASTC_HDR aren't unique types, prefer ldr type
         const KTXFormatInfo& info = it.second;
@@ -684,8 +683,6 @@ MyMTLPixelFormat vulkanToMetalFormat(uint32_t format)
 
     return MyMTLPixelFormatInvalid;
 }
-
-
 
 MyMTLPixelFormat toggleSrgbFormat(MyMTLPixelFormat format)
 {
@@ -753,11 +750,19 @@ MyMTLPixelFormat toggleSrgbFormat(MyMTLPixelFormat format)
 const char* supercompressionName(KTX2Supercompression type)
 {
     const char* name = "Unknown";
-    switch(type) {
-        case KTX2SupercompressionNone:    name = "None"; break;
-        case KTX2SupercompressionBasisLZ: name = "BasisLZ"; break;
-        case KTX2SupercompressionZstd:    name = "Zstd"; break;
-        case KTX2SupercompressionZlib:    name = "Zlib"; break;
+    switch (type) {
+        case KTX2SupercompressionNone:
+            name = "None";
+            break;
+        case KTX2SupercompressionBasisLZ:
+            name = "BasisLZ";
+            break;
+        case KTX2SupercompressionZstd:
+            name = "Zstd";
+            break;
+        case KTX2SupercompressionZlib:
+            name = "Zlib";
+            break;
     }
     return name;
 }
@@ -781,7 +786,7 @@ uint32_t KTXImage::mipLengthCalc(uint32_t mipNumber) const
     uint32_t w = width;
     uint32_t h = height;
     uint32_t d = depth;
-    
+
     mipDown(w, h, d, mipNumber);
     return mipLengthCalc(w, h);
 }
@@ -793,11 +798,10 @@ uint32_t KTXImage::blockCountRows(uint32_t width_) const
     Int2 dims = blockDims();
 
     width_ = (width_ + dims.x - 1) / dims.x;
-    
+
     return width_;
 }
-    
-    
+
 uint32_t KTXImage::blockCount(uint32_t width_, uint32_t height_) const
 {
     assert(width_ >= 1 && height_ >= 1);
@@ -922,19 +926,19 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength, bool isInf
     if ((size_t)imageDataLength < sizeof(kKTX2Identifier)) {
         return false;
     }
-    
+
     // check for ktx2
     if (memcmp(imageData, kKTX2Identifier, sizeof(kKTX2Identifier)) == 0) {
         return openKTX2(imageData, imageDataLength, isInfoOnly);
     }
-    
+
     // check for ktx1
     if (memcmp(imageData, kKTXIdentifier, sizeof(kKTXIdentifier)) != 0) {
         return false;
     }
-   
+
     //skipImageLength = skipImageLength_;
-    
+
     // since KTX1 doesn't have compressed mips, can alias the file data directly
     fileData = imageData;
     fileDataLength = imageDataLength;
@@ -971,7 +975,7 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength, bool isInf
         KLOGE("kram", "unsupported texture format glBase/glInternalFormat 0x%04X 0x%04X", header.glBaseInternalFormat, header.glInternalFormat);
         return false;
     }
-    
+
     initMipLevels(sizeof(KTXHeader) + header.bytesOfKeyValueData);
     return validateMipLevels();
 }
@@ -1128,17 +1132,17 @@ void KTXImage::toPropsData(vector<uint8_t>& propsData)
 
 void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxSize, int32_t mipSkip, uint32_t& numSkippedMips)
 {
-     // dst levels
+    // dst levels
     int32_t w = width;
     int32_t h = height;
     int32_t d = depth;
-    
+
     numSkippedMips = mipSkip;
-    
+
     bool needsDownsample = (numSkippedMips > 0) || (w > mipMaxSize || h > mipMaxSize);
 
     int32_t maxMipLevels = 16;  // 64K x 64K
-    
+
     // can still downsample src multiple times even with only 1 level exported
     if ((!doMipmaps) && needsDownsample) {
         maxMipLevels = 1;
@@ -1147,18 +1151,18 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
     KTXImageLevel level;
     //level.offset = 0; // compute later, once know ktx vs. ktx2
     //level.lengthCompressed = 0;
-    
+
     mipLevels.clear();
-    
+
     if (doMipmaps || needsDownsample) {
         bool keepMip =
             (numSkippedMips >= (uint32_t)mipSkip) ||
             ((w >= mipMinSize && w <= mipMaxSize) &&
-            (h >= mipMinSize && h <= mipMaxSize));
-        
+             (h >= mipMinSize && h <= mipMaxSize));
+
         if (keepMip) {
             level.length = mipLengthCalc(w, h);
-            
+
             if (mipLevels.empty()) {
                 // adjust the top dimensions
                 width = w;
@@ -1179,19 +1183,19 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
             keepMip =
                 (numSkippedMips >= (uint32_t)mipSkip) ||
                 ((w >= mipMinSize && w <= mipMaxSize) &&
-                (h >= mipMinSize && h <= mipMaxSize));
-            
+                 (h >= mipMinSize && h <= mipMaxSize));
+
             if (keepMip && (mipLevels.size() < (size_t)maxMipLevels)) {
                 // length needs to be multiplied by chunk size before writing out
                 level.length = mipLengthCalc(w, h);
-                
+
                 if (mipLevels.empty()) {
                     // adjust the top dimensions
                     width = w;
                     height = h;
                     depth = d;
                 }
-                
+
                 mipLevels.push_back(level);
             }
             else {
@@ -1205,22 +1209,21 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
     else {
         // length needs to be multiplied by chunk size before writing out
         level.length = mipLengthCalc(w, h);
-        
+
         mipLevels.push_back(level);
     }
-    
-    
+
     header.numberOfMipmapLevels = mipLevels.size();
-    
+
     header.pixelWidth = width;
     header.pixelHeight = height;
 }
-    
+
 void KTXImage::initMipLevels(size_t mipOffset)
 {
     // largest mips are first in file
     uint32_t numMips = max(1u, header.numberOfMipmapLevels);
-   
+
     int numChunks = header.totalChunks();
 
     mipLevels.reserve(numMips);
@@ -1231,7 +1234,7 @@ void KTXImage::initMipLevels(size_t mipOffset)
     int32_t w = width;
     int32_t h = height;
     int32_t d = depth;
-    
+
     for (uint32_t i = 0; i < numMips; ++i) {
         size_t dataSize = mipLengthCalc(w, h);
 
@@ -1239,30 +1242,31 @@ void KTXImage::initMipLevels(size_t mipOffset)
 
         // TODO: align mip offset to multiple of 4 bytes for KTX1, may need for kTX2
         // make sure when adding up offsets with length to include this padding
-//        if (!skipImageLength) {
-//            offset += 3 - (offset & 3); // align level to 4 bytes
-//        }
-        
+        //        if (!skipImageLength) {
+        //            offset += 3 - (offset & 3); // align level to 4 bytes
+        //        }
+
         // compute dataSize from header data
         if (!skipImageLength) {
             // advance past the length
             offset += sizeof(uint32_t);
         }
-        
+
         // level holds single texture size not level size, but offset reflects level start
-        KTXImageLevel level = { offset, 0, dataSize };
+        KTXImageLevel level = {offset, 0, dataSize};
         mipLevels.push_back(level);
 
         offset += levelSize;
-        
+
         mipDown(w, h, d);
     }
 }
 
-bool KTXImage::validateMipLevels() const {
+bool KTXImage::validateMipLevels() const
+{
     if (skipImageLength)
         return true;
-    
+
     bool isValid = true;
 
     int numChunks = header.totalChunks();
@@ -1270,10 +1274,10 @@ bool KTXImage::validateMipLevels() const {
     // validate that no weird size to image
     for (uint32_t i = 0; i < mipLevels.size(); ++i) {
         auto& level = mipLevels[i];
-        
+
         const uint8_t* levelSizeField = (const uint8_t*)fileData + level.offset - sizeof(uint32_t);
         uint32_t levelSizeFromRead = *(const uint32_t*)levelSizeField;
-        
+
         // cube only stores size of one face, ugh
         if (textureType == MyMTLTextureTypeCube) {
             levelSizeFromRead *= 6;
@@ -1285,7 +1289,7 @@ bool KTXImage::validateMipLevels() const {
             break;
         }
     }
-    
+
     return isValid;
 }
 
@@ -1309,8 +1313,6 @@ const char* textureTypeName(MyMTLTextureType textureType)
     }
     return name;
 }
-
-
 
 // KTX2 layout
 //// Data Format Descriptor
@@ -1348,12 +1350,12 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     if ((size_t)imageDataLength < sizeof(KTX2Header)) {
         return false;
     }
-    
+
     // identifier not detected
     if (memcmp(imageData, kKTX2Identifier, sizeof(kKTX2Identifier)) != 0) {
         return false;
     }
-    
+
     // these are set after decompress of mips if needed
     //fileData = imageData;
     //fileDataLength = (int)imageDataLength;
@@ -1361,35 +1363,34 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     // copy out the header,
     const KTX2Header& header2 = *(const KTX2Header*)imageData;
 
-
     if (header2.supercompressionScheme == KTX2SupercompressionBasisLZ) {
         KLOGE("kram", "Basis decode not yet supported");
         return false;
     }
-    
+
     if (header2.supercompressionScheme != KTX2SupercompressionNone &&
         header2.supercompressionScheme != KTX2SupercompressionZstd &&
         header2.supercompressionScheme != KTX2SupercompressionZlib) {
         KLOGE("kram", "Unknown supercompression %d", header2.supercompressionScheme);
         return false;
     }
-    
+
     bool isCompressed = header2.supercompressionScheme != KTX2SupercompressionNone;
-    
+
     // This typically means UASTC encoding + zstd supercompression, and code doesn't handle that below yet
     if (header2.vkFormat == 0) {
         KLOGE("kram", "UASTC and vkFormat of 0 decode not yet supported");
         return false;
     }
-    
-    header.pixelWidth  = header2.pixelWidth;
+
+    header.pixelWidth = header2.pixelWidth;
     header.pixelHeight = header2.pixelHeight;
-    header.pixelDepth  = header2.pixelDepth;
-    
+    header.pixelDepth = header2.pixelDepth;
+
     header.numberOfArrayElements = header2.layerCount;
     header.numberOfFaces = header2.faceCount;
     header.numberOfMipmapLevels = max((int)header2.levelCount, 1);
-    
+
     // for 2d and 3d textures
     width = header.pixelWidth;
     height = max(1, (int)header.pixelHeight);
@@ -1398,57 +1399,55 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     textureType = header.metalTextureType();
 
     int32_t numChunks = totalChunks();
-    
+
     vector<KTXImageLevel> levels;
     uint32_t levelOffset = sizeof(KTX2Header);
     for (uint32_t i = 0; i < header.numberOfMipmapLevels; ++i) {
         // ktx2 stores levels in same order as ktx1, but larger mips occur later in the file
         // only KTX2 writes this array out due to lengthCompressed field.
-        
+
         auto level = *(const KTXImageLevel*)(imageData + levelOffset + sizeof(KTXImageLevel) * i);
-        
+
         assert(level.length % numChunks == 0);
-        
+
         // ktx2 doesn't mess up the length like ktx1 does on cubemaps.  This is the true level length.
         // Divide by chunks so that can compare against KTX1 mips from initMipLevels.
         level.length /= numChunks;
-        
+
         levels.push_back(level);
     }
-    
-   
+
     // convert format to MyMTLPixelFormat
     pixelFormat = vulkanToMetalFormat(header2.vkFormat);
-    
+
     // kram can only load a subset of format
-    if (pixelFormat == MyMTLPixelFormatInvalid)
-    {
+    if (pixelFormat == MyMTLPixelFormatInvalid) {
         KLOGE("kram", "unsupported texture format VK_FORMAT %u", header2.vkFormat);
         return false;
     }
-    
+
     // transfer key-value data pairs
     // bytesOfKeyValueData will be updated if props written out
     header.bytesOfKeyValueData = 0;
     initProps(imageData + header2.kvdByteOffset, header2.kvdByteLength);
-   
+
     // skip parsing th elevels
     if (isInfoOnly) {
         skipImageLength = true;
         fileData = imageData;
         fileDataLength = imageDataLength;
-        
+
         // copy this in to return as info
         supercompressionType = (KTX2Supercompression)header2.supercompressionScheme;
-        
+
         // copy these over from ktx2
         mipLevels = levels;
-        
+
         // copy the original ktx2 levels, this includes mip compression
         isCompressed =
             (mipLevels[0].lengthCompressed > 0) &&
             ((mipLevels[0].length * numChunks) != mipLevels[0].lengthCompressed);
-        
+
         if (!isCompressed) {
             for (auto& level : mipLevels) {
                 level.lengthCompressed = 0;
@@ -1456,40 +1455,39 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
         }
         return true;
     }
-    
+
     if (!isCompressed) {
         // Note: this is aliasing the mips from a ktx2 file into a ktx1 KTXImage
         // This is highly unsafe but mostly works for input.
-        
+
         // Note: KTX2 also doesn't have the length field embedded the mipData
         // so need to be able to set skipLength to unify the mipgen if aliasing the mip data
         // Only reading this format, never writing it out.
         skipImageLength = true;
-        
+
         fileData = imageData;
         fileDataLength = imageDataLength;
-        
+
         // these are mip offset for KTX2 file
         size_t mipOffset = header2.sgdByteOffset + header2.sgdByteLength;
         initMipLevels(mipOffset);
-        
+
         // TODO: KTX1 packs rows to 4 bytes, but KTX2 packs tightly to 1
         // for now just reverse the ktx2 mips back to ktx1, aliasing fileData
         // Note ktx2 is align 1, and ktx1 is align 4, so can't always do this
-        
+
         for (uint32_t i = 0; i < header.numberOfMipmapLevels; ++i) {
             const auto& level2 = levels[i];
             auto& level1 = mipLevels[i];
-            
+
             // the offsets are reversed in ktx2 file
             level1.offset = level2.offset;
             assert(level1.lengthCompressed == 0);
-            
-            if (level1.length != level2.length)
-            {
+
+            if (level1.length != level2.length) {
                 // This is likely due to the reversal of mips
                 // but many of the test images from libkx are hitting this, fix this issue.
-                
+
                 KLOGE("kram", "mip sizes aren't equal");
                 return false;
             }
@@ -1499,66 +1497,66 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
         // This is decompressing KTX2 into KTX1
         size_t mipOffset = sizeof(KTXHeader) + header.bytesOfKeyValueData;
         initMipLevels(mipOffset);
-        
+
         // compute the decompressed size
         // Note: initMipLevels computes but doesn't store this
         reserveImageData();
-        
+
         // TODO: may need to fill out length field in fileData
-        
+
         supercompressionType = (KTX2Supercompression)header2.supercompressionScheme;
-        
+
         // need to decompress mips here
         for (uint32_t i = 0; i < header.numberOfMipmapLevels; ++i) {
             // compresssed level
             const auto& level2 = levels[i];
             const uint8_t* srcData = imageData + level2.offset;
-           
+
             // uncompressed level
             auto& level1 = mipLevels[i];
-            level1.lengthCompressed = level2.lengthCompressed; // need this for copyLevel to have enough data
-            uint8_t* dstData = (uint8_t*)fileData + level1.offset; // can const_cast, since class owns data
-          
+            level1.lengthCompressed = level2.lengthCompressed;      // need this for copyLevel to have enough data
+            uint8_t* dstData = (uint8_t*)fileData + level1.offset;  // can const_cast, since class owns data
+
             if (!unpackLevel(i, srcData, dstData)) {
                 return false;
             }
-            
+
             // have decompressed here, so set to 0
             level1.lengthCompressed = 0;
         }
-        
+
         // have decompressed ktx1, so change back to None
         supercompressionType = KTX2SupercompressionNone;
     }
-    
+
     return true;
 }
 
-bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData) const {
-    
+bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData) const
+{
     // uncompressed level
     uint32_t numChunks = totalChunks();
     const auto& level = mipLevels[mipNumber];
     size_t dstDataSize = level.length * numChunks;
-    
+
     if (level.lengthCompressed == 0) {
         memcpy(dstData, srcData, dstDataSize);
     }
     else {
         size_t srcDataSize = level.lengthCompressed;
-        
+
         // TODO: use basis transcoder (single file) for Basis UASTC here, then don't need libktx yet
         // wont work for BasisLZ (which is ETC1S).
         // copy this in to return as info
-        
-        switch(supercompressionType) {
+
+        switch (supercompressionType) {
             case KTX2SupercompressionZstd: {
                 // decompress from zstd directly into ktx1 ordered chunk
                 // Note: decode fails with FSE_decompress.
                 size_t dstDataSizeZstd = ZSTD_decompress(
                     dstData, dstDataSize,
                     srcData, srcDataSize);
-                
+
                 if (ZSTD_isError(dstDataSizeZstd)) {
                     KLOGE("kram", "decode mip zstd failed");
                     return false;
@@ -1569,7 +1567,7 @@ bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* 
                 }
                 break;
             }
-            
+
             case KTX2SupercompressionZlib: {
                 // can use miniz or libCompression
                 mz_ulong dstDataSizeMiniz = 0;
@@ -1582,46 +1580,48 @@ bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* 
                     KLOGE("kram", "decode mip zlib size not expected");
                     return false;
                 }
-                
+
                 break;
             }
-                
+
             // already checked at top of function
             default: {
                 return false;
             }
         }
     }
-    
+
     return true;
 }
 
-vector<uint8_t>& KTXImage::imageData() {
+vector<uint8_t>& KTXImage::imageData()
+{
     return _imageData;
 }
 
-void KTXImage::reserveImageData() {
+void KTXImage::reserveImageData()
+{
     int32_t numChunks = totalChunks();
-    
+
     // on KTX1 the last mip is the smallest and last in the file
     // on KTX2 the first mip is the largest and last in the file
     const auto& firstMip = mipLevels[0];
-    const auto& lastMip = mipLevels[header.numberOfMipmapLevels-1];
-    
+    const auto& lastMip = mipLevels[header.numberOfMipmapLevels - 1];
+
     size_t firstMipOffset =
         firstMip.offset + firstMip.length * numChunks;
     size_t lastMipOffset =
         lastMip.offset + lastMip.length * numChunks;
     size_t totalSize = max(firstMipOffset, lastMipOffset);
-    
+
     reserveImageData(totalSize);
 }
 
-void KTXImage::reserveImageData(size_t totalSize) {
-    
+void KTXImage::reserveImageData(size_t totalSize)
+{
     _imageData.resize(totalSize);
     memset(_imageData.data(), 0, totalSize);
-    
+
     fileDataLength = totalSize;
     fileData = _imageData.data();
 }

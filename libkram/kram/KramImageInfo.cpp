@@ -119,16 +119,20 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
     // or RGBA to save endpoint storage dual plane can occur for more than just
     // RGB+A, any one channel can be a plane to itself if encoder supports
     else if (isStringEqual(formatString, "astc4x4")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_4x4_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_4x4_sRGB : MyMTLPixelFormatASTC_4x4_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_4x4_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_4x4_sRGB
+                                                                                 : MyMTLPixelFormatASTC_4x4_LDR;
     }
     else if (isStringEqual(formatString, "astc5x5")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_5x5_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_5x5_sRGB : MyMTLPixelFormatASTC_5x5_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_5x5_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_5x5_sRGB
+                                                                                 : MyMTLPixelFormatASTC_5x5_LDR;
     }
     else if (isStringEqual(formatString, "astc6x6")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_6x6_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_6x6_sRGB : MyMTLPixelFormatASTC_6x6_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_6x6_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_6x6_sRGB
+                                                                                 : MyMTLPixelFormatASTC_6x6_LDR;
     }
     else if (isStringEqual(formatString, "astc8x8")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_8x8_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_8x8_sRGB : MyMTLPixelFormatASTC_8x8_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_8x8_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_8x8_sRGB
+                                                                                 : MyMTLPixelFormatASTC_8x8_LDR;
     }
 
     // explicit formats
@@ -748,14 +752,13 @@ bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
         }
     }
     else if (textureType == MyMTLTextureType2DArray) {
-        
         if (chunksCount > 0) {
             w = w / chunksX;
             h = h / chunksY;
-            
+
             // this can be smaller than chunksX * chunkY, but assume chunks packed up and to left
             header.numberOfArrayElements = chunksCount;
-            
+
             int32_t x = 0;
             int32_t y = 0;
             for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
@@ -763,10 +766,10 @@ bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
                     y++;
                     x = 0;
                 }
-                
+
                 Int2 chunkOffset = {w * x, h * y};
                 chunkOffsets.push_back(chunkOffset);
-                
+
                 x++;
             }
         }
@@ -997,12 +1000,12 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
 
     isKTX2 = args.isKTX2;
     compressor = args.compressor;
-    
+
     isPrezero = args.isPrezero;
     isPremultiplied = args.isPremultiplied;
     if (isPremultiplied)
         isPrezero = false;
-    
+
     isNormal = args.isNormal;
 
     doSDF = args.doSDF;
@@ -1012,8 +1015,8 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     doMipmaps = args.doMipmaps;
     mipMinSize = args.mipMinSize;
     mipMaxSize = args.mipMaxSize;
-    mipSkip    = args.mipSkip;
-    
+    mipSkip = args.mipSkip;
+
     swizzleText = args.swizzleText;
     averageChannels = args.averageChannels;
 
@@ -1027,7 +1030,7 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     heightScale = args.heightScale;
     if (isHeight)
         isNormal = true;
-    
+
     // Note: difference between input srgb and output srgb, but it's mingled
     // here a bit
 
@@ -1059,7 +1062,7 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
         hasAlpha = false;
     if (!isColorFormat(pixelFormat))
         hasColor = false;
-    
+
     // copy over chunks
     chunksX = args.chunksX;
     chunksY = args.chunksY;
@@ -1105,11 +1108,12 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
     // transfer the chunk count, this was a ktx/2 import
     if (sourceImage.chunksY() > 0) {
         chunksX = 1;
-        
+
         chunksY =
-        chunksCount = sourceImage.chunksY();;
+            chunksCount = sourceImage.chunksY();
+        ;
     }
-    
+
     // these come from png header, but hasn't walked pixels yet
     if (!sourceImage.hasAlpha()) {
         hasAlpha = false;
@@ -1122,7 +1126,7 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
     if (isHeight) {
         heightToNormals(w, h, srcPixelsFloat, srcPixels, heightScale, isWrap);
     }
-    
+
     // this updates hasColor/hasAlpha
     if (!swizzleText.empty()) {
         // set any channels that are constant
@@ -1206,15 +1210,13 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
     }
 }
 
-
-
 // TODO: tread 16u png into pixelsFlat, then gen an 8-bit normal xy
 // from that.  This is more like SDF where a single height is used.
 
 void ImageInfo::heightToNormals(int32_t w, int32_t h,
-                            float4* srcPixels,
-                            Color* srcPixels8,
-                            float scale, bool isWrap)
+                                float4* srcPixels,
+                                Color* srcPixels8,
+                                float scale, bool isWrap)
 {
     // see here
     // https://developer.download.nvidia.com/CgTutorial/cg_tutorial_chapter08.html
@@ -1223,48 +1225,48 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
     // may need to copy a row/column of pixels for wrap
     float4* dstPixels = srcPixels;
     Color* dstPixels8 = srcPixels8;
-    
+
     bool isFloat = srcPixels;
-    
+
     // copy the texture, or there are too many edge cases in the code below
     vector<Color> srcDataCopy8;
     vector<float4> srcDataCopy;
     if (isFloat) {
-        srcDataCopy.resize(w*h);
+        srcDataCopy.resize(w * h);
         memcpy(srcDataCopy.data(), srcPixels, vsizeof(srcDataCopy));
         srcPixels = srcDataCopy.data();
     }
     else {
-        srcDataCopy8.resize(w*h);
+        srcDataCopy8.resize(w * h);
         memcpy(srcDataCopy8.data(), srcPixels8, vsizeof(srcDataCopy8));
         srcPixels8 = srcDataCopy8.data();
     }
-    
+
     //-----------------------
-    
+
     bool isWrapX = isWrap;
     bool isWrapY = isWrap;
-    
+
     // 2.0 is distance betwen +1 and -1
     // don't scale by this, want caller to be able to pass 1.0 as default scale not 2.0
-    float scaleX = scale; // / 2.0;
-    float scaleY = scale; // / 2.0;
+    float scaleX = scale;  // / 2.0;
+    float scaleY = scale;  // / 2.0;
 
     if (!isFloat) {
         scaleX /= 255.0f;
         scaleY /= 255.0f;
     }
-    
+
     // TODO: doing this at image level doesn't support chunk conversion
     // so this would only work for 2D images, and not atlas strips to a 2D array.
-    
+
     // TODO: Larger kernel support to 2x2, 3x3, 5x5, 7x7, 9x9
     // This pattern is a 3x3 cross here only 4 cardinal samples are used.
     // Bigger areas have bleed especially if this is run on a chart.
-    
+
     // this recommends generating a few maps, and blending between them
     // https://vrayschool.com/normal-map/
-    
+
     for (int32_t y = 0; y < h; ++y) {
         int32_t y0 = y;
         int32_t ym = y - 1;
@@ -1299,9 +1301,7 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
                 if (xp > (w - 1)) xp = w - 1;
             }
 
-            
             if (isFloat) {
-                
                 // cross pattern
                 // height channel is in x
                 float cN = srcPixels[ym + x].x;
@@ -1312,61 +1312,61 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
                 // up is N, so this is rhcs
                 float dx = (cE - cW) * scaleX;
                 float dy = (cN - cS) * scaleY;
-           
+
                 dx = -dx;
                 dy = -dy;
-                
+
                 float4 normal = float4m(dx, dy, 1.0f, 0.0f);
                 normal = normalize(normal);
-                
+
                 // convert to unorm
                 // TODO: may need to do around unorm8 offset of unorm 255/127 and + 128/127
                 normal = normal * 0.5 + 0.5f;
-                
+
                 // write out the result
                 float4& dstPixel = dstPixels[y0 + x];
 
                 dstPixel.x = normal.x;
                 dstPixel.y = normal.y;
-                
+
                 // TODO: consider storing in z, easier to see data channel, not premul
                 // store height in alpha.  Let caller provide the swizzle xyzh01
                 //dstPixel.z = normal.z; // can reconstruct from xy
                 //dstPixel.w = srcPixels[y0 + x0].x;
-                
+
                 dstPixel.z = srcPixels[y0 + x].z;
                 dstPixel.w = srcPixels[y0 + x].w;
             }
             else {
                 // cross pattern
                 // height channel is in x
-                uint8_t cN = srcPixels8[ym + x].r; // assumes first elem (.r) is height channel
+                uint8_t cN = srcPixels8[ym + x].r;  // assumes first elem (.r) is height channel
                 uint8_t cS = srcPixels8[yp + x].r;
                 uint8_t cE = srcPixels8[y0 + xp].r;
                 uint8_t cW = srcPixels8[y0 + xm].r;
 
                 float dx = (cE - cW) * scaleX;
                 float dy = (cN - cS) * scaleY;
-           
+
                 dx = -dx;
                 dy = -dy;
-                
+
                 float4 normal = float4m(dx, dy, 1.0f, 0.0f);
                 normal = normalize(normal);
-                
+
                 // convert to unorm
                 normal = round(normal * 127.0f) + 128.0f;
-                
+
                 Color& dstPixel8 = dstPixels8[y0 + x];
 
                 dstPixel8.r = normal.x;
                 dstPixel8.g = normal.y;
-                
+
                 // TODO: consider storing height in z, easier to see data channel, not premul
                 // store height in alpha.  Let caller provide the swizzle xyzh01
                 //dstPixel8.b = normal.z; // can reconstruct from xy
                 //dstPixel8.a = srcPixels8[y0 + x0].r;
-                
+
                 dstPixel8.b = srcPixels8[y0 + x].b;
                 dstPixel8.a = srcPixels8[y0 + x].a;
             }
@@ -1374,18 +1374,25 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
     }
 }
 
-
 const char* encoderName(TexEncoder encoder)
 {
-    switch(encoder) {
-        case kTexEncoderExplicit: return "Explicit";
-        case kTexEncoderATE: return "ATE";
-        case kTexEncoderSquish: return "Squish";
-        case kTexEncoderBcenc: return "Bcenc";
-        case kTexEncoderEtcenc: return "Etcenc";
-        case kTexEncoderAstcenc: return "Astcenc";
-        case kTexEncoderUnknown: return "Unknown";
-        default: return "Unknown"; // to fix Visual Studio C4715
+    switch (encoder) {
+        case kTexEncoderExplicit:
+            return "Explicit";
+        case kTexEncoderATE:
+            return "ATE";
+        case kTexEncoderSquish:
+            return "Squish";
+        case kTexEncoderBcenc:
+            return "Bcenc";
+        case kTexEncoderEtcenc:
+            return "Etcenc";
+        case kTexEncoderAstcenc:
+            return "Astcenc";
+        case kTexEncoderUnknown:
+            return "Unknown";
+        default:
+            return "Unknown";  // to fix Visual Studio C4715
     }
 }
 

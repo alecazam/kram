@@ -11,7 +11,6 @@
 
 #include <mutex>
 
-
 namespace kram {
 
 using mymutex = std::mutex;
@@ -22,7 +21,8 @@ using namespace NAMESPACE_STL;
 static mymutex gLogLock;
 static string gErrorLogCaptureText;
 static bool gIsErrorLogCapture = false;
-void setErrorLogCapture(bool enable) {
+void setErrorLogCapture(bool enable)
+{
     gIsErrorLogCapture = enable;
     if (enable) {
         lock_t lock(gLogLock);
@@ -31,9 +31,9 @@ void setErrorLogCapture(bool enable) {
 }
 bool isErrorLogCapture() { return gIsErrorLogCapture; }
 
-
 // return the text
-void getErrorLogCaptureText(string& text) {
+void getErrorLogCaptureText(string& text)
+{
     if (gIsErrorLogCapture) {
         lock_t lock(gLogLock);
         text = gErrorLogCaptureText;
@@ -43,7 +43,6 @@ void getErrorLogCaptureText(string& text) {
     }
 }
 
-
 // TODO: install assert handler to intercept, and also add a verify (assert that leaves source in)
 //void __assert(const char *expression, const char *file, int32_t line) {
 //
@@ -52,8 +51,7 @@ void getErrorLogCaptureText(string& text) {
 // Note: careful with stdio sscanf.  In clang, this does and initial strlen which for long buffers
 // being parsed (f.e. mmapped Json) this can significantly slow a parser down.
 
-
-int32_t append_vsprintf(string& str, const char* format, va_list args) 
+int32_t append_vsprintf(string& str, const char* format, va_list args)
 {
     // for KLOGE("group", "%s", "text")
     if (strcmp(format, "%s") == 0) {
@@ -61,7 +59,7 @@ int32_t append_vsprintf(string& str, const char* format, va_list args)
         str += firstArg;
         return strlen(firstArg);
     }
-    
+
     // This is important for the case where ##VAR_ARGS only leaves the format.
     // In this case "text" must be a compile time constant string to avoid security warning needed for above.
     // for KLOGE("group", "text")
@@ -75,19 +73,18 @@ int32_t append_vsprintf(string& str, const char* format, va_list args)
     va_copy(argsCopy, args);
     int32_t len = vsnprintf(NULL, 0, format, argsCopy);
     va_end(argsCopy);
-    
+
     if (len > 0) {
         size_t existingLen = str.length();
-        
+
         // resize and format again into string
         str.resize(existingLen + len, 0);
 
         vsnprintf((char*)str.data() + existingLen, len + 1, format, args);
     }
-    
+
     return len;
 }
-
 
 static int32_t vsprintf(string& str, const char* format, va_list args)
 {
@@ -115,7 +112,6 @@ int32_t append_sprintf(string& str, const char* format, ...)
     return len;
 }
 
-
 bool startsWith(const char* str, const string& substring)
 {
     return strncmp(str, substring.c_str(), substring.size()) == 0;
@@ -127,7 +123,7 @@ bool endsWith(const string& value, const string& ending)
     if (ending.size() > value.size()) {
         return false;
     }
-    
+
     // reverse comparison at end of value
     return equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
@@ -143,14 +139,14 @@ bool endsWithExtension(const char* str, const string& substring)
 }
 
 extern int32_t logMessage(const char* group, int32_t logLevel,
-                      const char* file, int32_t line, const char* func,
-                      const char* fmt, ...)
+                          const char* file, int32_t line, const char* func,
+                          const char* fmt, ...)
 {
     // TOOD: add any filtering up here
 
     // convert var ags to a msg
     const char* msg;
-    
+
     string str;
     if (strrchr(fmt, '%') == nullptr) {
         msg = fmt;
@@ -163,7 +159,7 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
 
         msg = str.c_str();
     }
-   
+
     // pipe to correct place, could even be file output
     FILE* fp = stdout;
     if (logLevel >= LogLevelWarning)
@@ -241,7 +237,7 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
             gErrorLogCaptureText += "\n";
         }
     }
-    
+
     fprintf(fp, "%s%s%s%s%s%s", tag, groupString, space, msg, needsNewline ? "\n" : "", fileLineFunc.c_str());
 
     return 0;  // reserved for later

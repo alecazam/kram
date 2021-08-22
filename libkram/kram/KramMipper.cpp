@@ -7,7 +7,7 @@
 //#include <algorithm>
 #include <cassert>
 
-#include "KTXImage.h" // for mipDown
+#include "KTXImage.h"  // for mipDown
 
 namespace kram {
 
@@ -36,7 +36,7 @@ int32_t nextPow2(int32_t num)
 
 inline uint8_t floatToUint8(float value)
 {
-    return (uint8_t)roundf(value * 255.0f); // or use 255.1f ?
+    return (uint8_t)roundf(value * 255.0f);  // or use 255.1f ?
 }
 
 inline Color Unormfloat4ToColor(float4 value)
@@ -53,7 +53,7 @@ inline Color Unormfloat4ToColor(float4 value)
 inline Color Snormfloat4ToColor(float4 value)
 {
     Color c;
-    value = round(127.0f * value) + float4(128.0f); 
+    value = round(127.0f * value) + float4(128.0f);
     c.r = (uint8_t)value.x;
     c.g = (uint8_t)value.y;
     c.b = (uint8_t)value.z;
@@ -75,15 +75,15 @@ inline float srgbToLinearFunc(float s)
                                      : powf((s + 0.055f) / 1.055f, 2.4f);
 }
 
-float4 linearToSRGB(float4 lin) {
+float4 linearToSRGB(float4 lin)
+{
     lin = saturate(lin);
-    
+
     return float4m(
         linearToSRGBFunc(lin.x),
         linearToSRGBFunc(lin.y),
         linearToSRGBFunc(lin.z),
-        lin.w
-    );
+        lin.w);
 }
 
 //
@@ -169,10 +169,10 @@ void Mipper::initTables()
 void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, bool doPrezero,
                                     vector<half4>& halfImage) const
 {
-    Color zeroColor = { 0, 0, 0, 0 };
-    float4 zeroColorf = float4m(0.0, 0.0f, 0.0f, 0.f); // need a constant for this
+    Color zeroColor = {0, 0, 0, 0};
+    float4 zeroColorf = float4m(0.0, 0.0f, 0.0f, 0.f);  // need a constant for this
     half4 zeroColorh = toHalf4(zeroColorf);
-    
+
     int32_t w = srcImage.width;
     int32_t h = srcImage.height;
 
@@ -183,7 +183,6 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
         assert(false);
     }
     else if (srcImage.isSRGB) {
-        
         // this does srgb and premul conversion
         for (int32_t y = 0; y < h; y++) {
             int32_t y0 = y * w;
@@ -239,7 +238,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
             int32_t y0 = y * w;
             for (int32_t x = 0; x < w; x++) {
                 Color& c0 = srcImage.pixels[y0 + x];
-                
+
                 // TODO: assumes 16, need 32f path too
                 if (c0.a == 0) {
                     c0 = zeroColor;
@@ -247,7 +246,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
                 }
                 else {
                     float4 cFloat = {alphaToFloat[c0.r], alphaToFloat[c0.g],
-                                    alphaToFloat[c0.b], alphaToFloat[c0.a]};
+                                     alphaToFloat[c0.b], alphaToFloat[c0.a]};
                     halfImage[y0 + x] = toHalf4(cFloat);
                 }
             }
@@ -333,7 +332,7 @@ void Mipper::mipmap(const ImageData& srcImage, ImageData& dstImage) const
     dstImage.width = srcImage.width;
     dstImage.height = srcImage.height;
     dstImage.depth = srcImage.depth;
-    
+
     mipDown(dstImage.width, dstImage.height, dstImage.depth);
 
     // this assumes that we can read mip-1 from srcImage
@@ -344,7 +343,7 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
 {
     int32_t width = srcImage.width;
     int32_t height = srcImage.height;
-    
+
     // this can receive premul, srgb data
     // the mip chain is linear data only
     Color* cDstColor = dstImage.pixels;
@@ -355,9 +354,9 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
 
     half4* cDstHalf = dstImage.pixelsHalf;
     const half4* srcHalf = srcImage.pixelsHalf;
-    
+
     // Note the ptrs above may point to same memory
-    
+
     int32_t dstIndex = 0;
 
     bool isOddX = width & 1;
@@ -366,79 +365,78 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
     // advance always by 2, but sample from neighbors
     int32_t mipWidth = std::max(1, width / 2);
     int32_t mipHeight = std::max(1, height / 2);
-    
-    float invWidth = 1.0f/width;
-    float invHeight = 1.0f/height;
-    
+
+    float invWidth = 1.0f / width;
+    float invHeight = 1.0f / height;
+
     for (int32_t y = isOddY ? 1 : 0; y < height; y += 2) {
         int32_t ym = y - 1;
         int32_t y0 = y;
         int32_t y1 = y + 1;
 
         // weights
-        int32_t mipY = y/2;
+        int32_t mipY = y / 2;
         float ymw = (mipHeight - mipY - 1) * invHeight;
         float y0w = mipHeight * invHeight;
         float y1w = mipY * invHeight;
-        
+
         if (!isOddY) {
-            ym = y; // weight is 0
-            
+            ym = y;  // weight is 0
+
             ymw = 0.0f;
             y0w = 0.5f;
             y1w = 0.5f;
         }
-        
+
         // normalize weights
         float totalY = ymw + y0w + y1w;
         ymw /= totalY;
         y0w /= totalY;
         y1w /= totalY;
-//
+        //
         ym *= width;
         y0 *= width;
         y1 *= width;
 
         for (int32_t x = isOddX ? 1 : 0; x < width; x += 2) {
- 
             int32_t xm = x - 1;
             int32_t x0 = x;
             int32_t x1 = x + 1;
- 
+
             // weights
-            int32_t mipX = x/2;
+            int32_t mipX = x / 2;
             float xmw = (mipWidth - mipX - 1) * invWidth;
             float x0w = mipWidth * invWidth;
             float x1w = mipX * invWidth;
-            
+
             if (!isOddX) {
-                xm = x; // weight is 0
-                
+                xm = x;  // weight is 0
+
                 xmw = 0.0f;
                 x0w = 0.5f;
                 x1w = 0.5f;
             }
-            
+
             // this mipgen is pulling down alpha of 255 to 241 and smaller over the course of the whole mip chain
             float totalX = xmw + x0w + x1w;
             xmw /= totalX;
             x0w /= totalX;
             x1w /= totalX;
-            
+
             // we have 3x2, 2x3 or 3x3 pattern to weight
             // now lookup the 9 values from the buffer
-            
+
             float4 c[9];
-            
+
             if (srcHalf) {
                 c[0] = toFloat4(srcHalf[ym + xm]);
                 c[1] = toFloat4(srcHalf[ym + x0]);
                 c[2] = toFloat4(srcHalf[ym + x1]);
-                
+
                 c[3] = toFloat4(srcHalf[y0 + xm]);
                 c[4] = toFloat4(srcHalf[y0 + x0]);
                 c[5] = toFloat4(srcHalf[y0 + x1]);
-                
+
                 c[6] = toFloat4(srcHalf[y1 + xm]);
                 c[7] = toFloat4(srcHalf[y1 + x0]);
                 c[8] = toFloat4(srcHalf[y1 + x1]);
@@ -447,11 +445,11 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 c[0] = srcFloat[ym + xm];
                 c[1] = srcFloat[ym + x0];
                 c[2] = srcFloat[ym + x1];
-                
+
                 c[3] = srcFloat[y0 + xm];
                 c[4] = srcFloat[y0 + x0];
                 c[5] = srcFloat[y0 + x1];
-                
+
                 c[6] = srcFloat[y1 + xm];
                 c[7] = srcFloat[y1 + x0];
                 c[8] = srcFloat[y1 + x1];
@@ -460,37 +458,36 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 c[0] = ColorToUnormFloat4(srcColor[ym + xm]);
                 c[1] = ColorToUnormFloat4(srcColor[ym + x0]);
                 c[2] = ColorToUnormFloat4(srcColor[ym + x1]);
-                
+
                 c[3] = ColorToUnormFloat4(srcColor[y0 + xm]);
                 c[4] = ColorToUnormFloat4(srcColor[y0 + x0]);
                 c[5] = ColorToUnormFloat4(srcColor[y0 + x1]);
-                
+
                 c[6] = ColorToUnormFloat4(srcColor[y1 + xm]);
                 c[7] = ColorToUnormFloat4(srcColor[y1 + x0]);
                 c[8] = ColorToUnormFloat4(srcColor[y1 + x1]);
             }
-                
+
             // apply weights to columns/rows
             for (int32_t i = 0; i < 3; i++) {
-                c[3*i+0] *= xmw;
-                c[3*i+1] *= x0w;
-                c[3*i+2] *= x1w;
+                c[3 * i + 0] *= xmw;
+                c[3 * i + 1] *= x0w;
+                c[3 * i + 2] *= x1w;
             }
-             
+
             for (int32_t i = 0; i < 3; i++) {
-                c[0+i] *= ymw;
-                c[3+i] *= y0w;
-                c[6+i] *= y1w;
+                c[0 + i] *= ymw;
+                c[3 + i] *= y0w;
+                c[6 + i] *= y1w;
             }
-                
+
             // add them all up
             float4 cFloat = c[0];
             for (int32_t i = 1; i < 9; ++i) {
                 cFloat += c[i];
             }
-                
-            if (srcHalf) {
 
+            if (srcHalf) {
                 // overwrite float4 image
                 cDstHalf[dstIndex] = toHalf4(cFloat);
 
@@ -510,7 +507,6 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 }
             }
             else if (srcFloat) {
-
                 // overwrite float4 image
                 cDstFloat[dstIndex] = cFloat;
 
@@ -530,7 +526,6 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 }
             }
             else {
-
                 // can overwrite memory on linear image, some precision loss, but fast
                 Color color = Unormfloat4ToColor(cFloat);
                 cDstColor[dstIndex] = color;
@@ -541,7 +536,6 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
     }
 }
 
-    
 void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
 {
     int32_t width = srcImage.width;
@@ -549,14 +543,14 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
 
     bool isOddX = width & 1;
     bool isOddY = height & 1;
-    
+
     if (isOddX || isOddY) {
         mipmapLevelOdd(srcImage, dstImage);
         return;
     }
-    
+
     // fast path for 2x2 downsample below, can do in 4 taps
-    
+
     // this can receive premul, srgb data
     // the mip chain is linear data only
     Color* cDstColor = dstImage.pixels;
@@ -567,9 +561,9 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
 
     half4* cDstHalf = dstImage.pixelsHalf;
     const half4* srcHalf = srcImage.pixelsHalf;
-    
+
     // Note the ptrs above may point to same memory
-    
+
     int32_t dstIndex = 0;
 
     for (int32_t y = 0; y < height; y += 2) {

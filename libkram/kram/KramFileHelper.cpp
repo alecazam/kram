@@ -5,10 +5,9 @@
 #include "KramFileHelper.h"
 
 // here's how to mmmap data, but NSData may have another way
+#include <errno.h>
 #include <stdio.h>
 #include <sys/stat.h>
-
-#include <errno.h>
 
 // Use this for consistent tmp file handling
 //#include <algorithm> // for min
@@ -21,8 +20,8 @@
 #endif
 
 #if KRAM_WIN
+#include <direct.h>   // direct-ory for _mkdir, _rmdir
 #include <windows.h>  // for GetNativeSystemInfo()
-#include <direct.h> // direct-ory for _mkdir, _rmdir
 
 // Windows mkdir doesn't take permission
 #define mkdir(fname, permission) _mkdir(fname)
@@ -35,32 +34,32 @@ using namespace NAMESPACE_STL;
 #define nl "\n"
 
 // https://stackoverflow.com/questions/7430248/creating-a-new-directory-in-c
-static void mkdirRecursive(char *path) {
-    char *sep = strrchr(path, '/');
+static void mkdirRecursive(char* path)
+{
+    char* sep = strrchr(path, '/');
     if (sep != NULL) {
         *sep = 0;
         mkdirRecursive(path);
         *sep = '/';
     }
-    
-    if (*path != '\0' && mkdir(path, 0755) && errno != EEXIST)
-    {
-        KLOGE("kram", "error while trying to create '%s'" nl
-               "%s" nl,
-               path, strerror(errno)); // same as %m
+
+    if (*path != '\0' && mkdir(path, 0755) && errno != EEXIST) {
+        KLOGE("kram", "error while trying to create '%s'" nl "%s" nl,
+              path, strerror(errno));  // same as %m
     }
 }
 
-static FILE *fopen_mkdir(const char *path, const char *mode) {
-    const char *sep = strrchr(path, '/');
-    if(sep) {
-        char *path0 = strdup(path);
-        path0[ sep - path ] = 0;
+static FILE* fopen_mkdir(const char* path, const char* mode)
+{
+    const char* sep = strrchr(path, '/');
+    if (sep) {
+        char* path0 = strdup(path);
+        path0[sep - path] = 0;
         mkdirRecursive(path0);
         free(path0);
     }
-    
-    return fopen(path,mode);
+
+    return fopen(path, mode);
 }
 
 FileHelper::~FileHelper() { close(); }
@@ -150,9 +149,9 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
     if (size_ == (size_t)-1) {
         return false;
     }
-    
+
     // DONE: copy in smaller buffered chunks
-    size_t maxBufferSize = 256*1024;
+    size_t maxBufferSize = 256 * 1024;
     size_t bufferSize = min(size_, maxBufferSize);
     vector<uint8_t> tmpBuf;
     tmpBuf.resize(bufferSize);
@@ -174,12 +173,12 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
     if (!dstHelper.open(dstFilename, "w+b")) {
         return false;
     }
-    
+
     size_t bytesRemaining = size_;
-    while(bytesRemaining > 0) {
+    while (bytesRemaining > 0) {
         int bytesToRead = min(bufferSize, bytesRemaining);
         bytesRemaining -= bytesToRead;
-        
+
         if (!read(tmpBuf.data(), bytesToRead) ||
             !dstHelper.write(tmpBuf.data(), bytesToRead)) {
             dstHelper.close();
@@ -189,7 +188,7 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -203,7 +202,7 @@ bool FileHelper::open(const char* filename, const char* access)
     else {
         _fp = fopen(filename, access);
     }
-    
+
     if (!_fp) {
         return false;
     }
@@ -253,32 +252,31 @@ bool FileHelper::exists(const char* filename) const
     return true;
 }
 
-uint64_t FileHelper::modificationTimestamp(const char* filename) {
-  
-    // Win has to rename all this, so make it happy using wrappers from miniz
-    #if defined(_MSC_VER) || defined(__MINGW64__)
-    #define MZ_FILE_STAT_STRUCT _stat64
-    #define MZ_FILE_STAT _stat64
-    #else
-    #define MZ_FILE_STAT_STRUCT stat
-    #define MZ_FILE_STAT stat
-    #endif
+uint64_t FileHelper::modificationTimestamp(const char* filename)
+{
+// Win has to rename all this, so make it happy using wrappers from miniz
+#if defined(_MSC_VER) || defined(__MINGW64__)
+#define MZ_FILE_STAT_STRUCT _stat64
+#define MZ_FILE_STAT _stat64
+#else
+#define MZ_FILE_STAT_STRUCT stat
+#define MZ_FILE_STAT stat
+#endif
 
     struct MZ_FILE_STAT_STRUCT stats;
     if (MZ_FILE_STAT(filename, &stats) < 0) {
         return 0;
     }
-       
+
     // https://www.quora.com/What-is-the-difference-between-mtime-atime-and-ctime
     // atime is last access time
     // ctime when attributes change
     // mtime when contents change
     // folders mtime changes when files added/deleted
-    
+
     // 32.32, only return seconds for now
     // https://stackoverflow.com/questions/11373505/getting-the-last-modified-date-of-a-file-in-c
     return stats.st_mtime;
 }
-
 
 }  // namespace kram

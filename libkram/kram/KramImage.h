@@ -8,9 +8,9 @@
 //#include <vector>
 
 #include "KTXImage.h"  // for MyMTLTextureType
-#include "KramMipper.h"
 #include "KramConfig.h"
 #include "KramImageInfo.h"
+#include "KramMipper.h"
 
 namespace kram {
 
@@ -45,7 +45,6 @@ public:
     // convert top level to single-image
     bool loadImageFromKTX(const KTXImage& image);
 
-    
     // this is only for 2d images
     bool resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, ImageResizeFilter filter = kImageResizeFilterPoint);
 
@@ -58,11 +57,11 @@ public:
 
     bool hasColor() const { return _hasColor; }
     bool hasAlpha() const { return _hasAlpha; }
-    
+
     // if converted a KTX/2 image to Image, then this field will be non-zero
     uint32_t chunksY() const { return _chunksY; }
     void setChunksY(uint32_t chunksY) { _chunksY = chunksY; }
-    
+
 private:
     bool convertToFourChannel(const KTXImage& image);
 
@@ -81,13 +80,13 @@ private:
     vector<uint8_t> _pixels;  // TODO: change to Color?
     //vector<half4> _pixelsHalf; // TODO: add support to import fp16
     vector<float4> _pixelsFloat;
-    
+
     uint32_t _chunksY = 0;
 };
 
 class KramDecoderParams {
 public:
-    TexEncoder decoder = kTexEncoderUnknown; // will pick best available from format
+    TexEncoder decoder = kTexEncoderUnknown;  // will pick best available from format
     bool isVerbose = false;
     string swizzleText;
 };
@@ -98,15 +97,15 @@ public:
 class KramDecoder {
 public:
     bool decode(const KTXImage& image, FILE* dstFile, const KramDecoderParams& params) const;
-    
+
     bool decode(const KTXImage& image, KTXImage& dstImage, const KramDecoderParams& params) const;
-    
+
     bool decodeBlocks(
-                int32_t w, int32_t h,
-                const uint8_t* blockData, uint32_t numBlocks, MyMTLPixelFormat blockFormat,
-                vector<uint8_t>& dstPixels, // currently Color
-                const KramDecoderParams& params) const;
-    
+        int32_t w, int32_t h,
+        const uint8_t* blockData, uint32_t numBlocks, MyMTLPixelFormat blockFormat,
+        vector<uint8_t>& dstPixels,  // currently Color
+        const KramDecoderParams& params) const;
+
 private:
     bool decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& dstImage, const KramDecoderParams& params) const;
 };
@@ -125,7 +124,7 @@ public:
     // TODO: supply encode() that takes a KTXImage src with mips already generated
     // and then can encode them to a block format.  In-place mips from Image don't
     // allow for custom mips, and also require conversion of KTXImage to Image.
-    
+
 private:
     bool encodeImpl(ImageInfo& info, Image& singleImage, FILE* dstFile, KTXImage& dstImage) const;
 
@@ -150,15 +149,13 @@ private:
                               FILE* dstFile, KTXImage& dstImage) const;
 
     bool writeKTX1FileOrImage(
-         ImageInfo& info,
-         Image& singleImage,
-         MipConstructData& mipConstructData,
-         const vector<uint8_t>& propsData,
-         FILE* dstFile, KTXImage& dstImage) const;
+        ImageInfo& info,
+        Image& singleImage,
+        MipConstructData& mipConstructData,
+        const vector<uint8_t>& propsData,
+        FILE* dstFile, KTXImage& dstImage) const;
 
     void addBaseProps(const ImageInfo& info, KTXImage& dstImage) const;
-
 };
-
 
 }  // namespace kram

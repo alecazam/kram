@@ -10,17 +10,14 @@
 #include "KramConfig.h"
 
 // helpers
-#include "KramFileHelper.h"
-#include "KramMmapHelper.h"
-#include "KramZipHelper.h"
-#include "KramTimer.h"
-#include "KramLog.h"
-
+#include "KTXImage.h"
 #include "Kram.h"
-
+#include "KramFileHelper.h"
 #include "KramImage.h"
 #include "KramImageInfo.h"
-#include "KTXImage.h"
+#include "KramLog.h"
 #include "KramMipper.h"
+#include "KramMmapHelper.h"
 #include "KramSDFMipper.h"
-
+#include "KramTimer.h"
+#include "KramZipHelper.h"
