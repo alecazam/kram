@@ -37,7 +37,13 @@ set -e
 mkdir -p bin
 
 # need absolute path
-binPath=$(realpath bin)
+# but macos left out realpath, ugh
+# https://stackoverflow.com/questions/3572030/bash-script-absolute-path-with-os-x
+if [[ $buildType == macos ]]; then
+	binPath=$( cd "$(dirname "bin")" ; pwd -P )
+else
+	binPath=$(realpath bin)
+fi
 
 mkdir -p build
 
