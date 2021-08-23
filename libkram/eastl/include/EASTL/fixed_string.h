@@ -12,7 +12,7 @@
 #pragma once
 
 #include <EASTL/internal/config.h>
-#include <EASTL/string.h>
+#include <EASTL/basic_string.h>
 #include <EASTL/internal/fixed_pool.h>
 
 

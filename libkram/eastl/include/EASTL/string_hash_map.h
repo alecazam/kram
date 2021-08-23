@@ -5,7 +5,7 @@
 #pragma once
 
 #include <EASTL/hash_map.h>
-#include <EASTL/string.h>
+#include <EASTL/basic_string.h>
 
 namespace eastl
 {

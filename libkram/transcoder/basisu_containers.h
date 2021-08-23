@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
-#include <algorithm>
+//#include <algorithm>
 
 #if !__clang__ && __GNUC__ // Grumble clang grumble
 #pragma GCC diagnostic push

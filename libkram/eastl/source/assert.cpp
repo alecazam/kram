@@ -4,7 +4,7 @@
 
 
 #include <EASTL/internal/config.h>
-#include <EASTL/string.h>
+#include <EASTL/basic_string.h>
 #include <EABase/eabase.h>
 
 #if defined(EA_PLATFORM_MICROSOFT)

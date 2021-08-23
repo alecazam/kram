@@ -18,7 +18,7 @@
 
 EA_DISABLE_ALL_VC_WARNINGS()
 #include <ctype.h>              // toupper, etc.
-#include <string.h>             // memset, etc.
+#include <cstring>             // memset, etc.
 EA_RESTORE_ALL_VC_WARNINGS()
 
 namespace eastl

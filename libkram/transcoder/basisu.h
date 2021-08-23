@@ -58,10 +58,10 @@
 #include <limits.h>
 #include <stdint.h>
 
-#include <algorithm>
+//#include <algorithm>
 #include <limits>
-#include <functional>
-#include <iterator>
+//#include <functional>
+//#include <iterator>
 #include <type_traits>
 #include <assert.h>
 #include <random>

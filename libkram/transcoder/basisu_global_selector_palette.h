@@ -16,7 +16,7 @@
 // limitations under the License.
 #pragma once
 #include "basisu_transcoder_internal.h"
-#include <algorithm>
+//#include <algorithm>
 
 namespace basist
 {
