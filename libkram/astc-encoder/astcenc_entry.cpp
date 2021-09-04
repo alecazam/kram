@@ -27,6 +27,8 @@
 #include "astcenc_internal.h"
 #include "astcenc_diagnostic_trace.h"
 
+using namespace NAMESPACE_STL;
+
 // The ASTC codec is written with the assumption that a float threaded through
 // the "if32" union will in fact be stored and reloaded as a 32-bit IEEE-754 single-precision
 // float, stored with round-to-nearest rounding. This is always the case in an
@@ -109,7 +111,7 @@ struct astcenc_preset_config {
 /**
  * @brief The static quality presets that are built-in.
  */
-static const std::array<astcenc_preset_config, 5> preset_configs {{
+static const array<astcenc_preset_config, 5> preset_configs {{
 	{
 		ASTCENC_PRE_FASTEST,
 		4, 2, 30, 1, 1, 79, 57, 2.0f, 2.0f, 1.0f, 0.5f

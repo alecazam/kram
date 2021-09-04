@@ -21,7 +21,8 @@
 
 #include "astcenc_internal.h"
 
-#include <array>
+using namespace NAMESPACE_STL;
+//#include <array>
 
 // unpacked quint triplets <low,middle,high> for each packed-quint value
 static const uint8_t quints_of_integer[128][3] = {
@@ -351,7 +352,7 @@ struct btq_count {
 /**
  * @brief The table of bits, trits, and quints needed for a quant encode.
  */
-static const std::array<btq_count, 21> btq_counts = {{
+static const array<btq_count, 21> btq_counts = {{
 	{   QUANT_2, 1, 0, 0 },
 	{   QUANT_3, 0, 1, 0 },
 	{   QUANT_4, 2, 0, 0 },
@@ -398,7 +399,7 @@ struct ise_size {
 /**
  * @brief The table of scale, round, and divisors needed for quant sizing.
  */
-static const std::array<ise_size, 21> ise_sizes = {{
+static const array<ise_size, 21> ise_sizes = {{
 	{   QUANT_2,  1, 0, 1 },
 	{   QUANT_3,  8, 4, 5 },
 	{   QUANT_4,  2, 0, 1 },

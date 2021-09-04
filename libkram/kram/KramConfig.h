@@ -165,12 +165,17 @@
 
 #include <EASTL/deque.h>
 #include <EASTL/iterator.h>    // for copy_if on Win
-#include <EASTL/shared_ptr.h>  // includes thread/mutex
 #include <EASTL/sort.h>
 #include <EASTL/basic_string.h>
-#include <EASTL/unique_ptr.h>
+
+#include <EASTL/array.h>
+#include <EASTL/map.h>
 #include <EASTL/unordered_map.h>
 #include <EASTL/vector.h>
+
+#include <EASTL/shared_ptr.h>  // includes thread/mutex
+#include <EASTL/unique_ptr.h>
+#include <EASTL/initializer_list.h>
 
 #include <atomic>
 
@@ -179,12 +184,18 @@
 #else
 
 #include <algorithm>  // for max
-#include <atomic>
-#include <deque>
 #include <functional>
+
+#include <deque>
 #include <iterator>  // for copy_if on Win
-#include <memory>    // for shared_ptr
 #include <string>
+
+#include <atomic>
+#include <memory>    // for shared_ptr
+#include <initializer_list>
+
+#include <array>
+#include <map>
 #include <unordered_map>
 #include <vector>
 

@@ -262,7 +262,7 @@
 					"$(PROJECT_DIR)/../libkram/kram",
 					"$(PROJECT_DIR)/../libkram/eastl/include",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.1;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -324,7 +324,7 @@
 					"$(PROJECT_DIR)/../libkram/kram",
 					"$(PROJECT_DIR)/../libkram/eastl/include",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.1;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_CFLAGS = (
