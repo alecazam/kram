@@ -154,13 +154,16 @@ inline my_at_block_format_t pixelToDecoderFormat(MyMTLPixelFormat format, bool i
             // Note: remapping unorm inputs to snorm outside of call
             case MyMTLPixelFormatBC4_RUnorm:
                 encoderFormat = my_at_block_format_bc4; break;
+                
+            // Can't use bc4s/5s decoding, or must pass a float image to the ate decoder
+            // can correct this unorm to snorm after image is loaded?
             case MyMTLPixelFormatBC4_RSnorm:
-                encoderFormat = my_at_block_format_bc4s; break;
+                encoderFormat = my_at_block_format_bc4; break; // my_at_block_format_bc4s; break;
                 
             case MyMTLPixelFormatBC5_RGUnorm:
                 encoderFormat = my_at_block_format_bc5; break;
             case MyMTLPixelFormatBC5_RGSnorm:
-                encoderFormat = my_at_block_format_bc5s; break;
+                encoderFormat = my_at_block_format_bc5; break; // my_at_block_format_bc5s; break;
                 
             // hdr
             case MyMTLPixelFormatBC6H_RGBUfloat:
@@ -363,9 +366,12 @@ bool ATEEncoder::Decode(uint32_t metalPixelFormat, size_t dstDataSize, int32_t b
     uint32_t flags = at_flags_skip_parameter_checking
                | at_flags_disable_multithreading;
     
+    // Notes say the following.  So
+    // Signed or HDR block formats must be paired with a float texel format and cannot be paired with at_flags_srgb_linear_texels.
+    
 // this is a decode only flag that presumably does srgb -> linear conversion, but leave the texels as is
 //    if (isSrgb) {
-        flags |= at_flags_srgb_linear_texels;
+//        flags |= at_flags_srgb_linear_texels;
 //    }
     
     if (isVerbose) {
@@ -390,6 +396,17 @@ bool ATEEncoder::Decode(uint32_t metalPixelFormat, size_t dstDataSize, int32_t b
 
     // content may be premul, but don't want decoder multiplying
     at_alpha_t srcAlphaType = at_alpha_not_premultiplied;
+    // drop the alpha if needed
+    if (blockFormat == my_at_block_format_bc1 ||
+        blockFormat == my_at_block_format_bc4 ||
+        blockFormat == my_at_block_format_bc4s ||
+        blockFormat == my_at_block_format_bc5 ||
+        blockFormat == my_at_block_format_bc5s ||
+        blockFormat == my_at_block_format_bc6 ||
+        blockFormat == my_at_block_format_bc6u)
+    {
+        srcAlphaType = at_alpha_opaque;
+    }
     at_alpha_t dstAlphaType = srcAlphaType;
     
     at_encoder_t encoder = at_encoder_create(
@@ -418,6 +435,15 @@ bool ATEEncoder::Decode(uint32_t metalPixelFormat, size_t dstDataSize, int32_t b
                                    at_flags_t(flags)
                                  );
 
+    // decode is leaving a=60 for some bizarro reason, so correct that
+    if (srcAlphaType == at_alpha_opaque)
+    {
+        for (uint32_t i = 0, iEnd = w*h; i < iEnd; ++i)
+        {
+            dstData[4*i+3] = 255;
+        }
+    }
+    
     if (error != at_error_success) {
         KLOGE("ATEEncoder", "decode failed");
         return false;

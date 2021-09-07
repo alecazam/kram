@@ -190,21 +190,21 @@ void CompressImage( u8 const* rgba, int width, int height, void* blocks, int for
 void Decompress( u8* rgba, void const* block, int format )
 {
     // get the block locations
-    void const * alphaBock = reinterpret_cast< u8 const* >( block ) + 8;
+    void const * alphaBlock = reinterpret_cast< u8 const* >( block ) + 8;
  
     // decompress colour
     switch( format )
     {
         case kBC1:
-            DecompressColour( rgba, block, true);
+            DecompressColour( rgba, block, true); // a=1
             break;
         case kBC2:
             DecompressColour( rgba, block, false);
-            DecompressAlphaBC2( rgba, alphaBock ); // put in a
+            DecompressAlphaBC2( rgba, alphaBlock ); // put in a
             break;
         case kBC3:
             DecompressColour( rgba, block, false);
-            DecompressAlphaBC3( rgba, alphaBock, 3 ); // put in a
+            DecompressAlphaBC3( rgba, alphaBlock, 3 ); // put in a
             break;
  
         case kBC4:
@@ -212,7 +212,7 @@ void Decompress( u8* rgba, void const* block, int format )
             break;
         case kBC5:
             DecompressAlphaBC3( rgba, block, 0 ); // put in r
-            DecompressAlphaBC3( rgba, alphaBock, 1 ); // put in g
+            DecompressAlphaBC3( rgba, alphaBlock, 1 ); // put in g
             break;
     }
 }
@@ -230,7 +230,12 @@ void DecompressImage( u8* rgba, int width, int height, void const* blocks, int f
 		for( int x = 0; x < width; x += 4 )
 		{
 			// decompress the block
-			u8 targetRgba[4*16];
+            
+            // Clear to 0001 (for bc4/5)
+            u8 targetRgba[4*16] = {};
+            for (uint32_t i = 0; i < 16; ++i)
+                targetRgba[4*i+3] = 255;
+            
 			Decompress( targetRgba, sourceBlock, format );
 			
 			// write the decompressed pixels to the correct image locations

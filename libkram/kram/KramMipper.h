@@ -39,6 +39,9 @@ inline float4 ColorToSnormFloat4(const Color &value)
 // for signed bc4/5, remap the endpoints after unorm fit
 void remapToSignedBCEndpoint88(uint16_t &endpoint);
 
+// for decoding bc4/5 snorm, convert block to unsigned endpoints before decode
+void remapFromSignedBCEndpoint88(uint16_t& endpoint);
+
 float4 linearToSRGB(float4 lin);
 
 // return srgb from a linear intesnity

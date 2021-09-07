@@ -19,12 +19,12 @@ buildType=$1
 # translate Github Actions to os typpe
 if [[ $buildType =~ "macos" ]]; then
 	buildType="macos"
-fi
-if [[ $buildType =~ "windows" ]]; then
+elif [[ $buildType =~ "windows" ]]; then
 	buildType="windows"
-fi
-if [[ $buildType =~ "ubuntu" ]]; then
+elif [[ $buildType =~ "ubuntu" ]]; then
 	buildType="linux"
+else
+	buildType="macos"
 fi
 
 # exit on failure of any command
@@ -41,13 +41,12 @@ mkdir -p bin
 # https://stackoverflow.com/questions/3572030/bash-script-absolute-path-with-os-x
 if [[ $buildType == macos ]]; then
 	binPath=$( cd "$(dirname "bin")" ; pwd -P )
+
+	# not sure why above doesn't include the folder name
+	binPath="${binPath}/bin"
 else
 	binPath=$(realpath bin)
 fi
-
-mkdir -p build
-
-pushd build
 
 # can't just use cmake .. on osx, cmake gets confused about metal files since language not recognized
 # but Xcode knows how to build these.  I don't want to setup special rule for metal files right now.
@@ -55,14 +54,13 @@ if [[ $buildType == macos ]]; then
 
 	# not using CMake anymore on mac/iOS.  Using custom workspace and projects.
 	#cmake .. -G Xcode
-
 	# build the release build
 	#cmake --build . --config Release
-
 	# copy it to bin directory
 	#cmake --install . --config Release
 
-	pushd ../build2
+	# this dir already exists, so don't have to mkdir
+	pushd build2
 
 	xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
 	xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
@@ -73,6 +71,10 @@ if [[ $buildType == macos ]]; then
 	popd
 
 elif [[ $buildType == windows ]]; then
+	mkdir -p build
+
+	pushd build
+
 	#cmake .. -G "Visual Studio 15 2017 Win64"
 	cmake .. -G "Visual Studio 16 2019" -A x64
 
@@ -82,7 +84,13 @@ elif [[ $buildType == windows ]]; then
 	# copy it to bin directory
 	cmake --install . --config Release
 
+	popd
+
 elif [[ $buildType == linux ]]; then
+	mkdir -p build
+
+	pushd build
+
 	cmake .. 
 
 	# build the release build
@@ -90,9 +98,10 @@ elif [[ $buildType == linux ]]; then
 
 	# copy it to bin directory
 	cmake --install . --config Release
+
+	popd
 fi
 
-popd
 
 #---------------------------------
 

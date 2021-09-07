@@ -316,6 +316,13 @@ inline int8_t signedConvertUint8(uint8_t x)
     return (int8_t)xx;
 }
 
+inline uint8_t unsignedConvertInt8(int8_t x)
+{
+    // split into +/- values
+    int32_t xx = (int32_t)x + 128;
+    return (uint8_t)xx;
+}
+
 void remapToSignedBCEndpoint88(uint16_t& endpoint)
 {
     uint8_t e0val = endpoint & 0xFF;
@@ -323,6 +330,17 @@ void remapToSignedBCEndpoint88(uint16_t& endpoint)
 
     int8_t e0 = signedConvertUint8(e0val);
     int8_t e1 = signedConvertUint8(e1val);
+
+    endpoint = (*(const uint8_t*)&e0) | ((*(const uint8_t*)&e1) << 8);
+}
+
+void remapFromSignedBCEndpoint88(uint16_t& endpoint)
+{
+    uint8_t e0val = endpoint & 0xFF;
+    uint8_t e1val = (endpoint >> 8) & 0xFF;
+
+    int8_t e0 = unsignedConvertInt8(e0val);
+    int8_t e1 = unsignedConvertInt8(e1val);
 
     endpoint = (*(const uint8_t*)&e0) | ((*(const uint8_t*)&e1) << 8);
 }

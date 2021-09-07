@@ -447,7 +447,8 @@ bool KramDecoder::decodeBlocks(
     bool isVerbose = params.isVerbose;
     const string& swizzleText = params.swizzleText;
     bool isHDR = isHdrFormat(blockFormat);
-
+    //bool isSigned = isSignedFormat(blockFormat);
+    
     // start decoding after format pulled from KTX file
     if (isBCFormat(blockFormat)) {
         // bc via ate, or squish for bc1-5 if on other platforms
@@ -471,9 +472,37 @@ bool KramDecoder::decodeBlocks(
                     int32_t bb0 = bby * blocks_x + bbx;
                     const uint8_t* srcBlock = &srcData[bb0 * blockSize];
 
-                    // decode into temp 4x4 pixels
-                    Color pixels[blockDim * blockDim];
+                    // Clear to 0001
+                    // TODO: could only do for bc4/5
+                    Color pixels[blockDim * blockDim] = {};
+                    for (uint32_t i = 0, iEnd = blockDim*blockDim; i < iEnd; ++i)
+                    {
+                        pixels[i].a = 255;
+                    }
+                    
+                    // TODO: need this for bc4/5/6sn on other decoders (ate + squish)
+                    // but have to run through all blocks before passing.  Here doing one block
+                    // at a time.  EAC_R11/RG11sn already do this conversion on decode.
+                    
+                    // Switch from unorm to snorm if needed
+                    uint16_t* e0;
+                    uint16_t* e1;
 
+                    e0 = (uint16_t*)&srcBlock[0];
+                    
+                    if (blockFormat == MyMTLPixelFormatBC4_RSnorm) {
+                        // 2 8-bit endpoints
+                        remapFromSignedBCEndpoint88(*e0);
+                    }
+                    else if (blockFormat == MyMTLPixelFormatBC5_RGSnorm) {
+                        // 4 8-bit endpoints
+                        remapFromSignedBCEndpoint88(*e0);
+                        
+                        e1 = (uint16_t*)&srcBlock[4*2];
+                        remapFromSignedBCEndpoint88(*e1);
+                    }
+                    
+                    // decode into temp 4x4 pixels
                     success = true;
 
                     switch (blockFormat) {
@@ -484,13 +513,17 @@ bool KramDecoder::decodeBlocks(
                             break;
                         case MyMTLPixelFormatBC3_RGBA_sRGB:
                         case MyMTLPixelFormatBC3_RGBA:
-                            // Returns true if the block uses 3 color punchthrough alpha mode.
+                            // Returns false if the block uses 3 color punchthrough alpha mode.
                             rgbcx::unpack_bc3(srcBlock, pixels);
                             break;
+                            
+                        // writes r packed
                         case MyMTLPixelFormatBC4_RSnorm:
                         case MyMTLPixelFormatBC4_RUnorm:
                             rgbcx::unpack_bc4(srcBlock, (uint8_t*)pixels);
                             break;
+                            
+                        // writes rg packed
                         case MyMTLPixelFormatBC5_RGSnorm:
                         case MyMTLPixelFormatBC5_RGUnorm:
                             rgbcx::unpack_bc5(srcBlock, pixels);
@@ -524,7 +557,8 @@ bool KramDecoder::decodeBlocks(
                                 break;  // go to next y above
                             }
 
-                            dstPixels[yy * w + xx] = pixels[by * blockDim + bx];
+                            const Color& c = pixels[by * blockDim + bx];
+                            dstPixels[yy * w + xx] = c;
                         }
                     }
                 }
@@ -562,7 +596,9 @@ bool KramDecoder::decodeBlocks(
 
             if (success) {
                 // only handles bc1,3,4,5
+                // TODO: colors still don't look correct on rs, rgs.  Above it always requests unorm.
                 squish::DecompressImage(outputTexture.data(), w, h, srcData, format);
+                
                 success = true;
             }
         }
@@ -570,6 +606,9 @@ bool KramDecoder::decodeBlocks(
 #if COMPILE_ATE
         else if (useATE) {
             ATEEncoder encoder;
+            
+            // TODO: colors still don't look correct on rs, rgs
+            // docs mention needing to pass float pixels for snorm, but always using unorm decode format now
             success = encoder.Decode(blockFormat, blockDataSize, blockDims.y,
                                      isVerbose,
                                      w, h, srcData, outputTexture.data());
