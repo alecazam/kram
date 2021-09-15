@@ -9,6 +9,7 @@
 //#include <algorithm>
 //#include <map>
 //#include <unordered_map>
+#include <mutex>
 
 // for zlib decompress
 #include "miniz.h"
@@ -1114,6 +1115,15 @@ void KTXImage::addChannelProps(const char* channelContent)
     // Nrm.x,Nrm.y,X,X
     // Alb.ra,Alb.ga,Alb.ba,Alb.a, // indicate premul channel
     // Rgh.x,Mtl.x,X,X
+}
+
+bool KTXImage::isPremul() const
+{
+    string channels = getProp(kPropChannels);
+    if (strstr(channels.c_str(), "Alb.ra,Alb.ga,Alb.ba") == 0) {
+        return true;
+    }
+    return false;
 }
 
 void KTXImage::toPropsData(vector<uint8_t>& propsData)

@@ -307,6 +307,9 @@ public:
     bool isKTX1() const { return !skipImageLength; }
     bool isKTX2() const { return skipImageLength; }
 
+    // determine if image stores rgb * a
+    bool isPremul() const;
+    
     // can use on ktx1/2 files, does a decompress if needed
     bool unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* dstData) const;
 

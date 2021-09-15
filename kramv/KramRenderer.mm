@@ -971,7 +971,7 @@ struct packed_float3 {
 
     // note that decoded textures are 3/4 channel even though they are normal/sdf
     // originally, so test those first
-    if (numChannels == 2 || endsWith(filenameShort, "-n") ||
+    if (/*numChannels == 2 || */ endsWith(filenameShort, "-n") ||
         endsWith(filenameShort, "_normal")) {
         isNormal = true;
     }
@@ -979,7 +979,7 @@ struct packed_float3 {
              endsWith(filenameShort, "-sdf")) {
         isSDF = true;
     }
-    else if (numChannels == 3 || numChannels == 4 ||
+    else if (numChannels == 3 || numChannels == 4 || // TODO: elim channel test, only rely on suffix?, also have key-value pairs
              endsWith(filenameShort, "-a") ||
              endsWith(filenameShort, "_basecolor")) {
         isAlbedo = true;
@@ -996,9 +996,6 @@ struct packed_float3 {
     if (isAlbedo && isPNG) {
         _showSettings->isPremul =
             true;  // convert to premul in shader, so can see other channels
-    }
-    else if (isNormal || isSDF) {
-        _showSettings->isPremul = false;
     }
 
     _showSettings->numChannels = numChannels;
