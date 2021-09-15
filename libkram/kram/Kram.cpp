@@ -380,19 +380,24 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     }
 
     // this inserts onto end of array, it doesn't resize
-    vector<uint8_t> pixels;
-    pixels.clear();
-    errorLode = lodepng::decode(pixels, width, height, data, dataSize, LCT_RGBA, 8);
+    vector<uint8_t> pixelsPNG;
+    pixelsPNG.clear();
+    errorLode = lodepng::decode(pixelsPNG, width, height, data, dataSize, LCT_RGBA, 8);
     if (errorLode != 0) {
         return false;
     }
+
+    // Note: could probably do a cast of vector<uint8_t> to vector<Color>, but do a copy here instead
+    vector<Color> pixels;
+    pixels.resize(width * height);
+    memcpy(pixels.data(), pixelsPNG.data(), vsizeof(pixelsPNG));
 
     // convert to grasycale on load
     // better if could do this later in pipeline to stay in linear fp16 color
     if (hasColor && isGray) {
         Mipper mipper;
 
-        Color* colors = (Color*)pixels.data();
+        Color* colors = pixels.data();
         for (int32_t i = 0, iEnd = width * height; i < iEnd; ++i) {
             colors[i] = toGrayscaleRec709(colors[i], mipper);
         }
@@ -406,7 +411,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     // on premul PNG data on load, and colors look much darker.
 
     if (hasAlpha && isPremulRgb) {
-        Color* colors = (Color*)pixels.data();
+        Color* colors = pixels.data();
         for (int32_t i = 0, iEnd = width * height; i < iEnd; ++i) {
             colors[i] = toPremul(colors[i]);
         }
@@ -1904,10 +1909,10 @@ static int32_t kramAppDecode(vector<const char*>& args)
     }
 
     bool isDstKTX = endsWith(dstFilename, ".ktx");
-    bool isDstKTX2 = endsWith(dstFilename, ".ktx2");
+    //bool isDstKTX2 = endsWith(dstFilename, ".ktx2");
 
-    if (!(isDstKTX || isDstKTX2)) {
-        KLOGE("Kram", "decode only supports ktx and ktx2 output");
+    if (!(isDstKTX)) {  //} || isDstKTX2)) {
+        KLOGE("Kram", "decode only supports ktx output");
         error = true;
     }
 
@@ -1921,6 +1926,8 @@ static int32_t kramAppDecode(vector<const char*>& args)
     FileHelper tmpFileHelper;
 
     bool success = SetupSourceKTX(srcImageData, srcFilename, srcImage);
+    if (!success)
+        return -1;
 
     // TODO: for hdr decode, may need to walk blocks or ask caller to pass -hdr flag
     if (!validateFormatAndDecoder(srcImage.textureType, srcImage.pixelFormat, textureDecoder)) {
@@ -1928,9 +1935,11 @@ static int32_t kramAppDecode(vector<const char*>& args)
         return -1;
     }
 
-    success = success && SetupTmpFile(tmpFileHelper, isDstKTX2 ? ".ktx2" : ".ktx");
+    success = SetupTmpFile(tmpFileHelper, /* isDstKTX2 ? ".ktx2" : */ ".ktx");
+    if (!success)
+        return -1;
 
-    if (success && isVerbose) {
+    if (isVerbose) {
         KLOGI("Kram", "Decoding %s to %s with %s\n",
               textureTypeName(srcImage.textureType),
               metalTypeName(srcImage.pixelFormat),
@@ -1943,11 +1952,12 @@ static int32_t kramAppDecode(vector<const char*>& args)
     params.swizzleText = swizzleText;
 
     KramDecoder decoder;  // just to call decode
-    success = success && decoder.decode(srcImage, tmpFileHelper.pointer(), params);
+    success = decoder.decode(srcImage, tmpFileHelper.pointer(), params);
 
     // rename to dest filepath, note this only occurs if above succeeded
     // so any existing files are left alone on failure.
-    success = success && tmpFileHelper.copyTemporaryFileTo(dstFilename.c_str());
+    if (success)
+        success = tmpFileHelper.copyTemporaryFileTo(dstFilename.c_str());
 
     return success ? 0 : -1;
 }

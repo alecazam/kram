@@ -415,19 +415,31 @@ public:
 
 //using tFormatTable = unordered_map<MyMTLPixelFormat, KTXFormatInfo>;
 
-static unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo>* gFormatTable = nullptr;
+using mymap = unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo>;
+static mymap* gFormatTable = nullptr;
+
+// thumbnailing can hit this from multiple threads
+using mymutex = std::mutex;
+using lock_t = std::unique_lock<mymutex>;
+static mymutex gFormatTableMutex;
 
 static bool initFormatsIfNeeded()
 {
     if (gFormatTable) {
         return true;
     }
-
-    gFormatTable = new unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo>();
+    
+    lock_t lock(gFormatTableMutex);
+    
+    if (gFormatTable) {
+        return true;
+    }
+    
+    mymap* formatTable = new unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo>();
 
 // the following table could be included multiple ties to build switch statements, but instead use a hashmap
 #define KTX_FORMAT(fmt, metalType, vulkanType, glType, glBase, x, y, blockSize, numChannels, flags) \
-    (*gFormatTable)[(uint32_t)metalType] = KTXFormatInfo(                                           \
+    (*formatTable)[(uint32_t)metalType] = KTXFormatInfo(                                           \
         #fmt, #metalType, #vulkanType, #glType,                                                     \
         metalType, vulkanType, glType, glBase,                                                      \
         x, y, blockSize, numChannels, (flags));
@@ -505,6 +517,8 @@ static bool initFormatsIfNeeded()
     KTX_FORMAT(EXPrgb32f, MyMTLPixelFormatRGB32Float_internal, VK_FORMAT_R32G32B32_SFLOAT, GL_RGB32F, GL_RGB, 1, 1, 12, 3, FLAG_32F)
 #endif
 
+    gFormatTable = formatTable;
+    
     return true;
 }
 

@@ -36,6 +36,13 @@ inline float4 ColorToSnormFloat4(const Color &value)
     return (c - float4(128.0f)) / 255.0f;
 }
 
+inline Color ColorFromUnormFloat4(const float4 &value)
+{
+    float4 c = round(saturate(value) * 255.0f);
+    Color color = { (uint8_t)c.x, (uint8_t)c.y, (uint8_t)c.z, (uint8_t)c.w };
+    return color;
+}
+
 // for signed bc4/5, remap the endpoints after unorm fit
 void remapToSignedBCEndpoint88(uint16_t &endpoint);
 

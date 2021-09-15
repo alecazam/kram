@@ -39,11 +39,14 @@ public:
     Image();
 
     // these 3 calls for Encode
-    bool loadImageFromPixels(const vector<uint8_t>& pixels, int32_t width,
+    bool loadImageFromPixels(const vector<Color>& pixels, int32_t width,
                              int32_t height, bool hasColor, bool hasAlpha);
 
-    // convert top level to single-image
-    bool loadImageFromKTX(const KTXImage& image);
+    // convert mip level of explicit format to single-image
+    bool loadImageFromKTX(const KTXImage& image, uint32_t mipNumber = 0);
+
+    // convert mip level of explicit format to single-image thumbnail
+    bool loadThumbnailFromKTX(const KTXImage& image, uint32_t mipNumber);
 
     // this is only for 2d images
     bool resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, ImageResizeFilter filter = kImageResizeFilterPoint);
@@ -52,7 +55,7 @@ public:
     int32_t width() const { return _width; }
     int32_t height() const { return _height; }
 
-    const vector<uint8_t>& pixels() const { return _pixels; }
+    const vector<Color>& pixels() const { return _pixels; }
     const vector<float4>& pixelsFloat() const { return _pixelsFloat; }
 
     bool hasColor() const { return _hasColor; }
@@ -63,7 +66,11 @@ public:
     void setChunksY(uint32_t chunksY) { _chunksY = chunksY; }
 
 private:
-    bool convertToFourChannel(const KTXImage& image);
+    // convert r/rg/rgb to rgba, 16f -> 32f
+    bool convertToFourChannel(const KTXImage& image, uint32_t mipNumber);
+
+    // converts all to rgba8unorm
+    bool convertToFourChannelForThumbnail(const KTXImage& image, uint32_t mipNumber);
 
 private:
     // pixel size of image
@@ -77,7 +84,7 @@ private:
 
     // this is the entire strip data, float version can be passed for HDR
     // sources always 4 channels RGBA for 8 and 32f data.  16f promoted to 32f.
-    vector<uint8_t> _pixels;  // TODO: change to Color?
+    vector<Color> _pixels;
     //vector<half4> _pixelsHalf; // TODO: add support to import fp16
     vector<float4> _pixelsFloat;
 

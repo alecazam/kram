@@ -113,15 +113,10 @@ Image::Image() : _width(0), _height(0), _hasColor(false), _hasAlpha(false)
 // TODO: image here is very specifically a single level of chunks of float4 or Color (RGBA8Unorm)
 // the encoder is only written to deal with those types.
 
-bool Image::loadImageFromKTX(const KTXImage& image)
+bool Image::loadImageFromKTX(const KTXImage& image, uint32_t mipNumber)
 {
-    // copy the data into a contiguous array
-    // a verticaly chunke image, will be converted to chunks in encode
-    _width = image.width;
-    _height = image.height * image.totalChunks();
-
     if (image.header.numberOfMipmapLevels > 1) {
-        KLOGW("Image", "Skipping custom mip levels from KTX load, but will build them from top level");
+        KLOGW("Image", "Decode single mip level from KTX/2, but can rebuild them from requested mip level %d", mipNumber);
     }
 
     _hasColor = isColorFormat(image.pixelFormat);
@@ -131,13 +126,22 @@ bool Image::loadImageFromKTX(const KTXImage& image)
     setChunksY(image.totalChunks());
 
     // TODO: this assumes 1,2,3 channel srcData has no rowPadding to say 4 bytes
-    return convertToFourChannel(image);
+    return convertToFourChannel(image, mipNumber);
 }
 
-bool Image::convertToFourChannel(const KTXImage& image)
+bool Image::convertToFourChannel(const KTXImage& image, uint32_t mipNumber)
 {
-    const uint32_t mipNumber = 0;
+    if (mipNumber >= image.header.numberOfMipmapLevels)
+        return false;
+    
     const auto& srcMipLevel = image.mipLevels[mipNumber];
+
+    // copy the data into a contiguous array
+    // a verticaly chunked image, will be converted to chunks in encode
+    uint32_t width, height, depth;
+    image.mipDimensions(mipNumber, width, height, depth);
+    _width = width;
+    _height = height * chunksY();
 
     // this is offset to a given level
     uint64_t mipBaseOffset = srcMipLevel.offset;
@@ -164,13 +168,13 @@ bool Image::convertToFourChannel(const KTXImage& image)
 #endif
         case MyMTLPixelFormatRGBA8Unorm_sRGB:
         case MyMTLPixelFormatRGBA8Unorm: {
-            const uint8_t* srcPixels = srcLevelData;
+            const uint8_t* srcPixels = srcLevelData + mipBaseOffset;
 
             int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
 
-            _pixels.resize(4 * _width * _height);
+            _pixels.resize(_width * _height);
 
-            Color* dstPixels = (Color*)_pixels.data();
+            Color* dstPixels = _pixels.data();
 
             Color dstTemp = {0, 0, 0, 255};
 
@@ -204,7 +208,7 @@ bool Image::convertToFourChannel(const KTXImage& image)
             // treat as float for per channel copies
             float4* dstPixels = _pixelsFloat.data();
 
-            const half* srcPixels = (const half*)srcLevelData;
+            const half* srcPixels = (const half*)(srcLevelData + mipBaseOffset);
 
             half4 dstTemp = toHalf4(float4m(0.0f, 0.0f, 0.0f, 1.0f));
 
@@ -233,7 +237,7 @@ bool Image::convertToFourChannel(const KTXImage& image)
         case MyMTLPixelFormatRGB32Float_internal:
 #endif
         case MyMTLPixelFormatRGBA32Float: {
-            const float* srcPixels = (const float*)srcLevelData;
+            const float* srcPixels = (const float*)(srcLevelData + mipBaseOffset);
 
             int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
 
@@ -268,7 +272,171 @@ bool Image::convertToFourChannel(const KTXImage& image)
     return true;
 }
 
-bool Image::loadImageFromPixels(const vector<uint8_t>& pixels, int32_t width,
+bool Image::loadThumbnailFromKTX(const KTXImage& image, uint32_t mipNumber)
+{
+    if (image.header.numberOfMipmapLevels > 1) {
+        KLOGW("Image", "Decode single mip level from KTX/2, but can rebuild them from requested mip level %d", mipNumber);
+    }
+
+    _hasColor = isColorFormat(image.pixelFormat);
+    _hasAlpha = isAlphaFormat(image.pixelFormat);
+
+    // preserve chunk count from the conversion
+    setChunksY(1); // image.totalChunks());
+
+    // TODO: this assumes 1,2,3 channel srcData has no rowPadding to 4 bytes
+    return convertToFourChannelForThumbnail(image, mipNumber);
+}
+
+// converts to RGBA8Unorm (or srgb)
+bool Image::convertToFourChannelForThumbnail(const KTXImage& image, uint32_t mipNumber)
+{
+    if (mipNumber >= image.header.numberOfMipmapLevels)
+        return false;
+    
+    const auto& srcMipLevel = image.mipLevels[mipNumber];
+    
+    uint32_t chunkCount = chunksY();
+    
+    // copy the data into a contiguous array
+    // a verticaly chunked image, will be converted to chunks in encode
+    uint32_t width, height, depth;
+    image.mipDimensions(mipNumber, width, height, depth);
+    _width = width;
+    _height = height * chunkCount;
+
+    // this is offset to a given level
+    uint64_t mipBaseOffset = srcMipLevel.offset;
+    const uint8_t* srcLevelData = image.fileData;
+
+    vector<uint8_t> mipStorage;
+    if (image.isSupercompressed()) {
+        mipStorage.resize(image.levelLength(mipNumber));
+        if (!image.unpackLevel(mipNumber, srcLevelData + srcMipLevel.offset, mipStorage.data())) {
+            return false;
+        }
+        srcLevelData = mipStorage.data();
+
+        // going to upload from mipStorage temp array
+        mipBaseOffset = 0;
+    }
+
+    switch (image.pixelFormat) {
+        case MyMTLPixelFormatR8Unorm:
+        case MyMTLPixelFormatRG8Unorm:
+#if SUPPORT_RGB
+        case MyMTLPixelFormatRGB8Unorm_sRGB_internal:
+        case MyMTLPixelFormatRGB8Unorm_internal:
+#endif
+        case MyMTLPixelFormatRGBA8Unorm_sRGB:
+        case MyMTLPixelFormatRGBA8Unorm: {
+            const uint8_t* srcPixels = srcLevelData + mipBaseOffset;
+
+            int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
+
+            _pixels.resize(_width * _height);
+
+            Color* dstPixels = _pixels.data();
+
+            Color dstTemp = {0, 0, 0, 255};
+
+            for (int32_t y = 0; y < _height; ++y) {
+                int32_t y0 = y * _width;
+
+                for (int32_t x = 0; x < _width; ++x) {
+                    int32_t srcX = (y0 + x) * numSrcChannels;
+                    int32_t dstX = (y0 + x);  // * numDstChannels;
+
+                    for (int32_t i = 0; i < numSrcChannels; ++i) {
+                        *(&dstTemp.r + i) = srcPixels[srcX + i];
+                    }
+
+                    dstPixels[dstX] = dstTemp;
+                }
+            }
+            break;
+        }
+
+        case MyMTLPixelFormatR16Float:
+        case MyMTLPixelFormatRG16Float:
+#if SUPPORT_RGB
+        case MyMTLPixelFormatRGB16Float_internal:
+#endif
+        case MyMTLPixelFormatRGBA16Float: {
+            int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
+
+            _pixels.resize(_width * _height);
+
+            // treat as float for per channel copies
+            Color* dstPixels = _pixels.data();
+
+            const half* srcPixels = (const half*)(srcLevelData + mipBaseOffset);
+
+            half4 dstTemp = toHalf4(float4m(0.0f, 0.0f, 0.0f, 1.0f));
+
+            for (int32_t y = 0; y < _height; ++y) {
+                int32_t y0 = y * _width;
+
+                for (int32_t x = 0; x < _width; ++x) {
+                    int32_t srcX = (y0 + x) * numSrcChannels;
+                    int32_t dstX = (y0 + x);
+
+                    // copy in available values
+                    for (int32_t i = 0; i < numSrcChannels; ++i) {
+                        dstTemp.v[i] = srcPixels[srcX + i];
+                    }
+
+                    // use AVX to convert
+                    // This is a simple saturate to unorm8
+                    dstPixels[dstX] = ColorFromUnormFloat4(toFloat4(dstTemp));
+                }
+            }
+            break;
+        }
+
+        case MyMTLPixelFormatR32Float:
+        case MyMTLPixelFormatRG32Float:
+#if SUPPORT_RGB
+        case MyMTLPixelFormatRGB32Float_internal:
+#endif
+        case MyMTLPixelFormatRGBA32Float: {
+            const float* srcPixels = (const float*)(srcLevelData + mipBaseOffset);
+
+            int32_t numSrcChannels = numChannelsOfFormat(image.pixelFormat);
+
+            _pixels.resize(_width * _height);
+
+            // treat as float for per channel copies
+            Color* dstPixels = _pixels.data();
+            float4 dstTemp = float4m(0.0f, 0.0f, 0.0f, 1.0f);
+
+            for (int32_t y = 0; y < _height; ++y) {
+                int32_t y0 = y * _width;
+
+                for (int32_t x = 0; x < _width; ++x) {
+                    int32_t srcX = (y0 + x) * numSrcChannels;
+                    int32_t dstX = (y0 + x);
+
+                    for (int32_t i = 0; i < numSrcChannels; ++i) {
+                        dstTemp[i] = srcPixels[srcX + i];
+                    }
+
+                    // This is a simple saturate to unorm8
+                    dstPixels[dstX] = ColorFromUnormFloat4(dstTemp);
+                }
+            }
+
+            break;
+        }
+        default:
+            KLOGE("Image", "Unsupported KTX format\n");
+            return false;
+    }
+
+    return true;
+}
+
+bool Image::loadImageFromPixels(const vector<Color>& pixels, int32_t width,
                                 int32_t height, bool hasColor, bool hasAlpha)
 {
     // copy the data into a contiguous array
@@ -282,7 +450,7 @@ bool Image::loadImageFromPixels(const vector<uint8_t>& pixels, int32_t width,
 
     // always assumes 4 rgba8 channels
     // _pixels.resize(4 * _width * _height);
-    assert((int32_t)pixels.size() == (width * height * 4));
+    assert((int32_t)pixels.size() == (width * height));
     _pixels = pixels;
 
     return true;
@@ -408,8 +576,9 @@ bool KramDecoder::decodeBlocks(
     // could tie use flags to format filter, or encoder settings
     // or may want to disable if decoders don't gen correct output
     TexEncoder decoder = params.decoder;
-
-    if (!validateFormatAndDecoder(MyMTLTextureType2D, blockFormat, decoder)) {
+    MyMTLTextureType textureType = MyMTLTextureType2D; // Note: this is a lie to get decode to occur
+    
+    if (!validateFormatAndDecoder(textureType, blockFormat, decoder)) {
         KLOGE("Kram", "block decode only supports specific block types");
         return false;
     }
@@ -429,7 +598,6 @@ bool KramDecoder::decodeBlocks(
     bool useAstcenc = decoder == kTexEncoderAstcenc;
 #endif
 
-    // TODO: hook to block decode logic below
     // copy srcData if using ATE, it says it needs 16-byte aligned data for encode
     // and assume for decode too.  Output texture is already 16-byte aligned.
     const uint8_t* srcData = blockData;
@@ -447,10 +615,13 @@ bool KramDecoder::decodeBlocks(
     bool isVerbose = params.isVerbose;
     const string& swizzleText = params.swizzleText;
     bool isHDR = isHdrFormat(blockFormat);
-    //bool isSigned = isSignedFormat(blockFormat);
     
     // start decoding after format pulled from KTX file
-    if (isBCFormat(blockFormat)) {
+    if (isExplicitFormat(blockFormat)) { 
+        // Could convert r/rg/rgb/rgba8 and 16f/32f to rgba8u image for png 8-bit output
+        // for now just copying these to ktx format which supports these formats
+    }
+    else if (isBCFormat(blockFormat)) {
         // bc via ate, or squish for bc1-5 if on other platforms
         // bcenc also likely has decode for bc7
         if (false) {
@@ -771,9 +942,13 @@ bool KramDecoder::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& 
     // changing format, so update props
     auto dstPixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
 
-    // DONE: Support ASTC and BC7 HDR decode to RGBA16F here
-    if (isHdrFormat(srcImage.pixelFormat)) {
+    // DONE: Support ASTC and BC6 HDR decode to RGBA16F here
+    // also handle explicit formats by converting to 4 channels
+    if (isHalfFormat(srcImage.pixelFormat)) {
         dstPixelFormat = MyMTLPixelFormatRGBA16Float;
+    }
+    else if (isFloatFormat(srcImage.pixelFormat)) {
+        dstPixelFormat = MyMTLPixelFormatRGBA32Float;
     }
 
     dstHeader.initFormatGL(dstPixelFormat);
@@ -784,6 +959,8 @@ bool KramDecoder::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& 
     dstImage.toPropsData(propsData);
     dstHeader.bytesOfKeyValueData = (uint32_t)vsizeof(propsData);
 
+    // Note: this always decodes to KTX
+    // TODO: also support decode to KTX2?
     size_t mipOffset = sizeof(KTXHeader) + dstHeader.bytesOfKeyValueData;
     dstImage.initMipLevels(mipOffset);
 
@@ -853,12 +1030,15 @@ bool KramDecoder::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& 
             const uint8_t* srcData = srcLevelData + mipBaseOffset + chunk * srcMipLevel.length;
 
             // decode the blocks to LDR RGBA8
-            if (!decodeBlocks(w, h, srcData, srcMipLevel.length, srcImage.pixelFormat, outputTexture, params)) {
+            if (isExplicitFormat(srcImage.pixelFormat)) {
+                // just copy the data as is
+                memcpy(outputTexture.data(), srcData, srcMipLevel.length);
+            }
+            else if (!decodeBlocks(w, h, srcData, srcMipLevel.length, srcImage.pixelFormat, outputTexture, params)) {
                 return false;
             }
 
             // write the mips out to the file, and code above can then decode into the same buffer
-            // This isn't correct for cubes, arrays, and other types.  The mip length is only written out once for all mips.
 
             if (chunk == 0 && !dstImage.skipImageLength) {
                 // sie of one mip
@@ -874,8 +1054,6 @@ bool KramDecoder::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& 
                 }
             }
 
-            // only writing one mip at a time in the level here
-            // so written bytes are only length and not numChunks * length
             int32_t dstMipOffset = dstMipLevel.offset + chunk * dstMipLevel.length;
 
             if (!writeDataAtOffset(outputTexture.data(), dstMipLevel.length, dstMipOffset, dstFile, dstImage)) {
@@ -907,10 +1085,10 @@ bool Image::resizeImage(int32_t wResize, int32_t hResize, bool resizePow2, Image
     }
 
     if (!_pixels.empty()) {
-        vector<uint8_t> pixelsResize;
-        pixelsResize.resize(wResize * hResize * sizeof(Color));
+        vector<Color> pixelsResize;
+        pixelsResize.resize(wResize * hResize);
 
-        pointFilterImage(_width, _height, (const Color*)_pixels.data(), wResize, hResize, (Color*)pixelsResize.data());
+        pointFilterImage(_width, _height, _pixels.data(), wResize, hResize, pixelsResize.data());
 
         _pixels = pixelsResize;
     }
