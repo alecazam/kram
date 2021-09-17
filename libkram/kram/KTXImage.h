@@ -322,7 +322,7 @@ public:
     uint32_t mipLengthCalc(uint32_t mipNumber) const;
     size_t mipLengthLargest() const { return mipLevels[0].length; }
     size_t mipLength(uint32_t mipNumber) const { return mipLevels[mipNumber].length; }
-
+    
     // level
     size_t levelLength(uint32_t mipNumber) const { return mipLevels[mipNumber].length * totalChunks(); }
     size_t levelLengthCompressed(uint32_t mipNumber) const { return mipLevels[mipNumber].lengthCompressed; }
@@ -331,6 +331,11 @@ public:
     uint32_t totalChunks() const;
     size_t chunkOffset(uint32_t mipNumber, uint32_t chunkNumber) const { return mipLevels[mipNumber].offset + mipLevels[mipNumber].length * chunkNumber; }
 
+    // trying to bury access to KTX1 header, since this supports KTX2 now
+    uint32_t arrayCount() const { return std::max(1u, header.numberOfArrayElements); }
+    uint32_t mipCount() const   { return std::max(1u, header.numberOfMipmapLevels); }
+    uint32_t faceCount() const  { return std::max(1u, header.numberOfFaces); }
+    
 private:
     bool openKTX2(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly);
 
@@ -351,7 +356,7 @@ public:  // TODO: bury this
     bool skipImageLength = false;
     KTX2Supercompression supercompressionType = KTX2SupercompressionNone;
 
-    KTXHeader header;  // copy of KTXHeader, so can be modified and then written back
+    KTXHeader header;  // copy of KTXHeader from KTX1, so can be modified and then written back
 
     // write out only string/string props, for easy of viewing
     vector<pair<string, string> > props;

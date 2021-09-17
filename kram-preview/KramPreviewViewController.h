@@ -2,12 +2,8 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-#import <QuickLookThumbnailing/QuickLookThumbnailing.h>
+#import <Cocoa/Cocoa.h>
 
-NS_ASSUME_NONNULL_BEGIN
-
-@interface KramThumbnailProvider : QLThumbnailProvider
+@interface KramPreviewViewController : NSViewController
 
 @end
-
-NS_ASSUME_NONNULL_END

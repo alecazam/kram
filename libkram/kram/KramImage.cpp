@@ -115,7 +115,7 @@ Image::Image() : _width(0), _height(0), _hasColor(false), _hasAlpha(false)
 
 bool Image::loadImageFromKTX(const KTXImage& image, uint32_t mipNumber)
 {
-    if (image.header.numberOfMipmapLevels > 1) {
+    if (image.mipLevels.size() > 1) {
         KLOGW("Image", "Decode single mip level from KTX/2, but can rebuild them from requested mip level %d", mipNumber);
     }
 
@@ -131,7 +131,7 @@ bool Image::loadImageFromKTX(const KTXImage& image, uint32_t mipNumber)
 
 bool Image::convertToFourChannel(const KTXImage& image, uint32_t mipNumber)
 {
-    if (mipNumber >= image.header.numberOfMipmapLevels)
+    if (mipNumber >= image.mipLevels.size())
         return false;
     
     const auto& srcMipLevel = image.mipLevels[mipNumber];
@@ -274,7 +274,7 @@ bool Image::convertToFourChannel(const KTXImage& image, uint32_t mipNumber)
 
 bool Image::loadThumbnailFromKTX(const KTXImage& image, uint32_t mipNumber)
 {
-    if (image.header.numberOfMipmapLevels > 1) {
+    if (image.mipLevels.size() > 1) {
         KLOGW("Image", "Decode single mip level from KTX/2, but can rebuild them from requested mip level %d", mipNumber);
     }
 
@@ -291,7 +291,7 @@ bool Image::loadThumbnailFromKTX(const KTXImage& image, uint32_t mipNumber)
 // converts to RGBA8Unorm (or srgb)
 bool Image::convertToFourChannelForThumbnail(const KTXImage& image, uint32_t mipNumber)
 {
-    if (mipNumber >= image.header.numberOfMipmapLevels)
+    if (mipNumber >= image.mipLevels.size())
         return false;
     
     const auto& srcMipLevel = image.mipLevels[mipNumber];
@@ -1000,7 +1000,7 @@ bool KramDecoder::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& 
     vector<uint8_t> mipStorage;
     mipStorage.resize(srcImage.mipLengthLargest() * numChunks);  // enough to hold biggest mip
 
-    for (uint32_t i = 0; i < srcImage.header.numberOfMipmapLevels; ++i) {
+    for (uint32_t i = 0; i < srcImage.mipLevels.size(); ++i) {
         // DONE: to decode compressed KTX2 want to walk all chunks of a single level
         // after decompressing the level.   This isn't doing unpackLevel and needs to here.
 

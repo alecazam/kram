@@ -32,12 +32,12 @@
 				<string>public.ktx2</string>
 			</array>
 			<key>QLThumbnailMinimumDimension</key>
-			<integer>64</integer>
+			<integer>0</integer>
 		</dict>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.quicklook.thumbnail</string>
 		<key>NSExtensionPrincipalClass</key>
-		<string>ThumbnailProvider</string>
+		<string>KramThumbnailProvider</string>
 	</dict>
 </dict>
 </plist>

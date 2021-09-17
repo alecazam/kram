@@ -1014,7 +1014,7 @@ struct packed_float3 {
     //    }
 
     // can derive these from texture queries
-    _showSettings->mipCount = (int32_t)image.header.numberOfMipmapLevels;
+    _showSettings->mipCount = (int32_t)image.mipLevels.size();
     _showSettings->faceCount = (image.textureType == MyMTLTextureTypeCube ||
                                 image.textureType == MyMTLTextureTypeCubeArray)
                                    ? 6

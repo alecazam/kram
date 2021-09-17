@@ -1682,7 +1682,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     float numPixels = srcImage.width * srcImage.height;
     numPixels *= (float)numChunks;
 
-    if (srcImage.header.numberOfMipmapLevels > 1) {
+    if (srcImage.mipCount() > 1) {
         numPixels *= 4.0 / 3.0f;  // TODO: estimate for now
     }
 
@@ -1704,7 +1704,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                            textureTypeName(srcImage.header.metalTextureType()),
                            srcImage.width, srcImage.height,
                            numPixels,
-                           srcImage.header.numberOfMipmapLevels);
+                           srcImage.mipCount());
             break;
         case MyMTLTextureType3D:
             append_sprintf(info,
@@ -1715,7 +1715,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                            textureTypeName(srcImage.header.metalTextureType()),
                            srcImage.width, srcImage.height, srcImage.depth,
                            numPixels,
-                           srcImage.header.numberOfMipmapLevels);
+                           srcImage.mipCount());
             break;
     }
 

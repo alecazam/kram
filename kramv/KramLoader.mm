@@ -206,7 +206,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
         dstImageInfoArgs.textureType = image.textureType;
         dstImageInfoArgs.pixelFormat = remapInternalRGBFormat(image.pixelFormat);
         dstImageInfoArgs.doMipmaps =
-            image.header.numberOfMipmapLevels > 1;  // ignore 0
+            image.mipCount() > 1;  // ignore 0
         dstImageInfoArgs.textureEncoder = kTexEncoderExplicit;
 
         // set chunk count, so it's explicit
@@ -318,7 +318,7 @@ static_cast<NSUInteger>(image.height), 1 }  // MTLSize
 
 
     // have to schedule autogen inside render using MTLBlitEncoder
-    if (image.header.numberOfMipmapLevels > 1) {
+    if (image.mipCount() > 1) {
         [_mipgenTextures addObject: texture];
     }
 
@@ -408,14 +408,14 @@ static_cast<NSUInteger>(image.height), 1 }  // MTLSize
     textureDescriptor.height = MAX(1, image.height);
     textureDescriptor.depth = MAX(1, image.depth);
 
-    textureDescriptor.arrayLength = MAX(1, image.header.numberOfArrayElements);
+    textureDescriptor.arrayLength = MAX(1, image.arrayCount());
 
     // ignoring 0 (auto mip), but might need to support for explicit formats
     // must have hw filtering support for format, and 32f filtering only first
     // appeared on A14/M1 and only get box filtering in API-level filters.  But
     // would cut storage.
     textureDescriptor.mipmapLevelCount =
-        MAX(1, image.header.numberOfMipmapLevels);
+        MAX(1, image.mipCount());
 
     // this is needed for blit
     if (isPrivate)
@@ -449,9 +449,9 @@ copying NSData into MTLBuffer.
     int32_t h = image.height;
     int32_t d = image.depth;
 
-    int32_t numMips     = MAX(1, image.header.numberOfMipmapLevels);
-    int32_t numArrays   = MAX(1, image.header.numberOfArrayElements);
-    int32_t numFaces    = MAX(1, image.header.numberOfFaces);
+    int32_t numMips     = MAX(1, image.mipCount());
+    int32_t numArrays   = MAX(1, image.arrayCount());
+    int32_t numFaces    = MAX(1, image.faceCount());
     int32_t numSlices   = MAX(1, image.depth);
 
     Int2 blockDims = image.blockDims();
