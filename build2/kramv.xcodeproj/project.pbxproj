@@ -631,7 +631,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(SRCROOT)/../kram-thumb/kram_thumb.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
-				INFOPLIST_FILE = "$(SRCROOT)/../kram-thumb/Info.plist";
+				INFOPLIST_FILE = "../kram-thumb/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -650,7 +650,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(SRCROOT)/../kram-thumb/kram_thumb.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
-				INFOPLIST_FILE = "$(SRCROOT)/../kram-thumb/Info.plist";
+				INFOPLIST_FILE = "../kram-thumb/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -669,7 +669,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(SRCROOT)/../kram-preview/kram_preview.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
-				INFOPLIST_FILE = "$(SRCROOT)/../kram-preview/Info.plist";
+				INFOPLIST_FILE = "../kram-preview/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -688,7 +688,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(SRCROOT)/../kram-preview/kram_preview.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
-				INFOPLIST_FILE = "$(SRCROOT)/../kram-preview/Info.plist";
+				INFOPLIST_FILE = "../kram-preview/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
