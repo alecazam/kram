@@ -34,6 +34,18 @@ using namespace simd;
 using namespace kram;
 using namespace NAMESPACE_STL;
 
+// this aliases the existing string, so can't chop extension
+inline const char* toFilenameShort(const char* filename) {
+    const char* filenameShort = strrchr(filename, '/');
+    if (filenameShort == nullptr) {
+        filenameShort = filename;
+    }
+    else {
+        filenameShort += 1;
+    }
+    return filenameShort;
+}
+
 //-------------
 
 @interface MyMTKView : MTKView
@@ -2397,7 +2409,8 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     // copy names into the files view
     [_tableViewController.items removeAllObjects];
     for (const auto& entry: _zip.zipEntrys()) {
-        [_tableViewController.items addObject: [NSString stringWithUTF8String: entry.filename]];
+        const char *filenameShort = toFilenameShort(entry.filename);
+        [_tableViewController.items addObject: [NSString stringWithUTF8String: filenameShort]];
     }
     [_tableView reloadData];
     
@@ -2604,8 +2617,6 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
     // show/hide button
     [self updateUIAfterLoad];
-    // no need for file table on single files
-    _tableView.hidden = YES;
     
     self.needsDisplay = YES;
     return YES;
@@ -2838,10 +2849,10 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
                 _fileFolderIndex = index;
             }
             
-            // TODO: may need to chop off full path here
             [_tableViewController.items removeAllObjects];
             for (const auto& file: files) {
-                [_tableViewController.items addObject: [NSString stringWithUTF8String: file.c_str()]];
+                const char *filenameShort = toFilenameShort(file.c_str());
+                [_tableViewController.items addObject: [NSString stringWithUTF8String: filenameShort]];
             }
             [_tableView reloadData];
             
@@ -3010,14 +3021,8 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     setErrorLogCapture(false);
 
     // set title to filename, chop this to just file+ext, not directory
-    const char *filenameShort = strrchr(filename, '/');
-    if (filenameShort == nullptr) {
-        filenameShort = filename;
-    }
-    else {
-        filenameShort += 1;
-    }
-
+    const char *filenameShort = toFilenameShort(filename);
+    
     // was using subtitle, but that's macOS 11.0 feature.
     string title = "kramv - ";
     title += formatTypeName(_showSettings->originalFormat);
