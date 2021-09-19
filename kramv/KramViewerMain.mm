@@ -54,6 +54,45 @@ using namespace NAMESPACE_STL;
 
 //-------------
 
+// https://medium.com/@kevingutowski/how-to-setup-a-tableview-in-2019-obj-c-c7dece203333
+@interface TableViewController : NSObject <NSTableViewDataSource, NSTableViewDelegate>
+@property (nonatomic, strong) NSMutableArray<NSString*>* items;
+@end
+
+@implementation TableViewController
+
+- (instancetype)init {
+    self = [super init];
+    
+    _items = [[NSMutableArray alloc] init];
+    return self;
+}
+
+// NSTableViewDataSource
+- (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView
+{
+    return self.items.count;
+}
+
+// NSTableViewDelegate
+-(NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
+{
+    NSString *identifier = tableColumn.identifier;
+    NSTableCellView *cell = [tableView makeViewWithIdentifier:identifier owner:self];
+    cell.textField.stringValue = [self.items objectAtIndex:row];
+    return cell;
+}
+
+- (void)tableViewSelectionDidChange:(NSNotification *)notification
+{
+    //NSInteger selectedRow = [myTableView selectedRow];
+    
+    KLOGI("kramv", "tableView changed");
+}
+@end
+
+//-------------
+
 @interface KramDocument : NSDocument
 
 @end
@@ -309,6 +348,8 @@ enum Key {
     RightArrow = 0x7C,
     DownArrow = 0x7D,
     UpArrow = 0x7E,
+    
+    Escape = 0x35,
 };
 
 /*
@@ -428,7 +469,15 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     NSMutableArray<NSButton *> *_buttonArray;
     NSTextField *_hudLabel;
     NSTextField *_hudLabel2;
-
+    
+    // Offer list of files in archives
+    // TODO: move to NSOutlineView since that can show archive folders with content inside
+    IBOutlet NSTableView *_tableView;
+    IBOutlet TableViewController *_tableViewController;
+    
+    IBOutlet NSTableView *_shapesTableView;
+    IBOutlet TableViewController *_shapesTableViewController;
+   
     vector<string> _textSlots;
     ShowSettings *_showSettings;
 
@@ -1756,6 +1805,12 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     }
 }
 
+- (void)hideTables
+{
+    _tableView.hidden = YES;
+    _shapesTableView.hidden = YES;
+}
+
 - (bool)handleKey:(uint32_t)keyCode isShiftKeyDown:(bool)isShiftKeyDown
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
@@ -1767,6 +1822,11 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     string text;
 
     switch (keyCode) {
+        // for now hit esc to hide the table views
+        case Key::Escape: {
+            [self hideTables];
+            break;
+        }
         case Key::V: {
             bool isVertical =
                 _buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical;
@@ -1868,6 +1928,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
         case Key::Num6: {
             _showSettings->advanceShapeChannel(isShiftKeyDown);
+            
             text = _showSettings->shapeChannelText();
             isChanged = true;
             break;
@@ -2123,12 +2184,20 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
             }
             break;
 
-        // test out different shapes, not offiical support yet
+        // test out different shapes
         case Key::Num8:
             if (_showSettings->meshCount > 1) {
                 _showSettings->advanceMeshNumber(isShiftKeyDown);
                 text = _showSettings->meshNumberText();
                 isChanged = true;
+                
+                // update shapes table
+                [_shapesTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_showSettings->meshNumber] byExtendingSelection:NO];
+                [_shapesTableView scrollRowToVisible:_showSettings->meshNumber];
+                
+                // show the shapes table
+                _tableView.hidden = YES;
+                _shapesTableView.hidden = NO;
             }
             break;
 
@@ -2283,6 +2352,22 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     return NO;
 }
 
+- (void)updateShapesTable
+{
+    // no dynamic shapes from archive/folder yet, so init once
+    // TODO: tie to default shapes and those in the archive/folder
+    // may not want single archive with meshes/textures, so support different
+    if (_shapesTableViewController.items.count > 0)
+        return;
+    
+    // setup shapes view too
+    [_shapesTableViewController.items removeAllObjects];
+    for (uint32_t i = 0; i < _showSettings->meshCount; ++i) {
+        [_shapesTableViewController.items addObject: [NSString stringWithUTF8String: _showSettings->meshNumberName(i)]];
+    }
+    [_shapesTableView reloadData];
+}
+
 - (BOOL)loadArchive:(const char *)zipFilename
 {
     _zipMmap.close();
@@ -2308,7 +2393,24 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
     // load the first entry in the archive
     _fileArchiveIndex = 0;
-
+    
+    // copy names into the files view
+    [_tableViewController.items removeAllObjects];
+    for (const auto& entry: _zip.zipEntrys()) {
+        [_tableViewController.items addObject: [NSString stringWithUTF8String: entry.filename]];
+    }
+    [_tableView reloadData];
+    
+    // set selection
+    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileArchiveIndex] byExtendingSelection:NO];
+    [_tableView scrollRowToVisible:_fileArchiveIndex];
+    
+    [self updateShapesTable];
+    
+    // hack to see shape table
+    _tableView.hidden = YES;
+    _shapesTableView.hidden = YES;
+    
     return YES;
 }
 
@@ -2332,6 +2434,14 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
     _fileArchiveIndex = _fileArchiveIndex % numEntries;
 
+    // set selection
+    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileArchiveIndex] byExtendingSelection:NO];
+    [_tableView scrollRowToVisible:_fileArchiveIndex];
+    
+    // show the files table
+    _tableView.hidden = NO;
+    _shapesTableView.hidden = YES;
+    
     return [self loadTextureFromArchive];
 }
 
@@ -2350,6 +2460,14 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
     _fileFolderIndex = _fileFolderIndex % numEntries;
 
+    // set selection
+    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileFolderIndex] byExtendingSelection:NO];
+    [_tableView scrollRowToVisible:_fileFolderIndex];
+    
+    // show the files table
+    _tableView.hidden = NO;
+    _shapesTableView.hidden = YES;
+    
     return [self loadTextureFromFolder];
 }
 
@@ -2486,7 +2604,9 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
     // show/hide button
     [self updateUIAfterLoad];
-
+    // no need for file table on single files
+    _tableView.hidden = YES;
+    
     self.needsDisplay = YES;
     return YES;
 }
@@ -2717,6 +2837,21 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
                 _fileFolderIndex = index;
             }
+            
+            // TODO: may need to chop off full path here
+            [_tableViewController.items removeAllObjects];
+            for (const auto& file: files) {
+                [_tableViewController.items addObject: [NSString stringWithUTF8String: file.c_str()]];
+            }
+            [_tableView reloadData];
+            
+            [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileFolderIndex] byExtendingSelection:NO];
+            [_tableView scrollRowToVisible:_fileFolderIndex];
+            
+            [self updateShapesTable];
+            
+            _tableView.hidden = YES;
+            _shapesTableView.hidden = YES;
         }
 
         // now load image from directory
@@ -2912,7 +3047,9 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
     // show/hide button
     [self updateUIAfterLoad];
-
+    // no need for file table on single files
+    _tableView.hidden = YES;
+    
     self.needsDisplay = YES;
     return YES;
 }

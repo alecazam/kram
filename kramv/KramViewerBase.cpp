@@ -11,6 +11,33 @@ int32_t ShowSettings::totalChunks() const
            std::max(one, sliceCount);
 }
 
+const char *ShowSettings::meshNumberName(uint32_t meshNumber_) const
+{
+    const char *text = "";
+
+    switch (meshNumber_) {
+        case 0:
+            text = "Plane";
+            break;
+        case 1:
+            text = "Box";
+            break;
+        case 2:
+            text = "Sphere";
+            break;
+        case 3:
+            text = "Sphere MirrorU";
+            break;
+        case 4:
+            text = "Capsule";
+            break;
+        default:
+            break;
+    }
+
+    return text;
+}
+
 const char *ShowSettings::meshNumberText() const
 {
     const char *text = "";

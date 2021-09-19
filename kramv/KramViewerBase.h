@@ -226,7 +226,9 @@ public:
     const char *shapeChannelText() const;
     const char *debugModeText() const;
     const char *lightingModeText() const;
-
+    
+    const char *meshNumberName(uint32_t meshNumber) const;
+    
     string lastFilename;
     double lastTimestamp = 0.0;
 
