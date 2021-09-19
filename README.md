@@ -139,9 +139,21 @@ At runtime:
 ```
 
 ### Building
-kram uses CMake to setup the projects and build.  kramv.app, kram, and libkram are generated, but kramv.app and kram are stand-alone.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
+kram has switched from CMake to an explicit Xcode workspace and projects on Apple platforms.  CMake can't clean, build workspaces, or handle app extensions needed for thumbnails/previews.  I spent a lot of time trying to keep this system working since it keeps kram from being tied to Xcode releases, but I also wanted to added better Finder integration and debugging.  These all live in 'build2' to distinguish from the 'build' directory created for CMake.  Like CMake, the cibuild.h script runs xcodebuild from the command line to generate all the libraries and apps into the bin directory.  Note that Xcode has never been able to simultaneously open the same project included in different workspaces, so organize derivative workspaces carefullly.
 
-For Mac, the build is out-of-source, and can be built from the command line, or debugged from the xcodeproj that is built.  Ninja and Makefiles can also be generated from cmake, but remember to trash the CMakeCache.txt file.
+I also tried to use a CMake framework build, but this required changing all the include paths to one parent directory.  Since libkram includes eastl, and other includes this requirement was not ideal.  So for now using libkram involves setting header and library search paths.  See the workspace projects for how this is setup.
+
+```
+./scripts/cibuild.h
+
+open build2/kram.xcworkspace
+
+```
+
+
+kram was using CMake to setup the projects and build.  kramv.app, kram, and libkram are generated, but kramv.app and kram are stand-alone.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
+
+For Mac, the CMake build is out-of-source, and can be built from the command line, or debugged from the xcodeproj that is built.  Ninja and Makefiles can also be generated from cmake, but remember to trash the CMakeCache.txt file.
 
 ```
 mkdir build
@@ -154,7 +166,7 @@ or
 cmake --install ../bin --config Release
 ```
 
-For Windows, the steps are similar. I tried to fix CMake to build the library into the app directory so the app is updated.  "Rebuild Solution" if your changes don't take effect, or if breakpoints stop being hit.
+For Windows, CMake is still used. I tried to fix CMake to build the library into the app directory so the app is updated.  "Rebuild Solution" if your changes don't take effect, or if breakpoints stop being hit.
 
 ```
 mkdir build
