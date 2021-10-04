@@ -571,6 +571,22 @@
 		706EFF8426D34740001C950E /* red_black_tree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5F26D3473F001C950E /* red_black_tree.cpp */; };
 		706EFF8526D34740001C950E /* fixed_pool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD6026D3473F001C950E /* fixed_pool.cpp */; };
 		706EFF8626D34740001C950E /* fixed_pool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD6026D3473F001C950E /* fixed_pool.cpp */; };
+		708A6A962708CE4700BA5410 /* bc6h_decode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */; };
+		708A6A972708CE4700BA5410 /* bc6h_decode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */; };
+		708A6A982708CE4700BA5410 /* bc6h_decode.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A8C2708CE4700BA5410 /* bc6h_decode.h */; };
+		708A6A992708CE4700BA5410 /* bc6h_decode.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A8C2708CE4700BA5410 /* bc6h_decode.h */; };
+		708A6A9A2708CE4700BA5410 /* bc6h_encode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708A6A8D2708CE4700BA5410 /* bc6h_encode.cpp */; };
+		708A6A9B2708CE4700BA5410 /* bc6h_encode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708A6A8D2708CE4700BA5410 /* bc6h_encode.cpp */; };
+		708A6A9C2708CE4700BA5410 /* bc6h_encode.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A8E2708CE4700BA5410 /* bc6h_encode.h */; };
+		708A6A9D2708CE4700BA5410 /* bc6h_encode.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A8E2708CE4700BA5410 /* bc6h_encode.h */; };
+		708A6AA02708CE4700BA5410 /* bc6h_definitions.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A902708CE4700BA5410 /* bc6h_definitions.h */; };
+		708A6AA12708CE4700BA5410 /* bc6h_definitions.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A902708CE4700BA5410 /* bc6h_definitions.h */; };
+		708A6AA42708CE4700BA5410 /* bc6h_utils.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A922708CE4700BA5410 /* bc6h_utils.h */; };
+		708A6AA52708CE4700BA5410 /* bc6h_utils.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A922708CE4700BA5410 /* bc6h_utils.h */; };
+		70A7BD3027092A1200DBCCF7 /* hdr_encode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A7BD2E27092A1200DBCCF7 /* hdr_encode.cpp */; };
+		70A7BD3127092A1200DBCCF7 /* hdr_encode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A7BD2E27092A1200DBCCF7 /* hdr_encode.cpp */; };
+		70A7BD3227092A1200DBCCF7 /* hdr_encode.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */; };
+		70A7BD3327092A1200DBCCF7 /* hdr_encode.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -874,6 +890,14 @@
 		706EFD5E26D3473F001C950E /* hashtable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hashtable.cpp; sourceTree = "<group>"; };
 		706EFD5F26D3473F001C950E /* red_black_tree.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = red_black_tree.cpp; sourceTree = "<group>"; };
 		706EFD6026D3473F001C950E /* fixed_pool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fixed_pool.cpp; sourceTree = "<group>"; };
+		708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bc6h_decode.cpp; sourceTree = "<group>"; };
+		708A6A8C2708CE4700BA5410 /* bc6h_decode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bc6h_decode.h; sourceTree = "<group>"; };
+		708A6A8D2708CE4700BA5410 /* bc6h_encode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bc6h_encode.cpp; sourceTree = "<group>"; };
+		708A6A8E2708CE4700BA5410 /* bc6h_encode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bc6h_encode.h; sourceTree = "<group>"; };
+		708A6A902708CE4700BA5410 /* bc6h_definitions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bc6h_definitions.h; sourceTree = "<group>"; };
+		708A6A922708CE4700BA5410 /* bc6h_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bc6h_utils.h; sourceTree = "<group>"; };
+		70A7BD2E27092A1200DBCCF7 /* hdr_encode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hdr_encode.cpp; sourceTree = "<group>"; };
+		70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hdr_encode.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -917,6 +941,7 @@
 		706EEDA826D1583E001C950E /* libkram */ = {
 			isa = PBXGroup;
 			children = (
+				708A6A882708CE4700BA5410 /* compressonator */,
 				706EFC3E26D3473F001C950E /* eastl */,
 				706EEDA926D1583E001C950E /* etc2comp */,
 				706EEDC926D1583E001C950E /* bc7enc */,
@@ -1395,6 +1420,29 @@
 			path = source;
 			sourceTree = "<group>";
 		};
+		708A6A882708CE4700BA5410 /* compressonator */ = {
+			isa = PBXGroup;
+			children = (
+				708A6A892708CE4700BA5410 /* bc6h */,
+			);
+			path = compressonator;
+			sourceTree = "<group>";
+		};
+		708A6A892708CE4700BA5410 /* bc6h */ = {
+			isa = PBXGroup;
+			children = (
+				70A7BD2E27092A1200DBCCF7 /* hdr_encode.cpp */,
+				70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */,
+				708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */,
+				708A6A8C2708CE4700BA5410 /* bc6h_decode.h */,
+				708A6A8D2708CE4700BA5410 /* bc6h_encode.cpp */,
+				708A6A8E2708CE4700BA5410 /* bc6h_encode.h */,
+				708A6A902708CE4700BA5410 /* bc6h_definitions.h */,
+				708A6A922708CE4700BA5410 /* bc6h_utils.h */,
+			);
+			path = bc6h;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1447,6 +1495,7 @@
 				706EFDB126D3473F001C950E /* fixed_set.h in Headers */,
 				706EFDAB26D3473F001C950E /* initializer_list.h in Headers */,
 				706EFF1126D34740001C950E /* vector_set.h in Headers */,
+				708A6A9C2708CE4700BA5410 /* bc6h_encode.h in Headers */,
 				706EFF1F26D34740001C950E /* shared_ptr.h in Headers */,
 				706EFF1526D34740001C950E /* string_map.h in Headers */,
 				706EEFDF26D15984001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
@@ -1510,9 +1559,11 @@
 				706EFF0D26D34740001C950E /* optional.h in Headers */,
 				706EFDCB26D3473F001C950E /* type_properties.h in Headers */,
 				706EEFF326D15984001C950E /* basisu_transcoder.h in Headers */,
+				70A7BD3227092A1200DBCCF7 /* hdr_encode.h in Headers */,
 				706EFD6926D3473F001C950E /* eaplatform.h in Headers */,
 				706EFF0126D34740001C950E /* function.h in Headers */,
 				706EFD8126D3473F001C950E /* lru_cache.h in Headers */,
+				708A6AA02708CE4700BA5410 /* bc6h_definitions.h in Headers */,
 				706EFF6F26D34740001C950E /* variant.h in Headers */,
 				706EFDBD26D3473F001C950E /* function_detail.h in Headers */,
 				706EFDA526D3473F001C950E /* algorithm.h in Headers */,
@@ -1591,10 +1642,12 @@
 				706EFEFB26D34740001C950E /* function_help.h in Headers */,
 				706EFD9926D3473F001C950E /* fixed_function.h in Headers */,
 				706EF01426D15985001C950E /* alpha.h in Headers */,
+				708A6A982708CE4700BA5410 /* bc6h_decode.h in Headers */,
 				706EF01526D15985001C950E /* singlecolourfit.h in Headers */,
 				706EFF0526D34740001C950E /* intrusive_hash_map.h in Headers */,
 				706EF01626D15985001C950E /* maths.h in Headers */,
 				706EF01726D15985001C950E /* colourset.h in Headers */,
+				708A6AA42708CE4700BA5410 /* bc6h_utils.h in Headers */,
 				706EF01826D15985001C950E /* colourblock.h in Headers */,
 				706EFDAF26D3473F001C950E /* chrono.h in Headers */,
 				706EF01926D15985001C950E /* rangefit.h in Headers */,
@@ -1657,6 +1710,7 @@
 				706EFDB226D3473F001C950E /* fixed_set.h in Headers */,
 				706EFDAC26D3473F001C950E /* initializer_list.h in Headers */,
 				706EFF1226D34740001C950E /* vector_set.h in Headers */,
+				708A6A9D2708CE4700BA5410 /* bc6h_encode.h in Headers */,
 				706EFF2026D34740001C950E /* shared_ptr.h in Headers */,
 				706EFF1626D34740001C950E /* string_map.h in Headers */,
 				706EF15926D166C5001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
@@ -1720,9 +1774,11 @@
 				706EFF0E26D34740001C950E /* optional.h in Headers */,
 				706EFDCC26D3473F001C950E /* type_properties.h in Headers */,
 				706EF16D26D166C5001C950E /* basisu_transcoder.h in Headers */,
+				70A7BD3327092A1200DBCCF7 /* hdr_encode.h in Headers */,
 				706EFD6A26D3473F001C950E /* eaplatform.h in Headers */,
 				706EFF0226D34740001C950E /* function.h in Headers */,
 				706EFD8226D3473F001C950E /* lru_cache.h in Headers */,
+				708A6AA12708CE4700BA5410 /* bc6h_definitions.h in Headers */,
 				706EFF7026D34740001C950E /* variant.h in Headers */,
 				706EFDBE26D3473F001C950E /* function_detail.h in Headers */,
 				706EFDA626D3473F001C950E /* algorithm.h in Headers */,
@@ -1801,10 +1857,12 @@
 				706EFEFC26D34740001C950E /* function_help.h in Headers */,
 				706EFD9A26D3473F001C950E /* fixed_function.h in Headers */,
 				706EF18E26D166C5001C950E /* alpha.h in Headers */,
+				708A6A992708CE4700BA5410 /* bc6h_decode.h in Headers */,
 				706EF18F26D166C5001C950E /* singlecolourfit.h in Headers */,
 				706EFF0626D34740001C950E /* intrusive_hash_map.h in Headers */,
 				706EF19026D166C5001C950E /* maths.h in Headers */,
 				706EF19126D166C5001C950E /* colourset.h in Headers */,
+				708A6AA52708CE4700BA5410 /* bc6h_utils.h in Headers */,
 				706EF19226D166C5001C950E /* colourblock.h in Headers */,
 				706EFDB026D3473F001C950E /* chrono.h in Headers */,
 				706EF19326D166C5001C950E /* rangefit.h in Headers */,
@@ -1910,12 +1968,15 @@
 				706EEF8C26D1595D001C950E /* bc7decomp.cpp in Sources */,
 				706EEF8D26D1595D001C950E /* bc7enc.cpp in Sources */,
 				706EEF8E26D1595D001C950E /* astcenc_pick_best_endpoint_format.cpp in Sources */,
+				708A6A9A2708CE4700BA5410 /* bc6h_encode.cpp in Sources */,
+				70A7BD3027092A1200DBCCF7 /* hdr_encode.cpp in Sources */,
 				706EEF8F26D1595D001C950E /* astcenc_integer_sequence.cpp in Sources */,
 				706EEF9026D1595D001C950E /* astcenc_compute_variance.cpp in Sources */,
 				706EFF7726D34740001C950E /* string.cpp in Sources */,
 				706EEF9126D1595D001C950E /* astcenc_quantization.cpp in Sources */,
 				706EEF9226D1595D001C950E /* astcenc_color_unquantize.cpp in Sources */,
 				706EEF9326D1595D001C950E /* astcenc_mathlib_softfloat.cpp in Sources */,
+				708A6A962708CE4700BA5410 /* bc6h_decode.cpp in Sources */,
 				706EEF9426D1595D001C950E /* astcenc_weight_quant_xfer_tables.cpp in Sources */,
 				706EEF9526D1595D001C950E /* astcenc_encoding_choice_error.cpp in Sources */,
 				706EEF9626D1595D001C950E /* astcenc_percentile_tables.cpp in Sources */,
@@ -1995,12 +2056,15 @@
 				706EF1A426D166C5001C950E /* bc7decomp.cpp in Sources */,
 				706EF1A526D166C5001C950E /* bc7enc.cpp in Sources */,
 				706EF1A626D166C5001C950E /* astcenc_pick_best_endpoint_format.cpp in Sources */,
+				708A6A9B2708CE4700BA5410 /* bc6h_encode.cpp in Sources */,
+				70A7BD3127092A1200DBCCF7 /* hdr_encode.cpp in Sources */,
 				706EF1A726D166C5001C950E /* astcenc_integer_sequence.cpp in Sources */,
 				706EF1A826D166C5001C950E /* astcenc_compute_variance.cpp in Sources */,
 				706EFF7826D34740001C950E /* string.cpp in Sources */,
 				706EF1A926D166C5001C950E /* astcenc_quantization.cpp in Sources */,
 				706EF1AA26D166C5001C950E /* astcenc_color_unquantize.cpp in Sources */,
 				706EF1AB26D166C5001C950E /* astcenc_mathlib_softfloat.cpp in Sources */,
+				708A6A972708CE4700BA5410 /* bc6h_decode.cpp in Sources */,
 				706EF1AC26D166C5001C950E /* astcenc_weight_quant_xfer_tables.cpp in Sources */,
 				706EF1AD26D166C5001C950E /* astcenc_encoding_choice_error.cpp in Sources */,
 				706EF1AE26D166C5001C950E /* astcenc_percentile_tables.cpp in Sources */,
@@ -2137,6 +2201,7 @@
 					"-DCOMPILE_SQUISH=1",
 					"-DCOMPILE_BCENC=1",
 					"-DCOMPILE_EASTL=1",
+					"-DCOMPILE_BASIS=1",
 					"-include",
 					KramConfig.h,
 				);
@@ -2212,6 +2277,7 @@
 					"-DCOMPILE_SQUISH=1",
 					"-DCOMPILE_BCENC=1",
 					"-DCOMPILE_EASTL=1",
+					"-DCOMPILE_BASIS=1",
 					"-include",
 					KramConfig.h,
 				);

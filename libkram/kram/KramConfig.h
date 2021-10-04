@@ -123,6 +123,7 @@
 #define USE_FLOAT16 0
 #endif
 
+
 // can override from build system
 
 // can't have ATE defined to 1 on other platforms
@@ -148,6 +149,11 @@
 
 #ifndef COMPILE_EASTL
 #define COMPILE_EASTL 0
+#endif
+
+// basis transcoder only (read not writes)
+#ifndef COMPILE_BASIS
+#define COMPILE_BASIS 0
 #endif
 
 // rgb8/16f/32f formats only supported for import, Metal doesn't expose these formats
@@ -201,6 +207,10 @@
 
 #define NAMESPACE_STL std
 
+#endif
+
+#if COMPILE_BASIS
+#include "basisu_transcoder.h"
 #endif
 
 // includes that are usable across all files

@@ -17,6 +17,12 @@
 #include <limits.h>
 #include "basisu_containers_impl.h"
 
+// Alec stripping out some support to shrink the compile size
+#define BASISD_SUPPORT_PVRTC1 0
+#define BASISD_SUPPORT_ATC 0
+#define BASISD_SUPPORT_PVRTC2 0
+#define BASISD_SUPPORT_FXT1 0
+
 #ifndef BASISD_IS_BIG_ENDIAN
 // TODO: This doesn't work on OSX. How can this be so difficult?
 //#if defined(__BIG_ENDIAN__) || defined(_BIG_ENDIAN) || defined(BIG_ENDIAN)
@@ -147,7 +153,7 @@ constexpr bool BASISD_IS_BIG_ENDIAN = false;
    // If BASISD_SUPPORT_KTX2_ZSTD is 0, UASTC files compressed with Zstd cannot be loaded.
 	#if BASISD_SUPPORT_KTX2_ZSTD
 		// We only use two Zstd API's: ZSTD_decompress() and ZSTD_isError()
-		#include "../zstd/zstd.h"
+		#include "zstd.h"
 	#endif
 #endif
 
