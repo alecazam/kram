@@ -210,15 +210,12 @@ int lerp(int a, int b, int i, int denom) {
     case 3:
         denom *= 5;
         i *= 5;    // fall through to case 15
-            
-/// TODO: Alec fix these missing
     case 15:
         weights = g_aWeights4;
         break;
     case 7:
         weights = g_aWeights3;
         break;
-//
     default:
         assert(0);
     }
@@ -411,8 +408,9 @@ AMD_BC6H_Format extract_format(BYTE in[BC6H_COMPRESSED_BLOCK_SIZE]) {
         bc6h_format.bw = header.getvalue(25,10) |             //11:   bw[9:0]
                          (header.getvalue(60,1) << 10);        //      bw[10]
         bc6h_format.bx = header.getvalue(55,5);               //5:    bx[4:0]
+        // https://github.com/GPUOpen-Tools/compressonator/issues/172
         bc6h_format.by = header.getvalue(61,4) |               //5:    by[3:0]
-                         (header.getvalue(40,1) << 4);         //      by[4]
+                         (header.getvalue(40,1) << 4);         //      by[4]   TODO: Alec, verify this, was unused before adding or
         bc6h_format.bz = header.getvalue(50,1) |              //5:    bz[0]
                          (header.getvalue(69,1) << 1) |        //      bz[1]
                          (header.getvalue(70,1) << 2) |        //      bz[2]

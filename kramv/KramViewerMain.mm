@@ -48,6 +48,28 @@ inline const char* toFilenameShort(const char* filename) {
 
 //-------------
 
+// This is so annoying, but otherwise the hud always intercepts clicks intended
+// for the underlying TableView.
+// https://stackoverflow.com/questions/15891098/nstextfield-click-through
+@interface MyNSTextField : NSTextField
+
+@end
+
+@implementation MyNSTextField
+{
+    
+}
+
+// override to allow clickthrough
+- (NSView*)hitTest:(NSPoint)aPoint
+{
+    return nil;
+}
+
+@end
+
+//-------------
+
 @interface MyMTKView : MTKView
 // for now only have a single imageURL
 @property(retain, nonatomic, readwrite, nullable) NSURL *imageURL;
@@ -61,6 +83,12 @@ inline const char* toFilenameShort(const char* filename) {
 - (BOOL)loadTextureFromURL:(NSURL *)url;
 
 - (void)setHudText:(const char *)text;
+
+- (void)tableViewSelectionDidChange:(NSNotification *)notification;
+
+- (void)addNotifications;
+
+- (void)removeNotifications;
 
 @end
 
@@ -140,7 +168,7 @@ inline const char* toFilenameShort(const char* filename) {
 }
 
 - (NSData *)dataOfType:(nonnull NSString *)typeName
-                 error:(NSError *_Nullable *)outError
+                 error:(NSError *_Nullable __autoreleasing *)outError
 {
     // Insert code here to write your document to data of the specified type. If
     // outError != NULL, ensure that you create and set an appropriate error if
@@ -154,7 +182,7 @@ inline const char* toFilenameShort(const char* filename) {
 
 - (BOOL)readFromURL:(nonnull NSURL *)url
              ofType:(nonnull NSString *)typeName
-              error:(NSError *_Nullable *)outError
+              error:(NSError *_Nullable __autoreleasing *)outError
 {
     // called from OpenRecent documents menu
 
@@ -567,7 +595,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     _hudLabel2 = [self _addHud:YES];
     _hudLabel = [self _addHud:NO];
     [self setHudText:""];
-
+    
     return self;
 }
 
@@ -763,7 +791,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // really want field to expand to fill the window height for large output
 
     // add a label for the hud
-    NSTextField *label = [[NSTextField alloc]
+    NSTextField *label = [[MyNSTextField alloc]
         initWithFrame:NSMakeRect(isShadow ? 21 : 20, isShadow ? 21 : 20, 800,
                                  1200)];
     label.drawsBackground = NO;
@@ -776,6 +804,10 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     label.lineBreakMode = NSLineBreakByClipping;
     label.maximumNumberOfLines = 0;  // fill to height
 
+    // important or interferes with table view
+    label.refusesFirstResponder = YES;
+    label.enabled = NO;
+    
     label.cell.scrollable = NO;
     label.cell.wraps = NO;
 
@@ -1412,7 +1444,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     NSString *textNS = [NSString stringWithUTF8String:text.c_str()];
     _hudLabel2.stringValue = textNS;
     _hudLabel2.needsDisplay = YES;
-
+    
     _hudLabel.stringValue = textNS;
     _hudLabel.needsDisplay = YES;
 }
@@ -2210,6 +2242,9 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
                 // show the shapes table
                 _tableView.hidden = YES;
                 _shapesTableView.hidden = NO;
+                
+                // want it to respond to arrow keys
+                [self.window makeFirstResponder: _shapesTableView];
             }
             break;
 
@@ -2418,6 +2453,9 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileArchiveIndex] byExtendingSelection:NO];
     [_tableView scrollRowToVisible:_fileArchiveIndex];
     
+    // want it to respond to arrow keys
+    [self.window makeFirstResponder: _tableView];
+    
     [self updateShapesTable];
     
     // hack to see shape table
@@ -2429,15 +2467,10 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
 - (BOOL)advanceTextureFromAchive:(BOOL)increment
 {
-    if (!_zipMmap.data()) {
-        // no archive loaded
+    if ((!_zipMmap.data()) || _zip.zipEntrys().empty()) {
+        // no archive loaded or it's empty
         return NO;
     }
-
-    if (_zip.zipEntrys().empty()) {
-        return NO;
-    }
-
     size_t numEntries = _zip.zipEntrys().size();
 
     if (increment)
@@ -2450,6 +2483,9 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     // set selection
     [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileArchiveIndex] byExtendingSelection:NO];
     [_tableView scrollRowToVisible:_fileArchiveIndex];
+    
+    // want it to respond to arrow keys
+    [self.window makeFirstResponder: _tableView];
     
     // show the files table
     _tableView.hidden = NO;
@@ -2477,11 +2513,36 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileFolderIndex] byExtendingSelection:NO];
     [_tableView scrollRowToVisible:_fileFolderIndex];
     
+    // want it to respond to arrow keys
+    [self.window makeFirstResponder: _tableView];
+    
     // show the files table
     _tableView.hidden = NO;
     _shapesTableView.hidden = YES;
     
     return [self loadTextureFromFolder];
+}
+
+- (BOOL)setImageFromSelection:(NSInteger)index {
+    if (_zipMmap.data() && !_zip.zipEntrys().empty()) {
+        if (_fileArchiveIndex != index) {
+            _fileArchiveIndex = index;
+            return [self loadTextureFromArchive];
+        }
+    }
+
+    if (!_folderFiles.empty()) {
+        if (_fileFolderIndex != index) {
+            _fileFolderIndex = index;
+            return [self loadTextureFromFolder];
+        }
+    }
+    return NO;
+}
+
+- (BOOL)setShapeFromSelection:(NSInteger)index {
+    _showSettings->meshNumber = index;
+    return YES;
 }
 
 - (BOOL)findFilenameInFolders:(const string &)filename
@@ -3096,6 +3157,38 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 */
 #endif
 
+- (void)tableViewSelectionDidChange:(NSNotification *)notification
+{
+    if (notification.object == _tableView)
+    {
+        // image
+        NSInteger selectedRow = [_tableView selectedRow];
+        [self setImageFromSelection:selectedRow];
+        
+    }
+    else if (notification.object == _shapesTableView)
+    {
+        // shape
+        NSInteger selectedRow = [_shapesTableView selectedRow];
+        [self setShapeFromSelection:selectedRow];
+    }
+}
+
+- (void)addNotifications
+{
+    // listen for the selection change messages
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                              selector:@selector(tableViewSelectionDidChange:)
+                                                  name:NSTableViewSelectionDidChangeNotification object:nil];
+}
+
+- (void)removeNotifications
+{
+    // listen for the selection change messages
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+
 - (BOOL)acceptsFirstResponder
 {
     return YES;
@@ -3118,6 +3211,11 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     NSTrackingArea *_trackingArea;
 }
 
+- (void)viewWillDisappear
+{
+    [_view removeNotifications];
+}
+
 - (void)viewDidLoad
 {
     [super viewDidLoad];
@@ -3137,12 +3235,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     _renderer = [[Renderer alloc] initWithMetalKitView:_view
                                               settings:_view.showSettings];
 
-    // original sample code was sending down _view.bounds.size, but need
-    // drawableSize this was causing all sorts of inconsistencies
-    [_renderer mtkView:_view drawableSizeWillChange:_view.drawableSize];
-
-    _view.delegate = _renderer;
-
+    
     // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/TrackingAreaObjects/TrackingAreaObjects.html
     // this is better than requesting mousemoved events, they're only sent when
     // cursor is inside
@@ -3161,7 +3254,16 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     // programmatically add some buttons
     // think limited to 11 viewws before they must be wrapepd in a container.
     // That's how SwiftUI was.
+    [_view addNotifications];
+    
+    // original sample code was sending down _view.bounds.size, but need
+    // drawableSize this was causing all sorts of inconsistencies
+    [_renderer mtkView:_view drawableSizeWillChange:_view.drawableSize];
+
+    _view.delegate = _renderer;
 }
+
+
 
 @end
 
