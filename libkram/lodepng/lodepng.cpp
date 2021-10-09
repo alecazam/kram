@@ -2235,12 +2235,17 @@ static unsigned zlib_decompress(unsigned char** out, size_t* outsize, size_t exp
   if(settings->custom_zlib) {
     ucvector v = ucvector_init(*out, *outsize);
     if(expected_size) {
-        assert(*outsize == 0);
         /*reserve the memory to avoid intermediate reallocations*/
         ucvector_resize(&v, expected_size);
         v.size = expected_size;
     }
-
+      
+    // this only happens on iccp block
+    if (*outsize == 0 && expected_size == 0) {
+        expected_size = 16*1024;
+        ucvector_resize(&v, expected_size);
+    }
+      
     error = settings->custom_zlib(&v.data, &v.size, in, insize, settings);
     if(error) {
       /*the custom zlib is allowed to have its own error codes, however, we translate it to code 110*/
