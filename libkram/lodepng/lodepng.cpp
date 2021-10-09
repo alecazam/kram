@@ -2233,13 +2233,24 @@ static unsigned zlib_decompress(unsigned char** out, size_t* outsize, size_t exp
                                 const unsigned char* in, size_t insize, const LodePNGDecompressSettings* settings) {
   unsigned error;
   if(settings->custom_zlib) {
-    error = settings->custom_zlib(out, outsize, in, insize, settings);
+    ucvector v = ucvector_init(*out, *outsize);
+    if(expected_size) {
+        assert(*outsize == 0);
+        /*reserve the memory to avoid intermediate reallocations*/
+        ucvector_resize(&v, expected_size);
+        v.size = expected_size;
+    }
+
+    error = settings->custom_zlib(&v.data, &v.size, in, insize, settings);
     if(error) {
       /*the custom zlib is allowed to have its own error codes, however, we translate it to code 110*/
       error = 110;
       /*if there's a max output size, and the custom zlib returned error, then indicate that error instead*/
       if(settings->max_output_size && *outsize > settings->max_output_size) error = 109;
     }
+      
+    *out = v.data;
+    *outsize = v.size;
   } else {
     ucvector v = ucvector_init(*out, *outsize);
     if(expected_size) {
@@ -2336,38 +2347,43 @@ static unsigned zlib_compress(unsigned char** out, size_t* outsize, const unsign
 /*this is a good tradeoff between speed and compression ratio*/
 #define DEFAULT_WINDOWSIZE 2048
 
+/*const*/ LodePNGCompressSettings lodepng_default_compress_settings = {2, 1, DEFAULT_WINDOWSIZE, 3, 128, 1, 0, 0, 0};
+
+
 void lodepng_compress_settings_init(LodePNGCompressSettings* settings) {
   /*compress with dynamic huffman tree (not in the mathematical sense, just not the predefined one)*/
-  settings->btype = 2;
-  settings->use_lz77 = 1;
-  settings->windowsize = DEFAULT_WINDOWSIZE;
-  settings->minmatch = 3;
-  settings->nicematch = 128;
-  settings->lazymatching = 1;
-
-  settings->custom_zlib = 0;
-  settings->custom_deflate = 0;
-  settings->custom_context = 0;
+//  settings->btype = 2;
+//  settings->use_lz77 = 1;
+//  settings->windowsize = DEFAULT_WINDOWSIZE;
+//  settings->minmatch = 3;
+//  settings->nicematch = 128;
+//  settings->lazymatching = 1;
+//
+//  settings->custom_zlib = 0;
+//  settings->custom_deflate = 0;
+//  settings->custom_context = 0;
+    *settings = lodepng_default_compress_settings;
 }
-
-const LodePNGCompressSettings lodepng_default_compress_settings = {2, 1, DEFAULT_WINDOWSIZE, 3, 128, 1, 0, 0, 0};
 
 
 #endif /*LODEPNG_COMPILE_ENCODER*/
 
 #ifdef LODEPNG_COMPILE_DECODER
 
-void lodepng_decompress_settings_init(LodePNGDecompressSettings* settings) {
-  settings->ignore_adler32 = 0;
-  settings->ignore_nlen = 0;
-  settings->max_output_size = 0;
+/*const*/ LodePNGDecompressSettings lodepng_default_decompress_settings = {0, 0, 0, 0, 0, 0};
 
-  settings->custom_zlib = 0;
-  settings->custom_inflate = 0;
-  settings->custom_context = 0;
+void lodepng_decompress_settings_init(LodePNGDecompressSettings* settings) {
+//  settings->ignore_adler32 = 0;
+//  settings->ignore_nlen = 0;
+//  settings->max_output_size = 0;
+//
+//  settings->custom_zlib = 0;
+//  settings->custom_inflate = 0;
+//  settings->custom_context = 0;
+    
+    *settings = lodepng_default_decompress_settings;
 }
 
-const LodePNGDecompressSettings lodepng_default_decompress_settings = {0, 0, 0, 0, 0, 0};
 
 #endif /*LODEPNG_COMPILE_DECODER*/
 

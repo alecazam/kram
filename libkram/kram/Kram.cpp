@@ -23,6 +23,7 @@
 #include "KramVersion.h"
 #include "TaskSystem.h"
 #include "lodepng.h"
+#include "miniz.h"
 
 // one .cpp must supply these new overrides
 #if USE_EASTL
@@ -330,6 +331,16 @@ bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
     return sourceImage.loadImageFromKTX(image);
 }
 
+// wrap miniz decoder, since it ignores crc checksum and is faster than default png
+unsigned LodepngDeflateUsingMiniz(
+    unsigned char** dstData, size_t* dstDataSize,
+    const unsigned char* srcData, size_t srcDataSize,
+    const LodePNGDecompressSettings* settings)
+{
+    return mz_uncompress(*dstData, dstDataSize,
+                         srcData, srcDataSize);  // != MZ_OK;
+}
+
 bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray, Image& sourceImage)
 {
     uint32_t width = 0;
@@ -378,6 +389,11 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
             hasAlpha = true;
             break;
     }
+
+    // Point deflate on decoder to faster version in miniz.
+    // This also is already set to ignore crc.  Is passed as default arg to decodes.
+    auto& settings = lodepng_default_decompress_settings;
+    settings.custom_zlib = LodepngDeflateUsingMiniz;
 
     // this inserts onto end of array, it doesn't resize
     vector<uint8_t> pixelsPNG;

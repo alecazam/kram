@@ -32,6 +32,11 @@ using namespace NAMESPACE_STL;
 
 extern const char* LODEPNG_VERSION_STRING;
 
+// TODO: Alec - move these to config
+#define LODEPNG_NO_COMPILE_DISK
+#define LODEPNG_COMPILE_ZLIB
+#define LODEPNG_NO_COMPILE_ENCODER
+
 /*
 The following #defines are used to create code sections. They can be disabled
 to disable code sections, which can give faster compile time and smaller binary.
@@ -294,7 +299,7 @@ struct LodePNGDecompressSettings {
   const void* custom_context; /*optional custom settings for custom functions*/
 };
 
-extern const LodePNGDecompressSettings lodepng_default_decompress_settings;
+extern /*const*/ LodePNGDecompressSettings lodepng_default_decompress_settings;
 void lodepng_decompress_settings_init(LodePNGDecompressSettings* settings);
 #endif /*LODEPNG_COMPILE_DECODER*/
 
@@ -327,7 +332,7 @@ struct LodePNGCompressSettings /*deflate = compress*/ {
   const void* custom_context; /*optional custom settings for custom functions*/
 };
 
-extern const LodePNGCompressSettings lodepng_default_compress_settings;
+extern /*const*/ LodePNGCompressSettings lodepng_default_compress_settings;
 void lodepng_compress_settings_init(LodePNGCompressSettings* settings);
 #endif /*LODEPNG_COMPILE_ENCODER*/
 
