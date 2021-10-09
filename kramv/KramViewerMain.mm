@@ -80,6 +80,9 @@ inline const char* toFilenameShort(const char* filename) {
 
 @property(nonatomic, readwrite) double lastArchiveTimestamp;
 
+// can hide hud while list view is up
+@property(nonatomic, readwrite) bool hudHidden;
+
 - (BOOL)loadTextureFromURL:(NSURL *)url;
 
 - (void)setHudText:(const char *)text;
@@ -1855,6 +1858,11 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     _shapesTableView.hidden = YES;
 }
 
+- (void)updateHudVisibility {
+    _hudLabel.hidden = _hudHidden || !_showSettings->isHudShown;
+    _hudLabel2.hidden = _hudHidden || !_showSettings->isHudShown;
+}
+
 - (bool)handleKey:(uint32_t)keyCode isShiftKeyDown:(bool)isShiftKeyDown
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
@@ -1868,7 +1876,9 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     switch (keyCode) {
         // for now hit esc to hide the table views
         case Key::Escape: {
+            _hudHidden = false;
             [self hideTables];
+            [self updateHudVisibility];
             break;
         }
         case Key::V: {
@@ -2162,8 +2172,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
         // this may require calling setNeedsDisplay on the UILabel as cursor moves
         case Key::H:
             _showSettings->isHudShown = !_showSettings->isHudShown;
-            _hudLabel.hidden = !_showSettings->isHudShown;
-            _hudLabel2.hidden = !_showSettings->isHudShown;
+            [self updateHudVisibility];
             // isChanged = true;
             text = "Hud ";
             text += _showSettings->isHudShown ? "On" : "Off";
@@ -2215,12 +2224,18 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
             if (![self findButton:"J"].isHidden) {
                 if (_showSettings->isArchive) {
                     if ([self advanceTextureFromAchive:!isShiftKeyDown]) {
+                        _hudHidden = true;
+                        [self updateHudVisibility];
+                        
                         isChanged = true;
                         text = "Loaded " + _showSettings->lastFilename;
                     }
                 }
                 else if (_showSettings->isFolder) {
                     if ([self advanceTextureFromFolder:!isShiftKeyDown]) {
+                        _hudHidden = true;
+                        [self updateHudVisibility];
+                        
                         isChanged = true;
                         text = "Loaded " + _showSettings->lastFilename;
                     }
@@ -2242,6 +2257,9 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
                 // show the shapes table
                 _tableView.hidden = YES;
                 _shapesTableView.hidden = NO;
+                
+                _hudHidden = true;
+                [self updateHudVisibility];
                 
                 // want it to respond to arrow keys
                 [self.window makeFirstResponder: _shapesTableView];
@@ -2458,7 +2476,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     
     [self updateShapesTable];
     
-    // hack to see shape table
+    // hack to see table
     _tableView.hidden = YES;
     _shapesTableView.hidden = YES;
     
@@ -2520,6 +2538,9 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     _tableView.hidden = NO;
     _shapesTableView.hidden = YES;
     
+    _hudHidden = true;
+    [self updateHudVisibility];
+    
     return [self loadTextureFromFolder];
 }
 
@@ -2541,8 +2562,12 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 }
 
 - (BOOL)setShapeFromSelection:(NSInteger)index {
-    _showSettings->meshNumber = index;
-    return YES;
+    if (_showSettings->meshNumber != index) {
+        _showSettings->meshNumber = index;
+        self.needsDisplay = YES;
+        return YES;
+    }
+    return NO;
 }
 
 - (BOOL)findFilenameInFolders:(const string &)filename
@@ -2827,6 +2852,10 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 {
     // NSLog(@"LoadTexture");
 
+    // turn back on the hud if was in a list view
+    _hudHidden = false;
+    [self updateHudVisibility];
+    
     const char *filename = url.fileSystemRepresentation;
     if (filename == nullptr) {
         // Fixed by converting dropped urls into paths then back to a url.
@@ -3164,7 +3193,6 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
         // image
         NSInteger selectedRow = [_tableView selectedRow];
         [self setImageFromSelection:selectedRow];
-        
     }
     else if (notification.object == _shapesTableView)
     {
