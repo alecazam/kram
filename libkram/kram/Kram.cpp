@@ -337,8 +337,15 @@ unsigned LodepngDeflateUsingMiniz(
     const unsigned char* srcData, size_t srcDataSize,
     const LodePNGDecompressSettings* settings)
 {
-    return mz_uncompress(*dstData, dstDataSize,
-                         srcData, srcDataSize);  // != MZ_OK;
+    // mz_ulong doesn't line up with size_t on Windows, but does on macOS
+    mz_ulong dstDataSizeUL = *dstDataSize;
+
+    int result = mz_uncompress(*dstData, &dstDataSizeUL,
+                               srcData, srcDataSize);
+
+    *dstDataSize = dstDataSizeUL;
+
+    return result;
 }
 
 bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray, Image& sourceImage)
