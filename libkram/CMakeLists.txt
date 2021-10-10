@@ -139,8 +139,8 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/squish/*.cpp"
     "${SOURCE_DIR}/squish/*.h"
 
-    "${SOURCE_DIR}/compressonator/*.cpp"
-    "${SOURCE_DIR}/compressonator/*.h"
+    "${SOURCE_DIR}/compressonator/bc6h/*.cpp"
+    "${SOURCE_DIR}/compressonator/bc6h/*.h"
 
     "${SOURCE_DIR}/tmpfileplus/tmpfileplus.cpp"
     "${SOURCE_DIR}/tmpfileplus/tmpfileplus.h"
@@ -200,7 +200,7 @@ target_include_directories(${myTargetLib} PRIVATE
     "${SOURCE_DIR}/astc-encoder/"
     "${SOURCE_DIR}/ate/"
     "${SOURCE_DIR}/bc7enc/"
-    "${SOURCE_DIR}/compressonator/"
+    "${SOURCE_DIR}/compressonator/bc6h/"
     "${SOURCE_DIR}/etc2comp/"
     "${SOURCE_DIR}/heman/"
     "${SOURCE_DIR}/lodepng"
