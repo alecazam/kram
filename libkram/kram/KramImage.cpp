@@ -4,6 +4,7 @@
 
 #include "KramImage.h"
 
+
 #if COMPILE_ATE
 #include "ateencoder.h"  // astc/bc encoder, apple only
 #endif
@@ -14,6 +15,11 @@
 
 #if COMPILE_SQUISH
 #include "squish.h"  // bc encoder
+#endif
+
+#if COMPILE_COMP
+#include "bc6h_encode.h"  // bc encoder
+#include "bc6h_decode.h"  // bc decoder
 #endif
 
 #if COMPILE_BCENC
@@ -700,6 +706,28 @@ bool KramDecoder::decodeBlocks(
                             rgbcx::unpack_bc5(srcBlock, pixels);
                             break;
 
+#if COMPILE_COMP
+                        // writes rg packed
+                        case MyMTLPixelFormatBC6H_RGBUfloat:
+                        case MyMTLPixelFormatBC6H_RGBFloat: {
+                            // go to compressenator calls here
+                            float pixelsFloat[16][4]; // really rgb x fp16, a=1.0
+                            uint8_t srcBlockForDecompress[16];
+                            for (uint32_t i = 0; i < 16; ++i) {
+                                srcBlockForDecompress[i] = srcBlock[i];
+                            }
+                            
+                            BC6HBlockDecoder decoderCompressenator;
+                            decoderCompressenator.DecompressBlock(pixelsFloat, srcBlockForDecompress);
+                            
+                            // losing snorm and chopping to 8-bit
+                            for (uint32_t i = 0; i < 16; ++i) {
+                                pixels[i] = ColorFromUnormFloat4(*(const float4*)&pixelsFloat[i]);
+                            }
+                            break;
+                        }
+#endif
+                            
                         case MyMTLPixelFormatBC7_RGBAUnorm:
                         case MyMTLPixelFormatBC7_RGBAUnorm_sRGB:
                             bc7decomp::unpack_bc7(srcBlock, (bc7decomp::color_rgba*)pixels);
@@ -2533,6 +2561,26 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                             break;
                         }
 
+#if COMPILE_COMP
+                        case MyMTLPixelFormatBC6H_RGBUfloat:
+                        case MyMTLPixelFormatBC6H_RGBFloat: {
+                            CMP_BC6H_BLOCK_PARAMETERS options;
+                            options.isSigned = info.isSigned;
+                            
+                            BC6HBlockEncoder encoderCompressenator(options);
+                            
+                            // TODO: this needs HDR data
+                            float   srcPixelCopyFloat[16][4];
+                            for (int i = 0; i < 16; ++i) {
+                                srcPixelCopyFloat[i][0] = srcPixelCopy[i * 4 + 0];
+                                srcPixelCopyFloat[i][1] = srcPixelCopy[i * 4 + 1];
+                                srcPixelCopyFloat[i][2] = srcPixelCopy[i * 4 + 2];
+                                srcPixelCopyFloat[i][3] = 1.0f;
+                            }
+                            encoderCompressenator.CompressBlock(srcPixelCopyFloat, dstBlock);
+                            break;
+                        }
+#endif
                         case MyMTLPixelFormatBC7_RGBAUnorm:
                         case MyMTLPixelFormatBC7_RGBAUnorm_sRGB: {
                             bc7enc_compress_block(dstBlock, srcPixelCopy, &bc7params);
@@ -2549,6 +2597,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                 }
             }
 
+            // TODO: shouldn't set for bc6
             if (info.isSigned) {
                 doRemapSnormEndpoints = true;
             }

@@ -34,7 +34,7 @@ class BC6HBlockDecoder {
   public:
     BC6HBlockDecoder() {};
     ~BC6HBlockDecoder() {};
-    void DecompressBlock(float out[MAX_SUBSET_SIZE][MAX_DIMENSION_BIG],BYTE in[BC6H_COMPRESSED_BLOCK_SIZE]);
+    void DecompressBlock(float out[MAX_SUBSET_SIZE][MAX_DIMENSION_BIG], BYTE in[BC6H_COMPRESSED_BLOCK_SIZE]);
 
     bool bc6signed = false; // this is suppiled by user for compression for SIGNED_F16 or UNSIGNED_F16 or obtained during decompression
 

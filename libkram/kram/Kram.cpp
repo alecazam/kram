@@ -291,15 +291,6 @@ private:
     uint32_t minDim = 0;
 };
 
-inline Color toPremul(Color c)
-{
-    // these are really all fractional, but try this
-    c.r = ((uint32_t)c.r * (uint32_t)c.a) / 255;
-    c.g = ((uint32_t)c.g * (uint32_t)c.a) / 255;
-    c.b = ((uint32_t)c.b * (uint32_t)c.a) / 255;
-    return c;
-}
-
 // rec709
 // https://en.wikipedia.org/wiki/Grayscale
 inline Color toGrayscaleRec709(Color c, const Mipper& mipper)
@@ -354,9 +345,14 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     uint32_t height = 0;
     uint32_t errorLode = 0;
 
+    // Point deflate on decoder to faster version in miniz.
+    auto& settings = lodepng_default_decompress_settings;
+    settings.custom_zlib = LodepngDeflateUsingMiniz;
+
     // can identify 16unorm data for heightmaps via this call
     LodePNGState state;
     lodepng_state_init(&state);
+    state.decoder.ignore_crc = 1;
 
     errorLode = lodepng_inspect(&width, &height, &state, data, dataSize);
     if (errorLode != 0) {
@@ -396,11 +392,6 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
             hasAlpha = true;
             break;
     }
-
-    // Point deflate on decoder to faster version in miniz.
-    // This also is already set to ignore crc.  Is passed as default arg to decodes.
-    auto& settings = lodepng_default_decompress_settings;
-    settings.custom_zlib = LodepngDeflateUsingMiniz;
 
     // this inserts onto end of array, it doesn't resize
     vector<uint8_t> pixelsPNG;
@@ -1564,9 +1555,13 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     uint32_t height = 0;
     uint32_t errorLode = 0;
 
+    auto& settings = lodepng_default_decompress_settings;
+    settings.custom_zlib = LodepngDeflateUsingMiniz;
+
     // can identify 16unorm data for heightmaps via this call
     LodePNGState state;
     lodepng_state_init(&state);
+    state.decoder.ignore_crc = 1;
 
     errorLode = lodepng_inspect(&width, &height, &state, data, dataSize);
     if (errorLode != 0) {
@@ -2446,12 +2441,12 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             // TODO: find an encoder for BC6
-            bool isBC = format == MyMTLPixelFormatBC6H_RGBFloat ||
-                        format == MyMTLPixelFormatBC6H_RGBUfloat;
-            if (isBC) {
-                KLOGE("Kram", "don't have a bc6 encoder");
-                return -1;
-            }
+            //            bool isBC = format == MyMTLPixelFormatBC6H_RGBFloat ||
+            //                        format == MyMTLPixelFormatBC6H_RGBUfloat;
+            //            if (isBC) {
+            //                KLOGE("Kram", "don't have a bc6 encoder");
+            //                return -1;
+            //            }
 
             // allows explicit output
         }

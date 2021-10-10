@@ -74,6 +74,8 @@ class BC6HBlockEncoder {
     ~BC6HBlockEncoder() {};
 
     float   CompressBlock(float in[MAX_SUBSET_SIZE][MAX_DIMENSION_BIG],BYTE   out[COMPRESSED_BLOCK_SIZE]);
+    
+private:
     void    clampF16Max(float EndPoints[MAX_SUBSETS][MAX_END_POINTS][MAX_DIMENSION_BIG]);
     void    AverageEndPoint(float EndPoints[MAX_SUBSETS][MAX_END_POINTS][MAX_DIMENSION_BIG], float iEndPoints[MAX_SUBSETS][MAX_END_POINTS][MAX_DIMENSION_BIG], int max_subsets, int mode);
     void    QuantizeEndPointToF16Prec(float  EndPoints[MAX_SUBSETS][MAX_END_POINTS][MAX_DIMENSION_BIG], int iEndPoints[MAX_SUBSETS][MAX_END_POINTS][MAX_DIMENSION_BIG], int max_subsets, int prec);

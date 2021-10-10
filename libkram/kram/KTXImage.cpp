@@ -1120,7 +1120,7 @@ void KTXImage::addChannelProps(const char* channelContent)
 bool KTXImage::isPremul() const
 {
     string channels = getProp(kPropChannels);
-    if (strstr(channels.c_str(), "Alb.ra,Alb.ga,Alb.ba") == 0) {
+    if (strstr(channels.c_str(), "Alb.ra,Alb.ga,Alb.ba") != nullptr) {
         return true;
     }
     return false;

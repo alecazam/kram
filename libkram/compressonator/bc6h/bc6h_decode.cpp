@@ -698,7 +698,7 @@ AMD_BC6H_Format extract_format(BYTE in[BC6H_COMPRESSED_BLOCK_SIZE]) {
 
 //---------------------------------------------------------------------------------------------------------------------------------------
 
-void BC6HBlockDecoder::DecompressBlock( float out[MAX_SUBSET_SIZE][MAX_DIMENSION_BIG],BYTE in[BC6H_COMPRESSED_BLOCK_SIZE]) {
+void BC6HBlockDecoder::DecompressBlock( float out[MAX_SUBSET_SIZE][MAX_DIMENSION_BIG], BYTE in[BC6H_COMPRESSED_BLOCK_SIZE]) {
 
     AMD_BC6H_Format bc6h_format = extract_format(in);
     if (!bc6signed)

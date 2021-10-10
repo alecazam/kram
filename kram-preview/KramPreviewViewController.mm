@@ -67,18 +67,21 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     // Add the supported content types to the QLSupportedContentTypes array in the Info.plist of the extension.
     // Perform any setup necessary in order to prepare the view.
     
-    // The follwing is copied out of Thumbnailer
+    // The following is adapted out of Thumbnailer
     
     // No request here, may need to use view size
-    uint32_t maxWidth = 128; // request.maximumSize.width
-    uint32_t maxHeight = 128; // request.maximumSize.height
+    uint32_t maxWidth = self.view.frame.size.width;
+    uint32_t maxHeight = self.view.frame.size.height;
     
     const char* filename = [url fileSystemRepresentation];
 
     NSError* error = nil;
     
+    bool isKTX = endsWith(filename, ".ktx");
+    bool isKTX2 = endsWith(filename, ".ktx2");
+    
     // ignore upper case extensions
-    if (!(endsWith(filename, ".ktx") || endsWith(filename, ".ktx2"))) {
+    if (!(isKTX || isKTX2)) {
         error = KLOGF(1, "kramv %s only supports ktx/ktx2 files\n", filename);
         handler(error);
         return;
@@ -217,6 +220,8 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     // TODO: might want to convert to PNG, but maybe thumbnail system does that automatically?
     // see how big thumbs.db is after running this
     
+    // This doesn't allocate, but in an imageView that must outlast the handle call, does that work?
+    
     vImage_Error err = 0;
     CGImageRef cgImage = vImageCreateCGImageFromBuffer(&buf, &format, NULL, NULL, kvImageNoAllocate, &err);
     if (err) {
@@ -228,10 +233,26 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
 
     NSImage* nsImage = [[NSImage alloc] initWithCGImage:cgImage size:rect.size];
     
+    if (![self.view isKindOfClass:[NSImageView class]]) {
+        error = KLOGF(9, "kramv %s expected NSImageView \n", filename);
+        handler(error);
+        return;
+    }
+    
     NSImageView* nsImageView = (NSImageView*)self.view;
     
+    // Copositing is like it's using NSCompositeCopy instead of SourceOver
+    // The default is NSCompositeSourceOver. NSRectFill() ignores
+    // -[NSGraphicsContext compositingOperation] and continues to use NSCompositeCopy.
+    // So may have to use NSFillRect which uses SourceOver
+    // https://cocoadev.github.io/NSCompositingOperation/
+    
+    // no frame
+    nsImageView.imageFrameStyle = NSImageFrameNone;
     // Change default white to transparent
-    [nsImageView.layer setBackgroundColor: [NSColor clearColor].CGColor];
+    [nsImageView.layer setBackgroundColor: [NSColor blackColor].CGColor];
+    //[nsImageView.layer setBackgroundColor: [NSColor clearColor].CGColor];
+    
     nsImageView.image = nsImage;
 
     // This seems to cause plugin to fail

@@ -48,9 +48,9 @@ using namespace HDR_Encode;
 
 BYTE Cmp_Red_Block[16] = { 0xc2,0x7b,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xe0,0x03,0x00,0x00,0x00,0x00,0x00 };
 
-extern int  g_block;
-extern FILE *g_fp;
-int gl_block = 0;
+//extern int  g_block;
+//extern FILE *g_fp;
+//int gl_block = 0;
 
 #ifdef DEBUG_PATTERNS
 // random pixel noise range
@@ -1467,7 +1467,7 @@ float BC6HBlockEncoder::CompressBlock(float in[MAX_SUBSET_SIZE][MAX_DIMENSION_BI
         fclose(fi);
 #endif
 
-    g_block++;
+    //g_block++;
 
     return (float)bestError;
 }

@@ -50,7 +50,11 @@ struct ImageToPass
     NSError* error = nil;
     string errorText;
     
-    if (!(endsWith(filename, ".ktx") || endsWith(filename, ".ktx2"))) {
+    // TODO: use first x-many bytes also to validate, open will do that
+    bool isKTX = endsWith(filename, ".ktx");
+    bool isKTX2 = endsWith(filename, ".ktx2");
+    
+    if (!(isKTX || isKTX2)) {
         error = KLOGF(1, "kramv %s only supports ktx/ktx2 files\n", filename);
         handler(nil, error);
         return;
@@ -247,8 +251,8 @@ struct ImageToPass
         
         // The image is scaled—disproportionately
         
-        CGContextSetBlendMode(context, kCGBlendModeCopy);
-        //CGContextSetBlendMode(context, kCGBlendModeNormal);
+        //CGContextSetBlendMode(context, kCGBlendModeCopy);
+        CGContextSetBlendMode(context, kCGBlendModeNormal);
         
         CGContextDrawImage(context, rect, cgImage);
 

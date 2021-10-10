@@ -339,6 +339,12 @@ static const MyMTLPixelFormat kEncodingFormatsBcenc[] =
         MyMTLPixelFormatBC5_RGSnorm,
         MyMTLPixelFormatBC5_RGUnorm,
 
+#if COMPILE_COMP
+        // really compresensator
+        MyMTLPixelFormatBC6H_RGBUfloat,
+        MyMTLPixelFormatBC6H_RGBFloat,
+#endif
+        
         MyMTLPixelFormatBC7_RGBAUnorm,
         MyMTLPixelFormatBC7_RGBAUnorm_sRGB,
 };
@@ -557,11 +563,11 @@ bool validateFormatAndEncoder(ImageInfoArgs& infoArgs)
 
     // check arguments
     // flag unsupported formats
-    if (format == MyMTLPixelFormatBC6H_RGBUfloat ||
-        format == MyMTLPixelFormatBC6H_RGBFloat) {
-        KLOGE("ImageInfo", "bc6 not supported\n");
-        error = true;
-    }
+//    if (format == MyMTLPixelFormatBC6H_RGBUfloat ||
+//        format == MyMTLPixelFormatBC6H_RGBFloat) {
+//        KLOGE("ImageInfo", "bc6 not supported\n");
+//        error = true;
+//    }
 
     infoArgs.pixelFormat = format;
 

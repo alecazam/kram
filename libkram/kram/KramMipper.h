@@ -23,6 +23,19 @@ struct Color {
     uint8_t r, g, b, a;
 };
 
+// This doesn't convert to srgb before premul, but is cheap.
+inline Color toPremul(Color c)
+{
+    if (c.a != 255) {
+        // these are really all fractional, but try this
+        c.r = ((uint32_t)c.r * (uint32_t)c.a) / 255;
+        c.g = ((uint32_t)c.g * (uint32_t)c.a) / 255;
+        c.b = ((uint32_t)c.b * (uint32_t)c.a) / 255;
+    }
+    return c;
+}
+
+
 inline float4 ColorToUnormFloat4(const Color &value)
 {
     // simd lib can't ctor these even in C++, so will make abstracting harder

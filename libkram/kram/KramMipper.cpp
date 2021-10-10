@@ -39,6 +39,7 @@ inline uint8_t floatToUint8(float value)
     return (uint8_t)roundf(value * 255.0f);  // or use 255.1f ?
 }
 
+// same as ColorFromUnormFloat4
 inline Color Unormfloat4ToColor(float4 value)
 {
     Color c;

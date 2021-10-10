@@ -31,6 +31,8 @@ option(ETCENC "Compile ETC2Comp Encoder" ON)
 option(SQUISH "Compile Squish Encoder" ON)
 option(ASTCENC "Compile ASTCenc Encoder" ON)
 option(BCENC "Compile BCenc Encoder" ON)
+option(COMP "Compile Compressenator Encoder" ON)
+
 option(EASTL "Compile EASTL" OFF)
 
 # convert ON to 1, UGH
@@ -39,6 +41,7 @@ set(COMPILE_BCENC 0)
 set(COMPILE_ETCENC 0)
 set(COMPILE_SQUISH 0)
 set(COMPILE_ASTCENC 0)
+set(COMPILE_COMP 0)
 
 if (ATE AND (BUILD_MAC OR BUILD_IOS))
     set(COMPILE_ATE 1)
@@ -59,6 +62,11 @@ endif()
 if (ASTCENC)
     set(COMPILE_ASTCENC 1)
 endif()
+
+if (COMP)
+    set(COMPILE_COMP 1)
+endif()
+
 
 # this isn't an encoder, but replaces stl with eastl
 set(COMPILE_EASTL 0)
@@ -131,6 +139,9 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/squish/*.cpp"
     "${SOURCE_DIR}/squish/*.h"
 
+    "${SOURCE_DIR}/compressenator/*.cpp"
+    "${SOURCE_DIR}/compressenator/*.h"
+
     "${SOURCE_DIR}/tmpfileplus/tmpfileplus.cpp"
     "${SOURCE_DIR}/tmpfileplus/tmpfileplus.h"
     
@@ -189,6 +200,7 @@ target_include_directories(${myTargetLib} PRIVATE
     "${SOURCE_DIR}/astc-encoder/"
     "${SOURCE_DIR}/ate/"
     "${SOURCE_DIR}/bc7enc/"
+    "${SOURCE_DIR}/compressenator/"
     "${SOURCE_DIR}/etc2comp/"
     "${SOURCE_DIR}/heman/"
     "${SOURCE_DIR}/lodepng"
@@ -271,5 +283,6 @@ target_compile_definitions(${myTargetLib} PUBLIC
     "-DCOMPILE_ETCENC=${COMPILE_ETCENC}"
     "-DCOMPILE_SQUISH=${COMPILE_SQUISH}"
     "-DCOMPILE_ASTCENC=${COMPILE_ASTCENC}"
+    "-DCOMPILE_COMP=${COMPILE_COMP}"
     "-DCOMPILE_EASTL=${COMPILE_EASTL}"
 )
