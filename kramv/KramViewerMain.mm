@@ -2,10 +2,15 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-#import <Cocoa/Cocoa.h>
-#import <Metal/Metal.h>
-#import <MetalKit/MetalKit.h>
-#import <TargetConditionals.h>
+// using -fmodules and -fcxx-modules
+@import Cocoa;
+@import Metal;
+@import MetalKit;
+
+//#import <Cocoa/Cocoa.h>
+//#import <Metal/Metal.h>
+//#import <MetalKit/MetalKit.h>
+//#import <TargetConditionals.h>
 
 #import "KramRenderer.h"
 #import "KramShaders.h"
@@ -24,6 +29,8 @@
 //#include "KramImage.h"
 #include "KramViewerBase.h"
 
+
+
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;
 #else
@@ -33,6 +40,7 @@ static bool doPrintPanZoom = true;
 using namespace simd;
 using namespace kram;
 using namespace NAMESPACE_STL;
+
 
 // this aliases the existing string, so can't chop extension
 inline const char* toFilenameShort(const char* filename) {
@@ -93,6 +101,8 @@ inline const char* toFilenameShort(const char* filename) {
 
 - (void)removeNotifications;
 
+- (void)fixupDocumentList;
+
 @end
 
 //-------------
@@ -128,9 +138,7 @@ inline const char* toFilenameShort(const char* filename) {
 
 - (void)tableViewSelectionDidChange:(NSNotification *)notification
 {
-    //NSInteger selectedRow = [myTableView selectedRow];
-    
-    KLOGI("kramv", "tableView changed");
+   // does not need to respond, have a listener on this notification
 }
 @end
 
@@ -183,6 +191,8 @@ inline const char* toFilenameShort(const char* filename) {
     return nil;
 }
 
+
+
 - (BOOL)readFromURL:(nonnull NSURL *)url
              ofType:(nonnull NSString *)typeName
               error:(NSError *_Nullable __autoreleasing *)outError
@@ -194,35 +204,19 @@ inline const char* toFilenameShort(const char* filename) {
     //return [view loadTextureFromURL:url];
 #else
 
+    // TODO: This is only getting called on first open on macOS 12.0 even with hack below.
+    // find out why.
+    
     NSApplication *app = [NSApplication sharedApplication];
     MyMTKView *view = app.mainWindow.contentView;
     BOOL success = [view loadTextureFromURL:url];
     if (success) {
-        [view setHudText:""];
-
-        // DONE: this recent menu only seems to work the first time
-        // and not in subsequent calls to the same entry.  readFromUrl isn't even
-        // called. So don't get a chance to switch back to a recent texture. Maybe
-        // there's some list of documents created and so it doesn't think the file
-        // needs to be reloaded.
-        //
         // Note: if I return NO from this call then a dialog pops up that image
         // couldn't be loaded, but then the readFromURL is called everytime a new
         // image is picked from the list.
 
-        // Clear the document list so readFromURL keeps getting called
-        // Can't remove currentDoc, so have to skip that
-        NSDocumentController *dc = [NSDocumentController sharedDocumentController];
-        NSDocument *currentDoc = dc.currentDocument;
-        NSMutableArray *docsToRemove = [[NSMutableArray alloc] init];
-        for (NSDocument *doc in dc.documents) {
-            if (doc != currentDoc)
-                [docsToRemove addObject:doc];
-        }
-
-        for (NSDocument *doc in docsToRemove) {
-            [dc removeDocument:doc];
-        }
+        [view setHudText:""];
+        [view fixupDocumentList];
     }
 
     return success;
@@ -276,7 +270,10 @@ inline const char* toFilenameShort(const char* filename) {
 
     NSURL *url = urls.firstObject;
     [view loadTextureFromURL:url];
+    [view fixupDocumentList];
 }
+
+
 
 - (IBAction)showAboutDialog:(id)sender
 {
@@ -392,6 +389,7 @@ enum Key {
     DownArrow = 0x7D,
     UpArrow = 0x7E,
     
+    Space = 0x31,
     Escape = 0x35,
 };
 
@@ -572,7 +570,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
     // only re-render when changes are made
     // Note: this breaks ability to gpu capture, since display link not running.
-    // so disable this if want to do captures.
+    // so disable this if want to do captures.  Or just move the cursor to capture.
 #ifndef NDEBUG  // KRAM_RELEASE
     self.enableSetNeedsDisplay = YES;
 #endif
@@ -607,11 +605,36 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     return _showSettings;
 }
 
+-(void)fixupDocumentList
+{
+    // DONE: this recent menu only seems to work the first time
+    // and not in subsequent calls to the same entry.  readFromUrl isn't even
+    // called. So don't get a chance to switch back to a recent texture. Maybe
+    // there's some list of documents created and so it doesn't think the file
+    // needs to be reloaded.
+   
+    // Clear the document list so readFromURL keeps getting called
+    // Can't remove currentDoc, so have to skip that
+    NSDocumentController *dc = [NSDocumentController sharedDocumentController];
+    NSDocument *currentDoc = dc.currentDocument;
+    NSMutableArray *docsToRemove = [[NSMutableArray alloc] init];
+    for (NSDocument *doc in dc.documents) {
+        if (doc != currentDoc)
+            [docsToRemove addObject:doc];
+    }
+
+    for (NSDocument *doc in docsToRemove) {
+        [dc removeDocument:doc];
+    }
+}
+
 - (NSStackView *)_addButtons
 {
-    const int32_t numButtons = 30;
+    const int32_t numButtons = 31;
     const char *names[numButtons * 2] = {
 
+        " ",
+        "Play",
         "?",
         "Help",
         "I",
@@ -744,7 +767,6 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         YES;  // default, but why have to have _buttonArrary
     [self addSubview:stackView];
 
-#if 1
     // Want menus, so user can define their own shortcuts to commands
     // Also need to enable/disable this via validateUserInterfaceItem
     NSApplication *app = [NSApplication sharedApplication];
@@ -783,7 +805,6 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     }
 
     [_viewMenu addItem:[NSMenuItem separatorItem]];
-#endif
 
     return stackView;
 }
@@ -792,11 +813,16 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 {
     // TODO: This text field is clamping to the height, so have it set to 1200.
     // really want field to expand to fill the window height for large output
-
+    uint32_t w = 800;
+    uint32_t h = 1220;
+    
     // add a label for the hud
     NSTextField *label = [[MyNSTextField alloc]
-        initWithFrame:NSMakeRect(isShadow ? 21 : 20, isShadow ? 21 : 20, 800,
-                                 1200)];
+        initWithFrame:NSMakeRect(isShadow ? 21 : 20, isShadow ? 21 : 20, w,
+                                 h)];
+    
+    label.preferredMaxLayoutWidth = w;
+
     label.drawsBackground = NO;
     label.textColor = !isShadow
                           ? [NSColor colorWithSRGBRed:0 green:1 blue:0 alpha:1]
@@ -823,8 +849,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     [self addSubview:label];
 
     // add vertical constrains to have it fill window, but keep 800 width
-    label.preferredMaxLayoutWidth = 800;
-
+    // this didn't seem to work, can do in Storyboard
     // NSDictionary* views = @{ @"label" : label };
     //[self addConstraints:[NSLayoutConstraint
     //constraintsWithVisualFormat:@"H:|-[label]" options:0 metrics:nil
@@ -844,49 +869,69 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
                                    panY:_showSettings->panY
                                    zoom:_showSettings->zoom];
 
-    // convert to clip space, or else need to apply additional viewport transform
+    // convert from pixel to clip space
     float halfX = _showSettings->viewSizeX * 0.5f;
     float halfY = _showSettings->viewSizeY * 0.5f;
-
+    
     // sometimes get viewSizeX that's scaled by retina, and other times not.
     // account for contentScaleFactor (viewSizeX is 2x bigger than cursorX on
     // retina display) now passing down drawableSize instead of view.bounds.size
     halfX /= (float)_showSettings->viewContentScaleFactor;
     halfY /= (float)_showSettings->viewContentScaleFactor;
+    
+    float4x4 viewportMatrix =
+    {
+        (float4){ halfX,      0, 0, 0 },
+        (float4){ 0,     -halfY, 0, 0 },
+        (float4){ 0,          0, 1, 0 },
+        (float4){ halfX,  halfY, 0, 1 },
+    };
+    viewportMatrix = inverse(viewportMatrix);
+    
+    float4 cursor = float4m(_showSettings->cursorX, _showSettings->cursorY, 0.0f, 1.0f);
+    
+    cursor = viewportMatrix * cursor;
+    
+    //NSPoint clipPoint;
+    //clipPoint.x = (point.x - halfX) / halfX;
+    //clipPoint.y = -(point.y - halfY) / halfY;
 
-    NSPoint point = NSMakePoint(_showSettings->cursorX, _showSettings->cursorY);
-    NSPoint clipPoint;
-    clipPoint.x = (point.x - halfX) / halfX;
-    clipPoint.y = -(point.y - halfY) / halfY;
-
-    // convert point in window to point in texture
-    float4x4 mInv = simd_inverse(projectionViewModelMatrix);
-    mInv.columns[3].w =
-        1.0f;  // fixes inverse, calls always leaves m[3][3] = 0.999
-
-    float4 pixel = mInv * float4m(clipPoint.x, clipPoint.y, 1.0f, 1.0f);
-    // pixel /= pixel.w; // in case perspective used
+    // convert point in window to point in model space
+    float4x4 mInv = inverse(projectionViewModelMatrix);
+    
+    float4 pixel = mInv * float4m(cursor.x, cursor.y, 1.0f, 1.0f);
+    pixel.xyz /= pixel.w; // in case perspective used
 
     // allow pan to extend to show all
-    float maxX = 0.5f;
+    float ar = _showSettings->imageAspectRatio();
+    float maxX = 0.5f * ar;
     float minY = -0.5f;
     if (_showSettings->isShowingAllLevelsAndMips) {
-        maxX += 1.0f * (_showSettings->totalChunks() - 1);
+        maxX += ar * 1.0f * (_showSettings->totalChunks() - 1);
         minY -= 1.0f * (_showSettings->mipCount - 1);
     }
 
+    // X bound may need adjusted for ar ?
     // that's in model space (+/0.5f, +/0.5f), so convert to texture space
-    pixel.x = NAMESPACE_STL::clamp(pixel.x, -0.5f, maxX);
+    pixel.x = NAMESPACE_STL::clamp(pixel.x, -0.5f * ar, maxX);
     pixel.y = NAMESPACE_STL::clamp(pixel.y, minY, 0.5f);
 
     // now that's the point that we want to zoom towards
-    // No checkson this zoom
+    // No checks on this zoom
     // old - newPosition from the zoom
 
+#if USE_PERSPECTIVE
+    // TODO: this doesn't work for perspective
     newPan.x = _showSettings->panX - (_showSettings->zoom - newZoom) *
                                          _showSettings->imageBoundsX * pixel.x;
     newPan.y = _showSettings->panY + (_showSettings->zoom - newZoom) *
                                          _showSettings->imageBoundsY * pixel.y;
+#else
+    newPan.x = _showSettings->panX - (_showSettings->zoom - newZoom) *
+                                         _showSettings->imageBoundsX * pixel.x;
+    newPan.y = _showSettings->panY + (_showSettings->zoom - newZoom) *
+                                         _showSettings->imageBoundsY * pixel.y;
+#endif
 }
 
 - (void)handleGesture:(NSGestureRecognizer *)gestureRecognizer
@@ -898,7 +943,9 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
     bool isFirstGesture = _zoomGesture.state == NSGestureRecognizerStateBegan;
 
+    // TODO: move into object
     static float _originalZoom = 1.0f;
+    static float _validMagnification = 1.0f;
 
     float zoom = _zoomGesture.magnification;
     if (isFirstGesture) {
@@ -910,9 +957,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         zoom = 0.1f / _originalZoom;
         _zoomGesture.magnification = zoom;
     }
-
-    static float _validMagnification;
-
+    
     //-------------------------------------
 
     // https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/handling_uikit_gestures/handling_pinch_gestures?language=objc
@@ -931,9 +976,13 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
     // https://stackoverflow.com/questions/30002361/image-zoom-centered-on-mouse-position
 
+    // DONE: rect is now ar:1 for rect case, so these x values need to be half ar
+    // and that's only if it's not rotated.  box/cube/ellipse make also not correspond
+    float ar = _showSettings->imageAspectRatio();
+    
     // find the cursor location with respect to the image
-    float4 bottomLeftCorner = float4m(-0.5, -0.5f, 0.0f, 1.0f);
-    float4 topRightCorner = float4m(0.5, 0.5f, 0.0f, 1.0f);
+    float4 bottomLeftCorner = float4m(-0.5 * ar, -0.5f, 0.0f, 1.0f);
+    float4 topRightCorner = float4m(0.5 * ar, 0.5f, 0.0f, 1.0f);
 
     Renderer *renderer = (Renderer *)self.delegate;
     float4x4 newMatrix = [renderer computeImageTransform:_showSettings->panX
@@ -946,8 +995,8 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     float4 pt1 = newMatrix * topRightCorner;
 
     // for perspective
-    // pt0 /= pt0.w;
-    // pt1 /= pt1.w;
+    pt0 /= pt0.w;
+    pt1 /= pt1.w;
 
     // see that rectangle intersects the view, view is -1 to 1
     // this handles inversion
@@ -976,28 +1025,41 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // take into account zoomFit, or need to limit zoomFit and have smaller images
     // be smaller on screen
     float maxZoom = std::max(128.0f, _showSettings->zoomFit);
+    //float minZoom = std::min(1.0f/8.0f, _showSettings->zoomFit);
 
-    // don't allow image to get too big
+    // TODO: 3d models have imageBoundsY of 1, so the limits are hit immediately
+    
     int32_t gap = _showSettings->showAllPixelGap;
-    if ((visibleWidth >
-         maxZoom * (_showSettings->imageBoundsX + gap) * numTexturesX) ||
-        (visibleHeight >
-         maxZoom * (_showSettings->imageBoundsY + gap) * numTexturesY)) {
-        _zoomGesture.magnification = _validMagnification;
-        return;
+    
+    // Note this includes chunks and mips even if those are not shown
+    // so image could be not visible.
+    float2 maxZoomXY;
+    maxZoomXY.x = maxZoom * (_showSettings->imageBoundsX + gap) * numTexturesX;
+    maxZoomXY.y = maxZoom * (_showSettings->imageBoundsY + gap) * numTexturesY;
+    
+    float minPixelSize = 4;
+    float2 minZoomXY;
+    minZoomXY.x = minPixelSize; // minZoom * (_showSettings->imageBoundsX + gap) * numTexturesX;
+    minZoomXY.y = minPixelSize; // minZoom * (_showSettings->imageBoundsY + gap) * numTexturesY;
+   
+    // don't allow image to get too big
+    bool isZoomChanged = true;
+    
+    if (visibleWidth > maxZoomXY.x || visibleHeight > maxZoomXY.y) {
+        isZoomChanged = false;
     }
 
-    // don't allow image to get too small
-    int32_t minPixelSize = 4;
-    if ((visibleWidth <
-         std::min((int32_t)_showSettings->imageBoundsX, minPixelSize)) ||
-        (visibleHeight <
-         std::min((int32_t)_showSettings->imageBoundsY, minPixelSize))) {
-        _zoomGesture.magnification = _validMagnification;
-        return;
+    // or too small
+    if (visibleWidth < minZoomXY.x || visibleHeight < minZoomXY.y) {
+        isZoomChanged = false;
     }
 
+    // or completely off-screen
     if (!NSIntersectsRect(imageRect, viewRect)) {
+        isZoomChanged = false;
+    }
+    
+    if (!isZoomChanged) {
         _zoomGesture.magnification = _validMagnification;
         return;
     }
@@ -1060,14 +1122,12 @@ inline float4 toPremul(const float4 &c)
 
 // Writing out to rgba32 for sampling, but unorm formats like ASTC and RGBA8
 // are still off and need to use the following.
-float toSnorm8(float c) { return (255.0 / 127.0) * c - (128 / 127.0); }
+float  toSnorm8(float c)  { return (255.0f / 127.0f) * c - (128.0f / 127.0f); }
+float2 toSnorm8(float2 c) { return (255.0f / 127.0f) * c - (128.0f / 127.0f); }
+float3 toSnorm8(float3 c) { return (255.0f / 127.0f) * c - (128.0f / 127.0f); }
+float4 toSnorm8(float4 c) { return (255.0f / 127.0f) * c - (128.0f / 127.0f); }
 
-float2 toSnorm8(float2 c) { return (255.0 / 127.0) * c - (128 / 127.0); }
-
-float3 toSnorm8(float3 c) { return (255.0 / 127.0) * c - (128 / 127.0); }
-float4 toSnorm8(float4 c) { return (255.0 / 127.0) * c - (128 / 127.0); }
-
-float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
+float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
 - (void)updateEyedropper
 {
@@ -1124,27 +1184,34 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     halfX /= (float)_showSettings->viewContentScaleFactor;
     halfY /= (float)_showSettings->viewContentScaleFactor;
 
-    NSPoint point = NSMakePoint(_showSettings->cursorX, _showSettings->cursorY);
-    NSPoint clipPoint;
-    clipPoint.x = (point.x - halfX) / halfX;
-    clipPoint.y = -(point.y - halfY) / halfY;
+    float4 cursor = float4m(_showSettings->cursorX, _showSettings->cursorY, 0.0f, 1.0f);
+    
+    float4x4 pixelToClipTfm =
+    {
+        (float4){ halfX,      0, 0, 0 },
+        (float4){ 0,     -halfY, 0, 0 },
+        (float4){ 0,          0, 1, 0 },
+        (float4){ halfX,  halfY, 0, 1 },
+    };
+    pixelToClipTfm = inverse(pixelToClipTfm);
+    
+    cursor = pixelToClipTfm * cursor;
+    
+    //float4 clipPoint;
+    //clipPoint.x = (point.x - halfX) / halfX;
+    //clipPoint.y = -(point.y - halfY) / halfY;
 
     // convert point in window to point in texture
-    float4x4 mInv = simd_inverse(projectionViewModelMatrix);
-    mInv.columns[3].w =
-        1.0f;  // fixes inverse, calls always leaves m[3][3] = 0.999
+    float4x4 mInv = inverse(projectionViewModelMatrix);
+    
+    float4 pixel = mInv * float4m(cursor.x, cursor.y, 1.0f, 1.0f);
+    pixel.xyz /= pixel.w; // in case perspective used
 
-    float4 pixel = mInv * float4m(clipPoint.x, clipPoint.y, 1.0f, 1.0f);
-    // pixel /= pixel.w; // in case perspective used
-
-    // that's in model space (+/0.5f, +/0.5f), so convert to texture space
-    pixel.y *= -1.0f;
-
-    pixel.x += 0.5f;
-    pixel.y += 0.5f;
-
-    pixel.x *= 0.999f;
-    pixel.y *= 0.999f;
+    float ar = _showSettings->imageAspectRatio();
+    
+    // that's in model space (+/0.5f * ar, +/0.5f), so convert to texture space
+    pixel.x = 0.999f * (pixel.x / ar + 0.5f);
+    pixel.y = 0.999f * (-pixel.y + 0.5f);
 
     float2 uv = pixel.xy;
 
@@ -1486,13 +1553,14 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     // transform the upper left and bottom right corner or the image
 
     // what if zoom moves it outside?
-
-    float4 pt0 = projectionViewModelMatrix * float4m(-0.5, -0.5f, 0.0f, 1.0f);
-    float4 pt1 = projectionViewModelMatrix * float4m(0.5, 0.5f, 0.0f, 1.0f);
+    float ar = _showSettings->imageAspectRatio();
+    
+    float4 pt0 = projectionViewModelMatrix * float4m(-0.5 * ar, -0.5f, 0.0f, 1.0f);
+    float4 pt1 = projectionViewModelMatrix * float4m(0.5 * ar, 0.5f, 0.0f, 1.0f);
 
     // for perspective
-    // pt0 /= pt0.w;
-    // pt1 /= pt1.w;
+    pt0.xyz /= pt0.w;
+    pt1.xyz /= pt1.w;
 
     float2 ptOrigin = simd::min(pt0.xy, pt1.xy);
     float2 ptSize = abs(pt0.xy - pt1.xy);
@@ -1584,7 +1652,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     bool isJumpToNextHidden =
         !(_showSettings->isArchive || _showSettings->isFolder);
 
-    bool isRedHidden = false;
+    bool isRedHidden = _showSettings->numChannels == 0; // models don't show rgba
     bool isGreenHidden = _showSettings->numChannels <= 1;
     bool isBlueHidden = _showSettings->numChannels <= 2 &&
                         !_showSettings->isNormal;  // reconstruct z = b on normals
@@ -1604,8 +1672,10 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     bool isCheckerboardHidden = !hasAlpha;
 
     bool isSignedHidden = !isSignedFormat(_showSettings->originalFormat);
-
+    bool isPlayHidden = !_showSettings->isModel;
+    
     // buttons
+    [self findButton:" "].hidden = isPlayHidden;
     [self findButton:"Y"].hidden = isArrayHidden;
     [self findButton:"F"].hidden = isFaceSliceHidden;
     [self findButton:"M"].hidden = isMipHidden;
@@ -1624,6 +1694,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     // menus (may want to disable, not hide)
     // problem is crashes since menu seems to strip hidden items
     // enabled state has to be handled in validateUserInterfaceItem
+    [self findMenuItem:" "].hidden = isPlayHidden;
     [self findMenuItem:"Y"].hidden = isArrayHidden;
     [self findMenuItem:"F"].hidden = isFaceSliceHidden;
     [self findMenuItem:"M"].hidden = isMipHidden;
@@ -1650,6 +1721,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     auto Off = NSControlStateValueOff;
 #define toState(x) (x) ? On : Off
 
+    Renderer* renderer = (Renderer*)self.delegate;
     auto showAllState = toState(_showSettings->isShowingAllLevelsAndMips);
     auto premulState = toState(_showSettings->isPremul);
     auto signedState = toState(_showSettings->isSigned);
@@ -1658,6 +1730,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     auto gridState = toState(_showSettings->isAnyGridShown());
     auto wrapState = toState(_showSettings->isWrap);
     auto debugState = toState(_showSettings->debugMode != DebugModeNone);
+    auto playState = toState(_showSettings->isModel && renderer.playAnimations);
 
     TextureChannels &channels = _showSettings->channels;
 
@@ -1684,6 +1757,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     auto jumpState = Off;
 
     // buttons
+    [self findButton:" "].state = playState;
     [self findButton:"?"].state = helpState;
     [self findButton:"I"].state = infoState;
 
@@ -1719,6 +1793,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
     // when menu state is selected, it may not uncheck when advancing through
     // state
+    [self findMenuItem:" "].state = playState;
     [self findMenuItem:"?"].state = helpState;
     [self findMenuItem:"I"].state = infoState;
 
@@ -1836,6 +1911,9 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     else if (title == "A")
         keyCode = Key::A;
 
+    else if (title == " ")
+        keyCode = Key::Space;
+    
     if (keyCode >= 0)
         [self handleKey:keyCode isShiftKeyDown:isShiftKeyDown];
 }
@@ -1962,6 +2040,25 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
             }
             break;
 
+        case Key::Space: {
+            if (![self findButton:" "].isHidden) {
+                 Renderer *renderer = (Renderer *)self.delegate;
+                
+                renderer.playAnimations = !renderer.playAnimations;
+                
+                text = renderer.playAnimations ? "Play" : "Pause";
+                isChanged = true;
+                
+                self.enableSetNeedsDisplay = !renderer.playAnimations;
+                self.paused = !renderer.playAnimations;
+            }
+            else {
+                self.enableSetNeedsDisplay = YES;
+                self.paused = YES;
+            }
+            break;
+        }
+            
         case Key::Num4:
         case Key::A:
             if (![self findButton:"A"].isHidden) {
@@ -2223,7 +2320,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
         case Key::J:
             if (![self findButton:"J"].isHidden) {
                 if (_showSettings->isArchive) {
-                    if ([self advanceTextureFromAchive:!isShiftKeyDown]) {
+                    if ([self advanceFileFromAchive:!isShiftKeyDown]) {
                         _hudHidden = true;
                         [self updateHudVisibility];
                         
@@ -2232,7 +2329,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
                     }
                 }
                 else if (_showSettings->isFolder) {
-                    if ([self advanceTextureFromFolder:!isShiftKeyDown]) {
+                    if ([self advanceFileFromFolder:!isShiftKeyDown]) {
                         _hudHidden = true;
                         [self updateHudVisibility];
                         
@@ -2448,8 +2545,14 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     }
 
     // filter out unsupported extensions
-
-    _zip.filterExtensions({".ktx", ".ktx2", ".png"});
+    vector<string> extensions = {
+        ".ktx", ".ktx2", ".png" // textures
+#if USE_GLTF
+        , ".glb", ".gltf" // models
+#endif
+    };
+    
+    _zip.filterExtensions(extensions);
 
     // don't switch to empty archive
     if (_zip.zipEntrys().empty()) {
@@ -2483,7 +2586,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     return YES;
 }
 
-- (BOOL)advanceTextureFromAchive:(BOOL)increment
+- (BOOL)advanceFileFromAchive:(BOOL)increment
 {
     if ((!_zipMmap.data()) || _zip.zipEntrys().empty()) {
         // no archive loaded or it's empty
@@ -2509,10 +2612,10 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     _tableView.hidden = NO;
     _shapesTableView.hidden = YES;
     
-    return [self loadTextureFromArchive];
+    return [self loadFileFromArchive];
 }
 
-- (BOOL)advanceTextureFromFolder:(BOOL)increment
+- (BOOL)advanceFileFromFolder:(BOOL)increment
 {
     if (_folderFiles.empty()) {
         // no archive loaded
@@ -2541,21 +2644,21 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     _hudHidden = true;
     [self updateHudVisibility];
     
-    return [self loadTextureFromFolder];
+    return [self loadFileFromFolder];
 }
 
 - (BOOL)setImageFromSelection:(NSInteger)index {
     if (_zipMmap.data() && !_zip.zipEntrys().empty()) {
         if (_fileArchiveIndex != index) {
             _fileArchiveIndex = index;
-            return [self loadTextureFromArchive];
+            return [self loadFileFromArchive];
         }
     }
 
     if (!_folderFiles.empty()) {
         if (_fileFolderIndex != index) {
             _fileFolderIndex = index;
-            return [self loadTextureFromFolder];
+            return [self loadFileFromFolder];
         }
     }
     return NO;
@@ -2585,16 +2688,23 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     return isFound;
 }
 
-- (BOOL)loadTextureFromFolder
+- (BOOL)loadFileFromFolder
 {
     // now lookup the filename and data at that entry
     const char *filename = _folderFiles[_fileFolderIndex].c_str();
     string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
-
+    
+    bool isModel =
+        endsWithExtension(filename, ".gltf") ||
+        endsWithExtension(filename, ".gtb");
+    if (isModel)
+        return [self loadModelFile:nil filename:filename];
+    
     // have already filtered filenames out, so this should never get hit
     bool isPNG = isPNGFilename(filename);
-    if (!(isPNG || endsWithExtension(filename, ".ktx") ||
+    if (!(isPNG ||
+          endsWithExtension(filename, ".ktx") ||
           endsWithExtension(filename, ".ktx2"))) {
         return NO;
     }
@@ -2662,7 +2772,10 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
         image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
     }
 
+    
     Renderer *renderer = (Renderer *)self.delegate;
+    [renderer releaseAllPendingTextures];
+    
     if (![renderer loadTextureFromImage:fullFilename.c_str()
                               timestamp:timestamp
                                   image:image
@@ -2708,18 +2821,26 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     return YES;
 }
 
-- (BOOL)loadTextureFromArchive
+- (BOOL)loadFileFromArchive
 {
     // now lookup the filename and data at that entry
-    const auto &entry = _zip.zipEntrys()[_fileArchiveIndex];
-    const char *filename = entry.filename;
+    const auto& entry = _zip.zipEntrys()[_fileArchiveIndex];
+    const char* filename = entry.filename;
     string fullFilename = filename;
     double timestamp = (double)entry.modificationDate;
 
-    // have already filtered filenames out, so this should never get hit
+    bool isModel =
+        endsWithExtension(filename, ".gltf") ||
+        endsWithExtension(filename, ".gtb");
+    if (isModel)
+        return [self loadModelFile:nil filename:filename];
+    
+    //--------
+    
     bool isPNG = isPNGFilename(filename);
 
-    if (!(isPNG || endsWithExtension(filename, ".ktx") ||
+    if (!(isPNG ||
+          endsWithExtension(filename, ".ktx") ||
           endsWithExtension(filename, ".ktx2"))) {
         return NO;
     }
@@ -2803,6 +2924,8 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     }
 
     Renderer *renderer = (Renderer *)self.delegate;
+    [renderer releaseAllPendingTextures];
+    
     if (![renderer loadTextureFromImage:fullFilename.c_str()
                               timestamp:(double)timestamp
                                   image:image
@@ -2844,6 +2967,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     // show/hide button
     [self updateUIAfterLoad];
 
+    
     self.needsDisplay = YES;
     return YES;
 }
@@ -2863,9 +2987,14 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
         KLOGE("kramv", "Fix this load url returning nil issue");
         return NO;
     }
-
+    
+    Renderer *renderer = (Renderer *)self.delegate;
+    
+    // folders can have a . in them f.e. 2.0/blah/...
+    bool isDirectory = url.hasDirectoryPath;
+    
     // this likely means it's a local file directory
-    if (strchr(filename, '.') == nullptr) {
+    if (isDirectory) {
         // make list of all file in the directory
 
         if (!self.imageURL || (!([self.imageURL isEqualTo:url]))) {
@@ -2884,19 +3013,37 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
                                       }];
 
             vector<string> files;
+#if USE_GLTF
+            // only display models in folder if found, ignore the png/jpg files
             while (NSURL *fileOrDirectoryURL = [directoryEnumerator nextObject]) {
                 const char *name = fileOrDirectoryURL.fileSystemRepresentation;
 
-                // filter only types that are supported
-                bool isPNG = isPNGFilename(name);
-
-                if (isPNG || endsWithExtension(name, ".ktx") ||
-                    endsWithExtension(name, ".ktx2")) {
+                bool isGLTF = endsWithExtension(name, ".gltf");
+                bool isGLB = endsWithExtension(name, ".glb");
+                if (isGLTF || isGLB)
+                {
                     files.push_back(name);
                 }
             }
+#endif
 
             // don't change to this folder if it's devoid of content
+            if (files.empty()) {
+                while (NSURL *fileOrDirectoryURL = [directoryEnumerator nextObject]) {
+                    const char *name = fileOrDirectoryURL.fileSystemRepresentation;
+
+                    // filter only types that are supported
+                    bool isPNG = isPNGFilename(name);
+                    bool isKTX = endsWithExtension(name, ".ktx");
+                    bool isKTX2 = endsWithExtension(name, ".ktx2");
+    
+                    if (isPNG || isKTX || isKTX2)
+                    {
+                        files.push_back(name);
+                    }
+                }
+            }
+            
             if (files.empty()) {
                 return NO;
             }
@@ -2959,10 +3106,11 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
         _showSettings->isArchive = false;
         _showSettings->isFolder = true;
 
+        
         // now load the file at the index
         setErrorLogCapture(true);
 
-        BOOL success = [self loadTextureFromFolder];
+        BOOL success = [self loadFileFromFolder];
 
         if (!success) {
             // get back error text from the failed load
@@ -2986,9 +3134,8 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     }
 
     //-------------------
-
+    
     if (endsWithExtension(filename, ".metallib")) {
-        Renderer *renderer = (Renderer *)self.delegate;
         if ([renderer hotloadShaders:filename]) {
             NSURL *metallibFileURL =
                 [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
@@ -3004,11 +3151,22 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     }
 
     // file is not a supported extension
-    if (!(endsWithExtension(filename, ".zip") || isPNGFilename(filename) ||
+    if (!(
+          // archive
+          endsWithExtension(filename, ".zip") ||
+          
+          // images
+          isPNGFilename(filename) ||
           endsWithExtension(filename, ".ktx") ||
-          endsWithExtension(filename, ".ktx2"))) {
+          endsWithExtension(filename, ".ktx2") ||
+          
+          // models
+          endsWithExtension(filename, ".gltf") ||
+          endsWithExtension(filename, ".glb")
+        ))
+    {
         string errorText =
-            "Unsupported file extension, must be .zip, .png, .ktx, ktx2\n";
+            "Unsupported file extension, must be .zip, .png, .ktx, .ktx2, .gltf, .glb\n";
 
         string finalErrorText;
         append_sprintf(finalErrorText, "Could not load from file:\n %s\n",
@@ -3019,6 +3177,16 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
         return NO;
     }
 
+    if (endsWithExtension(filename, ".gltf") ||
+        endsWithExtension(filename, ".glb"))
+    {
+        return [self loadModelFile:url filename:nullptr];
+    }
+    
+    // for now, knock out model if loading an image
+    // TODO: might want to unload even before loading a new model
+    [renderer unloadModel];
+    
     //-------------------
 
     if (endsWithExtension(filename, ".zip")) {
@@ -3063,7 +3231,7 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
         setErrorLogCapture(true);
 
-        BOOL success = [self loadTextureFromArchive];
+        BOOL success = [self loadFileFromArchive];
 
         if (!success) {
             // get back error text from the failed load
@@ -3087,11 +3255,110 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
         return success;
     }
 
-    //-------------------
+    return [self loadImageFile:url];
+}
 
+-(BOOL)loadModelFile:(NSURL*)url filename:(const char*)filename
+{
+#if USE_GLTF
+    // Right now can only load these if they are embedded, since sandbox will
+    // fail to load related .png and .bin files.  There's a way to opt into
+    // related items, but they must all be named the same.  I think if folder
+    // instead of the file is selected, then could search and find the gltf files
+    // and the other files.
+
+    //----------------------
+    // These assets should be combined into a single hierarchy, and be able to
+    // save out a scene with all of them in a single scene.  But that should
+    // probably reference original content in case it's updated.
+    
+    Renderer *renderer = (Renderer *)self.delegate;
+    [renderer releaseAllPendingTextures];
+    
+    setErrorLogCapture(true);
+
+    // set title to filename, chop this to just file+ext, not directory
+    if (url != nil)
+        filename = url.fileSystemRepresentation;
+    const char* filenameShort = toFilenameShort(filename);
+
+    NSURL* gltfFileURL =
+        [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
+
+    BOOL success = [renderer loadModel:gltfFileURL];
+    
+    // TODO: split this off to a completion handler, since loadModel is async
+    // and should probably also have a cancellation (or counter)
+    
+    // show/hide button
+    [self updateUIAfterLoad];
+    
+    if (!success) {
+        string errorText;
+        getErrorLogCaptureText(errorText);
+        setErrorLogCapture(false);
+        
+        string finalErrorText;
+        append_sprintf(finalErrorText, "Could not load model from file:\n %s\n",
+                       filename);
+        finalErrorText += errorText;
+
+        [self setHudText:finalErrorText.c_str()];
+        
+        return NO;
+    }
+
+    // was using subtitle, but that's macOS 11.0 feature.
+    string title = "kramv - ";
+    title += filenameShort;
+
+    self.window.title = [NSString stringWithUTF8String:title.c_str()];
+
+    // if url is nil, then loading out of archive or folder
+    // and don't want to save that or set imageURL
+    if (url != nil)
+    {
+        // add to recent docs, so can reload quickly
+        NSDocumentController *dc =
+            [NSDocumentController sharedDocumentController];
+        [dc noteNewRecentDocumentURL:gltfFileURL];
+
+        // TODO: not really an image
+        self.imageURL = gltfFileURL;
+        
+        // this may be loading out of folder/archive, but if url passed then it isn't
+        _showSettings->isArchive = false;
+        _showSettings->isFolder = false;
+        
+        // no need for file table on single files
+        _tableView.hidden = YES;
+    }
+    
+    // show the controls
+    if (_noImageLoaded) {
+        _buttonStack.hidden = NO;  // show controls
+        _noImageLoaded = NO;
+    }
+
+    setErrorLogCapture(false);
+
+    self.needsDisplay = YES;
+
+    return success;
+#else
+    return NO;
+#endif
+}
+
+-(BOOL)loadImageFile:(NSURL*)url
+{
     Renderer *renderer = (Renderer *)self.delegate;
     setErrorLogCapture(true);
 
+    // set title to filename, chop this to just file+ext, not directory
+    const char* filename = url.fileSystemRepresentation;
+    const char* filenameShort = toFilenameShort(filename);
+    
     BOOL success = [renderer loadTexture:url];
 
     if (!success) {
@@ -3110,9 +3377,6 @@ float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
     }
     setErrorLogCapture(false);
 
-    // set title to filename, chop this to just file+ext, not directory
-    const char *filenameShort = toFilenameShort(filename);
-    
     // was using subtitle, but that's macOS 11.0 feature.
     string title = "kramv - ";
     title += formatTypeName(_showSettings->originalFormat);

@@ -8,6 +8,13 @@
 #include "KramLib.h"
 #import "KramShaders.h"  // for TextureChannels
 
+// Turn on GLTF loading support for 3d models.  This relies on Warren Moore's first GLTFKit
+// which only handles import and synchronous loading.
+#define USE_GLTF 0
+
+// Only use a perspective transform for models/images, otherwise perspective only used for models
+#define USE_PERSPECTIVE 0
+
 namespace kram {
 class ShowSettings;
 class KTXImage;
@@ -36,4 +43,14 @@ class KTXImage;
 
 - (BOOL)hotloadShaders:(nonnull const char *)filename;
 
+
+// unload textures and gltf model textures
+- (void)releaseAllPendingTextures;
+
+// for gltf models
+- (void)unloadModel;
+
+@property (nonatomic) BOOL playAnimations;
+
 @end
+

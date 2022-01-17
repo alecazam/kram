@@ -108,6 +108,8 @@ struct ViewFramebufferData {
     ShowSettings *_showSettings;
 }
 
+@synthesize playAnimations;
+
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view
                                     settings:(nonnull ShowSettings *)settings
 {
@@ -579,6 +581,23 @@ struct packed_float3 {
     float x, y, z;
 };
 
+
+- (void)releaseAllPendingTextures
+{
+    @autoreleasepool {
+        [_loader releaseAllPendingTextures];
+        
+        // also release the model and cached textures in the renderer
+        [self unloadModel];
+    }
+}
+
+- (void)unloadModel
+{
+    // TODO:
+}
+
+
 - (void)_loadAssets
 {
     /// Load assets into metal objects
@@ -767,7 +786,7 @@ struct packed_float3 {
     //    doFlipUV:true];
 
     mdlMesh = [MDLMesh newCapsuleWithHeight:1.0
-                                      radii:(vector_float2){0.5, 0.25}
+                                      radii:(vector_float2){1.0f/3.0f, 1.0f/3.0f} // circle
                              // vertical cap subtracted from height
                              radialSegments:16
                            verticalSegments:1
@@ -783,6 +802,19 @@ struct packed_float3 {
     _mesh = _meshBox;
 }
 
+// this aliases the existing string, so can't chop extension
+inline const char* toFilenameShort(const char* filename) {
+    const char* filenameShort = strrchr(filename, '/');
+    if (filenameShort == nullptr) {
+        filenameShort = filename;
+    }
+    else {
+        filenameShort += 1;
+    }
+    return filenameShort;
+}
+
+
 - (BOOL)loadTextureFromImage:(nonnull const char *)fullFilenameString
                    timestamp:(double)timestamp
                        image:(kram::KTXImage &)image
@@ -792,7 +824,8 @@ struct packed_float3 {
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
     string fullFilename = fullFilenameString;
-
+    const char* filenameShort = toFilenameShort(fullFilename.c_str());
+    
     // Note that modstamp can change, but content data hash may be the same
     bool isNewFile = (fullFilename != _showSettings->lastFilename);
     bool isTextureChanged =
@@ -806,7 +839,8 @@ struct packed_float3 {
 
         MTLPixelFormat originalFormatMTL = MTLPixelFormatInvalid;
         id<MTLTexture> texture = [_loader loadTextureFromImage:image
-                                                originalFormat:&originalFormatMTL];
+                                                originalFormat:&originalFormatMTL
+                                                          name:filenameShort];
         if (!texture) {
             return NO;
         }
@@ -816,7 +850,8 @@ struct packed_float3 {
         id<MTLTexture> normalTexture;
         if (imageNormal) {
             normalTexture = [_loader loadTextureFromImage:*imageNormal
-                                           originalFormat:nil];
+                                           originalFormat:nil
+                                                     name:filenameShort];
             if (!normalTexture) {
                 return NO;
             }
@@ -888,9 +923,12 @@ struct packed_float3 {
             return NO;
         }
 
+        const char* filenameShort = toFilenameShort(fullFilename.c_str());
+        
         MTLPixelFormat originalFormatMTL = MTLPixelFormatInvalid;
         id<MTLTexture> texture = [_loader loadTextureFromImage:image
-                                                originalFormat:&originalFormatMTL];
+                                                originalFormat:&originalFormatMTL
+                                                          name:filenameShort];
         if (!texture) {
             return NO;
         }
@@ -1297,11 +1335,6 @@ float4 inverseScaleSquared(const float4x4 &m)
 
         _showSettings->isInverted = uniforms.modelMatrixInvScale2.w < 0.0f;
 
-        // this was stored so view could use it, but now that code calcs the
-        // transform via computeImageTransform
-        _showSettings->projectionViewModelMatrix =
-            uniforms.projectionViewMatrix * uniforms.modelMatrix;
-
         // cache the camera position
         uniforms.cameraPosition =
             inverse(_viewMatrix3D).columns[3].xyz;  // this is all ortho
@@ -1322,11 +1355,6 @@ float4 inverseScaleSquared(const float4x4 &m)
         uniforms.modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix);
 
         _showSettings->isInverted = uniforms.modelMatrixInvScale2.w < 0.0f;
-
-        // this was stored so view could use it, but now that code calcs the
-        // transform via computeImageTransform
-        _showSettings->projectionViewModelMatrix =
-            uniforms.projectionViewMatrix * uniforms.modelMatrix;
 
         // cache the camera position
         uniforms.cameraPosition =

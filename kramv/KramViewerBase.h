@@ -213,8 +213,6 @@ public:
 
     LightingMode lightingMode = LightingModeDiffuse;
 
-    // have multiple models, so don't store this, use split projView and modelMatrix
-    //float4x4 projectionViewModelMatrix;
     bool isInverted;
 
     // cached on load, raw info about the texture from libkram
