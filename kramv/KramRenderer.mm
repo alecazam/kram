@@ -4,14 +4,100 @@
 
 #import "KramRenderer.h"
 
-#import <ModelIO/ModelIO.h>
-#import <TargetConditionals.h>
+@import ModelIO;
+//#import <ModelIO/ModelIO.h>
+//#import <TargetConditionals.h>
 
 // Include header shared between C code here, which executes Metal API commands,
 // and .metal files
 #import "KramLoader.h"
 #import "KramShaders.h"
 #include "KramViewerBase.h"
+
+// c interface to signposts similar to dtrace on macOS/iOS
+#include <os/signpost.h>
+#include <mutex> // for recursive_mutex
+
+os_log_t gLogKramv = os_log_create("com.ba.kramv", "");
+
+class Signpost
+{
+public:
+    Signpost(const char* name)
+        : _name(name), _ended(false)
+    {
+        if (os_signpost_enabled(gLogKramv)) // pretty much always true
+            os_signpost_interval_begin(gLogKramv, OS_SIGNPOST_ID_EXCLUSIVE, "kram", "%s", _name);
+        else
+            _ended = true;
+    }
+    
+    ~Signpost()
+    {
+        stop();
+    }
+    
+    void stop()
+    {
+        if (!_ended) {
+            os_signpost_interval_end(gLogKramv, OS_SIGNPOST_ID_EXCLUSIVE, "kram", "%s", _name);
+            _ended = true;
+        }
+    }
+    
+private:
+    const char* _name;
+    bool _ended;
+};
+
+
+#if USE_GLTF
+
+using mymutex = std::recursive_mutex;
+using mylock = std::unique_lock<mymutex>;
+
+// TODO: make part of renderer
+static mymutex gModelLock;
+
+// patch this into GLTFRenderer, so can use kram to load ktx/2 and png files
+// doesn't support jpg, hdr, or exr files.  Can't yet load ktx2 w/basis.
+
+@interface KramGLTFTextureLoader : NSObject <IGLTFMTLTextureLoader>
+- (instancetype)initWithLoader:(KramLoader*)loader;
+- (id<MTLTexture> _Nullable)newTextureWithContentsOfURL:(NSURL *)url options:(NSDictionary * _Nullable)options error:(NSError **)error;
+- (id<MTLTexture> _Nullable)newTextureWithData:(NSData *)data options:(NSDictionary * _Nullable)options error:(NSError **)error;
+@end
+
+@interface KramGLTFTextureLoader ()
+@property (nonatomic, strong) KramLoader* loader;
+@end
+
+@implementation KramGLTFTextureLoader
+
+- (instancetype)initWithLoader:(KramLoader*)loader
+{
+    if ((self = [super init])) {
+        _loader = loader;
+    }
+    return self;
+}
+
+// TODO: this ignores options and error.  Default png loading may need to request srgb.
+- (id<MTLTexture> _Nullable)newTextureWithContentsOfURL:(NSURL *)url options:(NSDictionary * _Nullable)options error:(NSError **)error
+{
+    return [_loader loadTextureFromURL:url originalFormat:nil];
+}
+
+// TODO: this ignores options and error.  Default png loading may need to request srgb.
+- (id<MTLTexture> _Nullable)newTextureWithData:(NSData *)data options:(NSDictionary * _Nullable)options error:(NSError **)error
+{
+    return [_loader loadTextureFromData:data originalFormat:nil];
+}
+
+@end
+
+#endif
+
 
 static const NSUInteger MaxBuffersInFlight = 3;
 
@@ -92,7 +178,7 @@ struct ViewFramebufferData {
 
     MDLVertexDescriptor *_mdlVertexDescriptor;
 
-    // MTKMesh *_meshPlane; // really a thin gox
+    MTKMesh *_meshRect;
     MTKMesh *_meshBox;
     MTKMesh *_meshSphere;
     MTKMesh *_meshSphereMirrored;
@@ -106,6 +192,20 @@ struct ViewFramebufferData {
     ViewFramebufferData _viewFramebuffer;
 
     ShowSettings *_showSettings;
+    
+#if USE_GLTF
+    KramGLTFTextureLoader* _textureLoader;
+    id<GLTFBufferAllocator> _bufferAllocator;
+    GLTFMTLRenderer* _gltfRenderer;
+    GLTFAsset *_asset; // only 1 for now
+    double _animationTime;
+    
+    id<MTLTexture> _environmentTexture;
+    bool _environmentNeedsUpdate;
+    
+    NSURLSession* _urlSession;
+#endif
+
 }
 
 @synthesize playAnimations;
@@ -127,6 +227,25 @@ struct ViewFramebufferData {
         _inFlightSemaphore = dispatch_semaphore_create(MaxBuffersInFlight);
         [self _loadMetalWithView:view];
         [self _loadAssets];
+        
+#if USE_GLTF
+        _bufferAllocator = [[GLTFMTLBufferAllocator alloc] initWithDevice:_device];
+        _gltfRenderer = [[GLTFMTLRenderer alloc] initWithDevice:_device];
+        
+        // This aliases the existing kram loader, can handle png, ktx, ktx2
+        _textureLoader = [[KramGLTFTextureLoader alloc] initWithLoader:_loader];
+        _gltfRenderer.textureLoader = _textureLoader;
+        
+        // load the environment from a cube map for now
+        // runs this after _shaderLibrary established above
+        _gltfRenderer.lightingEnvironment = [[GLTFMTLLightingEnvironment alloc] initWithLibrary: _shaderLibrary];
+        
+        //NSURL* environmentURL = [[NSBundle mainBundle] URLForResource:@"piazza_san_marco" withExtension:@"ktx"];
+        NSURL* environmentURL = [[NSBundle mainBundle] URLForResource:@"tropical_beach" withExtension:@"ktx"];
+        _environmentTexture = [_loader loadTextureFromURL:environmentURL originalFormat:nil];
+        _environmentNeedsUpdate = true;
+#endif
+
     }
 
     return self;
@@ -592,11 +711,137 @@ struct packed_float3 {
     }
 }
 
-- (void)unloadModel
+- (void)updateModelSettings:(const string &)fullFilename
 {
-    // TODO:
+    _showSettings->isModel = true;
+    _showSettings->numChannels = 0; // hides rgba
+    
+    // don't want any scale on view, or as little as possible
+    _showSettings->imageBoundsX = 1;
+    _showSettings->imageBoundsY = 1;
+    
+    BOOL isNewFile = YES;
+    [self resetSomeImageSettings:isNewFile];
 }
 
+- (BOOL)loadModel:(nonnull NSURL*)url
+{
+#if USE_GLTF
+
+        // TODO: move to async version of this, many of these load slow
+        // but is there a way to cancel the load.  Or else move to cgltf which is faster.
+        // see GLTFKit2.
+
+#define DO_ASYNC 0
+#if DO_ASYNC
+        [GLTFAsset loadAssetWithURL:url bufferAllocator:_bufferAllocator delegate:self];
+#else
+    @autoreleasepool {
+        GLTFAsset* newAsset = [[GLTFAsset alloc] initWithURL:url bufferAllocator:_bufferAllocator];
+
+        if (!newAsset) {
+            return NO;
+        }
+
+        // tie into delegate callback
+        [self assetWithURL:url didFinishLoading:newAsset];
+    }
+#endif
+
+    // Can't really report YES to caller, since it may fail to load async
+    return YES;
+#else
+    return NO;
+#endif
+}
+
+- (void)unloadModel
+{
+#if USE_GLTF
+    _asset = nil;
+    _animationTime = 0.0;
+    [_gltfRenderer releaseAllResources];
+#endif
+}
+
+// TODO: remove this
+//- (void)updateProjTransform
+//{
+//    // float aspect = size.width / (float)size.height;
+//    //_projectionMatrix = perspective_rhs(45.0f * (M_PI / 180.0f), aspect, 0.1f,
+//    //100.0f);
+//    _projectionMatrix =
+//        orthographic_rhs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f,
+//                         100000.0f, _showSettings->isReverseZ);
+//
+//    // DONE: adjust zoom to fit the entire image to the window
+//    _showSettings->zoomFit =
+//        MIN((float)_showSettings->viewSizeX, (float)_showSettings->viewSizeY) /
+//        MAX(1, MAX((float)_showSettings->imageBoundsX,
+//                   (float)_showSettings->imageBoundsY));
+//
+//    // already using drawableSize which includes scale
+//    // TODO: remove contentScaleFactor of view, this can be 1.0 to 2.0f
+//    // why does this always report 2x even when I change monitor res.
+//    //_showSettings->zoomFit /= _showSettings->viewContentScaleFactor;
+//}
+
+- (void)updateProjTransform
+{
+    // Want to move to always using perspective even for 2d images, but still more math
+    // to work out to keep zoom to cursor working.
+#if USE_PERSPECTIVE
+    float aspect = _showSettings->viewSizeX /  (float)_showSettings->viewSizeY;
+    _projectionMatrix = perspective_rhs(90.0f * (M_PI / 180.0f), aspect, 0.1f, 100000.0f, _showSettings->isReverseZ);
+
+    // This was used to reset zoom to a baseline that had a nice zoom.  But little connected to it now.
+    // Remember with rotation, the bounds can hit the nearClip.  Note all shapes are 0.5 radius,
+    // so at 1 this is 2x to leave gap around the shape for now.
+    float shapeHeightInY = 1;
+    _showSettings->zoomFit = shapeHeightInY; // / (float)_showSettings->viewSizeY;
+
+#else
+
+    if (_showSettings->isModel) {
+        float aspect = _showSettings->viewSizeX /  (float)_showSettings->viewSizeY;
+        _projectionMatrix = perspective_rhs(90.0f * (M_PI / 180.0f), aspect, 0.1f, 100000.0f, _showSettings->isReverseZ);
+
+        _showSettings->zoomFit = 1;
+    }
+    else {
+        _projectionMatrix =
+            orthographic_rhs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f,
+                             100000.0f, _showSettings->isReverseZ);
+
+        // DONE: adjust zoom to fit the entire image to the window
+        _showSettings->zoomFit =
+            MIN((float)_showSettings->viewSizeX, (float)_showSettings->viewSizeY) /
+            MAX(1, MAX((float)_showSettings->imageBoundsX,
+                       (float)_showSettings->imageBoundsY));
+    }
+#endif
+}
+    
+- (void)_createMeshRect:(float)aspectRatioXToY
+{
+    // This is a box that's smashed down to a thin 2d z plane, can get very close to it
+    // due to the thinness of the volume without nearZ intersect
+    
+    /// Load assets into metal objects
+    MDLMesh *mdlMesh;
+
+    mdlMesh = [MDLMesh newBoxWithDimensions:(vector_float3){aspectRatioXToY, 1, 0.001}
+                                   segments:(vector_uint3){1, 1, 1}
+                               geometryType:MDLGeometryTypeTriangles
+                              inwardNormals:NO
+                                  allocator:_metalAllocator];
+
+    // for some reason normals are all n = 1,0,0 which doesn't make sense on a box
+    // for the side that is being viewed.
+    
+    // only one of these for now, but really should store per image
+    _meshRect = [self _createMeshAsset:"MeshRect" mdlMesh:mdlMesh doFlipUV:false];
+}
 
 - (void)_loadAssets
 {
@@ -799,7 +1044,8 @@ struct packed_float3 {
                                   mdlMesh:mdlMesh
                                  doFlipUV:true];
 
-    _mesh = _meshBox;
+    // this will get set based on sahpe
+    _mesh = nil;
 }
 
 // this aliases the existing string, so can't chop extension
@@ -974,6 +1220,8 @@ inline const char* toFilenameShort(const char* filename) {
 - (void)updateImageSettings:(const string &)fullFilename
                       image:(KTXImage &)image
 {
+    _showSettings->isModel = false;
+
     // this is the actual format, may have been decoded
     id<MTLTexture> texture = _colorMap;
     MyMTLPixelFormat format = (MyMTLPixelFormat)texture.pixelFormat;
@@ -1096,7 +1344,11 @@ float zoom3D = 1.0f;
             std::min(_showSettings->sliceNumber, _showSettings->sliceCount);
     }
 
-    [self updateViewTransforms];
+    [self updateProjTransform];
+
+    // the rect is ar:1 for images
+    float aspectRatioXtoY = _showSettings->imageAspectRatio();
+    [self _createMeshRect:aspectRatioXtoY];
 
     // this controls viewMatrix (global to all visible textures)
     _showSettings->panX = 0.0f;
@@ -1172,12 +1424,12 @@ float zoom3D = 1.0f;
     }
 }
 
-bool almost_equal_elements(float3 v, float tol)
+inline bool almost_equal_elements(float3 v, float tol)
 {
     return (fabs(v.x - v.y) < tol) && (fabs(v.x - v.z) < tol);
 }
 
-const float3x3 &toFloat3x3(const float4x4 &m) { return (const float3x3 &)m; }
+inline const float3x3& toFloat3x3(const float4x4 &m) { return (const float3x3 &)m; }
 
 float4 inverseScaleSquared(const float4x4 &m)
 {
@@ -1186,8 +1438,8 @@ float4 inverseScaleSquared(const float4x4 &m)
                                   length_squared(m.columns[2].xyz));
 
     // if uniform, then set scaleSquared all to 1
-    if (almost_equal_elements(scaleSquared, 1e-5)) {
-        scaleSquared = float3m(1.0);
+    if (almost_equal_elements(scaleSquared, 1e-5f)) {
+        scaleSquared = float3m(1.0f);
     }
 
     // don't divide by 0
@@ -1285,7 +1537,7 @@ float4 inverseScaleSquared(const float4x4 &m)
     _showSettings->is3DView = true;
     switch (_showSettings->meshNumber) {
         case 0:
-            _mesh = _meshBox;
+            _mesh = _meshRect;
             _showSettings->is3DView = false;
             break;
         case 1:
@@ -1417,17 +1669,33 @@ float4 inverseScaleSquared(const float4x4 &m)
         // call drawMain
         [self drawSample];
 
+        // decrement count, proceeds if sema >= 0 afterwards
+        Signpost postWait("waitOnSemaphore");
         dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
-
+        postWait.stop();
+        
         _uniformBufferIndex = (_uniformBufferIndex + 1) % MaxBuffersInFlight;
 
         id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
         commandBuffer.label = @"MyCommand";
 
         __block dispatch_semaphore_t block_sema = _inFlightSemaphore;
-        [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */) {
-            dispatch_semaphore_signal(block_sema);
-        }];
+        
+        #if USE_GLTF
+                GLTFMTLRenderer* gltfRenderer = _gltfRenderer;
+                [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */) {
+                    [gltfRenderer signalFrameCompletion];
+        
+                    // increment count
+                    dispatch_semaphore_signal(block_sema);
+                }];
+        
+        #else
+                [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */) {
+                    // increment count
+                    dispatch_semaphore_signal(block_sema);
+                }];
+        #endif
 
         [self _updateGameState];
 
@@ -1439,21 +1707,45 @@ float4 inverseScaleSquared(const float4x4 &m)
         // also use for async texture upload
         id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
         if (blitEncoder) {
+            Signpost postUpload("uploadTextures");
             blitEncoder.label = @"MyBlitEncoder";
             [_loader uploadTexturesIfNeeded:blitEncoder commandBuffer:commandBuffer];
             [blitEncoder endEncoding];
         }
 
+        Signpost postDraw("Draw");
         [self drawMain:commandBuffer
                   view:view];
-
+        postDraw.stop();
+        
         // hold onto this for sampling from it via eyedropper
-        _lastDrawableTexture = view.currentDrawable.texture;
+        id<CAMetalDrawable> drawable = view.currentDrawable;
+        _lastDrawableTexture = drawable.texture;
 
-        [commandBuffer presentDrawable:view.currentDrawable];
+        // These are equivalent
+        // [commandBuffer presentDrawable:view.currentDrawable];
+        [commandBuffer addScheduledHandler:^(id<MTLCommandBuffer> cmdBuf) {
+            Signpost postPresent("presentDrawble");
+            [drawable present];
+        }];
+
         [commandBuffer commit];
     }
 }
+
+#if USE_GLTF
+
+static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
+    GLTFBoundingSphere s;
+    float3 center = 0.5f * (b.minPoint + b.maxPoint);
+    float r = simd::distance(b.maxPoint, center);
+    
+    s.center = center;
+    s.radius = r;
+    return s;
+}
+#endif
+
 
 - (void)drawMain:(id<MTLCommandBuffer>)commandBuffer
             view:(nonnull MTKView *)view
@@ -1462,14 +1754,23 @@ float4 inverseScaleSquared(const float4x4 &m)
     // avoids
     //   holding onto the drawable and blocking the display pipeline any longer
     //   than necessary
-    MTLRenderPassDescriptor *renderPassDescriptor =
-        view.currentRenderPassDescriptor;
-
+    MTLRenderPassDescriptor* renderPassDescriptor = nil;
+    
+    // This retrieval can take 20ms+ when gpu is busy
+    Signpost post("nextDrawable");
+    renderPassDescriptor = view.currentRenderPassDescriptor;
+    post.stop();
+    
     if (renderPassDescriptor == nil) {
         return;
     }
 
-    if (_colorMap == nil) {
+    if (_colorMap == nil
+#if USE_GLTF
+        && _asset == nil
+#endif
+    )
+    {
         // this will clear target
         id<MTLRenderCommandEncoder> renderEncoder =
             [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
@@ -1482,6 +1783,28 @@ float4 inverseScaleSquared(const float4x4 &m)
         return;
     }
 
+#if USE_GLTF
+    {
+        mylock lock(gModelLock);
+    
+        if (_asset) {
+            
+            // TODO: needs to be done in the render loop, since it must run compute
+            // This runs compute to generate radiance/irradiance in mip levels
+            // Also an equirect version for a 2d image
+            if (_environmentNeedsUpdate) {
+                if (_environmentTexture.textureType == MTLTextureTypeCube)
+                    [_gltfRenderer.lightingEnvironment generateFromCubeTexture:_environmentTexture commandBuffer:commandBuffer];
+                else
+                    [_gltfRenderer.lightingEnvironment generateFromEquirectTexture:_environmentTexture commandBuffer:commandBuffer];
+                
+                _environmentNeedsUpdate = false;
+            }
+        }
+    }
+#endif
+
+    
     // Final pass rendering code here
     id<MTLRenderCommandEncoder> renderEncoder =
         [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
@@ -1493,232 +1816,292 @@ float4 inverseScaleSquared(const float4x4 &m)
 
     // set raster state
     [renderEncoder setFrontFacingWinding:_showSettings->isInverted
-                                             ? MTLWindingCounterClockwise
+                                             ? MTLWindingClockwise
                                              : MTLWindingCounterClockwise];
     [renderEncoder setCullMode:MTLCullModeBack];
     [renderEncoder setDepthStencilState:_depthStateFull];
 
-    [renderEncoder pushDebugGroup:@"DrawShape"];
-
-    // set the mesh shape
-    for (NSUInteger bufferIndex = 0; bufferIndex < _mesh.vertexBuffers.count;
-         bufferIndex++) {
-        MTKMeshBuffer *vertexBuffer = _mesh.vertexBuffers[bufferIndex];
-        if ((NSNull *)vertexBuffer != [NSNull null]) {
-            [renderEncoder setVertexBuffer:vertexBuffer.buffer
-                                    offset:vertexBuffer.offset
-                                   atIndex:bufferIndex];
-        }
-    }
-
-    //---------------------------------------
-    // figure out the sampler
-
-    id<MTLSamplerState> sampler;
-
-    MyMTLTextureType textureType = (MyMTLTextureType)_colorMap.textureType;
-
-    bool isCube = (textureType == MyMTLTextureTypeCube ||
-                   textureType == MyMTLTextureTypeCubeArray);
-    bool doWrap = !isCube && _showSettings->isWrap;
-    bool doEdge = !doWrap;
-
-    if (_showSettings->isPreview) {
-        sampler = doWrap ? _colorMapSamplerFilterWrap
-                         : (doEdge ? _colorMapSamplerFilterEdge
-                                   : _colorMapSamplerFilterBorder);
-    }
-    else {
-        sampler = doWrap ? _colorMapSamplerNearestWrap
-                         : (doEdge ? _colorMapSamplerNearestEdge
-                                   : _colorMapSamplerNearestBorder);
-    }
-
-    //---------------------------------------
-    // for (texture in _textures) // TODO: setup
-    // if (_colorMap)
+    bool drawShape = true;
+    
+    #if USE_GLTF
     {
-        // TODO: set texture specific uniforms, but using single _colorMap for now
-        switch (_colorMap.textureType) {
-            case MTLTextureType1DArray:
-                [renderEncoder setRenderPipelineState:_pipelineState1DArray];
-                break;
+        mylock lock(gModelLock);
 
-            case MTLTextureType2D:
-                [renderEncoder setRenderPipelineState:_pipelineStateImage];
-                break;
-
-            case MTLTextureType2DArray:
-                [renderEncoder setRenderPipelineState:_pipelineStateImageArray];
-                break;
-
-            case MTLTextureType3D:
-                [renderEncoder setRenderPipelineState:_pipelineStateVolume];
-                break;
-            case MTLTextureTypeCube:
-                [renderEncoder setRenderPipelineState:_pipelineStateCube];
-                break;
-            case MTLTextureTypeCubeArray:
-                [renderEncoder setRenderPipelineState:_pipelineStateCubeArray];
-                break;
-
-            default:
-                break;
+        if (_asset) {
+            drawShape = false;
+    
+            // update animations
+            if (self.playAnimations) {
+                _animationTime += 1.0/60.0;
+    
+                NSTimeInterval maxAnimDuration = 0;
+                for (GLTFAnimation *animation in _asset.animations) {
+                    for (GLTFAnimationChannel *channel in animation.channels) {
+                        if (channel.duration > maxAnimDuration) {
+                            maxAnimDuration = channel.duration;
+                        }
+                    }
+                }
+            
+                NSTimeInterval animTime = fmod(_animationTime, maxAnimDuration);
+    
+                for (GLTFAnimation *animation in _asset.animations) {
+                    [animation runAtTime:animTime];
+                }
+            }
+            
+            // regularization scales the model to 1 unit dimension, may animate out of this box
+            // just a scale to diameter 1, and translate back from center and viewer z
+            GLTFBoundingSphere bounds = GLTFBoundingSphereFromBox2(_asset.defaultScene.approximateBounds);
+            float invScale = (bounds.radius > 0) ? (0.5 / (bounds.radius)) : 1.0;
+            float4x4 centerScale = float4x4(float4m(invScale,invScale,invScale,1));
+            float4x4 centerTranslation = matrix_identity_float4x4;
+            centerTranslation.columns[3] = vector4(-bounds.center, 1.0f);
+            float4x4 regularizationMatrix = centerScale * centerTranslation;
+    
+            // incorporate the rotation now
+            Uniforms &uniforms =
+                *(Uniforms *)_dynamicUniformBuffer[_uniformBufferIndex].contents;
+    
+            regularizationMatrix = regularizationMatrix * uniforms.modelMatrix;
+    
+            // TODO: be able to pass regularization to affect root of modelMatrix tree,
+            // do not modify viewMatrix here since that messes with world space.
+    
+            // set the view and projection matrix
+            _gltfRenderer.viewMatrix = _viewMatrix * regularizationMatrix;
+            _gltfRenderer.projectionMatrix = _projectionMatrix;
+    
+            [renderEncoder pushDebugGroup:@"DrawModel"];
+            [_gltfRenderer renderScene:_asset.defaultScene commandBuffer:commandBuffer commandEncoder:renderEncoder];
+            [renderEncoder popDebugGroup];
         }
+    }
+    #endif
+    
+    if (drawShape) {
+        [renderEncoder pushDebugGroup:@"DrawShape"];
 
-        id<MTLBuffer> uniformBuffer = _dynamicUniformBuffer[_uniformBufferIndex];
-        [renderEncoder setVertexBuffer:uniformBuffer
-                                offset:0
-                               atIndex:BufferIndexUniforms];
-
-        [renderEncoder setFragmentBuffer:uniformBuffer
-                                  offset:0
-                                 atIndex:BufferIndexUniforms];
-
-        // set the texture up
-        [renderEncoder setFragmentTexture:_colorMap atIndex:TextureIndexColor];
-
-        // setup normal map
-        if (_normalMap && _showSettings->isPreview) {
-            [renderEncoder setFragmentTexture:_normalMap atIndex:TextureIndexNormal];
-        }
-
-        UniformsLevel uniformsLevel;
-        uniformsLevel.drawOffset = float2m(0.0f);
-
-        if (_showSettings->isPreview) {
-            // upload this on each face drawn, since want to be able to draw all
-            // mips/levels at once
-            [self _setUniformsLevel:uniformsLevel mipLOD:_showSettings->mipNumber];
-
-            [renderEncoder setVertexBytes:&uniformsLevel
-                                   length:sizeof(uniformsLevel)
-                                  atIndex:BufferIndexUniformsLevel];
-
-            [renderEncoder setFragmentBytes:&uniformsLevel
-                                     length:sizeof(uniformsLevel)
-                                    atIndex:BufferIndexUniformsLevel];
-
-            // use exisiting lod, and mip
-            [renderEncoder setFragmentSamplerState:sampler atIndex:SamplerIndexColor];
-
-            for (MTKSubmesh *submesh in _mesh.submeshes) {
-                [renderEncoder drawIndexedPrimitives:submesh.primitiveType
-                                          indexCount:submesh.indexCount
-                                           indexType:submesh.indexType
-                                         indexBuffer:submesh.indexBuffer.buffer
-                                   indexBufferOffset:submesh.indexBuffer.offset];
+        // set the mesh shape
+        for (NSUInteger bufferIndex = 0; bufferIndex < _mesh.vertexBuffers.count;
+             bufferIndex++) {
+            MTKMeshBuffer *vertexBuffer = _mesh.vertexBuffers[bufferIndex];
+            if ((NSNull *)vertexBuffer != [NSNull null]) {
+                [renderEncoder setVertexBuffer:vertexBuffer.buffer
+                                        offset:vertexBuffer.offset
+                                       atIndex:bufferIndex];
             }
         }
-        else if (_showSettings->isShowingAllLevelsAndMips) {
-            int32_t w = _colorMap.width;
-            int32_t h = _colorMap.height;
-            // int32_t d = _colorMap.depth;
 
-            // gap the contact sheet, note this 2 pixels is scaled on small textures
-            // by the zoom
-            int32_t gap =
-                _showSettings
-                    ->showAllPixelGap;  // * _showSettings->viewContentScaleFactor;
+        //---------------------------------------
+        // figure out the sampler
 
-            for (int32_t mip = 0; mip < _showSettings->mipCount; ++mip) {
+        id<MTLSamplerState> sampler;
+
+        MyMTLTextureType textureType = (MyMTLTextureType)_colorMap.textureType;
+
+        bool isCube = (textureType == MyMTLTextureTypeCube ||
+                       textureType == MyMTLTextureTypeCubeArray);
+        bool doWrap = !isCube && _showSettings->isWrap;
+        bool doEdge = !doWrap;
+
+        if (_showSettings->isPreview) {
+            sampler = doWrap ? _colorMapSamplerFilterWrap
+                             : (doEdge ? _colorMapSamplerFilterEdge
+                                       : _colorMapSamplerFilterBorder);
+        }
+        else {
+            sampler = doWrap ? _colorMapSamplerNearestWrap
+                             : (doEdge ? _colorMapSamplerNearestEdge
+                                       : _colorMapSamplerNearestBorder);
+        }
+
+        //---------------------------------------
+        // for (texture in _textures) // TODO: setup
+        // if (_colorMap)
+        {
+            // TODO: set texture specific uniforms, but using single _colorMap for now
+            switch (_colorMap.textureType) {
+                case MTLTextureType1DArray:
+                    [renderEncoder setRenderPipelineState:_pipelineState1DArray];
+                    break;
+
+                case MTLTextureType2D:
+                    [renderEncoder setRenderPipelineState:_pipelineStateImage];
+                    break;
+
+                case MTLTextureType2DArray:
+                    [renderEncoder setRenderPipelineState:_pipelineStateImageArray];
+                    break;
+
+                case MTLTextureType3D:
+                    [renderEncoder setRenderPipelineState:_pipelineStateVolume];
+                    break;
+                case MTLTextureTypeCube:
+                    [renderEncoder setRenderPipelineState:_pipelineStateCube];
+                    break;
+                case MTLTextureTypeCubeArray:
+                    [renderEncoder setRenderPipelineState:_pipelineStateCubeArray];
+                    break;
+
+                default:
+                    break;
+            }
+
+            id<MTLBuffer> uniformBuffer = _dynamicUniformBuffer[_uniformBufferIndex];
+            [renderEncoder setVertexBuffer:uniformBuffer
+                                    offset:0
+                                   atIndex:BufferIndexUniforms];
+
+            [renderEncoder setFragmentBuffer:uniformBuffer
+                                      offset:0
+                                     atIndex:BufferIndexUniforms];
+
+            // set the texture up
+            [renderEncoder setFragmentTexture:_colorMap atIndex:TextureIndexColor];
+
+            // setup normal map
+            if (_normalMap && _showSettings->isPreview) {
+                [renderEncoder setFragmentTexture:_normalMap atIndex:TextureIndexNormal];
+            }
+
+            UniformsLevel uniformsLevel;
+            uniformsLevel.drawOffset = float2m(0.0f);
+
+            if (_showSettings->isPreview) {
+                // upload this on each face drawn, since want to be able to draw all
+                // mips/levels at once
+                [self _setUniformsLevel:uniformsLevel mipLOD:_showSettings->mipNumber];
+
+                [renderEncoder setVertexBytes:&uniformsLevel
+                                       length:sizeof(uniformsLevel)
+                                      atIndex:BufferIndexUniformsLevel];
+
+                [renderEncoder setFragmentBytes:&uniformsLevel
+                                         length:sizeof(uniformsLevel)
+                                        atIndex:BufferIndexUniformsLevel];
+
+                // use exisiting lod, and mip
+                [renderEncoder setFragmentSamplerState:sampler atIndex:SamplerIndexColor];
+
+                for (MTKSubmesh *submesh in _mesh.submeshes) {
+                    [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                              indexCount:submesh.indexCount
+                                               indexType:submesh.indexType
+                                             indexBuffer:submesh.indexBuffer.buffer
+                                       indexBufferOffset:submesh.indexBuffer.offset];
+                }
+            }
+            else if (_showSettings->isShowingAllLevelsAndMips) {
+                int32_t w = _colorMap.width;
+                int32_t h = _colorMap.height;
+                // int32_t d = _colorMap.depth;
+
+                // gap the contact sheet, note this 2 pixels is scaled on small textures
+                // by the zoom
+                int32_t gap =
+                    _showSettings
+                        ->showAllPixelGap;  // * _showSettings->viewContentScaleFactor;
+
+                for (int32_t mip = 0; mip < _showSettings->mipCount; ++mip) {
+                    // upload this on each face drawn, since want to be able to draw all
+                    // mips/levels at once
+                    [self _setUniformsLevel:uniformsLevel mipLOD:mip];
+
+                    if (mip == 0) {
+                        uniformsLevel.drawOffset.y = 0.0f;
+                    }
+                    else {
+                        // all mips draw at top mip size currently
+                        uniformsLevel.drawOffset.y -= h + gap;
+                    }
+
+                    // this its ktxImage.totalChunks()
+                    int32_t numLevels = _showSettings->totalChunks();
+
+                    for (int32_t level = 0; level < numLevels; ++level) {
+                        if (isCube) {
+                            uniformsLevel.face = level % 6;
+                            uniformsLevel.arrayOrSlice = level / 6;
+                        }
+                        else {
+                            uniformsLevel.arrayOrSlice = level;
+                        }
+
+                        // advance x across faces/slices/array elements, 1d array and 2d thin
+                        // array are weird though.
+                        if (level == 0) {
+                            uniformsLevel.drawOffset.x = 0.0f;
+                        }
+                        else {
+                            uniformsLevel.drawOffset.x += w + gap;
+                        }
+
+                        [renderEncoder setVertexBytes:&uniformsLevel
+                                               length:sizeof(uniformsLevel)
+                                              atIndex:BufferIndexUniformsLevel];
+
+                        [renderEncoder setFragmentBytes:&uniformsLevel
+                                                 length:sizeof(uniformsLevel)
+                                                atIndex:BufferIndexUniformsLevel];
+
+                        // force lod, and don't mip
+                        [renderEncoder setFragmentSamplerState:sampler
+                                                   lodMinClamp:mip
+                                                   lodMaxClamp:mip + 1
+                                                       atIndex:SamplerIndexColor];
+
+                        // TODO: since this isn't a preview, have mode to display all faces
+                        // and mips on on screen faces and arrays and slices go across in a
+                        // row, and mips are displayed down from each of those in a column
+
+                        for (MTKSubmesh *submesh in _mesh.submeshes) {
+                            [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                                      indexCount:submesh.indexCount
+                                                       indexType:submesh.indexType
+                                                     indexBuffer:submesh.indexBuffer.buffer
+                                               indexBufferOffset:submesh.indexBuffer.offset];
+                        }
+                    }
+                }
+            }
+            else {
+                int32_t mip = _showSettings->mipNumber;
+
                 // upload this on each face drawn, since want to be able to draw all
                 // mips/levels at once
                 [self _setUniformsLevel:uniformsLevel mipLOD:mip];
 
-                if (mip == 0) {
-                    uniformsLevel.drawOffset.y = 0.0f;
-                }
-                else {
-                    // all mips draw at top mip size currently
-                    uniformsLevel.drawOffset.y -= h + gap;
-                }
+                [renderEncoder setVertexBytes:&uniformsLevel
+                                       length:sizeof(uniformsLevel)
+                                      atIndex:BufferIndexUniformsLevel];
 
-                // this its ktxImage.totalChunks()
-                int32_t numLevels = _showSettings->totalChunks();
+                [renderEncoder setFragmentBytes:&uniformsLevel
+                                         length:sizeof(uniformsLevel)
+                                        atIndex:BufferIndexUniformsLevel];
 
-                for (int32_t level = 0; level < numLevels; ++level) {
-                    if (isCube) {
-                        uniformsLevel.face = level % 6;
-                        uniformsLevel.arrayOrSlice = level / 6;
-                    }
-                    else {
-                        uniformsLevel.arrayOrSlice = level;
-                    }
+                // force lod, and don't mip
+                [renderEncoder setFragmentSamplerState:sampler
+                                           lodMinClamp:mip
+                                           lodMaxClamp:mip + 1
+                                               atIndex:SamplerIndexColor];
 
-                    // advance x across faces/slices/array elements, 1d array and 2d thin
-                    // array are weird though.
-                    if (level == 0) {
-                        uniformsLevel.drawOffset.x = 0.0f;
-                    }
-                    else {
-                        uniformsLevel.drawOffset.x += w + gap;
-                    }
+                // TODO: since this isn't a preview, have mode to display all faces and
+                // mips on on screen faces and arrays and slices go across in a row, and
+                // mips are displayed down from each of those in a column
 
-                    [renderEncoder setVertexBytes:&uniformsLevel
-                                           length:sizeof(uniformsLevel)
-                                          atIndex:BufferIndexUniformsLevel];
-
-                    [renderEncoder setFragmentBytes:&uniformsLevel
-                                             length:sizeof(uniformsLevel)
-                                            atIndex:BufferIndexUniformsLevel];
-
-                    // force lod, and don't mip
-                    [renderEncoder setFragmentSamplerState:sampler
-                                               lodMinClamp:mip
-                                               lodMaxClamp:mip + 1
-                                                   atIndex:SamplerIndexColor];
-
-                    // TODO: since this isn't a preview, have mode to display all faces
-                    // and mips on on screen faces and arrays and slices go across in a
-                    // row, and mips are displayed down from each of those in a column
-
-                    for (MTKSubmesh *submesh in _mesh.submeshes) {
-                        [renderEncoder drawIndexedPrimitives:submesh.primitiveType
-                                                  indexCount:submesh.indexCount
-                                                   indexType:submesh.indexType
-                                                 indexBuffer:submesh.indexBuffer.buffer
-                                           indexBufferOffset:submesh.indexBuffer.offset];
-                    }
+                for (MTKSubmesh *submesh in _mesh.submeshes) {
+                    [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                              indexCount:submesh.indexCount
+                                               indexType:submesh.indexType
+                                             indexBuffer:submesh.indexBuffer.buffer
+                                       indexBufferOffset:submesh.indexBuffer.offset];
                 }
             }
         }
-        else {
-            int32_t mip = _showSettings->mipNumber;
 
-            // upload this on each face drawn, since want to be able to draw all
-            // mips/levels at once
-            [self _setUniformsLevel:uniformsLevel mipLOD:mip];
-
-            [renderEncoder setVertexBytes:&uniformsLevel
-                                   length:sizeof(uniformsLevel)
-                                  atIndex:BufferIndexUniformsLevel];
-
-            [renderEncoder setFragmentBytes:&uniformsLevel
-                                     length:sizeof(uniformsLevel)
-                                    atIndex:BufferIndexUniformsLevel];
-
-            // force lod, and don't mip
-            [renderEncoder setFragmentSamplerState:sampler
-                                       lodMinClamp:mip
-                                       lodMaxClamp:mip + 1
-                                           atIndex:SamplerIndexColor];
-
-            // TODO: since this isn't a preview, have mode to display all faces and
-            // mips on on screen faces and arrays and slices go across in a row, and
-            // mips are displayed down from each of those in a column
-
-            for (MTKSubmesh *submesh in _mesh.submeshes) {
-                [renderEncoder drawIndexedPrimitives:submesh.primitiveType
-                                          indexCount:submesh.indexCount
-                                           indexType:submesh.indexType
-                                         indexBuffer:submesh.indexBuffer.buffer
-                                   indexBufferOffset:submesh.indexBuffer.offset];
-            }
-        }
+        [renderEncoder popDebugGroup];
     }
-
-    [renderEncoder popDebugGroup];
 
     [renderEncoder endEncoding];
 
@@ -1924,28 +2307,50 @@ float4 inverseScaleSquared(const float4x4 &m)
 
     _showSettings->viewContentScaleFactor = framebufferScale;
 
-    [self updateViewTransforms];
+    [self updateProjTransform];
+    
+#if USE_GLTF
+    _gltfRenderer.drawableSize = size;
+    _gltfRenderer.colorPixelFormat = view.colorPixelFormat;
+    _gltfRenderer.depthStencilPixelFormat = view.depthStencilPixelFormat;
+#endif
+    
+    [self updateProjTransform];
 }
 
-- (void)updateViewTransforms
+#if USE_GLTF
+// @protocol GLTFAssetLoadingDelegate
+- (void)assetWithURL:(NSURL *)assetURL requiresContentsOfURL:(NSURL *)url completionHandler:(void (^)(NSData *_Nullable, NSError *_Nullable))completionHandler
 {
-    // float aspect = size.width / (float)size.height;
-    //_projectionMatrix = perspective_rhs(45.0f * (M_PI / 180.0f), aspect, 0.1f,
-    //100.0f);
-    _projectionMatrix =
-        orthographic_rhs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f,
-                         100000.0f, _showSettings->isReverseZ);
-
-    // DONE: adjust zoom to fit the entire image to the window
-    _showSettings->zoomFit =
-        MIN((float)_showSettings->viewSizeX, (float)_showSettings->viewSizeY) /
-        MAX(1, MAX((float)_showSettings->imageBoundsX,
-                   (float)_showSettings->imageBoundsY));
-
-    // already using drawableSize which includes scale
-    // TODO: remove contentScaleFactor of view, this can be 1.0 to 2.0f
-    // why does this always report 2x even when I change monitor res.
-    //_showSettings->zoomFit /= _showSettings->viewContentScaleFactor;
+    // This can handle remote assets
+    NSURLSessionDataTask *task = [_urlSession dataTaskWithURL:url
+                                                        completionHandler:^(NSData *data, NSURLResponse *response, NSError *error)
+    {
+        completionHandler(data, error);
+    }];
+    
+    [task resume];
 }
+
+- (void)assetWithURL:(NSURL *)assetURL didFinishLoading:(GLTFAsset *)asset
+{
+    mylock lock(gModelLock);
+    
+    _asset = asset;
+    
+    _animationTime = 0.0;
+    
+    string fullFilename = assetURL.path.UTF8String;
+    [self updateModelSettings:fullFilename];
+}
+
+- (void)assetWithURL:(NSURL *)assetURL didFailToLoadWithError:(NSError *)error;
+{
+    // TODO: display this error to the user
+    NSLog(@"Asset load failed with error: %@", error);
+}
+#endif
+
+
 
 @end

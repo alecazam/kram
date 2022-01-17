@@ -328,11 +328,10 @@ float4x4 matrix4x4_rotation(float radians, vector_float3 axis)
     float x = axis.x, y = axis.y, z = axis.z;
 
     float4x4 m = {
-        (float4){ ct + x * x * ci,     y * x * ci + z * st, z * x * ci - y *
-        st, 0}, (float4){ x * y * ci - z * st,     ct + y * y * ci, z * y * ci
-        + x * st, 0}, (float4){ x * z * ci + y * st, y * z * ci - x * st, ct +
-        z * z * ci, 0}, (float4){                   0,                   0, 0,
-        1}
+        (float4){ ct + x * x * ci,     y * x * ci + z * st, z * x * ci - y * st, 0},
+        (float4){ x * y * ci - z * st,     ct + y * y * ci, z * y * ci + x * st, 0},
+        (float4){ x * z * ci + y * st, y * z * ci - x * st,     ct + z * z * ci, 0},
+        (float4){                   0,                   0,                   0, 1}
     };
     return m;
 }

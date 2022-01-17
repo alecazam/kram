@@ -2,8 +2,10 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-#import <Foundation/NSURL.h>
-#import <MetalKit/MetalKit.h>
+@import Foundation;
+@import MetalKit;
+//#import <Foundation/NSURL.h>
+//#import <MetalKit/MetalKit.h>
 
 #include "KramLib.h"
 #import "KramShaders.h"  // for TextureChannels
@@ -15,6 +17,12 @@
 // Only use a perspective transform for models/images, otherwise perspective only used for models
 #define USE_PERSPECTIVE 0
 
+#if USE_GLTF
+@import GLTF;
+@import GLTFMTL;
+#endif
+
+
 namespace kram {
 class ShowSettings;
 class KTXImage;
@@ -23,7 +31,11 @@ class KTXImage;
 // Our platform independent renderer class.   Implements the MTKViewDelegate
 // protocol which
 //   allows it to accept per-frame update and drawable resize callbacks.
+#if USE_GLTF
+@interface Renderer : NSObject <MTKViewDelegate, GLTFAssetLoadingDelegate>
+#else
 @interface Renderer : NSObject <MTKViewDelegate>
+#endif
 
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view
                                     settings:
@@ -47,9 +59,13 @@ class KTXImage;
 // unload textures and gltf model textures
 - (void)releaseAllPendingTextures;
 
-// for gltf models
+// load a gltf model
+- (BOOL)loadModel:(nonnull NSURL*)url;
+
+// unload gltf model
 - (void)unloadModel;
 
+// can play animations in gltf models
 @property (nonatomic) BOOL playAnimations;
 
 @end

@@ -3029,6 +3029,22 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
             // don't change to this folder if it's devoid of content
             if (files.empty()) {
+#if !USE_GLTF
+                // reset the enumerator
+                directoryEnumerator =
+                    [[NSFileManager defaultManager]
+                                   enumeratorAtURL:url
+                        includingPropertiesForKeys:[NSArray array]
+                                           options:0
+                                      errorHandler:  // nil
+                                          ^BOOL(NSURL *urlArg, NSError *error) {
+                                              macroUnusedVar(urlArg);
+                                              macroUnusedVar(error);
+
+                                              // handle error
+                                              return NO;
+                                          }];
+#endif
                 while (NSURL *fileOrDirectoryURL = [directoryEnumerator nextObject]) {
                     const char *name = fileOrDirectoryURL.fileSystemRepresentation;
 
