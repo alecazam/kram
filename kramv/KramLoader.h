@@ -37,7 +37,8 @@ class KTXImageData;
 // load from a KTXImage
 - (nullable id<MTLTexture>)loadTextureFromImage:(const kram::KTXImage &)image
                                  originalFormat:
-                                     (nullable MTLPixelFormat *)originalFormat;
+                                     (nullable MTLPixelFormat *)originalFormat
+                                name:(nonnull const char*)name;
 
 // load into KTXImage and KTXImageData, can use with loadTextureFromImage
 - (BOOL)loadImageFromURL:(nonnull NSURL *)url
@@ -53,6 +54,10 @@ class KTXImageData;
 // private MTLTexture
 - (void)uploadTexturesIfNeeded:(nonnull id<MTLBlitCommandEncoder>)blitEncoder
                  commandBuffer:(nonnull id<MTLCommandBuffer>)commandBuffer;
+
+// Important to call this before loading a new model/texture, otherwise staging buffer
+// will flood, and unnecessary textures will be uploaded to.
+- (void)releaseAllPendingTextures;
 
 @property(retain, nonatomic, readwrite, nonnull) id<MTLDevice> device;
 

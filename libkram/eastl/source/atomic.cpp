@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////////
-
+#if USE_EASTL
 
 #include <EASTL/atomic.h>
 
@@ -23,3 +23,5 @@ volatile CompilerBarrierDataDependencyFuncPtr gCompilerBarrierDataDependencyFunc
 } // namespace internal
 
 } // namespace eastl
+
+#endif

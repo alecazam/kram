@@ -181,9 +181,13 @@ static const unsigned int TUNE_MAX_TRIAL_CANDIDATES { 4 };
  */
 class ParallelManager
 {
+    using mymutex = std::recursive_mutex;
+    using mylock = std::unique_lock<mymutex>;
+    using mycondition = std::condition_variable_any;
+
 private:
 	/** @brief Lock used for critical section and condition synchronization. */
-	std::mutex m_lock;
+    mymutex m_lock;
 
 	/** @brief True if the stage init() step has been executed. */
 	bool m_init_done;
@@ -192,7 +196,7 @@ private:
 	bool m_term_done;
 
 	/** @brief Contition variable for tracking stage processing completion. */
-	std::condition_variable m_complete;
+	mycondition m_complete;
 
 	/** @brief Number of tasks started, but not necessarily finished. */
 	std::atomic<unsigned int> m_start_count;
@@ -237,7 +241,7 @@ public:
 	 */
 	void init(std::function<unsigned int(void)> init_func)
 	{
-		std::lock_guard<std::mutex> lck(m_lock);
+		mylock lck(m_lock);
 		if (!m_init_done)
 		{
 			m_task_count = init_func();
@@ -256,7 +260,7 @@ public:
 	 */
 	void init(unsigned int task_count)
 	{
-		std::lock_guard<std::mutex> lck(m_lock);
+        mylock lck(m_lock);
 		if (!m_init_done)
 		{
 			m_task_count = task_count;
@@ -301,7 +305,7 @@ public:
 	{
 		// Note: m_done_count cannot use an atomic without the mutex; this has
 		// a race between the update here and the wait() for other threads
-		std::unique_lock<std::mutex> lck(m_lock);
+        mylock lck(m_lock);
 		this->m_done_count += count;
 		if (m_done_count == m_task_count)
 		{
@@ -315,7 +319,7 @@ public:
 	 */
 	void wait()
 	{
-		std::unique_lock<std::mutex> lck(m_lock);
+        mylock lck(m_lock);
 		m_complete.wait(lck, [this]{ return m_done_count == m_task_count; });
 	}
 
@@ -330,7 +334,7 @@ public:
 	 */
 	void term(std::function<void(void)> term_func)
 	{
-		std::lock_guard<std::mutex> lck(m_lock);
+        mylock lck(m_lock);
 		if (!m_term_done)
 		{
 			term_func();

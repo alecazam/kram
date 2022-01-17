@@ -13,8 +13,8 @@
 
 namespace kram {
 
-using mymutex = std::mutex;
-using lock_t = std::unique_lock<mymutex>;
+using mymutex = std::recursive_mutex;
+using mylock = std::unique_lock<mymutex>;
 
 using namespace NAMESPACE_STL;
 
@@ -25,7 +25,7 @@ void setErrorLogCapture(bool enable)
 {
     gIsErrorLogCapture = enable;
     if (enable) {
-        lock_t lock(gLogLock);
+        mylock lock(gLogLock);
         gErrorLogCaptureText.clear();
     }
 }
@@ -35,7 +35,7 @@ bool isErrorLogCapture() { return gIsErrorLogCapture; }
 void getErrorLogCaptureText(string& text)
 {
     if (gIsErrorLogCapture) {
-        lock_t lock(gLogLock);
+        mylock lock(gLogLock);
         text = gErrorLogCaptureText;
     }
     else {
@@ -228,7 +228,7 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
     }
 
     // stdout isn't thread safe, so to prevent mixed output put this under mutex
-    lock_t lock(gLogLock);
+    mylock lock(gLogLock);
 
     // this means caller needs to know all errors to display in the hud
     if (gIsErrorLogCapture && logLevel == LogLevelError) {

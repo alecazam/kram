@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 /////////////////////////////////////////////////////////////////////////////
-
+#if USE_EASTL
 
 #include <EASTL/internal/config.h>
 #include <EASTL/allocator.h>
@@ -43,7 +43,7 @@
 
 
 #endif // EASTL_USER_DEFINED_ALLOCATOR
-
+#endif
 
 
 

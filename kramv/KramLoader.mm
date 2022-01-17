@@ -9,6 +9,7 @@
 //#include <vector>
 //#include <algorithm> // for max
 #include <mm_malloc.h>
+#include <mutex>
 
 #include "KramLib.h"
 //#include "KramLog.h"
@@ -20,6 +21,10 @@
 using namespace kram;
 using namespace NAMESPACE_STL;
 using namespace simd;
+
+using mymutex = std::recursive_mutex;
+using mylock = std::unique_lock<mymutex>;
+static mymutex gTextureLock;
 
 string kram::toLower(const string &text)
 {
@@ -173,23 +178,47 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
 {
     KTXImage image;
 
-    // isInfoOnly = true keeps compressed mips on KTX2 and aliases original mip
-    // data but have decode etc2/astc path below that uncompressed mips and the
-    // rgb conversion path below as well in the viewer. games would want to
-    // decompress directly from aliased mmap ktx2 data into staging or have blocks
-    // pre-twiddled in hw morton order.
-
-    bool isInfoOnly = true;
-    if (!image.open(imageData, imageDataLength, isInfoOnly)) {
+    if (imageDataLength > 3 &&
+        imageData[0] == 0xff && imageData[1] == 0xd8 && imageData[2] == 0xff )
+    {
+        KLOGE("kramv", "loader does not support jpg files");
         return nil;
     }
+        
+    // if png, then need to load from KTXImageData which uses loadpng
+    // \x89, P, N, G
+    if (imageDataLength > 4 &&
+        imageData[0] == 137 && imageData[1] == 'P' && imageData[2] == 'N' && imageData[3] == 'G')
+    {
+        KTXImageData imageDataReader;
+        if (!imageDataReader.open(imageData, imageDataLength, image)) {
+            return nil;
+        }
+        
+        return [self loadTextureFromImage:image originalFormat:originalFormat name:""];
+    }
+    else
+    {
+    
+        // isInfoOnly = true keeps compressed mips on KTX2 and aliases original mip
+        // data but have decode etc2/astc path below that uncompressed mips and the
+        // rgb conversion path below as well in the viewer. games would want to
+        // decompress directly from aliased mmap ktx2 data into staging or have blocks
+        // pre-twiddled in hw morton order.
 
-    return [self loadTextureFromImage:image originalFormat:originalFormat];
+        bool isInfoOnly = true;
+        if (!image.open(imageData, imageDataLength, isInfoOnly)) {
+            return nil;
+        }
+
+        return [self loadTextureFromImage:image originalFormat:originalFormat name:""];
+    }
 }
 
 - (nullable id<MTLTexture>)loadTextureFromImage:(const KTXImage &)image
                                  originalFormat:
                                      (nullable MTLPixelFormat *)originalFormat
+                                           name:(const char*)name
 {
 #if SUPPORT_RGB
     if (isInternalRGBFormat(image.pixelFormat)) {
@@ -230,7 +259,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
                     .pixelFormat;  // TODO: should this return rgbaImage.pixelFormat ?
         }
 
-        return [self blitTextureFromImage:rbgaImage2];
+        return [self blitTextureFromImage:rbgaImage2 name:name];
     }
 #endif
 
@@ -245,13 +274,13 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
             return nil;
         }
 
-        return [self blitTextureFromImage:imageDecoded];
+        return [self blitTextureFromImage:imageDecoded name:name];
     }
     else
 #endif
     {
         // fast load path directly from mmap'ed data, decompress direct to staging
-        return [self blitTextureFromImage:image];
+        return [self blitTextureFromImage:image name:name];
     }
 }
 
@@ -389,7 +418,7 @@ static_cast<NSUInteger>(image.height), 1 }  // MTLSize
         return nil;
     }
 
-    return [self loadTextureFromImage:image originalFormat:originalFormat];
+    return [self loadTextureFromImage:image originalFormat:originalFormat name:imageData.name()];
 }
 
 - (nullable id<MTLTexture>)createTexture:(const KTXImage &)image
@@ -615,17 +644,8 @@ texture MTLRegion region = { { 0, 0, 0 }, // MTLOrigin { (NSUInteger)w,
 - (void)uploadTexturesIfNeeded:(id<MTLBlitCommandEncoder>)blitEncoder
                  commandBuffer:(id<MTLCommandBuffer>)commandBuffer
 {
-    if (_mipgenTextures.count > 0) {
-        for (id<MTLTexture> texture in _mipgenTextures) {
-            // autogen mips will include srgb conversions, so toggling srgb on/off
-            // isn't quite correct
-            [blitEncoder generateMipmapsForTexture:texture];
-        }
-
-        // reset the arra
-        [_mipgenTextures removeAllObjects];
-    }
-
+    mylock lock(gTextureLock);
+    
     if (!_blits.empty()) {
         // now upload from staging MTLBuffer to private MTLTexture
         for (const auto &blit : _blits) {
@@ -660,7 +680,7 @@ texture MTLRegion region = { { 0, 0, 0 }, // MTLOrigin { (NSUInteger)w,
         _blits.clear();
         [_blitTextures removeAllObjects];
 
-        // TODO: use atomic on this
+        // TODO: use atomic on this, but have lock now
         uint32_t bufferOffsetCopy = _bufferOffset;
         [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */) {
             // can only reset this once gpu completes the blits above
@@ -670,6 +690,30 @@ texture MTLRegion region = { { 0, 0, 0 }, // MTLOrigin { (NSUInteger)w,
                 self->_bufferOffset = 0;
         }];
     }
+    
+    // mipgen after possible initial blit above
+    if (_mipgenTextures.count > 0) {
+        for (id<MTLTexture> texture in _mipgenTextures) {
+            // autogen mips will include srgb conversions, so toggling srgb on/off
+            // isn't quite correct
+            [blitEncoder generateMipmapsForTexture:texture];
+        }
+
+        // reset the arra
+        [_mipgenTextures removeAllObjects];
+    }
+}
+
+- (void)releaseAllPendingTextures
+{
+    mylock lock(gTextureLock);
+    
+    _bufferOffset = 0;
+    
+    _blits.clear();
+    
+    [_mipgenTextures removeAllObjects];
+    [_blitTextures removeAllObjects];
 }
 
 inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
@@ -681,12 +725,17 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
 // (f.e. ktx), and another path for private that uses a blitEncoder and must
 // have block aligned data (f.e. ktxa, ktx2). Could repack ktx data into ktxa
 // before writing to temporary file, or when copying NSData into MTLBuffer.
-- (nullable id<MTLTexture>)blitTextureFromImage:(const KTXImage &)image
+- (nullable id<MTLTexture>)blitTextureFromImage:(const KTXImage &)image name:(const char*)name
 {
+    mylock lock(gTextureLock);
+    
     if (_buffer == nil) {
+        // Was set to 128, but models like FlightHelmet.gltf exceeded that buffer
+        static const size_t kStagingBufferSize = 256 * 1024 * 1024;
+        
         // this is enough to upload 4k x 4x @ RGBA8u with mips, 8k x 8k compressed
         // with mips @96MB
-        [self createStagingBufffer:128 * 1024 * 1024];
+        [self createStagingBufffer:kStagingBufferSize];
     }
 
     // TODO: first make sure have enough buffer to upload, otherwise need to queue
@@ -699,7 +748,10 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
     id<MTLTexture> texture = [self createTexture:image isPrivate:true];
     if (!texture)
         return nil;
-
+    
+    // set a label so can identify in captures
+    texture.label = [NSString stringWithUTF8String:name];
+    
     // this is index where texture will be added
     uint32_t textureIndex = (uint32_t)_blitTextures.count;
 
@@ -731,6 +783,7 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
 
     uint32_t numChunks = image.totalChunks();
 
+    // This offset, needs to keep incrementing.  Cleared in blit code.
     uint32_t bufferOffset = _bufferOffset;
 
     for (uint32_t i = 0; i < numMips; ++i) {
@@ -739,6 +792,12 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
         // pad buffer offset to a multiple of the blockSize
         bufferOffset = alignOffset(bufferOffset, blockSize);
 
+        if ((bufferOffset + mipLevel.length * numChunks) > _buffer.allocatedSize) {
+            KLOGE("kramv", "Ran out of buffer space to upload images");
+            return nil;
+        }
+        
+        
         // this may have to decompress the level data
         if (!image.unpackLevel(i, mipData + mipLevel.offset,
                                bufferData + bufferOffset)) {

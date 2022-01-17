@@ -21,6 +21,17 @@
 		706EF25526D17C85001C950E /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF25426D17C85001C950E /* Metal.framework */; };
 		706EF25726D17C9D001C950E /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF25626D17C9D001C950E /* AppKit.framework */; };
 		706EF26726D17DFA001C950E /* libate.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF25926D17CAA001C950E /* libate.tbd */; };
+		70833665271575E50077BCB6 /* GLTF.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70833664271575E50077BCB6 /* GLTF.framework */; };
+		70833666271575E50077BCB6 /* GLTF.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 70833664271575E50077BCB6 /* GLTF.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		70833669271575EA0077BCB6 /* GLTFMTL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70833668271575EA0077BCB6 /* GLTFMTL.framework */; };
+		7083366A271575EA0077BCB6 /* GLTFMTL.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 70833668271575EA0077BCB6 /* GLTFMTL.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		708D44CA272B022500783DCE /* pbr.metal in Sources */ = {isa = PBXBuildFile; fileRef = 708D44C6272B022500783DCE /* pbr.metal */; };
+		708D44CB272B022500783DCE /* hdr.metal in Sources */ = {isa = PBXBuildFile; fileRef = 708D44C7272B022500783DCE /* hdr.metal */; };
+		708D44CC272B022500783DCE /* skybox.metal in Sources */ = {isa = PBXBuildFile; fileRef = 708D44C8272B022500783DCE /* skybox.metal */; };
+		708D44CD272B022500783DCE /* brdf.metal in Sources */ = {isa = PBXBuildFile; fileRef = 708D44C9272B022500783DCE /* brdf.metal */; };
+		708D44D0272B03BF00783DCE /* pbr.txt in Resources */ = {isa = PBXBuildFile; fileRef = 708D44CF272B03BF00783DCE /* pbr.txt */; };
+		708D44D4272FA4C800783DCE /* tropical_beach.ktx in Resources */ = {isa = PBXBuildFile; fileRef = 708D44D2272FA4C800783DCE /* tropical_beach.ktx */; };
+		708D44D5272FA4C800783DCE /* piazza_san_marco.ktx in Resources */ = {isa = PBXBuildFile; fileRef = 708D44D3272FA4C800783DCE /* piazza_san_marco.ktx */; };
 		70E33EC826E536BF00CBA422 /* QuickLookThumbnailing.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC726E536BF00CBA422 /* QuickLookThumbnailing.framework */; };
 		70E33ECA26E536BF00CBA422 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC926E536BF00CBA422 /* Quartz.framework */; };
 		70E33ECE26E536BF00CBA422 /* KramThumbnailProvider.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70E33ECD26E536BF00CBA422 /* KramThumbnailProvider.mm */; };
@@ -58,6 +69,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		70833667271575E50077BCB6 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				70833666271575E50077BCB6 /* GLTF.framework in Embed Frameworks */,
+				7083366A271575EA0077BCB6 /* GLTFMTL.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		70E33ED426E536BF00CBA422 /* Embed App Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -94,6 +117,17 @@
 		706EF25426D17C85001C950E /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		706EF25626D17C9D001C950E /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		706EF25926D17CAA001C950E /* libate.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libate.tbd; path = usr/lib/libate.tbd; sourceTree = SDKROOT; };
+		7083365D2715642C0077BCB6 /* GLTF.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GLTF.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		70833661271564320077BCB6 /* GLTFMTL.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GLTFMTL.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		70833664271575E50077BCB6 /* GLTF.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GLTF.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		70833668271575EA0077BCB6 /* GLTFMTL.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GLTFMTL.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		708D44C6272B022500783DCE /* pbr.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = pbr.metal; sourceTree = "<group>"; };
+		708D44C7272B022500783DCE /* hdr.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = hdr.metal; sourceTree = "<group>"; };
+		708D44C8272B022500783DCE /* skybox.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = skybox.metal; sourceTree = "<group>"; };
+		708D44C9272B022500783DCE /* brdf.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = brdf.metal; sourceTree = "<group>"; };
+		708D44CF272B03BF00783DCE /* pbr.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = pbr.txt; sourceTree = "<group>"; };
+		708D44D2272FA4C800783DCE /* tropical_beach.ktx */ = {isa = PBXFileReference; lastKnownFileType = file; path = tropical_beach.ktx; sourceTree = "<group>"; };
+		708D44D3272FA4C800783DCE /* piazza_san_marco.ktx */ = {isa = PBXFileReference; lastKnownFileType = file; path = piazza_san_marco.ktx; sourceTree = "<group>"; };
 		70E33EC626E536BF00CBA422 /* kram-thumb.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "kram-thumb.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E33EC726E536BF00CBA422 /* QuickLookThumbnailing.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLookThumbnailing.framework; path = System/Library/Frameworks/QuickLookThumbnailing.framework; sourceTree = SDKROOT; };
 		70E33EC926E536BF00CBA422 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
@@ -120,9 +154,11 @@
 				706EF25226D17C6F001C950E /* MetalKit.framework in Frameworks */,
 				706EF25526D17C85001C950E /* Metal.framework in Frameworks */,
 				706EF25726D17C9D001C950E /* AppKit.framework in Frameworks */,
+				70833669271575EA0077BCB6 /* GLTFMTL.framework in Frameworks */,
 				706EF26726D17DFA001C950E /* libate.tbd in Frameworks */,
 				706EF24F26D17C43001C950E /* Foundation.framework in Frameworks */,
 				706EF24926D17BC2001C950E /* libkram.a in Frameworks */,
+				70833665271575E50077BCB6 /* GLTF.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -158,6 +194,8 @@
 		706EF20626D17A26001C950E = {
 			isa = PBXGroup;
 			children = (
+				708D44D1272FA4C800783DCE /* Textures */,
+				708D44C5272B01E900783DCE /* Shaders */,
 				706EF22926D17A81001C950E /* kramv */,
 				70E33ECB26E536BF00CBA422 /* kram-thumb */,
 				70E33EE426E5478900CBA422 /* kram-preview */,
@@ -185,8 +223,6 @@
 				706EF23026D17A81001C950E /* KramLoader.mm */,
 				706EF23226D17A81001C950E /* KramRenderer.h */,
 				706EF23526D17A81001C950E /* KramLoader.h */,
-				706EF22E26D17A81001C950E /* KramShaders.h */,
-				706EF23626D17A81001C950E /* KramShaders.metal */,
 				706EF23726D17A81001C950E /* KramRenderer.mm */,
 				706EF22B26D17A81001C950E /* kramv.entitlements */,
 				706EF23126D17A81001C950E /* Assets.xcassets */,
@@ -200,6 +236,10 @@
 		706EF24726D17BC2001C950E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				70833668271575EA0077BCB6 /* GLTFMTL.framework */,
+				70833664271575E50077BCB6 /* GLTF.framework */,
+				70833661271564320077BCB6 /* GLTFMTL.framework */,
+				7083365D2715642C0077BCB6 /* GLTF.framework */,
 				70E33EDC26E537AD00CBA422 /* Accelerate.framework */,
 				70E33EDA26E5379900CBA422 /* CoreGraphics.framework */,
 				706EF25926D17CAA001C950E /* libate.tbd */,
@@ -213,6 +253,31 @@
 				70E33EC926E536BF00CBA422 /* Quartz.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		708D44C5272B01E900783DCE /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				706EF22E26D17A81001C950E /* KramShaders.h */,
+				706EF23626D17A81001C950E /* KramShaders.metal */,
+				708D44C9272B022500783DCE /* brdf.metal */,
+				708D44C7272B022500783DCE /* hdr.metal */,
+				708D44C6272B022500783DCE /* pbr.metal */,
+				708D44CF272B03BF00783DCE /* pbr.txt */,
+				708D44C8272B022500783DCE /* skybox.metal */,
+			);
+			name = Shaders;
+			path = ../kramv/Shaders;
+			sourceTree = "<group>";
+		};
+		708D44D1272FA4C800783DCE /* Textures */ = {
+			isa = PBXGroup;
+			children = (
+				708D44D2272FA4C800783DCE /* tropical_beach.ktx */,
+				708D44D3272FA4C800783DCE /* piazza_san_marco.ktx */,
+			);
+			name = Textures;
+			path = ../kramv/Textures;
 			sourceTree = "<group>";
 		};
 		70E33ECB26E536BF00CBA422 /* kram-thumb */ = {
@@ -251,6 +316,7 @@
 				706EF20C26D17A26001C950E /* Frameworks */,
 				706EF20D26D17A26001C950E /* Resources */,
 				70E33ED426E536BF00CBA422 /* Embed App Extensions */,
+				70833667271575E50077BCB6 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -343,6 +409,9 @@
 			files = (
 				706EF23E26D17A81001C950E /* Main.storyboard in Resources */,
 				706EF23D26D17A81001C950E /* Assets.xcassets in Resources */,
+				708D44D0272B03BF00783DCE /* pbr.txt in Resources */,
+				708D44D4272FA4C800783DCE /* tropical_beach.ktx in Resources */,
+				708D44D5272FA4C800783DCE /* piazza_san_marco.ktx in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -373,6 +442,10 @@
 				706EF23926D17A81001C950E /* KramViewerMain.mm in Sources */,
 				706EF23B26D17A81001C950E /* KramViewerBase.cpp in Sources */,
 				706EF23F26D17A81001C950E /* KramShaders.metal in Sources */,
+				708D44CD272B022500783DCE /* brdf.metal in Sources */,
+				708D44CA272B022500783DCE /* pbr.metal in Sources */,
+				708D44CC272B022500783DCE /* skybox.metal in Sources */,
+				708D44CB272B022500783DCE /* hdr.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -479,19 +552,21 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/../libkram/kram",
-					"$(PROJECT_DIR)/../libkram/eastl/include",
-				);
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/kram";
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				MTL_LANGUAGE_REVISION = UseDeploymentTarget;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
-					"-DCOMPILE_EASTL=1",
+					"-DCOMPILE_EASTL=0",
 					"-include",
 					KramConfig.h,
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-fcxx-modules",
+					"-fmodules",
 				);
 				SDKROOT = macosx;
 			};
@@ -543,18 +618,20 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/../libkram/kram",
-					"$(PROJECT_DIR)/../libkram/eastl/include",
-				);
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/kram";
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				MTL_LANGUAGE_REVISION = UseDeploymentTarget;
 				OTHER_CFLAGS = (
-					"-DCOMPILE_EASTL=1",
+					"-DCOMPILE_EASTL=0",
 					"-include",
 					KramConfig.h,
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-fcxx-modules",
+					"-fmodules",
 				);
 				SDKROOT = macosx;
 			};

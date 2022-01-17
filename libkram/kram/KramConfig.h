@@ -161,6 +161,8 @@
 #define SUPPORT_RGB 1
 #endif
 
+// This needs debug support that native stl already has.
+// EASTL only seems to define that for Visual Studio, and not lldb
 #define USE_EASTL COMPILE_EASTL
 #if USE_EASTL
 

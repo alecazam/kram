@@ -131,8 +131,12 @@ public:
 
     // the 2d view doesn't want to inset pixels for clamp, or point sampling is
     // thrown off expecially on small 4x4 textures
+#if USE_PERSPECTIVE
+    bool is3DView = true; // only use perspective
+#else
     bool is3DView = false;
-
+#endif
+    
     // TODO: Might eliminate this, since mips are either built with or without
     // srgb and disabling with a MTLView caused many flags to have to be set on
     // MTLTexture
@@ -150,6 +154,9 @@ public:
     // whether files are pulled from folder(s)
     bool isFolder = false;
 
+    // image vs. gltf model
+    bool isModel = false;
+    
     // can sample from drawable or from single source texture
     bool isEyedropperFromDrawable();
 
@@ -206,7 +213,8 @@ public:
 
     LightingMode lightingMode = LightingModeDiffuse;
 
-    float4x4 projectionViewModelMatrix;
+    // have multiple models, so don't store this, use split projView and modelMatrix
+    //float4x4 projectionViewModelMatrix;
     bool isInverted;
 
     // cached on load, raw info about the texture from libkram
@@ -229,6 +237,12 @@ public:
     
     const char *meshNumberName(uint32_t meshNumber) const;
     
+    float imageAspectRatio() const {
+        float ar = 1.0f;
+        if (meshNumber == 0 && !isModel && imageBoundsY > 0)
+            ar = imageBoundsX / (float)imageBoundsY;
+        return ar;
+    }
     string lastFilename;
     double lastTimestamp = 0.0;
 
@@ -238,8 +252,13 @@ public:
 
 float4x4 matrix4x4_translation(float tx, float ty, float tz);
 
+float4x4 perspective_rhs(float fovyRadians, float aspect, float nearZ, float
+                         farZ, bool isReverseZ);
+
 float4x4 orthographic_rhs(float width, float height, float nearZ, float farZ,
                           bool isReverseZ);
+
+float4x4 matrix4x4_rotation(float radians, vector_float3 axis);
 
 void printChannels(string &tmp, const string &label, float4 c,
                    int32_t numChannels, bool isFloat, bool isSigned);

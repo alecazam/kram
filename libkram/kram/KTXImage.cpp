@@ -420,8 +420,8 @@ using mymap = unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo>;
 static mymap* gFormatTable = nullptr;
 
 // thumbnailing can hit this from multiple threads
-using mymutex = std::mutex;
-using lock_t = std::unique_lock<mymutex>;
+using mymutex = std::recursive_mutex;
+using mylock = std::unique_lock<mymutex>;
 static mymutex gFormatTableMutex;
 
 static bool initFormatsIfNeeded()
@@ -430,7 +430,7 @@ static bool initFormatsIfNeeded()
         return true;
     }
     
-    lock_t lock(gFormatTableMutex);
+    mylock lock(gFormatTableMutex);
     
     if (gFormatTable) {
         return true;

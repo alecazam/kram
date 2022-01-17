@@ -499,7 +499,7 @@ void skinPosAndBasis(thread float4& position, thread float3& tangent, thread flo
         tangent = (float4(tangent, 0.0) * bindPoseToBoneTransform);
 }
 
-float3x3 toFloat3x3(float4x4 m)
+inline float3x3 toFloat3x3(float4x4 m)
 {
     return float3x3(m[0].xyz, m[1].xyz, m[2].xyz);
 }
@@ -640,49 +640,57 @@ vertex ColorInOut DrawCubeVS(
     ColorInOut out = DrawImageFunc(in, uniforms, uniformsLevel);
     
     // convert to -1 to 1
-    float3 uvw = out.texCoordXYZ;
-    uvw.xy = toSnorm(uvw.xy);
-    uvw.z = 1.0;
-    
-    // switch to the face
-    switch(uniformsLevel.face) {
-        case 0: // x
-            uvw = uvw.zyx;
-            uvw.zy *= -1; // to match original cube image
-            break;
-            
-        case 1: // -x
-            uvw = uvw.zyx;
-            uvw.yz *= -1;
-            uvw.z *= -1; // to match PVR
-            uvw.x = -1;
-            break;
-            
-        case 2: // y
-            uvw = uvw.xzy;
-            break;
-            
-        case 3: // -y
-            uvw = uvw.xzy;
-            uvw.xz *= -1;
-            uvw.x *= -1; // to match PVR
-            uvw.y = -1;
-            break;
-            
-        case 4: // z
-            uvw = uvw.xyz; // noop
-            uvw.y *= -1;
-            break;
-            
-        case 5: // -z
-            uvw = uvw.xyz;
-            uvw.xy *= -1;
-            uvw.z = -1;
-            break;
-    }
+    float3 uvw;
 
-    out.texCoordXYZ = uvw;
+    // if preview, then actually sample from cube map
+    // and don't override to the face
+    if (uniforms.isPreview) {
+        uvw = 2 * in.position.xyz; // use model-space pos
+    }
+    else {
+        uvw = out.texCoordXYZ;
+        uvw.xy = toSnorm(uvw.xy);
+        uvw.z = 1.0;
+        
+        // switch to the face
+        switch(uniformsLevel.face) {
+            case 0: // x
+                uvw = uvw.zyx;
+                uvw.zy *= -1; // to match original cube image
+                break;
+                
+            case 1: // -x
+                uvw = uvw.zyx;
+                uvw.yz *= -1;
+                uvw.z *= -1; // to match PVR
+                uvw.x = -1;
+                break;
+                
+            case 2: // y
+                uvw = uvw.xzy;
+                break;
+                
+            case 3: // -y
+                uvw = uvw.xzy;
+                uvw.xz *= -1;
+                uvw.x *= -1; // to match PVR
+                uvw.y = -1;
+                break;
+                
+            case 4: // z
+                uvw = uvw.xyz; // noop
+                uvw.y *= -1;
+                break;
+                
+            case 5: // -z
+                uvw = uvw.xyz;
+                uvw.xy *= -1;
+                uvw.z = -1;
+                break;
+        }
+    }
     
+    out.texCoordXYZ = uvw;
     return out;
 }
 

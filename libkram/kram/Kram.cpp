@@ -78,9 +78,25 @@ bool isPNGFilename(const uint8_t* data, size_t dataSize)
     return true;
 }
 
+// this aliases the existing string, so can't chop extension
+inline const char* toFilenameShort(const char* filename)
+{
+    const char* filenameShort = strrchr(filename, '/');
+    if (filenameShort == nullptr) {
+        filenameShort = filename;
+    }
+    else {
+        filenameShort += 1;
+    }
+    return filenameShort;
+}
+
 bool KTXImageData::open(const char* filename, KTXImage& image)
 {
     close();
+
+    // set name from filename
+    _name = toFilenameShort(filename);
 
     if (isPNGFilename(filename)) {
         return openPNG(filename, image);

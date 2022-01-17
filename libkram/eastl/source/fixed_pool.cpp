@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
-
+#if USE_EASTL
 
 #include <EASTL/internal/fixed_pool.h>
 #include <EASTL/fixed_allocator.h>
@@ -53,7 +53,7 @@ namespace eastl
 } // namespace eastl
 
 
-
+#endif
 
 
 

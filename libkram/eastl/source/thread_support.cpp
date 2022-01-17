@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Copyright (c) Electronic Arts Inc. All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
-
+#if USE_EASTL
 
 #include <EASTL/internal/config.h>
 #include <EASTL/internal/thread_support.h>
@@ -106,7 +106,7 @@ namespace eastl
 } // namespace eastl
 
 
-
+#endif
 
 
 

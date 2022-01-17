@@ -26,6 +26,11 @@ public:
     // This releases all memory associated with this class
     void close();
 
+    // Allow caller to set a label that is passed onto created texture.
+    // If loaded from filename, then defaults to that.
+    void setName(const char* name) { _name = name; }
+    const char* name() const { return _name.c_str(); }
+
 private:
     // Open png image into a KTXImage as a single-level mip
     // Only handles 2d case and only srgba/rgba conversion.
@@ -36,6 +41,7 @@ private:
     bool openPNG(const uint8_t* data, size_t dataSize, KTXImage& image);
 
 private:
+    string _name;
     MmapHelper mmapHelper;
     vector<uint8_t> fileData;
     bool isMmap = false;

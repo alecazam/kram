@@ -41,7 +41,7 @@ namespace HDR_Encode {
 #ifdef USE_RAMPS
 #include <mutex>
 static int g_init_ramps = 0;
-std::mutex mtx;
+std::recursive_mutex mtx;
 #endif
 
 

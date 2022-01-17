@@ -299,260 +299,6 @@
 		706EF1DD26D166C5001C950E /* libate.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF12A26D159F9001C950E /* libate.tbd */; };
 		706EF26426D17DCC001C950E /* ateencoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF926D1583E001C950E /* ateencoder.mm */; };
 		706EFC2426D1C39B001C950E /* ateencoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF926D1583E001C950E /* ateencoder.mm */; };
-		706EFD6126D3473F001C950E /* eaunits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4126D3473F001C950E /* eaunits.h */; };
-		706EFD6226D3473F001C950E /* eaunits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4126D3473F001C950E /* eaunits.h */; };
-		706EFD6326D3473F001C950E /* version.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4226D3473F001C950E /* version.h */; };
-		706EFD6426D3473F001C950E /* version.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4226D3473F001C950E /* version.h */; };
-		706EFD6526D3473F001C950E /* eacompilertraits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4426D3473F001C950E /* eacompilertraits.h */; };
-		706EFD6626D3473F001C950E /* eacompilertraits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4426D3473F001C950E /* eacompilertraits.h */; };
-		706EFD6726D3473F001C950E /* eacompiler.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4526D3473F001C950E /* eacompiler.h */; };
-		706EFD6826D3473F001C950E /* eacompiler.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4526D3473F001C950E /* eacompiler.h */; };
-		706EFD6926D3473F001C950E /* eaplatform.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4626D3473F001C950E /* eaplatform.h */; };
-		706EFD6A26D3473F001C950E /* eaplatform.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4626D3473F001C950E /* eaplatform.h */; };
-		706EFD6B26D3473F001C950E /* eastdarg.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4726D3473F001C950E /* eastdarg.h */; };
-		706EFD6C26D3473F001C950E /* eastdarg.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4726D3473F001C950E /* eastdarg.h */; };
-		706EFD6D26D3473F001C950E /* eahave.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4826D3473F001C950E /* eahave.h */; };
-		706EFD6E26D3473F001C950E /* eahave.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4826D3473F001C950E /* eahave.h */; };
-		706EFD6F26D3473F001C950E /* nullptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4926D3473F001C950E /* nullptr.h */; };
-		706EFD7026D3473F001C950E /* nullptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4926D3473F001C950E /* nullptr.h */; };
-		706EFD7126D3473F001C950E /* int128.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4A26D3473F001C950E /* int128.h */; };
-		706EFD7226D3473F001C950E /* int128.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4A26D3473F001C950E /* int128.h */; };
-		706EFD7326D3473F001C950E /* earesult.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4B26D3473F001C950E /* earesult.h */; };
-		706EFD7426D3473F001C950E /* earesult.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4B26D3473F001C950E /* earesult.h */; };
-		706EFD7526D3473F001C950E /* eabase.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4C26D3473F001C950E /* eabase.h */; };
-		706EFD7626D3473F001C950E /* eabase.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4C26D3473F001C950E /* eabase.h */; };
-		706EFD7726D3473F001C950E /* scoped_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4E26D3473F001C950E /* scoped_ptr.h */; };
-		706EFD7826D3473F001C950E /* scoped_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4E26D3473F001C950E /* scoped_ptr.h */; };
-		706EFD7926D3473F001C950E /* unordered_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4F26D3473F001C950E /* unordered_map.h */; };
-		706EFD7A26D3473F001C950E /* unordered_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC4F26D3473F001C950E /* unordered_map.h */; };
-		706EFD7B26D3473F001C950E /* fixed_hash_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5026D3473F001C950E /* fixed_hash_set.h */; };
-		706EFD7C26D3473F001C950E /* fixed_hash_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5026D3473F001C950E /* fixed_hash_set.h */; };
-		706EFD7D26D3473F001C950E /* bitset.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5126D3473F001C950E /* bitset.h */; };
-		706EFD7E26D3473F001C950E /* bitset.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5126D3473F001C950E /* bitset.h */; };
-		706EFD7F26D3473F001C950E /* tuple_vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5326D3473F001C950E /* tuple_vector.h */; };
-		706EFD8026D3473F001C950E /* tuple_vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5326D3473F001C950E /* tuple_vector.h */; };
-		706EFD8126D3473F001C950E /* lru_cache.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5426D3473F001C950E /* lru_cache.h */; };
-		706EFD8226D3473F001C950E /* lru_cache.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5426D3473F001C950E /* lru_cache.h */; };
-		706EFD8326D3473F001C950E /* ring_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5526D3473F001C950E /* ring_buffer.h */; };
-		706EFD8426D3473F001C950E /* ring_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5526D3473F001C950E /* ring_buffer.h */; };
-		706EFD8526D3473F001C950E /* fixed_tuple_vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5626D3473F001C950E /* fixed_tuple_vector.h */; };
-		706EFD8626D3473F001C950E /* fixed_tuple_vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5626D3473F001C950E /* fixed_tuple_vector.h */; };
-		706EFD8726D3473F001C950E /* sort_extra.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5726D3473F001C950E /* sort_extra.h */; };
-		706EFD8826D3473F001C950E /* sort_extra.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5726D3473F001C950E /* sort_extra.h */; };
-		706EFD8926D3473F001C950E /* intrusive_slist.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5826D3473F001C950E /* intrusive_slist.h */; };
-		706EFD8A26D3473F001C950E /* intrusive_slist.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5826D3473F001C950E /* intrusive_slist.h */; };
-		706EFD8B26D3473F001C950E /* list_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5926D3473F001C950E /* list_map.h */; };
-		706EFD8C26D3473F001C950E /* list_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5926D3473F001C950E /* list_map.h */; };
-		706EFD8D26D3473F001C950E /* call_traits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5A26D3473F001C950E /* call_traits.h */; };
-		706EFD8E26D3473F001C950E /* call_traits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5A26D3473F001C950E /* call_traits.h */; };
-		706EFD8F26D3473F001C950E /* compressed_pair.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5B26D3473F001C950E /* compressed_pair.h */; };
-		706EFD9026D3473F001C950E /* compressed_pair.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5B26D3473F001C950E /* compressed_pair.h */; };
-		706EFD9126D3473F001C950E /* intrusive_sdlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5C26D3473F001C950E /* intrusive_sdlist.h */; };
-		706EFD9226D3473F001C950E /* intrusive_sdlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5C26D3473F001C950E /* intrusive_sdlist.h */; };
-		706EFD9326D3473F001C950E /* adaptors.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5D26D3473F001C950E /* adaptors.h */; };
-		706EFD9426D3473F001C950E /* adaptors.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5D26D3473F001C950E /* adaptors.h */; };
-		706EFD9526D3473F001C950E /* fixed_ring_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5E26D3473F001C950E /* fixed_ring_buffer.h */; };
-		706EFD9626D3473F001C950E /* fixed_ring_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5E26D3473F001C950E /* fixed_ring_buffer.h */; };
-		706EFD9726D3473F001C950E /* intrusive_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5F26D3473F001C950E /* intrusive_ptr.h */; };
-		706EFD9826D3473F001C950E /* intrusive_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC5F26D3473F001C950E /* intrusive_ptr.h */; };
-		706EFD9926D3473F001C950E /* fixed_function.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6026D3473F001C950E /* fixed_function.h */; };
-		706EFD9A26D3473F001C950E /* fixed_function.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6026D3473F001C950E /* fixed_function.h */; };
-		706EFD9B26D3473F001C950E /* safe_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6126D3473F001C950E /* safe_ptr.h */; };
-		706EFD9C26D3473F001C950E /* safe_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6126D3473F001C950E /* safe_ptr.h */; };
-		706EFD9D26D3473F001C950E /* bitvector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6226D3473F001C950E /* bitvector.h */; };
-		706EFD9E26D3473F001C950E /* bitvector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6226D3473F001C950E /* bitvector.h */; };
-		706EFD9F26D3473F001C950E /* segmented_vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6326D3473F001C950E /* segmented_vector.h */; };
-		706EFDA026D3473F001C950E /* segmented_vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6326D3473F001C950E /* segmented_vector.h */; };
-		706EFDA126D3473F001C950E /* weak_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6426D3473F001C950E /* weak_ptr.h */; };
-		706EFDA226D3473F001C950E /* weak_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6426D3473F001C950E /* weak_ptr.h */; };
-		706EFDA326D3473F001C950E /* hash_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6526D3473F001C950E /* hash_map.h */; };
-		706EFDA426D3473F001C950E /* hash_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6526D3473F001C950E /* hash_map.h */; };
-		706EFDA526D3473F001C950E /* algorithm.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6626D3473F001C950E /* algorithm.h */; };
-		706EFDA626D3473F001C950E /* algorithm.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6626D3473F001C950E /* algorithm.h */; };
-		706EFDA726D3473F001C950E /* allocator_malloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6726D3473F001C950E /* allocator_malloc.h */; };
-		706EFDA826D3473F001C950E /* allocator_malloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6726D3473F001C950E /* allocator_malloc.h */; };
-		706EFDA926D3473F001C950E /* map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6826D3473F001C950E /* map.h */; };
-		706EFDAA26D3473F001C950E /* map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6826D3473F001C950E /* map.h */; };
-		706EFDAB26D3473F001C950E /* initializer_list.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6926D3473F001C950E /* initializer_list.h */; };
-		706EFDAC26D3473F001C950E /* initializer_list.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6926D3473F001C950E /* initializer_list.h */; };
-		706EFDAD26D3473F001C950E /* numeric.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6A26D3473F001C950E /* numeric.h */; };
-		706EFDAE26D3473F001C950E /* numeric.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6A26D3473F001C950E /* numeric.h */; };
-		706EFDAF26D3473F001C950E /* chrono.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6B26D3473F001C950E /* chrono.h */; };
-		706EFDB026D3473F001C950E /* chrono.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6B26D3473F001C950E /* chrono.h */; };
-		706EFDB126D3473F001C950E /* fixed_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6C26D3473F001C950E /* fixed_set.h */; };
-		706EFDB226D3473F001C950E /* fixed_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6C26D3473F001C950E /* fixed_set.h */; };
-		706EFDB326D3473F001C950E /* linked_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6D26D3473F001C950E /* linked_ptr.h */; };
-		706EFDB426D3473F001C950E /* linked_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6D26D3473F001C950E /* linked_ptr.h */; };
-		706EFDB526D3473F001C950E /* fixed_slist.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6E26D3473F001C950E /* fixed_slist.h */; };
-		706EFDB626D3473F001C950E /* fixed_slist.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC6E26D3473F001C950E /* fixed_slist.h */; };
-		706EFDB726D3473F001C950E /* type_compound.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7026D3473F001C950E /* type_compound.h */; };
-		706EFDB826D3473F001C950E /* type_compound.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7026D3473F001C950E /* type_compound.h */; };
-		706EFDB926D3473F001C950E /* move_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7126D3473F001C950E /* move_help.h */; };
-		706EFDBA26D3473F001C950E /* move_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7126D3473F001C950E /* move_help.h */; };
-		706EFDBB26D3473F001C950E /* enable_shared.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7226D3473F001C950E /* enable_shared.h */; };
-		706EFDBC26D3473F001C950E /* enable_shared.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7226D3473F001C950E /* enable_shared.h */; };
-		706EFDBD26D3473F001C950E /* function_detail.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7326D3473F001C950E /* function_detail.h */; };
-		706EFDBE26D3473F001C950E /* function_detail.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7326D3473F001C950E /* function_detail.h */; };
-		706EFDBF26D3473F001C950E /* piecewise_construct_t.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7426D3473F001C950E /* piecewise_construct_t.h */; };
-		706EFDC026D3473F001C950E /* piecewise_construct_t.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7426D3473F001C950E /* piecewise_construct_t.h */; };
-		706EFDC126D3473F001C950E /* generic_iterator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7526D3473F001C950E /* generic_iterator.h */; };
-		706EFDC226D3473F001C950E /* generic_iterator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7526D3473F001C950E /* generic_iterator.h */; };
-		706EFDC326D3473F001C950E /* type_fundamental.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7626D3473F001C950E /* type_fundamental.h */; };
-		706EFDC426D3473F001C950E /* type_fundamental.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7626D3473F001C950E /* type_fundamental.h */; };
-		706EFDC526D3473F001C950E /* char_traits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7726D3473F001C950E /* char_traits.h */; };
-		706EFDC626D3473F001C950E /* char_traits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7726D3473F001C950E /* char_traits.h */; };
-		706EFDC726D3473F001C950E /* copy_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7826D3473F001C950E /* copy_help.h */; };
-		706EFDC826D3473F001C950E /* copy_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7826D3473F001C950E /* copy_help.h */; };
-		706EFDC926D3473F001C950E /* fill_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7926D3473F001C950E /* fill_help.h */; };
-		706EFDCA26D3473F001C950E /* fill_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7926D3473F001C950E /* fill_help.h */; };
-		706EFDCB26D3473F001C950E /* type_properties.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7A26D3473F001C950E /* type_properties.h */; };
-		706EFDCC26D3473F001C950E /* type_properties.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7A26D3473F001C950E /* type_properties.h */; };
-		706EFDCD26D3473F001C950E /* fixed_pool.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7B26D3473F001C950E /* fixed_pool.h */; };
-		706EFDCE26D3473F001C950E /* fixed_pool.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7B26D3473F001C950E /* fixed_pool.h */; };
-		706EFDCF26D3473F001C950E /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7C26D3473F001C950E /* config.h */; };
-		706EFDD026D3473F001C950E /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7C26D3473F001C950E /* config.h */; };
-		706EFDD126D3473F001C950E /* in_place_t.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7D26D3473F001C950E /* in_place_t.h */; };
-		706EFDD226D3473F001C950E /* in_place_t.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7D26D3473F001C950E /* in_place_t.h */; };
-		706EFDD326D3473F001C950E /* hashtable.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7E26D3473F001C950E /* hashtable.h */; };
-		706EFDD426D3473F001C950E /* hashtable.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7E26D3473F001C950E /* hashtable.h */; };
-		706EFDD526D3473F001C950E /* type_pod.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7F26D3473F001C950E /* type_pod.h */; };
-		706EFDD626D3473F001C950E /* type_pod.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC7F26D3473F001C950E /* type_pod.h */; };
-		706EFDD726D3473F001C950E /* pair_fwd_decls.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8026D3473F001C950E /* pair_fwd_decls.h */; };
-		706EFDD826D3473F001C950E /* pair_fwd_decls.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8026D3473F001C950E /* pair_fwd_decls.h */; };
-		706EFDD926D3473F001C950E /* type_transformations.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8126D3473F001C950E /* type_transformations.h */; };
-		706EFDDA26D3473F001C950E /* type_transformations.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8126D3473F001C950E /* type_transformations.h */; };
-		706EFDDB26D3473F001C950E /* integer_sequence.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8226D3473F001C950E /* integer_sequence.h */; };
-		706EFDDC26D3473F001C950E /* integer_sequence.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8226D3473F001C950E /* integer_sequence.h */; };
-		706EFDDD26D3473F001C950E /* smart_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8326D3473F001C950E /* smart_ptr.h */; };
-		706EFDDE26D3473F001C950E /* smart_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8326D3473F001C950E /* smart_ptr.h */; };
-		706EFDDF26D3473F001C950E /* tuple_fwd_decls.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8426D3473F001C950E /* tuple_fwd_decls.h */; };
-		706EFDE026D3473F001C950E /* tuple_fwd_decls.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFC8426D3473F001C950E /* tuple_fwd_decls.h */; };
-		706EFEF526D34740001C950E /* thread_support.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1726D3473F001C950E /* thread_support.h */; };
-		706EFEF626D34740001C950E /* thread_support.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1726D3473F001C950E /* thread_support.h */; };
-		706EFEF726D34740001C950E /* intrusive_hashtable.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1826D3473F001C950E /* intrusive_hashtable.h */; };
-		706EFEF826D34740001C950E /* intrusive_hashtable.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1826D3473F001C950E /* intrusive_hashtable.h */; };
-		706EFEF926D34740001C950E /* mem_fn.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1926D3473F001C950E /* mem_fn.h */; };
-		706EFEFA26D34740001C950E /* mem_fn.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1926D3473F001C950E /* mem_fn.h */; };
-		706EFEFB26D34740001C950E /* function_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1A26D3473F001C950E /* function_help.h */; };
-		706EFEFC26D34740001C950E /* function_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1A26D3473F001C950E /* function_help.h */; };
-		706EFEFD26D34740001C950E /* memory_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1B26D3473F001C950E /* memory_base.h */; };
-		706EFEFE26D34740001C950E /* memory_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1B26D3473F001C950E /* memory_base.h */; };
-		706EFEFF26D34740001C950E /* functional_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1C26D3473F001C950E /* functional_base.h */; };
-		706EFF0026D34740001C950E /* functional_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1C26D3473F001C950E /* functional_base.h */; };
-		706EFF0126D34740001C950E /* function.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1D26D3473F001C950E /* function.h */; };
-		706EFF0226D34740001C950E /* function.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1D26D3473F001C950E /* function.h */; };
-		706EFF0326D34740001C950E /* red_black_tree.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1E26D3473F001C950E /* red_black_tree.h */; };
-		706EFF0426D34740001C950E /* red_black_tree.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1E26D3473F001C950E /* red_black_tree.h */; };
-		706EFF0526D34740001C950E /* intrusive_hash_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1F26D3473F001C950E /* intrusive_hash_map.h */; };
-		706EFF0626D34740001C950E /* intrusive_hash_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD1F26D3473F001C950E /* intrusive_hash_map.h */; };
-		706EFF0726D34740001C950E /* fixed_allocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2026D3473F001C950E /* fixed_allocator.h */; };
-		706EFF0826D34740001C950E /* fixed_allocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2026D3473F001C950E /* fixed_allocator.h */; };
-		706EFF0926D34740001C950E /* priority_queue.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2126D3473F001C950E /* priority_queue.h */; };
-		706EFF0A26D34740001C950E /* priority_queue.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2126D3473F001C950E /* priority_queue.h */; };
-		706EFF0B26D34740001C950E /* vector_multimap.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2226D3473F001C950E /* vector_multimap.h */; };
-		706EFF0C26D34740001C950E /* vector_multimap.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2226D3473F001C950E /* vector_multimap.h */; };
-		706EFF0D26D34740001C950E /* optional.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2326D3473F001C950E /* optional.h */; };
-		706EFF0E26D34740001C950E /* optional.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2326D3473F001C950E /* optional.h */; };
-		706EFF0F26D34740001C950E /* functional.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2426D3473F001C950E /* functional.h */; };
-		706EFF1026D34740001C950E /* functional.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2426D3473F001C950E /* functional.h */; };
-		706EFF1126D34740001C950E /* vector_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2526D3473F001C950E /* vector_set.h */; };
-		706EFF1226D34740001C950E /* vector_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2526D3473F001C950E /* vector_set.h */; };
-		706EFF1326D34740001C950E /* shared_array.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2626D3473F001C950E /* shared_array.h */; };
-		706EFF1426D34740001C950E /* shared_array.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2626D3473F001C950E /* shared_array.h */; };
-		706EFF1526D34740001C950E /* string_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2726D3473F001C950E /* string_map.h */; };
-		706EFF1626D34740001C950E /* string_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2726D3473F001C950E /* string_map.h */; };
-		706EFF1726D34740001C950E /* list.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2826D3473F001C950E /* list.h */; };
-		706EFF1826D34740001C950E /* list.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2826D3473F001C950E /* list.h */; };
-		706EFF1926D34740001C950E /* fixed_substring.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2926D3473F001C950E /* fixed_substring.h */; };
-		706EFF1A26D34740001C950E /* fixed_substring.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2926D3473F001C950E /* fixed_substring.h */; };
-		706EFF1B26D34740001C950E /* fixed_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2A26D3473F001C950E /* fixed_map.h */; };
-		706EFF1C26D34740001C950E /* fixed_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2A26D3473F001C950E /* fixed_map.h */; };
-		706EFF1D26D34740001C950E /* numeric_limits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2B26D3473F001C950E /* numeric_limits.h */; };
-		706EFF1E26D34740001C950E /* numeric_limits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2B26D3473F001C950E /* numeric_limits.h */; };
-		706EFF1F26D34740001C950E /* shared_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2C26D3473F001C950E /* shared_ptr.h */; };
-		706EFF2026D34740001C950E /* shared_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2C26D3473F001C950E /* shared_ptr.h */; };
-		706EFF2126D34740001C950E /* fixed_list.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2D26D3473F001C950E /* fixed_list.h */; };
-		706EFF2226D34740001C950E /* fixed_list.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2D26D3473F001C950E /* fixed_list.h */; };
-		706EFF2326D34740001C950E /* allocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2E26D3473F001C950E /* allocator.h */; };
-		706EFF2426D34740001C950E /* allocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2E26D3473F001C950E /* allocator.h */; };
-		706EFF2526D34740001C950E /* fixed_string.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2F26D3473F001C950E /* fixed_string.h */; };
-		706EFF2626D34740001C950E /* fixed_string.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD2F26D3473F001C950E /* fixed_string.h */; };
-		706EFF2726D34740001C950E /* slist.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3026D3473F001C950E /* slist.h */; };
-		706EFF2826D34740001C950E /* slist.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3026D3473F001C950E /* slist.h */; };
-		706EFF2926D34740001C950E /* array.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3126D3473F001C950E /* array.h */; };
-		706EFF2A26D34740001C950E /* array.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3126D3473F001C950E /* array.h */; };
-		706EFF2B26D34740001C950E /* unique_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3226D3473F001C950E /* unique_ptr.h */; };
-		706EFF2C26D34740001C950E /* unique_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3226D3473F001C950E /* unique_ptr.h */; };
-		706EFF2D26D34740001C950E /* intrusive_hash_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3326D3473F001C950E /* intrusive_hash_set.h */; };
-		706EFF2E26D34740001C950E /* intrusive_hash_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3326D3473F001C950E /* intrusive_hash_set.h */; };
-		706EFF2F26D34740001C950E /* deque.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3426D3473F001C950E /* deque.h */; };
-		706EFF3026D34740001C950E /* deque.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3426D3473F001C950E /* deque.h */; };
-		706EFF3126D34740001C950E /* stack.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3526D3473F001C950E /* stack.h */; };
-		706EFF3226D34740001C950E /* stack.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3526D3473F001C950E /* stack.h */; };
-		706EFF3326D34740001C950E /* ratio.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3626D3473F001C950E /* ratio.h */; };
-		706EFF3426D34740001C950E /* ratio.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3626D3473F001C950E /* ratio.h */; };
-		706EFF3526D34740001C950E /* vector_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3726D3473F001C950E /* vector_map.h */; };
-		706EFF3626D34740001C950E /* vector_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3726D3473F001C950E /* vector_map.h */; };
-		706EFF3726D34740001C950E /* intrusive_list.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3826D3473F001C950E /* intrusive_list.h */; };
-		706EFF3826D34740001C950E /* intrusive_list.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3826D3473F001C950E /* intrusive_list.h */; };
-		706EFF3926D34740001C950E /* heap.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3926D3473F001C950E /* heap.h */; };
-		706EFF3A26D34740001C950E /* heap.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3926D3473F001C950E /* heap.h */; };
-		706EFF3B26D34740001C950E /* tuple.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3A26D3473F001C950E /* tuple.h */; };
-		706EFF3C26D34740001C950E /* tuple.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3A26D3473F001C950E /* tuple.h */; };
-		706EFF3D26D34740001C950E /* memory.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3B26D3473F001C950E /* memory.h */; };
-		706EFF3E26D34740001C950E /* memory.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3B26D3473F001C950E /* memory.h */; };
-		706EFF3F26D34740001C950E /* vector_multiset.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3C26D3473F001C950E /* vector_multiset.h */; };
-		706EFF4026D34740001C950E /* vector_multiset.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3C26D3473F001C950E /* vector_multiset.h */; };
-		706EFF4126D34740001C950E /* fixed_vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3D26D3473F001C950E /* fixed_vector.h */; };
-		706EFF4226D34740001C950E /* fixed_vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3D26D3473F001C950E /* fixed_vector.h */; };
-		706EFF4326D34740001C950E /* unordered_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3E26D3473F001C950E /* unordered_set.h */; };
-		706EFF4426D34740001C950E /* unordered_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3E26D3473F001C950E /* unordered_set.h */; };
-		706EFF4526D34740001C950E /* span.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3F26D3473F001C950E /* span.h */; };
-		706EFF4626D34740001C950E /* span.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD3F26D3473F001C950E /* span.h */; };
-		706EFF4726D34740001C950E /* string_hash_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4026D3473F001C950E /* string_hash_map.h */; };
-		706EFF4826D34740001C950E /* string_hash_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4026D3473F001C950E /* string_hash_map.h */; };
-		706EFF4926D34740001C950E /* meta.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4126D3473F001C950E /* meta.h */; };
-		706EFF4A26D34740001C950E /* meta.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4126D3473F001C950E /* meta.h */; };
-		706EFF4B26D34740001C950E /* sort.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4226D3473F001C950E /* sort.h */; };
-		706EFF4C26D34740001C950E /* sort.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4226D3473F001C950E /* sort.h */; };
-		706EFF4D26D34740001C950E /* core_allocator_adapter.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4326D3473F001C950E /* core_allocator_adapter.h */; };
-		706EFF4E26D34740001C950E /* core_allocator_adapter.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4326D3473F001C950E /* core_allocator_adapter.h */; };
-		706EFF4F26D34740001C950E /* linked_array.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4426D3473F001C950E /* linked_array.h */; };
-		706EFF5026D34740001C950E /* linked_array.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4426D3473F001C950E /* linked_array.h */; };
-		706EFF5126D34740001C950E /* core_allocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4526D3473F001C950E /* core_allocator.h */; };
-		706EFF5226D34740001C950E /* core_allocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4526D3473F001C950E /* core_allocator.h */; };
-		706EFF5326D34740001C950E /* scoped_array.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4626D3473F001C950E /* scoped_array.h */; };
-		706EFF5426D34740001C950E /* scoped_array.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4626D3473F001C950E /* scoped_array.h */; };
-		706EFF5526D34740001C950E /* utility.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4726D3473F001C950E /* utility.h */; };
-		706EFF5626D34740001C950E /* utility.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4726D3473F001C950E /* utility.h */; };
-		706EFF5726D34740001C950E /* type_traits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4826D3473F001C950E /* type_traits.h */; };
-		706EFF5826D34740001C950E /* type_traits.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4826D3473F001C950E /* type_traits.h */; };
-		706EFF5926D34740001C950E /* vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4926D3473F001C950E /* vector.h */; };
-		706EFF5A26D34740001C950E /* vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4926D3473F001C950E /* vector.h */; };
-		706EFF5B26D34740001C950E /* fixed_hash_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4A26D3473F001C950E /* fixed_hash_map.h */; };
-		706EFF5C26D34740001C950E /* fixed_hash_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4A26D3473F001C950E /* fixed_hash_map.h */; };
-		706EFF5D26D34740001C950E /* hash_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4B26D3473F001C950E /* hash_set.h */; };
-		706EFF5E26D34740001C950E /* hash_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4B26D3473F001C950E /* hash_set.h */; };
-		706EFF5F26D34740001C950E /* finally.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4C26D3473F001C950E /* finally.h */; };
-		706EFF6026D34740001C950E /* finally.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4C26D3473F001C950E /* finally.h */; };
-		706EFF6126D34740001C950E /* iterator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4D26D3473F001C950E /* iterator.h */; };
-		706EFF6226D34740001C950E /* iterator.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4D26D3473F001C950E /* iterator.h */; };
-		706EFF6326D34740001C950E /* any.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4E26D3473F001C950E /* any.h */; };
-		706EFF6426D34740001C950E /* any.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4E26D3473F001C950E /* any.h */; };
-		706EFF6526D34740001C950E /* queue.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4F26D3473F001C950E /* queue.h */; };
-		706EFF6626D34740001C950E /* queue.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD4F26D3473F001C950E /* queue.h */; };
-		706EFF6726D34740001C950E /* random.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5026D3473F001C950E /* random.h */; };
-		706EFF6826D34740001C950E /* random.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5026D3473F001C950E /* random.h */; };
-		706EFF6926D34740001C950E /* string_view.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5126D3473F001C950E /* string_view.h */; };
-		706EFF6A26D34740001C950E /* string_view.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5126D3473F001C950E /* string_view.h */; };
-		706EFF6B26D34740001C950E /* set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5226D3473F001C950E /* set.h */; };
-		706EFF6C26D34740001C950E /* set.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5226D3473F001C950E /* set.h */; };
-		706EFF6D26D34740001C950E /* basic_string.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5326D3473F001C950E /* basic_string.h */; };
-		706EFF6E26D34740001C950E /* basic_string.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5326D3473F001C950E /* basic_string.h */; };
-		706EFF6F26D34740001C950E /* variant.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5426D3473F001C950E /* variant.h */; };
-		706EFF7026D34740001C950E /* variant.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5426D3473F001C950E /* variant.h */; };
-		706EFF7126D34740001C950E /* atomic.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5526D3473F001C950E /* atomic.h */; };
-		706EFF7226D34740001C950E /* atomic.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EFD5526D3473F001C950E /* atomic.h */; };
 		706EFF7326D34740001C950E /* thread_support.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5726D3473F001C950E /* thread_support.cpp */; };
 		706EFF7426D34740001C950E /* thread_support.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5726D3473F001C950E /* thread_support.cpp */; };
 		706EFF7526D34740001C950E /* assert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5826D3473F001C950E /* assert.cpp */; };
@@ -1122,37 +868,37 @@
 			isa = PBXGroup;
 			children = (
 				706EEE1926D1583F001C950E /* KramZipHelper.h */,
-				706EEE1A26D1583F001C950E /* KramTimer.cpp */,
-				706EEE1B26D1583F001C950E /* KTXImage.cpp */,
-				706EEE1C26D1583F001C950E /* KramMipper.cpp */,
-				706EEE1D26D1583F001C950E /* _clang-format */,
 				706EEE1E26D1583F001C950E /* KramZipHelper.cpp */,
-				706EEE1F26D1583F001C950E /* TaskSystem.cpp */,
-				706EEE2026D1583F001C950E /* KramSDFMipper.h */,
-				706EEE2126D1583F001C950E /* KramFileHelper.cpp */,
-				706EEE2226D1583F001C950E /* sse2neon.h */,
 				706EEE2326D1583F001C950E /* KramConfig.h */,
-				706EEE2426D1583F001C950E /* KramLog.h */,
 				706EEE2526D1583F001C950E /* KramImageInfo.cpp */,
 				706EEE2626D1583F001C950E /* KramImage.cpp */,
 				706EEE2726D1583F001C950E /* KramLib.h */,
+				706EEE2426D1583F001C950E /* KramLog.h */,
 				706EEE2826D1583F001C950E /* KramLog.cpp */,
 				706EEE2926D1583F001C950E /* KramVersion.h */,
 				706EEE2A26D1583F001C950E /* KramImage.h */,
+				706EEE2026D1583F001C950E /* KramSDFMipper.h */,
 				706EEE2B26D1583F001C950E /* KramSDFMipper.cpp */,
-				706EEE2C26D1583F001C950E /* KramMmapHelper.cpp */,
-				706EEE2D26D1583F001C950E /* win_mmap.h */,
-				706EEE2E26D1583F001C950E /* Kram.h */,
-				706EEE2F26D1583F001C950E /* float4a.cpp */,
 				706EEE3026D1583F001C950E /* KTXImage.h */,
+				706EEE1B26D1583F001C950E /* KTXImage.cpp */,
 				706EEE3126D1583F001C950E /* KramImageInfo.h */,
 				706EEE3226D1583F001C950E /* KramTimer.h */,
+				706EEE1A26D1583F001C950E /* KramTimer.cpp */,
 				706EEE3326D1583F001C950E /* KramMmapHelper.h */,
-				706EEE3426D1583F001C950E /* float4a.h */,
+				706EEE2C26D1583F001C950E /* KramMmapHelper.cpp */,
+				706EEE2E26D1583F001C950E /* Kram.h */,
 				706EEE3526D1583F001C950E /* Kram.cpp */,
 				706EEE3626D1583F001C950E /* KramFileHelper.h */,
+				706EEE2126D1583F001C950E /* KramFileHelper.cpp */,
 				706EEE3726D1583F001C950E /* KramMipper.h */,
+				706EEE1C26D1583F001C950E /* KramMipper.cpp */,
+				706EEE1D26D1583F001C950E /* _clang-format */,
+				706EEE2D26D1583F001C950E /* win_mmap.h */,
+				706EEE2226D1583F001C950E /* sse2neon.h */,
+				706EEE3426D1583F001C950E /* float4a.h */,
+				706EEE2F26D1583F001C950E /* float4a.cpp */,
 				706EEE3826D1583F001C950E /* TaskSystem.h */,
+				706EEE1F26D1583F001C950E /* TaskSystem.cpp */,
 			);
 			path = kram;
 			sourceTree = "<group>";
@@ -1450,213 +1196,86 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				706EFDB526D3473F001C950E /* fixed_slist.h in Headers */,
-				706EFD8D26D3473F001C950E /* call_traits.h in Headers */,
-				706EFDCD26D3473F001C950E /* fixed_pool.h in Headers */,
-				706EFF5126D34740001C950E /* core_allocator.h in Headers */,
-				706EFF3326D34740001C950E /* ratio.h in Headers */,
 				706EEFD126D15984001C950E /* EtcErrorMetric.h in Headers */,
-				706EFD6326D3473F001C950E /* version.h in Headers */,
-				706EFF5726D34740001C950E /* type_traits.h in Headers */,
-				706EFF6926D34740001C950E /* string_view.h in Headers */,
 				706EEFD226D15984001C950E /* EtcColor.h in Headers */,
-				706EFF5B26D34740001C950E /* fixed_hash_map.h in Headers */,
 				706EEFD326D15984001C950E /* EtcDifferentialTrys.h in Headers */,
-				706EFF0926D34740001C950E /* priority_queue.h in Headers */,
-				706EFF0326D34740001C950E /* red_black_tree.h in Headers */,
 				706EEFD426D15984001C950E /* EtcBlock4x4Encoding_RGB8.h in Headers */,
-				706EFF3526D34740001C950E /* vector_map.h in Headers */,
-				706EFDCF26D3473F001C950E /* config.h in Headers */,
 				706EEFD526D15984001C950E /* EtcConfig.h in Headers */,
-				706EFF2B26D34740001C950E /* unique_ptr.h in Headers */,
 				706EEFD626D15984001C950E /* EtcBlock4x4Encoding_R11.h in Headers */,
 				706EEFD726D15984001C950E /* EtcBlock4x4Encoding_RG11.h in Headers */,
-				706EFF2526D34740001C950E /* fixed_string.h in Headers */,
-				706EFD7F26D3473F001C950E /* tuple_vector.h in Headers */,
 				706EEFD826D15984001C950E /* EtcMath.h in Headers */,
 				706EEFD926D15984001C950E /* EtcIndividualTrys.h in Headers */,
-				706EFF2726D34740001C950E /* slist.h in Headers */,
 				706EEFDA26D15984001C950E /* EtcBlock4x4EncodingBits.h in Headers */,
-				706EFDBB26D3473F001C950E /* enable_shared.h in Headers */,
 				706EEFDB26D15984001C950E /* EtcBlock4x4Encoding_RGB8A1.h in Headers */,
-				706EFDDB26D3473F001C950E /* integer_sequence.h in Headers */,
-				706EFD9326D3473F001C950E /* adaptors.h in Headers */,
-				706EFDA126D3473F001C950E /* weak_ptr.h in Headers */,
-				706EFDD726D3473F001C950E /* pair_fwd_decls.h in Headers */,
-				706EFF6526D34740001C950E /* queue.h in Headers */,
-				706EFD8726D3473F001C950E /* sort_extra.h in Headers */,
-				706EFD6F26D3473F001C950E /* nullptr.h in Headers */,
 				706EEFDC26D15984001C950E /* EtcBlock4x4.h in Headers */,
 				706EEFDD26D15984001C950E /* Etc.h in Headers */,
-				706EFEFF26D34740001C950E /* functional_base.h in Headers */,
 				706EEFDE26D15984001C950E /* EtcImage.h in Headers */,
-				706EFDDF26D3473F001C950E /* tuple_fwd_decls.h in Headers */,
-				706EFF6D26D34740001C950E /* basic_string.h in Headers */,
-				706EFDB126D3473F001C950E /* fixed_set.h in Headers */,
-				706EFDAB26D3473F001C950E /* initializer_list.h in Headers */,
-				706EFF1126D34740001C950E /* vector_set.h in Headers */,
 				708A6A9C2708CE4700BA5410 /* bc6h_encode.h in Headers */,
-				706EFF1F26D34740001C950E /* shared_ptr.h in Headers */,
-				706EFF1526D34740001C950E /* string_map.h in Headers */,
 				706EEFDF26D15984001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
 				706EEFE026D15984001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
-				706EFEF726D34740001C950E /* intrusive_hashtable.h in Headers */,
 				706EEFE126D15984001C950E /* EtcColorFloatRGBA.h in Headers */,
-				706EFDC126D3473F001C950E /* generic_iterator.h in Headers */,
-				706EFDD326D3473F001C950E /* hashtable.h in Headers */,
-				706EFD7326D3473F001C950E /* earesult.h in Headers */,
-				706EFD9B26D3473F001C950E /* safe_ptr.h in Headers */,
-				706EFD7526D3473F001C950E /* eabase.h in Headers */,
-				706EFD6D26D3473F001C950E /* eahave.h in Headers */,
-				706EFF4926D34740001C950E /* meta.h in Headers */,
-				706EFF1926D34740001C950E /* fixed_substring.h in Headers */,
-				706EFDD526D3473F001C950E /* type_pod.h in Headers */,
 				706EEFE226D15984001C950E /* EtcBlock4x4Encoding.h in Headers */,
 				706EEFE326D15984001C950E /* rgbcx.h in Headers */,
-				706EFF4726D34740001C950E /* string_hash_map.h in Headers */,
-				706EFF1D26D34740001C950E /* numeric_limits.h in Headers */,
-				706EFDBF26D3473F001C950E /* piecewise_construct_t.h in Headers */,
-				706EFD8526D3473F001C950E /* fixed_tuple_vector.h in Headers */,
 				706EEFE426D15984001C950E /* bc7enc.h in Headers */,
 				706EEFE526D15984001C950E /* bc7decomp.h in Headers */,
-				706EFEF526D34740001C950E /* thread_support.h in Headers */,
 				706EEFE626D15984001C950E /* rgbcx_table4.h in Headers */,
-				706EFD6526D3473F001C950E /* eacompilertraits.h in Headers */,
 				706EEFE726D15984001C950E /* astcenc_diagnostic_trace.h in Headers */,
 				706EEFE826D15984001C950E /* astcenc_vecmathlib.h in Headers */,
-				706EFD9726D3473F001C950E /* intrusive_ptr.h in Headers */,
 				706EEFE926D15984001C950E /* astcenc_vecmathlib_avx2_8.h in Headers */,
 				706EEFEA26D15984001C950E /* astcenc.h in Headers */,
-				706EFEFD26D34740001C950E /* memory_base.h in Headers */,
-				706EFD9526D3473F001C950E /* fixed_ring_buffer.h in Headers */,
-				706EFF4326D34740001C950E /* unordered_set.h in Headers */,
-				706EFF2F26D34740001C950E /* deque.h in Headers */,
 				706EEFEB26D15984001C950E /* astcenc_internal.h in Headers */,
 				706EEFEC26D15984001C950E /* astcenc_vecmathlib_neon_armv7_4.h in Headers */,
 				706EEFED26D15984001C950E /* astcenc_vecmathlib_sse_4.h in Headers */,
 				706EEFEE26D15984001C950E /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EEFEF26D15984001C950E /* astcenc_vecmathlib_none_4.h in Headers */,
-				706EFF5926D34740001C950E /* vector.h in Headers */,
 				706EEFF026D15984001C950E /* astcenc_vecmathlib_common_4.h in Headers */,
-				706EFD7926D3473F001C950E /* unordered_map.h in Headers */,
-				706EFF3D26D34740001C950E /* memory.h in Headers */,
-				706EFF1726D34740001C950E /* list.h in Headers */,
-				706EFF1326D34740001C950E /* shared_array.h in Headers */,
-				706EFF5326D34740001C950E /* scoped_array.h in Headers */,
-				706EFDA726D3473F001C950E /* allocator_malloc.h in Headers */,
-				706EFD8326D3473F001C950E /* ring_buffer.h in Headers */,
-				706EFD8B26D3473F001C950E /* list_map.h in Headers */,
-				706EFF2D26D34740001C950E /* intrusive_hash_set.h in Headers */,
-				706EFF3726D34740001C950E /* intrusive_list.h in Headers */,
 				706EEFF126D15984001C950E /* astcenc_mathlib.h in Headers */,
-				706EFF4B26D34740001C950E /* sort.h in Headers */,
-				706EFD9F26D3473F001C950E /* segmented_vector.h in Headers */,
-				706EFF2126D34740001C950E /* fixed_list.h in Headers */,
-				706EFF3926D34740001C950E /* heap.h in Headers */,
-				706EFDD926D3473F001C950E /* type_transformations.h in Headers */,
-				706EFDB926D3473F001C950E /* move_help.h in Headers */,
 				706EEFF226D15984001C950E /* ateencoder.h in Headers */,
-				706EFF0D26D34740001C950E /* optional.h in Headers */,
-				706EFDCB26D3473F001C950E /* type_properties.h in Headers */,
 				706EEFF326D15984001C950E /* basisu_transcoder.h in Headers */,
 				70A7BD3227092A1200DBCCF7 /* hdr_encode.h in Headers */,
-				706EFD6926D3473F001C950E /* eaplatform.h in Headers */,
-				706EFF0126D34740001C950E /* function.h in Headers */,
-				706EFD8126D3473F001C950E /* lru_cache.h in Headers */,
 				708A6AA02708CE4700BA5410 /* bc6h_definitions.h in Headers */,
-				706EFF6F26D34740001C950E /* variant.h in Headers */,
-				706EFDBD26D3473F001C950E /* function_detail.h in Headers */,
-				706EFDA526D3473F001C950E /* algorithm.h in Headers */,
 				706EEFF426D15984001C950E /* basisu_containers.h in Headers */,
-				706EFD8F26D3473F001C950E /* compressed_pair.h in Headers */,
 				706EEFF526D15985001C950E /* basisu_containers_impl.h in Headers */,
-				706EFF5F26D34740001C950E /* finally.h in Headers */,
 				706EEFF626D15985001C950E /* basisu_transcoder_internal.h in Headers */,
-				706EFF4126D34740001C950E /* fixed_vector.h in Headers */,
-				706EFD6B26D3473F001C950E /* eastdarg.h in Headers */,
-				706EFDC926D3473F001C950E /* fill_help.h in Headers */,
 				706EEFF726D15985001C950E /* basisu_global_selector_cb.h in Headers */,
 				706EEFF826D15985001C950E /* basisu_transcoder_uastc.h in Headers */,
 				706EEFF926D15985001C950E /* basisu_global_selector_palette.h in Headers */,
-				706EFD7B26D3473F001C950E /* fixed_hash_set.h in Headers */,
-				706EFD9126D3473F001C950E /* intrusive_sdlist.h in Headers */,
-				706EFF4F26D34740001C950E /* linked_array.h in Headers */,
 				706EEFFA26D15985001C950E /* basisu.h in Headers */,
-				706EFD7126D3473F001C950E /* int128.h in Headers */,
-				706EFF6B26D34740001C950E /* set.h in Headers */,
-				706EFDC326D3473F001C950E /* type_fundamental.h in Headers */,
-				706EFDAD26D3473F001C950E /* numeric.h in Headers */,
-				706EFF5D26D34740001C950E /* hash_set.h in Headers */,
 				706EEFFB26D15985001C950E /* basisu_file_headers.h in Headers */,
-				706EFF3F26D34740001C950E /* vector_multiset.h in Headers */,
 				706EEFFC26D15985001C950E /* miniz.h in Headers */,
 				706EEFFD26D15985001C950E /* hedistance.h in Headers */,
 				706EEFFE26D15985001C950E /* stb_rect_pack.h in Headers */,
-				706EFDC526D3473F001C950E /* char_traits.h in Headers */,
 				706EEFFF26D15985001C950E /* KramZipHelper.h in Headers */,
-				706EFD7D26D3473F001C950E /* bitset.h in Headers */,
-				706EFF3B26D34740001C950E /* tuple.h in Headers */,
 				706EF00026D15985001C950E /* KramSDFMipper.h in Headers */,
 				706EF00126D15985001C950E /* sse2neon.h in Headers */,
 				706EF00226D15985001C950E /* KramConfig.h in Headers */,
-				706EFDB726D3473F001C950E /* type_compound.h in Headers */,
-				706EFF0B26D34740001C950E /* vector_multimap.h in Headers */,
-				706EFDA326D3473F001C950E /* hash_map.h in Headers */,
 				706EF00326D15985001C950E /* KramLog.h in Headers */,
-				706EFD8926D3473F001C950E /* intrusive_slist.h in Headers */,
 				706EF00426D15985001C950E /* KramLib.h in Headers */,
 				706EF00526D15985001C950E /* KramVersion.h in Headers */,
-				706EFF0F26D34740001C950E /* functional.h in Headers */,
-				706EFD6126D3473F001C950E /* eaunits.h in Headers */,
 				706EF00626D15985001C950E /* KramImage.h in Headers */,
-				706EFF4526D34740001C950E /* span.h in Headers */,
-				706EFD9D26D3473F001C950E /* bitvector.h in Headers */,
-				706EFF6326D34740001C950E /* any.h in Headers */,
-				706EFDDD26D3473F001C950E /* smart_ptr.h in Headers */,
-				706EFDA926D3473F001C950E /* map.h in Headers */,
-				706EFDC726D3473F001C950E /* copy_help.h in Headers */,
-				706EFF2326D34740001C950E /* allocator.h in Headers */,
 				706EF00726D15985001C950E /* win_mmap.h in Headers */,
-				706EFF1B26D34740001C950E /* fixed_map.h in Headers */,
 				706EF00826D15985001C950E /* Kram.h in Headers */,
-				706EFF7126D34740001C950E /* atomic.h in Headers */,
-				706EFF2926D34740001C950E /* array.h in Headers */,
 				706EF00926D15985001C950E /* KTXImage.h in Headers */,
-				706EFDD126D3473F001C950E /* in_place_t.h in Headers */,
-				706EFF4D26D34740001C950E /* core_allocator_adapter.h in Headers */,
 				706EF00A26D15985001C950E /* KramImageInfo.h in Headers */,
 				706EF00B26D15985001C950E /* KramTimer.h in Headers */,
-				706EFD7726D3473F001C950E /* scoped_ptr.h in Headers */,
 				706EF00C26D15985001C950E /* KramMmapHelper.h in Headers */,
-				706EFF6726D34740001C950E /* random.h in Headers */,
 				706EF00D26D15985001C950E /* float4a.h in Headers */,
-				706EFF3126D34740001C950E /* stack.h in Headers */,
 				706EF00E26D15985001C950E /* KramFileHelper.h in Headers */,
 				706EF00F26D15985001C950E /* KramMipper.h in Headers */,
 				706EF01026D15985001C950E /* TaskSystem.h in Headers */,
-				706EFD6726D3473F001C950E /* eacompiler.h in Headers */,
 				706EF01126D15985001C950E /* squish.h in Headers */,
-				706EFF5526D34740001C950E /* utility.h in Headers */,
 				706EF01226D15985001C950E /* clusterfit.h in Headers */,
 				706EF01326D15985001C950E /* colourfit.h in Headers */,
-				706EFEFB26D34740001C950E /* function_help.h in Headers */,
-				706EFD9926D3473F001C950E /* fixed_function.h in Headers */,
 				706EF01426D15985001C950E /* alpha.h in Headers */,
 				708A6A982708CE4700BA5410 /* bc6h_decode.h in Headers */,
 				706EF01526D15985001C950E /* singlecolourfit.h in Headers */,
-				706EFF0526D34740001C950E /* intrusive_hash_map.h in Headers */,
 				706EF01626D15985001C950E /* maths.h in Headers */,
 				706EF01726D15985001C950E /* colourset.h in Headers */,
 				708A6AA42708CE4700BA5410 /* bc6h_utils.h in Headers */,
 				706EF01826D15985001C950E /* colourblock.h in Headers */,
-				706EFDAF26D3473F001C950E /* chrono.h in Headers */,
 				706EF01926D15985001C950E /* rangefit.h in Headers */,
 				706EF01A26D15985001C950E /* zstd.h in Headers */,
-				706EFF6126D34740001C950E /* iterator.h in Headers */,
-				706EFF0726D34740001C950E /* fixed_allocator.h in Headers */,
-				706EFEF926D34740001C950E /* mem_fn.h in Headers */,
 				706EF01B26D15985001C950E /* lodepng.h in Headers */,
-				706EFDB326D3473F001C950E /* linked_ptr.h in Headers */,
 				706EF01C26D15985001C950E /* tmpfileplus.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1665,213 +1284,86 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				706EFDB626D3473F001C950E /* fixed_slist.h in Headers */,
-				706EFD8E26D3473F001C950E /* call_traits.h in Headers */,
-				706EFDCE26D3473F001C950E /* fixed_pool.h in Headers */,
-				706EFF5226D34740001C950E /* core_allocator.h in Headers */,
-				706EFF3426D34740001C950E /* ratio.h in Headers */,
 				706EF14B26D166C5001C950E /* EtcErrorMetric.h in Headers */,
-				706EFD6426D3473F001C950E /* version.h in Headers */,
-				706EFF5826D34740001C950E /* type_traits.h in Headers */,
-				706EFF6A26D34740001C950E /* string_view.h in Headers */,
 				706EF14C26D166C5001C950E /* EtcColor.h in Headers */,
-				706EFF5C26D34740001C950E /* fixed_hash_map.h in Headers */,
 				706EF14D26D166C5001C950E /* EtcDifferentialTrys.h in Headers */,
-				706EFF0A26D34740001C950E /* priority_queue.h in Headers */,
-				706EFF0426D34740001C950E /* red_black_tree.h in Headers */,
 				706EF14E26D166C5001C950E /* EtcBlock4x4Encoding_RGB8.h in Headers */,
-				706EFF3626D34740001C950E /* vector_map.h in Headers */,
-				706EFDD026D3473F001C950E /* config.h in Headers */,
 				706EF14F26D166C5001C950E /* EtcConfig.h in Headers */,
-				706EFF2C26D34740001C950E /* unique_ptr.h in Headers */,
 				706EF15026D166C5001C950E /* EtcBlock4x4Encoding_R11.h in Headers */,
 				706EF15126D166C5001C950E /* EtcBlock4x4Encoding_RG11.h in Headers */,
-				706EFF2626D34740001C950E /* fixed_string.h in Headers */,
-				706EFD8026D3473F001C950E /* tuple_vector.h in Headers */,
 				706EF15226D166C5001C950E /* EtcMath.h in Headers */,
 				706EF15326D166C5001C950E /* EtcIndividualTrys.h in Headers */,
-				706EFF2826D34740001C950E /* slist.h in Headers */,
 				706EF15426D166C5001C950E /* EtcBlock4x4EncodingBits.h in Headers */,
-				706EFDBC26D3473F001C950E /* enable_shared.h in Headers */,
 				706EF15526D166C5001C950E /* EtcBlock4x4Encoding_RGB8A1.h in Headers */,
-				706EFDDC26D3473F001C950E /* integer_sequence.h in Headers */,
-				706EFD9426D3473F001C950E /* adaptors.h in Headers */,
-				706EFDA226D3473F001C950E /* weak_ptr.h in Headers */,
-				706EFDD826D3473F001C950E /* pair_fwd_decls.h in Headers */,
-				706EFF6626D34740001C950E /* queue.h in Headers */,
-				706EFD8826D3473F001C950E /* sort_extra.h in Headers */,
-				706EFD7026D3473F001C950E /* nullptr.h in Headers */,
 				706EF15626D166C5001C950E /* EtcBlock4x4.h in Headers */,
 				706EF15726D166C5001C950E /* Etc.h in Headers */,
-				706EFF0026D34740001C950E /* functional_base.h in Headers */,
 				706EF15826D166C5001C950E /* EtcImage.h in Headers */,
-				706EFDE026D3473F001C950E /* tuple_fwd_decls.h in Headers */,
-				706EFF6E26D34740001C950E /* basic_string.h in Headers */,
-				706EFDB226D3473F001C950E /* fixed_set.h in Headers */,
-				706EFDAC26D3473F001C950E /* initializer_list.h in Headers */,
-				706EFF1226D34740001C950E /* vector_set.h in Headers */,
 				708A6A9D2708CE4700BA5410 /* bc6h_encode.h in Headers */,
-				706EFF2026D34740001C950E /* shared_ptr.h in Headers */,
-				706EFF1626D34740001C950E /* string_map.h in Headers */,
 				706EF15926D166C5001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
 				706EF15A26D166C5001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
-				706EFEF826D34740001C950E /* intrusive_hashtable.h in Headers */,
 				706EF15B26D166C5001C950E /* EtcColorFloatRGBA.h in Headers */,
-				706EFDC226D3473F001C950E /* generic_iterator.h in Headers */,
-				706EFDD426D3473F001C950E /* hashtable.h in Headers */,
-				706EFD7426D3473F001C950E /* earesult.h in Headers */,
-				706EFD9C26D3473F001C950E /* safe_ptr.h in Headers */,
-				706EFD7626D3473F001C950E /* eabase.h in Headers */,
-				706EFD6E26D3473F001C950E /* eahave.h in Headers */,
-				706EFF4A26D34740001C950E /* meta.h in Headers */,
-				706EFF1A26D34740001C950E /* fixed_substring.h in Headers */,
-				706EFDD626D3473F001C950E /* type_pod.h in Headers */,
 				706EF15C26D166C5001C950E /* EtcBlock4x4Encoding.h in Headers */,
 				706EF15D26D166C5001C950E /* rgbcx.h in Headers */,
-				706EFF4826D34740001C950E /* string_hash_map.h in Headers */,
-				706EFF1E26D34740001C950E /* numeric_limits.h in Headers */,
-				706EFDC026D3473F001C950E /* piecewise_construct_t.h in Headers */,
-				706EFD8626D3473F001C950E /* fixed_tuple_vector.h in Headers */,
 				706EF15E26D166C5001C950E /* bc7enc.h in Headers */,
 				706EF15F26D166C5001C950E /* bc7decomp.h in Headers */,
-				706EFEF626D34740001C950E /* thread_support.h in Headers */,
 				706EF16026D166C5001C950E /* rgbcx_table4.h in Headers */,
-				706EFD6626D3473F001C950E /* eacompilertraits.h in Headers */,
 				706EF16126D166C5001C950E /* astcenc_diagnostic_trace.h in Headers */,
 				706EF16226D166C5001C950E /* astcenc_vecmathlib.h in Headers */,
-				706EFD9826D3473F001C950E /* intrusive_ptr.h in Headers */,
 				706EF16326D166C5001C950E /* astcenc_vecmathlib_avx2_8.h in Headers */,
 				706EF16426D166C5001C950E /* astcenc.h in Headers */,
-				706EFEFE26D34740001C950E /* memory_base.h in Headers */,
-				706EFD9626D3473F001C950E /* fixed_ring_buffer.h in Headers */,
-				706EFF4426D34740001C950E /* unordered_set.h in Headers */,
-				706EFF3026D34740001C950E /* deque.h in Headers */,
 				706EF16526D166C5001C950E /* astcenc_internal.h in Headers */,
 				706EF16626D166C5001C950E /* astcenc_vecmathlib_neon_armv7_4.h in Headers */,
 				706EF16726D166C5001C950E /* astcenc_vecmathlib_sse_4.h in Headers */,
 				706EF16826D166C5001C950E /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EF16926D166C5001C950E /* astcenc_vecmathlib_none_4.h in Headers */,
-				706EFF5A26D34740001C950E /* vector.h in Headers */,
 				706EF16A26D166C5001C950E /* astcenc_vecmathlib_common_4.h in Headers */,
-				706EFD7A26D3473F001C950E /* unordered_map.h in Headers */,
-				706EFF3E26D34740001C950E /* memory.h in Headers */,
-				706EFF1826D34740001C950E /* list.h in Headers */,
-				706EFF1426D34740001C950E /* shared_array.h in Headers */,
-				706EFF5426D34740001C950E /* scoped_array.h in Headers */,
-				706EFDA826D3473F001C950E /* allocator_malloc.h in Headers */,
-				706EFD8426D3473F001C950E /* ring_buffer.h in Headers */,
-				706EFD8C26D3473F001C950E /* list_map.h in Headers */,
-				706EFF2E26D34740001C950E /* intrusive_hash_set.h in Headers */,
-				706EFF3826D34740001C950E /* intrusive_list.h in Headers */,
 				706EF16B26D166C5001C950E /* astcenc_mathlib.h in Headers */,
-				706EFF4C26D34740001C950E /* sort.h in Headers */,
-				706EFDA026D3473F001C950E /* segmented_vector.h in Headers */,
-				706EFF2226D34740001C950E /* fixed_list.h in Headers */,
-				706EFF3A26D34740001C950E /* heap.h in Headers */,
-				706EFDDA26D3473F001C950E /* type_transformations.h in Headers */,
-				706EFDBA26D3473F001C950E /* move_help.h in Headers */,
 				706EF16C26D166C5001C950E /* ateencoder.h in Headers */,
-				706EFF0E26D34740001C950E /* optional.h in Headers */,
-				706EFDCC26D3473F001C950E /* type_properties.h in Headers */,
 				706EF16D26D166C5001C950E /* basisu_transcoder.h in Headers */,
 				70A7BD3327092A1200DBCCF7 /* hdr_encode.h in Headers */,
-				706EFD6A26D3473F001C950E /* eaplatform.h in Headers */,
-				706EFF0226D34740001C950E /* function.h in Headers */,
-				706EFD8226D3473F001C950E /* lru_cache.h in Headers */,
 				708A6AA12708CE4700BA5410 /* bc6h_definitions.h in Headers */,
-				706EFF7026D34740001C950E /* variant.h in Headers */,
-				706EFDBE26D3473F001C950E /* function_detail.h in Headers */,
-				706EFDA626D3473F001C950E /* algorithm.h in Headers */,
 				706EF16E26D166C5001C950E /* basisu_containers.h in Headers */,
-				706EFD9026D3473F001C950E /* compressed_pair.h in Headers */,
 				706EF16F26D166C5001C950E /* basisu_containers_impl.h in Headers */,
-				706EFF6026D34740001C950E /* finally.h in Headers */,
 				706EF17026D166C5001C950E /* basisu_transcoder_internal.h in Headers */,
-				706EFF4226D34740001C950E /* fixed_vector.h in Headers */,
-				706EFD6C26D3473F001C950E /* eastdarg.h in Headers */,
-				706EFDCA26D3473F001C950E /* fill_help.h in Headers */,
 				706EF17126D166C5001C950E /* basisu_global_selector_cb.h in Headers */,
 				706EF17226D166C5001C950E /* basisu_transcoder_uastc.h in Headers */,
 				706EF17326D166C5001C950E /* basisu_global_selector_palette.h in Headers */,
-				706EFD7C26D3473F001C950E /* fixed_hash_set.h in Headers */,
-				706EFD9226D3473F001C950E /* intrusive_sdlist.h in Headers */,
-				706EFF5026D34740001C950E /* linked_array.h in Headers */,
 				706EF17426D166C5001C950E /* basisu.h in Headers */,
-				706EFD7226D3473F001C950E /* int128.h in Headers */,
-				706EFF6C26D34740001C950E /* set.h in Headers */,
-				706EFDC426D3473F001C950E /* type_fundamental.h in Headers */,
-				706EFDAE26D3473F001C950E /* numeric.h in Headers */,
-				706EFF5E26D34740001C950E /* hash_set.h in Headers */,
 				706EF17526D166C5001C950E /* basisu_file_headers.h in Headers */,
-				706EFF4026D34740001C950E /* vector_multiset.h in Headers */,
 				706EF17626D166C5001C950E /* miniz.h in Headers */,
 				706EF17726D166C5001C950E /* hedistance.h in Headers */,
 				706EF17826D166C5001C950E /* stb_rect_pack.h in Headers */,
-				706EFDC626D3473F001C950E /* char_traits.h in Headers */,
 				706EF17926D166C5001C950E /* KramZipHelper.h in Headers */,
-				706EFD7E26D3473F001C950E /* bitset.h in Headers */,
-				706EFF3C26D34740001C950E /* tuple.h in Headers */,
 				706EF17A26D166C5001C950E /* KramSDFMipper.h in Headers */,
 				706EF17B26D166C5001C950E /* sse2neon.h in Headers */,
 				706EF17C26D166C5001C950E /* KramConfig.h in Headers */,
-				706EFDB826D3473F001C950E /* type_compound.h in Headers */,
-				706EFF0C26D34740001C950E /* vector_multimap.h in Headers */,
-				706EFDA426D3473F001C950E /* hash_map.h in Headers */,
 				706EF17D26D166C5001C950E /* KramLog.h in Headers */,
-				706EFD8A26D3473F001C950E /* intrusive_slist.h in Headers */,
 				706EF17E26D166C5001C950E /* KramLib.h in Headers */,
 				706EF17F26D166C5001C950E /* KramVersion.h in Headers */,
-				706EFF1026D34740001C950E /* functional.h in Headers */,
-				706EFD6226D3473F001C950E /* eaunits.h in Headers */,
 				706EF18026D166C5001C950E /* KramImage.h in Headers */,
-				706EFF4626D34740001C950E /* span.h in Headers */,
-				706EFD9E26D3473F001C950E /* bitvector.h in Headers */,
-				706EFF6426D34740001C950E /* any.h in Headers */,
-				706EFDDE26D3473F001C950E /* smart_ptr.h in Headers */,
-				706EFDAA26D3473F001C950E /* map.h in Headers */,
-				706EFDC826D3473F001C950E /* copy_help.h in Headers */,
-				706EFF2426D34740001C950E /* allocator.h in Headers */,
 				706EF18126D166C5001C950E /* win_mmap.h in Headers */,
-				706EFF1C26D34740001C950E /* fixed_map.h in Headers */,
 				706EF18226D166C5001C950E /* Kram.h in Headers */,
-				706EFF7226D34740001C950E /* atomic.h in Headers */,
-				706EFF2A26D34740001C950E /* array.h in Headers */,
 				706EF18326D166C5001C950E /* KTXImage.h in Headers */,
-				706EFDD226D3473F001C950E /* in_place_t.h in Headers */,
-				706EFF4E26D34740001C950E /* core_allocator_adapter.h in Headers */,
 				706EF18426D166C5001C950E /* KramImageInfo.h in Headers */,
 				706EF18526D166C5001C950E /* KramTimer.h in Headers */,
-				706EFD7826D3473F001C950E /* scoped_ptr.h in Headers */,
 				706EF18626D166C5001C950E /* KramMmapHelper.h in Headers */,
-				706EFF6826D34740001C950E /* random.h in Headers */,
 				706EF18726D166C5001C950E /* float4a.h in Headers */,
-				706EFF3226D34740001C950E /* stack.h in Headers */,
 				706EF18826D166C5001C950E /* KramFileHelper.h in Headers */,
 				706EF18926D166C5001C950E /* KramMipper.h in Headers */,
 				706EF18A26D166C5001C950E /* TaskSystem.h in Headers */,
-				706EFD6826D3473F001C950E /* eacompiler.h in Headers */,
 				706EF18B26D166C5001C950E /* squish.h in Headers */,
-				706EFF5626D34740001C950E /* utility.h in Headers */,
 				706EF18C26D166C5001C950E /* clusterfit.h in Headers */,
 				706EF18D26D166C5001C950E /* colourfit.h in Headers */,
-				706EFEFC26D34740001C950E /* function_help.h in Headers */,
-				706EFD9A26D3473F001C950E /* fixed_function.h in Headers */,
 				706EF18E26D166C5001C950E /* alpha.h in Headers */,
 				708A6A992708CE4700BA5410 /* bc6h_decode.h in Headers */,
 				706EF18F26D166C5001C950E /* singlecolourfit.h in Headers */,
-				706EFF0626D34740001C950E /* intrusive_hash_map.h in Headers */,
 				706EF19026D166C5001C950E /* maths.h in Headers */,
 				706EF19126D166C5001C950E /* colourset.h in Headers */,
 				708A6AA52708CE4700BA5410 /* bc6h_utils.h in Headers */,
 				706EF19226D166C5001C950E /* colourblock.h in Headers */,
-				706EFDB026D3473F001C950E /* chrono.h in Headers */,
 				706EF19326D166C5001C950E /* rangefit.h in Headers */,
 				706EF19426D166C5001C950E /* zstd.h in Headers */,
-				706EFF6226D34740001C950E /* iterator.h in Headers */,
-				706EFF0826D34740001C950E /* fixed_allocator.h in Headers */,
-				706EFEFA26D34740001C950E /* mem_fn.h in Headers */,
 				706EF19526D166C5001C950E /* lodepng.h in Headers */,
-				706EFDB426D3473F001C950E /* linked_ptr.h in Headers */,
 				706EF19626D166C5001C950E /* tmpfileplus.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1884,8 +1376,8 @@
 			buildConfigurationList = 706ECDE926D1577A001C950E /* Build configuration list for PBXNativeTarget "kram" */;
 			buildPhases = (
 				706ECDDA26D1577A001C950E /* Headers */,
-				706ECDDB26D1577A001C950E /* Sources */,
 				706ECDDC26D1577A001C950E /* Frameworks */,
+				706ECDDB26D1577A001C950E /* Sources */,
 			);
 			buildRules = (
 			);
@@ -2188,7 +1680,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/eastl/include";
+				HEADER_SEARCH_PATHS = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -2200,7 +1692,7 @@
 					"-DCOMPILE_ETCENC=1",
 					"-DCOMPILE_SQUISH=1",
 					"-DCOMPILE_BCENC=1",
-					"-DCOMPILE_EASTL=1",
+					"-DCOMPILE_EASTL=0",
 					"-DCOMPILE_COMP=1",
 					"-DCOMPILE_BASIS=1",
 					"-include",
@@ -2266,7 +1758,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/eastl/include";
+				HEADER_SEARCH_PATHS = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -2277,7 +1769,7 @@
 					"-DCOMPILE_ETCENC=1",
 					"-DCOMPILE_SQUISH=1",
 					"-DCOMPILE_BCENC=1",
-					"-DCOMPILE_EASTL=1",
+					"-DCOMPILE_EASTL=0",
 					"-DCOMPILE_COMP=1",
 					"-DCOMPILE_BASIS=1",
 					"-include",

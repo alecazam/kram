@@ -2,6 +2,12 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:../gtlf/GLTFMTL/GLTFMTL.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:../gtlf/GLTF/GLTF.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:kram.xcodeproj">
    </FileRef>
    <FileRef

@@ -13,6 +13,7 @@
 //#include <functional>
 //#include <memory>
 #include <mutex>
+#include <condition_variable>
 #include <thread>
 //#include <vector>
 
@@ -23,19 +24,20 @@ using namespace NAMESPACE_STL;
 
 /**************************************************************************************************/
 
-using mymutex = std::mutex; // for mutex
-using lock_t = std::unique_lock<mymutex>;
+using mymutex = std::recursive_mutex;
+using mylock = std::unique_lock<mymutex>;
+using mycondition = std::condition_variable_any;
 
 class notification_queue {
     deque<function<void()>> _q;
     bool _done = false;
     mymutex _mutex;
-    std::condition_variable _ready;
+    mycondition _ready;
 
 public:
     bool try_pop(function<void()>& x)
     {
-        lock_t lock{_mutex, std::try_to_lock};
+        mylock lock{_mutex, std::try_to_lock};
         if (!lock || _q.empty()) {
             return false;
         }
@@ -46,7 +48,7 @@ public:
 
     bool pop(function<void()>& x)
     {
-        lock_t lock{_mutex};
+        mylock lock{_mutex};
         while (_q.empty() && !_done) {
             _ready.wait(lock);  // this is what blocks a given thread to avoid spin loop
         }
@@ -66,7 +68,7 @@ public:
     bool try_push(F&& f)
     {
         {
-            lock_t lock{_mutex, std::try_to_lock};
+            mylock lock{_mutex, std::try_to_lock};
             if (!lock) {
                 return false;
             }
@@ -80,7 +82,7 @@ public:
     void push(F&& f)
     {
         {
-            lock_t lock{_mutex};
+            mylock lock{_mutex};
             // TODO: fix this construct, it's saying no matching sctor for eastl::deque<eastl::function<void ()>>>::value_type
 #if USE_EASTL
             KLOGE("TaskSystem", "Fix eastl deque or function");
@@ -96,7 +98,7 @@ public:
     // has queue been marked done or not
     bool is_done() const
     {
-        lock_t lock{const_cast<mymutex&>(_mutex)};  // ugh
+        mylock lock{const_cast<mymutex&>(_mutex)};  // ugh
         bool done_ = _done;
         return done_;
     }
@@ -105,7 +107,7 @@ public:
     void set_done()
     {
         {
-            lock_t lock{_mutex};
+            mylock lock{_mutex};
             _done = true;
         }
         _ready.notify_all();
