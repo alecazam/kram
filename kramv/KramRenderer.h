@@ -12,7 +12,7 @@
 
 // Turn on GLTF loading support for 3d models.  This relies on Warren Moore's first GLTFKit
 // which only handles import and synchronous loading.
-#define USE_GLTF 0
+#define USE_GLTF 1
 
 // Only use a perspective transform for models/images, otherwise perspective only used for models
 #define USE_PERSPECTIVE 0

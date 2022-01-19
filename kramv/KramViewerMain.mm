@@ -577,7 +577,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // openFile in appDelegate handles "Open in..."
 
     _textSlots.resize(2);
-
+    
     // added for drag-drop support
     [self registerForDraggedTypes:pasteboardTypes];
 
@@ -632,7 +632,6 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 {
     const int32_t numButtons = 31;
     const char *names[numButtons * 2] = {
-
         " ",
         "Play",
         "?",
@@ -1954,8 +1953,9 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     switch (keyCode) {
         // for now hit esc to hide the table views
         case Key::Escape: {
-            _hudHidden = false;
             [self hideTables];
+            
+            _hudHidden = false;
             [self updateHudVisibility];
             break;
         }
@@ -2352,9 +2352,10 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
                 [_shapesTableView scrollRowToVisible:_showSettings->meshNumber];
                 
                 // show the shapes table
-                _tableView.hidden = YES;
+                [self hideTables];
                 _shapesTableView.hidden = NO;
                 
+                // also have to hide hud or it will obscure the visible table
                 _hudHidden = true;
                 [self updateHudVisibility];
                 
@@ -2580,8 +2581,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     [self updateShapesTable];
     
     // hack to see table
-    _tableView.hidden = YES;
-    _shapesTableView.hidden = YES;
+    [self hideTables];
     
     return YES;
 }
@@ -2609,8 +2609,12 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     [self.window makeFirstResponder: _tableView];
     
     // show the files table
+    [self hideTables];
     _tableView.hidden = NO;
-    _shapesTableView.hidden = YES;
+    
+    // also have to hide hud or it will obscure the visible table
+    _hudHidden = true;
+    [self updateHudVisibility];
     
     return [self loadFileFromArchive];
 }
@@ -2638,8 +2642,8 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     [self.window makeFirstResponder: _tableView];
     
     // show the files table
+    [self hideTables];
     _tableView.hidden = NO;
-    _shapesTableView.hidden = YES;
     
     _hudHidden = true;
     [self updateHudVisibility];
@@ -3029,7 +3033,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
             // don't change to this folder if it's devoid of content
             if (files.empty()) {
-#if !USE_GLTF
+#if USE_GLTF
                 // reset the enumerator
                 directoryEnumerator =
                     [[NSFileManager defaultManager]
@@ -3113,9 +3117,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
             [_tableView scrollRowToVisible:_fileFolderIndex];
             
             [self updateShapesTable];
-            
-            _tableView.hidden = YES;
-            _shapesTableView.hidden = YES;
+            [self hideTables];
         }
 
         // now load image from directory
@@ -3429,6 +3431,13 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     return YES;
 }
 
+- (void)setupUI
+{
+    // Load the basic shapes table once
+    [self updateShapesTable];
+    [self hideTables];
+}
+
 - (void)concludeDragOperation:(id)sender
 {
     // did setNeedsDisplay, but already doing that in loadTextureFromURL
@@ -3563,6 +3572,8 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     // think limited to 11 viewws before they must be wrapepd in a container.
     // That's how SwiftUI was.
     [_view addNotifications];
+    
+    [_view setupUI];
     
     // original sample code was sending down _view.bounds.size, but need
     // drawableSize this was causing all sorts of inconsistencies
