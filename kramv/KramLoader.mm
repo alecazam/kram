@@ -8,7 +8,6 @@
 
 //#include <vector>
 //#include <algorithm> // for max
-#include <mm_malloc.h>
 #include <mutex>
 
 #include "KramLib.h"
