@@ -120,9 +120,9 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image)
     }
     
     // make sure to copy mips/slices from DDS array-ordered to mip-ordered for KTX
-    image.width = hdr.width;
-    image.height = hdr.height;
-    image.depth = (hdr.flags & DDSD_DEPTH) ? hdr.depth : 1;
+    image.width = (hdr.flags & DDSD_WIDTH) ? hdr.width : 1;
+    image.height = (hdr.flags & DDSD_HEIGHT) ? hdr.height : 1;
+    image.depth = (hdr.flags & DDSD_DEPTH) ? hdr.depth : 0;
     
     uint32_t mipCount = (hdr.flags & DDSD_MIPMAPCOUNT) ? hdr.mipMapCount : 1;
     
@@ -143,6 +143,7 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image)
     switch(hdr10.resourceDimension) {
         case DDS_DIMENSION_TEXTURE1D:
             image.textureType = MyMTLTextureType1DArray;
+            isArray = true; // kram doesn't support 1d
             break;
         case DDS_DIMENSION_TEXTURE2D:
             if (isCube) {
@@ -157,6 +158,14 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image)
             break;
     }
 
+    // fixuup the values, so that can convert header properly to type in info
+    if (!isArray)
+        ktxHdr.numberOfArrayElements = 0;
+    if (image.textureType != MyMTLTextureType3D)
+        ktxHdr.pixelDepth = 0;
+    if (image.textureType == MyMTLTextureType1DArray)
+        ktxHdr.pixelHeight = 0;
+    
     image.pixelFormat = pixelFormat;
     
     // allocate data
