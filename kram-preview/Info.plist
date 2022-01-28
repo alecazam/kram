@@ -27,7 +27,11 @@
 		<key>NSExtensionAttributes</key>
 		<dict>
 			<key>QLSupportedContentTypes</key>
-			<array/>
+			<array>
+				<string>org.khronos.ktx</string>
+				<string>public.ktx2</string>
+				<string>image/vnd-ms.dds</string>
+			</array>
 			<key>QLSupportsSearchableItems</key>
 			<true/>
 		</dict>

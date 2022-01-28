@@ -30,6 +30,7 @@
 			<array>
 				<string>org.khronos.ktx</string>
 				<string>public.ktx2</string>
+				<string>image/vnd-ms.dds</string>
 			</array>
 			<key>QLThumbnailMinimumDimension</key>
 			<integer>0</integer>

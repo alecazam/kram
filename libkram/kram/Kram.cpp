@@ -16,6 +16,7 @@
 //#include <vector>
 
 #include "KTXImage.h"
+#include "KramDDSHelper.h"
 #include "KramFileHelper.h"
 #include "KramImage.h"  // has config defines, move them out
 #include "KramMmapHelper.h"
@@ -57,13 +58,43 @@ void releaseVector(vector<T>& v)
     v.shrink_to_fit();
 }
 
+bool isKTXFilename(const char* filename)
+{
+    // should really lookg at first 4 bytes of data
+    return endsWithExtension(filename, ".ktx");
+}
+bool isKTX2Filename(const char* filename)
+{
+    // should really lookg at first 4 bytes of data
+    return endsWithExtension(filename, ".ktx2");
+}
+bool isDDSFilename(const char* filename)
+{
+    // should really lookg at first 4 bytes of data
+    return endsWithExtension(filename, ".dds");
+}
 bool isPNGFilename(const char* filename)
 {
     // should really lookg at first 4 bytes of data
     return endsWithExtension(filename, ".png");
 }
 
-bool isPNGFilename(const uint8_t* data, size_t dataSize)
+static bool isDDSFilename(const uint8_t* data, size_t dataSize)
+{
+    // read the 4 chars at the beginning of the file
+    const uint32_t numChars = 4;
+    if (dataSize < numChars)
+        return false;
+
+    const uint8_t kDdsSignature[numChars] = {'D', 'D', 'S', ' '};
+    if (memcmp(data, kDdsSignature, sizeof(kDdsSignature)) != 0) {
+        return false;
+    }
+
+    return true;
+}
+
+static bool isPNGFilename(const uint8_t* data, size_t dataSize)
 {
     // read the 4 chars at the beginning of the file
     const uint32_t numChars = 8;
@@ -135,8 +166,16 @@ bool KTXImageData::open(const char* filename, KTXImage& image)
         dataSize = fileData.size();
     }
 
-    // read the KTXImage in from the data, it will alias mmap or fileData
-    bool isLoaded = image.open(data, dataSize, isInfoOnly);
+    bool isLoaded = true;
+
+    if (isDDSFilename(data, dataSize)) {
+        DDSHelper ddsHelper;
+        isLoaded = ddsHelper.load(data, dataSize, image);
+    }
+    else {
+        // read the KTXImage in from the data, it will alias mmap or fileData
+        isLoaded = image.open(data, dataSize, isInfoOnly);
+    }
 
     // this means KTXImage is using it's own storage
     if (!isLoaded || image.fileData != data) {
@@ -221,12 +260,16 @@ bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image
     image.height = singleImage.height();
     image.depth = 0;
 
+    image.header.pixelWidth = image.width;
+    image.header.pixelHeight = image.height;
+    image.header.pixelDepth = image.depth;
     image.header.numberOfArrayElements = 0;
     image.header.numberOfMipmapLevels = 1;
+
     image.textureType = MyMTLTextureType2D;
     image.pixelFormat = /*isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : */ MyMTLPixelFormatRGBA8Unorm;
 
-    // TODO: support mips with blitEncoder but tha confuses mipCount in KTXImage
+    // TODO: support mips with blitEncoder but that confuses mipCount in KTXImage
     //     Mipper can also generate on cpu side.  Mipped can do premul conversion though.
 
     // TODO: support chunks and striped png, but may need to copy horizontal to vertical
@@ -247,7 +290,14 @@ bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image)
     close();
 
     if (isPNGFilename(data, dataSize)) {
+        // data stored in image
         return openPNG(data, dataSize, image);
+    }
+    else if (isDDSFilename(data, dataSize)) {
+        // converts dds to ktx, data stored in image
+        // Note: unlike png, this data may already be block encoded
+        DDSHelper ddsHelper;
+        return ddsHelper.load(data, dataSize, image);
     }
 
     // image will likely alias incoming data, so KTXImageData is unused
@@ -458,10 +508,11 @@ bool SetupTmpFile(FileHelper& tmpFileHelper, const char* suffix)
 bool SetupSourceImage(const string& srcFilename, Image& sourceImage,
                       bool isPremulSrgb = false, bool isGray = false)
 {
-    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
-    bool isPNG = endsWith(srcFilename, ".png");
+    bool isKTX = isKTXFilename(srcFilename);
+    bool isKTX2 = isKTX2Filename(srcFilename);
+    bool isPNG = isPNGFilename(srcFilename);
 
-    if (!(isKTX || isPNG)) {
+    if (!(isKTX || isKTX2 || isPNG)) {
         KLOGE("Kram", "File input \"%s\" isn't a png, ktx, ktx2 file.\n",
               srcFilename.c_str());
         return false;
@@ -1455,11 +1506,13 @@ static int32_t kramAppInfo(vector<const char*>& args)
         error = true;
     }
 
-    bool isPNG = endsWith(srcFilename, ".png");
-    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
+    bool isPNG = isPNGFilename(srcFilename);
+    bool isKTX = isKTXFilename(srcFilename);
+    bool isKTX2 = isKTX2Filename(srcFilename);
+    bool isDDS = isDDSFilename(srcFilename);
 
-    if (!(isPNG || isKTX)) {
-        KLOGE("Kram", "info only supports png, ktx, ktx2 inputs");
+    if (!(isPNG || isKTX || isKTX2 || isDDS)) {
+        KLOGE("Kram", "info only supports png, ktx, ktx2, dds inputs");
         error = true;
     }
 
@@ -1494,12 +1547,14 @@ static int32_t kramAppInfo(vector<const char*>& args)
 // this is the main chunk of info generation, can be called without writing result to stdio
 string kramInfoToString(const string& srcFilename, bool isVerbose)
 {
-    bool isPNG = endsWith(srcFilename, ".png");
-    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
+    bool isPNG = isPNGFilename(srcFilename);
+    bool isKTX = isKTXFilename(srcFilename);
+    bool isKTX2 = isKTX2Filename(srcFilename);
+    bool isDDS = isDDSFilename(srcFilename);
 
     string info;
 
-    // handle png and ktx
+    // handle png and ktx and dds
     if (isPNG) {
         MmapHelper srcMmapHelper;
         vector<uint8_t> srcFileBuffer;
@@ -1547,7 +1602,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
 
         info = kramInfoPNGToString(srcFilename, data, dataSize, isVerbose);
     }
-    else if (isKTX) {
+    else if (isKTX || isKTX2 || isDDS) {
         KTXImage srcImage;
         KTXImageData srcImageData;
 
@@ -1935,17 +1990,20 @@ static int32_t kramAppDecode(vector<const char*>& args)
         error = true;
     }
 
-    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
+    bool isKTX = isKTXFilename(srcFilename);
+    bool isKTX2 = isKTX2Filename(srcFilename);
+    bool isDDS = isDDSFilename(srcFilename);
 
-    if (!isKTX) {
-        KLOGE("Kram", "decode only supports ktx and ktx2 input");
+    if (!(isKTX || isKTX2 || isDDS)) {
+        KLOGE("Kram", "decode only supports ktx, ktx2, dds input");
         error = true;
     }
 
-    bool isDstKTX = endsWith(dstFilename, ".ktx");
-    //bool isDstKTX2 = endsWith(dstFilename, ".ktx2");
+    bool isDstKTX = isKTXFilename(dstFilename);
+    //bool isDstKTX2 = isKTX2Filename(dstFilename); // TODO:
+    //bool isDstDDS = isDDSFilename(dstFilename); // TODO:
 
-    if (!(isDstKTX)) {  //} || isDstKTX2)) {
+    if (!(isDstKTX)) {
         KLOGE("Kram", "decode only supports ktx output");
         error = true;
     }
@@ -1954,6 +2012,12 @@ static int32_t kramAppDecode(vector<const char*>& args)
         kramDecodeUsage();
         return -1;
     }
+
+    const char* dstExt = ".ktx";
+    //    if (isDstKTX2)
+    //        dstExt = ".ktx2";
+    //    if (isDstDDS)
+    //        dstExt = ".dds";
 
     KTXImage srcImage;
     KTXImageData srcImageData;
@@ -1965,11 +2029,11 @@ static int32_t kramAppDecode(vector<const char*>& args)
 
     // TODO: for hdr decode, may need to walk blocks or ask caller to pass -hdr flag
     if (!validateFormatAndDecoder(srcImage.textureType, srcImage.pixelFormat, textureDecoder)) {
-        KLOGE("Kram", "format decode only supports ktx and ktx2 output");
+        KLOGE("Kram", "format decode only supports ktx output");
         return -1;
     }
 
-    success = SetupTmpFile(tmpFileHelper, /* isDstKTX2 ? ".ktx2" : */ ".ktx");
+    success = SetupTmpFile(tmpFileHelper, dstExt);
     if (!success)
         return -1;
 
@@ -2380,20 +2444,24 @@ static int32_t kramAppEncode(vector<const char*>& args)
         error = true;
     }
 
-    bool isKTX = endsWith(srcFilename, ".ktx") || endsWith(srcFilename, ".ktx2");
-    bool isPNG = endsWith(srcFilename, ".png");
+    // allow input
+    bool isDDS = isDDSFilename(srcFilename);
+    bool isKTX = isKTXFilename(srcFilename);
+    bool isKTX2 = isKTX2Filename(srcFilename);
+    bool isPNG = isPNGFilename(srcFilename);
 
-    if (!(isPNG || isKTX)) {
-        KLOGE("Kram", "encode only supports png, ktx, ktx2 input");
+    if (!(isPNG || isKTX || isKTX2 || isDDS)) {
+        KLOGE("Kram", "encode only supports png, ktx, ktx2, dds input");
         error = true;
     }
 
-    // allow ktx and ktx2 output
-    bool isDstKTX = endsWith(dstFilename, ".ktx");
-    bool isDstKTX2 = endsWith(dstFilename, ".ktx2");
+    // allow output
+    bool isDstDDS = isDDSFilename(dstFilename);
+    bool isDstKTX = isKTXFilename(dstFilename);
+    bool isDstKTX2 = isKTX2Filename(dstFilename);
 
-    if (!(isDstKTX || isDstKTX2)) {
-        KLOGE("Kram", "encode only supports ktx and ktx2 output");
+    if (!(isDstKTX || isDstKTX2 || isDstDDS)) {
+        KLOGE("Kram", "encode only supports ktx, ktx2, dds output");
         error = true;
     }
 
@@ -2402,9 +2470,15 @@ static int32_t kramAppEncode(vector<const char*>& args)
         return -1;
     }
 
+    const char* dstExt = ".ktx";
+    if (isDstKTX2)
+        dstExt = ".ktx2";
+    else if (isDstDDS)
+        dstExt = ".dds";
+
     infoArgs.isKTX2 = isDstKTX2;
 
-    // Any new settings just go into this struct which is passed into enoder
+    // Any new settings just go into this struct which is passed into encoder
     ImageInfo info;
     info.initWithArgs(infoArgs);
 
@@ -2412,28 +2486,78 @@ static int32_t kramAppEncode(vector<const char*>& args)
     // The helper keeps ktx mips in mmap alive in case want to read them
     // incrementally. Fallback to read into fileBuffer if mmap fails.
     Image srcImage;
+    KTXImage srcImageKTX;
+
     FileHelper tmpFileHelper;
 
-    bool success = SetupSourceImage(srcFilename, srcImage, isPremulRgb, isGray);
+    bool canEncodeInput = true;
+    bool success = true;
+    if (isDDS) {
+        // Note: this is type KTXImage, not Image.
+
+        KTXImageData srcImageData;
+        success = SetupSourceKTX(srcImageData, srcFilename, srcImageKTX);
+
+        if (success) {
+            if (isBlockFormat(srcImageKTX.pixelFormat)) {
+                // can only export to dds/ktx (KTX2 would need to supercompress in Image encode path)
+                canEncodeInput = false;
+
+                if (isDstKTX2) {
+                    KLOGE("Kram", "encode can only export dds import to ktx, dds");
+                    success = false;
+                }
+            }
+            else {
+                success = srcImage.loadImageFromKTX(srcImageKTX);
+            }
+        }
+    }
+    else {
+        success = SetupSourceImage(srcFilename, srcImage, isPremulRgb, isGray);
+    }
 
     if (success) {
-        success = SetupTmpFile(tmpFileHelper, isDstKTX2 ? ".ktx2" : ".ktx");
+        success = SetupTmpFile(tmpFileHelper, dstExt);
 
         if (!success) {
             KLOGE("Kram", "encode couldn't generate tmp file for output");
         }
     }
 
+    if (success && !canEncodeInput) {
+        // write the image out with mips to the file (no encode is done)
+
+        // Allow DDS -> DDS?
+        if (isDstDDS) {
+            DDSHelper ddsHelper;
+            success = ddsHelper.save(srcImageKTX, tmpFileHelper);
+        }
+        else {
+            // TODO: write out KTXImage data/mips as a KTX file
+            success = false;
+        }
+
+        // rename to dest filepath, note this only occurs if above succeeded
+        // so any existing files are left alone on failure.
+        if (success) {
+            success = tmpFileHelper.copyTemporaryFileTo(dstFilename.c_str());
+
+            if (!success) {
+                KLOGE("Kram", "rename of temp file failed");
+            }
+        }
+    }
+
     // so now can complete validation knowing hdr vs. ldr input
     // this checks the dst format
-    if (success) {
+    else if (success) {
         bool isHDR = !srcImage.pixelsFloat().empty();
 
         if (isHDR) {
             MyMTLPixelFormat format = info.pixelFormat;
 
-            // astcecnc is only hdr encoder currently and explicit output to
-            // 16f/32f mips.
+            // astcecnc and bcenc are only hdr encoder with explicit input from 16f/32f mips.
             if (!isFloatFormat(format)) {
                 KLOGE("Kram", "only explicit and encoded float formats for hdr");
                 return -1;
@@ -2456,13 +2580,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 }
             }
 
-            // TODO: find an encoder for BC6
-            //            bool isBC = format == MyMTLPixelFormatBC6H_RGBFloat ||
-            //                        format == MyMTLPixelFormatBC6H_RGBUfloat;
-            //            if (isBC) {
-            //                KLOGE("Kram", "don't have a bc6 encoder");
-            //                return -1;
-            //            }
+            // TODO: test bc6h and bcenc?
 
             // allows explicit output
         }
@@ -2486,10 +2604,29 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
         if (success) {
             KramEncoder encoder;
-            success = encoder.encode(info, srcImage, tmpFileHelper.pointer());
 
-            if (!success) {
-                KLOGE("Kram", "encode failed");
+            if (isDstDDS) {
+                // encode to ktx
+                KTXImage dstImage;
+                success = encoder.encode(info, srcImage, dstImage);
+                if (!success) {
+                    KLOGE("Kram", "encode failed");
+                }
+
+                // save as dds
+                if (success) {
+                    DDSHelper ddsHelper;
+                    success = ddsHelper.save(dstImage, tmpFileHelper);
+                    if (!success) {
+                        KLOGE("Kram", "encode dds convert failed");
+                    }
+                }
+            }
+            else {
+                success = encoder.encode(info, srcImage, tmpFileHelper.pointer());
+                if (!success) {
+                    KLOGE("Kram", "encode failed");
+                }
             }
         }
 

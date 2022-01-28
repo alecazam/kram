@@ -364,7 +364,7 @@ static_cast<NSUInteger>(image.height), 1 }  // MTLSize
     // files can be renamed to the incorrect extensions
     string filename = toLower(path);
 
-    if (endsWithExtension(filename.c_str(), ".png")) {
+    if (isPNGFilename(filename)) {
         // set title to filename, chop this to just file+ext, not directory
         string filenameShort = filename;
         const char *filenameSlash = strrchr(filenameShort.c_str(), '/');

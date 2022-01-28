@@ -2547,7 +2547,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
     // filter out unsupported extensions
     vector<string> extensions = {
-        ".ktx", ".ktx2", ".png" // textures
+        ".ktx", ".ktx2", ".png", ".dds" // textures
 #if USE_GLTF
         , ".glb", ".gltf" // models
 #endif
@@ -2708,8 +2708,10 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     // have already filtered filenames out, so this should never get hit
     bool isPNG = isPNGFilename(filename);
     if (!(isPNG ||
-          endsWithExtension(filename, ".ktx") ||
-          endsWithExtension(filename, ".ktx2"))) {
+          isKTXFilename(filename) ||
+          isKTX2Filename(filename) ||
+          isDDSFilename(filename))
+    ) {
         return NO;
     }
 
@@ -2844,8 +2846,9 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     bool isPNG = isPNGFilename(filename);
 
     if (!(isPNG ||
-          endsWithExtension(filename, ".ktx") ||
-          endsWithExtension(filename, ".ktx2"))) {
+          isKTXFilename(filename) ||
+          isKTX2Filename(filename) ||
+          isDDSFilename(filename))) {
         return NO;
     }
 
@@ -3054,10 +3057,11 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
                     // filter only types that are supported
                     bool isPNG = isPNGFilename(name);
-                    bool isKTX = endsWithExtension(name, ".ktx");
-                    bool isKTX2 = endsWithExtension(name, ".ktx2");
+                    bool isKTX = isKTXFilename(name);
+                    bool isKTX2 = isKTX2Filename(name);
+                    bool isDDS = isDDSFilename(name);
     
-                    if (isPNG || isKTX || isKTX2)
+                    if (isPNG || isKTX || isKTX2 || isDDS)
                     {
                         files.push_back(name);
                     }
@@ -3175,8 +3179,9 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
           
           // images
           isPNGFilename(filename) ||
-          endsWithExtension(filename, ".ktx") ||
-          endsWithExtension(filename, ".ktx2") ||
+          isKTXFilename(filename) ||
+          isKTX2Filename(filename) ||
+          isDDSFilename(filename) ||
           
           // models
           endsWithExtension(filename, ".gltf") ||
@@ -3184,7 +3189,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
         ))
     {
         string errorText =
-            "Unsupported file extension, must be .zip, .png, .ktx, .ktx2, .gltf, .glb\n";
+            "Unsupported file extension, must be .zip, .png, .ktx, .ktx2, .dds, .gltf, .glb\n";
 
         string finalErrorText;
         append_sprintf(finalErrorText, "Could not load from file:\n %s\n",

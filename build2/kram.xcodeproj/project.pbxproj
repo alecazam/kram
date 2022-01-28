@@ -333,6 +333,10 @@
 		70A7BD3127092A1200DBCCF7 /* hdr_encode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A7BD2E27092A1200DBCCF7 /* hdr_encode.cpp */; };
 		70A7BD3227092A1200DBCCF7 /* hdr_encode.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */; };
 		70A7BD3327092A1200DBCCF7 /* hdr_encode.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */; };
+		70CDB65027A1382700A546C1 /* KramDDSHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 70CDB64E27A1382600A546C1 /* KramDDSHelper.h */; };
+		70CDB65127A1382700A546C1 /* KramDDSHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 70CDB64E27A1382600A546C1 /* KramDDSHelper.h */; };
+		70CDB65227A1382700A546C1 /* KramDDSHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */; };
+		70CDB65327A1382700A546C1 /* KramDDSHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -644,6 +648,8 @@
 		708A6A922708CE4700BA5410 /* bc6h_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bc6h_utils.h; sourceTree = "<group>"; };
 		70A7BD2E27092A1200DBCCF7 /* hdr_encode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hdr_encode.cpp; sourceTree = "<group>"; };
 		70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hdr_encode.h; sourceTree = "<group>"; };
+		70CDB64E27A1382600A546C1 /* KramDDSHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramDDSHelper.h; sourceTree = "<group>"; };
+		70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramDDSHelper.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -867,6 +873,8 @@
 		706EEE1826D1583F001C950E /* kram */ = {
 			isa = PBXGroup;
 			children = (
+				70CDB64E27A1382600A546C1 /* KramDDSHelper.h */,
+				70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */,
 				706EEE1926D1583F001C950E /* KramZipHelper.h */,
 				706EEE1E26D1583F001C950E /* KramZipHelper.cpp */,
 				706EEE2326D1583F001C950E /* KramConfig.h */,
@@ -1210,6 +1218,7 @@
 				706EEFDC26D15984001C950E /* EtcBlock4x4.h in Headers */,
 				706EEFDD26D15984001C950E /* Etc.h in Headers */,
 				706EEFDE26D15984001C950E /* EtcImage.h in Headers */,
+				70CDB65027A1382700A546C1 /* KramDDSHelper.h in Headers */,
 				708A6A9C2708CE4700BA5410 /* bc6h_encode.h in Headers */,
 				706EEFDF26D15984001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
 				706EEFE026D15984001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
@@ -1298,6 +1307,7 @@
 				706EF15626D166C5001C950E /* EtcBlock4x4.h in Headers */,
 				706EF15726D166C5001C950E /* Etc.h in Headers */,
 				706EF15826D166C5001C950E /* EtcImage.h in Headers */,
+				70CDB65127A1382700A546C1 /* KramDDSHelper.h in Headers */,
 				708A6A9D2708CE4700BA5410 /* bc6h_encode.h in Headers */,
 				706EF15926D166C5001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
 				706EF15A26D166C5001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
@@ -1446,6 +1456,7 @@
 			files = (
 				706EF26426D17DCC001C950E /* ateencoder.mm in Sources */,
 				706EEF7F26D1595D001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */,
+				70CDB65227A1382700A546C1 /* KramDDSHelper.cpp in Sources */,
 				706EEF8026D1595D001C950E /* EtcImage.cpp in Sources */,
 				706EEF8126D1595D001C950E /* EtcDifferentialTrys.cpp in Sources */,
 				706EEF8226D1595D001C950E /* EtcMath.cpp in Sources */,
@@ -1534,6 +1545,7 @@
 			files = (
 				706EFC2426D1C39B001C950E /* ateencoder.mm in Sources */,
 				706EF19826D166C5001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */,
+				70CDB65327A1382700A546C1 /* KramDDSHelper.cpp in Sources */,
 				706EF19926D166C5001C950E /* EtcImage.cpp in Sources */,
 				706EF19A26D166C5001C950E /* EtcDifferentialTrys.cpp in Sources */,
 				706EF19B26D166C5001C950E /* EtcMath.cpp in Sources */,

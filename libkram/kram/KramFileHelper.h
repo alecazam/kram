@@ -21,7 +21,7 @@ class FileHelper {
 public:
     ~FileHelper();
 
-    bool exists(const char* filenae) const;
+    bool exists(const char* filename) const;
 
     bool open(const char* filename, const char* access);
 

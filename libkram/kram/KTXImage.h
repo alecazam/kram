@@ -300,6 +300,7 @@ public:
     void reserveImageData();
     void reserveImageData(size_t totalSize);
     vector<uint8_t>& imageData();
+    const vector<uint8_t>& imageData() const;
 
     // for KTX2 files, the mips can be compressed using various encoders
     bool isSupercompressed() const { return isKTX2() && mipLevels[0].lengthCompressed != 0; }
@@ -432,8 +433,13 @@ uint32_t numChannelsOfFormat(MyMTLPixelFormat format);
 const char* formatTypeName(MyMTLPixelFormat format);
 
 // metal
-uint32_t metalType(MyMTLPixelFormat format);  // really MTLPixelFormat
 const char* metalTypeName(MyMTLPixelFormat format);
+uint32_t metalType(MyMTLPixelFormat format);  // really MTLPixelFormat
+
+// directx
+const char* directxTypeName(MyMTLPixelFormat format);
+uint32_t directxType(MyMTLPixelFormat format);           // really DXFormat
+MyMTLPixelFormat directxToMetalFormat(uint32_t format);  // really DXFormat
 
 // vuklan
 const char* vulkanTypeName(MyMTLPixelFormat format);

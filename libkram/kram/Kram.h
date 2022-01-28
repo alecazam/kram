@@ -48,7 +48,15 @@ private:
     bool isInfoOnly = true;
 };
 
+bool isKTXFilename(const char* filename);
+bool isKTX2Filename(const char* filename);
+bool isDDSFilename(const char* filename);
 bool isPNGFilename(const char* filename);
+
+inline bool isKTXFilename(const string& filename) { return isKTXFilename(filename.c_str()); }
+inline bool isKTX2Filename(const string& filename) { return isKTX2Filename(filename.c_str()); }
+inline bool isDDSFilename(const string& filename) { return isDDSFilename(filename.c_str()); }
+inline bool isPNGFilename(const string& filename) { return isPNGFilename(filename.c_str()); }
 
 // helpers to source from a png or single level of a ktx
 bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage);

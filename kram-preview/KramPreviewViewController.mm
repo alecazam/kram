@@ -77,12 +77,13 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
 
     NSError* error = nil;
     
-    bool isKTX = endsWith(filename, ".ktx");
-    bool isKTX2 = endsWith(filename, ".ktx2");
+    bool isKTX = isKTXFilename(filename);
+    bool isKTX2 = isKTX2Filename(filename);
+    bool isDDS = isDDSFilename(filename);
     
     // ignore upper case extensions
-    if (!(isKTX || isKTX2)) {
-        error = KLOGF(1, "kramv %s only supports ktx/ktx2 files\n", filename);
+    if (!(isKTX || isKTX2 || isDDS)) {
+        error = KLOGF(1, "kramv %s only supports ktx, ktx2, dds files\n", filename);
         handler(error);
         return;
     }
