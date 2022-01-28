@@ -79,7 +79,7 @@ bool isPNGFilename(const char* filename)
     return endsWithExtension(filename, ".png");
 }
 
-static bool isDDSFilename(const uint8_t* data, size_t dataSize)
+static bool isDDSFile(const uint8_t* data, size_t dataSize)
 {
     // read the 4 chars at the beginning of the file
     const uint32_t numChars = 4;
@@ -94,7 +94,7 @@ static bool isDDSFilename(const uint8_t* data, size_t dataSize)
     return true;
 }
 
-static bool isPNGFilename(const uint8_t* data, size_t dataSize)
+static bool isPNGFile(const uint8_t* data, size_t dataSize)
 {
     // read the 4 chars at the beginning of the file
     const uint32_t numChars = 8;
@@ -168,7 +168,7 @@ bool KTXImageData::open(const char* filename, KTXImage& image)
 
     bool isLoaded = true;
 
-    if (isDDSFilename(data, dataSize)) {
+    if (isDDSFile(data, dataSize)) {
         DDSHelper ddsHelper;
         isLoaded = ddsHelper.load(data, dataSize, image);
     }
@@ -289,11 +289,11 @@ bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image)
 {
     close();
 
-    if (isPNGFilename(data, dataSize)) {
+    if (isPNGFile(data, dataSize)) {
         // data stored in image
         return openPNG(data, dataSize, image);
     }
-    else if (isDDSFilename(data, dataSize)) {
+    else if (isDDSFile(data, dataSize)) {
         // converts dds to ktx, data stored in image
         // Note: unlike png, this data may already be block encoded
         DDSHelper ddsHelper;
@@ -2543,6 +2543,10 @@ static int32_t kramAppEncode(vector<const char*>& args)
             // TODO: save out to KTX2 with and without supercompresion
             //KramEncoder encoder;
             //success = encoder.saveKTX2(srcImageKTX, tmpFileHelper.pointer());
+        }
+
+        if (!success) {
+            KLOGE("Kram", "save to format failed");
         }
 
         // rename to dest filepath, note this only occurs if above succeeded

@@ -1079,20 +1079,37 @@ MyMTLTextureType KTXHeader::metalTextureType() const
 
 //---------------------------------------------------
 
+inline bool isKTX2File(const uint8_t* data, size_t dataSize) {
+    if (dataSize < sizeof(kKTX2Identifier)) {
+        return false;
+    }
+    
+    if (memcmp(data, kKTX2Identifier, sizeof(kKTX2Identifier)) != 0) {
+        return false;
+    }
+    return true;
+}
+
+inline bool isKTX1File(const uint8_t* data, size_t dataSize) {
+    if (dataSize < sizeof(kKTXIdentifier)) {
+        return false;
+    }
+    
+    if (memcmp(data, kKTXIdentifier, sizeof(kKTXIdentifier)) != 0) {
+        return false;
+    }
+    return true;
+}
+
 bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength, bool isInfoOnly)
 {
     // Note: never trust the extension, always load based on the identifier
-    if ((size_t)imageDataLength < sizeof(kKTX2Identifier)) {
-        return false;
-    }
-
-    // check for ktx2
-    if (memcmp(imageData, kKTX2Identifier, sizeof(kKTX2Identifier)) == 0) {
+    if (isKTX2File(imageData, imageDataLength)) {
         return openKTX2(imageData, imageDataLength, isInfoOnly);
     }
 
     // check for ktx1
-    if (memcmp(imageData, kKTXIdentifier, sizeof(kKTXIdentifier)) != 0) {
+    if (!isKTX1File(imageData, imageDataLength)) {
         return false;
     }
 
