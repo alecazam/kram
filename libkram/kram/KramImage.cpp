@@ -1873,7 +1873,7 @@ bool KramEncoder::saveKTX1(const KTXImage& image, FILE* dstFile) const {
     uint32_t dstOffset = sizeof(KTXHeader) + vsizeof(propsData);
     
     // This may not have been allocated, might be aliasing original
-    const uint8_t* mipLevelData = image.imageData().data();
+    const uint8_t* mipLevelData = image.fileData;
     const auto& mipLevels = image.mipLevels;
     
     // KTX writes largest mips first

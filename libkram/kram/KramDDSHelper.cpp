@@ -298,7 +298,7 @@ bool DDSHelper::save(const KTXImage& image, FileHelper& fileHelper)
     if (success) {
         // Now write the mip data out in the order dds expects
         // Ugh, dds stores each array item mips, then the next array item mips.
-        const uint8_t* imageData = image.imageData().data();
+        const uint8_t* imageData = image.fileData;
         for (uint32_t chunkNum = 0; chunkNum < image.totalChunks(); ++chunkNum) {
             
             for (uint32_t mipNum = 0; mipNum < image.mipCount(); ++mipNum) {
