@@ -1859,18 +1859,22 @@ bool KramEncoder::saveKTX1(const KTXImage& image, FILE* dstFile) const {
     
     vector<uint8_t> propsData;
     image.toPropsData(propsData);
+    headerCopy.bytesOfKeyValueData = (uint32_t)vsizeof(propsData);
     
-    if (!writeDataAtOffset((const uint8_t*)&headerCopy, sizeof(headerCopy), 0, dstFile, dstImage)) {
+    uint32_t dstOffset = 0;
+    
+    if (!writeDataAtOffset((const uint8_t*)&headerCopy, sizeof(KTXHeader), 0, dstFile, dstImage)) {
         return false;
     }
-
+    dstOffset += sizeof(KTXHeader);
+    
     // write out the props
-    if (!writeDataAtOffset(propsData.data(), vsizeof(propsData), sizeof(KTXHeader), dstFile, dstImage)) {
+    if (!writeDataAtOffset(propsData.data(), headerCopy.bytesOfKeyValueData, sizeof(KTXHeader), dstFile, dstImage)) {
         return false;
     }
-
+    dstOffset += headerCopy.bytesOfKeyValueData;
+    
     // build and write out the mip data
-    uint32_t dstOffset = sizeof(KTXHeader) + vsizeof(propsData);
     
     // This may not have been allocated, might be aliasing original
     const uint8_t* mipLevelData = image.fileData;
@@ -1878,15 +1882,16 @@ bool KramEncoder::saveKTX1(const KTXImage& image, FILE* dstFile) const {
     
     // KTX writes largest mips first
     
-    uint32_t chunkCount = image.totalChunks();
+    uint32_t numChunks = image.totalChunks();
     for (uint32_t mipNum = 0; mipNum < image.mipCount(); ++mipNum) {
         // ktx weirdly writes size differently for cube, but not cube array
         // also this completely throws off block alignment
         uint32_t mipStorageSize = mipLevels[mipNum].length;
-        uint32_t levelDataSize = mipStorageSize * chunkCount;
+        uint32_t levelDataSize = mipStorageSize * numChunks;
         
+        // cube stores size of one face, ugh
         if (image.textureType != MyMTLTextureTypeCube) {
-            mipStorageSize *= 6;
+            mipStorageSize *= numChunks;
         }
         
         size_t chunkOffset = image.chunkOffset(mipNum, 0);

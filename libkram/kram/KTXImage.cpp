@@ -37,7 +37,7 @@ const uint8_t kKTXIdentifier[kKTXIdentifierSize] = {
     0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
     //'«', 'K', 'T', 'X', ' ', '1', '1', '»', '\r', '\n', '\x1A', '\n'
 };
-const uint8_t kKTX2Identifier[kKTXIdentifierSize] = {
+const uint8_t kKTX2Identifier[kKTX2IdentifierSize] = {
     0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
     // '«', 'K', 'T', 'X', ' ', '2', '0', '»', '\r', '\n', '\x1A', '\n'
 };

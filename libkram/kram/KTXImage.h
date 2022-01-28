@@ -134,8 +134,9 @@ struct Int2 {
 //---------------------------------------------
 
 constexpr int32_t kKTXIdentifierSize = 12;
+constexpr int32_t kKTX2IdentifierSize = 12;
 extern const uint8_t kKTXIdentifier[kKTXIdentifierSize];
-extern const uint8_t kKTX2Identifier[kKTXIdentifierSize];
+extern const uint8_t kKTX2Identifier[kKTX2IdentifierSize];
 
 class KTXHeader {
 public:
@@ -194,7 +195,7 @@ public:
 // and this stores an array of supercompressed levels, and has dfds.
 class KTX2Header {
 public:
-    uint8_t identifier[kKTXIdentifierSize] = {
+    uint8_t identifier[kKTX2IdentifierSize] = {
         // same is kKTX2Identifier
         0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
         // '«', 'K', 'T', 'X', ' ', '2', '0', '»', '\r', '\n', '\x1A', '\n'
