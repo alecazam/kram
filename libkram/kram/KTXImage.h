@@ -278,7 +278,7 @@ public:
     bool validateMipLevels() const;
 
     // props handling
-    void toPropsData(vector<uint8_t>& propsData);
+    void toPropsData(vector<uint8_t>& propsData) const;
 
     string getProp(const char* name) const;
     void addProp(const char* name, const char* value);

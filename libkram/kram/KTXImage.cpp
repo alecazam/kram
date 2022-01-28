@@ -1270,7 +1270,7 @@ bool KTXImage::isPremul() const
     return false;
 }
 
-void KTXImage::toPropsData(vector<uint8_t>& propsData)
+void KTXImage::toPropsData(vector<uint8_t>& propsData) const
 {
     for (const auto& prop : props) {
         uint32_t size = uint32_t(prop.first.length() + 1 +

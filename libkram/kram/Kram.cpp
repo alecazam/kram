@@ -2528,13 +2528,17 @@ static int32_t kramAppEncode(vector<const char*>& args)
     if (success && !canEncodeInput) {
         // write the image out with mips to the file (no encode is done)
 
-        // Allow DDS -> DDS?
-        if (isDstDDS) {
+        // Don't allow DDS -> DDS?  This is really the only case for this
+        if (isDstDDS && !isDDS) {
             DDSHelper ddsHelper;
             success = ddsHelper.save(srcImageKTX, tmpFileHelper);
         }
-        else {
-            // TODO: write out KTXImage data/mips as a KTX file
+        else if (isDstKTX) {
+            KramEncoder encoder;
+            success = encoder.saveKTX1(srcImageKTX, tmpFileHelper.pointer());
+        }
+        else if (isDstKTX2) {
+            // TODO: save out to KTX2 with and without supercompresion
             success = false;
         }
 

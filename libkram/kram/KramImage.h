@@ -128,9 +128,8 @@ public:
     // encode/decode to a memory block
     bool encode(ImageInfo& info, Image& singleImage, KTXImage& dstImage) const;
 
-    // TODO: supply encode() that takes a KTXImage src with mips already generated
-    // and then can encode them to a block format.  In-place mips from Image don't
-    // allow for custom mips, and also require conversion of KTXImage to Image.
+    // can save out to ktx1 directly, if say imported from dds
+    bool saveKTX1(const KTXImage& image, FILE* dstFile) const;
 
 private:
     bool encodeImpl(ImageInfo& info, Image& singleImage, FILE* dstFile, KTXImage& dstImage) const;

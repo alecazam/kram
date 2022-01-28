@@ -1836,11 +1836,74 @@ bool KramEncoder::writeKTX1FileOrImage(
         return false;
     }
 
-    // build and weite out the mip data
+    // build and write out the mip data
     if (!createMipsFromChunks(info, singleImage, mipConstructData, dstFile, dstImage)) {
         return false;
     }
 
+    return true;
+}
+
+bool KramEncoder::saveKTX1(const KTXImage& image, FILE* dstFile) const {
+    // write the header out
+    KTXHeader headerCopy = image.header;
+    
+    // fixup header for 1d array
+    if (image.textureType == MyMTLTextureType1DArray) {
+        headerCopy.pixelHeight = 0;
+        headerCopy.pixelDepth = 0;
+    }
+
+    // This is unused
+    KTXImage dstImage;
+    
+    vector<uint8_t> propsData;
+    image.toPropsData(propsData);
+    
+    if (!writeDataAtOffset((const uint8_t*)&headerCopy, sizeof(headerCopy), 0, dstFile, dstImage)) {
+        return false;
+    }
+
+    // write out the props
+    if (!writeDataAtOffset(propsData.data(), vsizeof(propsData), sizeof(KTXHeader), dstFile, dstImage)) {
+        return false;
+    }
+
+    // build and write out the mip data
+    uint32_t dstOffset = sizeof(KTXHeader) + vsizeof(propsData);
+    
+    // This may not have been allocated, might be aliasing original
+    const uint8_t* mipLevelData = image.imageData().data();
+    const auto& mipLevels = image.mipLevels;
+    
+    // KTX writes largest mips first
+    
+    uint32_t chunkCount = image.totalChunks();
+    for (uint32_t mipNum = 0; mipNum < image.mipCount(); ++mipNum) {
+        // ktx weirdly writes size differently for cube, but not cube array
+        // also this completely throws off block alignment
+        uint32_t mipStorageSize = mipLevels[mipNum].length;
+        uint32_t levelDataSize = mipStorageSize * chunkCount;
+        
+        if (image.textureType != MyMTLTextureTypeCube) {
+            mipStorageSize *= 6;
+        }
+        
+        size_t chunkOffset = image.chunkOffset(mipNum, 0);
+        
+        // write length of mip
+        if (!writeDataAtOffset((const uint8_t*)&mipStorageSize, sizeof(uint32_t), dstOffset, dstFile, dstImage)) {
+            return false;
+        }
+        dstOffset += sizeof(uint32_t);
+        
+        // write the level pixels
+        if (!writeDataAtOffset(mipLevelData + chunkOffset, levelDataSize, dstOffset, dstFile, dstImage)) {
+            return false;
+        }
+        dstOffset += levelDataSize;
+    }
+    
     return true;
 }
 
@@ -2178,7 +2241,8 @@ bool KramEncoder::createMipsFromChunks(
             // Write out the mip size on chunk 0, all other mips are this size since not supercompressed.
             // This throws off block alignment and gpu loading of ktx files from mmap.  I guess 3d textures
             // and arrays can then load entire level in a single call.
-            if ((!info.isKTX2) && chunk == 0) {
+            bool isDstKTX1 = !info.isKTX2;
+            if (isDstKTX1 && chunk == 0) {
                 // some clarification on what imageSize means, but best to look at ktx codebase itself
                 // https://github.com/BinomialLLC/basis_universal/issues/40
 
