@@ -1616,7 +1616,7 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
     header.bytesOfKeyValueData = 0;
     initProps(imageData + header2.kvdByteOffset, header2.kvdByteLength);
 
-    // skip parsing th elevels
+    // skip parsing the levels
     if (isInfoOnly) {
         skipImageLength = true;
         fileData = imageData;

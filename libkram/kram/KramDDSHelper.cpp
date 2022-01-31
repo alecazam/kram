@@ -95,7 +95,7 @@ struct DDS_HEADER_DXT10
     uint32_t        miscFlags2;
 };
 
-bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image)
+bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool isInfoOnly)
 {
     uint32_t magic = *(uint32_t*)data;
     const uint32_t magicSize = sizeof(uint32_t);
@@ -166,25 +166,34 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image)
     if (image.textureType == MyMTLTextureType1DArray)
         ktxHdr.pixelHeight = 0;
     
+    // make sure these line up
+    if (image.header.metalTextureType() != image.textureType) {
+        return false;
+    }
+    
     image.pixelFormat = pixelFormat;
     
     // allocate data
     image.initMipLevels(mipDataOffset);
-    image.reserveImageData();
     
-    uint8_t* dstImageData = image.imageData().data();
-    const uint8_t* srcImageData = data + mipDataOffset;
-    
-    size_t srcOffset = 0;
-    for (uint32_t chunkNum = 0; chunkNum < image.totalChunks(); ++chunkNum) {
-        for (uint32_t mipNum = 0; mipNum < image.mipCount(); ++mipNum) {
-            // memcpy from src to dst
-            size_t dstOffset = image.chunkOffset(mipNum, chunkNum);
-            size_t mipLength = image.mipLevels[mipNum].length;
-    
-            memcpy(dstImageData + dstOffset, srcImageData + srcOffset, mipLength);
-            
-            srcOffset += mipLength;
+    // Skip allocating the pixels
+    if (!isInfoOnly) {
+        image.reserveImageData();
+        
+        uint8_t* dstImageData = image.imageData().data();
+        const uint8_t* srcImageData = data + mipDataOffset;
+        
+        size_t srcOffset = 0;
+        for (uint32_t chunkNum = 0; chunkNum < image.totalChunks(); ++chunkNum) {
+            for (uint32_t mipNum = 0; mipNum < image.mipCount(); ++mipNum) {
+                // memcpy from src to dst
+                size_t dstOffset = image.chunkOffset(mipNum, chunkNum);
+                size_t mipLength = image.mipLevels[mipNum].length;
+        
+                memcpy(dstImageData + dstOffset, srcImageData + srcOffset, mipLength);
+                
+                srcOffset += mipLength;
+            }
         }
     }
     

@@ -131,6 +131,9 @@ public:
     // can save out to ktx1 directly, if say imported from dds
     bool saveKTX1(const KTXImage& image, FILE* dstFile) const;
 
+    // can save out to ktx2 directly, this can supercompress mips
+    bool saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compressor, FILE* dstFile) const;
+    
 private:
     bool encodeImpl(ImageInfo& info, Image& singleImage, FILE* dstFile, KTXImage& dstImage) const;
 
@@ -158,7 +161,6 @@ private:
         ImageInfo& info,
         Image& singleImage,
         MipConstructData& mipConstructData,
-        const vector<uint8_t>& propsData,
         FILE* dstFile, KTXImage& dstImage) const;
 
     void addBaseProps(const ImageInfo& info, KTXImage& dstImage) const;

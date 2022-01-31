@@ -27,7 +27,7 @@ class FileHelper;
 // BC-compressed blocks before conversion.
 class DDSHelper {
 public:
-    bool load(const uint8_t* data, size_t dataSize, KTXImage& image);
+    bool load(const uint8_t* data, size_t dataSize, KTXImage& image, bool isInfoOnly = false);
     bool save(const KTXImage& image, FileHelper& fileHelper);
 };
 

@@ -1542,244 +1542,23 @@ bool KramEncoder::encodeImpl(ImageInfo& info, Image& singleImage, FILE* dstFile,
         KLOGE("kram", "skipped all mips");
         return false;
     }
-    // ----------------------------------------------------
-
-    int32_t numChunks = (int32_t)chunkOffsets.size();
-
-    //---------------
-    // props
 
     addBaseProps(info, dstImage);
 
-    // convert props into a data blob that can be written out
-    vector<uint8_t> propsData;
-    dstImage.toPropsData(propsData);
-    header.bytesOfKeyValueData = (uint32_t)vsizeof(propsData);
-
-    // ----------------------------------------------------
-
-    // can go out to KTX2 here instead
-    // It has two different blocks, supercompression for BasisLZ
-    // and a DFD block which details the block content.
-    // And mips are reversed.
-
-    // dstImage case - in memory version will always be KTX1 format for now
-    // this even gens a KTX1 dstImage, and then just compresses the mip levels
-
     if (info.isKTX2 && dstFile) {
-        // generate KTX1 file with uncompressed mips first
-        // a big memory hit here, since all mips stored in memory despite built in-place
-        // could build and compress and entire level at a time, but can't write any of it
-        // out until smallest mips are constructed.  Only then are offsets resolved.
-
-        // A better way would be to do mips in-place, but in-order, and compressing the large
-        // to small mips into an array of open compressor streams.  Then only need one mip instead of
-        // all levels in memory.
-        if (!writeKTX1FileOrImage(info, singleImage, mipConstructData, propsData, nullptr, dstImage)) {
+        // build ktx1 file first in memory
+        if (!writeKTX1FileOrImage(info, singleImage, mipConstructData, nullptr, dstImage)) {
             return false;
         }
 
-        // now convert from ktx1 to ktx2
-
-        KTX2Header header2;
-
-        header2.vkFormat = vulkanType(info.pixelFormat);
-        // header2.typeSize = 1; // skip
-
-        header2.pixelWidth = header.pixelWidth;
-        header2.pixelHeight = header.pixelHeight;
-        header2.pixelDepth = header.pixelDepth;
-
-        header2.layerCount = header.numberOfArrayElements;
-        header2.faceCount = header.numberOfFaces;
-        header2.levelCount = header.numberOfMipmapLevels;
-
-        header2.supercompressionScheme = info.compressor.compressorType;
-
-        // compute the dfd
-        KTX2DescriptorFileBlock dfdData(info.pixelFormat, info.hasAlpha && info.isPremultiplied, info.compressor.isCompressed());
-
-        // TODO: sgdData only used for BasisLZ, UASTC + zstd don't use this
-        vector<uint8_t> sgdData;
-
-        size_t levelByteLength = header2.levelCount * sizeof(KTXImageLevel);
-        size_t levelByteOffset = sizeof(KTX2Header);
-
-        // compute offsets and lengts of data blocks
-        header2.dfdByteOffset = levelByteOffset + levelByteLength;
-        header2.kvdByteOffset = header2.dfdByteOffset + dfdData.totalSize;
-        header2.sgdByteOffset = header2.kvdByteOffset + vsizeof(propsData);
-
-        header2.dfdByteLength = dfdData.totalSize;
-        header2.kvdByteLength = vsizeof(propsData);
-        header2.sgdByteLength = vsizeof(sgdData);
-
-        // write the header
-        if (!writeDataAtOffset((const uint8_t*)&header2, sizeof(KTX2Header), 0, dstFile, dstImage)) {
+        // now write that as ktx2 with potentially supercompressed mips
+        if (!saveKTX2(dstImage, info.compressor, dstFile)) {
             return false;
-        }
-
-        // next are levels, but those are written out later
-
-        // write the dfd
-        if (!writeDataAtOffset((const uint8_t*)&dfdData, dfdData.totalSize, header2.dfdByteOffset, dstFile, dstImage)) {
-            return false;
-        }
-
-        // write the props
-        if (!writeDataAtOffset(propsData.data(), vsizeof(propsData), header2.kvdByteOffset, dstFile, dstImage)) {
-            return false;
-        }
-
-        // skip supercompression block
-        if (!sgdData.empty()) {
-            // TODO: align(8) sgdPadding
-            if (!writeDataAtOffset(sgdData.data(), vsizeof(sgdData), header2.sgdByteOffset, dstFile, dstImage)) {
-                return false;
-            }
-        }
-
-        // offsets will be largest last unlike KTX
-        // data is packed without any length or alignment unllike in KTX
-        // reverse the mip levels offsets (but not the order) for KTX2
-
-        size_t imageByteOffset = header2.sgdByteOffset + header2.sgdByteLength;
-
-        size_t lastImageByteOffset = imageByteOffset;
-
-        vector<KTXImageLevel> ktx2Levels(dstImage.mipLevels);
-        for (int32_t i = ktx2Levels.size() - 1; i >= 0; --i) {
-            // align the offset to leastCommonMultiple(4, texel_block_size);
-            if (lastImageByteOffset & 0x3) {
-                lastImageByteOffset += 4 - (lastImageByteOffset & 0x3);
-            }
-
-            auto& level = ktx2Levels[i];
-            level.length *= numChunks;
-            level.lengthCompressed = level.length;
-            level.offset = lastImageByteOffset;
-
-            lastImageByteOffset = level.offset + level.length;
-        }
-
-        if (!info.compressor.isCompressed()) {
-            if (!writeDataAtOffset((const uint8_t*)ktx2Levels.data(), vsizeof(ktx2Levels), levelByteOffset, dstFile, dstImage)) {
-                return false;
-            }
-
-            // write the levels out
-            for (int32_t i = 0; i < (int32_t)ktx2Levels.size(); ++i) {
-                auto& level2 = ktx2Levels[i];
-                auto& level1 = dstImage.mipLevels[i];
-
-                if (!writeDataAtOffset(dstImage.fileData + level1.offset, level2.length, level2.offset, dstFile, dstImage)) {
-                    return false;
-                }
-            }
-        }
-        else {
-            // start compression with the smallest mips first, then can write out data as we go through it all
-
-            // update the offsets and compressed sizes
-            lastImageByteOffset = imageByteOffset;
-
-            // allocate big enough to hold entire uncompressed level
-            vector<uint8_t> compressedData;
-            compressedData.resize(mz_compressBound(ktx2Levels.front().length));  // largest mip
-            size_t compressedDataSize = 0;
-
-            // reuse a context here
-            ZSTD_CCtx* cctx = nullptr;
-            int zlibLevel = MZ_DEFAULT_COMPRESSION;
-
-            if (info.compressor.compressorType == KTX2SupercompressionZstd) {
-                cctx = ZSTD_createCCtx();
-                if (!cctx) {
-                    return false;
-                }
-
-                if (info.compressor.compressorLevel > 0.0f) {
-                    int zstdLevel = (int)round(info.compressor.compressorLevel);
-                    if (zstdLevel > 100) {
-                        zstdLevel = 100;
-                    }
-
-                    ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, zstdLevel);
-
-                    // may need to reset the compressor context, but says call starts a new frame
-                }
-            }
-            else if (info.compressor.compressorType == KTX2SupercompressionZlib) {
-                // set the level up
-                if (info.compressor.compressorLevel > 0.0f) {
-                    zlibLevel = (int)round(info.compressor.compressorLevel);
-                    if (zlibLevel > 10) {
-                        zlibLevel = 10;
-                    }
-                }
-            }
-
-            ZSTDScope scope(cctx);
-
-            for (int32_t i = (int32_t)ktx2Levels.size() - 1; i >= 0; --i) {
-                auto& level2 = ktx2Levels[i];
-                auto& level1 = dstImage.mipLevels[i];
-
-                const uint8_t* levelData = dstImage.fileData + level1.offset;
-
-                // compress each mip
-                switch (info.compressor.compressorType) {
-                    case KTX2SupercompressionZstd: {
-                        // this resets the frame on each call
-                        compressedDataSize = ZSTD_compress2(cctx, compressedData.data(), compressedData.size(), levelData, level2.length);
-
-                        if (ZSTD_isError(compressedDataSize)) {
-                            KLOGE("kram", "encode mip zstd failed");
-                            return false;
-                        }
-                        break;
-                    }
-                    case KTX2SupercompressionZlib: {
-                        mz_ulong dstSize = compressedData.size();
-                        if (mz_compress2(compressedData.data(), &dstSize, levelData, level2.length, zlibLevel) != MZ_OK) {
-                            KLOGE("kram", "encode mip zlib failed");
-                            return false;
-                        }
-                        compressedDataSize = dstSize;
-
-                        break;
-                    }
-                    default:
-                        // should never get here
-                        return false;
-                }
-
-                // also need for compressed levels?
-                // align the offset to leastCommonMultiple(4, texel_block_size);
-                if (lastImageByteOffset & 0x3) {
-                    lastImageByteOffset += 4 - (lastImageByteOffset & 0x3);
-                }
-
-                level2.lengthCompressed = compressedDataSize;
-                level2.offset = lastImageByteOffset;
-
-                lastImageByteOffset = level2.offset + level2.lengthCompressed;
-
-                // write the mip
-                if (!writeDataAtOffset(compressedData.data(), compressedDataSize, level2.offset, dstFile, dstImage)) {
-                    return false;
-                }
-            }
-
-            // write out mip level size/offsets
-            if (!writeDataAtOffset((const uint8_t*)ktx2Levels.data(), vsizeof(ktx2Levels), levelByteOffset, dstFile, dstImage)) {
-                return false;
-            }
         }
     }
     else {
         // this is purely ktx1 output path
-        if (!writeKTX1FileOrImage(info, singleImage, mipConstructData, propsData, dstFile, dstImage)) {
+        if (!writeKTX1FileOrImage(info, singleImage, mipConstructData, dstFile, dstImage)) {
             return false;
         }
     }
@@ -1787,13 +1566,229 @@ bool KramEncoder::encodeImpl(ImageInfo& info, Image& singleImage, FILE* dstFile,
     return true;
 }
 
+bool KramEncoder::saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compressor, FILE* dstFile) const
+{
+    // TODO: move this propsData into KTXImage
+    vector<uint8_t> propsData;
+    srcImage.toPropsData(propsData);
+    
+    // now convert from ktx1 to ktx2
+    const KTXHeader& header = srcImage.header;
+    
+    KTXImage dstImage; // unused, just passed to reference
+    
+    KTX2Header header2;
+
+    header2.vkFormat = vulkanType(srcImage.pixelFormat);
+    // header2.typeSize = 1; // skip
+
+    header2.pixelWidth = header.pixelWidth;
+    header2.pixelHeight = header.pixelHeight;
+    header2.pixelDepth = header.pixelDepth;
+
+    header2.layerCount = header.numberOfArrayElements;
+    header2.faceCount = header.numberOfFaces;
+    header2.levelCount = header.numberOfMipmapLevels;
+
+    header2.supercompressionScheme = compressor.compressorType;
+
+    // compute the dfd
+    KTX2DescriptorFileBlock dfdData(srcImage.pixelFormat, srcImage.isPremul(), compressor.isCompressed());
+
+    // TODO: sgdData only used for BasisLZ, UASTC + zstd don't use this
+    vector<uint8_t> sgdData;
+
+    size_t levelByteLength = header2.levelCount * sizeof(KTXImageLevel);
+    size_t levelByteOffset = sizeof(KTX2Header);
+
+    // compute offsets and lengts of data blocks
+    header2.dfdByteOffset = levelByteOffset + levelByteLength;
+    header2.kvdByteOffset = header2.dfdByteOffset + dfdData.totalSize;
+    header2.sgdByteOffset = header2.kvdByteOffset + vsizeof(propsData);
+
+    header2.dfdByteLength = dfdData.totalSize;
+    header2.kvdByteLength = vsizeof(propsData);
+    header2.sgdByteLength = vsizeof(sgdData);
+
+    // write the header
+    if (!writeDataAtOffset((const uint8_t*)&header2, sizeof(KTX2Header), 0, dstFile, dstImage)) {
+        return false;
+    }
+
+    // next are levels, but those are written out later
+
+    // write the dfd
+    if (!writeDataAtOffset((const uint8_t*)&dfdData, dfdData.totalSize, header2.dfdByteOffset, dstFile, dstImage)) {
+        return false;
+    }
+
+    // write the props
+    if (!writeDataAtOffset(propsData.data(), vsizeof(propsData), header2.kvdByteOffset, dstFile, dstImage)) {
+        return false;
+    }
+
+    // skip supercompression block
+    if (!sgdData.empty()) {
+        // TODO: align(8) sgdPadding
+        if (!writeDataAtOffset(sgdData.data(), vsizeof(sgdData), header2.sgdByteOffset, dstFile, dstImage)) {
+            return false;
+        }
+    }
+
+    // offsets will be largest last unlike KTX
+    // data is packed without any length or alignment unllike in KTX
+    // reverse the mip levels offsets (but not the order) for KTX2
+
+    size_t imageByteOffset = header2.sgdByteOffset + header2.sgdByteLength;
+
+    size_t lastImageByteOffset = imageByteOffset;
+
+    uint32_t numChunks = srcImage.totalChunks();
+    vector<KTXImageLevel> ktx2Levels(dstImage.mipLevels);
+    for (int32_t i = ktx2Levels.size() - 1; i >= 0; --i) {
+        // align the offset to leastCommonMultiple(4, texel_block_size);
+        if (lastImageByteOffset & 0x3) {
+            lastImageByteOffset += 4 - (lastImageByteOffset & 0x3);
+        }
+
+        auto& level = ktx2Levels[i];
+        level.length *= numChunks;
+        level.lengthCompressed = level.length;
+        level.offset = lastImageByteOffset;
+
+        lastImageByteOffset = level.offset + level.length;
+    }
+
+    if (!compressor.isCompressed()) {
+        if (!writeDataAtOffset((const uint8_t*)ktx2Levels.data(), vsizeof(ktx2Levels), levelByteOffset, dstFile, dstImage)) {
+            return false;
+        }
+
+        // write the levels out
+        for (int32_t i = 0; i < (int32_t)ktx2Levels.size(); ++i) {
+            auto& level2 = ktx2Levels[i];
+            auto& level1 = dstImage.mipLevels[i];
+
+            if (!writeDataAtOffset(dstImage.fileData + level1.offset, level2.length, level2.offset, dstFile, dstImage)) {
+                return false;
+            }
+        }
+    }
+    else {
+        // start compression with the smallest mips first, then can write out data as we go through it all
+
+        // update the offsets and compressed sizes
+        lastImageByteOffset = imageByteOffset;
+
+        // allocate big enough to hold entire uncompressed level
+        vector<uint8_t> compressedData;
+        compressedData.resize(mz_compressBound(ktx2Levels.front().length));  // largest mip
+        size_t compressedDataSize = 0;
+
+        // reuse a context here
+        ZSTD_CCtx* cctx = nullptr;
+        int zlibLevel = MZ_DEFAULT_COMPRESSION;
+
+        if (compressor.compressorType == KTX2SupercompressionZstd) {
+            cctx = ZSTD_createCCtx();
+            if (!cctx) {
+                return false;
+            }
+
+            if (compressor.compressorLevel > 0.0f) {
+                int zstdLevel = (int)round(compressor.compressorLevel);
+                if (zstdLevel > 100) {
+                    zstdLevel = 100;
+                }
+
+                ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, zstdLevel);
+
+                // may need to reset the compressor context, but says call starts a new frame
+            }
+        }
+        else if (compressor.compressorType == KTX2SupercompressionZlib) {
+            // set the level up
+            if (compressor.compressorLevel > 0.0f) {
+                zlibLevel = (int)round(compressor.compressorLevel);
+                if (zlibLevel > 10) {
+                    zlibLevel = 10;
+                }
+            }
+        }
+
+        ZSTDScope scope(cctx);
+
+        for (int32_t i = (int32_t)ktx2Levels.size() - 1; i >= 0; --i) {
+            auto& level2 = ktx2Levels[i];
+            auto& level1 = dstImage.mipLevels[i];
+
+            const uint8_t* levelData = dstImage.fileData + level1.offset;
+
+            // compress each mip
+            switch (compressor.compressorType) {
+                case KTX2SupercompressionZstd: {
+                    // this resets the frame on each call
+                    compressedDataSize = ZSTD_compress2(cctx, compressedData.data(), compressedData.size(), levelData, level2.length);
+
+                    if (ZSTD_isError(compressedDataSize)) {
+                        KLOGE("kram", "encode mip zstd failed");
+                        return false;
+                    }
+                    break;
+                }
+                case KTX2SupercompressionZlib: {
+                    mz_ulong dstSize = compressedData.size();
+                    if (mz_compress2(compressedData.data(), &dstSize, levelData, level2.length, zlibLevel) != MZ_OK) {
+                        KLOGE("kram", "encode mip zlib failed");
+                        return false;
+                    }
+                    compressedDataSize = dstSize;
+
+                    break;
+                }
+                default:
+                    // should never get here
+                    return false;
+            }
+
+            // also need for compressed levels?
+            // align the offset to leastCommonMultiple(4, texel_block_size);
+            if (lastImageByteOffset & 0x3) {
+                lastImageByteOffset += 4 - (lastImageByteOffset & 0x3);
+            }
+
+            level2.lengthCompressed = compressedDataSize;
+            level2.offset = lastImageByteOffset;
+
+            lastImageByteOffset = level2.offset + level2.lengthCompressed;
+
+            // write the mip
+            if (!writeDataAtOffset(compressedData.data(), compressedDataSize, level2.offset, dstFile, dstImage)) {
+                return false;
+            }
+        }
+
+        // write out mip level size/offsets
+        if (!writeDataAtOffset((const uint8_t*)ktx2Levels.data(), vsizeof(ktx2Levels), levelByteOffset, dstFile, dstImage)) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 bool KramEncoder::writeKTX1FileOrImage(
     ImageInfo& info,
     Image& singleImage,
     MipConstructData& mipConstructData,
-    const vector<uint8_t>& propsData,
+    //const vector<uint8_t>& propsData,
     FILE* dstFile, KTXImage& dstImage) const
 {
+    // convert props into a data blob that can be written out
+    vector<uint8_t> propsData;
+    dstImage.toPropsData(propsData);
+    dstImage.header.bytesOfKeyValueData = (uint32_t)vsizeof(propsData);
+
     // recompute, it's had mips added into it above
     size_t mipOffset = sizeof(KTXHeader) + dstImage.header.bytesOfKeyValueData;
 

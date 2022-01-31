@@ -122,8 +122,10 @@ inline const char* toFilenameShort(const char* filename)
     return filenameShort;
 }
 
-bool KTXImageData::open(const char* filename, KTXImage& image)
+bool KTXImageData::open(const char* filename, KTXImage& image, bool isInfoOnly_)
 {
+    isInfoOnly = isInfoOnly_;
+
     close();
 
     // set name from filename
@@ -170,7 +172,7 @@ bool KTXImageData::open(const char* filename, KTXImage& image)
 
     if (isDDSFile(data, dataSize)) {
         DDSHelper ddsHelper;
-        isLoaded = ddsHelper.load(data, dataSize, image);
+        isLoaded = ddsHelper.load(data, dataSize, image, isInfoOnly);
     }
     else {
         // read the KTXImage in from the data, it will alias mmap or fileData
@@ -285,19 +287,20 @@ bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image
     return true;
 }
 
-bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image)
+bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image, bool isInfoOnly_)
 {
+    isInfoOnly = isInfoOnly_;
     close();
 
     if (isPNGFile(data, dataSize)) {
         // data stored in image
-        return openPNG(data, dataSize, image);
+        return openPNG(data, dataSize, image);  // TODO: pass isInfoOnly
     }
     else if (isDDSFile(data, dataSize)) {
         // converts dds to ktx, data stored in image
         // Note: unlike png, this data may already be block encoded
         DDSHelper ddsHelper;
-        return ddsHelper.load(data, dataSize, image);
+        return ddsHelper.load(data, dataSize, image, isInfoOnly);
     }
 
     // image will likely alias incoming data, so KTXImageData is unused
@@ -311,9 +314,10 @@ bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image)
 // decoding reads a ktx file into KTXImage (not Image)
 bool SetupSourceKTX(KTXImageData& srcImageData,
                     const string& srcFilename,
-                    KTXImage& sourceImage)
+                    KTXImage& sourceImage,
+                    bool isInfoOnly)
 {
-    if (!srcImageData.open(srcFilename.c_str(), sourceImage)) {
+    if (!srcImageData.open(srcFilename.c_str(), sourceImage, isInfoOnly)) {
         KLOGE("Kram", "File input \"%s\" could not be opened for read.\n",
               srcFilename.c_str());
         return false;
@@ -379,7 +383,11 @@ inline Color toGrayscaleRec709(Color c, const Mipper& mipper)
 bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
 {
     KTXImage image;
-    bool isInfoOnly = true;  // don't decompress entire image, only going to unpack top level mip
+
+    // don't decompress pixel data, only going to unpack top level mip on KTX2
+    // this stil aliases the incoming pixel data
+    bool isInfoOnly = true;
+
     if (!image.open(data, dataSize, isInfoOnly)) {
         return false;
     }
@@ -1222,7 +1230,8 @@ void kramDecodeUsage(bool showVersion = true)
           "\t [-swizzle rgba01]\n"
           "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
           "\t [-v/erbose]\n"
-          "\t -i/nput .ktx\n"
+          // TODO: does this support .ktx2, .dds?
+          "\t -i/nput <.ktx | .ktx2 | .dds>\n"
           "\t -o/utput .ktx\n"
           "\n",
           showVersion ? usageName : "");
@@ -1233,7 +1242,7 @@ void kramInfoUsage(bool showVersion = true)
     KLOGI("Kram",
           "%s\n"
           "Usage: kram info\n"
-          "\t -i/nput <.png | .ktx | .ktx2>\n"
+          "\t -i/nput <.png | .ktx | .ktx2 | .dds>\n"
           "\t [-o/utput info.txt]\n"
           "\t [-v/erbose]\n"
           "\n",
@@ -1284,8 +1293,8 @@ void kramEncodeUsage(bool showVersion = true)
           "\t -f/ormat (bc1 | astc4x4 | etc2rgba | rgba16f) [-quality 0-100]\n"
           "\t [-zstd 0] or [-zlib 0] (for .ktx2 output)\n"
           "\t [-srgb] [-signed] [-normal]\n"
-          "\t -i/nput <source.png | .ktx | .ktx2>\n"
-          "\t -o/utput <target.ktx | .ktx | .ktx2>\n"
+          "\t -i/nput <source.png | .ktx | .ktx2 | .dds>\n"
+          "\t -o/utput <target.ktx | .ktx | .ktx2 | .dds>\n"
           "\n"
           "\t [-type 2d|3d|..]\n"
           "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
@@ -1606,7 +1615,8 @@ string kramInfoToString(const string& srcFilename, bool isVerbose)
         KTXImage srcImage;
         KTXImageData srcImageData;
 
-        bool success = SetupSourceKTX(srcImageData, srcFilename, srcImage);
+        // TODO: pass isInfoOnly = true to this
+        bool success = SetupSourceKTX(srcImageData, srcFilename, srcImage, true);
         if (!success) {
             KLOGE("Kram", "File input \"%s\" could not be opened for info read.\n",
                   srcFilename.c_str());
@@ -1778,7 +1788,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     // to megapixels
     numPixels /= (1000.0f * 1000.0f);
 
-    auto textureType = srcImage.header.metalTextureType();
+    auto textureType = srcImage.textureType;
     switch (textureType) {
         case MyMTLTextureType1DArray:
         case MyMTLTextureType2D:
@@ -1790,7 +1800,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                            "dims: %dx%d\n"
                            "dimm: %0.3f MP\n"
                            "mips: %d\n",
-                           textureTypeName(srcImage.header.metalTextureType()),
+                           textureTypeName(srcImage.textureType),
                            srcImage.width, srcImage.height,
                            numPixels,
                            srcImage.mipCount());
@@ -1801,7 +1811,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                            "dims: %dx%dx%d\n"
                            "dimm: %0.3f MP\n"
                            "mips: %d\n",
-                           textureTypeName(srcImage.header.metalTextureType()),
+                           textureTypeName(srcImage.textureType),
                            srcImage.width, srcImage.height, srcImage.depth,
                            numPixels,
                            srcImage.mipCount());
@@ -1815,15 +1825,24 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                        srcImage.header.numberOfArrayElements);
     }
 
-    append_sprintf(info,
-                   "fmtk: %s\n"
-                   "fmtm: %s (%d)\n"
-                   "fmtv: %s (%d)\n"
-                   "fmtg: %s (0x%04X)\n",
-                   formatTypeName(metalFormat),
-                   metalTypeName(metalFormat), metalFormat,
-                   vulkanTypeName(metalFormat), vulkanType(metalFormat),
-                   glTypeName(metalFormat), glType(metalFormat));
+    if (isVerbose) {
+        append_sprintf(info,
+                       "fmtk: %s\n"
+                       "fmtm: %s (%d)\n"
+                       "fmtv: %s (%d)\n"
+                       "fmtd: %s (0x%04X)\n"
+                       "fmtg: %s (0x%04X)\n",
+                       formatTypeName(metalFormat),
+                       metalTypeName(metalFormat), metalFormat,
+                       vulkanTypeName(metalFormat), vulkanType(metalFormat),
+                       directxTypeName(metalFormat), directxType(metalFormat),
+                       glTypeName(metalFormat), glType(metalFormat));
+    }
+    else {
+        append_sprintf(info,
+                       "fmtk: %s\n",
+                       formatTypeName(metalFormat));
+    }
 
     // report any props
     for (const auto& prop : srcImage.props) {
@@ -2023,7 +2042,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
     KTXImageData srcImageData;
     FileHelper tmpFileHelper;
 
-    bool success = SetupSourceKTX(srcImageData, srcFilename, srcImage);
+    bool success = SetupSourceKTX(srcImageData, srcFilename, srcImage, false);
     if (!success)
         return -1;
 
@@ -2496,7 +2515,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
         // Note: this is type KTXImage, not Image.
 
         KTXImageData srcImageData;
-        success = SetupSourceKTX(srcImageData, srcFilename, srcImageKTX);
+        success = SetupSourceKTX(srcImageData, srcFilename, srcImageKTX, false);
 
         if (success) {
             if (isBlockFormat(srcImageKTX.pixelFormat)) {
@@ -2540,9 +2559,13 @@ static int32_t kramAppEncode(vector<const char*>& args)
             success = encoder.saveKTX1(srcImageKTX, tmpFileHelper.pointer());
         }
         else if (isDstKTX2) {
-            // TODO: save out to KTX2 with and without supercompresion
-            //KramEncoder encoder;
-            //success = encoder.saveKTX2(srcImageKTX, tmpFileHelper.pointer());
+            KramEncoder encoder;
+
+            // default to zstd compressor
+            KTX2Compressor compressor;
+            compressor.compressorType = KTX2SupercompressionZstd;
+
+            success = encoder.saveKTX2(srcImageKTX, compressor, tmpFileHelper.pointer());
         }
 
         if (!success) {
