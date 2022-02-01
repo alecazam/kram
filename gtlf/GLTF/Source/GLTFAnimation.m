@@ -115,18 +115,26 @@
                     NSLog(@"WARNING: Only float accessors are supported for rotation animations. This will only be reported once.");
                 });
             }
-            const GLTFQuaternion *rotationValues = sampler.outputValues;
             
-            GLTFQuaternion previousRotation = rotationValues[previousKeyFrame];
-            GLTFQuaternion nextRotation = rotationValues[nextKeyFrame];
+            // This was using an offset of 12 into outputValues, and trying to cast
+            // as a simd type.  Use raw floats instead.
+            const float *rotationValues = sampler.outputValues;
+            const float *prev = &rotationValues[4 * previousKeyFrame];
+            const float *next = &rotationValues[4 * nextKeyFrame];
+            
+            GLTFQuaternion previousRotation = {{ prev[0], prev[1], prev[2], prev[3] }};
+            GLTFQuaternion nextRotation = {{ next[0], next[1], next[2], next[3] }};
             GLTFQuaternion interpRotation = simd_slerp(previousRotation, nextRotation, frameProgress);
 
             target.rotationQuaternion = interpRotation;
         } else if ([path isEqualToString:@"translation"]) {
-            const GLTFVector3 *translationValues = sampler.outputValues;
+            const float *translationValues = sampler.outputValues;
             
-            GLTFVector3 previousTranslation = translationValues[previousKeyFrame];
-            GLTFVector3 nextTranslation = translationValues[nextKeyFrame];
+            const float *prev = &translationValues[3 * previousKeyFrame];
+            const float *next = &translationValues[3 * nextKeyFrame];
+            
+            GLTFVector3 previousTranslation = { prev[0], prev[1], prev[2] };
+            GLTFVector3 nextTranslation = { next[0], next[1], next[2] };
             
             GLTFVector3 interpTranslation = (GLTFVector3) {
                 ((1 - frameProgress) * previousTranslation.x) + (frameProgress * nextTranslation.x),
