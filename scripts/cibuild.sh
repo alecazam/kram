@@ -64,7 +64,7 @@ if [[ $buildType == macos ]]; then
 
 	xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
 	xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-	xcodebuild build -sdk macosx -workspace kramc.xcworkspace -scheme kram CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+	xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kramc CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
 
 	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramc DSTROOT=${binPath} INSTALL_PATH=
 	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramv DSTROOT=${binPath} INSTALL_PATH=
