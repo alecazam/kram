@@ -129,7 +129,7 @@
 			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>image/vnd-ms.dds</string>
+				<string>image/dds</string>
 			</array>
 			<key>NSDocumentClass</key>
 			<string>KramDocument</string>

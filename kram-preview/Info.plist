@@ -30,7 +30,7 @@
 			<array>
 				<string>org.khronos.ktx</string>
 				<string>public.ktx2</string>
-				<string>image/vnd-ms.dds</string>
+				<string>image/dds</string>
 			</array>
 			<key>QLSupportsSearchableItems</key>
 			<true/>
