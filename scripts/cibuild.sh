@@ -43,6 +43,7 @@ if [[ $buildType == macos ]]; then
 	binPath=$( cd "$(dirname "bin")" ; pwd -P )
 
 	# not sure why above doesn't include the folder name
+	binHolderPath="${binPath}"
 	binPath="${binPath}/bin"
 else
 	binPath=$(realpath bin)
@@ -62,12 +63,16 @@ if [[ $buildType == macos ]]; then
 	# this dir already exists, so don't have to mkdir
 	pushd build2
 
-	xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-	xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-	xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kramc CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-
-	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramc DSTROOT=${binPath} INSTALL_PATH=
-	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramv DSTROOT=${binPath} INSTALL_PATH=
+	# build libraries
+	# see here about destination arg
+	# https://github.com/appcelerator/titanium_mobile/pull/13098
+	xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios -configuration Release -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+	xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram -configuration Release -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+	
+	# install apps so they are signed
+	# can't specify empty INSTALL_PATH, or xcodebuild succeeds but copies nothing to bin
+	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramc -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramv -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
 
 	popd
 
