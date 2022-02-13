@@ -1366,7 +1366,7 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
             mipDown(w, h, d);
 
             keepMip =
-                (numSkippedMips >= (uint32_t)mipSkip) ||
+                (mipSkip != 0 && numSkippedMips >= (uint32_t)mipSkip) ||
                 ((w >= mipMinSize && w <= mipMaxSize) &&
                  (h >= mipMinSize && h <= mipMaxSize));
 
