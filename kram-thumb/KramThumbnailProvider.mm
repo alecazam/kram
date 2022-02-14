@@ -248,6 +248,11 @@ struct ImageToPass
                                  (uint32_t)roundf(contextSize.width * requestScale),
                                  (uint32_t)roundf(contextSize.height * requestScale));
 
+        // Default is white, but that messes up all content that uses alpha
+        // and doesn't match the preview code or kramv background (or Preview).
+        CGContextSetFillColorWithColor(context, CGColorGetConstantColor(kCGColorBlack));
+        CGContextFillRect(context, rect);
+        
         // TODO: should this clear to NSColor clearColor ?
         // don't want default white?
         
