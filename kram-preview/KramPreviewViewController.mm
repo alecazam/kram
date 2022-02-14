@@ -37,7 +37,9 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
 @interface KramPreviewViewController () <QLPreviewingController>
 @end
 
-@implementation KramPreviewViewController
+@implementation KramPreviewViewController {
+    NSImageView* _imageView;
+}
 
 - (NSString *)nibName {
     return @"KramPreviewViewController";
@@ -46,6 +48,22 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
 - (void)loadView {
     [super loadView];
     // Do any additional setup after loading the view.
+    
+    _imageView = [[NSImageView alloc] initWithFrame:self.view.frame];
+    [_imageView setTranslatesAutoresizingMaskIntoConstraints:NO]; //Required to opt-in to autolayout
+
+    _imageView.imageScaling = NSImageScaleProportionallyUpOrDown;
+    
+    [self.view addSubview: _imageView];
+    
+    NSDictionary* views = @{@"myview": _imageView};
+    [self.view addConstraints:[NSLayoutConstraint
+                               constraintsWithVisualFormat:@"H:|[myview]|" options:0 metrics:nil
+                               views:views]];
+    [self.view addConstraints:[NSLayoutConstraint
+                               constraintsWithVisualFormat:@"V:|[myview]|" options:0 metrics:nil
+                                views:views]];
+    //[NSLayoutConstraint activateConstraints: self.view.constraints];
 }
 
 /*
@@ -64,18 +82,24 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
 
 - (void)preparePreviewOfFileAtURL:(NSURL *)url completionHandler:(void (^)(NSError * _Nullable))handler {
     
+    NSError* error = nil;
+    const char* filename = [url fileSystemRepresentation];
+
+//    if (![_imageView isKindOfClass:[NSImageView class]]) {
+//        error = KLOGF(9, "kramv %s expected NSImageView \n", filename);
+//        handler(error);
+//        return;
+//    }
+    
     // Add the supported content types to the QLSupportedContentTypes array in the Info.plist of the extension.
     // Perform any setup necessary in order to prepare the view.
     
     // The following is adapted out of Thumbnailer
     
     // No request here, may need to use view size
-    uint32_t maxWidth = self.view.frame.size.width;
-    uint32_t maxHeight = self.view.frame.size.height;
+    uint32_t maxWidth = _imageView.frame.size.width;
+    uint32_t maxHeight = _imageView.frame.size.height;
     
-    const char* filename = [url fileSystemRepresentation];
-
-    NSError* error = nil;
     
     bool isKTX = isKTXFilename(filename);
     bool isKTX2 = isKTX2Filename(filename);
@@ -224,7 +248,7 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     // This doesn't allocate, but in an imageView that must outlast the handle call, does that work?
     
     vImage_Error err = 0;
-    CGImageRef cgImage = vImageCreateCGImageFromBuffer(&buf, &format, NULL, NULL, kvImageNoAllocate, &err);
+    CGImageRef cgImage = vImageCreateCGImageFromBuffer(&buf, &format, NULL, NULL, /*kvImageNoAllocate*/ kvImageNoFlags, &err);
     if (err) {
         error = KLOGF(8, "kramv %s failed create cgimage\n", filename);
         handler(error);
@@ -234,13 +258,9 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
 
     NSImage* nsImage = [[NSImage alloc] initWithCGImage:cgImage size:rect.size];
     
-    if (![self.view isKindOfClass:[NSImageView class]]) {
-        error = KLOGF(9, "kramv %s expected NSImageView \n", filename);
-        handler(error);
-        return;
-    }
     
-    NSImageView* nsImageView = (NSImageView*)self.view;
+    
+    NSImageView* nsImageView = _imageView; // (NSImageView*)self.view;
     
     // Copositing is like it's using NSCompositeCopy instead of SourceOver
     // The default is NSCompositeSourceOver. NSRectFill() ignores
@@ -248,8 +268,9 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     // So may have to use NSFillRect which uses SourceOver
     // https://cocoadev.github.io/NSCompositingOperation/
     
-    // no frame
-    nsImageView.imageFrameStyle = NSImageFrameNone;
+    // no frame, already the default
+    // nsImageView.imageFrameStyle = NSImageFrameNone;
+    
     // Change default white to transparent
     [nsImageView.layer setBackgroundColor: [NSColor blackColor].CGColor];
     //[nsImageView.layer setBackgroundColor: [NSColor clearColor].CGColor];

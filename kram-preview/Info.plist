@@ -28,9 +28,9 @@
 		<dict>
 			<key>QLSupportedContentTypes</key>
 			<array>
-				<string>xxx-org.khronos.ktx</string>
-				<string>xxx-public.ktx2</string>
-				<string>xxx-image/dds</string>
+				<string>org.khronos.ktx</string>
+				<string>public.ktx2</string>
+				<string>image/dds</string>
 			</array>
 			<key>QLSupportsSearchableItems</key>
 			<false/>
