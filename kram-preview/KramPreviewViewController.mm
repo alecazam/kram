@@ -278,7 +278,7 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     nsImageView.image = nsImage;
 
     // This seems to cause plugin to fail
-    //CGImageRelease(cgImage);
+    CGImageRelease(cgImage);
     
     // TODO: could add description with info from texture (format, etc)
     // self.textView.text = ...
