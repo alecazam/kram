@@ -234,9 +234,10 @@ struct ImageToPass
         format.colorSpace = isSrgb ? CGColorSpaceCreateWithName(kCGColorSpaceSRGB) : CGColorSpaceCreateDeviceRGB();
         
         // don't need to allocate, can reuse memory from mip
-
+        bool skipPixelCopy = true;
+        
         vImage_Error err = 0;
-        CGImageRef cgImage = vImageCreateCGImageFromBuffer(&buf, &format, NULL, NULL, kvImageNoAllocate, &err);
+        CGImageRef cgImage = vImageCreateCGImageFromBuffer(&buf, &format, NULL, NULL, skipPixelCopy ? kvImageNoAllocate : kvImageNoFlags, &err);
         if (err) {
             // Can't return NSError
             //error = KLOGF("kramv %s failed create cgimage\n", filename);
@@ -252,14 +253,15 @@ struct ImageToPass
         
         // The image is scaled—disproportionately
         
-        //CGContextSetBlendMode(context, kCGBlendModeCopy);
-        CGContextSetBlendMode(context, kCGBlendModeNormal);
+        CGContextSetBlendMode(context, kCGBlendModeCopy);
+        //CGContextSetBlendMode(context, kCGBlendModeNormal);
         
         CGContextDrawImage(context, rect, cgImage);
 
         // This seems to cause plugin to fail
         // Needed?
-        //CGImageRelease(cgImage);
+        if (!skipPixelCopy)
+            CGImageRelease(cgImage);
         
         return YES;
      }], nil);

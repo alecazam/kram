@@ -52,6 +52,9 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     _imageView = [[NSImageView alloc] initWithFrame:self.view.frame];
     [_imageView setTranslatesAutoresizingMaskIntoConstraints:NO]; //Required to opt-in to autolayout
 
+    // no frame, already the default
+    // _imageView.imageFrameStyle = NSImageFrameNone;
+    
     _imageView.imageScaling = NSImageScaleProportionallyUpOrDown;
     
     [self.view addSubview: _imageView];
@@ -64,6 +67,15 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
                                constraintsWithVisualFormat:@"V:|[myview]|" options:0 metrics:nil
                                 views:views]];
     //[NSLayoutConstraint activateConstraints: self.view.constraints];
+}
+
+// This isn't a view, but hoping this is called
+- (void)viewDidAppear {
+    [super viewDidAppear];
+    
+    // this must be called after layer is ready
+    //self.view.layer.backgroundColor = [NSColor blackColor].CGColor;
+    _imageView.layer.backgroundColor = [NSColor blackColor].CGColor;
 }
 
 /*
@@ -246,9 +258,10 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     // see how big thumbs.db is after running this
     
     // This doesn't allocate, but in an imageView that must outlast the handle call, does that work?
+    bool skipPixelCopy = false;
     
     vImage_Error err = 0;
-    CGImageRef cgImage = vImageCreateCGImageFromBuffer(&buf, &format, NULL, NULL, /*kvImageNoAllocate*/ kvImageNoFlags, &err);
+    CGImageRef cgImage = vImageCreateCGImageFromBuffer(&buf, &format, NULL, NULL, skipPixelCopy ? kvImageNoAllocate : kvImageNoFlags, &err);
     if (err) {
         error = KLOGF(8, "kramv %s failed create cgimage\n", filename);
         handler(error);
@@ -258,8 +271,6 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
 
     NSImage* nsImage = [[NSImage alloc] initWithCGImage:cgImage size:rect.size];
     
-    
-    
     NSImageView* nsImageView = _imageView; // (NSImageView*)self.view;
     
     // Copositing is like it's using NSCompositeCopy instead of SourceOver
@@ -268,17 +279,12 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     // So may have to use NSFillRect which uses SourceOver
     // https://cocoadev.github.io/NSCompositingOperation/
     
-    // no frame, already the default
-    // nsImageView.imageFrameStyle = NSImageFrameNone;
-    
-    // Change default white to transparent
-    [nsImageView.layer setBackgroundColor: [NSColor blackColor].CGColor];
-    //[nsImageView.layer setBackgroundColor: [NSColor clearColor].CGColor];
-    
     nsImageView.image = nsImage;
 
-    // This seems to cause plugin to fail
-    CGImageRelease(cgImage);
+    // This seems to cause plugin to fail with NoAllocate set
+    // This leaks a CGImageRef, but the CGImage doesn't hold any memory w/NoAllocate.
+    if (!skipPixelCopy)
+        CGImageRelease(cgImage);
     
     // TODO: could add description with info from texture (format, etc)
     // self.textView.text = ...
