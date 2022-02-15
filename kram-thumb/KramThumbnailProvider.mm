@@ -258,8 +258,8 @@ struct ImageToPass
         
         // The image is scaled—disproportionately
         
-        CGContextSetBlendMode(context, kCGBlendModeCopy);
-        //CGContextSetBlendMode(context, kCGBlendModeNormal);
+        //CGContextSetBlendMode(context, kCGBlendModeCopy);
+        CGContextSetBlendMode(context, kCGBlendModeNormal);
         
         CGContextDrawImage(context, rect, cgImage);
 
