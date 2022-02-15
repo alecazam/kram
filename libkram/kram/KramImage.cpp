@@ -1575,7 +1575,7 @@ bool KramEncoder::saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compr
     // now convert from ktx1 to ktx2
     const KTXHeader& header = srcImage.header;
     
-    KTXImage dstImage; // unused, just passed to reference
+    KTXImage dummyImage; // unused, just passed to reference
     
     KTX2Header header2;
 
@@ -1611,26 +1611,26 @@ bool KramEncoder::saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compr
     header2.sgdByteLength = vsizeof(sgdData);
 
     // write the header
-    if (!writeDataAtOffset((const uint8_t*)&header2, sizeof(KTX2Header), 0, dstFile, dstImage)) {
+    if (!writeDataAtOffset((const uint8_t*)&header2, sizeof(KTX2Header), 0, dstFile, dummyImage)) {
         return false;
     }
 
     // next are levels, but those are written out later
 
     // write the dfd
-    if (!writeDataAtOffset((const uint8_t*)&dfdData, dfdData.totalSize, header2.dfdByteOffset, dstFile, dstImage)) {
+    if (!writeDataAtOffset((const uint8_t*)&dfdData, dfdData.totalSize, header2.dfdByteOffset, dstFile, dummyImage)) {
         return false;
     }
 
     // write the props
-    if (!writeDataAtOffset(propsData.data(), vsizeof(propsData), header2.kvdByteOffset, dstFile, dstImage)) {
+    if (!writeDataAtOffset(propsData.data(), vsizeof(propsData), header2.kvdByteOffset, dstFile, dummyImage)) {
         return false;
     }
 
     // skip supercompression block
     if (!sgdData.empty()) {
         // TODO: align(8) sgdPadding
-        if (!writeDataAtOffset(sgdData.data(), vsizeof(sgdData), header2.sgdByteOffset, dstFile, dstImage)) {
+        if (!writeDataAtOffset(sgdData.data(), vsizeof(sgdData), header2.sgdByteOffset, dstFile, dummyImage)) {
             return false;
         }
     }
@@ -1644,7 +1644,7 @@ bool KramEncoder::saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compr
     size_t lastImageByteOffset = imageByteOffset;
 
     uint32_t numChunks = srcImage.totalChunks();
-    vector<KTXImageLevel> ktx2Levels(dstImage.mipLevels);
+    vector<KTXImageLevel> ktx2Levels(srcImage.mipLevels);
     for (int32_t i = ktx2Levels.size() - 1; i >= 0; --i) {
         // align the offset to leastCommonMultiple(4, texel_block_size);
         if (lastImageByteOffset & 0x3) {
@@ -1660,16 +1660,16 @@ bool KramEncoder::saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compr
     }
 
     if (!compressor.isCompressed()) {
-        if (!writeDataAtOffset((const uint8_t*)ktx2Levels.data(), vsizeof(ktx2Levels), levelByteOffset, dstFile, dstImage)) {
+        if (!writeDataAtOffset((const uint8_t*)ktx2Levels.data(), vsizeof(ktx2Levels), levelByteOffset, dstFile, dummyImage)) {
             return false;
         }
 
         // write the levels out
         for (int32_t i = 0; i < (int32_t)ktx2Levels.size(); ++i) {
             auto& level2 = ktx2Levels[i];
-            auto& level1 = dstImage.mipLevels[i];
+            const auto& level1 = srcImage.mipLevels[i];
 
-            if (!writeDataAtOffset(dstImage.fileData + level1.offset, level2.length, level2.offset, dstFile, dstImage)) {
+            if (!writeDataAtOffset(srcImage.fileData + level1.offset, level2.length, level2.offset, dstFile, dummyImage)) {
                 return false;
             }
         }
@@ -1720,9 +1720,9 @@ bool KramEncoder::saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compr
 
         for (int32_t i = (int32_t)ktx2Levels.size() - 1; i >= 0; --i) {
             auto& level2 = ktx2Levels[i];
-            auto& level1 = dstImage.mipLevels[i];
+            const auto& level1 = srcImage.mipLevels[i];
 
-            const uint8_t* levelData = dstImage.fileData + level1.offset;
+            const uint8_t* levelData = srcImage.fileData + level1.offset;
 
             // compress each mip
             switch (compressor.compressorType) {
@@ -1763,13 +1763,13 @@ bool KramEncoder::saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compr
             lastImageByteOffset = level2.offset + level2.lengthCompressed;
 
             // write the mip
-            if (!writeDataAtOffset(compressedData.data(), compressedDataSize, level2.offset, dstFile, dstImage)) {
+            if (!writeDataAtOffset(compressedData.data(), compressedDataSize, level2.offset, dstFile, dummyImage)) {
                 return false;
             }
         }
 
         // write out mip level size/offsets
-        if (!writeDataAtOffset((const uint8_t*)ktx2Levels.data(), vsizeof(ktx2Levels), levelByteOffset, dstFile, dstImage)) {
+        if (!writeDataAtOffset((const uint8_t*)ktx2Levels.data(), vsizeof(ktx2Levels), levelByteOffset, dstFile, dummyImage)) {
             return false;
         }
     }
@@ -1850,7 +1850,7 @@ bool KramEncoder::saveKTX1(const KTXImage& image, FILE* dstFile) const {
     }
 
     // This is unused
-    KTXImage dstImage;
+    KTXImage dummyImage;
     
     vector<uint8_t> propsData;
     image.toPropsData(propsData);
@@ -1858,13 +1858,13 @@ bool KramEncoder::saveKTX1(const KTXImage& image, FILE* dstFile) const {
     
     uint32_t dstOffset = 0;
     
-    if (!writeDataAtOffset((const uint8_t*)&headerCopy, sizeof(KTXHeader), 0, dstFile, dstImage)) {
+    if (!writeDataAtOffset((const uint8_t*)&headerCopy, sizeof(KTXHeader), 0, dstFile, dummyImage)) {
         return false;
     }
     dstOffset += sizeof(KTXHeader);
     
     // write out the props
-    if (!writeDataAtOffset(propsData.data(), headerCopy.bytesOfKeyValueData, sizeof(KTXHeader), dstFile, dstImage)) {
+    if (!writeDataAtOffset(propsData.data(), headerCopy.bytesOfKeyValueData, sizeof(KTXHeader), dstFile, dummyImage)) {
         return false;
     }
     dstOffset += headerCopy.bytesOfKeyValueData;
@@ -1892,13 +1892,13 @@ bool KramEncoder::saveKTX1(const KTXImage& image, FILE* dstFile) const {
         size_t chunkOffset = image.chunkOffset(mipNum, 0);
         
         // write length of mip
-        if (!writeDataAtOffset((const uint8_t*)&mipStorageSize, sizeof(uint32_t), dstOffset, dstFile, dstImage)) {
+        if (!writeDataAtOffset((const uint8_t*)&mipStorageSize, sizeof(uint32_t), dstOffset, dstFile, dummyImage)) {
             return false;
         }
         dstOffset += sizeof(uint32_t);
         
         // write the level pixels
-        if (!writeDataAtOffset(mipLevelData + chunkOffset, levelDataSize, dstOffset, dstFile, dstImage)) {
+        if (!writeDataAtOffset(mipLevelData + chunkOffset, levelDataSize, dstOffset, dstFile, dummyImage)) {
             return false;
         }
         dstOffset += levelDataSize;
