@@ -1092,6 +1092,57 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     }
 }
 
+struct MouseData
+{
+    NSPoint originPoint;
+    NSPoint oldPoint;
+    NSPoint newPoint;
+    
+    NSPoint pan;
+};
+static MouseData mouseData;
+
+- (void)mouseDown:(NSEvent *)event
+{
+    mouseData.originPoint =
+    mouseData.oldPoint =
+    mouseData.newPoint = [self convertPoint:[event locationInWindow] fromView:nil];
+
+    // capture pan value and cursor value
+    mouseData.pan = NSMakePoint(_showSettings->panX, _showSettings->panY);
+}
+
+// drag is mouse movement with button down
+- (void)mouseDragged:(NSEvent *)event
+{
+    mouseData.oldPoint = mouseData.newPoint;
+    mouseData.newPoint = [self convertPoint:[event locationInWindow] fromView:nil];
+
+    // TODO: need to account for zoom
+    NSPoint delta;
+    delta.x = mouseData.newPoint.x - mouseData.originPoint.x;
+    delta.y = mouseData.newPoint.y - mouseData.originPoint.y;
+    delta.x = -delta.x;
+    delta.y = -delta.y;
+    
+    // scale to actual px or mouse cursor doesn't track drag
+    delta.x *= _showSettings->viewContentScaleFactor;
+    delta.y *= _showSettings->viewContentScaleFactor;
+    
+    // This is correct, but scale to image so cursor tracks the pick location
+    // might be over a different mip/chunk though.
+    float panX = mouseData.pan.x + delta.x;
+    float panY = mouseData.pan.y + delta.y;
+    
+    [self updatePan:panX panY:panY];
+}
+
+- (void)mouseUp:(NSEvent *)event
+{
+    // ignore up even though cursor may have moved
+
+}
+
 - (void)mouseMoved:(NSEvent *)event
 {
     // pixel in non-square window coords, run thorugh inverse to get texel space
@@ -1541,7 +1592,12 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
     float panX = _showSettings->panX + wheelX;
     float panY = _showSettings->panY + wheelY;
+    
+    [self updatePan:panX panY:(float)panY];
+}
 
+- (void)updatePan:(float)panX panY:(float)panY
+{
     Renderer *renderer = (Renderer *)self.delegate;
     float4x4 projectionViewModelMatrix =
         [renderer computeImageTransform:panX
