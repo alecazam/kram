@@ -97,19 +97,29 @@ struct DDS_HEADER_DXT10
 
 bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool isInfoOnly)
 {
-    uint32_t magic = *(uint32_t*)data;
+    // don't deref these, haven't established size yet
+    const uint32_t* magic = (const uint32_t*)data;
     const uint32_t magicSize = sizeof(uint32_t);
     const DDS_HEADER& hdr = *(const DDS_HEADER*)(data + magicSize);
     const DDS_HEADER_DXT10& hdr10 = *(const DDS_HEADER_DXT10*)(data + magicSize + sizeof(DDS_HEADER));
     const DDS_PIXELFORMAT& format = hdr.ddspf;
     uint32_t mipDataOffset = magicSize + sizeof(DDS_HEADER) + sizeof(DDS_HEADER_DXT10);
     
-    if (magic != DDS_MAGIC) {
+    if (dataSize <= mipDataOffset) {
+        return false;
+    }
+    
+    if (*magic != DDS_MAGIC) {
         return false;
     }
 
     // only load DX10 formatted DDS for now
     if (hdr.size != sizeof(DDS_HEADER) || format.size != sizeof(DDS_PIXELFORMAT)) {
+        return false;
+    }
+    
+    // this flag must be set even though just using fourcc to indicate DX10
+    if ((format.flags & DDSPF_FOURCC) == 0) {
         return false;
     }
     
@@ -211,7 +221,7 @@ bool DDSHelper::save(const KTXImage& image, FileHelper& fileHelper)
         return false;
     
     // Can only write out if matching format in DDS
-    if (directxType(image.pixelFormat) == 0)
+    if (directxType(image.pixelFormat) == MyMTLPixelFormatInvalid)
         return false;
     
     // https://docs.microsoft.com/en-us/windows/win32/direct3ddds/dds-header
@@ -235,8 +245,11 @@ bool DDSHelper::save(const KTXImage& image, FileHelper& fileHelper)
         hdr.caps |= DDSCAPS_MIPMAP;
         hdr.flags |= DDSD_MIPMAPCOUNT;
     }
+    
     // indicate this is newer dds file with pixelFormat
+    // important to set FOURCC flag
     format.fourCC = MAKEFOURCC('D', 'X', '1', '0');
+    format.flags |= DDSPF_FOURCC;
     
     hdr.flags |= DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT | DDSD_PIXELFORMAT;
     
