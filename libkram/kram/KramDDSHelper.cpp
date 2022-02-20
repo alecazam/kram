@@ -54,6 +54,19 @@ enum DDS_FLAGS : uint32_t
     DDS_DIMENSION_TEXTURE1D = 2,
     DDS_DIMENSION_TEXTURE2D = 3,
     DDS_DIMENSION_TEXTURE3D = 4,
+    
+    FOURCC_DX10 = MAKEFOURCC('D', 'X', '1', '0'),
+    
+    // dx10 misc2 flags
+    DDS_ALPHA_MODE_UNKNOWN = 0,
+    DDS_ALPHA_MODE_STRAIGHT = 1,
+    DDS_ALPHA_MODE_PREMULTIPLIED = 2,
+    DDS_ALPHA_MODE_OPAQUE = 3,
+    DDS_ALPHA_MODE_CUSTOM = 4,
+    
+    // Not worth support dx9-style files, these don't even hold srgb state
+    //FOURCC_BC1 = MAKEFOURCC('D', 'X', 'T', '1'),
+    //FOURCC_BC3 = MAKEFOURCC('D', 'X', 'T', '5'),
 };
 
 struct DDS_PIXELFORMAT
@@ -97,58 +110,100 @@ struct DDS_HEADER_DXT10
 
 bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool isInfoOnly)
 {
-    // don't deref these, haven't established size yet
-    const uint32_t* magic = (const uint32_t*)data;
     const uint32_t magicSize = sizeof(uint32_t);
-    const DDS_HEADER& hdr = *(const DDS_HEADER*)(data + magicSize);
-    const DDS_HEADER_DXT10& hdr10 = *(const DDS_HEADER_DXT10*)(data + magicSize + sizeof(DDS_HEADER));
-    const DDS_PIXELFORMAT& format = hdr.ddspf;
     uint32_t mipDataOffset = magicSize + sizeof(DDS_HEADER) + sizeof(DDS_HEADER_DXT10);
     
     if (dataSize <= mipDataOffset) {
+        KLOGE("kram", "bad dataSize too small %d <= %d", dataSize, mipDataOffset);
         return false;
     }
     
-    if (*magic != DDS_MAGIC) {
+    const uint32_t& magic = *(const uint32_t*)data;
+    const DDS_HEADER& hdr = *(const DDS_HEADER*)(data + magicSize);
+    const DDS_HEADER_DXT10& hdr10 = *(const DDS_HEADER_DXT10*)(data + magicSize + sizeof(DDS_HEADER));
+    const DDS_PIXELFORMAT& format = hdr.ddspf;
+    
+    if (magic != DDS_MAGIC) {
+        KLOGE("kram", "bad magic number 0x%08X", magic);
         return false;
     }
 
     // only load DX10 formatted DDS for now
-    if (hdr.size != sizeof(DDS_HEADER) || format.size != sizeof(DDS_PIXELFORMAT)) {
+    if (hdr.size != sizeof(DDS_HEADER)) {
+        KLOGE("kram", "bad header size %d", hdr.size);
+        return false;
+    }
+    if (format.size != sizeof(DDS_PIXELFORMAT)) {
+        KLOGE("kram", "bad format size %d", format.size);
         return false;
     }
     
     // this flag must be set even though just using fourcc to indicate DX10
     if ((format.flags & DDSPF_FOURCC) == 0) {
+        KLOGE("kram", "missing format.fourCC flag");
+        return false;
+    }
+    if (format.fourCC != FOURCC_DX10) {
+        KLOGE("kram", "format.fourCC 0x%08X must be DX10", format.fourCC);
         return false;
     }
     
     // Kram only supports a subset of DDS formats
     auto pixelFormat = directxToMetalFormat(hdr10.dxgiFormat);
-    if (pixelFormat == 0) {
+    if (pixelFormat == MyMTLPixelFormatInvalid) {
+        KLOGE("kram", "bad format.dxgiFormat %d", hdr10.dxgiFormat);
         return false;
     }
     
     // make sure to copy mips/slices from DDS array-ordered to mip-ordered for KTX
-    image.width = (hdr.flags & DDSD_WIDTH) ? hdr.width : 1;
-    image.height = (hdr.flags & DDSD_HEIGHT) ? hdr.height : 1;
-    image.depth = (hdr.flags & DDSD_DEPTH) ? hdr.depth : 0;
+    uint32_t width = (hdr.flags & DDSD_WIDTH) ? hdr.width : 1;
+    uint32_t height = (hdr.flags & DDSD_HEIGHT) ? hdr.height : 1;
+    uint32_t depth = (hdr.flags & DDSD_DEPTH) ? hdr.depth : 1;
     
     uint32_t mipCount = (hdr.flags & DDSD_MIPMAPCOUNT) ? hdr.mipMapCount : 1;
+    uint32_t arrayCount = hdr10.arraySize;
     
-    auto& ktxHdr = image.header;
-    ktxHdr.pixelWidth  = image.width;
-    ktxHdr.pixelHeight = image.height;
-    ktxHdr.pixelDepth  = image.depth;
+    // make sure that counts are reasonable
+    const uint32_t kMaxMipCount = 16;
+    const uint32_t kMaxTextureSize = 1u << (kMaxMipCount - 1); // 32K
+    const uint32_t kMaxArrayCount = 2*1024;
+   
+    if (width > kMaxTextureSize) {
+        KLOGE("kram", "bad dimension width %d", width);
+        return false;
+    }
+    if (height > kMaxTextureSize) {
+        KLOGE("kram", "bad dimension height %d", height);
+        return false;
+    }
+    if (depth > kMaxTextureSize) {
+        KLOGE("kram", "bad dimension depth %d", depth);
+        return false;
+    }
+    if (mipCount > kMaxMipCount) {
+        KLOGE("kram", "bad dimension mipCount %d", mipCount);
+        return false;
+    }
+    if (arrayCount > kMaxArrayCount) {
+        KLOGE("kram", "bad dimension height %d", arrayCount);
+        return false;
+    }
     
-    ktxHdr.initFormatGL(pixelFormat);
+    // does mipCount = 0 mean automip?
+    if (width == 0)
+        width = 1;
+    if (height == 0)
+        height = 1;
+    if (depth == 0)
+        depth = 1;
+    
+    if (mipCount == 0)
+        mipCount = 1;
+    if (arrayCount == 0)
+        arrayCount = 1;
     
     bool isCube = (hdr10.miscFlag & DDS_RESOURCE_MISC_TEXTURECUBE);
-    bool isArray = hdr10.arraySize > 1;
-    
-    ktxHdr.numberOfFaces = isCube ? 6 : 1;
-    ktxHdr.numberOfMipmapLevels = mipCount;
-    ktxHdr.numberOfArrayElements = hdr10.arraySize;
+    bool isArray = arrayCount > 1;
     
     switch(hdr10.resourceDimension) {
         case DDS_DIMENSION_TEXTURE1D:
@@ -167,17 +222,49 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool
             image.textureType = MyMTLTextureType3D;
             break;
     }
-
-    // fixuup the values, so that can convert header properly to type in info
+    
+    // transfer premul setting, would like to not depend on "info" to carry this
+    bool isPremul = (hdr10.miscFlags2 & DDS_ALPHA_MODE_PREMULTIPLIED) != 0;
+    if (isPremul)
+        image.addChannelProps("Alb.ra,Alb.ga,Alb.ba,Alb.a");
+    
+    //-------------
+    
+    // TODO: may need to fix these to KTX conventions first
+    image.width = width;
+    image.height = height;
+    image.depth = depth;
+    
+    auto& ktxHdr = image.header;
+    ktxHdr.pixelWidth  = image.width;
+    ktxHdr.pixelHeight = image.height;
+    ktxHdr.pixelDepth  = image.depth;
+    
+    ktxHdr.initFormatGL(pixelFormat);
+    
+    ktxHdr.numberOfFaces = isCube ? 6 : 1;
+    ktxHdr.numberOfMipmapLevels = mipCount;
+    ktxHdr.numberOfArrayElements = arrayCount;
+    
+    // fix up the values, so that can convert header properly to type in info
+    // TODO: this means image and ktx header don't match
     if (!isArray)
         ktxHdr.numberOfArrayElements = 0;
     if (image.textureType != MyMTLTextureType3D)
         ktxHdr.pixelDepth = 0;
     if (image.textureType == MyMTLTextureType1DArray)
         ktxHdr.pixelHeight = 0;
-    
-    // make sure these line up
-    if (image.header.metalTextureType() != image.textureType) {
+    if (image.textureType == MyMTLTextureTypeCube || image.textureType == MyMTLTextureTypeCubeArray) {
+        // DX10+ require all faces to be defined, DX9 could have partial cubemaps
+        if ((hdr.caps2 & DDSCAPS2_CUBEMAP_ALLFACES) != DDSCAPS2_CUBEMAP_ALLFACES) {
+            KLOGE("kram", "unsupported all faces of cubemap must be specified");
+            return false;
+        }
+    }
+        
+    // make sure derived type lines up
+    if (ktxHdr.metalTextureType() != image.textureType) {
+        KLOGE("kram", "unsupported textureType");
         return false;
     }
     
@@ -248,7 +335,7 @@ bool DDSHelper::save(const KTXImage& image, FileHelper& fileHelper)
     
     // indicate this is newer dds file with pixelFormat
     // important to set FOURCC flag
-    format.fourCC = MAKEFOURCC('D', 'X', '1', '0');
+    format.fourCC = FOURCC_DX10;
     format.flags |= DDSPF_FOURCC;
     
     hdr.flags |= DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT | DDSD_PIXELFORMAT;
@@ -320,6 +407,17 @@ bool DDSHelper::save(const KTXImage& image, FileHelper& fileHelper)
         }
     }
     
+    // set premul state
+    // The legacy D3DX 10 and D3DX 11 utility libraries will fail to load any .DDS file with miscFlags2 not equal to zero.
+    if (image.isPremul()) {
+        hdr10.miscFlags2 |= DDS_ALPHA_MODE_PREMULTIPLIED;
+    }
+    else {
+        hdr10.miscFlags2 |= DDS_ALPHA_MODE_STRAIGHT;
+    }
+    // TODO: also hdr10.miscFlags2 |= DDS_ALPHA_MODE_OPAQUE (alpha full opaque)
+    // TODO: also hdr10.miscFlags2 |= DDS_ALPHA_MODE_CUSTOM (raw data in alpha)
+        
     bool success = true;
     
     success = success && fileHelper.write((const uint8_t*)&DDS_MAGIC, sizeof(DDS_MAGIC));
