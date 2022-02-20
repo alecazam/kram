@@ -1599,7 +1599,13 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     //---------------------------------------
     // zoom
     
-    if (event.modifierFlags & NSEventModifierFlagCommand)
+    // Ugh, how we we tell mouseWheel from trackpad gesture calling this?
+    // if([event phase]) - supposedly only set on trackpad, but Apple MagicMouse does this on wheel
+    //   and trackpad fires on that too causing the image to zoom away to nothing (inertia maybe)
+    // https://stackoverflow.com/questions/6642058/mac-cocoa-how-can-i-detect-trackpad-scroll-gestures
+    bool isMouse = ![event hasPreciseScrollingDeltas];
+    
+    if (isMouse || event.modifierFlags & NSEventModifierFlagCommand)
     {
         // needs to set _validMagnfication, but how do we tell initial wheel event?
         float zoom = _zoomGesture.magnification;

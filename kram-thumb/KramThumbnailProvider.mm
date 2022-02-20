@@ -183,6 +183,22 @@ struct ImageToPass
             KramDecoderParams params;
             params.decoder = decoderType;
             
+            // TODO: should honor swizzle in the ktx image
+            // TODO: probaby need an snorm rgba format to convert the snorm versions, so they're not all red
+            // if sdf, will be signed format and that will stay red
+            
+            switch(image.pixelFormat)
+            {
+                // To avoid showing single channel content in red, replicate to rgb
+                case MyMTLPixelFormatBC4_RUnorm:
+                case MyMTLPixelFormatEAC_R11Unorm:
+                    params.swizzleText = "rrr1";
+                    break;
+                    
+                default:
+                    break;
+            }
+            
             vector<uint8_t> dstMipData;
             
             // only space for one chunk for now

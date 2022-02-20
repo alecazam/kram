@@ -862,6 +862,10 @@ float4 DrawPixels(
     float2 textureSize
 )
 {
+    // auto-swizzle BC4 and EAC_R11 to rrr1
+    if (uniforms.numChannels == 1 && !uniforms.isSigned)
+        c = float4(c.rrr, 1.0);
+    
     float4 sc = c;
     
     bool isPreview = uniforms.isPreview;
