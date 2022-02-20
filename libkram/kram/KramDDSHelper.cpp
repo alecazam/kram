@@ -114,7 +114,7 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool
     uint32_t mipDataOffset = magicSize + sizeof(DDS_HEADER) + sizeof(DDS_HEADER_DXT10);
     
     if (dataSize <= mipDataOffset) {
-        KLOGE("kram", "bad dataSize too small %d <= %d", dataSize, mipDataOffset);
+        KLOGE("kram", "bad dataSize too small %zu <= %d", dataSize, mipDataOffset);
         return false;
     }
     

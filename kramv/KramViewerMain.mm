@@ -91,6 +91,12 @@ inline const char* toFilenameShort(const char* filename) {
 // can hide hud while list view is up
 @property(nonatomic, readwrite) bool hudHidden;
 
+// TODO: should be a part of document, but only one doc to a view
+@property(nonatomic, readwrite) float originalZoom;
+@property(nonatomic, readwrite) float validMagnification;
+
+
+
 - (BOOL)loadTextureFromURL:(NSURL *)url;
 
 - (void)setHudText:(const char *)text;
@@ -581,10 +587,14 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // added for drag-drop support
     [self registerForDraggedTypes:pasteboardTypes];
 
+    // This gesture only works for trackpad
     _zoomGesture = [[NSMagnificationGestureRecognizer alloc]
         initWithTarget:self
                 action:@selector(handleGesture:)];
     [self addGestureRecognizer:_zoomGesture];
+
+    _originalZoom = 1.0f;
+    _validMagnification = 1.0f;
 
     _buttonArray = [[NSMutableArray alloc] init];
     _buttonStack = [self _addButtons];
@@ -942,14 +952,14 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
     bool isFirstGesture = _zoomGesture.state == NSGestureRecognizerStateBegan;
 
-    // TODO: move into object
-    static float _originalZoom = 1.0f;
-    static float _validMagnification = 1.0f;
-
     float zoom = _zoomGesture.magnification;
     if (isFirstGesture) {
         _zoomGesture.magnification = 1.0f;
-        zoom = _showSettings->zoom;
+        
+        _validMagnification = 1.0f;
+        _originalZoom = _showSettings->zoom;
+        
+        zoom = _originalZoom;
     }
     else if (zoom * _originalZoom < 0.1f) {
         // can go negative otherwise
@@ -957,21 +967,22 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         _zoomGesture.magnification = zoom;
     }
     
-    //-------------------------------------
-
-    // https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/handling_uikit_gestures/handling_pinch_gestures?language=objc
-    // need to sync up the zoom when action begins or zoom will jump
-    if (isFirstGesture) {
-        _validMagnification = 1.0f;
-        _originalZoom = zoom;
-    }
-    else {
+    if (!isFirstGesture) {
         // try expontental (this causes a jump, comparison avoids an initial jump
         // zoom = powf(zoom, 1.05f);
 
         // doing multiply instead of equals here, also does exponential zom
         zoom *= _originalZoom;
     }
+    
+    [self updateZoom:zoom];
+}
+
+-(void)updateZoom:(float)zoom
+{
+    // https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/handling_uikit_gestures/handling_pinch_gestures?language=objc
+    // need to sync up the zoom when action begins or zoom will jump
+    
 
     // https://stackoverflow.com/questions/30002361/image-zoom-centered-on-mouse-position
 
@@ -1102,6 +1113,7 @@ struct MouseData
 };
 static MouseData mouseData;
 
+// left mouse button down
 - (void)mouseDown:(NSEvent *)event
 {
     mouseData.originPoint =
@@ -1112,7 +1124,7 @@ static MouseData mouseData;
     mouseData.pan = NSMakePoint(_showSettings->panX, _showSettings->panY);
 }
 
-// drag is mouse movement with button down
+// drag is mouse movement with left button down
 - (void)mouseDragged:(NSEvent *)event
 {
     mouseData.oldPoint = mouseData.newPoint;
@@ -1585,8 +1597,30 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     //    }
 
     //---------------------------------------
-
+    // zoom
+    
+    if (event.modifierFlags & NSEventModifierFlagCommand)
+    {
+        // needs to set _validMagnfication, but how do we tell initial wheel event?
+        float zoom = _zoomGesture.magnification;
+        if (wheelY != 0.0)
+        {
+            wheelY *= 0.01;
+            wheelY = clamp(wheelY, -0.1, 0.1);
+            
+            zoom *= 1.0 + wheelY;
+            
+            // here have to modify the magnfication, since gesture isn't driving it
+            _zoomGesture.magnification = zoom;
+            
+            [self updateZoom: zoom];
+        }
+        return;
+    }
+    
+    //---------------------------------------
     // pan
+    
     wheelY = -wheelY;
     wheelX = -wheelX;
 
