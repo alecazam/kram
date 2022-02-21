@@ -41,6 +41,14 @@ using namespace simd;
 using namespace kram;
 using namespace NAMESPACE_STL;
 
+struct MouseData
+{
+    NSPoint originPoint;
+    NSPoint oldPoint;
+    NSPoint newPoint;
+    
+    NSPoint pan;
+};
 
 // this aliases the existing string, so can't chop extension
 inline const char* toFilenameShort(const char* filename) {
@@ -94,7 +102,7 @@ inline const char* toFilenameShort(const char* filename) {
 // TODO: should be a part of document, but only one doc to a view
 @property(nonatomic, readwrite) float originalZoom;
 @property(nonatomic, readwrite) float validMagnification;
-
+@property(nonatomic, readwrite) MouseData mouseData;
 
 
 - (BOOL)loadTextureFromURL:(NSURL *)url;
@@ -945,6 +953,11 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
 - (void)handleGesture:(NSGestureRecognizer *)gestureRecognizer
 {
+    // skip until image loaded
+    if (_showSettings->imageBoundsX == 0) {
+        return;
+    }
+    
     // https://cocoaosxrevisited.wordpress.com/2018/01/06/chapter-18-mouse-events/
     if (gestureRecognizer != _zoomGesture) {
         return;
@@ -1103,37 +1116,38 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     }
 }
 
-struct MouseData
-{
-    NSPoint originPoint;
-    NSPoint oldPoint;
-    NSPoint newPoint;
-    
-    NSPoint pan;
-};
-static MouseData mouseData;
 
 // left mouse button down
 - (void)mouseDown:(NSEvent *)event
 {
-    mouseData.originPoint =
-    mouseData.oldPoint =
-    mouseData.newPoint = [self convertPoint:[event locationInWindow] fromView:nil];
+    // skip until image loaded
+    if (_showSettings->imageBoundsX == 0) {
+        return;
+    }
+    
+    _mouseData.originPoint =
+    _mouseData.oldPoint =
+    _mouseData.newPoint = [self convertPoint:[event locationInWindow] fromView:nil];
 
     // capture pan value and cursor value
-    mouseData.pan = NSMakePoint(_showSettings->panX, _showSettings->panY);
+    _mouseData.pan = NSMakePoint(_showSettings->panX, _showSettings->panY);
 }
 
 // drag is mouse movement with left button down
 - (void)mouseDragged:(NSEvent *)event
 {
-    mouseData.oldPoint = mouseData.newPoint;
-    mouseData.newPoint = [self convertPoint:[event locationInWindow] fromView:nil];
+    // skip until image loaded
+    if (_showSettings->imageBoundsX == 0) {
+        return;
+    }
+    
+    _mouseData.oldPoint = _mouseData.newPoint;
+    _mouseData.newPoint = [self convertPoint:[event locationInWindow] fromView:nil];
 
     // TODO: need to account for zoom
     NSPoint delta;
-    delta.x = mouseData.newPoint.x - mouseData.originPoint.x;
-    delta.y = mouseData.newPoint.y - mouseData.originPoint.y;
+    delta.x = _mouseData.newPoint.x - _mouseData.originPoint.x;
+    delta.y = _mouseData.newPoint.y - _mouseData.originPoint.y;
     delta.x = -delta.x;
     delta.y = -delta.y;
     
@@ -1143,8 +1157,8 @@ static MouseData mouseData;
     
     // This is correct, but scale to image so cursor tracks the pick location
     // might be over a different mip/chunk though.
-    float panX = mouseData.pan.x + delta.x;
-    float panY = mouseData.pan.y + delta.y;
+    float panX = _mouseData.pan.x + delta.x;
+    float panY = _mouseData.pan.y + delta.y;
     
     [self updatePan:panX panY:panY];
 }
@@ -1157,6 +1171,11 @@ static MouseData mouseData;
 
 - (void)mouseMoved:(NSEvent *)event
 {
+    // skip until image loaded
+    if (_showSettings->imageBoundsX == 0) {
+        return;
+    }
+    
     // pixel in non-square window coords, run thorugh inverse to get texel space
     // I think magnofication of zoom gesture is affecting coordinates reported by
     // this
@@ -1583,6 +1602,11 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
 - (void)scrollWheel:(NSEvent *)event
 {
+    // skip until image loaded
+    if (_showSettings->imageBoundsX == 0) {
+        return;
+    }
+    
     double wheelX = [event scrollingDeltaX];
     double wheelY = [event scrollingDeltaY];
 
@@ -1605,12 +1629,10 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     // https://stackoverflow.com/questions/6642058/mac-cocoa-how-can-i-detect-trackpad-scroll-gestures
     bool isMouse = ![event hasPreciseScrollingDeltas];
     
-    if (isMouse || event.modifierFlags & NSEventModifierFlagCommand)
-    {
+    if (isMouse || event.modifierFlags & NSEventModifierFlagCommand) {
         // needs to set _validMagnfication, but how do we tell initial wheel event?
         float zoom = _zoomGesture.magnification;
-        if (wheelY != 0.0)
-        {
+        if (wheelY != 0.0) {
             wheelY *= 0.01;
             wheelY = clamp(wheelY, -0.1, 0.1);
             

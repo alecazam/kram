@@ -220,6 +220,7 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool
             break;
         case DDS_DIMENSION_TEXTURE3D:
             image.textureType = MyMTLTextureType3D;
+            isArray = false;
             break;
     }
     
