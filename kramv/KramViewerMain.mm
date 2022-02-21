@@ -64,6 +64,104 @@ inline const char* toFilenameShort(const char* filename) {
 
 //-------------
 
+enum Key {
+    A = 0x00,
+    S = 0x01,
+    D = 0x02,
+    F = 0x03,
+    H = 0x04,
+    G = 0x05,
+    Z = 0x06,
+    X = 0x07,
+    C = 0x08,
+    V = 0x09,
+    B = 0x0B,
+    Q = 0x0C,
+    W = 0x0D,
+    E = 0x0E,
+    R = 0x0F,
+    Y = 0x10,
+    T = 0x11,
+    O = 0x1F,
+    U = 0x20,
+    I = 0x22,
+    P = 0x23,
+    L = 0x25,
+    J = 0x26,
+    K = 0x28,
+    N = 0x2D,
+    M = 0x2E,
+
+    // https://eastmanreference.com/complete-list-of-applescript-key-codes
+    Num1 = 0x12,
+    Num2 = 0x13,
+    Num3 = 0x14,
+    Num4 = 0x15,
+    Num5 = 0x17,
+    Num6 = 0x16,
+    Num7 = 0x1A,
+    Num8 = 0x1C,
+    Num9 = 0x19,
+    Num0 = 0x1D,
+
+    LeftBrace = 0x21,
+    RightBrace = 0x1E,
+
+    LeftBracket = 0x21,
+    RightBracket = 0x1E,
+
+    Quote = 0x27,
+    Semicolon = 0x29,
+    Backslash = 0x2A,
+    Comma = 0x2B,
+    Slash = 0x2C,
+
+    LeftArrow = 0x7B,
+    RightArrow = 0x7C,
+    DownArrow = 0x7D,
+    UpArrow = 0x7E,
+    
+    Space = 0x31,
+    Escape = 0x35,
+};
+
+
+// This makes dealing with ui much simpler
+class Action {
+public:
+    Action(const char* icon_, const char* tip_, Key keyCode_): icon(icon_), tip(tip_), keyCode(keyCode_) {}
+    
+    const char* icon;
+    const char* tip;
+
+    // Note these are not ref-counted, but AppKit already does
+    id button; // NSButton*
+    id menuItem; // NSMenuItem*
+    Key keyCode;
+    
+    bool isHighlighted = false;
+    bool isHidden = false;
+    
+    void setHighlight(bool enable) {
+        isHighlighted = enable;
+        
+        auto On = NSControlStateValueOn;
+        auto Off = NSControlStateValueOff;
+        
+        ((NSButton*)button).state = enable ? On : Off;
+        ((NSMenuItem*)menuItem).state = enable ? On : Off;
+    }
+    
+    void setHidden(bool enable) {
+        isHidden = enable;
+        
+        ((NSButton*)button).hidden = enable;
+        ((NSMenuItem*)menuItem).hidden = enable;
+    }
+};
+
+//-------------
+
 // This is so annoying, but otherwise the hud always intercepts clicks intended
 // for the underlying TableView.
 // https://stackoverflow.com/questions/15891098/nstextfield-click-through
@@ -344,176 +442,6 @@ inline const char* toFilenameShort(const char* filename) {
 
 @end
 
-//-------------
-
-enum Key {
-    A = 0x00,
-    S = 0x01,
-    D = 0x02,
-    F = 0x03,
-    H = 0x04,
-    G = 0x05,
-    Z = 0x06,
-    X = 0x07,
-    C = 0x08,
-    V = 0x09,
-    B = 0x0B,
-    Q = 0x0C,
-    W = 0x0D,
-    E = 0x0E,
-    R = 0x0F,
-    Y = 0x10,
-    T = 0x11,
-    O = 0x1F,
-    U = 0x20,
-    I = 0x22,
-    P = 0x23,
-    L = 0x25,
-    J = 0x26,
-    K = 0x28,
-    N = 0x2D,
-    M = 0x2E,
-
-    // https://eastmanreference.com/complete-list-of-applescript-key-codes
-    Num1 = 0x12,
-    Num2 = 0x13,
-    Num3 = 0x14,
-    Num4 = 0x15,
-    Num5 = 0x17,
-    Num6 = 0x16,
-    Num7 = 0x1A,
-    Num8 = 0x1C,
-    Num9 = 0x19,
-    Num0 = 0x1D,
-
-    LeftBrace = 0x21,
-    RightBrace = 0x1E,
-
-    LeftBracket = 0x21,
-    RightBracket = 0x1E,
-
-    Quote = 0x27,
-    Semicolon = 0x29,
-    Backslash = 0x2A,
-    Comma = 0x2B,
-    Slash = 0x2C,
-
-    LeftArrow = 0x7B,
-    RightArrow = 0x7C,
-    DownArrow = 0x7D,
-    UpArrow = 0x7E,
-    
-    Space = 0x31,
-    Escape = 0x35,
-};
-
-/*
-
-// This is meant to advance a given image through a variety of encoder formats.
-// Then can compare the encoding results and pick the better one.
-// This could help artist see the effect on all mips of an encoder choice, and
-dial up/down the setting.
-// Would this cycle through astc and bc together, or separately.
-MyMTLPixelFormat encodeSrcTextureAsFormat(MyMTLPixelFormat currentFormat, bool
-increment) {
-    // if dev drops a png, then have a mode to see different encoding styles
-    // on normals, it would just be BC5, ETCrg, ASTCla and blocks
-    #define findIndex(array, x) \
-        for (int32_t i = 0, count = sizeof(array); i < count; ++i) { \
-            if (array[i] == x) { \
-                int32_t index = i; \
-                if (increment) \
-                    index = (index + 1) % count; \
-                else \
-                    index = (index + count - 1) % count; \
-                newFormat = array[index]; \
-                break; \
-            } \
-        }
-
-    MyMTLPixelFormat newFormat = currentFormat;
-
-    // these are formats to cycle through
-    MyMTLPixelFormat bc[]     = { MyMTLPixelFormatBC7_RGBAUnorm,
-MyMTLPixelFormatBC3_RGBA, MyMTLPixelFormatBC1_RGBA }; MyMTLPixelFormat bcsrgb[]
-= { MyMTLPixelFormatBC7_RGBAUnorm_sRGB, MyMTLPixelFormatBC3_RGBA_sRGB,
-MyMTLPixelFormatBC1_RGBA_sRGB };
-
-    // TODO: support non-square block with astcenc
-    MyMTLPixelFormat astc[]     = { MyMTLPixelFormatASTC_4x4_LDR,
-MyMTLPixelFormatASTC_5x5_LDR, MyMTLPixelFormatASTC_6x6_LDR,
-MyMTLPixelFormatASTC_8x8_LDR }; MyMTLPixelFormat astcsrgb[] = {
-MyMTLPixelFormatASTC_4x4_sRGB, MyMTLPixelFormatASTC_5x5_sRGB,
-MyMTLPixelFormatASTC_6x6_sRGB, MyMTLPixelFormatASTC_8x8_sRGB }; MyMTLPixelFormat
-astchdr[]  = { MyMTLPixelFormatASTC_4x4_HDR, MyMTLPixelFormatASTC_5x5_HDR,
-MyMTLPixelFormatASTC_6x6_HDR, MyMTLPixelFormatASTC_8x8_HDR };
-
-    if (isASTCFormat(currentFormat)) {
-        if (isHDRFormat(currentFormat)) {
-            // skip it, need hdr decode for Intel
-            // findIndex(astchdr, currentFormat);
-        }
-        else if (isSrgbFormat(currentFormat)) {
-            findIndex(astcsrgb, currentFormat);
-        }
-        else {
-            findIndex(astc, currentFormat);
-        }
-    }
-    else if (isBCFormat(currentFormat)) {
-        if (isHDRFormat(currentFormat)) {
-            // skip it for now, bc6h
-        }
-        else if (isSrgbFormat(currentFormat)) {
-            findIndex(bcsrgb, currentFormat);
-        }
-        else {
-            findIndex(bc, currentFormat);
-        }
-    }
-
-    #undef findIndex
-
-    return newFormat;
-}
-
-void encodeSrcForEncodeComparisons(bool increment) {
-    auto newFormat = encodeSrcTextureAsFormat(displayedFormat, increment);
-
-    // This is really only useful for variable block size formats like ASTC
-    // maybe some value in BC7 to BC1 comparison (original vs. BC7 vs. BC1)
-
-     // TODO: have to encode and then decode astc/etc on macOS-Intel
-     // load png and keep it around, and then call encode and then diff the
-image against the original pixels
-     // 565 will always differ from the original.
-
-     // Once encode generated, then cache result, only ever display two textures
-     // in a comparison mode. Also have eyedropper sample from second texture
-     // could display src vs. encode, or cached textures against each other
-     // have PSNR too ?
-
-    // see if the format is in cache
-
-    // encode incremented format and cache, that way don't wait too long
-    // and once all encode formats generated, can cycle through them until next
-image loaded
-
-    // Could reuse the same buffer for all ASTC formats, larger blocks always
-need less mem
-    //KramImage image; // TODO: move encode to KTXImage, convert png to one
-layer KTXImage
-    //image.open(...);
-    //image.encode(dstImage);
-    //decodeIfNeeded(dstImage, dstImageDecoded);
-    //comparisonTexture = [createImage:image];
-    //set that onto the shader to diff against after recontruct
-
-    // this format after decode may not be the same
-    displayedFormat = newFormat;
-}
-*/
-
 // also NSPasteboardTypeURL
 // also NSPasteboardTypeTIFF
 NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
@@ -545,6 +473,42 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
     vector<string> _folderFiles;
     int32_t _fileFolderIndex;
+    
+    Action* _actionPlay;
+    Action* _actionHelp;
+    Action* _actionInfo;
+    Action* _actionHud;
+    Action* _actionShowAll;
+    
+    Action* _actionPreview;
+    Action* _actionWrap;
+    Action* _actionPremul;
+    Action* _actionSigned;
+    
+    Action* _actionDebug;
+    Action* _actionGrid;
+    Action* _actionChecker;
+    Action* _actionHideUI;
+    Action* _actionVertical;
+    
+    Action* _actionMip;
+    Action* _actionFace;
+    Action* _actionArray;
+    Action* _actionItem;
+    Action* _actionReload;
+    Action* _actionFit;
+    
+    Action* _actionShapeMesh;
+    Action* _actionShapeChannel;
+    Action* _actionLighting;
+    Action* _actionTangent;
+    
+    Action* _actionR;
+    Action* _actionG;
+    Action* _actionB;
+    Action* _actionA;
+    
+    vector<Action> _actions;
 }
 
 - (void)awakeFromNib
@@ -648,94 +612,103 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
 - (NSStackView *)_addButtons
 {
-    const int32_t numButtons = 31;
-    const char *names[numButtons * 2] = {
-        " ",
-        "Play",
-        "?",
-        "Help",
-        "I",
-        "Info",
-        "H",
-        "Hud",
-        "S",
-        "Show All",
+    const int32_t numActions = 32;
+    Action actions[numActions] = {
+        Action(" ", "Play", Key::Space),
+        Action("?", "Help", Key::Slash),
+        Action("I", "Info", Key::I),
+        
+        Action("H", "Hud", Key::H),
+        Action("S", "Show All", Key::S),
+    
+        Action("P", "Preview", Key::P),
+        Action("W", "Repeat", Key::W), // really address mode
+        Action("O", "Premul", Key::O), // TODO: better letter for this
+        Action("N", "Signed", Key::N),
+        
+        Action("-", "", Key::A), // sep
 
-        "O",
-        "Preview",
-        "W",
-        "Repeat",
-        "P",
-        "Premul",
-        "N",
-        "Signed",
+        Action("D", "Debug", Key::D),
+        Action("G", "Grid", Key::G),
+        
+        Action("C", "Checker", Key::C),
+        Action("U", "Toggle UI", Key::U),
+        Action("V", "Toggle Vertical", Key::V),
 
-        "-",
-        "",
+        Action("-", "", Key::A), // sep
 
-        "E",
-        "Debug",
-        "D",
-        "Grid",
-        "C",
-        "Checker",
-        "U",
-        "Toggle UI",
+        Action("M", "Mip", Key::M),
+        Action("F", "Face", Key::F),
+        Action("Y", "Array", Key::Y),
+        Action("J", "Next", Key::J),
+        Action("L", "Reload", Key::L),
+        Action("0", "Fit", Key::Num0),
 
-        "-",
-        "",
+        Action("-", "", Key::A), // sep
 
-        "M",
-        "Mip",
-        "F",
-        "Face",
-        "Y",
-        "Array",
-        "J",
-        "Next",
-        "L",
-        "Reload",
-        "0",
-        "Fit",
-
-        "-",
-        "",
-
-        "8",
-        "Shape",
-        "6",
-        "Shape Channel",
-        "5",
-        "Lighting",
-        "T",
-        "Tangents",
+        Action("8", "Shape", Key::Num8),
+        Action("6", "Shape Channel", Key::Num6),
+        Action("5", "Lighting", Key::Num5),
+        Action("T", "Tangents", Key::T),
 
         // TODO: need to shift hud over a little
         // "UI", - add to show/hide buttons
 
-        "-",
-        "",
+        Action("-", "", Key::A), // sep
 
         // make these individual toggles and exclusive toggle off shift
-        "R",
-        "Red",
-        "G",
-        "Green",
-        "B",
-        "Blue",
-        "A",
-        "Alpha",
+        Action("R", "Red", Key::Num1),
+        Action("G", "Green", Key::Num2),
+        Action("B", "Blue", Key::Num3),
+        Action("A", "Alpha", Key::Num4),
     };
-
+    
+    Action** actionPtrs[] = {
+        &_actionPlay,
+        &_actionHelp,
+        &_actionInfo,
+        &_actionHud,
+        &_actionShowAll,
+        
+        &_actionPreview,
+        &_actionWrap,
+        &_actionPremul,
+        &_actionSigned,
+        
+        &_actionDebug,
+        &_actionGrid,
+        &_actionChecker,
+        &_actionHideUI,
+        &_actionVertical,
+        
+        &_actionMip,
+        &_actionFace,
+        &_actionArray,
+        &_actionItem,
+        &_actionReload,
+        &_actionFit,
+        
+        &_actionShapeMesh,
+        &_actionShapeChannel,
+        &_actionLighting,
+        &_actionTangent,
+        
+        &_actionR,
+        &_actionG,
+        &_actionB,
+        &_actionA,
+    };
+    
     NSRect rect = NSMakeRect(0, 10, 30, 30);
 
-    //#define ArrayCount(x) ((x) / sizeof(x[0]))
+    #define ArrayCount(x) ((x) / sizeof(x[0]))
 
     NSMutableArray *buttons = [[NSMutableArray alloc] init];
 
-    for (int32_t i = 0; i < numButtons; ++i) {
-        const char *icon = names[2 * i + 0];
-        const char *tip = names[2 * i + 1];
+    for (int32_t i = 0; i < numActions; ++i) {
+        Action& action = actions[i];
+        const char *icon = action.icon;
+        const char *tip = action.tip;
 
         NSString *name = [NSString stringWithUTF8String:icon];
         NSString *toolTip = [NSString stringWithUTF8String:tip];
@@ -750,26 +723,21 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
         button.buttonType = NSButtonTypeToggle;
         // NSButtonTypeOnOff
-
-#if 0
-        // can use this with border
-        // TODO: for some reason this breaks clicking on buttons
-        // TODO: eliminate the rounded border
-        button.showsBorderOnlyWhileMouseInside = YES;
-        button.bordered = YES;
-#else
         button.bordered = NO;
-#endif
         [button setFrame:rect];
 
         // stackView seems to disperse the items evenly across the area, so this
         // doesn't work
-        if (icon[0] == '-') {
+        bool isSeparator = icon[0] == '-';
+        
+        if (isSeparator) {
             // rect.origin.y += 11;
             button.enabled = NO;
         }
         else {
-            // sKrect.origin.y += 25;
+            action.button = button;
+            
+            // rect.origin.y += 25;
 
             // keep all buttons, since stackView will remove and pack the stack
             [_buttonArray addObject:button];
@@ -796,15 +764,17 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // NSMenu* menu = app.windowsMenu;
     //[menu addItem:[NSMenuItem separatorItem]];
 
-    for (int32_t i = 0; i < numButtons; ++i) {
-        const char *icon = names[2 * i + 0];  // single char
-        const char *title = names[2 * i + 1];
+    for (int32_t i = 0; i < numActions; ++i) {
+        Action& action = actions[i];
+        const char *icon = action.icon;  // single char
+        const char *title = action.tip;
 
         NSString *toolTip = [NSString stringWithUTF8String:icon];
         NSString *name = [NSString stringWithUTF8String:title];
         NSString *shortcut = @"";  // for now, or AppKit turns key int cmd+shift+key
-
-        if (icon[0] == '-') {
+        bool isSeparator = icon[0] == '-';
+        
+        if (isSeparator) {
             [_viewMenu addItem:[NSMenuItem separatorItem]];
         }
         else {
@@ -818,11 +788,33 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
             // menuItem.state = Mixed/Off/On;
 
             [_viewMenu addItem:menuItem];
+            
+            action.menuItem = menuItem;
         }
     }
 
     [_viewMenu addItem:[NSMenuItem separatorItem]];
 
+    //----------------------
+    
+    // copy all of them to a vector, and then assign the action ptrs
+    for (int32_t i = 0; i < numActions; ++i) {
+        Action& action = actions[i];
+        const char *icon = action.icon;  // single char
+        
+        // skip separators
+        bool isSeparator = icon[0] == '-';
+        if (isSeparator) continue;
+        
+        _actions.push_back(action);
+    }
+    
+    // now alias Actions to the vector above
+    //assert(_actions.size() == ArrayCount(actionPtrs));
+    for (int32_t i = 0; i < _actions.size(); ++i) {
+        *(actionPtrs[i]) = &_actions[i];
+    }
+    
     return stackView;
 }
 
@@ -864,15 +856,6 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // UILabel has shadowColor/shadowOffset but NSTextField doesn't
 
     [self addSubview:label];
-
-    // add vertical constrains to have it fill window, but keep 800 width
-    // this didn't seem to work, can do in Storyboard
-    // NSDictionary* views = @{ @"label" : label };
-    //[self addConstraints:[NSLayoutConstraint
-    //constraintsWithVisualFormat:@"H:|-[label]" options:0 metrics:nil
-    //views:views]]; [self addConstraints:[NSLayoutConstraint
-    //constraintsWithVisualFormat:@"V:|-[label]" options:0 metrics:nil
-    //views:views]];
 
     return label;
 }
@@ -1610,27 +1593,14 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     double wheelX = [event scrollingDeltaX];
     double wheelY = [event scrollingDeltaY];
 
-    //    if ([event hasPreciseScrollingDeltas])
-    //    {
-    //        //wheelX *= 0.01;
-    //        //wheelY *= 0.01;
-    //    }
-    //    else {
-    //        //wheelX *= 0.1;
-    //        //wheelY *= 0.1;
-    //    }
-
-    //---------------------------------------
-    // zoom
-    
     // Ugh, how we we tell mouseWheel from trackpad gesture calling this?
     // if([event phase]) - supposedly only set on trackpad, but Apple MagicMouse does this on wheel
     //   and trackpad fires on that too causing the image to zoom away to nothing (inertia maybe)
     // https://stackoverflow.com/questions/6642058/mac-cocoa-how-can-i-detect-trackpad-scroll-gestures
     bool isMouse = ![event hasPreciseScrollingDeltas];
     
-    if (isMouse || event.modifierFlags & NSEventModifierFlagCommand) {
-        // needs to set _validMagnfication, but how do we tell initial wheel event?
+    if (isMouse) {
+        // zoom with mouse
         float zoom = _zoomGesture.magnification;
         if (wheelY != 0.0) {
             wheelY *= 0.01;
@@ -1643,19 +1613,17 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
             
             [self updateZoom: zoom];
         }
-        return;
     }
-    
-    //---------------------------------------
-    // pan
-    
-    wheelY = -wheelY;
-    wheelX = -wheelX;
+    else {
+        // pan with trackpad
+        wheelY = -wheelY;
+        wheelX = -wheelX;
 
-    float panX = _showSettings->panX + wheelX;
-    float panY = _showSettings->panY + wheelY;
-    
-    [self updatePan:panX panY:(float)panY];
+        float panX = _showSettings->panX + wheelX;
+        float panY = _showSettings->panY + wheelY;
+        
+        [self updatePan:panX panY:(float)panY];
+    }
 }
 
 - (void)updatePan:(float)panX panY:(float)panY
@@ -1718,27 +1686,6 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     }
 }
 
-- (NSButton *)findButton:(const char *)name
-{
-    NSString *title = [NSString stringWithUTF8String:name];
-    for (NSButton *button in _buttonArray) {
-        if (button.title == title)
-            return button;
-    }
-    return nil;
-}
-
-- (NSMenuItem *)findMenuItem:(const char *)name
-{
-    NSString *title = [NSString stringWithUTF8String:name];
-
-    for (NSMenuItem *menuItem in _viewMenu.itemArray) {
-        if (menuItem.toolTip == title)
-            return menuItem;
-    }
-    return nil;
-}
-
 // use this to enable/disable menus, buttons, etc.  Called on every event
 // when not implemented, then user items are always enabled
 - (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item
@@ -1791,51 +1738,32 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     bool isSignedHidden = !isSignedFormat(_showSettings->originalFormat);
     bool isPlayHidden = !_showSettings->isModel;
     
-    // buttons
-    [self findButton:" "].hidden = isPlayHidden;
-    [self findButton:"Y"].hidden = isArrayHidden;
-    [self findButton:"F"].hidden = isFaceSliceHidden;
-    [self findButton:"M"].hidden = isMipHidden;
-    [self findButton:"S"].hidden = isShowAllHidden;
-    [self findButton:"J"].hidden = isJumpToNextHidden;
-
-    [self findButton:"R"].hidden = isRedHidden;
-    [self findButton:"G"].hidden = isGreenHidden;
-    [self findButton:"B"].hidden = isBlueHidden;
-    [self findButton:"A"].hidden = isAlphaHidden;
-
-    [self findButton:"P"].hidden = isPremulHidden;
-    [self findButton:"N"].hidden = isSignedHidden;
-    [self findButton:"C"].hidden = isCheckerboardHidden;
-
-    // menus (may want to disable, not hide)
-    // problem is crashes since menu seems to strip hidden items
-    // enabled state has to be handled in validateUserInterfaceItem
-    [self findMenuItem:" "].hidden = isPlayHidden;
-    [self findMenuItem:"Y"].hidden = isArrayHidden;
-    [self findMenuItem:"F"].hidden = isFaceSliceHidden;
-    [self findMenuItem:"M"].hidden = isMipHidden;
-    [self findMenuItem:"S"].hidden = isShowAllHidden;
-    [self findMenuItem:"J"].hidden = isJumpToNextHidden;
-
-    [self findMenuItem:"R"].hidden = isRedHidden;
-    [self findMenuItem:"G"].hidden = isGreenHidden;
-    [self findMenuItem:"B"].hidden = isBlueHidden;
-    [self findMenuItem:"A"].hidden = isAlphaHidden;
-
-    [self findMenuItem:"P"].hidden = isPremulHidden;
-    [self findMenuItem:"N"].hidden = isSignedHidden;
-    [self findMenuItem:"C"].hidden = isCheckerboardHidden;
-
+    _actionPlay->setHidden(isPlayHidden);
+    _actionArray->setHidden(isArrayHidden);
+    _actionFace->setHidden(isFaceSliceHidden);
+    _actionMip->setHidden(isMipHidden);
+    _actionShowAll->setHidden(isShowAllHidden);
+    _actionItem->setHidden(isJumpToNextHidden);
+    
+    _actionR->setHidden(isRedHidden);
+    _actionG->setHidden(isGreenHidden);
+    _actionB->setHidden(isBlueHidden);
+    _actionA->setHidden(isAlphaHidden);
+    
+    _actionPremul->setHidden(isPremulHidden);
+    _actionSigned->setHidden(isSignedHidden);
+    _actionChecker->setHidden(isCheckerboardHidden);
+    
     // also need to call after each toggle
     [self updateUIControlState];
 }
 
 - (void)updateUIControlState
 {
-    // there is also mixed
-    auto On = NSControlStateValueOn;
-    auto Off = NSControlStateValueOff;
+    // there is also mixed state, but not using that
+    auto On = true;
+    auto Off = false;
+    
 #define toState(x) (x) ? On : Off
 
     Renderer* renderer = (Renderer*)self.delegate;
@@ -1866,79 +1794,43 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
         toState(_showSettings->lightingMode != LightingModeDiffuse);
     auto tangentState = toState(_showSettings->useTangent);
 
-    // TODO: UI state, and vertical state
-    auto uiState = toState(_buttonStack.hidden);
+    // TODO: vertical state
+   auto uiState = toState(_buttonStack.hidden);
 
     auto helpState = Off;
     auto infoState = Off;
     auto jumpState = Off;
 
-    // buttons
-    [self findButton:" "].state = playState;
-    [self findButton:"?"].state = helpState;
-    [self findButton:"I"].state = infoState;
-
-    [self findButton:"Y"].state = arrayState;
-    [self findButton:"F"].state = faceState;
-    [self findButton:"M"].state = mipState;
-
-    [self findButton:"J"].state = jumpState;
-    [self findButton:"U"].state = Off;  // always off
-
-    [self findButton:"R"].state = redState;
-    [self findButton:"G"].state = greenState;
-    [self findButton:"B"].state = blueState;
-    [self findButton:"A"].state = alphaState;
-
-    [self findButton:"S"].state = showAllState;
-    [self findButton:"O"].state = previewState;
-    [self findButton:"8"].state = meshState;
-    [self findButton:"6"].state = meshChannelState;
-    [self findButton:"5"].state = lightingState;
-    [self findButton:"W"].state = wrapState;
-    [self findButton:"D"].state = gridState;
-    [self findButton:"E"].state = debugState;
-    [self findButton:"T"].state = tangentState;
-
-    [self findButton:"P"].state = premulState;
-    [self findButton:"N"].state = signedState;
-    [self findButton:"C"].state = checkerboardState;
-
-    // menus (may want to disable, not hide)
-    // problem is crashes since menu seems to strip hidden items
-    // enabled state has to be handled in validateUserInterfaceItem
-
-    // when menu state is selected, it may not uncheck when advancing through
-    // state
-    [self findMenuItem:" "].state = playState;
-    [self findMenuItem:"?"].state = helpState;
-    [self findMenuItem:"I"].state = infoState;
-
-    [self findMenuItem:"Y"].state = arrayState;
-    [self findMenuItem:"F"].state = faceState;
-    [self findMenuItem:"M"].state = mipState;
-    [self findMenuItem:"J"].state = jumpState;
-    [self findMenuItem:"U"].state = uiState;
-
-    [self findMenuItem:"R"].state = redState;
-    [self findMenuItem:"G"].state = greenState;
-    [self findMenuItem:"B"].state = blueState;
-    [self findMenuItem:"A"].state = alphaState;
-
-    [self findMenuItem:"S"].state = showAllState;
-    [self findMenuItem:"O"].state = previewState;
-    [self findMenuItem:"8"].state = meshState;
-    [self findMenuItem:"6"].state = meshChannelState;
-    [self findMenuItem:"5"].state = lightingState;
-    [self findMenuItem:"T"].state = tangentState;
-
-    [self findMenuItem:"W"].state = wrapState;
-    [self findMenuItem:"D"].state = gridState;
-    [self findMenuItem:"E"].state = debugState;
-
-    [self findMenuItem:"P"].state = premulState;
-    [self findMenuItem:"N"].state = signedState;
-    [self findMenuItem:"C"].state = checkerboardState;
+    // TODO: pass boolean, and change in the call
+    _actionPlay->setHighlight(playState);
+    _actionHelp->setHighlight(helpState);
+    _actionInfo->setHighlight(infoState);
+    
+    _actionArray->setHighlight(arrayState);
+    _actionFace->setHighlight(faceState);
+    _actionMip->setHighlight(mipState);
+    
+    _actionItem->setHighlight(jumpState);
+    _actionHideUI->setHighlight(uiState); // note below button always off, menu has state
+    
+    _actionR->setHighlight(redState);
+    _actionG->setHighlight(greenState);
+    _actionB->setHighlight(blueState);
+    _actionA->setHighlight(alphaState);
+    
+    _actionShowAll->setHighlight(showAllState);
+    _actionPreview->setHighlight(previewState);
+    _actionShapeMesh->setHighlight(meshState);
+    _actionShapeChannel->setHighlight(meshChannelState);
+    _actionLighting->setHighlight(lightingState);
+    _actionWrap->setHighlight(wrapState);
+    _actionGrid->setHighlight(gridState);
+    _actionDebug->setHighlight(debugState);
+    _actionTangent->setHighlight(tangentState);
+    
+    _actionPremul->setHighlight(premulState);
+    _actionSigned->setHighlight(signedState);
+    _actionChecker->setHighlight(checkerboardState);
 }
 
 // TODO: convert to C++ actions, and then call into Base holding all this
@@ -1949,90 +1841,32 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     NSEvent *theEvent = [NSApp currentEvent];
     bool isShiftKeyDown = (theEvent.modifierFlags & NSEventModifierFlagShift);
 
-    string title;
-
-    // sender is the UI element/NSButton
+    const Action* action = nullptr;
     if ([sender isKindOfClass:[NSButton class]]) {
         NSButton *button = (NSButton *)sender;
-        title = button.title.UTF8String;
+        for (const auto& search: _actions) {
+            if (search.button == button) {
+                action = &search;
+                break;
+            }
+        }
     }
     else if ([sender isKindOfClass:[NSMenuItem class]]) {
         NSMenuItem *menuItem = (NSMenuItem *)sender;
-        title = menuItem.toolTip.UTF8String;
+        for (const auto& search: _actions) {
+            if (search.menuItem == menuItem) {
+                action = &search;
+                break;
+            }
+        }
     }
-    else {
+    
+    if (!action) {
         KLOGE("kram", "unknown UI element");
         return;
     }
-
-    int32_t keyCode = -1;
-
-    if (title == "?")
-        keyCode = Key::Slash;  // help
-    else if (title == "I")
-        keyCode = Key::I;
-    else if (title == "H")
-        keyCode = Key::H;
-
-    else if (title == "S")
-        keyCode = Key::S;
-    else if (title == "O")
-        keyCode = Key::O;
-    else if (title == "W")
-        keyCode = Key::W;
-    else if (title == "P")
-        keyCode = Key::P;
-    else if (title == "N")
-        keyCode = Key::N;
-
-    else if (title == "E")
-        keyCode = Key::E;
-    else if (title == "D")
-        keyCode = Key::D;
-    else if (title == "C")
-        keyCode = Key::C;
-    else if (title == "U")
-        keyCode = Key::U;
-
-    else if (title == "M")
-        keyCode = Key::M;
-    else if (title == "F")
-        keyCode = Key::F;
-    else if (title == "Y")
-        keyCode = Key::Y;
-    else if (title == "J")
-        keyCode = Key::J;
-
-    // reload/refit
-    else if (title == "L")
-        keyCode = Key::L;
-    else if (title == "0")
-        keyCode = Key::Num0;
-
-    // mesh
-    else if (title == "8")
-        keyCode = Key::Num8;
-    else if (title == "6")
-        keyCode = Key::Num6;
-    else if (title == "5")
-        keyCode = Key::Num5;
-    else if (title == "T")
-        keyCode = Key::T;
-
-    else if (title == "R")
-        keyCode = Key::R;
-    else if (title == "G")
-        keyCode = Key::G;
-    else if (title == "B")
-        keyCode = Key::B;
-    else if (title == "A")
-        keyCode = Key::A;
-
-    else if (title == " ")
-        keyCode = Key::Space;
     
-    if (keyCode >= 0)
-        [self handleKey:keyCode isShiftKeyDown:isShiftKeyDown];
+    [self handleEventAction:action isShiftKeyDown:isShiftKeyDown];
 }
 
 - (void)keyDown:(NSEvent *)theEvent
@@ -2040,7 +1874,30 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     bool isShiftKeyDown = theEvent.modifierFlags & NSEventModifierFlagShift;
     uint32_t keyCode = theEvent.keyCode;
 
-    bool isHandled = [self handleKey:keyCode isShiftKeyDown:isShiftKeyDown];
+    // for now hit esc to hide the table views
+    if (keyCode == Key::Escape) {
+        [self hideTables];
+        
+        _hudHidden = false;
+        [self updateHudVisibility];
+        return;
+    }
+    
+    const Action* action = nullptr;
+    for (const auto& search: _actions) {
+        if (search.keyCode == keyCode) {
+            action = &search;
+            break;
+        }
+    }
+    
+    if (!action) {
+        [super keyDown:theEvent];
+        //KLOGE("kram", "unknown UI element");
+        return;
+    }
+    
+    bool isHandled = [self handleEventAction:action isShiftKeyDown:isShiftKeyDown];
     if (!isHandled) {
         // this will bonk
         [super keyDown:theEvent];
@@ -2058,7 +1915,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     _hudLabel2.hidden = _hudHidden || !_showSettings->isHudShown;
 }
 
-- (bool)handleKey:(uint32_t)keyCode isShiftKeyDown:(bool)isShiftKeyDown
+- (bool)handleEventAction:(const Action*)action isShiftKeyDown:(bool)isShiftKeyDown
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
     bool isChanged = false;
@@ -2068,485 +1925,457 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     // f.e. clamped values don't need to re-render
     string text;
 
-    switch (keyCode) {
-        // for now hit esc to hide the table views
-        case Key::Escape: {
-            [self hideTables];
-            
-            _hudHidden = false;
-            [self updateHudVisibility];
-            break;
+    if (action == _actionVertical) {
+        bool isVertical =
+            _buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical;
+        isVertical = !isVertical;
+
+        _buttonStack.orientation = isVertical
+                                       ? NSUserInterfaceLayoutOrientationVertical
+                                       : NSUserInterfaceLayoutOrientationHorizontal;
+        text = isVertical ? "Vert UI" : "Horiz UI";
+
+        // just to update toggle state to Off
+        isStateChanged = true;
+    }
+    else if (action == _actionHideUI) {
+        // this means no image loaded yet
+        if (_noImageLoaded) {
+            return true;
         }
-        case Key::V: {
-            bool isVertical =
-                _buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical;
-            isVertical = !isVertical;
 
-            _buttonStack.orientation = isVertical
-                                           ? NSUserInterfaceLayoutOrientationVertical
-                                           : NSUserInterfaceLayoutOrientationHorizontal;
-            text = isVertical ? "Vert UI" : "Horiz UI";
+        _buttonStack.hidden = !_buttonStack.hidden;
+        text = _buttonStack.hidden ? "Hide UI" : "Show UI";
 
-            // just to update toggle state to Off
-            isStateChanged = true;
-            break;
-        }
-        case Key::U:
-            // this means no image loaded yet
-            if (_noImageLoaded) {
-                return true;
-            }
+        // just to update toggle state to Off
+        isStateChanged = true;
+    }
 
-            _buttonStack.hidden = !_buttonStack.hidden;
-            text = _buttonStack.hidden ? "Hide UI" : "Show UI";
+    else if (action == _actionR) {
+        if (!action->isHidden) {
+            TextureChannels& channels = _showSettings->channels;
 
-            // just to update toggle state to Off
-            isStateChanged = true;
-            break;
-
-        // rgba channels
-        case Key::Num1:
-        case Key::R:
-            if (![self findButton:"R"].isHidden) {
-                TextureChannels &channels = _showSettings->channels;
-
-                if (channels == TextureChannels::ModeR001) {
-                    channels = TextureChannels::ModeRGBA;
-                    text = "Mask RGBA";
-                }
-                else {
-                    channels = TextureChannels::ModeR001;
-                    text = "Mask R001";
-                }
-                isChanged = true;
-            }
-
-            break;
-
-        case Key::Num2:
-        case Key::G:
-            if (![self findButton:"G"].isHidden) {
-                TextureChannels &channels = _showSettings->channels;
-
-                if (channels == TextureChannels::Mode0G01) {
-                    channels = TextureChannels::ModeRGBA;
-                    text = "Mask RGBA";
-                }
-                else {
-                    channels = TextureChannels::Mode0G01;
-                    text = "Mask 0G01";
-                }
-                isChanged = true;
-            }
-            break;
-
-        case Key::Num3:
-        case Key::B:
-            if (![self findButton:"B"].isHidden) {
-                TextureChannels &channels = _showSettings->channels;
-
-                if (channels == TextureChannels::Mode00B1) {
-                    channels = TextureChannels::ModeRGBA;
-                    text = "Mask RGBA";
-                }
-                else {
-                    channels = TextureChannels::Mode00B1;
-                    text = "Mask 00B1";
-                }
-
-                isChanged = true;
-            }
-            break;
-
-        case Key::Space: {
-            if (![self findButton:" "].isHidden) {
-                 Renderer *renderer = (Renderer *)self.delegate;
-                
-                renderer.playAnimations = !renderer.playAnimations;
-                
-                text = renderer.playAnimations ? "Play" : "Pause";
-                isChanged = true;
-                
-                self.enableSetNeedsDisplay = !renderer.playAnimations;
-                self.paused = !renderer.playAnimations;
+            if (channels == TextureChannels::ModeR001) {
+                channels = TextureChannels::ModeRGBA;
+                text = "Mask RGBA";
             }
             else {
-                self.enableSetNeedsDisplay = YES;
-                self.paused = YES;
+                channels = TextureChannels::ModeR001;
+                text = "Mask R001";
             }
-            break;
-        }
-            
-        case Key::Num4:
-        case Key::A:
-            if (![self findButton:"A"].isHidden) {
-                TextureChannels &channels = _showSettings->channels;
-
-                if (channels == TextureChannels::ModeAAA1) {
-                    channels = TextureChannels::ModeRGBA;
-                    text = "Mask RGBA";
-                }
-                else {
-                    channels = TextureChannels::ModeAAA1;
-                    text = "Mask AAA1";
-                }
-
-                isChanged = true;
-            }
-            break;
-
-        case Key::Num6: {
-            _showSettings->advanceShapeChannel(isShiftKeyDown);
-            
-            text = _showSettings->shapeChannelText();
             isChanged = true;
-            break;
         }
-        case Key::Num5: {
-            _showSettings->advanceLightingMode(isShiftKeyDown);
-            text = _showSettings->lightingModeText();
-            isChanged = true;
-            break;
-        }
-        case Key::T: {
-            _showSettings->useTangent = !_showSettings->useTangent;
-            if (_showSettings->useTangent)
-                text = "Vertex Tangents";
-            else
-                text = "Fragment Tangents";
-            isChanged = true;
-            break;
-        }
-        case Key::E: {
-            _showSettings->advanceDebugMode(isShiftKeyDown);
-            text = _showSettings->debugModeText();
-            isChanged = true;
-            break;
-        }
-        case Key::Slash:  // has ? mark above it
-            // display the chars for now
-            text =
-                "⇧RGBA, O-preview, ⇧E-debug, Show all\n"
-                "Hud, ⇧L-reload, ⇧0-fit\n"
-                "Checker, ⇧D-block/px grid, Info\n"
-                "W-wrap, Premul, N-signed\n"
-                "⇧Mip, ⇧Face, ⇧Y-array/slice\n"
-                "⇧J-next bundle image\n";
 
-            // just to update toggle state to Off
-            isStateChanged = true;
-            break;
+    }
+    else if (action == _actionG) {
+        if (!action->isHidden) {
+            TextureChannels& channels = _showSettings->channels;
 
-        case Key::Num0: {  // scale and reset pan
-            float zoom;
-            // fit image or mip
-            if (isShiftKeyDown) {
-                zoom = 1.0f;
+            if (channels == TextureChannels::Mode0G01) {
+                channels = TextureChannels::ModeRGBA;
+                text = "Mask RGBA";
             }
             else {
-                // fit to topmost image
-                zoom = _showSettings->zoomFit;
+                channels = TextureChannels::Mode0G01;
+                text = "Mask 0G01";
             }
-
-            // This zoom needs to be checked against zoom limits
-            // there's a cap on the zoom multiplier.
-            // This is reducing zoom which expands the image.
-            zoom *= 1.0f / (1 << _showSettings->mipNumber);
-
-            // even if zoom same, still do this since it resets the pan
-            _showSettings->zoom = zoom;
-
-            _showSettings->panX = 0.0f;
-            _showSettings->panY = 0.0f;
-
-            text = "Scale Image\n";
-            if (doPrintPanZoom) {
-                string tmp;
-                sprintf(tmp,
-                        "Pan %.3f,%.3f\n"
-                        "Zoom %.2fx\n",
-                        _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-                text += tmp;
-            }
-
             isChanged = true;
-
-            break;
         }
-        // reload key (also a quick way to reset the settings)
-        case Key::L:
-            [self loadTextureFromURL:self.imageURL];
+    }
+    else if (action == _actionB) {
+        if (!action->isHidden) {
+            TextureChannels& channels = _showSettings->channels;
 
-            // reload at actual size
-            if (isShiftKeyDown) {
-                _showSettings->zoom = 1.0f;
+            if (channels == TextureChannels::Mode00B1) {
+                channels = TextureChannels::ModeRGBA;
+                text = "Mask RGBA";
             }
-
-            text = "Reload Image";
-            if (doPrintPanZoom) {
-                string tmp;
-                sprintf(tmp,
-                        "Pan %.3f,%.3f\n"
-                        "Zoom %.2fx\n",
-                        _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-                text += tmp;
+            else {
+                channels = TextureChannels::Mode00B1;
+                text = "Mask 00B1";
             }
 
             isChanged = true;
-            break;
+        }
+    }
+    else if (action == _actionA) {
+        if (!action->isHidden) {
+            TextureChannels& channels = _showSettings->channels;
 
-        // P already used for premul
-        case Key::O:
-            _showSettings->isPreview = !_showSettings->isPreview;
-            isChanged = true;
-            text = "Preview ";
-            text += _showSettings->isPreview ? "On" : "Off";
-            break;
-
-        // TODO: might switch c to channel cycle, so could just hit that
-        // and depending on the content, it cycles through reasonable channel masks
-
-        // toggle checkerboard for transparency
-        case Key::C:
-            if (![self findButton:"C"].isHidden) {
-                _showSettings->isCheckerboardShown = !_showSettings->isCheckerboardShown;
-                isChanged = true;
-                text = "Checker ";
-                text += _showSettings->isCheckerboardShown ? "On" : "Off";
+            if (channels == TextureChannels::ModeAAA1) {
+                channels = TextureChannels::ModeRGBA;
+                text = "Mask RGBA";
             }
-            break;
+            else {
+                channels = TextureChannels::ModeAAA1;
+                text = "Mask AAA1";
+            }
 
-        // toggle pixel grid when magnified above 1 pixel, can happen from mipmap
-        // changes too
-        case Key::D: {
-            static int grid = 0;
-            static const int kNumGrids = 7;
+            isChanged = true;
+        }
+        
+    }
+    else if (action == _actionPlay) {
+        if (!action->isHidden) {
+            Renderer* renderer = (Renderer*)self.delegate;
+            
+            renderer.playAnimations = !renderer.playAnimations;
+            
+            text = renderer.playAnimations ? "Play" : "Pause";
+            isChanged = true;
+            
+            self.enableSetNeedsDisplay = !renderer.playAnimations;
+            self.paused = !renderer.playAnimations;
+        }
+        else {
+            self.enableSetNeedsDisplay = YES;
+            self.paused = YES;
+        }
+       
+    }
+
+    else if (action == _actionShapeChannel) {
+        _showSettings->advanceShapeChannel(isShiftKeyDown);
+        
+        text = _showSettings->shapeChannelText();
+        isChanged = true;
+    }
+    else if (action == _actionLighting) {
+        _showSettings->advanceLightingMode(isShiftKeyDown);
+        text = _showSettings->lightingModeText();
+        isChanged = true;
+    }
+    else if (action == _actionTangent) {
+        _showSettings->useTangent = !_showSettings->useTangent;
+        if (_showSettings->useTangent)
+            text = "Vertex Tangents";
+        else
+            text = "Fragment Tangents";
+        isChanged = true;
+    }
+    else if (action == _actionDebug) {
+        _showSettings->advanceDebugMode(isShiftKeyDown);
+        text = _showSettings->debugModeText();
+        isChanged = true;
+    }
+    else if (action == _actionHelp) {
+        // display the chars for now
+        text =
+            "1234-rgba, Preview, E-debug, Show all\n"
+            "Hud, L-reload, 0-fit\n"
+            "Checker, Grid, Info\n"
+            "Wrap, O-Premul, N-signed\n"
+            "Mip, Face, Y-array\n"
+            "J-next item\n";
+
+        // just to update toggle state to Off
+        isStateChanged = true;
+    }
+
+    else if (action == _actionFit) {
+        float zoom;
+        // fit image or mip
+        if (isShiftKeyDown) {
+            zoom = 1.0f;
+        }
+        else {
+            // fit to topmost image
+            zoom = _showSettings->zoomFit;
+        }
+
+        // This zoom needs to be checked against zoom limits
+        // there's a cap on the zoom multiplier.
+        // This is reducing zoom which expands the image.
+        zoom *= 1.0f / (1 << _showSettings->mipNumber);
+
+        // even if zoom same, still do this since it resets the pan
+        _showSettings->zoom = zoom;
+
+        _showSettings->panX = 0.0f;
+        _showSettings->panY = 0.0f;
+
+        text = "Scale Image\n";
+        if (doPrintPanZoom) {
+            string tmp;
+            sprintf(tmp,
+                    "Pan %.3f,%.3f\n"
+                    "Zoom %.2fx\n",
+                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+            text += tmp;
+        }
+
+        isChanged = true;
+    }
+    // reload key (also a quick way to reset the settings)
+    else if (action == _actionReload) {
+        [self loadTextureFromURL:self.imageURL];
+
+        // reload at actual size
+        if (isShiftKeyDown) {
+            _showSettings->zoom = 1.0f;
+        }
+
+        text = "Reload Image";
+        if (doPrintPanZoom) {
+            string tmp;
+            sprintf(tmp,
+                    "Pan %.3f,%.3f\n"
+                    "Zoom %.2fx\n",
+                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+            text += tmp;
+        }
+
+        isChanged = true;
+    }
+    // P already used for premul
+    else if (action == _actionPreview) {
+        _showSettings->isPreview = !_showSettings->isPreview;
+        isChanged = true;
+        text = "Preview ";
+        text += _showSettings->isPreview ? "On" : "Off";
+    }
+    // TODO: might switch c to channel cycle, so could just hit that
+    // and depending on the content, it cycles through reasonable channel masks
+
+    // toggle checkerboard for transparency
+    else if (action == _actionChecker) {
+        if (action->isHidden) {
+            _showSettings->isCheckerboardShown = !_showSettings->isCheckerboardShown;
+            isChanged = true;
+            text = "Checker ";
+            text += _showSettings->isCheckerboardShown ? "On" : "Off";
+        }
+    }
+
+    // toggle pixel grid when magnified above 1 pixel, can happen from mipmap
+    // changes too
+    else if (action == _actionDebug) {
+        static int grid = 0;
+        static const int kNumGrids = 7;
 
 #define advanceGrid(g, dec) \
-    grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
+grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
-            // TODO: display how many blocks there are
+        // TODO: display how many blocks there are
 
-            // if block size is 1, then this shouldn't toggle
-            _showSettings->isBlockGridShown = false;
-            _showSettings->isAtlasGridShown = false;
-            _showSettings->isPixelGridShown = false;
+        // if block size is 1, then this shouldn't toggle
+        _showSettings->isBlockGridShown = false;
+        _showSettings->isAtlasGridShown = false;
+        _showSettings->isPixelGridShown = false;
 
+        advanceGrid(grid, isShiftKeyDown);
+
+        if (grid == 2 && _showSettings->blockX == 1) {
+            // skip it
             advanceGrid(grid, isShiftKeyDown);
+        }
 
-            if (grid == 2 && _showSettings->blockX == 1) {
-                // skip it
-                advanceGrid(grid, isShiftKeyDown);
+        static const uint32_t gridSizes[kNumGrids] = {
+            0, 1, 2, 32, 64, 128, 256  // atlas sizes
+        };
+
+        if (grid == 0) {
+            sprintf(text, "Grid Off");
+        }
+        else if (grid == 1) {
+            _showSettings->isPixelGridShown = true;
+
+            sprintf(text, "Pixel Grid 1x1 On");
+        }
+        else if (grid == 2) {
+            _showSettings->isBlockGridShown = true;
+
+            sprintf(text, "Block Grid %dx%d On", _showSettings->blockX,
+                    _showSettings->blockY);
+        }
+        else {
+            _showSettings->isAtlasGridShown = true;
+
+            // want to be able to show altases tht have long entries derived from
+            // props but right now just a square grid atlas
+            _showSettings->gridSizeX = _showSettings->gridSizeY = gridSizes[grid];
+
+            sprintf(text, "Atlas Grid %dx%d On", _showSettings->gridSizeX,
+                    _showSettings->gridSizeY);
+        }
+
+        isChanged = true;
+    }
+    else if (action == _actionShowAll) {
+        if (!action->isHidden) {
+            // TODO: have drawAllMips, drawAllLevels, drawAllLevelsAndMips
+            _showSettings->isShowingAllLevelsAndMips =
+                !_showSettings->isShowingAllLevelsAndMips;
+            isChanged = true;
+            text = "Show All ";
+            text += _showSettings->isShowingAllLevelsAndMips ? "On" : "Off";
+        }
+    }
+
+    // toggle hud that shows name and pixel value under the cursor
+    // this may require calling setNeedsDisplay on the UILabel as cursor moves
+    else if (action == _actionHud) {
+        _showSettings->isHudShown = !_showSettings->isHudShown;
+        [self updateHudVisibility];
+        // isChanged = true;
+        text = "Hud ";
+        text += _showSettings->isHudShown ? "On" : "Off";
+    }
+
+    // info on the texture, could request info from lib, but would want to cache
+    // that info
+    else if (action == _actionInfo) {
+        if (_showSettings->isHudShown) {
+            sprintf(text, "%s",
+                    isShiftKeyDown ? _showSettings->imageInfoVerbose.c_str()
+                                   : _showSettings->imageInfo.c_str());
+        }
+        // just to update toggle state to Off
+        isStateChanged = true;
+    }
+
+    // toggle wrap/clamp
+    else if (action == _actionWrap) {
+        // TODO: cycle through all possible modes (clamp, repeat, mirror-once,
+        // mirror-repeat, ...)
+        _showSettings->isWrap = !_showSettings->isWrap;
+        isChanged = true;
+        text = "Wrap ";
+        text += _showSettings->isWrap ? "On" : "Off";
+    }
+
+    // toggle signed vs. unsigned
+    else if (action == _actionSigned) {
+        if (!action->isHidden) {
+            _showSettings->isSigned = !_showSettings->isSigned;
+            isChanged = true;
+            text = "Signed ";
+            text += _showSettings->isSigned ? "On" : "Off";
+        }
+    }
+
+    // toggle premul alpha vs. unmul
+    else if (action == _actionPremul) {
+        if (!action->isHidden) {
+            _showSettings->isPremul = !_showSettings->isPremul;
+            isChanged = true;
+            text = "Premul ";
+            text += _showSettings->isPremul ? "On" : "Off";
+        }
+    }
+
+    else if (action == _actionItem) {
+        if (!action->isHidden) {
+            if (_showSettings->isArchive) {
+                if ([self advanceFileFromAchive:!isShiftKeyDown]) {
+                    _hudHidden = true;
+                    [self updateHudVisibility];
+                    
+                    isChanged = true;
+                    text = "Loaded " + _showSettings->lastFilename;
+                }
             }
-
-            static const uint32_t gridSizes[kNumGrids] = {
-                0, 1, 2, 32, 64, 128, 256  // atlas sizes
-            };
-
-            if (grid == 0) {
-                sprintf(text, "Grid Off");
+            else if (_showSettings->isFolder) {
+                if ([self advanceFileFromFolder:!isShiftKeyDown]) {
+                    _hudHidden = true;
+                    [self updateHudVisibility];
+                    
+                    isChanged = true;
+                    text = "Loaded " + _showSettings->lastFilename;
+                }
             }
-            else if (grid == 1) {
-                _showSettings->isPixelGridShown = true;
+        }
+    }
 
-                sprintf(text, "Pixel Grid 1x1 On");
-            }
-            else if (grid == 2) {
-                _showSettings->isBlockGridShown = true;
+    // test out different shapes
+    else if (action == _actionShapeMesh) {
+        if (_showSettings->meshCount > 1) {
+            _showSettings->advanceMeshNumber(isShiftKeyDown);
+            text = _showSettings->meshNumberText();
+            isChanged = true;
+            
+            // update shapes table
+            [_shapesTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_showSettings->meshNumber] byExtendingSelection:NO];
+            [_shapesTableView scrollRowToVisible:_showSettings->meshNumber];
+            
+            // show the shapes table
+            [self hideTables];
+            _shapesTableView.hidden = NO;
+            
+            // also have to hide hud or it will obscure the visible table
+            _hudHidden = true;
+            [self updateHudVisibility];
+            
+            // want it to respond to arrow keys
+            [self.window makeFirstResponder: _shapesTableView];
+        }
+    }
 
-                sprintf(text, "Block Grid %dx%d On", _showSettings->blockX,
-                        _showSettings->blockY);
+    // TODO: should probably have these wrap and not clamp to count limits
+
+    // mip up/down
+    else if (action == _actionMip) {
+        if (_showSettings->mipCount > 1) {
+            if (isShiftKeyDown) {
+                _showSettings->mipNumber = MAX(_showSettings->mipNumber - 1, 0);
             }
             else {
-                _showSettings->isAtlasGridShown = true;
-
-                // want to be able to show altases tht have long entries derived from
-                // props but right now just a square grid atlas
-                _showSettings->gridSizeX = _showSettings->gridSizeY = gridSizes[grid];
-
-                sprintf(text, "Atlas Grid %dx%d On", _showSettings->gridSizeX,
-                        _showSettings->gridSizeY);
+                _showSettings->mipNumber =
+                    MIN(_showSettings->mipNumber + 1, _showSettings->mipCount - 1);
             }
-
+            sprintf(text, "Mip %d/%d", _showSettings->mipNumber,
+                    _showSettings->mipCount);
             isChanged = true;
-
-            break;
         }
-        case Key::S:
-            if (![self findButton:"S"].isHidden) {
-                // TODO: have drawAllMips, drawAllLevels, drawAllLevelsAndMips
-                _showSettings->isShowingAllLevelsAndMips =
-                    !_showSettings->isShowingAllLevelsAndMips;
-                isChanged = true;
-                text = "Show All ";
-                text += _showSettings->isShowingAllLevelsAndMips ? "On" : "Off";
+    }
+
+    else if (action == _actionFace) {
+        // cube or cube array, but hit s to pick cubearray
+        if (_showSettings->faceCount > 1) {
+            if (isShiftKeyDown) {
+                _showSettings->faceNumber = MAX(_showSettings->faceNumber - 1, 0);
             }
-            break;
-
-        // toggle hud that shows name and pixel value under the cursor
-        // this may require calling setNeedsDisplay on the UILabel as cursor moves
-        case Key::H:
-            _showSettings->isHudShown = !_showSettings->isHudShown;
-            [self updateHudVisibility];
-            // isChanged = true;
-            text = "Hud ";
-            text += _showSettings->isHudShown ? "On" : "Off";
-            break;
-
-        // info on the texture, could request info from lib, but would want to cache
-        // that info
-        case Key::I:
-            if (_showSettings->isHudShown) {
-                sprintf(text, "%s",
-                        isShiftKeyDown ? _showSettings->imageInfoVerbose.c_str()
-                                       : _showSettings->imageInfo.c_str());
+            else {
+                _showSettings->faceNumber =
+                    MIN(_showSettings->faceNumber + 1, _showSettings->faceCount - 1);
             }
-            // just to update toggle state to Off
-            isStateChanged = true;
-            break;
-
-        // toggle wrap/clamp
-        case Key::W:
-            // TODO: cycle through all possible modes (clamp, repeat, mirror-once,
-            // mirror-repeat, ...)
-            _showSettings->isWrap = !_showSettings->isWrap;
+            sprintf(text, "Face %d/%d", _showSettings->faceNumber,
+                    _showSettings->faceCount);
             isChanged = true;
-            text = "Wrap ";
-            text += _showSettings->isWrap ? "On" : "Off";
-            break;
+        }
+    }
 
-        // toggle signed vs. unsigned
-        case Key::N:
-            if (![self findButton:"N"].isHidden) {
-                _showSettings->isSigned = !_showSettings->isSigned;
-                isChanged = true;
-                text = "Signed ";
-                text += _showSettings->isSigned ? "On" : "Off";
+    else if (action == _actionArray) {
+        // slice
+        if (_showSettings->sliceCount > 1) {
+            if (isShiftKeyDown) {
+                _showSettings->sliceNumber = MAX(_showSettings->sliceNumber - 1, 0);
             }
-            break;
-
-        // toggle premul alpha vs. unmul
-        case Key::P:
-            if (![self findButton:"P"].isHidden) {
-                _showSettings->isPremul = !_showSettings->isPremul;
-                isChanged = true;
-                text = "Premul ";
-                text += _showSettings->isPremul ? "On" : "Off";
+            else {
+                _showSettings->sliceNumber =
+                    MIN(_showSettings->sliceNumber + 1, _showSettings->sliceCount - 1);
             }
-            break;
-
-        case Key::J:
-            if (![self findButton:"J"].isHidden) {
-                if (_showSettings->isArchive) {
-                    if ([self advanceFileFromAchive:!isShiftKeyDown]) {
-                        _hudHidden = true;
-                        [self updateHudVisibility];
-                        
-                        isChanged = true;
-                        text = "Loaded " + _showSettings->lastFilename;
-                    }
-                }
-                else if (_showSettings->isFolder) {
-                    if ([self advanceFileFromFolder:!isShiftKeyDown]) {
-                        _hudHidden = true;
-                        [self updateHudVisibility];
-                        
-                        isChanged = true;
-                        text = "Loaded " + _showSettings->lastFilename;
-                    }
-                }
+            sprintf(text, "Slice %d/%d", _showSettings->sliceNumber,
+                    _showSettings->sliceCount);
+            isChanged = true;
+        }
+        // array
+        else if (_showSettings->arrayCount > 1) {
+            if (isShiftKeyDown) {
+                _showSettings->arrayNumber = MAX(_showSettings->arrayNumber - 1, 0);
             }
-            break;
-
-        // test out different shapes
-        case Key::Num8:
-            if (_showSettings->meshCount > 1) {
-                _showSettings->advanceMeshNumber(isShiftKeyDown);
-                text = _showSettings->meshNumberText();
-                isChanged = true;
-                
-                // update shapes table
-                [_shapesTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_showSettings->meshNumber] byExtendingSelection:NO];
-                [_shapesTableView scrollRowToVisible:_showSettings->meshNumber];
-                
-                // show the shapes table
-                [self hideTables];
-                _shapesTableView.hidden = NO;
-                
-                // also have to hide hud or it will obscure the visible table
-                _hudHidden = true;
-                [self updateHudVisibility];
-                
-                // want it to respond to arrow keys
-                [self.window makeFirstResponder: _shapesTableView];
+            else {
+                _showSettings->arrayNumber =
+                    MIN(_showSettings->arrayNumber + 1, _showSettings->arrayCount - 1);
             }
-            break;
-
-        // TODO: should probably have these wrap and not clamp to count limits
-
-        // mip up/down
-        case Key::M:
-            if (_showSettings->mipCount > 1) {
-                if (isShiftKeyDown) {
-                    _showSettings->mipNumber = MAX(_showSettings->mipNumber - 1, 0);
-                }
-                else {
-                    _showSettings->mipNumber =
-                        MIN(_showSettings->mipNumber + 1, _showSettings->mipCount - 1);
-                }
-                sprintf(text, "Mip %d/%d", _showSettings->mipNumber,
-                        _showSettings->mipCount);
-                isChanged = true;
-            }
-            break;
-
-        case Key::F:
-            // cube or cube array, but hit s to pick cubearray
-            if (_showSettings->faceCount > 1) {
-                if (isShiftKeyDown) {
-                    _showSettings->faceNumber = MAX(_showSettings->faceNumber - 1, 0);
-                }
-                else {
-                    _showSettings->faceNumber =
-                        MIN(_showSettings->faceNumber + 1, _showSettings->faceCount - 1);
-                }
-                sprintf(text, "Face %d/%d", _showSettings->faceNumber,
-                        _showSettings->faceCount);
-                isChanged = true;
-            }
-            break;
-
-        case Key::Y:
-            // slice
-            if (_showSettings->sliceCount > 1) {
-                if (isShiftKeyDown) {
-                    _showSettings->sliceNumber = MAX(_showSettings->sliceNumber - 1, 0);
-                }
-                else {
-                    _showSettings->sliceNumber =
-                        MIN(_showSettings->sliceNumber + 1, _showSettings->sliceCount - 1);
-                }
-                sprintf(text, "Slice %d/%d", _showSettings->sliceNumber,
-                        _showSettings->sliceCount);
-                isChanged = true;
-            }
-            // array
-            else if (_showSettings->arrayCount > 1) {
-                if (isShiftKeyDown) {
-                    _showSettings->arrayNumber = MAX(_showSettings->arrayNumber - 1, 0);
-                }
-                else {
-                    _showSettings->arrayNumber =
-                        MIN(_showSettings->arrayNumber + 1, _showSettings->arrayCount - 1);
-                }
-                sprintf(text, "Array %d/%d", _showSettings->arrayNumber,
-                        _showSettings->arrayCount);
-                isChanged = true;
-            }
-            break;
-        default:
-            // non-handled key
-            return false;
+            sprintf(text, "Array %d/%d", _showSettings->arrayNumber,
+                    _showSettings->arrayCount);
+            isChanged = true;
+        }
+    }
+    else {
+        // non-handled action
+        return false;
     }
 
     if (!text.empty()) {
