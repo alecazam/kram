@@ -619,36 +619,36 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         Action("I", "Info", Key::I),
         
         Action("H", "Hud", Key::H),
-        Action("S", "Show All", Key::S),
+        Action("A", "Show All", Key::A),
     
         Action("P", "Preview", Key::P),
-        Action("W", "Repeat", Key::W), // really address mode
-        Action("O", "Premul", Key::O), // TODO: better letter for this
-        Action("N", "Signed", Key::N),
+        Action("W", "Wrap", Key::W),
+        Action("8", "Premul", Key::Num8),
+        Action("7", "Signed", Key::Num7),
         
         Action("-", "", Key::A), // sep
 
         Action("D", "Debug", Key::D),
         Action("G", "Grid", Key::G),
         
-        Action("C", "Checker", Key::C),
-        Action("U", "Toggle UI", Key::U),
-        Action("V", "Toggle Vertical", Key::V),
+        Action("B", "Checkerboard", Key::B),
+        Action("U", "UI", Key::U),
+        Action("V", "Vertical UI", Key::V),
 
         Action("-", "", Key::A), // sep
 
         Action("M", "Mip", Key::M),
         Action("F", "Face", Key::F),
         Action("Y", "Array", Key::Y),
-        Action("J", "Next", Key::J),
-        Action("L", "Reload", Key::L),
+        Action("N", "Next Item", Key::N),
+        Action("R", "Reload", Key::R),
         Action("0", "Fit", Key::Num0),
 
         Action("-", "", Key::A), // sep
 
-        Action("8", "Shape", Key::Num8),
-        Action("6", "Shape Channel", Key::Num6),
-        Action("5", "Lighting", Key::Num5),
+        Action("S", "Shape", Key::S),
+        Action("C", "Shape Channel", Key::C),
+        Action("L", "Lighting", Key::L),
         Action("T", "Tangents", Key::T),
 
         // TODO: need to shift hud over a little
@@ -2061,12 +2061,12 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     else if (action == _actionHelp) {
         // display the chars for now
         text =
-            "1234-rgba, Preview, E-debug, Show all\n"
-            "Hud, L-reload, 0-fit\n"
+            "1234-rgba, Preview, Debug, A-show all\n"
+            "Hud, Reload, 0-fit\n"
             "Checker, Grid, Info\n"
-            "Wrap, O-Premul, N-signed\n"
+            "Wrap, 8-signed, 9-premul\n"
             "Mip, Face, Y-array\n"
-            "J-next item\n";
+            "Next item, C-Shape channel, S-Shape\n";
 
         // just to update toggle state to Off
         isStateChanged = true;
