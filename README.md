@@ -39,32 +39,36 @@ Content Types - Albedo, Normal, SDF, Height
 Debug modes - transparent, color, non-zero, gray, +x, +y, xy >= 1
 Texture Types - 1darray (no mips), 2d, 2darray, 3d (no mips), cube, cube array
 
-⇧ decrement any advance listed below
+⇧ decrement any advance/toggle listed below
 
-?/ - show keyboard shortcuts
-O - toggle preview, disables debug mode, shows lit normals, and mips and filtering are enabled
-⇧D - toggle through none, pixel grid, block grid, atlas grid (32, 64, 128, 256), must be zoomed-in to see pixel grid
-⇧E - advance debug mode, this is texture content specific 
+? - show keyboard shortcuts
+P - toggle preview, disables debug mode, shows lit normals, and mips and filtering are enabled
+G - advance through none, pixel grid, block grid, atlas grid (32, 64, 128, 256), must be zoomed-in to see pixel grid
+D - advance debug mode, this is texture content specific 
 H - toggle hud
 U - toggle ui
 V - toggle vertical vs. horizontal buttons
 I - show texture info in overlay
-W - toggle repeat filter, scales uv from [0,1] to [0,2] and changes sampler to wrap/repeat
-S - show all - arrays, faces, slices and mips all on-screen
+W - toggle wrap/address filter, scales uv from [0,1] to [0,2] and changes sampler to wrap/repeat
+A - show all - arrays, faces, slices and mips all on-screen
 
-R/G/B/A - show channel in isolation, alpha as grayscale
-P - toggle shader premul, shader does this post-sample so only correct for point-sampling not preview
-N - toggle signed/unsigned
+1/2/3/4 - show rgba channels in isolation, alpha as grayscale
+7 - toggle signed/unsigned
+8 - toggle shader premul, shader does this post-sample so only correct for point-sampling not preview
 
-⇧0 - refit the current mip image to 1x, or fit view.  (at 1x with ⇧).
-⇧L - reload from disk if changed, zoom to fit (at 1x with ⇧)
+R - reload from disk if changed, zoom to fit (at 1x with ⇧)
+0 - fit the current mip image to 1x, or fit view.  (at 1x with ⇧).
 
-⇧Y advance array 
-⇧F advance face
-⇧M advance mip
-⇧8 advance shape (plane, unit box, sphere, capsule), displays list, esc to get out of list
+Y - advance array 
+F - advance face/slide
+M - advance mip
 
-⇧J advance bundle/folder image (can traverse zip of ktx/ktx2 files), displays list, esc to get out of list
+S - advance shape mesh (plane, unit box, sphere, capsule), displays list, esc to get out of list
+C - advance shape channel (depth, uv, face normal, vtx normal, tangent, bitangent, mip)
+L - advance lighting mode (lighting used in preview)
+T - advance tangent generation
+
+N - advance bundle/folder image (can traverse zip of ktx/ktx2 files), displays list, esc to get out of list
 
 ```
 
