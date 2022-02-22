@@ -879,6 +879,10 @@ uint32_t glType(MyMTLPixelFormat format)
 
 MyMTLPixelFormat glToMetalFormat(uint32_t format)
 {
+    if (format == 0) {
+        return MyMTLPixelFormatInvalid;
+    }
+    
     initFormatsIfNeeded();
 
     for (const auto& it : *gFormatTable) {
@@ -894,6 +898,10 @@ MyMTLPixelFormat glToMetalFormat(uint32_t format)
 
 MyMTLPixelFormat vulkanToMetalFormat(uint32_t format)
 {
+    if (format == 0) {
+        return MyMTLPixelFormatInvalid;
+    }
+    
     initFormatsIfNeeded();
 
     for (const auto& it : *gFormatTable) {
@@ -909,6 +917,10 @@ MyMTLPixelFormat vulkanToMetalFormat(uint32_t format)
 
 MyMTLPixelFormat directxToMetalFormat(uint32_t format)
 {
+    if (format == 0) {
+        return MyMTLPixelFormatInvalid;
+    }
+    
     initFormatsIfNeeded();
 
     for (const auto& it : *gFormatTable) {
@@ -982,7 +994,7 @@ MyMTLPixelFormat toggleSrgbFormat(MyMTLPixelFormat format)
             break;
     }
 
-    return MyMTLPixelFormatInvalid;
+    return format;
 }
 
 const char* supercompressionName(KTX2Supercompression type)

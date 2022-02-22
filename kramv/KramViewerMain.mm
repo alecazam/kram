@@ -2149,7 +2149,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
     // toggle pixel grid when magnified above 1 pixel, can happen from mipmap
     // changes too
-    else if (action == _actionDebug) {
+    else if (action == _actionGrid) {
         static int grid = 0;
         static const int kNumGrids = 7;
 
