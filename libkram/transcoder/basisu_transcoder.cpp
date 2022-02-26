@@ -211,8 +211,8 @@ namespace basist
 	}
 
 	static inline int32_t clampi(int32_t value, int32_t low, int32_t high) { if (value < low) value = low; else if (value > high) value = high;	return value; }
-	static inline float clampf(float value, float low, float high) { if (value < low) value = low; else if (value > high) value = high;	return value; }
-	static inline float saturate(float value) { return clampf(value, 0, 1.0f); }
+	//static inline float clampf(float value, float low, float high) { if (value < low) value = low; else if (value > high) value = high;	return value; }
+	//static inline float saturate(float value) { return clampf(value, 0, 1.0f); }
 
 	static inline uint8_t mul_8(uint32_t v, uint32_t q) { v = v * q + 128; return (uint8_t)((v + (v >> 8)) >> 8); }
 
@@ -323,13 +323,16 @@ namespace basist
 	};
 
 	DECLARE_ETC1_INTEN_TABLE(g_etc1_inten_tables, 1);
+
+#if BASISD_SUPPORT_PVRTC1
 	DECLARE_ETC1_INTEN_TABLE(g_etc1_inten_tables16, 16);
 	DECLARE_ETC1_INTEN_TABLE(g_etc1_inten_tables48, 3 * 16);
 
 	//const uint8_t g_etc1_to_selector_index[cETC1SelectorValues] = { 2, 3, 1, 0 };
-	const uint8_t g_selector_index_to_etc1[cETC1SelectorValues] = { 3, 2, 0, 1 };
 	
 	static const uint8_t g_etc_5_to_8[32] = { 0, 8, 16, 24, 33, 41, 49, 57, 66, 74, 82, 90, 99, 107, 115, 123, 132, 140, 148, 156, 165, 173, 181, 189, 198, 206, 214, 222, 231, 239, 247, 255 };
+#endif
+    const uint8_t g_selector_index_to_etc1[cETC1SelectorValues] = { 3, 2, 0, 1 };
 
 	struct decoder_etc_block
 	{
@@ -918,6 +921,8 @@ namespace basist
 		cDXT5SelectorBits = 3U, cDXT5SelectorValues = 1U << cDXT5SelectorBits, cDXT5SelectorMask = cDXT5SelectorValues - 1U,
 	};
 
+#if BASISD_SUPPORT_PVRTC1
+
 	static const uint8_t g_etc1_x_selector_unpack[4][256] =
 	{
 		{
@@ -963,6 +968,7 @@ namespace basist
 			2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
 		}
 	};
+#endif
 
 	struct dxt1_block
 	{

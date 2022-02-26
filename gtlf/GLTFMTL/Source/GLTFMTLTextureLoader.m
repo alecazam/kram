@@ -154,7 +154,7 @@ unsigned char *GLTFMTLConvertImageToRGBA8U(CGImageRef image)
     return self;
 }
 
-- (id<MTLTexture>)newTextureWithContentsOfURL:(NSURL *)url options:(NSDictionary *)options error:(NSError **)error {
+- (id<MTLTexture>)newTextureWithContentsOfURL:(NSURL *)url options:(NSDictionary *)options error:(NSError * __autoreleasing *)error {
     if (url == nil) {
         return nil;
     }
@@ -216,7 +216,7 @@ unsigned char *GLTFMTLConvertImageToRGBA8U(CGImageRef image)
                                     bytesPerRow:(size_t)bytesPerRow
                                      descriptor:(MTLTextureDescriptor *)descriptor
                                         options:(NSDictionary * _Nullable)options
-                                          error:(NSError **)error
+                                          error:(NSError * __autoreleasing *)error
 {
     NSNumber *usageOption = options[GLTFMTLTextureLoaderOptionUsageFlags];
     descriptor.usage = (usageOption != nil) ? usageOption.integerValue : MTLTextureUsageShaderRead;

@@ -14,7 +14,6 @@
 		706EF23E26D17A81001C950E /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 706EF23326D17A81001C950E /* Main.storyboard */; };
 		706EF23F26D17A81001C950E /* KramShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 706EF23626D17A81001C950E /* KramShaders.metal */; };
 		706EF24026D17A81001C950E /* KramRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 706EF23726D17A81001C950E /* KramRenderer.mm */; };
-		706EF24926D17BC2001C950E /* libkram.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF24826D17BC2001C950E /* libkram.a */; };
 		706EF24D26D17C30001C950E /* ModelIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF24C26D17C30001C950E /* ModelIO.framework */; };
 		706EF24F26D17C43001C950E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF24E26D17C43001C950E /* Foundation.framework */; };
 		706EF25226D17C6F001C950E /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF25126D17C6F001C950E /* MetalKit.framework */; };
@@ -25,6 +24,7 @@
 		70833666271575E50077BCB6 /* GLTF.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 70833664271575E50077BCB6 /* GLTF.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		70833669271575EA0077BCB6 /* GLTFMTL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70833668271575EA0077BCB6 /* GLTFMTL.framework */; };
 		7083366A271575EA0077BCB6 /* GLTFMTL.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 70833668271575EA0077BCB6 /* GLTFMTL.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		70871D4327CAD3EA00D0B9E1 /* libkram.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF24826D17BC2001C950E /* libkram.a */; };
 		708D44CA272B022500783DCE /* pbr.metal in Sources */ = {isa = PBXBuildFile; fileRef = 708D44C6272B022500783DCE /* pbr.metal */; };
 		708D44CB272B022500783DCE /* hdr.metal in Sources */ = {isa = PBXBuildFile; fileRef = 708D44C7272B022500783DCE /* hdr.metal */; };
 		708D44CC272B022500783DCE /* skybox.metal in Sources */ = {isa = PBXBuildFile; fileRef = 708D44C8272B022500783DCE /* skybox.metal */; };
@@ -152,12 +152,12 @@
 			files = (
 				706EF24D26D17C30001C950E /* ModelIO.framework in Frameworks */,
 				706EF25226D17C6F001C950E /* MetalKit.framework in Frameworks */,
+				70871D4327CAD3EA00D0B9E1 /* libkram.a in Frameworks */,
 				706EF25526D17C85001C950E /* Metal.framework in Frameworks */,
 				706EF25726D17C9D001C950E /* AppKit.framework in Frameworks */,
 				70833669271575EA0077BCB6 /* GLTFMTL.framework in Frameworks */,
 				706EF26726D17DFA001C950E /* libate.tbd in Frameworks */,
 				706EF24F26D17C43001C950E /* Foundation.framework in Frameworks */,
-				706EF24926D17BC2001C950E /* libkram.a in Frameworks */,
 				70833665271575E50077BCB6 /* GLTF.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -83,13 +83,13 @@ static mymutex gModelLock;
 }
 
 // TODO: this ignores options and error.  Default png loading may need to request srgb.
-- (id<MTLTexture> _Nullable)newTextureWithContentsOfURL:(NSURL *)url options:(NSDictionary * _Nullable)options error:(NSError **)error
+- (id<MTLTexture> _Nullable)newTextureWithContentsOfURL:(NSURL *)url options:(NSDictionary * _Nullable)options error:(NSError * __autoreleasing *)error
 {
     return [_loader loadTextureFromURL:url originalFormat:nil];
 }
 
 // TODO: this ignores options and error.  Default png loading may need to request srgb.
-- (id<MTLTexture> _Nullable)newTextureWithData:(NSData *)data options:(NSDictionary * _Nullable)options error:(NSError **)error
+- (id<MTLTexture> _Nullable)newTextureWithData:(NSData *)data options:(NSDictionary * _Nullable)options error:(NSError * __autoreleasing *)error
 {
     return [_loader loadTextureFromData:data originalFormat:nil];
 }
