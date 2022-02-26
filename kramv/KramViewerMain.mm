@@ -141,6 +141,7 @@ public:
     
     bool isHighlighted = false;
     bool isHidden = false;
+    bool isButtonDisabled = false;
     
     void setHighlight(bool enable) {
         isHighlighted = enable;
@@ -148,15 +149,24 @@ public:
         auto On = NSControlStateValueOn;
         auto Off = NSControlStateValueOff;
         
-        ((NSButton*)button).state = enable ? On : Off;
+        if (!isButtonDisabled) {
+            ((NSButton*)button).state = enable ? On : Off;
+        }
         ((NSMenuItem*)menuItem).state = enable ? On : Off;
     }
     
     void setHidden(bool enable) {
         isHidden = enable;
         
-        ((NSButton*)button).hidden = enable;
+        if (!isButtonDisabled) {
+            ((NSButton*)button).hidden = enable;
+        }
         ((NSMenuItem*)menuItem).hidden = enable;
+    }
+    
+    void disableButton() {
+        ((NSButton*)button).hidden = true;
+        isButtonDisabled = true;
     }
 };
 
@@ -246,6 +256,16 @@ public:
     NSTableCellView *cell = [tableView makeViewWithIdentifier:identifier owner:self];
     cell.textField.stringValue = [self.items objectAtIndex:row];
     return cell;
+}
+
+// NSTableViewDelegate
+- (BOOL)tableView:(NSTableView *)tableView
+shouldTypeSelectForEvent:(NSEvent *)event
+withCurrentSearchString:(NSString *)searchString
+{
+    // Return NO to prevent type select (otherwise S or N key will search that key)
+    // This is nice on long lists though.
+    return NO;
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)notification
@@ -612,82 +632,80 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
 - (NSStackView *)_addButtons
 {
-    const int32_t numActions = 32;
-    Action actions[numActions] = {
-        Action(" ", "Play", Key::Space),
+    // Don't reorder without also matching actionPtrs below
+    Action actions[] = {
         Action("?", "Help", Key::Slash),
         Action("I", "Info", Key::I),
-        
         Action("H", "Hud", Key::H),
-        Action("A", "Show All", Key::A),
-    
+        Action("U", "UI", Key::U),
+        Action("V", "UI Vertical", Key::V),
+
+        Action("D", "Debug", Key::D),
+        Action("G", "Grid", Key::G),
+        Action("B", "Checkerboard", Key::B),
+        
+        Action("", "", Key::A), // sep
+
         Action("P", "Preview", Key::P),
         Action("W", "Wrap", Key::W),
         Action("8", "Premul", Key::Num8),
         Action("7", "Signed", Key::Num7),
         
-        Action("-", "", Key::A), // sep
+        Action("", "", Key::A), // sep
 
-        Action("D", "Debug", Key::D),
-        Action("G", "Grid", Key::G),
-        
-        Action("B", "Checkerboard", Key::B),
-        Action("U", "UI", Key::U),
-        Action("V", "Vertical UI", Key::V),
-
-        Action("-", "", Key::A), // sep
-
+        Action("A", "Show All", Key::A),
         Action("M", "Mip", Key::M),
         Action("F", "Face", Key::F),
         Action("Y", "Array", Key::Y),
+        
         Action("N", "Next Item", Key::N),
         Action("R", "Reload", Key::R),
         Action("0", "Fit", Key::Num0),
 
-        Action("-", "", Key::A), // sep
+        Action("", "", Key::A), // sep
 
+        Action(" ", "Play", Key::Space), // TODO: really need icon on this
         Action("S", "Shape", Key::S),
         Action("C", "Shape Channel", Key::C),
         Action("L", "Lighting", Key::L),
         Action("T", "Tangents", Key::T),
 
-        // TODO: need to shift hud over a little
-        // "UI", - add to show/hide buttons
-
-        Action("-", "", Key::A), // sep
+        Action("", "", Key::A), // sep
 
         // make these individual toggles and exclusive toggle off shift
-        Action("R", "Red", Key::Num1),
-        Action("G", "Green", Key::Num2),
-        Action("B", "Blue", Key::Num3),
-        Action("A", "Alpha", Key::Num4),
+        Action("1", "Red", Key::Num1),
+        Action("2", "Green", Key::Num2),
+        Action("3", "Blue", Key::Num3),
+        Action("4", "Alpha", Key::Num4),
     };
     
+    // These have to be in same order as above.  May want to go back to search for text above.
     Action** actionPtrs[] = {
-        &_actionPlay,
         &_actionHelp,
         &_actionInfo,
         &_actionHud,
-        &_actionShowAll,
+        &_actionHideUI,
+        &_actionVertical,
+       
+        &_actionDebug,
+        &_actionGrid,
+        &_actionChecker,
         
         &_actionPreview,
         &_actionWrap,
         &_actionPremul,
         &_actionSigned,
         
-        &_actionDebug,
-        &_actionGrid,
-        &_actionChecker,
-        &_actionHideUI,
-        &_actionVertical,
-        
+        &_actionShowAll,
         &_actionMip,
         &_actionFace,
         &_actionArray,
+        
         &_actionItem,
         &_actionReload,
         &_actionFit,
         
+        &_actionPlay,
         &_actionShapeMesh,
         &_actionShapeChannel,
         &_actionLighting,
@@ -701,8 +719,10 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     
     NSRect rect = NSMakeRect(0, 10, 30, 30);
 
-    #define ArrayCount(x) ((x) / sizeof(x[0]))
+    #define ArrayCount(x) (sizeof(x) / sizeof(x[0]))
 
+    int32_t numActions = ArrayCount(actions);
+    
     NSMutableArray *buttons = [[NSMutableArray alloc] init];
 
     for (int32_t i = 0; i < numActions; ++i) {
@@ -718,7 +738,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         button = [NSButton buttonWithTitle:name
                                     target:self
                                     action:@selector(handleAction:)];
-        [button setToolTip:toolTip];
+        button.toolTip = toolTip;
         button.hidden = NO;
 
         button.buttonType = NSButtonTypeToggle;
@@ -728,7 +748,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
         // stackView seems to disperse the items evenly across the area, so this
         // doesn't work
-        bool isSeparator = icon[0] == '-';
+        bool isSeparator = icon[0] == 0;
         
         if (isSeparator) {
             // rect.origin.y += 11;
@@ -739,6 +759,9 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
             
             // rect.origin.y += 25;
 
+            // TODO: add icons
+            //button.image = ...;
+            
             // keep all buttons, since stackView will remove and pack the stack
             [_buttonArray addObject:button];
         }
@@ -771,19 +794,31 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
         NSString *toolTip = [NSString stringWithUTF8String:icon];
         NSString *name = [NSString stringWithUTF8String:title];
-        NSString *shortcut = @"";  // for now, or AppKit turns key int cmd+shift+key
-        bool isSeparator = icon[0] == '-';
+        bool isSeparator = icon[0] == 0;
         
         if (isSeparator) {
             [_viewMenu addItem:[NSMenuItem separatorItem]];
         }
         else {
+            // NSString *shortcut = @"";  // for now, or AppKit turns key int cmd+shift+key
+            NSString *shortcut = [NSString stringWithUTF8String:icon];
+            
             NSMenuItem *menuItem =
                 [[NSMenuItem alloc] initWithTitle:name
                                            action:@selector(handleAction:)
                                     keyEquivalent:shortcut];
-            menuItem.toolTip = toolTip;  // use in findMenuItem
-
+            menuItem.toolTip = toolTip;
+            
+            // All key-equivalents assume cmd, so unset cmd
+            // still leaves shift next to keys, but better than nothing
+            menuItem.keyEquivalentModifierMask = (NSEventModifierFlags)0;
+            
+            // TODO: add icons, also onStateImage, offStageImage, mixedStateImage
+            //menuItem.image = ...;
+             
+            // can set an integer constant that represents menu that avoid testing string (actionID)
+            //menuItem.tag = ...;
+            
             // TODO: menus and buttons should reflect any toggle state
             // menuItem.state = Mixed/Off/On;
 
@@ -803,7 +838,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         const char *icon = action.icon;  // single char
         
         // skip separators
-        bool isSeparator = icon[0] == '-';
+        bool isSeparator = icon[0] == 0;
         if (isSeparator) continue;
         
         _actions.push_back(action);
@@ -814,6 +849,12 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     for (int32_t i = 0; i < _actions.size(); ++i) {
         *(actionPtrs[i]) = &_actions[i];
     }
+    
+    // don't want these buttons showing up, menu only
+    _actionHud->disableButton();
+    _actionHelp->disableButton();
+    _actionHideUI->disableButton();
+    _actionVertical->disableButton();
     
     return stackView;
 }
@@ -1776,7 +1817,8 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     auto wrapState = toState(_showSettings->isWrap);
     auto debugState = toState(_showSettings->debugMode != DebugModeNone);
     auto playState = toState(_showSettings->isModel && renderer.playAnimations);
-
+    auto hudState = toState(_showSettings->isHudShown);
+    
     TextureChannels &channels = _showSettings->channels;
 
     auto redState = toState(channels == TextureChannels::ModeR001);
@@ -1794,17 +1836,20 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
         toState(_showSettings->lightingMode != LightingModeDiffuse);
     auto tangentState = toState(_showSettings->useTangent);
 
-    // TODO: vertical state
-   auto uiState = toState(_buttonStack.hidden);
+    auto verticalState = toState(_buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical);
+    auto uiState = toState(_buttonStack.hidden);
 
     auto helpState = Off;
     auto infoState = Off;
     auto jumpState = Off;
 
+    _actionVertical->setHighlight(verticalState);
+    
     // TODO: pass boolean, and change in the call
     _actionPlay->setHighlight(playState);
     _actionHelp->setHighlight(helpState);
     _actionInfo->setHighlight(infoState);
+    _actionHud->setHighlight(hudState);
     
     _actionArray->setHighlight(arrayState);
     _actionFace->setHighlight(faceState);
@@ -1906,8 +1951,8 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
 - (void)hideTables
 {
-    _tableView.hidden = YES;
-    _shapesTableView.hidden = YES;
+    _tableView.hidden = true;
+    _shapesTableView.hidden = true;
 }
 
 - (void)updateHudVisibility {
@@ -2180,12 +2225,12 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         else if (grid == 1) {
             _showSettings->isPixelGridShown = true;
 
-            sprintf(text, "Pixel Grid 1x1 On");
+            sprintf(text, "Pixel Grid 1x1");
         }
         else if (grid == 2) {
             _showSettings->isBlockGridShown = true;
 
-            sprintf(text, "Block Grid %dx%d On", _showSettings->blockX,
+            sprintf(text, "Block Grid %dx%d", _showSettings->blockX,
                     _showSettings->blockY);
         }
         else {
@@ -2195,7 +2240,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             // props but right now just a square grid atlas
             _showSettings->gridSizeX = _showSettings->gridSizeY = gridSizes[grid];
 
-            sprintf(text, "Atlas Grid %dx%d On", _showSettings->gridSizeX,
+            sprintf(text, "Atlas Grid %dx%d", _showSettings->gridSizeX,
                     _showSettings->gridSizeY);
         }
 
@@ -2220,6 +2265,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         // isChanged = true;
         text = "Hud ";
         text += _showSettings->isHudShown ? "On" : "Off";
+        isStateChanged = true;
     }
 
     // info on the texture, could request info from lib, but would want to cache
