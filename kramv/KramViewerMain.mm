@@ -515,6 +515,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     Action* _actionFace;
     Action* _actionArray;
     Action* _actionItem;
+    Action* _actionPrevItem;
     Action* _actionReload;
     Action* _actionFit;
     
@@ -658,7 +659,8 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         Action("F", "Face", Key::F),
         Action("Y", "Array", Key::Y),
         
-        Action("N", "Next Item", Key::N),
+        Action("↑", "Prev Item", Key::UpArrow),
+        Action("↓", "Next Item", Key::DownArrow),
         Action("R", "Reload", Key::R),
         Action("0", "Fit", Key::Num0),
 
@@ -701,6 +703,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         &_actionFace,
         &_actionArray,
         
+        &_actionPrevItem,
         &_actionItem,
         &_actionReload,
         &_actionFit,
@@ -851,6 +854,9 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     }
     
     // don't want these buttons showing up, menu only
+    _actionPrevItem->disableButton();
+    _actionItem->disableButton();
+    
     _actionHud->disableButton();
     _actionHelp->disableButton();
     _actionHideUI->disableButton();
@@ -1784,7 +1790,9 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     _actionFace->setHidden(isFaceSliceHidden);
     _actionMip->setHidden(isMipHidden);
     _actionShowAll->setHidden(isShowAllHidden);
+    
     _actionItem->setHidden(isJumpToNextHidden);
+    _actionPrevItem->setHidden(isJumpToNextHidden);
     
     _actionR->setHidden(isRedHidden);
     _actionG->setHidden(isGreenHidden);
@@ -1839,23 +1847,22 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     auto verticalState = toState(_buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical);
     auto uiState = toState(_buttonStack.hidden);
 
-    auto helpState = Off;
-    auto infoState = Off;
-    auto jumpState = Off;
-
     _actionVertical->setHighlight(verticalState);
     
     // TODO: pass boolean, and change in the call
     _actionPlay->setHighlight(playState);
-    _actionHelp->setHighlight(helpState);
-    _actionInfo->setHighlight(infoState);
+    _actionHelp->setHighlight(Off);
+    _actionInfo->setHighlight(Off);
     _actionHud->setHighlight(hudState);
     
     _actionArray->setHighlight(arrayState);
     _actionFace->setHighlight(faceState);
     _actionMip->setHighlight(mipState);
     
-    _actionItem->setHighlight(jumpState);
+    // these never show check state
+    _actionItem->setHighlight(Off);
+    _actionPrevItem->setHighlight(Off);
+    
     _actionHideUI->setHighlight(uiState); // note below button always off, menu has state
     
     _actionR->setHighlight(redState);
@@ -2111,7 +2118,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
             "Checker, Grid, Info\n"
             "Wrap, 8-signed, 9-premul\n"
             "Mip, Face, Y-array\n"
-            "Next item, C-Shape channel, S-Shape\n";
+            "↓-Next item, C-Shape channel, S-Shape\n";
 
         // just to update toggle state to Off
         isStateChanged = true;
@@ -2310,8 +2317,12 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         }
     }
 
-    else if (action == _actionItem) {
+    else if (action == _actionItem || action == _actionPrevItem) {
         if (!action->isHidden) {
+            // invert shift key for prev, since it's reversese
+            if (action == _actionPrevItem)
+                isShiftKeyDown = !isShiftKeyDown;
+            
             if (_showSettings->isArchive) {
                 if ([self advanceFileFromAchive:!isShiftKeyDown]) {
                     _hudHidden = true;
