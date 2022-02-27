@@ -583,11 +583,15 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 
 		# either store ktx2 or compress ktx in updating a zip with the data
 		if ktx2:
+			compressionLevel = 0
 			dstBundle = "bundle-" + platform + "-ktx2" + ".zip"
-			command = "find {0} -name '*.ktx2' | zip -u -0 -@ {1}".format(".", dstBundle)
+			command = "find {0} -name '*.ktx2' | zip -u -{1} -@ {2}".format(".", compressionLevel, dstBundle)
 		else:
+			# see https://aras-p.info/blog/2021/08/05/EXR-Zip-compression-levels/ 
+			# compression level 4 is 2x faster, and only slightly less compression than default of 6
+			compressionLevel = 4
 			dstBundle = "bundle-" + platform + "-ktx" + ".zip"
-			command = "find {0} -name '*.ktx' | zip -u -@ {1}".format(".", dstBundle)
+			command = "find {0} -name '*.ktx' | zip -u -{1} -@ {2}".format(".", compressionLevel, dstBundle)
 
 		print("running " + command)
 

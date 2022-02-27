@@ -1708,7 +1708,12 @@ bool KramEncoder::saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compr
         }
         else if (compressor.compressorType == KTX2SupercompressionZlib) {
             // set the level up
-            if (compressor.compressorLevel > 0.0f) {
+            if (compressor.compressorLevel == 0.0f) {
+                // https://aras-p.info/blog/2021/08/05/EXR-Zip-compression-levels/
+                // 4 is 2x faster than default of 6, only slightly worse compression
+                zlibLevel = 4;
+            }
+            else {
                 zlibLevel = (int)round(compressor.compressorLevel);
                 if (zlibLevel > 10) {
                     zlibLevel = 10;
