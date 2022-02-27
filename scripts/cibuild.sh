@@ -6,7 +6,7 @@
 
 # write out the git tag as a version.h file in a 
 tag=$(git describe --always --tags)
-versionFile=../libkram/kram/KramVersion.h
+versionFile=./libkram/kram/KramVersion.h
 
 echo "#pragma once" > $versionFile
 echo "#define KRAM_VERSION \"$tag\"" >> $versionFile
