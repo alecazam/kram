@@ -1830,7 +1830,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                        "fmtk: %s\n"
                        "fmtm: %s (%d)\n"
                        "fmtv: %s (%d)\n"
-                       "fmtd: %s (0x%04X)\n"
+                       "fmtd: %s (%d)\n"
                        "fmtg: %s (0x%04X)\n",
                        formatTypeName(metalFormat),
                        metalTypeName(metalFormat), metalFormat,

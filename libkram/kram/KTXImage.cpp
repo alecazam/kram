@@ -47,10 +47,10 @@ const uint8_t kKTX2Identifier[kKTX2IdentifierSize] = {
 // making this up, since Microsoft doesn't publish these constants
 const uint32_t DXGI_FORMAT_ETC2_OFFSET = 50;
 
-// enum based on dxgiformat.h
+// enum based on dxgiformat.h, but added astc ldr/hdr from obscure docs
+// and added etc2/eac by just making up constants since those aren't public
 // Copyright (C) Microsoft.  All rights reserved.
-// TODO: (renamte to DXGI_FORMAT_FORMAT) so easier to search for all
-enum DXFormat : uint32_t
+enum MyDXGIFormat : uint32_t
 {
     DXGI_FORMAT_UNKNOWN                                 = 0,
     
@@ -233,7 +233,7 @@ enum DXFormat : uint32_t
 //---------------------------------------------------
 
 enum GLFormat : uint32_t {
-    GL_FORMAT_UNKNOWN = 0,
+    GL_UNKNOWN = 0,
 
     //#ifndef GL_EXT_texture_compression_s3tc
     // BC1
@@ -392,7 +392,7 @@ enum GLFormatBase {
 // The encoder only handles sliced 3D astc and not 3D blocks.
 // Also no MTL equivalent for 3D blocks.
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#VkPhysicalDeviceTextureCompressionASTCHDRFeaturesEXT
-enum VKFormat {
+enum MyVKFormat {
     VK_FORMAT_UNDEFINED = 0,
 
     // this is explcit format supprt
@@ -528,8 +528,8 @@ public:
         const char* glName_,
 
         MyMTLPixelFormat metalType_,
-        VKFormat vulkanType_,
-        DXFormat directxType_,
+        MyVKFormat vulkanType_,
+        MyDXGIFormat directxType_,
         GLFormat glType_,
         GLFormatBase glBase_,
 
@@ -541,11 +541,18 @@ public:
 
         KTXFormatFlags flags_)
     {
+        constexpr uint32_t vulkanNameStart = sizeof("VK_FORMAT_") - 1;
+        constexpr uint32_t glNameStart = sizeof("GL_") - 1;
+        constexpr uint32_t dxNameStart = sizeof("DXGI_FORMAT_") - 1;
+        constexpr uint32_t metalNameStart = sizeof("MyMTLPixelFormat") - 1;
+        
         formatName = formatName_;
-        metalName = metalName_;
-        vulkanName = vulkanName_;
-        directxName = directxName_;
-        glName = glName_;
+        
+        // skip the redunant part
+        metalName = metalName_ + metalNameStart;
+        vulkanName = vulkanName_ + vulkanNameStart;
+        directxName = directxName_ + dxNameStart;
+        glName = glName_ + glNameStart;
 
         metalType = metalType_;
         vulkanType = vulkanType_;
@@ -639,7 +646,7 @@ static bool initFormatsIfNeeded()
         metalType, vulkanType, directxType, glType, glBase,          \
         x, y, blockSize, numChannels, (flags));
 
-    KTX_FORMAT(Invalid, MyMTLPixelFormatInvalid, VK_FORMAT_UNDEFINED, DXGI_FORMAT_UNKNOWN, GL_FORMAT_UNKNOWN, GL_RGBA, 1, 1, 0, 0, 0)
+    KTX_FORMAT(Invalid, MyMTLPixelFormatInvalid, VK_FORMAT_UNDEFINED, DXGI_FORMAT_UNKNOWN, GL_UNKNOWN, GL_RGBA, 1, 1, 0, 0, 0)
 
     // BC
     KTX_FORMAT(BC1, MyMTLPixelFormatBC1_RGBA, VK_FORMAT_BC1_RGB_UNORM_BLOCK, DXGI_FORMAT_BC1_UNORM, GL_COMPRESSED_RGB_S3TC_DXT1_EXT, GL_RGB, 4, 4, 8, 3, FLAG_ENC_BC)
@@ -831,7 +838,7 @@ uint32_t metalType(MyMTLPixelFormat format)
 const char* metalTypeName(MyMTLPixelFormat format)
 {
     const auto& it = formatInfo(format);
-    return it.metalName + 2;  // strlen("My");
+    return it.metalName;
 }
 
 const char* formatTypeName(MyMTLPixelFormat format)
