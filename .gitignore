@@ -7,6 +7,9 @@ bin/
 # ignore out folder, test results go here
 out/
 
+# this file is generated from cibuild.sh, and is based on current tag
+libkram/kram/KramVersion.h
+
 # ignore zip files
 *.zip
 
