@@ -1,4 +1,4 @@
-// kram - Copyright 2020 by Alec Miller. - MIT License
+// kram - Copyright 2020-2022 by Alec Miller. - MIT License
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
@@ -417,7 +417,7 @@ withCurrentSearchString:(NSString *)searchString
 
     // want to embed the git tag here
     options[@"Copyright"] =
-        [NSString stringWithUTF8String:"kram ©2020,2021 by Alec Miller"];
+        [NSString stringWithUTF8String:"kram ©2020-2022 by Alec Miller"];
 
     // add a link to kram website, skip the Visit text
     NSMutableAttributedString *str = [[NSMutableAttributedString alloc]
