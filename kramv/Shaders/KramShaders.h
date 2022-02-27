@@ -102,7 +102,8 @@ typedef NS_ENUM(int32_t, ShaderShapeChannel) {
 
 typedef NS_ENUM(int32_t, ShaderLightingMode) {
     ShLightingModeDiffuse = 0,
-    ShLightingModeSpecular,
+    ShLightingModeSpecular = 1,
+    ShLightingModeNone = 2,
 };
 
 // TODO: placement of these elements in the struct breaks transfer

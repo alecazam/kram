@@ -151,6 +151,9 @@ const char *ShowSettings::lightingModeText() const
         case LightingModeSpecular:
             text = "Light Specular";
             break;
+        case LightingModeNone:
+            text = "Light None";
+            break;
         default:
             break;
     }

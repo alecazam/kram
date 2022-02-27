@@ -70,7 +70,8 @@ enum ShapeChannel {
 enum LightingMode {
     LightingModeDiffuse = 0,   // amb + diffuse
     LightingModeSpecular = 1,  // amb + diffuse + specular
-
+    LightingModeNone = 2,      // no lighting, just mips
+    
     LightingModeCount,
 };
 

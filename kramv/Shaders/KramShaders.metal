@@ -746,98 +746,115 @@ float4 doLighting(float4 albedo, float3 viewDir, float3 bumpNormal, float3 verte
     // circle to all texture previews since it's additive.
     bool doBlinnPhongSpecular = false;
     
-    bool doSpecular = true; // can confuse lighting review, make option to enable or everything has bright white spot
-    bool doDiffuse = true;
-    bool doAmbient = true;
     
-    if (lightingMode == ShLightingModeDiffuse)
+    if (lightingMode == ShLightingModeNone)
     {
-        doSpecular = false;
+        // do nothing
     }
-    
-    // see here about energy normalization, not going to GGX just yet
-    // http://www.thetenthplanet.de/archives/255
-    
-    // Note: this isn't the same as the faceNormal, the vertexNormal is interpolated
-    // see iq's trick for flipping lighting in reflectIQ.
-    
-    // Use reflectIQ to flip specular, 
-    //float dotVertexNL = dot(vertexNormal, lightDir);
-    
-    float dotNL = dot(bumpNormal, lightDir);
-    
-    if (doSpecular) {
-        //if (dotVertexNL > 0.0) {
-            float specularAmount;
+    else
+    {
+        bool doAmbient = false;
+        bool doDiffuse = false;
+        bool doSpecular = false;
+       
+        if (lightingMode == ShLightingModeDiffuse)
+        {
+            doAmbient = true;
+            doDiffuse = true;
+        }
+        else if (lightingMode == ShLightingModeSpecular)
+        {
+            doAmbient = true;
+            doDiffuse = true;
             
-            // in lieu of a roughness map, do this
-            // fake energy conservation by multiply with gloss
-            // https://www.youtube.com/watch?v=E4PHFnvMzFc&t=946s
-            float gloss = 0.3;
-            float specularExp = exp2(gloss * 11.0) + 2.0;
-            float energyNormalization = gloss;
-            
-            if (doBlinnPhongSpecular) {
-                // this doesn't look so good as a highlight in ortho at least
-                float3 E = -viewDir;
-                float3 H = normalize(lightDir + E);
-                float dotHN = saturate(dot(H, bumpNormal));
-                specularAmount = dotHN;
+            // can confuse lighting review, make option to enable or everything has bright white spot
+            doSpecular = true;
+        }
+    
+        // see here about energy normalization, not going to GGX just yet
+        // http://www.thetenthplanet.de/archives/255
+        
+        // Note: this isn't the same as the faceNormal, the vertexNormal is interpolated
+        // see iq's trick for flipping lighting in reflectIQ.
+        
+        // Use reflectIQ to flip specular,
+        //float dotVertexNL = dot(vertexNormal, lightDir);
+        
+        float dotNL = dot(bumpNormal, lightDir);
+        
+        if (doSpecular) {
+            //if (dotVertexNL > 0.0) {
+                float specularAmount;
                 
-                // to make dotHN look like dotRL
-                // https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_reflection_model
-                specularExp *= 4.0;
+                // in lieu of a roughness map, do this
+                // fake energy conservation by multiply with gloss
+                // https://www.youtube.com/watch?v=E4PHFnvMzFc&t=946s
+                float gloss = 0.3;
+                float specularExp = exp2(gloss * 11.0) + 2.0;
+                float energyNormalization = gloss;
                 
-                //energyNormalization = (specularExp + 1.0) / (2.0 * PI);
-            }
-            else {
-                // phong
-                // and seem to recall a conversion to above but H = (L+V)/2, the normalize knocks out the 1/2
-                float3 ref = normalize(reflectIQ(viewDir, bumpNormal));
-                float dotRL = saturate(dot(ref, lightDir));
-                specularAmount = dotRL;
+                if (doBlinnPhongSpecular) {
+                    // this doesn't look so good as a highlight in ortho at least
+                    float3 E = -viewDir;
+                    float3 H = normalize(lightDir + E);
+                    float dotHN = saturate(dot(H, bumpNormal));
+                    specularAmount = dotHN;
+                    
+                    // to make dotHN look like dotRL
+                    // https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_reflection_model
+                    specularExp *= 4.0;
+                    
+                    //energyNormalization = (specularExp + 1.0) / (2.0 * PI);
+                }
+                else {
+                    // phong
+                    // and seem to recall a conversion to above but H = (L+V)/2, the normalize knocks out the 1/2
+                    float3 ref = normalize(reflectIQ(viewDir, bumpNormal));
+                    float dotRL = saturate(dot(ref, lightDir));
+                    specularAmount = dotRL;
+                    
+                    //energyNormalization = (specularExp + 1.0) / (2.0 * PI);
+                }
                 
-                //energyNormalization = (specularExp + 1.0) / (2.0 * PI);
-            }
-            
-            // above can be interpolated
-            specularAmount = pow(specularAmount, specularExp) * energyNormalization;
-            specular = specularAmount * lightColor.rgb;
-       // }
-    }
+                // above can be interpolated
+                specularAmount = pow(specularAmount, specularExp) * energyNormalization;
+                specular = specularAmount * lightColor.rgb;
+           // }
+        }
 
-    if (doDiffuse) {
+        if (doDiffuse) {
+            
+            float dotNLSat = saturate(dotNL);
+            
+            // soften the terminator off the vertNormal
+            // this is so no diffuse if normal completely off from vertex normal
+            // also limiting diffuse lighting bump to lighting by vertex normal
+            float dotVertex = saturate(dot(vertexNormal, bumpNormal));
+            dotNL *= saturate(9.0 * dotVertex);
+            
+            diffuse = dotNLSat * lightColor.rgb;
+        }
         
-        float dotNLSat = saturate(dotNL);
+        if (doAmbient) {
+            // can misconstrue as diffuse with this, but make dark side not look flat
+            float dotNLUnsat = dotNL;
+            ambient = mix(0.1, 0.2, saturate(dotNLUnsat * 0.5 + 0.5));
+        }
         
-        // soften the terminator off the vertNormal
-        // this is so no diffuse if normal completely off from vertex normal
-        // also limiting diffuse lighting bump to lighting by vertex normal
-        float dotVertex = saturate(dot(vertexNormal, bumpNormal));
-        dotNL *= saturate(9.0 * dotVertex);
+        // attenuate, and not saturate below, so no HDR yet
+        specular *= 0.8;
+        diffuse *= 0.7;
+        //ambient *= 0.2;
         
-        diffuse = dotNLSat * lightColor.rgb;
+    #if 0
+        // attenuating albedo with specular knocks it all out
+        albedo.xyz *= saturate(ambient + diffuse + specular);
+    #else
+        albedo.xyz *= saturate(diffuse + ambient);
+        albedo.xyz += specular;
+        albedo.xyz = saturate(albedo.xyz);
+    #endif
     }
-    
-    if (doAmbient) {
-        // can misconstrue as diffuse with this, but make dark side not look flat
-        float dotNLUnsat = dotNL;
-        ambient = mix(0.1, 0.2, saturate(dotNLUnsat * 0.5 + 0.5));
-    }
-    
-    // attenuate, and not saturate below, so no HDR yet
-    specular *= 0.8;
-    diffuse *= 0.7;
-    //ambient *= 0.2;
-    
-#if 0
-    // attenuating albedo with specular knocks it all out
-    albedo.xyz *= saturate(ambient + diffuse + specular);
-#else
-    albedo.xyz *= saturate(diffuse + ambient);
-    albedo.xyz += specular;
-    albedo.xyz = saturate(albedo.xyz);
-#endif
     
     return albedo;
 }

@@ -478,8 +478,8 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     IBOutlet NSTableView *_tableView;
     IBOutlet TableViewController *_tableViewController;
     
-    IBOutlet NSTableView *_shapesTableView;
-    IBOutlet TableViewController *_shapesTableViewController;
+//    IBOutlet NSTableView *_shapesTableView;
+//    IBOutlet TableViewController *_shapesTableViewController;
    
     vector<string> _textSlots;
     ShowSettings *_showSettings;
@@ -1952,7 +1952,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 - (void)hideTables
 {
     _tableView.hidden = true;
-    _shapesTableView.hidden = true;
+    //_shapesTableView.hidden = true;
 }
 
 - (void)updateHudVisibility {
@@ -2341,19 +2341,19 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             isChanged = true;
             
             // update shapes table
-            [_shapesTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_showSettings->meshNumber] byExtendingSelection:NO];
-            [_shapesTableView scrollRowToVisible:_showSettings->meshNumber];
+//            [_shapesTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_showSettings->meshNumber] byExtendingSelection:NO];
+//            [_shapesTableView scrollRowToVisible:_showSettings->meshNumber];
             
-            // show the shapes table
-            [self hideTables];
-            _shapesTableView.hidden = NO;
-            
-            // also have to hide hud or it will obscure the visible table
-            _hudHidden = true;
-            [self updateHudVisibility];
-            
-            // want it to respond to arrow keys
-            [self.window makeFirstResponder: _shapesTableView];
+//            // show the shapes table
+//            [self hideTables];
+//            _shapesTableView.hidden = NO;
+//
+//            // also have to hide hud or it will obscure the visible table
+//            _hudHidden = true;
+//            [self updateHudVisibility];
+//
+//            // want it to respond to arrow keys
+//            [self.window makeFirstResponder: _shapesTableView];
         }
     }
 
@@ -2508,21 +2508,21 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return NO;
 }
 
-- (void)updateShapesTable
-{
-    // no dynamic shapes from archive/folder yet, so init once
-    // TODO: tie to default shapes and those in the archive/folder
-    // may not want single archive with meshes/textures, so support different
-    if (_shapesTableViewController.items.count > 0)
-        return;
-    
-    // setup shapes view too
-    [_shapesTableViewController.items removeAllObjects];
-    for (uint32_t i = 0; i < _showSettings->meshCount; ++i) {
-        [_shapesTableViewController.items addObject: [NSString stringWithUTF8String: _showSettings->meshNumberName(i)]];
-    }
-    [_shapesTableView reloadData];
-}
+//- (void)updateShapesTable
+//{
+//    // no dynamic shapes from archive/folder yet, so init once
+//    // TODO: tie to default shapes and those in the archive/folder
+//    // may not want single archive with meshes/textures, so support different
+//    if (_shapesTableViewController.items.count > 0)
+//        return;
+//
+//    // setup shapes view too
+//    [_shapesTableViewController.items removeAllObjects];
+//    for (uint32_t i = 0; i < _showSettings->meshCount; ++i) {
+//        [_shapesTableViewController.items addObject: [NSString stringWithUTF8String: _showSettings->meshNumberName(i)]];
+//    }
+//    [_shapesTableView reloadData];
+//}
 
 - (BOOL)loadArchive:(const char *)zipFilename
 {
@@ -2571,7 +2571,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     // want it to respond to arrow keys
     [self.window makeFirstResponder: _tableView];
     
-    [self updateShapesTable];
+    //[self updateShapesTable];
     
     // hack to see table
     [self hideTables];
@@ -3113,7 +3113,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileFolderIndex] byExtendingSelection:NO];
             [_tableView scrollRowToVisible:_fileFolderIndex];
             
-            [self updateShapesTable];
+            //[self updateShapesTable];
             [self hideTables];
         }
 
@@ -3432,7 +3432,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 - (void)setupUI
 {
     // Load the basic shapes table once
-    [self updateShapesTable];
+    //[self updateShapesTable];
     [self hideTables];
 }
 
@@ -3481,12 +3481,12 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         NSInteger selectedRow = [_tableView selectedRow];
         [self setImageFromSelection:selectedRow];
     }
-    else if (notification.object == _shapesTableView)
-    {
-        // shape
-        NSInteger selectedRow = [_shapesTableView selectedRow];
-        [self setShapeFromSelection:selectedRow];
-    }
+//    else if (notification.object == _shapesTableView)
+//    {
+//        // shape
+//        NSInteger selectedRow = [_shapesTableView selectedRow];
+//        [self setShapeFromSelection:selectedRow];
+//    }
 }
 
 - (void)addNotifications

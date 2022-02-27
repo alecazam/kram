@@ -221,10 +221,6 @@
                                                     </prototypeCellViews>
                                                 </tableColumn>
                                             </tableColumns>
-                                            <connections>
-                                                <outlet property="dataSource" destination="8Hb-tc-yTO" id="Pxa-Xs-op7"/>
-                                                <outlet property="delegate" destination="8Hb-tc-yTO" id="Xof-Wb-RoC"/>
-                                            </connections>
                                         </tableView>
                                     </subviews>
                                     <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
@@ -305,7 +301,6 @@
                         </subviews>
                         <connections>
                             <outlet property="_shapesTableView" destination="vPC-mQ-zsL" id="j7A-ww-DGP"/>
-                            <outlet property="_shapesTableViewController" destination="8Hb-tc-yTO" id="jai-kf-4vR"/>
                             <outlet property="_tableView" destination="Ydb-sa-YEf" id="PjO-jm-pnf"/>
                             <outlet property="_tableViewController" destination="Ivt-wI-wYi" id="l0c-Dj-gAP"/>
                         </connections>
@@ -313,7 +308,6 @@
                 </viewController>
                 <customObject id="rPt-NT-nkU" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
                 <customObject id="Ivt-wI-wYi" userLabel="FilesViewController" customClass="TableViewController"/>
-                <customObject id="8Hb-tc-yTO" userLabel="ShapesViewController" customClass="TableViewController"/>
             </objects>
             <point key="canvasLocation" x="75" y="817"/>
         </scene>
