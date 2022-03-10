@@ -372,7 +372,12 @@ struct ViewFramebufferData {
 {
     /// Load Metal state objects and initialize renderer dependent view properties
 
+    // Important to set color space, or colors are wrong
+    bool pickOne = true;
+    CGColorSpaceRef viewColorSpace = CGColorSpaceCreateWithName(pickOne ? kCGColorSpaceSRGB : kCGColorSpaceLinearSRGB);
+
     view.colorPixelFormat = MTLPixelFormatRGBA16Float;
+    view.colorspace = viewColorSpace;
     view.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
     view.sampleCount = 1;
 
