@@ -414,12 +414,6 @@ unsigned LodepngDeflateUsingMiniz(
     return result;
 }
 
-unsigned inspect_chunk_by_name(const unsigned char* data, const unsigned char* end,
-                               lodepng::State& state, const char type[5]) {
-  const unsigned char* p = lodepng_chunk_find_const(data, end, type);
-  return lodepng_inspect_chunk(&state, p - data, data, end - data);
-}
-
 bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray, bool& isSrgb, Image& sourceImage)
 {
     uint32_t width = 0;
@@ -447,6 +441,17 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
         lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
         isSrgb = state.info_png.srgb_defined;
     }
+    else {
+        chunkData = lodepng_chunk_find_const(data, data + dataSize, "gAMA");
+        if (chunkData) {
+            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+            if (state.info_png.gama_defined) {
+                isSrgb = state.info_png.gama_gamma == 45455; // 1/2.2 x 100000
+            }
+                
+        }
+    }
+    
     
     // don't convert png bit depths, but can convert pallete data
     //    if (state.info_png.color.bitdepth != 8) {
