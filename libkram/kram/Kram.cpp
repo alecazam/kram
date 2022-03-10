@@ -414,6 +414,12 @@ unsigned LodepngDeflateUsingMiniz(
     return result;
 }
 
+unsigned inspect_chunk_by_name(const unsigned char* data, const unsigned char* end,
+                               lodepng::State& state, const char type[5]) {
+  const unsigned char* p = lodepng_chunk_find_const(data, end, type);
+  return lodepng_inspect_chunk(&state, p - data, data, end - data);
+}
+
 bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray, bool& isSrgb, Image& sourceImage)
 {
     uint32_t width = 0;
@@ -429,11 +435,19 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     lodepng_state_init(&state);
     state.decoder.ignore_crc = 1;
 
+    // this doesn't look at any blocks including srgb, can only get those from decode
     errorLode = lodepng_inspect(&width, &height, &state, data, dataSize);
     if (errorLode != 0) {
         return false;
     }
 
+    // TODO: also gama 2.2 block sometimes used in older files
+    const uint8_t* chunkData = lodepng_chunk_find_const(data, data + dataSize, "sRGB");
+    if (chunkData) {
+        lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+        isSrgb = state.info_png.srgb_defined;
+    }
+    
     // don't convert png bit depths, but can convert pallete data
     //    if (state.info_png.color.bitdepth != 8) {
     //        return false;
@@ -468,9 +482,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
             break;
     }
     
-    // TODO: also gama 2.2 block sometimes used in older files
-    isSrgb = state.info_png.srgb_defined;
-
+    
     // this inserts onto end of array, it doesn't resize
     vector<uint8_t> pixelsPNG;
     pixelsPNG.clear();
