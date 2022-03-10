@@ -2701,7 +2701,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         isFound = searchPos != string::npos;
     }
 
-    bool isSrgb = isFound;
+    //bool isSrgb = isFound;
 
     string normalFilename;
     bool hasNormal = false;
@@ -2741,9 +2741,9 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         }
     }
 
-    if (isPNG && isSrgb) {
-        image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
-    }
+//    if (isPNG && isSrgb) {
+//        image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
+//    }
 
     
     Renderer *renderer = (Renderer *)self.delegate;
@@ -2837,7 +2837,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         isFound = searchPos != string::npos;
     }
 
-    bool isSrgb = isFound;
+    //bool isSrgb = isFound;
 
     //---------------------------
 
@@ -2893,9 +2893,9 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         }
     }
 
-    if (isPNG && isSrgb) {
-        image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
-    }
+//    if (isPNG && isSrgb) {
+//        image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
+//    }
 
     Renderer *renderer = (Renderer *)self.delegate;
     [renderer releaseAllPendingTextures];

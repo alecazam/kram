@@ -60,7 +60,7 @@ inline bool isPNGFilename(const string& filename) { return isPNGFilename(filenam
 
 // helpers to source from a png or single level of a ktx
 bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage);
-bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulSrgb, bool isGray, Image& sourceImage);
+bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulSrgb, bool isGray, bool& isSrgb, Image& sourceImage);
 
 // can call these with data instead of needing a file
 string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint64_t dataSize, bool isVerbose);

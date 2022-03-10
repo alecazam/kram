@@ -386,16 +386,16 @@ static_cast<NSUInteger>(image.height), 1 }  // MTLSize
             isSDF = true;
         }
 
-        bool isSRGB = (!isNormal && !isSDF);
+        //bool isSRGB = (!isNormal && !isSDF);
 
         if (!imageData.open(path, image)) {
             return NO;
         }
 
         // have to adjust the format if srgb
-        if (isSRGB) {
-            image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
-        }
+//        if (isSRGB) {
+//            image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
+//        }
     }
     else {
         if (!imageData.open(path, image)) {

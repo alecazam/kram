@@ -245,10 +245,11 @@ bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image
 
     // the mmap/filehelper point to the png data
     // use Image to
-
+    bool isSrgb = false;
+    
     Image singleImage;
-    bool isLoaded = LoadPng(data, dataSize, false, false, singleImage);
-
+    bool isLoaded = LoadPng(data, dataSize, false, false, isSrgb, singleImage);
+    
     // don't need png data anymore
     close();
 
@@ -269,7 +270,7 @@ bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image
     image.header.numberOfMipmapLevels = 1;
 
     image.textureType = MyMTLTextureType2D;
-    image.pixelFormat = /*isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : */ MyMTLPixelFormatRGBA8Unorm;
+    image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
 
     // TODO: support mips with blitEncoder but that confuses mipCount in KTXImage
     //     Mipper can also generate on cpu side.  Mipped can do premul conversion though.
@@ -413,7 +414,7 @@ unsigned LodepngDeflateUsingMiniz(
     return result;
 }
 
-bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray, Image& sourceImage)
+bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray, bool& isSrgb, Image& sourceImage)
 {
     uint32_t width = 0;
     uint32_t height = 0;
@@ -466,6 +467,9 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
             hasAlpha = true;
             break;
     }
+    
+    // TODO: also gama 2.2 block sometimes used in older files
+    isSrgb = state.info_png.srgb_defined;
 
     // this inserts onto end of array, it doesn't resize
     vector<uint8_t> pixelsPNG;
@@ -574,7 +578,8 @@ bool SetupSourceImage(const string& srcFilename, Image& sourceImage,
     //-----------------------
 
     if (isPNG) {
-        if (!LoadPng(data, dataSize, isPremulSrgb, isGray, sourceImage)) {
+        bool isSrgb = false;
+        if (!LoadPng(data, dataSize, isPremulSrgb, isGray, isSrgb, sourceImage)) {
             return false;  // error
         }
     }
@@ -1682,6 +1687,8 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
             break;
     }
 
+    bool isSrgb = state.info_png.srgb_defined;
+    
     string tmp;
     bool isMB = (dataSize > (512 * 1024));
     sprintf(tmp,
@@ -1702,14 +1709,16 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
             "bitd: %d\n"
             "colr: %s\n"
             "alph: %s\n"
-            "palt: %s\n",
+            "palt: %s\n"
+            "srgb: %s\n",
             textureTypeName(MyMTLTextureType2D),
             width, height,
             width * height / (1000.0f * 1000.0f),
             state.info_png.color.bitdepth,
             hasColor ? "y" : "n",
             hasAlpha ? "y" : "n",
-            hasPalette ? "y" : "n");
+            hasPalette ? "y" : "n",
+            isSrgb ? "y" : "n");
     info += tmp;
 
     // optional block with ppi
