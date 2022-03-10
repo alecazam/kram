@@ -436,18 +436,22 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     }
 
     isSrgb = false;
+   
+    // Stop at the idat, or if not present the end of the file
+    const uint8_t* end = lodepng_chunk_find_const(data, data + dataSize, "IDAT");
+    if (!end)
+        end = data + dataSize;
     
-    // TODO: also gama 2.2 block sometimes used in older files
-    const uint8_t* chunkData = lodepng_chunk_find_const(data, data + dataSize, "sRGB");
+    const uint8_t* chunkData = lodepng_chunk_find_const(data, end, "sRGB");
     if (chunkData) {
-        lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
         isSrgb = state.info_png.srgb_defined;
     }
     
     if (!chunkData) {
-        chunkData = lodepng_chunk_find_const(data, data + dataSize, "gAMA");
+        chunkData = lodepng_chunk_find_const(data, end, "gAMA");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
             if (state.info_png.gama_defined) {
                 if (!isSrgb)
                     isSrgb = state.info_png.gama_gamma == 45455; // 1/2.2 x 100000
@@ -457,9 +461,9 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     }
     
     if (!chunkData) {
-        chunkData = lodepng_chunk_find_const(data, data + dataSize, "iCCP");
+        chunkData = lodepng_chunk_find_const(data, end, "iCCP");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
             if (state.info_png.iccp_defined) {
                 // TODO: other profile names
                 if (!isSrgb)
@@ -470,9 +474,9 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     }
     
 //    if (!chunkData) {
-//        chunkData = lodepng_chunk_find_const(data, data + dataSize, "cHRM");
+//        chunkData = lodepng_chunk_find_const(data, end, "cHRM");
 //        if (chunkData) {
-//            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+//            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
 //            if (state.info_png.chrm_defined) {
 //                if (!isSrgb)
 //                // isSrgb = tate.info_png.chrm_red_x == ...;
@@ -1703,16 +1707,20 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     // TODO: also gama 2.2 block sometimes used in older files
     bool isSrgb = false;
     
-    const uint8_t* chunkData = lodepng_chunk_find_const(data, data + dataSize, "sRGB");
+    const uint8_t* end = lodepng_chunk_find_const(data, data + dataSize, "IDAT");
+    if (!end)
+        end = data + dataSize;
+    
+    const uint8_t* chunkData = lodepng_chunk_find_const(data, end, "sRGB");
     if (chunkData) {
-        lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
         isSrgb = state.info_png.srgb_defined;
     }
     
     if (!chunkData) {
-        chunkData = lodepng_chunk_find_const(data, data + dataSize, "gAMA");
+        chunkData = lodepng_chunk_find_const(data, end, "gAMA");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
             if (state.info_png.gama_defined) {
                 if (!isSrgb)
                     isSrgb = state.info_png.gama_gamma == 45455; // 1/2.2 x 100000
@@ -1722,9 +1730,9 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     }
     
     if (!chunkData) {
-        chunkData = lodepng_chunk_find_const(data, data + dataSize, "iCCP");
+        chunkData = lodepng_chunk_find_const(data, end, "iCCP");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
             if (state.info_png.iccp_defined) {
                 if (!isSrgb)
                     isSrgb = strcmp(state.info_png.iccp_name, "sRGB ICE61966-2.1") == 0;
@@ -1736,7 +1744,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
 //    if (!chunkData) {
 //        chunkData = lodepng_chunk_find_const(data, data + dataSize, "cHRM");
 //        if (chunkData) {
-//            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+//            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
 //            if (state.info_png.chrm_defined) {
 //                if (!isSrgb)
 //                // isSrgb = strcmp(state.info_png.chrm_red_x, "Srgb") == 0;
@@ -1814,17 +1822,18 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     info += tmp;
 
     // optional block with ppi
-    chunkData = lodepng_chunk_find_const(data, data + dataSize, "iCCP");
+    chunkData = lodepng_chunk_find_const(data, end, "pHYs");
     if (chunkData) {
-        lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
     
         if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
             float metersToInches = 39.37;
+            // TODO: there is info_pgn.phys_unit (0 - unknown, 1 - meters)
             sprintf(tmp,
                     "ppix: %d\n"
                     "ppiy: %d\n",
-                    (int32_t)(state.info_png.phys_x * metersToInches),
-                    (int32_t)(state.info_png.phys_y * metersToInches));
+                    (int32_t)(state.info_png.phys_x / metersToInches),
+                    (int32_t)(state.info_png.phys_y / metersToInches));
             info += tmp;
         }
     }
