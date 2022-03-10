@@ -1770,7 +1770,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     // more data from swizzle in the props. Often alpha doesn't store anything
     // useful to view.
 
-    // TODO: may want to disable isPremul on block textures that already have
+    // DONE: may want to disable isPremul on block textures that already have
     // premul in data or else premul is applied a second time to the visual
 
     bool hasAlpha = _showSettings->numChannels >= 3;
@@ -1838,7 +1838,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     auto meshState = toState(_showSettings->meshNumber > 0);
     auto meshChannelState = toState(_showSettings->shapeChannel > 0);
     auto lightingState =
-        toState(_showSettings->lightingMode != LightingModeDiffuse);
+        toState(_showSettings->lightingMode != LightingModeNone);
     auto tangentState = toState(_showSettings->useTangent);
 
     auto verticalState = toState(_buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical);
@@ -2110,12 +2110,12 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
         // display the chars for now
         text =
             "1234-rgba, Preview, Debug, A-show all\n"
-            "Hud, Reload, 0-fit\n"
-            "Checker, Grid, Info\n"
+            "Info, Hud, Reload, 0-fit\n"
+            "Checker, Grid\n"
             "Wrap, 8-signed, 9-premul\n"
-            "Mip, Face, Y-array\n"
-            "↓-Next item, C-Shape channel, S-Shape\n";
-
+            "Mip, Face, Y-array, ↓-next item\n"
+            "Lighting, S-shape, C-shape channel\n";
+        
         // just to update toggle state to Off
         isStateChanged = true;
     }
@@ -3522,19 +3522,15 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     _trackingArea = [[NSTrackingArea alloc]
         initWithRect:_view.bounds
              options:(NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved |
-
                       // NSTrackingActiveWhenFirstResponder |
-                      NSTrackingActiveInActiveApp |
                       // NSTrackingActiveInKeyWindow |
-                      NSTrackingInVisibleRect // ignore rect above, bur resizes
+                      NSTrackingActiveInActiveApp |
+                      NSTrackingInVisibleRect // ignore rect above, bur resizes with view
                       )
                owner:_view
             userInfo:nil];
     [_view addTrackingArea:_trackingArea];
 
-    // programmatically add some buttons
-    // think limited to 11 viewws before they must be wrapepd in a container.
-    // That's how SwiftUI was.
     [_view addNotifications];
     
     [_view setupUI];
