@@ -435,23 +435,51 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
         return false;
     }
 
+    isSrgb = false;
+    
     // TODO: also gama 2.2 block sometimes used in older files
     const uint8_t* chunkData = lodepng_chunk_find_const(data, data + dataSize, "sRGB");
     if (chunkData) {
         lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
         isSrgb = state.info_png.srgb_defined;
     }
-    else {
+    
+    if (!chunkData) {
         chunkData = lodepng_chunk_find_const(data, data + dataSize, "gAMA");
         if (chunkData) {
             lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
             if (state.info_png.gama_defined) {
-                isSrgb = state.info_png.gama_gamma == 45455; // 1/2.2 x 100000
+                if (!isSrgb)
+                    isSrgb = state.info_png.gama_gamma == 45455; // 1/2.2 x 100000
             }
                 
         }
     }
     
+    if (!chunkData) {
+        chunkData = lodepng_chunk_find_const(data, data + dataSize, "iCCP");
+        if (chunkData) {
+            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+            if (state.info_png.iccp_defined) {
+                // TODO: other profile names
+                if (!isSrgb)
+                    isSrgb = strcmp(state.info_png.iccp_name, "sRGB ICE61966-2.1") == 0;
+            }
+                
+        }
+    }
+    
+//    if (!chunkData) {
+//        chunkData = lodepng_chunk_find_const(data, data + dataSize, "cHRM");
+//        if (chunkData) {
+//            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+//            if (state.info_png.chrm_defined) {
+//                if (!isSrgb)
+//                // isSrgb = tate.info_png.chrm_red_x == ...;
+//            }
+//
+//        }
+//    }
     
     // don't convert png bit depths, but can convert pallete data
     //    if (state.info_png.color.bitdepth != 8) {
@@ -1671,7 +1699,56 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
         KLOGE("Kram", "info couldn't open png file");
         return "";
     }
-
+    
+    // TODO: also gama 2.2 block sometimes used in older files
+    bool isSrgb = false;
+    
+    const uint8_t* chunkData = lodepng_chunk_find_const(data, data + dataSize, "sRGB");
+    if (chunkData) {
+        lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+        isSrgb = state.info_png.srgb_defined;
+    }
+    
+    if (!chunkData) {
+        chunkData = lodepng_chunk_find_const(data, data + dataSize, "gAMA");
+        if (chunkData) {
+            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+            if (state.info_png.gama_defined) {
+                if (!isSrgb)
+                    isSrgb = state.info_png.gama_gamma == 45455; // 1/2.2 x 100000
+            }
+                
+        }
+    }
+    
+    if (!chunkData) {
+        chunkData = lodepng_chunk_find_const(data, data + dataSize, "iCCP");
+        if (chunkData) {
+            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+            if (state.info_png.iccp_defined) {
+                if (!isSrgb)
+                    isSrgb = strcmp(state.info_png.iccp_name, "sRGB ICE61966-2.1") == 0;
+            }
+                
+        }
+    }
+    
+//    if (!chunkData) {
+//        chunkData = lodepng_chunk_find_const(data, data + dataSize, "cHRM");
+//        if (chunkData) {
+//            lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+//            if (state.info_png.chrm_defined) {
+//                if (!isSrgb)
+//                // isSrgb = strcmp(state.info_png.chrm_red_x, "Srgb") == 0;
+//            }
+//
+//        }
+//    }
+    
+    // TODO: also bkgd blocks.
+    
+    
+    
     string info;
 
     bool hasColor = true;
@@ -1704,8 +1781,6 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
             break;
     }
 
-    bool isSrgb = state.info_png.srgb_defined;
-    
     string tmp;
     bool isMB = (dataSize > (512 * 1024));
     sprintf(tmp,
@@ -1739,20 +1814,21 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     info += tmp;
 
     // optional block with ppi
-    // TODO: inspect doesn't parse this block, only decode call does
-    //        if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
-    //            float metersToInches = 39.37;
-    //            sprintf(tmp,
-    //                    "ppix: %d\n"
-    //                    "ppiy: %d\n",
-    //                    (int32_t)(state.info_png.phys_x * metersToInches),
-    //                    (int32_t)(state.info_png.phys_y * metersToInches));
-    //            info += tmp;
-    //        }
+    chunkData = lodepng_chunk_find_const(data, data + dataSize, "iCCP");
+    if (chunkData) {
+        lodepng_inspect_chunk(&state, chunkData - data, data, dataSize);
+    
+        if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
+            float metersToInches = 39.37;
+            sprintf(tmp,
+                    "ppix: %d\n"
+                    "ppiy: %d\n",
+                    (int32_t)(state.info_png.phys_x * metersToInches),
+                    (int32_t)(state.info_png.phys_y * metersToInches));
+            info += tmp;
+        }
+    }
 
-    // TODO: also bkgd blocks.
-    // TODO: sRGB, cHRM, gAMA and other colorspace blocks aren't supported by lodepng,
-    // so can't report those would need to walk those blocks manually.
     return info;
 }
 

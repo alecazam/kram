@@ -372,12 +372,15 @@ struct ViewFramebufferData {
 {
     /// Load Metal state objects and initialize renderer dependent view properties
 
-    // Important to set color space, or colors are wrong
-    bool pickOne = true;
-    CGColorSpaceRef viewColorSpace = CGColorSpaceCreateWithName(pickOne ? kCGColorSpaceSRGB : kCGColorSpaceLinearSRGB);
-
-    view.colorPixelFormat = MTLPixelFormatRGBA16Float;
+    // Important to set color space, or colors are wrong.  Why doesn't one of these work (or the default)
+    // false is good for srgb -> rgba16f
+    // true is good for non-srgb -> rgba16f
+    bool pickOne = false;
+    CGColorSpaceRef viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
+    // pickOne ? kCGColorSpaceSRGB : kCGColorSpaceLinearSRGB);
     view.colorspace = viewColorSpace;
+    
+    view.colorPixelFormat = MTLPixelFormatRGBA16Float;
     view.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
     view.sampleCount = 1;
 
