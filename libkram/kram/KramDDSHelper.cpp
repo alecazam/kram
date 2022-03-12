@@ -12,9 +12,9 @@ using namespace NAMESPACE_STL;
 
 const uint32_t DDS_MAGIC = 0x20534444; // "DDS "
 
-#define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
-    ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) |       \
-    ((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24 ))
+#define MAKEFOURCC(str)                                                       \
+    ((uint32_t)(uint8_t)(str[0]) | ((uint32_t)(uint8_t)(str[1]) << 8) |       \
+    ((uint32_t)(uint8_t)(str[2]) << 16) | ((uint32_t)(uint8_t)(str[3]) << 24 ))
 
 enum DDS_FLAGS : uint32_t
 {
@@ -55,7 +55,7 @@ enum DDS_FLAGS : uint32_t
     DDS_DIMENSION_TEXTURE2D = 3,
     DDS_DIMENSION_TEXTURE3D = 4,
     
-    FOURCC_DX10 = MAKEFOURCC('D', 'X', '1', '0'),
+    FOURCC_DX10 = MAKEFOURCC("DX10"),
     
     // dx10 misc2 flags
     DDS_ALPHA_MODE_UNKNOWN = 0,
@@ -65,8 +65,8 @@ enum DDS_FLAGS : uint32_t
     DDS_ALPHA_MODE_CUSTOM = 4,
     
     // Not worth support dx9-style files, these don't even hold srgb state
-    //FOURCC_BC1 = MAKEFOURCC('D', 'X', 'T', '1'),
-    //FOURCC_BC3 = MAKEFOURCC('D', 'X', 'T', '5'),
+    //FOURCC_BC1 = MAKEFOURCC("DXT1"),
+    //FOURCC_BC3 = MAKEFOURCC("DXT5"),
 };
 
 struct DDS_PIXELFORMAT

@@ -414,6 +414,13 @@ unsigned LodepngDeflateUsingMiniz(
     return result;
 }
 
+//-----------------------
+
+// TODO: fix this to identify srgb, otherwise will skip GAMA block
+// no docs on how to identify srgb from iccp, ImageMagick might
+// have code for this.
+static const bool doParseIccProfile = false;
+
 struct IccProfileTag
 {
     uint32_t type, offset, size;
@@ -442,17 +449,21 @@ static float getICC15Fixed16(const unsigned char* icc, size_t size, size_t pos) 
 struct IccProfileHeader
 {
     uint32_t size; // 0
-    uint32_t cmmType; // 4
+    uint32_t cmmType; // 4 - 'appl'
     uint32_t version; // 8
-    uint32_t deviceClass; // 12
-    uint32_t inputSpace; // 16
-    uint32_t outputSpace; // 20
+    uint32_t deviceClass; // 12 - 'mntr'
+    uint32_t inputSpace; // 16 - 'RGB '
+    uint32_t outputSpace; // 20 - 'XYZ '
     uint16_t date[6]; // 24
-    uint32_t signature, platform, flags; // 36
-    uint32_t deviceManufacturer, deviceModel, deviceAttributes[2]; // 48
+    uint32_t signature; // 30 - 'ascp'
+    uint32_t platform; // 32 - 'APPL'
+    uint32_t flags; // 36
+    uint32_t deviceManufacturer; // 40 - 'APPL'
+    uint32_t deviceModel;
+    uint32_t deviceAttributes[2]; // 48
     uint32_t renderingIntent; // 64
     uint32_t psx, psy, psz; // 68 - fixed-point float, illuminant
-    uint32_t creator; // 80
+    uint32_t creator; // 80 - 'appl'
     uint32_t md5[4]; // 84
     uint32_t padding[7]; // 100
     uint32_t numTags; // 128
@@ -469,15 +480,25 @@ bool parseIccProfile(const uint8_t* data, uint32_t dataSize, bool& isSrgb)
 {
     isSrgb = false;
     
-    if (dataSize < sizeof(IccProfileHeader))
+    // should look at other blocks if this is false
+    if (dataSize < sizeof(IccProfileHeader)) {
         return false;
-
+    }
+    
     // copy header so can endianSwap it
     IccProfileHeader header = *(const IccProfileHeader*)data;
-    
     // convert big to little endian
     swapEndianUint32(header.size);
     swapEndianUint32(header.numTags);
+    
+    if (header.signature != MAKEFOURCC("acsp")) {
+        return false;
+    }
+
+    if (header.deviceModel == MAKEFOURCC("sRGB")) {
+        isSrgb = true;
+        return true;
+    }
     
     IccProfileTag* tags = (IccProfileTag*)(data + sizeof(IccProfileHeader));
 
@@ -493,29 +514,59 @@ bool parseIccProfile(const uint8_t* data, uint32_t dataSize, bool& isSrgb)
         
         switch(datatype) {
             case MAKEFOURCC("XYZ "): {
-                float x = getICC15Fixed16(data, dataSize, tag.offset + 8);
-                float y = getICC15Fixed16(data, dataSize, tag.offset + 12);
-                float z = getICC15Fixed16(data, dataSize, tag.offset + 16);
+                if (tag.type == MAKEFOURCC("wtpt")) {
+                    float x = getICC15Fixed16(data, dataSize, tag.offset + 8);
+                    float y = getICC15Fixed16(data, dataSize, tag.offset + 12);
+                    float z = getICC15Fixed16(data, dataSize, tag.offset + 16);
 
-                // types include rXYZ, gXYZ, bXYZ, wtpt,
-                // can srgb be based on white-point, seems cheesy
-                if (tag.type == MAKEFOURCC("wtpt") && x == 0.950454711f && y == 1.0f && z == 1.08905029f) {
-                    isSrgb = true;
-                    return true;
+                    // types include rXYZ, gXYZ, bXYZ, wtpt,
+                    // can srgb be based on white-point, seems cheesy
+                    // Media hitepoint trisimulus
+                    if (x == 0.950454711f && y == 1.0f && z == 1.08905029f) {
+                        isSrgb = true;
+                        return true;
+                    }
                 }
                 break;
             }
             case MAKEFOURCC("curv"):
+                // rTRC, gTRC, bTRC
                 break;
             case MAKEFOURCC("para"):
+                // aarg, aagg, aabg,
+                break;
+            case MAKEFOURCC("vcgt"):
+                // vcgt,
+                break;
+            case MAKEFOURCC("vcgp"):
+                // vcgp,
+                break;
+            case MAKEFOURCC("mmod"):
+                // mmod,
+                break;
+            case MAKEFOURCC("ndin"):
+                // ndin,
                 break;
             case MAKEFOURCC("chrm"):
                 break;
+            case MAKEFOURCC("sf32"):
+                // chad - chromatic adaptation matrix
+                break;
                 
-            case MAKEFOURCC("vcgp"):
+            case MAKEFOURCC("mAB "):
+                // A2B0, A2B1 - Intent-0/1, device to PCS table
+            case MAKEFOURCC("mBA "):
+                // B2A0, B2A1 - Intent-0/1, PCS to device table
+            case MAKEFOURCC("sig "):
+                // rig0
+                
             case MAKEFOURCC("text"):
             case MAKEFOURCC("mluc"):
+                // muti-localizaed description strings
             case MAKEFOURCC("desc"):
+                // cprt, dscm
+                // desc/desc or mluc/desc
+                // copyright and en description
                 break;
         }
     }
@@ -528,6 +579,8 @@ bool isIccProfileSrgb(const uint8_t* data, uint32_t dataSize) {
     parseIccProfile(data, dataSize, isSrgb);
     return isSrgb;
 }
+
+//-----------------------
 
 bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray, bool& isSrgb, Image& sourceImage)
 {
@@ -563,8 +616,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
         isSrgb = state.info_png.srgb_defined;
     }
     
-    /*
-    if (!chunkData) {
+    if (doParseIccProfile && !chunkData) {
         chunkData = lodepng_chunk_find_const(data, end, "iCCP");
         if (chunkData) {
             lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
@@ -575,7 +627,6 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
                 
         }
     }
-    */
     
     if (!chunkData) {
         chunkData = lodepng_chunk_find_const(data, end, "gAMA");
@@ -1840,11 +1891,9 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
         isSrgb = state.info_png.srgb_defined;
     }
     
-    /* TODO: fix this parsing, iccp holds vast quantities of data we don't care about
-     
     // Adobe Photoshop 2022 only sets iccp + gama instead of sRGB flag, but iccp takes
     // priority to gama block.
-    if (!chunkData) {
+    if (doParseIccProfile && !chunkData) {
         chunkData = lodepng_chunk_find_const(data, end, "iCCP");
         if (chunkData) {
             lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
@@ -1855,7 +1904,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
                 
         }
     }
-    */
+    
     if (!chunkData) {
         chunkData = lodepng_chunk_find_const(data, end, "gAMA");
         if (chunkData) {
