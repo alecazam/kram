@@ -65,6 +65,15 @@ ASTCENC_SIMD_INLINE vint4 operator+(vint4 a, int b)
 }
 
 /**
+ * @brief Overload: vector by vector incremental addition.
+ */
+ASTCENC_SIMD_INLINE vint4& operator+=(vint4& a, const vint4& b)
+{
+	a = a + b;
+	return a;
+}
+
+/**
  * @brief Overload: vector by scalar subtraction.
  */
 ASTCENC_SIMD_INLINE vint4 operator-(vint4 a, int b)
@@ -135,6 +144,9 @@ ASTCENC_SIMD_INLINE void print(vint4 a)
 // vfloat4 operators and functions
 // ============================================================================
 
+/**
+ * @brief Overload: vector by vector incremental addition.
+ */
 ASTCENC_SIMD_INLINE vfloat4& operator+=(vfloat4& a, const vfloat4& b)
 {
 	a = a + b;
@@ -321,7 +333,7 @@ ASTCENC_SIMD_INLINE float dot3_s(vfloat4 a, vfloat4 b)
 }
 
 /**
- * @brief Return the dot product for the full 4 lanes, returning vector.
+ * @brief Return the dot product for the bottom 3 lanes, returning vector.
  */
 ASTCENC_SIMD_INLINE vfloat4 dot3(vfloat4 a, vfloat4 b)
 {

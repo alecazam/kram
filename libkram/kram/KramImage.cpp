@@ -904,7 +904,7 @@ bool KramDecoder::decodeBlocks(
             // no swizzle
             astcenc_swizzle swizzleDecode = {ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A};
 
-            error = astcenc_decompress_image(codec_context, srcData, srcDataLength, &dstImageASTC, swizzleDecode, 0);
+            error = astcenc_decompress_image(codec_context, srcData, srcDataLength, &dstImageASTC, &swizzleDecode, 0);
 
             astcenc_context_free(codec_context);
 
@@ -3000,7 +3000,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
             }
 #else
             error = astcenc_compress_image(
-                codec_context, &srcImage, swizzleEncode,
+                codec_context, &srcImage, &swizzleEncode,
                 outputTexture.data.data(), mipStorageSize,
                 0);  // threadIndex
 #endif

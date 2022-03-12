@@ -28,14 +28,12 @@
 		706EEF9226D1595D001C950E /* astcenc_color_unquantize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDD926D1583E001C950E /* astcenc_color_unquantize.cpp */; };
 		706EEF9326D1595D001C950E /* astcenc_mathlib_softfloat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDA26D1583E001C950E /* astcenc_mathlib_softfloat.cpp */; };
 		706EEF9426D1595D001C950E /* astcenc_weight_quant_xfer_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDB26D1583E001C950E /* astcenc_weight_quant_xfer_tables.cpp */; };
-		706EEF9526D1595D001C950E /* astcenc_encoding_choice_error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDD26D1583E001C950E /* astcenc_encoding_choice_error.cpp */; };
 		706EEF9626D1595D001C950E /* astcenc_percentile_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDE26D1583E001C950E /* astcenc_percentile_tables.cpp */; };
 		706EEF9726D1595D001C950E /* astcenc_partition_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDF26D1583E001C950E /* astcenc_partition_tables.cpp */; };
 		706EEF9826D1595D001C950E /* astcenc_decompress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE026D1583E001C950E /* astcenc_decompress_symbolic.cpp */; };
 		706EEF9926D1595D001C950E /* astcenc_color_quantize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE126D1583E001C950E /* astcenc_color_quantize.cpp */; };
 		706EEF9A26D1595D001C950E /* astcenc_platform_isa_detection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE326D1583E001C950E /* astcenc_platform_isa_detection.cpp */; };
 		706EEF9B26D1595D001C950E /* astcenc_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE426D1583E001C950E /* astcenc_image.cpp */; };
-		706EEF9C26D1595D001C950E /* astcenc_kmeans_partitioning.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE626D1583E001C950E /* astcenc_kmeans_partitioning.cpp */; };
 		706EEF9D26D1595D001C950E /* astcenc_compress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE826D1583E001C950E /* astcenc_compress_symbolic.cpp */; };
 		706EEF9E26D1595D001C950E /* astcenc_ideal_endpoints_and_weights.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE926D1583E001C950E /* astcenc_ideal_endpoints_and_weights.cpp */; };
 		706EEF9F26D1595D001C950E /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDEB26D1583E001C950E /* astcenc_mathlib.cpp */; };
@@ -43,7 +41,6 @@
 		706EEFA126D1595D001C950E /* astcenc_diagnostic_trace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDEE26D1583E001C950E /* astcenc_diagnostic_trace.cpp */; };
 		706EEFA226D1595D001C950E /* astcenc_symbolic_physical.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDEF26D1583E001C950E /* astcenc_symbolic_physical.cpp */; };
 		706EEFA326D1595D001C950E /* astcenc_weight_align.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF026D1583E001C950E /* astcenc_weight_align.cpp */; };
-		706EEFA426D1595D001C950E /* astcenc_block_sizes2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF226D1583E001C950E /* astcenc_block_sizes2.cpp */; };
 		706EEFA526D1595D001C950E /* astcenc_entry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF326D1583E001C950E /* astcenc_entry.cpp */; };
 		706EEFA626D1595D001C950E /* astcenc_averages_and_directions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF526D1583E001C950E /* astcenc_averages_and_directions.cpp */; };
 		706EEFA726D1595D001C950E /* basisu_transcoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE0426D1583F001C950E /* basisu_transcoder.cpp */; };
@@ -249,14 +246,12 @@
 		706EF1AA26D166C5001C950E /* astcenc_color_unquantize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDD926D1583E001C950E /* astcenc_color_unquantize.cpp */; };
 		706EF1AB26D166C5001C950E /* astcenc_mathlib_softfloat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDA26D1583E001C950E /* astcenc_mathlib_softfloat.cpp */; };
 		706EF1AC26D166C5001C950E /* astcenc_weight_quant_xfer_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDB26D1583E001C950E /* astcenc_weight_quant_xfer_tables.cpp */; };
-		706EF1AD26D166C5001C950E /* astcenc_encoding_choice_error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDD26D1583E001C950E /* astcenc_encoding_choice_error.cpp */; };
 		706EF1AE26D166C5001C950E /* astcenc_percentile_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDE26D1583E001C950E /* astcenc_percentile_tables.cpp */; };
 		706EF1AF26D166C5001C950E /* astcenc_partition_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDDF26D1583E001C950E /* astcenc_partition_tables.cpp */; };
 		706EF1B026D166C5001C950E /* astcenc_decompress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE026D1583E001C950E /* astcenc_decompress_symbolic.cpp */; };
 		706EF1B126D166C5001C950E /* astcenc_color_quantize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE126D1583E001C950E /* astcenc_color_quantize.cpp */; };
 		706EF1B226D166C5001C950E /* astcenc_platform_isa_detection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE326D1583E001C950E /* astcenc_platform_isa_detection.cpp */; };
 		706EF1B326D166C5001C950E /* astcenc_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE426D1583E001C950E /* astcenc_image.cpp */; };
-		706EF1B426D166C5001C950E /* astcenc_kmeans_partitioning.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE626D1583E001C950E /* astcenc_kmeans_partitioning.cpp */; };
 		706EF1B526D166C5001C950E /* astcenc_compress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE826D1583E001C950E /* astcenc_compress_symbolic.cpp */; };
 		706EF1B626D166C5001C950E /* astcenc_ideal_endpoints_and_weights.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDE926D1583E001C950E /* astcenc_ideal_endpoints_and_weights.cpp */; };
 		706EF1B726D166C5001C950E /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDEB26D1583E001C950E /* astcenc_mathlib.cpp */; };
@@ -264,7 +259,6 @@
 		706EF1B926D166C5001C950E /* astcenc_diagnostic_trace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDEE26D1583E001C950E /* astcenc_diagnostic_trace.cpp */; };
 		706EF1BA26D166C5001C950E /* astcenc_symbolic_physical.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDEF26D1583E001C950E /* astcenc_symbolic_physical.cpp */; };
 		706EF1BB26D166C5001C950E /* astcenc_weight_align.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF026D1583E001C950E /* astcenc_weight_align.cpp */; };
-		706EF1BC26D166C5001C950E /* astcenc_block_sizes2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF226D1583E001C950E /* astcenc_block_sizes2.cpp */; };
 		706EF1BD26D166C5001C950E /* astcenc_entry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF326D1583E001C950E /* astcenc_entry.cpp */; };
 		706EF1BE26D166C5001C950E /* astcenc_averages_and_directions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDF526D1583E001C950E /* astcenc_averages_and_directions.cpp */; };
 		706EF1BF26D166C5001C950E /* basisu_transcoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE0426D1583F001C950E /* basisu_transcoder.cpp */; };
@@ -317,6 +311,72 @@
 		706EFF8426D34740001C950E /* red_black_tree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5F26D3473F001C950E /* red_black_tree.cpp */; };
 		706EFF8526D34740001C950E /* fixed_pool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD6026D3473F001C950E /* fixed_pool.cpp */; };
 		706EFF8626D34740001C950E /* fixed_pool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD6026D3473F001C950E /* fixed_pool.cpp */; };
+		70871D6527DC767300D0B9E1 /* astcenc_block_sizes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4427DC767200D0B9E1 /* astcenc_block_sizes.cpp */; };
+		70871D6627DC767300D0B9E1 /* astcenc_block_sizes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4427DC767200D0B9E1 /* astcenc_block_sizes.cpp */; };
+		70871D6727DC767300D0B9E1 /* astcenc_percentile_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4527DC767200D0B9E1 /* astcenc_percentile_tables.cpp */; };
+		70871D6827DC767300D0B9E1 /* astcenc_percentile_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4527DC767200D0B9E1 /* astcenc_percentile_tables.cpp */; };
+		70871D6927DC767300D0B9E1 /* astcenc_integer_sequence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4627DC767200D0B9E1 /* astcenc_integer_sequence.cpp */; };
+		70871D6A27DC767300D0B9E1 /* astcenc_integer_sequence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4627DC767200D0B9E1 /* astcenc_integer_sequence.cpp */; };
+		70871D6B27DC767300D0B9E1 /* astcenc_vecmathlib_neon_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D4727DC767200D0B9E1 /* astcenc_vecmathlib_neon_4.h */; };
+		70871D6C27DC767300D0B9E1 /* astcenc_vecmathlib_neon_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D4727DC767200D0B9E1 /* astcenc_vecmathlib_neon_4.h */; };
+		70871D6D27DC767300D0B9E1 /* astcenc_weight_quant_xfer_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4827DC767200D0B9E1 /* astcenc_weight_quant_xfer_tables.cpp */; };
+		70871D6E27DC767300D0B9E1 /* astcenc_weight_quant_xfer_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4827DC767200D0B9E1 /* astcenc_weight_quant_xfer_tables.cpp */; };
+		70871D6F27DC767300D0B9E1 /* astcenc_decompress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4927DC767200D0B9E1 /* astcenc_decompress_symbolic.cpp */; };
+		70871D7027DC767300D0B9E1 /* astcenc_decompress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4927DC767200D0B9E1 /* astcenc_decompress_symbolic.cpp */; };
+		70871D7127DC767300D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4A27DC767200D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp */; };
+		70871D7227DC767300D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4A27DC767200D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp */; };
+		70871D7327DC767300D0B9E1 /* astcenc.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D4B27DC767200D0B9E1 /* astcenc.h */; };
+		70871D7427DC767300D0B9E1 /* astcenc.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D4B27DC767200D0B9E1 /* astcenc.h */; };
+		70871D7527DC767300D0B9E1 /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4C27DC767200D0B9E1 /* astcenc_mathlib.cpp */; };
+		70871D7627DC767300D0B9E1 /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4C27DC767200D0B9E1 /* astcenc_mathlib.cpp */; };
+		70871D7727DC767300D0B9E1 /* astcenc_pick_best_endpoint_format.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4D27DC767200D0B9E1 /* astcenc_pick_best_endpoint_format.cpp */; };
+		70871D7827DC767300D0B9E1 /* astcenc_pick_best_endpoint_format.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4D27DC767200D0B9E1 /* astcenc_pick_best_endpoint_format.cpp */; };
+		70871D7927DC767300D0B9E1 /* astcenc_vecmathlib_common_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D4E27DC767200D0B9E1 /* astcenc_vecmathlib_common_4.h */; };
+		70871D7A27DC767300D0B9E1 /* astcenc_vecmathlib_common_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D4E27DC767200D0B9E1 /* astcenc_vecmathlib_common_4.h */; };
+		70871D7B27DC767300D0B9E1 /* astcenc_color_quantize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4F27DC767200D0B9E1 /* astcenc_color_quantize.cpp */; };
+		70871D7C27DC767300D0B9E1 /* astcenc_color_quantize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D4F27DC767200D0B9E1 /* astcenc_color_quantize.cpp */; };
+		70871D7D27DC767300D0B9E1 /* astcenc_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5027DC767200D0B9E1 /* astcenc_image.cpp */; };
+		70871D7E27DC767300D0B9E1 /* astcenc_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5027DC767200D0B9E1 /* astcenc_image.cpp */; };
+		70871D7F27DC767300D0B9E1 /* astcenc_mathlib_softfloat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5127DC767200D0B9E1 /* astcenc_mathlib_softfloat.cpp */; };
+		70871D8027DC767300D0B9E1 /* astcenc_mathlib_softfloat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5127DC767200D0B9E1 /* astcenc_mathlib_softfloat.cpp */; };
+		70871D8127DC767300D0B9E1 /* astcenc_find_best_partitioning.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5227DC767200D0B9E1 /* astcenc_find_best_partitioning.cpp */; };
+		70871D8227DC767300D0B9E1 /* astcenc_find_best_partitioning.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5227DC767200D0B9E1 /* astcenc_find_best_partitioning.cpp */; };
+		70871D8327DC767300D0B9E1 /* astcenc_vecmathlib_sse_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5327DC767200D0B9E1 /* astcenc_vecmathlib_sse_4.h */; };
+		70871D8427DC767300D0B9E1 /* astcenc_vecmathlib_sse_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5327DC767200D0B9E1 /* astcenc_vecmathlib_sse_4.h */; };
+		70871D8527DC767300D0B9E1 /* astcenc_symbolic_physical.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5427DC767200D0B9E1 /* astcenc_symbolic_physical.cpp */; };
+		70871D8627DC767300D0B9E1 /* astcenc_symbolic_physical.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5427DC767200D0B9E1 /* astcenc_symbolic_physical.cpp */; };
+		70871D8727DC767300D0B9E1 /* astcenc_averages_and_directions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5527DC767200D0B9E1 /* astcenc_averages_and_directions.cpp */; };
+		70871D8827DC767300D0B9E1 /* astcenc_averages_and_directions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5527DC767200D0B9E1 /* astcenc_averages_and_directions.cpp */; };
+		70871D8927DC767300D0B9E1 /* astcenc_vecmathlib_avx2_8.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5627DC767200D0B9E1 /* astcenc_vecmathlib_avx2_8.h */; };
+		70871D8A27DC767300D0B9E1 /* astcenc_vecmathlib_avx2_8.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5627DC767200D0B9E1 /* astcenc_vecmathlib_avx2_8.h */; };
+		70871D8B27DC767300D0B9E1 /* astcenc_compute_variance.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5727DC767200D0B9E1 /* astcenc_compute_variance.cpp */; };
+		70871D8C27DC767300D0B9E1 /* astcenc_compute_variance.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5727DC767200D0B9E1 /* astcenc_compute_variance.cpp */; };
+		70871D8D27DC767300D0B9E1 /* astcenc_vecmathlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5827DC767200D0B9E1 /* astcenc_vecmathlib.h */; };
+		70871D8E27DC767300D0B9E1 /* astcenc_vecmathlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5827DC767200D0B9E1 /* astcenc_vecmathlib.h */; };
+		70871D8F27DC767300D0B9E1 /* astcenc_diagnostic_trace.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5927DC767200D0B9E1 /* astcenc_diagnostic_trace.h */; };
+		70871D9027DC767300D0B9E1 /* astcenc_diagnostic_trace.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5927DC767200D0B9E1 /* astcenc_diagnostic_trace.h */; };
+		70871D9127DC767300D0B9E1 /* astcenc_vecmathlib_none_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5A27DC767200D0B9E1 /* astcenc_vecmathlib_none_4.h */; };
+		70871D9227DC767300D0B9E1 /* astcenc_vecmathlib_none_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5A27DC767200D0B9E1 /* astcenc_vecmathlib_none_4.h */; };
+		70871D9327DC767300D0B9E1 /* astcenc_entry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5B27DC767200D0B9E1 /* astcenc_entry.cpp */; };
+		70871D9427DC767300D0B9E1 /* astcenc_entry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5B27DC767200D0B9E1 /* astcenc_entry.cpp */; };
+		70871D9527DC767300D0B9E1 /* astcenc_mathlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5C27DC767300D0B9E1 /* astcenc_mathlib.h */; };
+		70871D9627DC767300D0B9E1 /* astcenc_mathlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D5C27DC767300D0B9E1 /* astcenc_mathlib.h */; };
+		70871D9727DC767300D0B9E1 /* astcenc_compress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5D27DC767300D0B9E1 /* astcenc_compress_symbolic.cpp */; };
+		70871D9827DC767300D0B9E1 /* astcenc_compress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5D27DC767300D0B9E1 /* astcenc_compress_symbolic.cpp */; };
+		70871D9927DC767300D0B9E1 /* astcenc_platform_isa_detection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5E27DC767300D0B9E1 /* astcenc_platform_isa_detection.cpp */; };
+		70871D9A27DC767300D0B9E1 /* astcenc_platform_isa_detection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5E27DC767300D0B9E1 /* astcenc_platform_isa_detection.cpp */; };
+		70871D9B27DC767300D0B9E1 /* astcenc_color_unquantize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5F27DC767300D0B9E1 /* astcenc_color_unquantize.cpp */; };
+		70871D9C27DC767300D0B9E1 /* astcenc_color_unquantize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D5F27DC767300D0B9E1 /* astcenc_color_unquantize.cpp */; };
+		70871D9D27DC767300D0B9E1 /* astcenc_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D6027DC767300D0B9E1 /* astcenc_internal.h */; };
+		70871D9E27DC767300D0B9E1 /* astcenc_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871D6027DC767300D0B9E1 /* astcenc_internal.h */; };
+		70871D9F27DC767300D0B9E1 /* astcenc_quantization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D6127DC767300D0B9E1 /* astcenc_quantization.cpp */; };
+		70871DA027DC767300D0B9E1 /* astcenc_quantization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D6127DC767300D0B9E1 /* astcenc_quantization.cpp */; };
+		70871DA127DC767300D0B9E1 /* astcenc_diagnostic_trace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D6227DC767300D0B9E1 /* astcenc_diagnostic_trace.cpp */; };
+		70871DA227DC767300D0B9E1 /* astcenc_diagnostic_trace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D6227DC767300D0B9E1 /* astcenc_diagnostic_trace.cpp */; };
+		70871DA327DC767300D0B9E1 /* astcenc_partition_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D6327DC767300D0B9E1 /* astcenc_partition_tables.cpp */; };
+		70871DA427DC767300D0B9E1 /* astcenc_partition_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D6327DC767300D0B9E1 /* astcenc_partition_tables.cpp */; };
+		70871DA527DC767300D0B9E1 /* astcenc_weight_align.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D6427DC767300D0B9E1 /* astcenc_weight_align.cpp */; };
+		70871DA627DC767300D0B9E1 /* astcenc_weight_align.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871D6427DC767300D0B9E1 /* astcenc_weight_align.cpp */; };
 		708A6A962708CE4700BA5410 /* bc6h_decode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */; };
 		708A6A972708CE4700BA5410 /* bc6h_decode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */; };
 		708A6A982708CE4700BA5410 /* bc6h_decode.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A8C2708CE4700BA5410 /* bc6h_decode.h */; };
@@ -389,7 +449,6 @@
 		706EEDDA26D1583E001C950E /* astcenc_mathlib_softfloat.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_mathlib_softfloat.cpp; sourceTree = "<group>"; };
 		706EEDDB26D1583E001C950E /* astcenc_weight_quant_xfer_tables.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_weight_quant_xfer_tables.cpp; sourceTree = "<group>"; };
 		706EEDDC26D1583E001C950E /* astcenc_vecmathlib_avx2_8.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = astcenc_vecmathlib_avx2_8.h; sourceTree = "<group>"; };
-		706EEDDD26D1583E001C950E /* astcenc_encoding_choice_error.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_encoding_choice_error.cpp; sourceTree = "<group>"; };
 		706EEDDE26D1583E001C950E /* astcenc_percentile_tables.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_percentile_tables.cpp; sourceTree = "<group>"; };
 		706EEDDF26D1583E001C950E /* astcenc_partition_tables.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_partition_tables.cpp; sourceTree = "<group>"; };
 		706EEDE026D1583E001C950E /* astcenc_decompress_symbolic.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_decompress_symbolic.cpp; sourceTree = "<group>"; };
@@ -398,7 +457,6 @@
 		706EEDE326D1583E001C950E /* astcenc_platform_isa_detection.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_platform_isa_detection.cpp; sourceTree = "<group>"; };
 		706EEDE426D1583E001C950E /* astcenc_image.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_image.cpp; sourceTree = "<group>"; };
 		706EEDE526D1583E001C950E /* astcenc_internal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = astcenc_internal.h; sourceTree = "<group>"; };
-		706EEDE626D1583E001C950E /* astcenc_kmeans_partitioning.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_kmeans_partitioning.cpp; sourceTree = "<group>"; };
 		706EEDE726D1583E001C950E /* astcenc_vecmathlib_neon_armv7_4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = astcenc_vecmathlib_neon_armv7_4.h; sourceTree = "<group>"; };
 		706EEDE826D1583E001C950E /* astcenc_compress_symbolic.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_compress_symbolic.cpp; sourceTree = "<group>"; };
 		706EEDE926D1583E001C950E /* astcenc_ideal_endpoints_and_weights.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_ideal_endpoints_and_weights.cpp; sourceTree = "<group>"; };
@@ -410,7 +468,6 @@
 		706EEDEF26D1583E001C950E /* astcenc_symbolic_physical.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_symbolic_physical.cpp; sourceTree = "<group>"; };
 		706EEDF026D1583E001C950E /* astcenc_weight_align.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_weight_align.cpp; sourceTree = "<group>"; };
 		706EEDF126D1583E001C950E /* astcenc_vecmathlib_none_4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = astcenc_vecmathlib_none_4.h; sourceTree = "<group>"; };
-		706EEDF226D1583E001C950E /* astcenc_block_sizes2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_block_sizes2.cpp; sourceTree = "<group>"; };
 		706EEDF326D1583E001C950E /* astcenc_entry.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_entry.cpp; sourceTree = "<group>"; };
 		706EEDF426D1583E001C950E /* astcenc_vecmathlib_common_4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = astcenc_vecmathlib_common_4.h; sourceTree = "<group>"; };
 		706EEDF526D1583E001C950E /* astcenc_averages_and_directions.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_averages_and_directions.cpp; sourceTree = "<group>"; };
@@ -640,6 +697,39 @@
 		706EFD5E26D3473F001C950E /* hashtable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hashtable.cpp; sourceTree = "<group>"; };
 		706EFD5F26D3473F001C950E /* red_black_tree.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = red_black_tree.cpp; sourceTree = "<group>"; };
 		706EFD6026D3473F001C950E /* fixed_pool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fixed_pool.cpp; sourceTree = "<group>"; };
+		70871D4427DC767200D0B9E1 /* astcenc_block_sizes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_block_sizes.cpp; path = "../../../astc-encoder/Source/astcenc_block_sizes.cpp"; sourceTree = "<group>"; };
+		70871D4527DC767200D0B9E1 /* astcenc_percentile_tables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_percentile_tables.cpp; path = "../../../astc-encoder/Source/astcenc_percentile_tables.cpp"; sourceTree = "<group>"; };
+		70871D4627DC767200D0B9E1 /* astcenc_integer_sequence.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_integer_sequence.cpp; path = "../../../astc-encoder/Source/astcenc_integer_sequence.cpp"; sourceTree = "<group>"; };
+		70871D4727DC767200D0B9E1 /* astcenc_vecmathlib_neon_4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc_vecmathlib_neon_4.h; path = "../../../astc-encoder/Source/astcenc_vecmathlib_neon_4.h"; sourceTree = "<group>"; };
+		70871D4827DC767200D0B9E1 /* astcenc_weight_quant_xfer_tables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_weight_quant_xfer_tables.cpp; path = "../../../astc-encoder/Source/astcenc_weight_quant_xfer_tables.cpp"; sourceTree = "<group>"; };
+		70871D4927DC767200D0B9E1 /* astcenc_decompress_symbolic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_decompress_symbolic.cpp; path = "../../../astc-encoder/Source/astcenc_decompress_symbolic.cpp"; sourceTree = "<group>"; };
+		70871D4A27DC767200D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_ideal_endpoints_and_weights.cpp; path = "../../../astc-encoder/Source/astcenc_ideal_endpoints_and_weights.cpp"; sourceTree = "<group>"; };
+		70871D4B27DC767200D0B9E1 /* astcenc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc.h; path = "../../../astc-encoder/Source/astcenc.h"; sourceTree = "<group>"; };
+		70871D4C27DC767200D0B9E1 /* astcenc_mathlib.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_mathlib.cpp; path = "../../../astc-encoder/Source/astcenc_mathlib.cpp"; sourceTree = "<group>"; };
+		70871D4D27DC767200D0B9E1 /* astcenc_pick_best_endpoint_format.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_pick_best_endpoint_format.cpp; path = "../../../astc-encoder/Source/astcenc_pick_best_endpoint_format.cpp"; sourceTree = "<group>"; };
+		70871D4E27DC767200D0B9E1 /* astcenc_vecmathlib_common_4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc_vecmathlib_common_4.h; path = "../../../astc-encoder/Source/astcenc_vecmathlib_common_4.h"; sourceTree = "<group>"; };
+		70871D4F27DC767200D0B9E1 /* astcenc_color_quantize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_color_quantize.cpp; path = "../../../astc-encoder/Source/astcenc_color_quantize.cpp"; sourceTree = "<group>"; };
+		70871D5027DC767200D0B9E1 /* astcenc_image.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_image.cpp; path = "../../../astc-encoder/Source/astcenc_image.cpp"; sourceTree = "<group>"; };
+		70871D5127DC767200D0B9E1 /* astcenc_mathlib_softfloat.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_mathlib_softfloat.cpp; path = "../../../astc-encoder/Source/astcenc_mathlib_softfloat.cpp"; sourceTree = "<group>"; };
+		70871D5227DC767200D0B9E1 /* astcenc_find_best_partitioning.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_find_best_partitioning.cpp; path = "../../../astc-encoder/Source/astcenc_find_best_partitioning.cpp"; sourceTree = "<group>"; };
+		70871D5327DC767200D0B9E1 /* astcenc_vecmathlib_sse_4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc_vecmathlib_sse_4.h; path = "../../../astc-encoder/Source/astcenc_vecmathlib_sse_4.h"; sourceTree = "<group>"; };
+		70871D5427DC767200D0B9E1 /* astcenc_symbolic_physical.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_symbolic_physical.cpp; path = "../../../astc-encoder/Source/astcenc_symbolic_physical.cpp"; sourceTree = "<group>"; };
+		70871D5527DC767200D0B9E1 /* astcenc_averages_and_directions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_averages_and_directions.cpp; path = "../../../astc-encoder/Source/astcenc_averages_and_directions.cpp"; sourceTree = "<group>"; };
+		70871D5627DC767200D0B9E1 /* astcenc_vecmathlib_avx2_8.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc_vecmathlib_avx2_8.h; path = "../../../astc-encoder/Source/astcenc_vecmathlib_avx2_8.h"; sourceTree = "<group>"; };
+		70871D5727DC767200D0B9E1 /* astcenc_compute_variance.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_compute_variance.cpp; path = "../../../astc-encoder/Source/astcenc_compute_variance.cpp"; sourceTree = "<group>"; };
+		70871D5827DC767200D0B9E1 /* astcenc_vecmathlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc_vecmathlib.h; path = "../../../astc-encoder/Source/astcenc_vecmathlib.h"; sourceTree = "<group>"; };
+		70871D5927DC767200D0B9E1 /* astcenc_diagnostic_trace.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc_diagnostic_trace.h; path = "../../../astc-encoder/Source/astcenc_diagnostic_trace.h"; sourceTree = "<group>"; };
+		70871D5A27DC767200D0B9E1 /* astcenc_vecmathlib_none_4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc_vecmathlib_none_4.h; path = "../../../astc-encoder/Source/astcenc_vecmathlib_none_4.h"; sourceTree = "<group>"; };
+		70871D5B27DC767200D0B9E1 /* astcenc_entry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_entry.cpp; path = "../../../astc-encoder/Source/astcenc_entry.cpp"; sourceTree = "<group>"; };
+		70871D5C27DC767300D0B9E1 /* astcenc_mathlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc_mathlib.h; path = "../../../astc-encoder/Source/astcenc_mathlib.h"; sourceTree = "<group>"; };
+		70871D5D27DC767300D0B9E1 /* astcenc_compress_symbolic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_compress_symbolic.cpp; path = "../../../astc-encoder/Source/astcenc_compress_symbolic.cpp"; sourceTree = "<group>"; };
+		70871D5E27DC767300D0B9E1 /* astcenc_platform_isa_detection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_platform_isa_detection.cpp; path = "../../../astc-encoder/Source/astcenc_platform_isa_detection.cpp"; sourceTree = "<group>"; };
+		70871D5F27DC767300D0B9E1 /* astcenc_color_unquantize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_color_unquantize.cpp; path = "../../../astc-encoder/Source/astcenc_color_unquantize.cpp"; sourceTree = "<group>"; };
+		70871D6027DC767300D0B9E1 /* astcenc_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = astcenc_internal.h; path = "../../../astc-encoder/Source/astcenc_internal.h"; sourceTree = "<group>"; };
+		70871D6127DC767300D0B9E1 /* astcenc_quantization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_quantization.cpp; path = "../../../astc-encoder/Source/astcenc_quantization.cpp"; sourceTree = "<group>"; };
+		70871D6227DC767300D0B9E1 /* astcenc_diagnostic_trace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_diagnostic_trace.cpp; path = "../../../astc-encoder/Source/astcenc_diagnostic_trace.cpp"; sourceTree = "<group>"; };
+		70871D6327DC767300D0B9E1 /* astcenc_partition_tables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_partition_tables.cpp; path = "../../../astc-encoder/Source/astcenc_partition_tables.cpp"; sourceTree = "<group>"; };
+		70871D6427DC767300D0B9E1 /* astcenc_weight_align.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = astcenc_weight_align.cpp; path = "../../../astc-encoder/Source/astcenc_weight_align.cpp"; sourceTree = "<group>"; };
 		708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bc6h_decode.cpp; sourceTree = "<group>"; };
 		708A6A8C2708CE4700BA5410 /* bc6h_decode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bc6h_decode.h; sourceTree = "<group>"; };
 		708A6A8D2708CE4700BA5410 /* bc6h_encode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bc6h_encode.cpp; sourceTree = "<group>"; };
@@ -769,16 +859,36 @@
 			isa = PBXGroup;
 			children = (
 				706EEDD326D1583E001C950E /* astcenc_pick_best_endpoint_format.cpp */,
+				70871D6227DC767300D0B9E1 /* astcenc_diagnostic_trace.cpp */,
 				706EEDD426D1583E001C950E /* astcenc_diagnostic_trace.h */,
+				70871D4F27DC767200D0B9E1 /* astcenc_color_quantize.cpp */,
+				70871D5F27DC767300D0B9E1 /* astcenc_color_unquantize.cpp */,
+				70871D5D27DC767300D0B9E1 /* astcenc_compress_symbolic.cpp */,
+				70871D5727DC767200D0B9E1 /* astcenc_compute_variance.cpp */,
+				70871D4927DC767200D0B9E1 /* astcenc_decompress_symbolic.cpp */,
+				70871D5927DC767200D0B9E1 /* astcenc_diagnostic_trace.h */,
+				70871D5B27DC767200D0B9E1 /* astcenc_entry.cpp */,
+				70871D5227DC767200D0B9E1 /* astcenc_find_best_partitioning.cpp */,
+				70871D4A27DC767200D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp */,
+				70871D5027DC767200D0B9E1 /* astcenc_image.cpp */,
 				706EEDD526D1583E001C950E /* astcenc_integer_sequence.cpp */,
 				706EEDD626D1583E001C950E /* astcenc_vecmathlib.h */,
 				706EEDD726D1583E001C950E /* astcenc_compute_variance.cpp */,
 				706EEDD826D1583E001C950E /* astcenc_quantization.cpp */,
 				706EEDD926D1583E001C950E /* astcenc_color_unquantize.cpp */,
+				70871D6027DC767300D0B9E1 /* astcenc_internal.h */,
 				706EEDDA26D1583E001C950E /* astcenc_mathlib_softfloat.cpp */,
+				70871D5A27DC767200D0B9E1 /* astcenc_vecmathlib_none_4.h */,
+				70871D5327DC767200D0B9E1 /* astcenc_vecmathlib_sse_4.h */,
+				70871D5827DC767200D0B9E1 /* astcenc_vecmathlib.h */,
+				70871D6427DC767300D0B9E1 /* astcenc_weight_align.cpp */,
 				706EEDDB26D1583E001C950E /* astcenc_weight_quant_xfer_tables.cpp */,
 				706EEDDC26D1583E001C950E /* astcenc_vecmathlib_avx2_8.h */,
-				706EEDDD26D1583E001C950E /* astcenc_encoding_choice_error.cpp */,
+				70871D4627DC767200D0B9E1 /* astcenc_integer_sequence.cpp */,
+				70871D5127DC767200D0B9E1 /* astcenc_mathlib_softfloat.cpp */,
+				70871D4C27DC767200D0B9E1 /* astcenc_mathlib.cpp */,
+				70871D5C27DC767300D0B9E1 /* astcenc_mathlib.h */,
+				70871D6327DC767300D0B9E1 /* astcenc_partition_tables.cpp */,
 				706EEDDE26D1583E001C950E /* astcenc_percentile_tables.cpp */,
 				706EEDDF26D1583E001C950E /* astcenc_partition_tables.cpp */,
 				706EEDE026D1583E001C950E /* astcenc_decompress_symbolic.cpp */,
@@ -787,7 +897,18 @@
 				706EEDE326D1583E001C950E /* astcenc_platform_isa_detection.cpp */,
 				706EEDE426D1583E001C950E /* astcenc_image.cpp */,
 				706EEDE526D1583E001C950E /* astcenc_internal.h */,
-				706EEDE626D1583E001C950E /* astcenc_kmeans_partitioning.cpp */,
+				70871D5527DC767200D0B9E1 /* astcenc_averages_and_directions.cpp */,
+				70871D4427DC767200D0B9E1 /* astcenc_block_sizes.cpp */,
+				70871D4527DC767200D0B9E1 /* astcenc_percentile_tables.cpp */,
+				70871D4D27DC767200D0B9E1 /* astcenc_pick_best_endpoint_format.cpp */,
+				70871D5E27DC767300D0B9E1 /* astcenc_platform_isa_detection.cpp */,
+				70871D6127DC767300D0B9E1 /* astcenc_quantization.cpp */,
+				70871D5427DC767200D0B9E1 /* astcenc_symbolic_physical.cpp */,
+				70871D5627DC767200D0B9E1 /* astcenc_vecmathlib_avx2_8.h */,
+				70871D4E27DC767200D0B9E1 /* astcenc_vecmathlib_common_4.h */,
+				70871D4727DC767200D0B9E1 /* astcenc_vecmathlib_neon_4.h */,
+				70871D4827DC767200D0B9E1 /* astcenc_weight_quant_xfer_tables.cpp */,
+				70871D4B27DC767200D0B9E1 /* astcenc.h */,
 				706EEDE726D1583E001C950E /* astcenc_vecmathlib_neon_armv7_4.h */,
 				706EEDE826D1583E001C950E /* astcenc_compress_symbolic.cpp */,
 				706EEDE926D1583E001C950E /* astcenc_ideal_endpoints_and_weights.cpp */,
@@ -799,7 +920,6 @@
 				706EEDEF26D1583E001C950E /* astcenc_symbolic_physical.cpp */,
 				706EEDF026D1583E001C950E /* astcenc_weight_align.cpp */,
 				706EEDF126D1583E001C950E /* astcenc_vecmathlib_none_4.h */,
-				706EEDF226D1583E001C950E /* astcenc_block_sizes2.cpp */,
 				706EEDF326D1583E001C950E /* astcenc_entry.cpp */,
 				706EEDF426D1583E001C950E /* astcenc_vecmathlib_common_4.h */,
 				706EEDF526D1583E001C950E /* astcenc_averages_and_directions.cpp */,
@@ -1220,10 +1340,12 @@
 				706EEFDE26D15984001C950E /* EtcImage.h in Headers */,
 				70CDB65027A1382700A546C1 /* KramDDSHelper.h in Headers */,
 				708A6A9C2708CE4700BA5410 /* bc6h_encode.h in Headers */,
+				70871D6B27DC767300D0B9E1 /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EEFDF26D15984001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
 				706EEFE026D15984001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
 				706EEFE126D15984001C950E /* EtcColorFloatRGBA.h in Headers */,
 				706EEFE226D15984001C950E /* EtcBlock4x4Encoding.h in Headers */,
+				70871D8F27DC767300D0B9E1 /* astcenc_diagnostic_trace.h in Headers */,
 				706EEFE326D15984001C950E /* rgbcx.h in Headers */,
 				706EEFE426D15984001C950E /* bc7enc.h in Headers */,
 				706EEFE526D15984001C950E /* bc7decomp.h in Headers */,
@@ -1235,6 +1357,7 @@
 				706EEFEB26D15984001C950E /* astcenc_internal.h in Headers */,
 				706EEFEC26D15984001C950E /* astcenc_vecmathlib_neon_armv7_4.h in Headers */,
 				706EEFED26D15984001C950E /* astcenc_vecmathlib_sse_4.h in Headers */,
+				70871D8327DC767300D0B9E1 /* astcenc_vecmathlib_sse_4.h in Headers */,
 				706EEFEE26D15984001C950E /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EEFEF26D15984001C950E /* astcenc_vecmathlib_none_4.h in Headers */,
 				706EEFF026D15984001C950E /* astcenc_vecmathlib_common_4.h in Headers */,
@@ -1242,6 +1365,7 @@
 				706EEFF226D15984001C950E /* ateencoder.h in Headers */,
 				706EEFF326D15984001C950E /* basisu_transcoder.h in Headers */,
 				70A7BD3227092A1200DBCCF7 /* hdr_encode.h in Headers */,
+				70871D7927DC767300D0B9E1 /* astcenc_vecmathlib_common_4.h in Headers */,
 				708A6AA02708CE4700BA5410 /* bc6h_definitions.h in Headers */,
 				706EEFF426D15984001C950E /* basisu_containers.h in Headers */,
 				706EEFF526D15985001C950E /* basisu_containers_impl.h in Headers */,
@@ -1252,9 +1376,11 @@
 				706EEFFA26D15985001C950E /* basisu.h in Headers */,
 				706EEFFB26D15985001C950E /* basisu_file_headers.h in Headers */,
 				706EEFFC26D15985001C950E /* miniz.h in Headers */,
+				70871D8927DC767300D0B9E1 /* astcenc_vecmathlib_avx2_8.h in Headers */,
 				706EEFFD26D15985001C950E /* hedistance.h in Headers */,
 				706EEFFE26D15985001C950E /* stb_rect_pack.h in Headers */,
 				706EEFFF26D15985001C950E /* KramZipHelper.h in Headers */,
+				70871D7327DC767300D0B9E1 /* astcenc.h in Headers */,
 				706EF00026D15985001C950E /* KramSDFMipper.h in Headers */,
 				706EF00126D15985001C950E /* sse2neon.h in Headers */,
 				706EF00226D15985001C950E /* KramConfig.h in Headers */,
@@ -1262,6 +1388,7 @@
 				706EF00426D15985001C950E /* KramLib.h in Headers */,
 				706EF00526D15985001C950E /* KramVersion.h in Headers */,
 				706EF00626D15985001C950E /* KramImage.h in Headers */,
+				70871D9127DC767300D0B9E1 /* astcenc_vecmathlib_none_4.h in Headers */,
 				706EF00726D15985001C950E /* win_mmap.h in Headers */,
 				706EF00826D15985001C950E /* Kram.h in Headers */,
 				706EF00926D15985001C950E /* KTXImage.h in Headers */,
@@ -1272,13 +1399,16 @@
 				706EF00E26D15985001C950E /* KramFileHelper.h in Headers */,
 				706EF00F26D15985001C950E /* KramMipper.h in Headers */,
 				706EF01026D15985001C950E /* TaskSystem.h in Headers */,
+				70871D8D27DC767300D0B9E1 /* astcenc_vecmathlib.h in Headers */,
 				706EF01126D15985001C950E /* squish.h in Headers */,
 				706EF01226D15985001C950E /* clusterfit.h in Headers */,
 				706EF01326D15985001C950E /* colourfit.h in Headers */,
 				706EF01426D15985001C950E /* alpha.h in Headers */,
 				708A6A982708CE4700BA5410 /* bc6h_decode.h in Headers */,
+				70871D9D27DC767300D0B9E1 /* astcenc_internal.h in Headers */,
 				706EF01526D15985001C950E /* singlecolourfit.h in Headers */,
 				706EF01626D15985001C950E /* maths.h in Headers */,
+				70871D9527DC767300D0B9E1 /* astcenc_mathlib.h in Headers */,
 				706EF01726D15985001C950E /* colourset.h in Headers */,
 				708A6AA42708CE4700BA5410 /* bc6h_utils.h in Headers */,
 				706EF01826D15985001C950E /* colourblock.h in Headers */,
@@ -1309,10 +1439,12 @@
 				706EF15826D166C5001C950E /* EtcImage.h in Headers */,
 				70CDB65127A1382700A546C1 /* KramDDSHelper.h in Headers */,
 				708A6A9D2708CE4700BA5410 /* bc6h_encode.h in Headers */,
+				70871D6C27DC767300D0B9E1 /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EF15926D166C5001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
 				706EF15A26D166C5001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
 				706EF15B26D166C5001C950E /* EtcColorFloatRGBA.h in Headers */,
 				706EF15C26D166C5001C950E /* EtcBlock4x4Encoding.h in Headers */,
+				70871D9027DC767300D0B9E1 /* astcenc_diagnostic_trace.h in Headers */,
 				706EF15D26D166C5001C950E /* rgbcx.h in Headers */,
 				706EF15E26D166C5001C950E /* bc7enc.h in Headers */,
 				706EF15F26D166C5001C950E /* bc7decomp.h in Headers */,
@@ -1324,6 +1456,7 @@
 				706EF16526D166C5001C950E /* astcenc_internal.h in Headers */,
 				706EF16626D166C5001C950E /* astcenc_vecmathlib_neon_armv7_4.h in Headers */,
 				706EF16726D166C5001C950E /* astcenc_vecmathlib_sse_4.h in Headers */,
+				70871D8427DC767300D0B9E1 /* astcenc_vecmathlib_sse_4.h in Headers */,
 				706EF16826D166C5001C950E /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EF16926D166C5001C950E /* astcenc_vecmathlib_none_4.h in Headers */,
 				706EF16A26D166C5001C950E /* astcenc_vecmathlib_common_4.h in Headers */,
@@ -1331,6 +1464,7 @@
 				706EF16C26D166C5001C950E /* ateencoder.h in Headers */,
 				706EF16D26D166C5001C950E /* basisu_transcoder.h in Headers */,
 				70A7BD3327092A1200DBCCF7 /* hdr_encode.h in Headers */,
+				70871D7A27DC767300D0B9E1 /* astcenc_vecmathlib_common_4.h in Headers */,
 				708A6AA12708CE4700BA5410 /* bc6h_definitions.h in Headers */,
 				706EF16E26D166C5001C950E /* basisu_containers.h in Headers */,
 				706EF16F26D166C5001C950E /* basisu_containers_impl.h in Headers */,
@@ -1341,9 +1475,11 @@
 				706EF17426D166C5001C950E /* basisu.h in Headers */,
 				706EF17526D166C5001C950E /* basisu_file_headers.h in Headers */,
 				706EF17626D166C5001C950E /* miniz.h in Headers */,
+				70871D8A27DC767300D0B9E1 /* astcenc_vecmathlib_avx2_8.h in Headers */,
 				706EF17726D166C5001C950E /* hedistance.h in Headers */,
 				706EF17826D166C5001C950E /* stb_rect_pack.h in Headers */,
 				706EF17926D166C5001C950E /* KramZipHelper.h in Headers */,
+				70871D7427DC767300D0B9E1 /* astcenc.h in Headers */,
 				706EF17A26D166C5001C950E /* KramSDFMipper.h in Headers */,
 				706EF17B26D166C5001C950E /* sse2neon.h in Headers */,
 				706EF17C26D166C5001C950E /* KramConfig.h in Headers */,
@@ -1351,6 +1487,7 @@
 				706EF17E26D166C5001C950E /* KramLib.h in Headers */,
 				706EF17F26D166C5001C950E /* KramVersion.h in Headers */,
 				706EF18026D166C5001C950E /* KramImage.h in Headers */,
+				70871D9227DC767300D0B9E1 /* astcenc_vecmathlib_none_4.h in Headers */,
 				706EF18126D166C5001C950E /* win_mmap.h in Headers */,
 				706EF18226D166C5001C950E /* Kram.h in Headers */,
 				706EF18326D166C5001C950E /* KTXImage.h in Headers */,
@@ -1361,13 +1498,16 @@
 				706EF18826D166C5001C950E /* KramFileHelper.h in Headers */,
 				706EF18926D166C5001C950E /* KramMipper.h in Headers */,
 				706EF18A26D166C5001C950E /* TaskSystem.h in Headers */,
+				70871D8E27DC767300D0B9E1 /* astcenc_vecmathlib.h in Headers */,
 				706EF18B26D166C5001C950E /* squish.h in Headers */,
 				706EF18C26D166C5001C950E /* clusterfit.h in Headers */,
 				706EF18D26D166C5001C950E /* colourfit.h in Headers */,
 				706EF18E26D166C5001C950E /* alpha.h in Headers */,
 				708A6A992708CE4700BA5410 /* bc6h_decode.h in Headers */,
+				70871D9E27DC767300D0B9E1 /* astcenc_internal.h in Headers */,
 				706EF18F26D166C5001C950E /* singlecolourfit.h in Headers */,
 				706EF19026D166C5001C950E /* maths.h in Headers */,
+				70871D9627DC767300D0B9E1 /* astcenc_mathlib.h in Headers */,
 				706EF19126D166C5001C950E /* colourset.h in Headers */,
 				708A6AA52708CE4700BA5410 /* bc6h_utils.h in Headers */,
 				706EF19226D166C5001C950E /* colourblock.h in Headers */,
@@ -1456,7 +1596,9 @@
 			files = (
 				706EF26426D17DCC001C950E /* ateencoder.mm in Sources */,
 				706EEF7F26D1595D001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */,
+				70871D7B27DC767300D0B9E1 /* astcenc_color_quantize.cpp in Sources */,
 				70CDB65227A1382700A546C1 /* KramDDSHelper.cpp in Sources */,
+				70871D9927DC767300D0B9E1 /* astcenc_platform_isa_detection.cpp in Sources */,
 				706EEF8026D1595D001C950E /* EtcImage.cpp in Sources */,
 				706EEF8126D1595D001C950E /* EtcDifferentialTrys.cpp in Sources */,
 				706EEF8226D1595D001C950E /* EtcMath.cpp in Sources */,
@@ -1466,31 +1608,40 @@
 				706EEF8726D1595D001C950E /* EtcIndividualTrys.cpp in Sources */,
 				706EEF8826D1595D001C950E /* EtcBlock4x4Encoding_R11.cpp in Sources */,
 				706EEF8926D1595D001C950E /* EtcBlock4x4Encoding_ETC1.cpp in Sources */,
+				70871D8127DC767300D0B9E1 /* astcenc_find_best_partitioning.cpp in Sources */,
 				706EEF8A26D1595D001C950E /* EtcBlock4x4Encoding.cpp in Sources */,
+				70871DA327DC767300D0B9E1 /* astcenc_partition_tables.cpp in Sources */,
 				706EEF8B26D1595D001C950E /* EtcBlock4x4.cpp in Sources */,
 				706EEF8C26D1595D001C950E /* bc7decomp.cpp in Sources */,
 				706EEF8D26D1595D001C950E /* bc7enc.cpp in Sources */,
 				706EEF8E26D1595D001C950E /* astcenc_pick_best_endpoint_format.cpp in Sources */,
 				708A6A9A2708CE4700BA5410 /* bc6h_encode.cpp in Sources */,
 				70A7BD3027092A1200DBCCF7 /* hdr_encode.cpp in Sources */,
+				70871DA527DC767300D0B9E1 /* astcenc_weight_align.cpp in Sources */,
 				706EEF8F26D1595D001C950E /* astcenc_integer_sequence.cpp in Sources */,
 				706EEF9026D1595D001C950E /* astcenc_compute_variance.cpp in Sources */,
 				706EFF7726D34740001C950E /* string.cpp in Sources */,
 				706EEF9126D1595D001C950E /* astcenc_quantization.cpp in Sources */,
 				706EEF9226D1595D001C950E /* astcenc_color_unquantize.cpp in Sources */,
+				70871D9327DC767300D0B9E1 /* astcenc_entry.cpp in Sources */,
+				70871D9727DC767300D0B9E1 /* astcenc_compress_symbolic.cpp in Sources */,
+				70871D7727DC767300D0B9E1 /* astcenc_pick_best_endpoint_format.cpp in Sources */,
 				706EEF9326D1595D001C950E /* astcenc_mathlib_softfloat.cpp in Sources */,
 				708A6A962708CE4700BA5410 /* bc6h_decode.cpp in Sources */,
 				706EEF9426D1595D001C950E /* astcenc_weight_quant_xfer_tables.cpp in Sources */,
-				706EEF9526D1595D001C950E /* astcenc_encoding_choice_error.cpp in Sources */,
 				706EEF9626D1595D001C950E /* astcenc_percentile_tables.cpp in Sources */,
 				706EEF9726D1595D001C950E /* astcenc_partition_tables.cpp in Sources */,
 				706EEF9826D1595D001C950E /* astcenc_decompress_symbolic.cpp in Sources */,
+				70871DA127DC767300D0B9E1 /* astcenc_diagnostic_trace.cpp in Sources */,
+				70871D7F27DC767300D0B9E1 /* astcenc_mathlib_softfloat.cpp in Sources */,
 				706EEF9926D1595D001C950E /* astcenc_color_quantize.cpp in Sources */,
 				706EFF7526D34740001C950E /* assert.cpp in Sources */,
+				70871D8727DC767300D0B9E1 /* astcenc_averages_and_directions.cpp in Sources */,
 				706EEF9A26D1595D001C950E /* astcenc_platform_isa_detection.cpp in Sources */,
 				706EEF9B26D1595D001C950E /* astcenc_image.cpp in Sources */,
-				706EEF9C26D1595D001C950E /* astcenc_kmeans_partitioning.cpp in Sources */,
 				706EEF9D26D1595D001C950E /* astcenc_compress_symbolic.cpp in Sources */,
+				70871D7527DC767300D0B9E1 /* astcenc_mathlib.cpp in Sources */,
+				70871D8527DC767300D0B9E1 /* astcenc_symbolic_physical.cpp in Sources */,
 				706EEF9E26D1595D001C950E /* astcenc_ideal_endpoints_and_weights.cpp in Sources */,
 				706EFF8526D34740001C950E /* fixed_pool.cpp in Sources */,
 				706EEF9F26D1595D001C950E /* astcenc_mathlib.cpp in Sources */,
@@ -1498,14 +1649,18 @@
 				706EEFA126D1595D001C950E /* astcenc_diagnostic_trace.cpp in Sources */,
 				706EEFA226D1595D001C950E /* astcenc_symbolic_physical.cpp in Sources */,
 				706EEFA326D1595D001C950E /* astcenc_weight_align.cpp in Sources */,
-				706EEFA426D1595D001C950E /* astcenc_block_sizes2.cpp in Sources */,
 				706EEFA526D1595D001C950E /* astcenc_entry.cpp in Sources */,
+				70871D6727DC767300D0B9E1 /* astcenc_percentile_tables.cpp in Sources */,
 				706EEFA626D1595D001C950E /* astcenc_averages_and_directions.cpp in Sources */,
 				706EEFA726D1595D001C950E /* basisu_transcoder.cpp in Sources */,
+				70871D7D27DC767300D0B9E1 /* astcenc_image.cpp in Sources */,
+				70871D6F27DC767300D0B9E1 /* astcenc_decompress_symbolic.cpp in Sources */,
 				706EFF8326D34740001C950E /* red_black_tree.cpp in Sources */,
 				706EFF7F26D34740001C950E /* intrusive_list.cpp in Sources */,
 				706EEFA826D1595D001C950E /* miniz.cpp in Sources */,
+				70871D6927DC767300D0B9E1 /* astcenc_integer_sequence.cpp in Sources */,
 				706EEFA926D1595D001C950E /* hedistance.cpp in Sources */,
+				70871D9F27DC767300D0B9E1 /* astcenc_quantization.cpp in Sources */,
 				706EEFAA26D1595D001C950E /* KramTimer.cpp in Sources */,
 				706EEFAB26D1595D001C950E /* KTXImage.cpp in Sources */,
 				706EEFAC26D1595D001C950E /* KramMipper.cpp in Sources */,
@@ -1514,19 +1669,24 @@
 				706EEFAF26D1595D001C950E /* KramFileHelper.cpp in Sources */,
 				706EFF7B26D34740001C950E /* numeric_limits.cpp in Sources */,
 				706EEFB026D1595D001C950E /* KramImageInfo.cpp in Sources */,
+				70871D9B27DC767300D0B9E1 /* astcenc_color_unquantize.cpp in Sources */,
 				706EEFB126D1595D001C950E /* KramImage.cpp in Sources */,
 				706EEFB226D1595D001C950E /* KramLog.cpp in Sources */,
 				706EEFB326D1595D001C950E /* KramSDFMipper.cpp in Sources */,
 				706EEFB426D1595D001C950E /* KramMmapHelper.cpp in Sources */,
 				706EEFB526D1595D001C950E /* float4a.cpp in Sources */,
+				70871D7127DC767300D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */,
 				706EFF7326D34740001C950E /* thread_support.cpp in Sources */,
 				706EEFB626D1595D001C950E /* Kram.cpp in Sources */,
+				70871D6527DC767300D0B9E1 /* astcenc_block_sizes.cpp in Sources */,
 				706EEFB726D1595D001C950E /* squish.cpp in Sources */,
 				706EEFB826D1595D001C950E /* colourset.cpp in Sources */,
 				706EFF8126D34740001C950E /* hashtable.cpp in Sources */,
 				706EEFB926D1595D001C950E /* clusterfit.cpp in Sources */,
 				706EEFBB26D1595D001C950E /* rangefit.cpp in Sources */,
+				70871D6D27DC767300D0B9E1 /* astcenc_weight_quant_xfer_tables.cpp in Sources */,
 				706EEFBC26D1595D001C950E /* alpha.cpp in Sources */,
+				70871D8B27DC767300D0B9E1 /* astcenc_compute_variance.cpp in Sources */,
 				706EEFBD26D1595D001C950E /* colourblock.cpp in Sources */,
 				706EEFBE26D1595E001C950E /* colourfit.cpp in Sources */,
 				706EFF7926D34740001C950E /* allocator_eastl.cpp in Sources */,
@@ -1545,7 +1705,9 @@
 			files = (
 				706EFC2426D1C39B001C950E /* ateencoder.mm in Sources */,
 				706EF19826D166C5001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */,
+				70871D7C27DC767300D0B9E1 /* astcenc_color_quantize.cpp in Sources */,
 				70CDB65327A1382700A546C1 /* KramDDSHelper.cpp in Sources */,
+				70871D9A27DC767300D0B9E1 /* astcenc_platform_isa_detection.cpp in Sources */,
 				706EF19926D166C5001C950E /* EtcImage.cpp in Sources */,
 				706EF19A26D166C5001C950E /* EtcDifferentialTrys.cpp in Sources */,
 				706EF19B26D166C5001C950E /* EtcMath.cpp in Sources */,
@@ -1555,31 +1717,40 @@
 				706EF19F26D166C5001C950E /* EtcIndividualTrys.cpp in Sources */,
 				706EF1A026D166C5001C950E /* EtcBlock4x4Encoding_R11.cpp in Sources */,
 				706EF1A126D166C5001C950E /* EtcBlock4x4Encoding_ETC1.cpp in Sources */,
+				70871D8227DC767300D0B9E1 /* astcenc_find_best_partitioning.cpp in Sources */,
 				706EF1A226D166C5001C950E /* EtcBlock4x4Encoding.cpp in Sources */,
+				70871DA427DC767300D0B9E1 /* astcenc_partition_tables.cpp in Sources */,
 				706EF1A326D166C5001C950E /* EtcBlock4x4.cpp in Sources */,
 				706EF1A426D166C5001C950E /* bc7decomp.cpp in Sources */,
 				706EF1A526D166C5001C950E /* bc7enc.cpp in Sources */,
 				706EF1A626D166C5001C950E /* astcenc_pick_best_endpoint_format.cpp in Sources */,
 				708A6A9B2708CE4700BA5410 /* bc6h_encode.cpp in Sources */,
 				70A7BD3127092A1200DBCCF7 /* hdr_encode.cpp in Sources */,
+				70871DA627DC767300D0B9E1 /* astcenc_weight_align.cpp in Sources */,
 				706EF1A726D166C5001C950E /* astcenc_integer_sequence.cpp in Sources */,
 				706EF1A826D166C5001C950E /* astcenc_compute_variance.cpp in Sources */,
 				706EFF7826D34740001C950E /* string.cpp in Sources */,
 				706EF1A926D166C5001C950E /* astcenc_quantization.cpp in Sources */,
 				706EF1AA26D166C5001C950E /* astcenc_color_unquantize.cpp in Sources */,
+				70871D9427DC767300D0B9E1 /* astcenc_entry.cpp in Sources */,
+				70871D9827DC767300D0B9E1 /* astcenc_compress_symbolic.cpp in Sources */,
+				70871D7827DC767300D0B9E1 /* astcenc_pick_best_endpoint_format.cpp in Sources */,
 				706EF1AB26D166C5001C950E /* astcenc_mathlib_softfloat.cpp in Sources */,
 				708A6A972708CE4700BA5410 /* bc6h_decode.cpp in Sources */,
 				706EF1AC26D166C5001C950E /* astcenc_weight_quant_xfer_tables.cpp in Sources */,
-				706EF1AD26D166C5001C950E /* astcenc_encoding_choice_error.cpp in Sources */,
 				706EF1AE26D166C5001C950E /* astcenc_percentile_tables.cpp in Sources */,
 				706EF1AF26D166C5001C950E /* astcenc_partition_tables.cpp in Sources */,
 				706EF1B026D166C5001C950E /* astcenc_decompress_symbolic.cpp in Sources */,
+				70871DA227DC767300D0B9E1 /* astcenc_diagnostic_trace.cpp in Sources */,
+				70871D8027DC767300D0B9E1 /* astcenc_mathlib_softfloat.cpp in Sources */,
 				706EF1B126D166C5001C950E /* astcenc_color_quantize.cpp in Sources */,
 				706EFF7626D34740001C950E /* assert.cpp in Sources */,
+				70871D8827DC767300D0B9E1 /* astcenc_averages_and_directions.cpp in Sources */,
 				706EF1B226D166C5001C950E /* astcenc_platform_isa_detection.cpp in Sources */,
 				706EF1B326D166C5001C950E /* astcenc_image.cpp in Sources */,
-				706EF1B426D166C5001C950E /* astcenc_kmeans_partitioning.cpp in Sources */,
 				706EF1B526D166C5001C950E /* astcenc_compress_symbolic.cpp in Sources */,
+				70871D7627DC767300D0B9E1 /* astcenc_mathlib.cpp in Sources */,
+				70871D8627DC767300D0B9E1 /* astcenc_symbolic_physical.cpp in Sources */,
 				706EF1B626D166C5001C950E /* astcenc_ideal_endpoints_and_weights.cpp in Sources */,
 				706EFF8626D34740001C950E /* fixed_pool.cpp in Sources */,
 				706EF1B726D166C5001C950E /* astcenc_mathlib.cpp in Sources */,
@@ -1587,14 +1758,18 @@
 				706EF1B926D166C5001C950E /* astcenc_diagnostic_trace.cpp in Sources */,
 				706EF1BA26D166C5001C950E /* astcenc_symbolic_physical.cpp in Sources */,
 				706EF1BB26D166C5001C950E /* astcenc_weight_align.cpp in Sources */,
-				706EF1BC26D166C5001C950E /* astcenc_block_sizes2.cpp in Sources */,
 				706EF1BD26D166C5001C950E /* astcenc_entry.cpp in Sources */,
+				70871D6827DC767300D0B9E1 /* astcenc_percentile_tables.cpp in Sources */,
 				706EF1BE26D166C5001C950E /* astcenc_averages_and_directions.cpp in Sources */,
 				706EF1BF26D166C5001C950E /* basisu_transcoder.cpp in Sources */,
+				70871D7E27DC767300D0B9E1 /* astcenc_image.cpp in Sources */,
+				70871D7027DC767300D0B9E1 /* astcenc_decompress_symbolic.cpp in Sources */,
 				706EFF8426D34740001C950E /* red_black_tree.cpp in Sources */,
 				706EFF8026D34740001C950E /* intrusive_list.cpp in Sources */,
 				706EF1C026D166C5001C950E /* miniz.cpp in Sources */,
+				70871D6A27DC767300D0B9E1 /* astcenc_integer_sequence.cpp in Sources */,
 				706EF1C126D166C5001C950E /* hedistance.cpp in Sources */,
+				70871DA027DC767300D0B9E1 /* astcenc_quantization.cpp in Sources */,
 				706EF1C226D166C5001C950E /* KramTimer.cpp in Sources */,
 				706EF1C326D166C5001C950E /* KTXImage.cpp in Sources */,
 				706EF1C426D166C5001C950E /* KramMipper.cpp in Sources */,
@@ -1603,19 +1778,24 @@
 				706EF1C726D166C5001C950E /* KramFileHelper.cpp in Sources */,
 				706EFF7C26D34740001C950E /* numeric_limits.cpp in Sources */,
 				706EF1C826D166C5001C950E /* KramImageInfo.cpp in Sources */,
+				70871D9C27DC767300D0B9E1 /* astcenc_color_unquantize.cpp in Sources */,
 				706EF1C926D166C5001C950E /* KramImage.cpp in Sources */,
 				706EF1CA26D166C5001C950E /* KramLog.cpp in Sources */,
 				706EF1CB26D166C5001C950E /* KramSDFMipper.cpp in Sources */,
 				706EF1CC26D166C5001C950E /* KramMmapHelper.cpp in Sources */,
 				706EF1CD26D166C5001C950E /* float4a.cpp in Sources */,
+				70871D7227DC767300D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */,
 				706EFF7426D34740001C950E /* thread_support.cpp in Sources */,
 				706EF1CE26D166C5001C950E /* Kram.cpp in Sources */,
+				70871D6627DC767300D0B9E1 /* astcenc_block_sizes.cpp in Sources */,
 				706EF1CF26D166C5001C950E /* squish.cpp in Sources */,
 				706EF1D026D166C5001C950E /* colourset.cpp in Sources */,
 				706EFF8226D34740001C950E /* hashtable.cpp in Sources */,
 				706EF1D126D166C5001C950E /* clusterfit.cpp in Sources */,
 				706EF1D226D166C5001C950E /* rangefit.cpp in Sources */,
+				70871D6E27DC767300D0B9E1 /* astcenc_weight_quant_xfer_tables.cpp in Sources */,
 				706EF1D326D166C5001C950E /* alpha.cpp in Sources */,
+				70871D8C27DC767300D0B9E1 /* astcenc_compute_variance.cpp in Sources */,
 				706EF1D426D166C5001C950E /* colourblock.cpp in Sources */,
 				706EF1D526D166C5001C950E /* colourfit.cpp in Sources */,
 				706EFF7A26D34740001C950E /* allocator_eastl.cpp in Sources */,

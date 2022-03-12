@@ -39,10 +39,6 @@
 
 #include <cstdio>
 
-#if defined(__arm__)
-	#include "astcenc_vecmathlib_neon_armv7_4.h"
-#endif
-
 // ============================================================================
 // vfloat4 data type
 // ============================================================================
@@ -55,7 +51,7 @@ struct vfloat4
 	/**
 	 * @brief Construct from zero-initialized value.
 	 */
-	ASTCENC_SIMD_INLINE vfloat4() {}
+	ASTCENC_SIMD_INLINE vfloat4() = default;
 
 	/**
 	 * @brief Construct from 4 values loaded from an unaligned address.
@@ -85,8 +81,8 @@ struct vfloat4
 	 */
 	ASTCENC_SIMD_INLINE explicit vfloat4(float a, float b, float c, float d)
 	{
-		float32x4_t v { a, b, c, d };
-		m = v;
+		float v[4] { a, b, c, d };
+		m = vld1q_f32(v);
 	}
 
 	/**
@@ -149,15 +145,13 @@ struct vfloat4
 	/**
 	 * @brief Return a swizzled float 2.
 	 */
-	template <int l0, int l1> ASTCENC_SIMD_INLINE float2 swz() const
+	template <int l0, int l1> ASTCENC_SIMD_INLINE vfloat4 swz() const
 	{
-		return float2(lane<l0>(), lane<l1>());
+		return vfloat4(lane<l0>(), lane<l1>(), 0.0f, 0.0f);
 	}
 
 	/**
 	 * @brief Return a swizzled float 3.
-	 *
-	 * TODO: Implement using permutes.
 	 */
 	template <int l0, int l1, int l2> ASTCENC_SIMD_INLINE vfloat4 swz() const
 	{
@@ -166,8 +160,6 @@ struct vfloat4
 
 	/**
 	 * @brief Return a swizzled float 4.
-	 *
-	 * TODO: Implement using permutes.
 	 */
 	template <int l0, int l1, int l2, int l3> ASTCENC_SIMD_INLINE vfloat4 swz() const
 	{
@@ -192,7 +184,7 @@ struct vint4
 	/**
 	 * @brief Construct from zero-initialized value.
 	 */
-	ASTCENC_SIMD_INLINE vint4() {}
+	ASTCENC_SIMD_INLINE vint4() = default;
 
 	/**
 	 * @brief Construct from 4 values loaded from an unaligned address.
@@ -234,8 +226,8 @@ struct vint4
 	 */
 	ASTCENC_SIMD_INLINE explicit vint4(int a, int b, int c, int d)
 	{
-		int32x4_t v { a, b, c, d };
-		m = v;
+		int v[4] { a, b, c, d };
+		m = vld1q_s32(v);
 	}
 
 	/**
@@ -318,6 +310,7 @@ struct vmask4
 		m = a;
 	}
 
+#if !defined(_MSC_VER)
 	/**
 	 * @brief Construct from an existing SIMD register.
 	 */
@@ -325,22 +318,33 @@ struct vmask4
 	{
 		m = vreinterpretq_u32_s32(a);
 	}
+#endif
 
 	/**
-	 * @brief Construct from an existing SIMD register.
+	 * @brief Construct from 1 scalar value.
+	 */
+	ASTCENC_SIMD_INLINE explicit vmask4(bool a)
+	{
+		m = vreinterpretq_u32_s32(vdupq_n_s32(a == true ? -1 : 0));
+	}
+
+	/**
+	 * @brief Construct from 4 scalar values.
+	 *
+	 * The value of @c a is stored to lane 0 (LSB) in the SIMD register.
 	 */
 	ASTCENC_SIMD_INLINE explicit vmask4(bool a, bool b, bool c, bool d)
 	{
-		int32x4_t v {
+		int v[4] {
 			a == true ? -1 : 0,
 			b == true ? -1 : 0,
 			c == true ? -1 : 0,
 			d == true ? -1 : 0
 		};
 
-		m = vreinterpretq_u32_s32(v);
+		int32x4_t ms = vld1q_s32(v);
+		m = vreinterpretq_u32_s32(ms);
 	}
-
 
 	/**
 	 * @brief The vector ...
@@ -391,7 +395,9 @@ ASTCENC_SIMD_INLINE vmask4 operator~(vmask4 a)
  */
 ASTCENC_SIMD_INLINE unsigned int mask(vmask4 a)
 {
-	static const int32x4_t shift { 0, 1, 2, 3 };
+	static const int shifta[4] { 0, 1, 2, 3 };
+	static const int32x4_t shift = vld1q_s32(shifta);
+
 	uint32x4_t tmp = vshrq_n_u32(a.m, 31);
 	return vaddvq_u32(vshlq_u32(tmp, shift));
 }
@@ -599,7 +605,7 @@ ASTCENC_SIMD_INLINE vint4 gatheri(const int* base, vint4 indices)
  */
 ASTCENC_SIMD_INLINE vint4 pack_low_bytes(vint4 a)
 {
-	alignas(16) uint8_t shuf[16] = {
+	alignas(16) uint8_t shuf[16] {
 		0, 4, 8, 12,   0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0
 	};
 	uint8x16_t idx = vld1q_u8(shuf);

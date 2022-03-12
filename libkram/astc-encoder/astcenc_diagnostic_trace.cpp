@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstdarg>
 #include <cstdio>
+#include <string>
 
 #include "astcenc_diagnostic_trace.h"
 
@@ -42,6 +43,7 @@ TraceLog::TraceLog(
 	m_root = new TraceNode("root");
 }
 
+/* See header for documentation. */
 TraceNode* TraceLog::get_current_leaf()
 {
 	if (m_stack.size())
@@ -52,11 +54,13 @@ TraceNode* TraceLog::get_current_leaf()
 	return nullptr;
 }
 
+/* See header for documentation. */
 int TraceLog::get_depth()
 {
 	return m_stack.size();
 }
 
+/* See header for documentation. */
 TraceLog::~TraceLog()
 {
 	assert(g_TraceLog == this);
@@ -64,6 +68,7 @@ TraceLog::~TraceLog()
 	g_TraceLog = nullptr;
 }
 
+/* See header for documentation. */
 TraceNode::TraceNode(
 	const char* format,
 	...
@@ -118,6 +123,7 @@ TraceNode::TraceNode(
 	out << in_indents << "[";
 }
 
+/* See header for documentation. */
 void TraceNode::add_attrib(
 	std::string type,
 	std::string key,
@@ -142,6 +148,7 @@ void TraceNode::add_attrib(
 	                                << value << " ]";
 }
 
+/* See header for documentation. */
 TraceNode::~TraceNode()
 {
 	g_TraceLog->m_stack.pop_back();
@@ -168,6 +175,7 @@ TraceNode::~TraceNode()
 	out << out_indents << "]";
 }
 
+/* See header for documentation. */
 void trace_add_data(
 	const char* key,
 	const char* format,
@@ -190,6 +198,7 @@ void trace_add_data(
 	node->add_attrib("str", key, value);
 }
 
+/* See header for documentation. */
 void trace_add_data(
 	const char* key,
 	float value
@@ -200,6 +209,7 @@ void trace_add_data(
 	node->add_attrib("float", key, buffer);
 }
 
+/* See header for documentation. */
 void trace_add_data(
 	const char* key,
 	int value
@@ -208,6 +218,7 @@ void trace_add_data(
 	node->add_attrib("int", key, std::to_string(value));
 }
 
+/* See header for documentation. */
 void trace_add_data(
 	const char* key,
 	unsigned int value

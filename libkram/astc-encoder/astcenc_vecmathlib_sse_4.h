@@ -52,7 +52,7 @@ struct vfloat4
 	/**
 	 * @brief Construct from zero-initialized value.
 	 */
-	ASTCENC_SIMD_INLINE vfloat4() {}
+	ASTCENC_SIMD_INLINE vfloat4() = default;
 
 	/**
 	 * @brief Construct from 4 values loaded from an unaligned address.
@@ -152,9 +152,12 @@ struct vfloat4
 	/**
 	 * @brief Return a swizzled float 2.
 	 */
-	template <int l0, int l1> ASTCENC_SIMD_INLINE float2 swz() const
+	template <int l0, int l1> ASTCENC_SIMD_INLINE vfloat4 swz() const
 	{
-		return float2(lane<l0>(), lane<l1>());
+		vfloat4 result(_mm_shuffle_ps(m, m, l0 | l1 << 2));
+		result.set_lane<2>(0.0f);
+		result.set_lane<3>(0.0f);
+		return result;
 	}
 
 	/**
@@ -193,7 +196,7 @@ struct vint4
 	/**
 	 * @brief Construct from zero-initialized value.
 	 */
-	ASTCENC_SIMD_INLINE vint4() {}
+	ASTCENC_SIMD_INLINE vint4() = default;
 
 	/**
 	 * @brief Construct from 4 values loaded from an unaligned address.
@@ -334,6 +337,15 @@ struct vmask4
 	ASTCENC_SIMD_INLINE explicit vmask4(__m128i a)
 	{
 		m = _mm_castsi128_ps(a);
+	}
+
+	/**
+	 * @brief Construct from 1 scalar value.
+	 */
+	ASTCENC_SIMD_INLINE explicit vmask4(bool a)
+	{
+		vint4 mask(a == false ? 0 : -1);
+		m = _mm_castsi128_ps(mask.m);
 	}
 
 	/**

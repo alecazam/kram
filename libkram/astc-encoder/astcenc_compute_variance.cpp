@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2011-2021 Arm Limited
+// Copyright 2011-2022 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -18,16 +18,15 @@
 #if !defined(ASTCENC_DECOMPRESS_ONLY)
 
 /**
- * @brief Functions to calculate variance per channel in a NxN footprint.
+ * @brief Functions to calculate variance per component in a NxN footprint.
  *
- * We need N to be parametric, so the routine below uses summed area tables in
- * order to execute in O(1) time independent of how big N is.
+ * We need N to be parametric, so the routine below uses summed area tables in order to execute in
+ * O(1) time independent of how big N is.
  *
- * The addition uses a Brent-Kung-based parallel prefix adder. This uses the
- * prefix tree to first perform a binary reduction, and then distributes the
- * results. This method means that there is no serial dependency between a
- * given element and the next one, and also significantly improves numerical
- * stability allowing us to use floats rather than doubles.
+ * The addition uses a Brent-Kung-based parallel prefix adder. This uses the prefix tree to first
+ * perform a binary reduction, and then distributes the results. This method means that there is no
+ * serial dependency between a given element and the next one, and also significantly improves
+ * numerical stability allowing us to use floats rather than doubles.
  */
 
 #include "astcenc_internal.h"
@@ -35,7 +34,7 @@
 #include <cassert>
 
 /**
- * @brief Generate a prefix-sum array using Brent-Kung algorithm.
+ * @brief Generate a prefix-sum array using the Brent-Kung algorithm.
  *
  * This will take an input array of the form:
  *     v0, v1, v2, ...
@@ -101,42 +100,38 @@ static void brent_kung_prefix_sum(
 }
 
 /**
- * @brief Compute averages and variances for a pixel region.
+ * @brief Compute averages for a pixel region.
  *
- * The routine computes both in a single pass, using a summed-area table to
- * decouple the running time from the averaging/variance kernel size.
+ * The routine computes both in a single pass, using a summed-area table to decouple the running
+ * time from the averaging/variance kernel size.
  *
- * @param arg The input parameter structure.
+ * @param[out] ctx   The compressor context storing the output data.
+ * @param      arg   The input parameter structure.
  */
 static void compute_pixel_region_variance(
 	astcenc_context& ctx,
-	const pixel_region_variance_args* arg
+	const pixel_region_args& arg
 ) {
 	// Unpack the memory structure into local variables
-	const astcenc_image* img = arg->img;
-	float rgb_power = arg->rgb_power;
-	float alpha_power = arg->alpha_power;
-	astcenc_swizzle swz = arg->swz;
-	bool have_z = arg->have_z;
+	const astcenc_image* img = arg.img;
+	astcenc_swizzle swz = arg.swz;
+	bool have_z = arg.have_z;
 
-	int size_x = arg->size_x;
-	int size_y = arg->size_y;
-	int size_z = arg->size_z;
+	int size_x = arg.size_x;
+	int size_y = arg.size_y;
+	int size_z = arg.size_z;
 
-	int offset_x = arg->offset_x;
-	int offset_y = arg->offset_y;
-	int offset_z = arg->offset_z;
+	int offset_x = arg.offset_x;
+	int offset_y = arg.offset_y;
+	int offset_z = arg.offset_z;
 
-	int avg_var_kernel_radius = arg->avg_var_kernel_radius;
-	int alpha_kernel_radius = arg->alpha_kernel_radius;
+	int alpha_kernel_radius = arg.alpha_kernel_radius;
 
-	float  *input_alpha_averages = ctx.input_alpha_averages;
-	vfloat4 *input_averages = ctx.input_averages;
-	vfloat4 *input_variances = ctx.input_variances;
-	vfloat4 *work_memory = arg->work_memory;
+	float*   input_alpha_averages = ctx.input_alpha_averages;
+	vfloat4* work_memory = arg.work_memory;
 
 	// Compute memory sizes and dimensions that we need
-	int kernel_radius = astc::max(avg_var_kernel_radius, alpha_kernel_radius);
+	int kernel_radius = alpha_kernel_radius;
 	int kerneldim = 2 * kernel_radius + 1;
 	int kernel_radius_xy = kernel_radius;
 	int kernel_radius_z = have_z ? kernel_radius : 0;
@@ -147,7 +142,6 @@ static void compute_pixel_region_variance(
 	int sizeprod = padsize_x * padsize_y * padsize_z;
 
 	int zd_start = have_z ? 1 : 0;
-	int are_powers_1 = (rgb_power == 1.0f) && (alpha_power == 1.0f);
 
 	vfloat4 *varbuf1 = work_memory;
 	vfloat4 *varbuf2 = work_memory + sizeprod;
@@ -203,12 +197,6 @@ static void compute_pixel_region_variance(
 					                     b * (1.0f / 255.0f),
 					                     a * (1.0f / 255.0f));
 
-					if (!are_powers_1)
-					{
-						vfloat4 exp(rgb_power, rgb_power, rgb_power, alpha_power);
-						d = pow(max(d, 1e-6f), exp);
-					}
-
 					VARBUF1(z, y, x) = d;
 					VARBUF2(z, y, x) = d * d;
 				}
@@ -245,12 +233,6 @@ static void compute_pixel_region_variance(
 
 					vint4 di(data[swz.r], data[swz.g], data[swz.b], data[swz.a]);
 					vfloat4 d = float16_to_float(di);
-
-					if (!are_powers_1)
-					{
-						vfloat4 exp(rgb_power, rgb_power, rgb_power, alpha_power);
-						d = pow(max(d, 1e-6f), exp);
-					}
 
 					VARBUF1(z, y, x) = d;
 					VARBUF2(z, y, x) = d * d;
@@ -294,12 +276,6 @@ static void compute_pixel_region_variance(
 					float a = data[swz.a];
 
 					vfloat4 d(r, g, b, a);
-
-					if (!are_powers_1)
-					{
-						vfloat4 exp(rgb_power, rgb_power, rgb_power, alpha_power);
-						d = pow(max(d, 1e-6f), exp);
-					}
 
 					VARBUF1(z, y, x) = d;
 					VARBUF2(z, y, x) = d * d;
@@ -369,36 +345,19 @@ static void compute_pixel_region_variance(
 		}
 	}
 
-	int avg_var_kdim = 2 * avg_var_kernel_radius + 1;
 	int alpha_kdim = 2 * alpha_kernel_radius + 1;
 
 	// Compute a few constants used in the variance-calculation.
-	float avg_var_samples;
 	float alpha_rsamples;
-	float mul1;
 
 	if (have_z)
 	{
-		avg_var_samples = (float)(avg_var_kdim * avg_var_kdim * avg_var_kdim);
 		alpha_rsamples = 1.0f / (float)(alpha_kdim * alpha_kdim * alpha_kdim);
 	}
 	else
 	{
-		avg_var_samples = (float)(avg_var_kdim * avg_var_kdim);
 		alpha_rsamples = 1.0f / (float)(alpha_kdim * alpha_kdim);
 	}
-
-	float avg_var_rsamples = 1.0f / avg_var_samples;
-	if (avg_var_samples == 1)
-	{
-		mul1 = 1.0f;
-	}
-	else
-	{
-		mul1 = 1.0f / (float)(avg_var_samples * (avg_var_samples - 1));
-	}
-
-	float mul2 = avg_var_samples * mul1;
 
 	// Use the summed-area tables to compute variance for each neighborhood
 	if (have_z)
@@ -436,33 +395,6 @@ static void compute_pixel_region_variance(
 
 					int out_index = z_dst * zdt + y_dst * ydt + x_dst;
 					input_alpha_averages[out_index] = (vasum * alpha_rsamples);
-
-					// Summed-area table lookups for RGBA average and variance
-					vfloat4 v1sum = ( VARBUF1(z_high, y_low,  x_low)
-					                - VARBUF1(z_high, y_low,  x_high)
-					                - VARBUF1(z_high, y_high, x_low)
-					                + VARBUF1(z_high, y_high, x_high)) -
-					               (  VARBUF1(z_low,  y_low,  x_low)
-					                - VARBUF1(z_low,  y_low,  x_high)
-					                - VARBUF1(z_low,  y_high, x_low)
-					                + VARBUF1(z_low,  y_high, x_high));
-
-					vfloat4 v2sum = ( VARBUF2(z_high, y_low,  x_low)
-					                - VARBUF2(z_high, y_low,  x_high)
-					                - VARBUF2(z_high, y_high, x_low)
-					                + VARBUF2(z_high, y_high, x_high)) -
-					               (  VARBUF2(z_low,  y_low,  x_low)
-					                - VARBUF2(z_low,  y_low,  x_high)
-					                - VARBUF2(z_low,  y_high, x_low)
-					                + VARBUF2(z_low,  y_high, x_high));
-
-					// Compute and emit the average
-					vfloat4 avg = v1sum * avg_var_rsamples;
-					input_averages[out_index] = avg;
-
-					// Compute and emit the actual variance
-					vfloat4 variance = mul2 * v2sum - mul1 * (v1sum * v1sum);
-					input_variances[out_index] = variance;
 				}
 			}
 		}
@@ -491,35 +423,16 @@ static void compute_pixel_region_variance(
 
 				int out_index = y_dst * ydt + x_dst;
 				input_alpha_averages[out_index] = (vasum * alpha_rsamples);
-
-				// summed-area table lookups for RGBA average and variance
-				vfloat4 v1sum = VARBUF1(0, y_low,  x_low)
-				              - VARBUF1(0, y_low,  x_high)
-				              - VARBUF1(0, y_high, x_low)
-				              + VARBUF1(0, y_high, x_high);
-
-				vfloat4 v2sum = VARBUF2(0, y_low,  x_low)
-				              - VARBUF2(0, y_low,  x_high)
-				              - VARBUF2(0, y_high, x_low)
-				              + VARBUF2(0, y_high, x_high);
-
-				// Compute and emit the average
-				vfloat4 avg = v1sum * avg_var_rsamples;
-				input_averages[out_index] = avg;
-
-				// Compute and emit the actual variance
-				vfloat4 variance = mul2 * v2sum - mul1 * (v1sum * v1sum);
-				input_variances[out_index] = variance;
 			}
 		}
 	}
 }
 
-void compute_averages_and_variances(
+void compute_averages(
 	astcenc_context& ctx,
-	const avg_var_args &ag
+	const avg_args &ag
 ) {
-	pixel_region_variance_args arg = ag.arg;
+	pixel_region_args arg = ag.arg;
 	arg.work_memory = new vfloat4[ag.work_memory_size];
 
 	int size_x = ag.img_size_x;
@@ -535,7 +448,7 @@ void compute_averages_and_variances(
 	while (true)
 	{
 		unsigned int count;
-		unsigned int base = ctx.manage_avg_var.get_task_assignment(16, count);
+		unsigned int base = ctx.manage_avg.get_task_assignment(16, count);
 		if (!count)
 		{
 			break;
@@ -556,61 +469,53 @@ void compute_averages_and_variances(
 			{
 				arg.size_x = astc::min(step_xy, size_x - x);
 				arg.offset_x = x;
-				compute_pixel_region_variance(ctx, &arg);
+				compute_pixel_region_variance(ctx, arg);
 			}
 		}
 
-		ctx.manage_avg_var.complete_task_assignment(count);
+		ctx.manage_avg.complete_task_assignment(count);
 	}
 
 	delete[] arg.work_memory;
 }
 
-/* Public function, see header file for detailed documentation */
-unsigned int init_compute_averages_and_variances(
-	astcenc_image& img,
-	float rgb_power,
-	float alpha_power,
-	int avg_var_kernel_radius,
-	int alpha_kernel_radius,
-	astcenc_swizzle swz,
-	pixel_region_variance_args& arg,
-	avg_var_args& ag
+/* See header for documentation. */
+unsigned int init_compute_averages(
+	const astcenc_image& img,
+	unsigned int alpha_kernel_radius,
+	const astcenc_swizzle& swz,
+	avg_args& ag
 ) {
-	int size_x = img.dim_x;
-	int size_y = img.dim_y;
-	int size_z = img.dim_z;
+	unsigned int size_x = img.dim_x;
+	unsigned int size_y = img.dim_y;
+	unsigned int size_z = img.dim_z;
 
 	// Compute maximum block size and from that the working memory buffer size
-	int kernel_radius = astc::max(avg_var_kernel_radius, alpha_kernel_radius);
-	int kerneldim = 2 * kernel_radius + 1;
+	unsigned int kernel_radius = alpha_kernel_radius;
+	unsigned int kerneldim = 2 * kernel_radius + 1;
 
 	bool have_z = (size_z > 1);
-	int max_blk_size_xy = have_z ? 16 : 32;
-	int max_blk_size_z = astc::min(size_z, have_z ? 16 : 1);
+	unsigned int max_blk_size_xy = have_z ? 16 : 32;
+	unsigned int max_blk_size_z = astc::min(size_z, have_z ? 16u : 1u);
 
-	int max_padsize_xy = max_blk_size_xy + kerneldim;
-	int max_padsize_z = max_blk_size_z + (have_z ? kerneldim : 0);
+	unsigned int max_padsize_xy = max_blk_size_xy + kerneldim;
+	unsigned int max_padsize_z = max_blk_size_z + (have_z ? kerneldim : 0);
 
-	// Perform block-wise averages-and-variances calculations across the image
+	// Perform block-wise averages calculations across the image
 	// Initialize fields which are not populated until later
-	arg.size_x = 0;
-	arg.size_y = 0;
-	arg.size_z = 0;
-	arg.offset_x = 0;
-	arg.offset_y = 0;
-	arg.offset_z = 0;
-	arg.work_memory = nullptr;
+	ag.arg.size_x = 0;
+	ag.arg.size_y = 0;
+	ag.arg.size_z = 0;
+	ag.arg.offset_x = 0;
+	ag.arg.offset_y = 0;
+	ag.arg.offset_z = 0;
+	ag.arg.work_memory = nullptr;
 
-	arg.img = &img;
-	arg.rgb_power = rgb_power;
-	arg.alpha_power = alpha_power;
-	arg.swz = swz;
-	arg.have_z = have_z;
-	arg.avg_var_kernel_radius = avg_var_kernel_radius;
-	arg.alpha_kernel_radius = alpha_kernel_radius;
+	ag.arg.img = &img;
+	ag.arg.swz = swz;
+	ag.arg.have_z = have_z;
+	ag.arg.alpha_kernel_radius = alpha_kernel_radius;
 
-	ag.arg = arg;
 	ag.img_size_x = size_x;
 	ag.img_size_y = size_y;
 	ag.img_size_z = size_z;
@@ -619,8 +524,8 @@ unsigned int init_compute_averages_and_variances(
 	ag.work_memory_size = 2 * max_padsize_xy * max_padsize_xy * max_padsize_z;
 
 	// The parallel task count
-	int z_tasks = (size_z + max_blk_size_z - 1) / max_blk_size_z;
-	int y_tasks = (size_y + max_blk_size_xy - 1) / max_blk_size_xy;
+	unsigned int z_tasks = (size_z + max_blk_size_z - 1) / max_blk_size_z;
+	unsigned int y_tasks = (size_y + max_blk_size_xy - 1) / max_blk_size_xy;
 	return z_tasks * y_tasks;
 }
 

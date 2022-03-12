@@ -19,6 +19,20 @@
 
 /**
  * @brief Functions for color quantization.
+ *
+ * The design of the color quantization functionality requires the caller to use higher level error
+ * analysis to determine the base encoding that should be used. This earlier analysis will select
+ * the basic type of the endpoint that should be used:
+ *
+ *     * Mode: LDR or HDR
+ *     * Quantization level
+ *     * Channel count: L, LA, RGB, or RGBA
+ *     * Endpoint 2 type: Direct color endcode, or scaled from endpoint 1.
+ *
+ * However, this leaves a number of decisions about exactly how to pack the endpoints open. In
+ * particular we need to determine if blue contraction can be used, or/and if delta encoding can be
+ * used. If they can be applied these will allow us to maintain higher precision in the endpoints
+ * without needing additional storage.
  */
 
 #include <stdio.h>
@@ -26,28 +40,41 @@
 
 #include "astcenc_internal.h"
 
-/*
-	quantize an LDR RGB color. Since this is a fall-back encoding, we cannot actually
-	fail but must just go on until we can produce a sensible result.
-
-	Due to how this encoding works, color0 cannot be larger than color1; as such,
-	if color0 is actually larger than color1, then color0 is reduced and color1 is
-	increased until color0 is no longer larger than color1.
-*/
-static inline int cqt_lookup(
-	int quant_level,
+/**
+ * @brief Determine the quantized value given a quantization level.
+ *
+ * @param quant_level   The quantization level to use.
+ * @param value         The value to convert. This may be outside of the 0-255 range and will be
+ *                      clamped before the value is looked up.
+ *
+ * @return The encoded quantized value. These are not necessarily in the order; the compressor
+ *         scrambles the values slightly to make hardware implementation easier.
+ */
+static inline int quant_color(
+	quant_method quant_level,
 	int value
 ) {
-	// TODO: Make this unsigned and avoid the low clamp
 	value = astc::clamp(value, 0, 255);
 	return color_quant_tables[quant_level][value];
 }
 
+/**
+ * @brief Quantize an LDR RGB color.
+ *
+ * Since this is a fall-back encoding, we cannot actually fail but must produce a sensible result.
+ * For this encoding @c color0 cannot be larger than @c color1. If @c color0 is actually larger
+ * than @c color1, @c color0 is reduced and @c color1 is increased until the constraint is met.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (r0, r1, g0, g1, b0, b1).
+ * @param      quant_level   The quantization level to use.
+ */
 static void quantize_rgb(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[6],
-	int quant_level
+	uint8_t output[6],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
@@ -66,12 +93,12 @@ static void quantize_rgb(
 	int iters = 0;
 	do
 	{
-		ri0 = cqt_lookup(quant_level, astc::flt2int_rd(r0 + rgb0_addon));
-		gi0 = cqt_lookup(quant_level, astc::flt2int_rd(g0 + rgb0_addon));
-		bi0 = cqt_lookup(quant_level, astc::flt2int_rd(b0 + rgb0_addon));
-		ri1 = cqt_lookup(quant_level, astc::flt2int_rd(r1 + rgb1_addon));
-		gi1 = cqt_lookup(quant_level, astc::flt2int_rd(g1 + rgb1_addon));
-		bi1 = cqt_lookup(quant_level, astc::flt2int_rd(b1 + rgb1_addon));
+		ri0 = quant_color(quant_level, astc::flt2int_rd(r0 + rgb0_addon));
+		gi0 = quant_color(quant_level, astc::flt2int_rd(g0 + rgb0_addon));
+		bi0 = quant_color(quant_level, astc::flt2int_rd(b0 + rgb0_addon));
+		ri1 = quant_color(quant_level, astc::flt2int_rd(r1 + rgb1_addon));
+		gi1 = quant_color(quant_level, astc::flt2int_rd(g1 + rgb1_addon));
+		bi1 = quant_color(quant_level, astc::flt2int_rd(b1 + rgb1_addon));
 
 		ri0b = color_unquant_tables[quant_level][ri0];
 		gi0b = color_unquant_tables[quant_level][gi0];
@@ -85,41 +112,61 @@ static void quantize_rgb(
 		iters++;
 	} while (ri0b + gi0b + bi0b > ri1b + gi1b + bi1b);
 
-	output[0] = ri0;
-	output[1] = ri1;
-	output[2] = gi0;
-	output[3] = gi1;
-	output[4] = bi0;
-	output[5] = bi1;
+	output[0] = static_cast<uint8_t>(ri0);
+	output[1] = static_cast<uint8_t>(ri1);
+	output[2] = static_cast<uint8_t>(gi0);
+	output[3] = static_cast<uint8_t>(gi1);
+	output[4] = static_cast<uint8_t>(bi0);
+	output[5] = static_cast<uint8_t>(bi1);
 }
 
-/* quantize an RGBA color. */
+/**
+ * @brief Quantize an LDR RGBA color.
+ *
+ * Since this is a fall-back encoding, we cannot actually fail but must produce a sensible result.
+ * For this encoding @c color0.rgb cannot be larger than @c color1.rgb (this indicates blue
+ * contraction). If @c color0.rgb is actually larger than @c color1.rgb, @c color0.rgb is reduced
+ * and @c color1.rgb is increased until the constraint is met.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (r0, r1, g0, g1, b0, b1, a0, a1).
+ * @param      quant_level   The quantization level to use.
+ */
 static void quantize_rgba(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[8],
-	int quant_level
+	uint8_t output[8],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
 	float a0 = astc::clamp255f(color0.lane<3>() * scale);
 	float a1 = astc::clamp255f(color1.lane<3>() * scale);
 
-	int ai0 = color_quant_tables[quant_level][astc::flt2int_rtn(a0)];
-	int ai1 = color_quant_tables[quant_level][astc::flt2int_rtn(a1)];
-
-	output[6] = ai0;
-	output[7] = ai1;
+	output[6] = color_quant_tables[quant_level][astc::flt2int_rtn(a0)];
+	output[7] = color_quant_tables[quant_level][astc::flt2int_rtn(a1)];
 
 	quantize_rgb(color0, color1, output, quant_level);
 }
 
-/* attempt to quantize RGB endpoint values with blue-contraction. Returns 1 on failure, 0 on success. */
+/**
+ * @brief Try to quantize an LDR RGB color using blue-contraction.
+ *
+ * Blue-contraction is only usable if encoded color 1 is larger than color 0.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (r1, r0, g1, g0, b1, b0).
+ * @param      quant_level   The quantization level to use.
+ *
+ * @return Returns @c false on failure, @c true on success.
+ */
 static bool try_quantize_rgb_blue_contract(
-	vfloat4 color0,	// assumed to be the smaller color
-	vfloat4 color1,	// assumed to be the larger color
-	int output[6],
-	int quant_level
+	vfloat4 color0,
+	vfloat4 color1,
+	uint8_t output[6],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
@@ -131,8 +178,7 @@ static bool try_quantize_rgb_blue_contract(
 	float g1 = color1.lane<1>() * scale;
 	float b1 = color1.lane<2>() * scale;
 
-	// inverse blue-contraction. This can produce an overflow;
-	// just bail out immediately if this is the case.
+	// Apply inverse blue-contraction. This can produce an overflow; which means BC cannot be used.
 	r0 += (r0 - b0);
 	g0 += (g0 - b0);
 	r1 += (r1 - b1);
@@ -144,71 +190,89 @@ static bool try_quantize_rgb_blue_contract(
 		return false;
 	}
 
-	// quantize the inverse-blue-contracted color
+	// Quantize the inverse-blue-contracted color
 	int ri0 = color_quant_tables[quant_level][astc::flt2int_rtn(r0)];
 	int gi0 = color_quant_tables[quant_level][astc::flt2int_rtn(g0)];
 	int bi0 = color_quant_tables[quant_level][astc::flt2int_rtn(b0)];
+
 	int ri1 = color_quant_tables[quant_level][astc::flt2int_rtn(r1)];
 	int gi1 = color_quant_tables[quant_level][astc::flt2int_rtn(g1)];
 	int bi1 = color_quant_tables[quant_level][astc::flt2int_rtn(b1)];
 
-	// then unquantize again
+	// Then unquantize again
 	int ru0 = color_unquant_tables[quant_level][ri0];
 	int gu0 = color_unquant_tables[quant_level][gi0];
 	int bu0 = color_unquant_tables[quant_level][bi0];
+
 	int ru1 = color_unquant_tables[quant_level][ri1];
 	int gu1 = color_unquant_tables[quant_level][gi1];
 	int bu1 = color_unquant_tables[quant_level][bi1];
 
-	// if color #1 is not larger than color #0, then blue-contraction is not a valid approach.
-	// note that blue-contraction and quantization may itself change this order, which is why
-	// we must only test AFTER blue-contraction.
+	// If color #1 is not larger than color #0 then blue-contraction cannot be used. Note that
+	// blue-contraction and quantization change this order, which is why we must test aftwards.
 	if (ru1 + gu1 + bu1 <= ru0 + gu0 + bu0)
 	{
 		return false;
 	}
 
-	output[0] = ri1;
-	output[1] = ri0;
-	output[2] = gi1;
-	output[3] = gi0;
-	output[4] = bi1;
-	output[5] = bi0;
+	output[0] = static_cast<uint8_t>(ri1);
+	output[1] = static_cast<uint8_t>(ri0);
+	output[2] = static_cast<uint8_t>(gi1);
+	output[3] = static_cast<uint8_t>(gi0);
+	output[4] = static_cast<uint8_t>(bi1);
+	output[5] = static_cast<uint8_t>(bi0);
 
 	return true;
 }
 
-/* quantize an RGBA color with blue-contraction */
+/**
+ * @brief Try to quantize an LDR RGBA color using blue-contraction.
+ *
+ * Blue-contraction is only usable if encoded color 1 RGB is larger than color 0 RGB.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (r1, r0, g1, g0, b1, b0, a1, a0).
+ * @param      quant_level   The quantization level to use.
+ *
+ * @return Returns @c false on failure, @c true on success.
+ */
 static int try_quantize_rgba_blue_contract(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[8],
-	int quant_level
+	uint8_t output[8],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
 	float a0 = astc::clamp255f(color0.lane<3>() * scale);
 	float a1 = astc::clamp255f(color1.lane<3>() * scale);
 
-	output[7] = color_quant_tables[quant_level][astc::flt2int_rtn(a0)];
 	output[6] = color_quant_tables[quant_level][astc::flt2int_rtn(a1)];
+	output[7] = color_quant_tables[quant_level][astc::flt2int_rtn(a0)];
 
 	return try_quantize_rgb_blue_contract(color0, color1, output, quant_level);
 }
 
-
-// delta-encoding:
-// at decode time, we move one bit from the offset to the base and seize another bit as a sign bit;
-// we then unquantize both values as if they contain one extra bit.
-
-// if the sum of the offsets is nonnegative, then we encode a regular delta.
-
-/* attempt to quantize an RGB endpoint value with delta-encoding. */
+/**
+ * @brief Try to quantize an LDR RGB color using delta encoding.
+ *
+ * At decode time we move one bit from the offset to the base and seize another bit as a sign bit;
+ * we then unquantize both values as if they contain one extra bit. If the sum of the offsets is
+ * non-negative, then we encode a regular delta.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (r0, r1, g0, g1, b0, b1).
+ * @param      quant_level   The quantization level to use.
+ *
+ * @return Returns @c false on failure, @c true on success.
+ */
 static bool try_quantize_rgb_delta(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[6],
-	int quant_level
+	uint8_t output[6],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
@@ -220,7 +284,7 @@ static bool try_quantize_rgb_delta(
 	float g1 = astc::clamp255f(color1.lane<1>() * scale);
 	float b1 = astc::clamp255f(color1.lane<2>() * scale);
 
-	// transform r0 to unorm9
+	// Transform r0 to unorm9
 	int r0a = astc::flt2int_rtn(r0);
 	int g0a = astc::flt2int_rtn(g0);
 	int b0a = astc::flt2int_rtn(b0);
@@ -229,13 +293,12 @@ static bool try_quantize_rgb_delta(
 	g0a <<= 1;
 	b0a <<= 1;
 
-	// mask off the top bit
+	// Mask off the top bit
 	int r0b = r0a & 0xFF;
 	int g0b = g0a & 0xFF;
 	int b0b = b0a & 0xFF;
 
-	// quantize, then unquantize in order to get a value that we take
-	// differences against.
+	// Quantize then unquantize in order to get a value that we take differences against
 	int r0be = color_quant_tables[quant_level][r0b];
 	int g0be = color_quant_tables[quant_level][g0b];
 	int b0be = color_quant_tables[quant_level][b0b];
@@ -243,11 +306,11 @@ static bool try_quantize_rgb_delta(
 	r0b = color_unquant_tables[quant_level][r0be];
 	g0b = color_unquant_tables[quant_level][g0be];
 	b0b = color_unquant_tables[quant_level][b0be];
-	r0b |= r0a & 0x100;			// final unquantized-values for endpoint 0.
+	r0b |= r0a & 0x100;
 	g0b |= g0a & 0x100;
 	b0b |= b0a & 0x100;
 
-	// then, get hold of the second value
+	// Get hold of the second value
 	int r1d = astc::flt2int_rtn(r1);
 	int g1d = astc::flt2int_rtn(g1);
 	int b1d = astc::flt2int_rtn(b1);
@@ -255,18 +318,19 @@ static bool try_quantize_rgb_delta(
 	r1d <<= 1;
 	g1d <<= 1;
 	b1d <<= 1;
-	// and take differences!
+
+	// ... and take differences
 	r1d -= r0b;
 	g1d -= g0b;
 	b1d -= b0b;
 
-	// check if the difference is too large to be encodable.
+	// Check if the difference is too large to be encodable
 	if (r1d > 63 || g1d > 63 || b1d > 63 || r1d < -64 || g1d < -64 || b1d < -64)
 	{
 		return false;
 	}
 
-	// insert top bit of the base into the offset
+	// Insert top bit of the base into the offset
 	r1d &= 0x7F;
 	g1d &= 0x7F;
 	b1d &= 0x7F;
@@ -275,9 +339,8 @@ static bool try_quantize_rgb_delta(
 	g1d |= (g0b & 0x100) >> 1;
 	b1d |= (b0b & 0x100) >> 1;
 
-	// then quantize & unquantize; if this causes any of the top two bits to flip,
-	// then encoding fails, since we have then corrupted either the top bit of the base
-	// or the sign bit of the offset.
+	// Then quantize and unquantize; if this causes either top two bits to flip, then encoding fails
+	// since we have then corrupted either the top bit of the base or the sign bit of the offset
 	int r1de = color_quant_tables[quant_level][r1d];
 	int g1de = color_quant_tables[quant_level][g1d];
 	int b1de = color_quant_tables[quant_level][b1d];
@@ -291,7 +354,7 @@ static bool try_quantize_rgb_delta(
 		return false;
 	}
 
-	// check that the sum of the encoded offsets is nonnegative, else encoding fails
+	// Check that the sum of the encoded offsets is nonnegative, else encoding fails
 	r1du &= 0x7f;
 	g1du &= 0x7f;
 	b1du &= 0x7f;
@@ -316,7 +379,7 @@ static bool try_quantize_rgb_delta(
 		return false;
 	}
 
-	// check that the offsets produce legitimate sums as well.
+	// Check that the offsets produce legitimate sums as well
 	r1du += r0b;
 	g1du += g0b;
 	b1du += b0b;
@@ -325,13 +388,12 @@ static bool try_quantize_rgb_delta(
 		return false;
 	}
 
-	// OK, we've come this far; we can now encode legitimate values.
-	output[0] = r0be;
-	output[1] = r1de;
-	output[2] = g0be;
-	output[3] = g1de;
-	output[4] = b0be;
-	output[5] = b1de;
+	output[0] = static_cast<uint8_t>(r0be);
+	output[1] = static_cast<uint8_t>(r1de);
+	output[2] = static_cast<uint8_t>(g0be);
+	output[3] = static_cast<uint8_t>(g1de);
+	output[4] = static_cast<uint8_t>(b0be);
+	output[5] = static_cast<uint8_t>(b1de);
 
 	return true;
 }
@@ -339,8 +401,8 @@ static bool try_quantize_rgb_delta(
 static bool try_quantize_rgb_delta_blue_contract(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[6],
-	int quant_level
+	uint8_t output[6],
+	quant_method quant_level
 ) {
 	// Note: Switch around endpoint colors already at start
 	float scale = 1.0f / 257.0f;
@@ -353,8 +415,7 @@ static bool try_quantize_rgb_delta_blue_contract(
 	float g0 = color1.lane<1>() * scale;
 	float b0 = color1.lane<2>() * scale;
 
-	// inverse blue-contraction. This step can perform an overflow, in which case
-	// we will bail out immediately.
+	// Apply inverse blue-contraction. This can produce an overflow; which means BC cannot be used.
 	r0 += (r0 - b0);
 	g0 += (g0 - b0);
 	r1 += (r1 - b1);
@@ -366,7 +427,7 @@ static bool try_quantize_rgb_delta_blue_contract(
 		return false;
 	}
 
-	// transform r0 to unorm9
+	// Transform r0 to unorm9
 	int r0a = astc::flt2int_rtn(r0);
 	int g0a = astc::flt2int_rtn(g0);
 	int b0a = astc::flt2int_rtn(b0);
@@ -374,13 +435,12 @@ static bool try_quantize_rgb_delta_blue_contract(
 	g0a <<= 1;
 	b0a <<= 1;
 
-	// mask off the top bit
+	// Mask off the top bit
 	int r0b = r0a & 0xFF;
 	int g0b = g0a & 0xFF;
 	int b0b = b0a & 0xFF;
 
-	// quantize, then unquantize in order to get a value that we take
-	// differences against.
+	// Quantize, then unquantize in order to get a value that we take differences against.
 	int r0be = color_quant_tables[quant_level][r0b];
 	int g0be = color_quant_tables[quant_level][g0b];
 	int b0be = color_quant_tables[quant_level][b0b];
@@ -388,11 +448,11 @@ static bool try_quantize_rgb_delta_blue_contract(
 	r0b = color_unquant_tables[quant_level][r0be];
 	g0b = color_unquant_tables[quant_level][g0be];
 	b0b = color_unquant_tables[quant_level][b0be];
-	r0b |= r0a & 0x100;			// final unquantized-values for endpoint 0.
+	r0b |= r0a & 0x100;
 	g0b |= g0a & 0x100;
 	b0b |= b0a & 0x100;
 
-	// then, get hold of the second value
+	// Get hold of the second value
 	int r1d = astc::flt2int_rtn(r1);
 	int g1d = astc::flt2int_rtn(g1);
 	int b1d = astc::flt2int_rtn(b1);
@@ -400,18 +460,19 @@ static bool try_quantize_rgb_delta_blue_contract(
 	r1d <<= 1;
 	g1d <<= 1;
 	b1d <<= 1;
-	// and take differences!
+
+	// .. and take differences!
 	r1d -= r0b;
 	g1d -= g0b;
 	b1d -= b0b;
 
-	// check if the difference is too large to be encodable.
+	// Check if the difference is too large to be encodable
 	if (r1d > 63 || g1d > 63 || b1d > 63 || r1d < -64 || g1d < -64 || b1d < -64)
 	{
 		return false;
 	}
 
-	// insert top bit of the base into the offset
+	// Insert top bit of the base into the offset
 	r1d &= 0x7F;
 	g1d &= 0x7F;
 	b1d &= 0x7F;
@@ -420,7 +481,7 @@ static bool try_quantize_rgb_delta_blue_contract(
 	g1d |= (g0b & 0x100) >> 1;
 	b1d |= (b0b & 0x100) >> 1;
 
-	// then quantize & unquantize; if this causes any of the top two bits to flip,
+	// Then quantize and  unquantize; if this causes any of the top two bits to flip,
 	// then encoding fails, since we have then corrupted either the top bit of the base
 	// or the sign bit of the offset.
 	int r1de = color_quant_tables[quant_level][r1d];
@@ -436,8 +497,8 @@ static bool try_quantize_rgb_delta_blue_contract(
 		return false;
 	}
 
-	// check that the sum of the encoded offsets is negative, else encoding fails
-	// note that this is inverse of the test for non-blue-contracted RGB.
+	// Check that the sum of the encoded offsets is negative, else encoding fails
+	// Note that this is inverse of the test for non-blue-contracted RGB.
 	r1du &= 0x7f;
 	g1du &= 0x7f;
 	b1du &= 0x7f;
@@ -462,7 +523,7 @@ static bool try_quantize_rgb_delta_blue_contract(
 		return false;
 	}
 
-	// check that the offsets produce legitimate sums as well.
+	// Check that the offsets produce legitimate sums as well
 	r1du += r0b;
 	g1du += g0b;
 	b1du += b0b;
@@ -472,22 +533,37 @@ static bool try_quantize_rgb_delta_blue_contract(
 		return false;
 	}
 
-	// OK, we've come this far; we can now encode legitimate values.
-	output[0] = r0be;
-	output[1] = r1de;
-	output[2] = g0be;
-	output[3] = g1de;
-	output[4] = b0be;
-	output[5] = b1de;
+	output[0] = static_cast<uint8_t>(r0be);
+	output[1] = static_cast<uint8_t>(r1de);
+	output[2] = static_cast<uint8_t>(g0be);
+	output[3] = static_cast<uint8_t>(g1de);
+	output[4] = static_cast<uint8_t>(b0be);
+	output[5] = static_cast<uint8_t>(b1de);
 
 	return true;
 }
 
+/**
+ * @brief Try to quantize an LDR A color using delta encoding.
+ *
+ * At decode time we move one bit from the offset to the base and seize another bit as a sign bit;
+ * we then unquantize both values as if they contain one extra bit. If the sum of the offsets is
+ * non-negative, then we encode a regular delta.
+ *
+ * This function only compressed the alpha - the other elements in the output array are not touched.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (x, x, x, x, x, x, a0, a1).
+ * @param      quant_level   The quantization level to use.
+ *
+ * @return Returns @c false on failure, @c true on success.
+ */
 static bool try_quantize_alpha_delta(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[8],
-	int quant_level
+	uint8_t output[8],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
@@ -503,38 +579,61 @@ static bool try_quantize_alpha_delta(
 	int a1d = astc::flt2int_rtn(a1);
 	a1d <<= 1;
 	a1d -= a0b;
+
 	if (a1d > 63 || a1d < -64)
 	{
 		return false;
 	}
+
 	a1d &= 0x7F;
 	a1d |= (a0b & 0x100) >> 1;
+
 	int a1de = color_quant_tables[quant_level][a1d];
 	int a1du = color_unquant_tables[quant_level][a1de];
 	if ((a1d ^ a1du) & 0xC0)
 	{
 		return false;
 	}
+
 	a1du &= 0x7F;
 	if (a1du & 0x40)
 	{
 		a1du -= 0x80;
 	}
+
 	a1du += a0b;
 	if (a1du < 0 || a1du > 0x1FF)
 	{
 		return false;
 	}
-	output[6] = a0be;
-	output[7] = a1de;
+
+	output[6] = static_cast<uint8_t>(a0be);
+	output[7] = static_cast<uint8_t>(a1de);
+
 	return true;
 }
 
+/**
+ * @brief Try to quantize an LDR LA color using delta encoding.
+ *
+ * At decode time we move one bit from the offset to the base and seize another bit as a sign bit;
+ * we then unquantize both values as if they contain one extra bit. If the sum of the offsets is
+ * non-negative, then we encode a regular delta.
+ *
+ * This function only compressed the alpha - the other elements in the output array are not touched.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (l0, l1, a0, a1).
+ * @param      quant_level   The quantization level to use.
+ *
+ * @return Returns @c false on failure, @c true on success.
+ */
 static bool try_quantize_luminance_alpha_delta(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[8],
-	int quant_level
+	uint8_t output[4],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
@@ -548,6 +647,7 @@ static bool try_quantize_luminance_alpha_delta(
 	int a0a = astc::flt2int_rtn(a0);
 	l0a <<= 1;
 	a0a <<= 1;
+
 	int l0b = l0a & 0xFF;
 	int a0b = a0a & 0xFF;
 	int l0be = color_quant_tables[quant_level][l0b];
@@ -556,20 +656,24 @@ static bool try_quantize_luminance_alpha_delta(
 	a0b = color_unquant_tables[quant_level][a0be];
 	l0b |= l0a & 0x100;
 	a0b |= a0a & 0x100;
+
 	int l1d = astc::flt2int_rtn(l1);
 	int a1d = astc::flt2int_rtn(a1);
 	l1d <<= 1;
 	a1d <<= 1;
 	l1d -= l0b;
 	a1d -= a0b;
+
 	if (l1d > 63 || l1d < -64)
 	{
 		return false;
 	}
+
 	if (a1d > 63 || a1d < -64)
 	{
 		return false;
 	}
+
 	l1d &= 0x7F;
 	a1d &= 0x7F;
 	l1d |= (l0b & 0x100) >> 1;
@@ -579,86 +683,122 @@ static bool try_quantize_luminance_alpha_delta(
 	int a1de = color_quant_tables[quant_level][a1d];
 	int l1du = color_unquant_tables[quant_level][l1de];
 	int a1du = color_unquant_tables[quant_level][a1de];
+
 	if ((l1d ^ l1du) & 0xC0)
 	{
 		return false;
 	}
+
 	if ((a1d ^ a1du) & 0xC0)
 	{
 		return false;
 	}
+
 	l1du &= 0x7F;
 	a1du &= 0x7F;
+
 	if (l1du & 0x40)
 	{
 		l1du -= 0x80;
 	}
+
 	if (a1du & 0x40)
 	{
 		a1du -= 0x80;
 	}
+
 	l1du += l0b;
 	a1du += a0b;
+
 	if (l1du < 0 || l1du > 0x1FF)
 	{
 		return false;
 	}
+
 	if (a1du < 0 || a1du > 0x1FF)
 	{
 		return false;
 	}
-	output[0] = l0be;
-	output[1] = l1de;
-	output[2] = a0be;
-	output[3] = a1de;
+
+	output[0] = static_cast<uint8_t>(l0be);
+	output[1] = static_cast<uint8_t>(l1de);
+	output[2] = static_cast<uint8_t>(a0be);
+	output[3] = static_cast<uint8_t>(a1de);
 
 	return true;
 }
 
+/**
+ * @brief Try to quantize an LDR RGBA color using delta encoding.
+ *
+ * At decode time we move one bit from the offset to the base and seize another bit as a sign bit;
+ * we then unquantize both values as if they contain one extra bit. If the sum of the offsets is
+ * non-negative, then we encode a regular delta.
+ *
+ * This function only compressed the alpha - the other elements in the output array are not touched.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (r0, r1, b0, b1, g0, g1, a0, a1).
+ * @param      quant_level   The quantization level to use.
+ *
+ * @return Returns @c false on failure, @c true on success.
+ */
 static bool try_quantize_rgba_delta(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[8],
-	int quant_level
+	uint8_t output[8],
+	quant_method quant_level
 ) {
-	bool alpha_delta_res = try_quantize_alpha_delta(color0, color1, output, quant_level);
-
-	if (alpha_delta_res == false)
-	{
-		return false;
-	}
-
-	return try_quantize_rgb_delta(color0, color1, output, quant_level);
+	return try_quantize_rgb_delta(color0, color1, output, quant_level) &&
+	       try_quantize_alpha_delta(color0, color1, output, quant_level);
 }
 
+
+/**
+ * @brief Try to quantize an LDR RGBA color using delta and blue contract encoding.
+ *
+ * At decode time we move one bit from the offset to the base and seize another bit as a sign bit;
+ * we then unquantize both values as if they contain one extra bit. If the sum of the offsets is
+ * non-negative, then we encode a regular delta.
+ *
+ * This function only compressed the alpha - the other elements in the output array are not touched.
+ *
+ * @param      color0       The input unquantized color0 endpoint.
+ * @param      color1       The input unquantized color1 endpoint.
+ * @param[out] output       The output endpoints, returned as (r0, r1, b0, b1, g0, g1, a0, a1).
+ * @param      quant_level  The quantization level to use.
+ *
+ * @return Returns @c false on failure, @c true on success.
+ */
 static bool try_quantize_rgba_delta_blue_contract(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[8],
-	int quant_level
+	uint8_t output[8],
+	quant_method quant_level
 ) {
-	// notice that for the alpha encoding, we are swapping around color0 and color1;
-	// this is because blue-contraction involves swapping around the two colors.
-	int alpha_delta_res = try_quantize_alpha_delta(color1, color0, output, quant_level);
-
-	if (alpha_delta_res == 0)
-	{
-		return false;
-	}
-
-	return try_quantize_rgb_delta_blue_contract(color0, color1, output, quant_level);
+	// Note that we swap the color0 and color1 ordering for alpha to match RGB blue-contract
+	return try_quantize_rgb_delta_blue_contract(color0, color1, output, quant_level) &&
+	       try_quantize_alpha_delta(color1, color0, output, quant_level);
 }
 
-static void quantize_rgbs_new(
-	vfloat4 rgbs_color,	// W component is a desired-scale to apply, in the range 0..1
-	int output[4],
-	int quant_level
+/**
+ * @brief Quantize an LDR RGB color using scale encoding.
+ *
+ * @param      color         The input unquantized color endpoint and scale factor.
+ * @param[out] output        The output endpoints, returned as (r0, g0, b0, s).
+ * @param      quant_level   The quantization level to use.
+ */
+static void quantize_rgbs(
+	vfloat4 color,
+	uint8_t output[4],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
-	float r = astc::clamp255f(rgbs_color.lane<0>() * scale);
-	float g = astc::clamp255f(rgbs_color.lane<1>() * scale);
-	float b = astc::clamp255f(rgbs_color.lane<2>() * scale);
+	float r = astc::clamp255f(color.lane<0>() * scale);
+	float g = astc::clamp255f(color.lane<1>() * scale);
+	float b = astc::clamp255f(color.lane<2>() * scale);
 
 	int ri = color_quant_tables[quant_level][astc::flt2int_rtn(r)];
 	int gi = color_quant_tables[quant_level][astc::flt2int_rtn(g)];
@@ -668,45 +808,57 @@ static void quantize_rgbs_new(
 	int gu = color_unquant_tables[quant_level][gi];
 	int bu = color_unquant_tables[quant_level][bi];
 
-	float oldcolorsum = hadd_rgb_s(rgbs_color) * scale;
+	float oldcolorsum = hadd_rgb_s(color) * scale;
 	float newcolorsum = (float)(ru + gu + bu);
 
-	float scalea = astc::clamp1f(rgbs_color.lane<3>() * (oldcolorsum + 1e-10f) / (newcolorsum + 1e-10f));
+	float scalea = astc::clamp1f(color.lane<3>() * (oldcolorsum + 1e-10f) / (newcolorsum + 1e-10f));
 	int scale_idx = astc::flt2int_rtn(scalea * 256.0f);
 	scale_idx = astc::clamp(scale_idx, 0, 255);
 
-	output[0] = ri;
-	output[1] = gi;
-	output[2] = bi;
+	output[0] = static_cast<uint8_t>(ri);
+	output[1] = static_cast<uint8_t>(gi);
+	output[2] = static_cast<uint8_t>(bi);
 	output[3] = color_quant_tables[quant_level][scale_idx];
 }
 
-static void quantize_rgbs_alpha_new(
+/**
+ * @brief Quantize an LDR RGBA color using scale encoding.
+ *
+ * @param      color        The input unquantized color endpoint and scale factor.
+ * @param[out] output       The output endpoints, returned as (r0, g0, b0, s, a0, a1).
+ * @param      quant_level  The quantization level to use.
+ */
+static void quantize_rgbs_alpha(
 	vfloat4 color0,
 	vfloat4 color1,
-	vfloat4 rgbs_color,
-	int output[6],
-	int quant_level
+	vfloat4 color,
+	uint8_t output[6],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
 	float a0 = astc::clamp255f(color0.lane<3>() * scale);
 	float a1 = astc::clamp255f(color1.lane<3>() * scale);
 
-	int ai0 = color_quant_tables[quant_level][astc::flt2int_rtn(a0)];
-	int ai1 = color_quant_tables[quant_level][astc::flt2int_rtn(a1)];
+	output[4] = color_quant_tables[quant_level][astc::flt2int_rtn(a0)];
+	output[5] = color_quant_tables[quant_level][astc::flt2int_rtn(a1)];
 
-	output[4] = ai0;
-	output[5] = ai1;
-
-	quantize_rgbs_new(rgbs_color, output, quant_level);
+	quantize_rgbs(color, output, quant_level);
 }
 
+/**
+ * @brief Quantize a LDR L color.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (l0, l1).
+ * @param      quant_level   The quantization level to use.
+ */
 static void quantize_luminance(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[2],
-	int quant_level
+	uint8_t output[2],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
@@ -727,11 +879,19 @@ static void quantize_luminance(
 	output[1] = color_quant_tables[quant_level][astc::flt2int_rtn(lum1)];
 }
 
+/**
+ * @brief Quantize a LDR LA color.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as (l0, l1, a0, a1).
+ * @param      quant_level   The quantization level to use.
+ */
 static void quantize_luminance_alpha(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[4],
-	int quant_level
+	uint8_t output[4],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
@@ -744,8 +904,7 @@ static void quantize_luminance_alpha(
 	float a0 = astc::clamp255f(color0.lane<3>());
 	float a1 = astc::clamp255f(color1.lane<3>());
 
-	// if the endpoints are *really* close, then pull them apart slightly;
-	// this affords for >8 bits precision for normal maps.
+	// If endpoints are close then pull apart slightly; this gives > 8 bit normal map precision.
 	if (quant_level > 18)
 	{
 		if (fabsf(lum0 - lum1) < 3.0f)
@@ -760,6 +919,7 @@ static void quantize_luminance_alpha(
 				lum0 += 0.5f;
 				lum1 -= 0.5f;
 			}
+
 			lum0 = astc::clamp255f(lum0);
 			lum1 = astc::clamp255f(lum1);
 		}
@@ -776,6 +936,7 @@ static void quantize_luminance_alpha(
 				a0 += 0.5f;
 				a1 -= 0.5f;
 			}
+
 			a0 = astc::clamp255f(a0);
 			a1 = astc::clamp255f(a1);
 		}
@@ -787,85 +948,105 @@ static void quantize_luminance_alpha(
 	output[3] = color_quant_tables[quant_level][astc::flt2int_rtn(a1)];
 }
 
-// quantize and unquantize a number, wile making sure to retain the top two bits.
+/**
+ * @brief Quantize and unquantize a value ensuring top two bits are the same.
+ *
+ * @param      quant_level     The quantization level to use.
+ * @param      value           The input unquantized value.
+ * @param[out] quant_value     The quantized value.
+ * @param[out] unquant_value   The unquantized value after quantization.
+ */
 static inline void quantize_and_unquantize_retain_top_two_bits(
-	int quant_level,
-	int value_to_quantize,	// 0 to 255.
-	int* quantized_value,
-	int* unquantized_value
+	quant_method quant_level,
+	uint8_t value,
+	uint8_t& quant_value,
+	uint8_t& unquant_value
 ) {
 	int perform_loop;
-	int quantval;
-	int uquantval;
+	uint8_t quantval;
+	uint8_t uquantval;
 
 	do
 	{
-		quantval = color_quant_tables[quant_level][value_to_quantize];
+		quantval = color_quant_tables[quant_level][value];
 		uquantval = color_unquant_tables[quant_level][quantval];
 
-		// perform looping if the top two bits were modified by quant/unquant
-		perform_loop = (value_to_quantize & 0xC0) != (uquantval & 0xC0);
+		// Perform looping if the top two bits were modified by quant/unquant
+		perform_loop = (value & 0xC0) != (uquantval & 0xC0);
 
-		if ((uquantval & 0xC0) > (value_to_quantize & 0xC0))
+		if ((uquantval & 0xC0) > (value & 0xC0))
 		{
-			// quant/unquant rounded UP so that the top two bits changed;
-			// decrement the input value in hopes that this will avoid rounding up.
-			value_to_quantize--;
+			// Quant/unquant rounded UP so that the top two bits changed;
+			// decrement the input in hopes that this will avoid rounding up.
+			value--;
 		}
-		else if ((uquantval & 0xC0) < (value_to_quantize & 0xC0))
+		else if ((uquantval & 0xC0) < (value & 0xC0))
 		{
-			// quant/unquant rounded DOWN so that the top two bits changed;
-			// decrement the input value in hopes that this will avoid rounding down.
-			value_to_quantize--;
+			// Quant/unquant rounded DOWN so that the top two bits changed;
+			// decrement the input in hopes that this will avoid rounding down.
+			value--;
 		}
 	} while (perform_loop);
 
-	*quantized_value = quantval;
-	*unquantized_value = uquantval;
+	quant_value = quantval;
+	unquant_value = uquantval;
 }
 
-// quantize and unquantize a number, wile making sure to retain the top four bits.
+/**
+ * @brief Quantize and unquantize a value ensuring top four bits are the same.
+ *
+ * @param      quant_level     The quantization level to use.
+ * @param      value           The input unquantized value.
+ * @param[out] quant_value     The quantized value.
+ * @param[out] unquant_value   The unquantized value after quantization.
+ */
 static inline void quantize_and_unquantize_retain_top_four_bits(
-	int quant_level,
-	int value_to_quantize,	// 0 to 255.
-	int *quantized_value,
-	int *unquantized_value
+	quant_method quant_level,
+	uint8_t value,
+	uint8_t& quant_value,
+	uint8_t& unquant_value
 ) {
-	int perform_loop;
-	int quantval;
-	int uquantval;
+	uint8_t perform_loop;
+	uint8_t quantval;
+	uint8_t uquantval;
 
 	do
 	{
-		quantval = color_quant_tables[quant_level][value_to_quantize];
+		quantval = color_quant_tables[quant_level][value];
 		uquantval = color_unquant_tables[quant_level][quantval];
 
-		// perform looping if the top two bits were modified by quant/unquant
-		perform_loop = (value_to_quantize & 0xF0) != (uquantval & 0xF0);
+		// Perform looping if the top four bits were modified by quant/unquant
+		perform_loop = (value & 0xF0) != (uquantval & 0xF0);
 
-		if ((uquantval & 0xF0) > (value_to_quantize & 0xF0))
+		if ((uquantval & 0xF0) > (value & 0xF0))
 		{
-			// quant/unquant rounded UP so that the top two bits changed;
+			// Quant/unquant rounded UP so that the top four bits changed;
 			// decrement the input value in hopes that this will avoid rounding up.
-			value_to_quantize--;
+			value--;
 		}
-		else if ((uquantval & 0xF0) < (value_to_quantize & 0xF0))
+		else if ((uquantval & 0xF0) < (value & 0xF0))
 		{
-			// quant/unquant rounded DOWN so that the top two bits changed;
+			// Quant/unquant rounded DOWN so that the top four bits changed;
 			// decrement the input value in hopes that this will avoid rounding down.
-			value_to_quantize--;
+			value--;
 		}
 	} while (perform_loop);
 
-	*quantized_value = quantval;
-	*unquantized_value = uquantval;
+	quant_value = quantval;
+	unquant_value = uquantval;
 }
 
-/* HDR color encoding, take #3 */
-static void quantize_hdr_rgbo3(
+/**
+ * @brief Quantize a HDR RGB color using RGB + offset.
+ *
+ * @param      color         The input unquantized color endpoint and offset.
+ * @param[out] output        The output endpoints, returned as packed RGBS with some mode bits.
+ * @param      quant_level   The quantization level to use.
+ */
+static void quantize_hdr_rgbo(
 	vfloat4 color,
-	int output[4],
-	int quant_level
+	uint8_t output[4],
+	quant_method quant_level
 ) {
 	color.set_lane<0>(color.lane<0>() + color.lane<3>());
 	color.set_lane<1>(color.lane<1>() + color.lane<3>());
@@ -874,13 +1055,20 @@ static void quantize_hdr_rgbo3(
 	color = clamp(0.0f, 65535.0f, color);
 
 	vfloat4 color_bak = color;
+
 	int majcomp;
 	if (color.lane<0>() > color.lane<1>() && color.lane<0>() > color.lane<2>())
+	{
 		majcomp = 0;			// red is largest component
+	}
 	else if (color.lane<1>() > color.lane<2>())
+	{
 		majcomp = 1;			// green is largest component
+	}
 	else
+	{
 		majcomp = 2;			// blue is largest component
+	}
 
 	// swap around the red component and the largest component.
 	switch (majcomp)
@@ -895,7 +1083,7 @@ static void quantize_hdr_rgbo3(
 		break;
 	}
 
-	static const int mode_bits[5][3] = {
+	static const int mode_bits[5][3] {
 		{11, 5, 7},
 		{11, 6, 5},
 		{10, 5, 8},
@@ -903,7 +1091,7 @@ static void quantize_hdr_rgbo3(
 		{8, 7, 6}
 	};
 
-	static const float mode_cutoffs[5][2] = {
+	static const float mode_cutoffs[5][2] {
 		{1024, 4096},
 		{2048, 1024},
 		{2048, 16384},
@@ -911,7 +1099,7 @@ static void quantize_hdr_rgbo3(
 		{32768, 16384}
 	};
 
-	static const float mode_rscales[5] = {
+	static const float mode_rscales[5] {
 		32.0f,
 		32.0f,
 		64.0f,
@@ -919,7 +1107,7 @@ static void quantize_hdr_rgbo3(
 		256.0f,
 	};
 
-	static const float mode_scales[5] = {
+	static const float mode_scales[5] {
 		1.0f / 32.0f,
 		1.0f / 32.0f,
 		1.0f / 64.0f,
@@ -939,7 +1127,7 @@ static void quantize_hdr_rgbo3(
 			continue;
 		}
 
-		// encode the mode into a 4-bit vector.
+		// Encode the mode into a 4-bit vector
 		int mode_enc = mode < 4 ? (mode | (majcomp << 2)) : (majcomp | 0xC);
 
 		float mode_scale = mode_scales[mode];
@@ -948,21 +1136,22 @@ static void quantize_hdr_rgbo3(
 		int gb_intcutoff = 1 << mode_bits[mode][1];
 		int s_intcutoff = 1 << mode_bits[mode][2];
 
-		// first, quantize and unquantize R.
+		// Quantize and unquantize R
 		int r_intval = astc::flt2int_rtn(r_base * mode_scale);
 
 		int r_lowbits = r_intval & 0x3f;
 
 		r_lowbits |= (mode_enc & 3) << 6;
 
-		int r_quantval;
-		int r_uquantval;
-		quantize_and_unquantize_retain_top_two_bits(quant_level, r_lowbits, &r_quantval, &r_uquantval);
+		uint8_t r_quantval;
+		uint8_t r_uquantval;
+		quantize_and_unquantize_retain_top_two_bits(
+		    quant_level, static_cast<uint8_t>(r_lowbits), r_quantval, r_uquantval);
 
 		r_intval = (r_intval & ~0x3f) | (r_uquantval & 0x3f);
 		float r_fval = static_cast<float>(r_intval) * mode_rscale;
 
-		// next, recompute G and B, then quantize and unquantize them.
+		// Recompute G and B, then quantize and unquantize them
 		float g_fval = r_fval - color.lane<1>() ;
 		float b_fval = r_fval - color.lane<2>() ;
 
@@ -1053,14 +1242,15 @@ static void quantize_hdr_rgbo3(
 		b_lowbits |= bit2 << 6;
 		b_lowbits |= bit3 << 5;
 
-		int g_quantval;
-		int b_quantval;
-		int g_uquantval;
-		int b_uquantval;
+		uint8_t g_quantval;
+		uint8_t b_quantval;
+		uint8_t g_uquantval;
+		uint8_t b_uquantval;
 
-		quantize_and_unquantize_retain_top_four_bits(quant_level, g_lowbits, &g_quantval, &g_uquantval);
-
-		quantize_and_unquantize_retain_top_four_bits(quant_level, b_lowbits, &b_quantval, &b_uquantval);
+		quantize_and_unquantize_retain_top_four_bits(
+		    quant_level, static_cast<uint8_t>(g_lowbits), g_quantval, g_uquantval);
+		quantize_and_unquantize_retain_top_four_bits(
+		    quant_level, static_cast<uint8_t>(b_lowbits), b_quantval, b_uquantval);
 
 		g_intval = (g_intval & ~0x1f) | (g_uquantval & 0x1f);
 		b_intval = (b_intval & ~0x1f) | (b_uquantval & 0x1f);
@@ -1068,8 +1258,7 @@ static void quantize_hdr_rgbo3(
 		g_fval = static_cast<float>(g_intval) * mode_rscale;
 		b_fval = static_cast<float>(b_intval) * mode_rscale;
 
-		// finally, recompute the scale value, based on the errors
-		// introduced to red, green and blue.
+		// Recompute the scale value, based on the errors introduced to red, green and blue
 
 		// If the error is positive, then the R,G,B errors combined have raised the color
 		// value overall; as such, the scale value needs to be increased.
@@ -1127,10 +1316,12 @@ static void quantize_hdr_rgbo3(
 		s_lowbits |= bit5 << 6;
 		s_lowbits |= bit4 << 7;
 
-		int s_quantval;
-		int s_uquantval;
+		uint8_t s_quantval;
+		uint8_t s_uquantval;
 
-		quantize_and_unquantize_retain_top_four_bits(quant_level, s_lowbits, &s_quantval, &s_uquantval);
+		quantize_and_unquantize_retain_top_four_bits(
+		    quant_level, static_cast<uint8_t>(s_lowbits), s_quantval, s_uquantval);
+
 		output[0] = r_quantval;
 		output[1] = g_quantval;
 		output[2] = b_quantval;
@@ -1138,8 +1329,7 @@ static void quantize_hdr_rgbo3(
 		return;
 	}
 
-	// failed to encode any of the modes above? In that case,
-	// encode using mode #5.
+	// Failed to encode any of the modes above? In that case encode using mode #5
 	float vals[4];
 	vals[0] = color_bak.lane<0>();
 	vals[1] = color_bak.lane<1>();
@@ -1168,20 +1358,29 @@ static void quantize_hdr_rgbo3(
 	encvals[2] = (ivals[2] & 0x7f) | 0x80;
 	encvals[3] = (ivals[3] & 0x7f) | ((ivals[0] & 0x40) << 1);
 
-	for (int i = 0; i < 4; i++)
+	for (uint8_t i = 0; i < 4; i++)
 	{
-		int dummy;
-		quantize_and_unquantize_retain_top_four_bits(quant_level, encvals[i], &(output[i]), &dummy);
+		uint8_t dummy;
+		quantize_and_unquantize_retain_top_four_bits(
+		    quant_level, static_cast<uint8_t>(encvals[i]), output[i], dummy);
 	}
 
 	return;
 }
 
-static void quantize_hdr_rgb3(
+/**
+ * @brief Quantize a HDR RGB color using direct RGB encoding.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as packed RGB+RGB pairs with mode bits.
+ * @param      quant_level   The quantization level to use.
+ */
+static void quantize_hdr_rgb(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[6],
-	int quant_level
+	uint8_t output[6],
+	quant_method quant_level
 ) {
 	// Note: color*.lane<3> is not used so we can ignore it
 	color0 = clamp(0.0f, 65535.0f, color0);
@@ -1193,25 +1392,25 @@ static void quantize_hdr_rgb3(
 	int majcomp;
 	if (color1.lane<0>() > color1.lane<1>() && color1.lane<0>() > color1.lane<2>())
 	{
-		majcomp = 0;			// red is largest
+		majcomp = 0;
 	}
 	else if (color1.lane<1>() > color1.lane<2>())
 	{
-		majcomp = 1;			// green is largest
+		majcomp = 1;
 	}
 	else
 	{
-		majcomp = 2;			// blue is largest
+		majcomp = 2;
 	}
 
-	// swizzle the components
+	// Swizzle the components
 	switch (majcomp)
 	{
-	case 1:					// red-green swap
+	case 1:  // red-green swap
 		color0 = color0.swz<1, 0, 2, 3>();
 		color1 = color1.swz<1, 0, 2, 3>();
 		break;
-	case 2:					// red-blue swap
+	case 2:  // red-blue swap
 		color0 = color0.swz<2, 1, 0, 3>();
 		color1 = color1.swz<2, 1, 0, 3>();
 		break;
@@ -1228,8 +1427,8 @@ static void quantize_hdr_rgb3(
 	float d0_base = a_base - b0_base - c_base - color0.lane<1>();
 	float d1_base = a_base - b1_base - c_base - color0.lane<2>();
 
-	// number of bits in the various fields in the various modes
-	static const int mode_bits[8][4] = {
+	// Number of bits in the various fields in the various modes
+	static const int mode_bits[8][4] {
 		{9, 7, 6, 7},
 		{9, 8, 6, 6},
 		{10, 6, 7, 7},
@@ -1240,9 +1439,9 @@ static void quantize_hdr_rgb3(
 		{12, 6, 7, 6}
 	};
 
-	// cutoffs to use for the computed values of a,b,c,d, assuming the
+	// Cutoffs to use for the computed values of a,b,c,d, assuming the
 	// range 0..65535 are LNS values corresponding to fp16.
-	static const float mode_cutoffs[8][4] = {
+	static const float mode_cutoffs[8][4] {
 		{16384, 8192, 8192, 8},	// mode 0: 9,7,6,7
 		{32768, 8192, 4096, 8},	// mode 1: 9,8,6,6
 		{4096, 8192, 4096, 4},	// mode 2: 10,6,7,7
@@ -1253,7 +1452,7 @@ static void quantize_hdr_rgb3(
 		{1024, 2048, 512, 1},	// mode 7: 12,6,7,6
 	};
 
-	static const float mode_scales[8] = {
+	static const float mode_scales[8] {
 		1.0f / 128.0f,
 		1.0f / 128.0f,
 		1.0f / 64.0f,
@@ -1264,8 +1463,8 @@ static void quantize_hdr_rgb3(
 		1.0f / 16.0f,
 	};
 
-	// scaling factors when going from what was encoded in the mode to 16 bits.
-	static const float mode_rscales[8] = {
+	// Scaling factors when going from what was encoded in the mode to 16 bits.
+	static const float mode_rscales[8] {
 		128.0f,
 		128.0f,
 		64.0f,
@@ -1276,11 +1475,11 @@ static void quantize_hdr_rgb3(
 		16.0f
 	};
 
-	// try modes one by one, with the highest-precision mode first.
+	// Try modes one by one, with the highest-precision mode first.
 	for (int mode = 7; mode >= 0; mode--)
 	{
-		// for each mode, test if we can in fact accommodate
-		// the computed b,c,d values. If we clearly can't, then we skip to the next mode.
+		// For each mode, test if we can in fact accommodate the computed b, c, and d values.
+		// If we clearly can't, then we skip to the next mode.
 
 		float b_cutoff = mode_cutoffs[mode][0];
 		float c_cutoff = mode_cutoffs[mode][1];
@@ -1298,7 +1497,7 @@ static void quantize_hdr_rgb3(
 		int c_intcutoff = 1 << mode_bits[mode][2];
 		int d_intcutoff = 1 << (mode_bits[mode][3] - 1);
 
-		// first, quantize and unquantize A, with the assumption that its high bits can be handled safely.
+		// Quantize and unquantize A, with the assumption that its high bits can be handled safely.
 		int a_intval = astc::flt2int_rtn(a_base * mode_scale);
 		int a_lowbits = a_intval & 0xFF;
 
@@ -1307,7 +1506,7 @@ static void quantize_hdr_rgb3(
 		a_intval = (a_intval & ~0xFF) | a_uquantval;
 		float a_fval = static_cast<float>(a_intval) * mode_rscale;
 
-		// next, recompute C, then quantize and unquantize it
+		// Recompute C, then quantize and unquantize it
 		float c_fval = a_fval - color0.lane<0>();
 		c_fval = astc::clamp(c_fval, 0.0f, 65535.0f);
 
@@ -1323,13 +1522,16 @@ static void quantize_hdr_rgb3(
 		c_lowbits |= (mode & 1) << 7;
 		c_lowbits |= (a_intval & 0x100) >> 2;
 
-		int c_quantval;
-		int c_uquantval;
-		quantize_and_unquantize_retain_top_two_bits(quant_level, c_lowbits, &c_quantval, &c_uquantval);
+		uint8_t c_quantval;
+		uint8_t c_uquantval;
+
+		quantize_and_unquantize_retain_top_two_bits(
+		    quant_level, static_cast<uint8_t>(c_lowbits), c_quantval, c_uquantval);
+
 		c_intval = (c_intval & ~0x3F) | (c_uquantval & 0x3F);
 		c_fval = static_cast<float>(c_intval) * mode_rscale;
 
-		// next, recompute B0 and B1, then quantize and unquantize them
+		// Recompute B0 and B1, then quantize and unquantize them
 		float b0_fval = a_fval - color1.lane<1>();
 		float b1_fval = a_fval - color1.lane<2>();
 
@@ -1388,21 +1590,22 @@ static void quantize_hdr_rgb3(
 		b0_lowbits |= ((mode >> 1) & 1) << 7;
 		b1_lowbits |= ((mode >> 2) & 1) << 7;
 
-		int b0_quantval;
-		int b1_quantval;
-		int b0_uquantval;
-		int b1_uquantval;
+		uint8_t b0_quantval;
+		uint8_t b1_quantval;
+		uint8_t b0_uquantval;
+		uint8_t b1_uquantval;
 
-		quantize_and_unquantize_retain_top_two_bits(quant_level, b0_lowbits, &b0_quantval, &b0_uquantval);
-
-		quantize_and_unquantize_retain_top_two_bits(quant_level, b1_lowbits, &b1_quantval, &b1_uquantval);
+		quantize_and_unquantize_retain_top_two_bits(
+		    quant_level, static_cast<uint8_t>(b0_lowbits), b0_quantval, b0_uquantval);
+		quantize_and_unquantize_retain_top_two_bits(
+		    quant_level, static_cast<uint8_t>(b1_lowbits), b1_quantval, b1_uquantval);
 
 		b0_intval = (b0_intval & ~0x3f) | (b0_uquantval & 0x3f);
 		b1_intval = (b1_intval & ~0x3f) | (b1_uquantval & 0x3f);
 		b0_fval = static_cast<float>(b0_intval) * mode_rscale;
 		b1_fval = static_cast<float>(b1_intval) * mode_rscale;
 
-		// finally, recompute D0 and D1, then quantize and unquantize them
+		// Recompute D0 and D1, then quantize and unquantize them
 		float d0_fval = a_fval - b0_fval - c_fval - color0.lane<1>();
 		float d1_fval = a_fval - b1_fval - c_fval - color0.lane<2>();
 
@@ -1484,16 +1687,17 @@ static void quantize_hdr_rgb3(
 		d0_lowbits |= (majcomp & 1) << 7;
 		d1_lowbits |= ((majcomp >> 1) & 1) << 7;
 
-		int d0_quantval;
-		int d1_quantval;
-		int d0_uquantval;
-		int d1_uquantval;
+		uint8_t d0_quantval;
+		uint8_t d1_quantval;
+		uint8_t d0_uquantval;
+		uint8_t d1_uquantval;
 
-		quantize_and_unquantize_retain_top_four_bits(quant_level, d0_lowbits, &d0_quantval, &d0_uquantval);
+		quantize_and_unquantize_retain_top_four_bits(
+		    quant_level, static_cast<uint8_t>(d0_lowbits), d0_quantval, d0_uquantval);
+		quantize_and_unquantize_retain_top_four_bits(
+		    quant_level, static_cast<uint8_t>(d1_lowbits), d1_quantval, d1_uquantval);
 
-		quantize_and_unquantize_retain_top_four_bits(quant_level, d1_lowbits, &d1_quantval, &d1_uquantval);
-
-		output[0] = a_quantval;
+		output[0] = static_cast<uint8_t>(a_quantval);
 		output[1] = c_quantval;
 		output[2] = b0_quantval;
 		output[3] = b1_quantval;
@@ -1502,11 +1706,10 @@ static void quantize_hdr_rgb3(
 		return;
 	}
 
-	// neither of the modes fit? In this case, we will use a flat representation
-	// for storing data, using 8 bits for red and green, and 7 bits for blue.
-	// This gives color accuracy roughly similar to LDR 4:4:3 which is not at all great
-	// but usable. This representation is used if the light color is more than 4x the
-	// color value of the dark color.
+	// If neither of the modes fit we will use a flat representation for storing data, using 8 bits
+	// for red and green, and 7 bits for blue. This gives color accuracy roughly similar to LDR
+	// 4:4:3 which is not at all great but usable. This representation is used if the light color is
+	// more than 4x the color value of the dark color.
 	float vals[6];
 	vals[0] = color0_bak.lane<0>();
 	vals[1] = color1_bak.lane<0>();
@@ -1528,39 +1731,53 @@ static void quantize_hdr_rgb3(
 
 	for (int i = 4; i < 6; i++)
 	{
-		int dummy;
+		uint8_t dummy;
 		int idx = astc::flt2int_rtn(vals[i] * 1.0f / 512.0f) + 128;
-		quantize_and_unquantize_retain_top_two_bits(quant_level, idx, &(output[i]), &dummy);
+		quantize_and_unquantize_retain_top_two_bits(
+		    quant_level, static_cast<uint8_t>(idx), output[i], dummy);
 	}
 
 	return;
 }
 
-static void quantize_hdr_rgb_ldr_alpha3(
+/**
+ * @brief Quantize a HDR RGB + LDR A color using direct RGBA encoding.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as packed RGBA+RGBA pairs with mode bits.
+ * @param      quant_level   The quantization level to use.
+ */
+static void quantize_hdr_rgb_ldr_alpha(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[8],
-	int quant_level
+	uint8_t output[8],
+	quant_method quant_level
 ) {
 	float scale = 1.0f / 257.0f;
 
 	float a0 = astc::clamp255f(color0.lane<3>() * scale);
 	float a1 = astc::clamp255f(color1.lane<3>() * scale);
 
-	int ai0 = color_quant_tables[quant_level][astc::flt2int_rtn(a0)];
-	int ai1 = color_quant_tables[quant_level][astc::flt2int_rtn(a1)];
+	output[6] = color_quant_tables[quant_level][astc::flt2int_rtn(a0)];
+	output[7] = color_quant_tables[quant_level][astc::flt2int_rtn(a1)];
 
-	output[6] = ai0;
-	output[7] = ai1;
-
-	quantize_hdr_rgb3(color0, color1, output, quant_level);
+	quantize_hdr_rgb(color0, color1, output, quant_level);
 }
 
-static void quantize_hdr_luminance_large_range3(
+/**
+ * @brief Quantize a HDR L color using the large range encoding.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as packed (l0, l1).
+ * @param      quant_level   The quantization level to use.
+ */
+static void quantize_hdr_luminance_large_range(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[2],
-	int quant_level
+	uint8_t output[2],
+	quant_method quant_level
 ) {
 	float lum0 = hadd_rgb_s(color0) * (1.0f / 3.0f);
 	float lum1 = hadd_rgb_s(color1) * (1.0f / 3.0f);
@@ -1575,21 +1792,21 @@ static void quantize_hdr_luminance_large_range3(
 	int ilum1 = astc::flt2int_rtn(lum1);
 	int ilum0 = astc::flt2int_rtn(lum0);
 
-	// find the closest encodable point in the upper half of the code-point space
+	// Find the closest encodable point in the upper half of the code-point space
 	int upper_v0 = (ilum0 + 128) >> 8;
 	int upper_v1 = (ilum1 + 128) >> 8;
 
 	upper_v0 = astc::clamp(upper_v0, 0, 255);
 	upper_v1 = astc::clamp(upper_v1, 0, 255);
 
-	// find the closest encodable point in the lower half of the code-point space
+	// Find the closest encodable point in the lower half of the code-point space
 	int lower_v0 = (ilum1 + 256) >> 8;
 	int lower_v1 = ilum0 >> 8;
 
 	lower_v0 = astc::clamp(lower_v0, 0, 255);
 	lower_v1 = astc::clamp(lower_v1, 0, 255);
 
-	// determine the distance between the point in code-point space and the input value
+	// Determine the distance between the point in code-point space and the input value
 	int upper0_dec = upper_v0 << 8;
 	int upper1_dec = upper_v1 << 8;
 	int lower0_dec = (lower_v1 << 8) + 128;
@@ -1620,11 +1837,21 @@ static void quantize_hdr_luminance_large_range3(
 	output[1] = color_quant_tables[quant_level][v1];
 }
 
-static bool try_quantize_hdr_luminance_small_range3(
+/**
+ * @brief Quantize a HDR L color using the small range encoding.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as packed (l0, l1) with mode bits.
+ * @param      quant_level   The quantization level to use.
+ *
+ * @return Returns @c false on failure, @c true on success.
+ */
+static bool try_quantize_hdr_luminance_small_range(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[2],
-	int quant_level
+	uint8_t output[2],
+	quant_method quant_level
 ) {
 	float lum0 = hadd_rgb_s(color0) * (1.0f / 3.0f);
 	float lum1 = hadd_rgb_s(color1) * (1.0f / 3.0f);
@@ -1639,7 +1866,7 @@ static bool try_quantize_hdr_luminance_small_range3(
 	int ilum1 = astc::flt2int_rtn(lum1);
 	int ilum0 = astc::flt2int_rtn(lum0);
 
-	// difference of more than a factor-of-2 results in immediate failure.
+	// Difference of more than a factor-of-2 results in immediate failure
 	if (ilum1 - ilum0 > 2048)
 	{
 		return false;
@@ -1650,7 +1877,7 @@ static bool try_quantize_hdr_luminance_small_range3(
 	int v0e, v1e;
 	int v0d, v1d;
 
-	// first, try to encode the high-precision submode
+	// Try to encode the high-precision submode
 	lowval = (ilum0 + 16) >> 5;
 	highval = (ilum1 + 16) >> 5;
 
@@ -1672,16 +1899,14 @@ static bool try_quantize_hdr_luminance_small_range3(
 			v1d = color_unquant_tables[quant_level][v1e];
 			if ((v1d & 0xF0) == (v1 & 0xF0))
 			{
-				output[0] = v0e;
-				output[1] = v1e;
+				output[0] = static_cast<uint8_t>(v0e);
+				output[1] = static_cast<uint8_t>(v1e);
 				return true;
 			}
 		}
 	}
 
-	// failed to encode the high-precision submode; well, then try to encode the
-	// low-precision submode.
-
+	// Try to encode the low-precision submode
 	lowval = (ilum0 + 32) >> 6;
 	highval = (ilum1 + 32) >> 6;
 
@@ -1711,16 +1936,24 @@ static bool try_quantize_hdr_luminance_small_range3(
 		return false;
 	}
 
-	output[0] = v0e;
-	output[1] = v1e;
+	output[0] = static_cast<uint8_t>(v0e);
+	output[1] = static_cast<uint8_t>(v1e);
 	return true;
 }
 
-static void quantize_hdr_alpha3(
+/**
+ * @brief Quantize a HDR A color using either delta or direct RGBA encoding.
+ *
+ * @param      alpha0        The input unquantized color0 endpoint.
+ * @param      alpha1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as packed RGBA+RGBA pairs with mode bits.
+ * @param      quant_level   The quantization level to use.
+ */
+static void quantize_hdr_alpha(
 	float alpha0,
 	float alpha1,
-	int output[2],
-	int quant_level
+	uint8_t output[2],
+	quant_method quant_level
 ) {
 	alpha0 = astc::clamp(alpha0, 0.0f, 65280.0f);
 	alpha1 = astc::clamp(alpha1, 0.0f, 65280.0f);
@@ -1733,7 +1966,7 @@ static void quantize_hdr_alpha3(
 	int v6e, v7e;
 	int v6d, v7d;
 
-	// try to encode one of the delta submodes, in decreasing-precision order.
+	// Try to encode one of the delta submodes, in decreasing-precision order
 	for (int i = 2; i >= 0; i--)
 	{
 		val0 = (ialpha0 + (128 >> i)) >> (8 - i);
@@ -1769,55 +2002,58 @@ static void quantize_hdr_alpha3(
 			continue;
 		}
 
-		output[0] = v6e;
-		output[1] = v7e;
+		output[0] = static_cast<uint8_t>(v6e);
+		output[1] = static_cast<uint8_t>(v7e);
 		return;
 	}
 
-	// could not encode any of the delta modes; instead encode a flat value
+	// Could not encode any of the delta modes; instead encode a flat value
 	val0 = (ialpha0 + 256) >> 9;
 	val1 = (ialpha1 + 256) >> 9;
 	v6 = val0 | 0x80;
 	v7 = val1 | 0x80;
 
-	v6e = color_quant_tables[quant_level][v6];
-	v7e = color_quant_tables[quant_level][v7];
-	output[0] = v6e;
-	output[1] = v7e;
+	output[0] = color_quant_tables[quant_level][v6];
+	output[1] = color_quant_tables[quant_level][v7];
 
 	return;
 }
 
-static void quantize_hdr_rgb_alpha3(
+/**
+ * @brief Quantize a HDR RGBA color using either delta or direct RGBA encoding.
+ *
+ * @param      color0        The input unquantized color0 endpoint.
+ * @param      color1        The input unquantized color1 endpoint.
+ * @param[out] output        The output endpoints, returned as packed RGBA+RGBA pairs with mode bits.
+ * @param      quant_level   The quantization level to use.
+ */
+static void quantize_hdr_rgb_alpha(
 	vfloat4 color0,
 	vfloat4 color1,
-	int output[8],
-	int quant_level
+	uint8_t output[8],
+	quant_method quant_level
 ) {
-	quantize_hdr_rgb3(color0, color1, output, quant_level);
-	quantize_hdr_alpha3(color0.lane<3>(), color1.lane<3>(), output + 6, quant_level);
+	quantize_hdr_rgb(color0, color1, output, quant_level);
+	quantize_hdr_alpha(color0.lane<3>(), color1.lane<3>(), output + 6, quant_level);
 }
 
-/*
-	Quantize a color. When quantizing an RGB or RGBA color, the quantizer may choose a
-	delta-based representation; as such, it will report back the format it actually used.
-*/
-int pack_color_endpoints(
+/* See header for documentation. */
+uint8_t pack_color_endpoints(
 	vfloat4 color0,
 	vfloat4 color1,
 	vfloat4 rgbs_color,
 	vfloat4 rgbo_color,
 	int format,
-	int* output,
-	int quant_level
+	uint8_t* output,
+	quant_method quant_level
 ) {
-	assert(quant_level >= 0 && quant_level < 21);
+	assert(quant_level < 21);
 
-	// we do not support negative colors.
+	// We do not support negative colors
 	color0 = max(color0, 0.0f);
 	color1 = max(color1, 0.0f);
 
-	int retval = 0;
+	uint8_t retval = 0;
 
 	switch (format)
 	{
@@ -1868,33 +2104,33 @@ int pack_color_endpoints(
 		break;
 
 	case FMT_RGB_SCALE:
-		quantize_rgbs_new(rgbs_color, output, quant_level);
+		quantize_rgbs(rgbs_color, output, quant_level);
 		retval = FMT_RGB_SCALE;
 		break;
 
 	case FMT_HDR_RGB_SCALE:
-		quantize_hdr_rgbo3(rgbo_color, output, quant_level);
+		quantize_hdr_rgbo(rgbo_color, output, quant_level);
 		retval = FMT_HDR_RGB_SCALE;
 		break;
 
 	case FMT_HDR_RGB:
-		quantize_hdr_rgb3(color0, color1, output, quant_level);
+		quantize_hdr_rgb(color0, color1, output, quant_level);
 		retval = FMT_HDR_RGB;
 		break;
 
 	case FMT_RGB_SCALE_ALPHA:
-		quantize_rgbs_alpha_new(color0, color1, rgbs_color, output, quant_level);
+		quantize_rgbs_alpha(color0, color1, rgbs_color, output, quant_level);
 		retval = FMT_RGB_SCALE_ALPHA;
 		break;
 
 	case FMT_HDR_LUMINANCE_SMALL_RANGE:
 	case FMT_HDR_LUMINANCE_LARGE_RANGE:
-		if (try_quantize_hdr_luminance_small_range3(color0, color1, output, quant_level))
+		if (try_quantize_hdr_luminance_small_range(color0, color1, output, quant_level))
 		{
 			retval = FMT_HDR_LUMINANCE_SMALL_RANGE;
 			break;
 		}
-		quantize_hdr_luminance_large_range3(color0, color1, output, quant_level);
+		quantize_hdr_luminance_large_range(color0, color1, output, quant_level);
 		retval = FMT_HDR_LUMINANCE_LARGE_RANGE;
 		break;
 
@@ -1917,12 +2153,12 @@ int pack_color_endpoints(
 		break;
 
 	case FMT_HDR_RGB_LDR_ALPHA:
-		quantize_hdr_rgb_ldr_alpha3(color0, color1, output, quant_level);
+		quantize_hdr_rgb_ldr_alpha(color0, color1, output, quant_level);
 		retval = FMT_HDR_RGB_LDR_ALPHA;
 		break;
 
 	case FMT_HDR_RGBA:
-		quantize_hdr_rgb_alpha3(color0, color1, output, quant_level);
+		quantize_hdr_rgb_alpha(color0, color1, output, quant_level);
 		retval = FMT_HDR_RGBA;
 		break;
 	}

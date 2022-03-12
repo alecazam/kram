@@ -15,29 +15,44 @@
 // under the License.
 // ----------------------------------------------------------------------------
 
-
 /**
  * @brief Platform-specific function implementations.
  *
  * This module contains functions for querying the host extended ISA support.
  */
 
+// Include before the defines below to pick up any auto-setup based on compiler
+// built-in config, if not being set explicitly by the build system
 #include "astcenc_internal.h"
 
 #if (ASTCENC_SSE > 0)    || (ASTCENC_AVX > 0) || \
     (ASTCENC_POPCNT > 0) || (ASTCENC_F16C > 0)
 
-static int g_cpu_has_sse41 = -1;
-static int g_cpu_has_avx2 = -1;
-static int g_cpu_has_popcnt = -1;
-static int g_cpu_has_f16c = -1;
+static bool g_init { false };
+
+/** Does this CPU support SSE 4.1? Set to -1 if not yet initialized. */
+static bool g_cpu_has_sse41 { false };
+
+/** Does this CPU support AVX2? Set to -1 if not yet initialized. */
+static bool g_cpu_has_avx2 { false };
+
+/** Does this CPU support POPCNT? Set to -1 if not yet initialized. */
+static bool g_cpu_has_popcnt { false };
+
+/** Does this CPU support F16C? Set to -1 if not yet initialized. */
+static bool g_cpu_has_f16c { false };
 
 /* ============================================================================
    Platform code for Visual Studio
 ============================================================================ */
 #if !defined(__clang__) && defined(_MSC_VER)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include <intrin.h>
 
+/**
+ * @brief Detect platform CPU ISA support and update global trackers.
+ */
 static void detect_cpu_isa()
 {
 	int data[4];
@@ -45,27 +60,27 @@ static void detect_cpu_isa()
 	__cpuid(data, 0);
 	int num_id = data[0];
 
-	g_cpu_has_sse41 = 0;
-	g_cpu_has_popcnt = 0;
-	g_cpu_has_f16c = 0;
 	if (num_id >= 1)
 	{
 		__cpuidex(data, 1, 0);
 		// SSE41 = Bank 1, ECX, bit 19
-		g_cpu_has_sse41 = data[2] & (1 << 19) ? 1 : 0;
+		g_cpu_has_sse41 = data[2] & (1 << 19) ? true : false;
 		// POPCNT = Bank 1, ECX, bit 23
-		g_cpu_has_popcnt = data[2] & (1 << 23) ? 1 : 0;
+		g_cpu_has_popcnt = data[2] & (1 << 23) ? true : false;
 		// F16C = Bank 1, ECX, bit 29
-		g_cpu_has_f16c = data[2] & (1 << 29) ? 1 : 0;
+		g_cpu_has_f16c = data[2] & (1 << 29) ? true : false;
 	}
 
-	g_cpu_has_avx2 = 0;
 	if (num_id >= 7)
 	{
 		__cpuidex(data, 7, 0);
 		// AVX2 = Bank 7, EBX, bit 5
-		g_cpu_has_avx2 = data[1] & (1 << 5) ? 1 : 0;
+		g_cpu_has_avx2 = data[1] & (1 << 5) ? true : false;
 	}
+
+	// Ensure state bits are updated before init flag is updated
+	MemoryBarrier();
+	g_init = true;
 }
 
 /* ============================================================================
@@ -74,47 +89,40 @@ static void detect_cpu_isa()
 #else
 #include <cpuid.h>
 
+/**
+ * @brief Detect platform CPU ISA support and update global trackers.
+ */
 static void detect_cpu_isa()
 {
 	unsigned int data[4];
 
-	g_cpu_has_sse41 = 0;
-	g_cpu_has_popcnt = 0;
-	g_cpu_has_f16c = 0;
 	if (__get_cpuid_count(1, 0, &data[0], &data[1], &data[2], &data[3]))
 	{
 		// SSE41 = Bank 1, ECX, bit 19
-		g_cpu_has_sse41 = data[2] & (1 << 19) ? 1 : 0;
+		g_cpu_has_sse41 = data[2] & (1 << 19) ? true : false;
 		// POPCNT = Bank 1, ECX, bit 23
-		g_cpu_has_popcnt = data[2] & (1 << 23) ? 1 : 0;
+		g_cpu_has_popcnt = data[2] & (1 << 23) ? true : false;
 		// F16C = Bank 1, ECX, bit 29
-		g_cpu_has_f16c = data[2] & (1 << 29) ? 1 : 0;
+		g_cpu_has_f16c = data[2] & (1 << 29) ? true : false;
 	}
 
 	g_cpu_has_avx2 = 0;
 	if (__get_cpuid_count(7, 0, &data[0], &data[1], &data[2], &data[3]))
 	{
 		// AVX2 = Bank 7, EBX, bit 5
-		g_cpu_has_avx2 = data[1] & (1 << 5) ? 1 : 0;
+		g_cpu_has_avx2 = data[1] & (1 << 5) ? true : false;
 	}
+
+	// Ensure state bits are updated before init flag is updated
+	__sync_synchronize();
+	g_init = true;
 }
 #endif
 
-/* Public function, see header file for detailed documentation */
-int cpu_supports_sse41()
+/* See header for documentation. */
+bool cpu_supports_popcnt()
 {
-	if (g_cpu_has_sse41 == -1)
-	{
-		detect_cpu_isa();
-	}
-
-	return g_cpu_has_sse41;
-}
-
-/* Public function, see header file for detailed documentation */
-int cpu_supports_popcnt()
-{
-	if (g_cpu_has_popcnt == -1)
+	if (!g_init)
 	{
 		detect_cpu_isa();
 	}
@@ -122,10 +130,10 @@ int cpu_supports_popcnt()
 	return g_cpu_has_popcnt;
 }
 
-/* Public function, see header file for detailed documentation */
-int cpu_supports_f16c()
+/* See header for documentation. */
+bool cpu_supports_f16c()
 {
-	if (g_cpu_has_f16c == -1)
+	if (!g_init)
 	{
 		detect_cpu_isa();
 	}
@@ -133,10 +141,21 @@ int cpu_supports_f16c()
 	return g_cpu_has_f16c;
 }
 
-/* Public function, see header file for detailed documentation */
-int cpu_supports_avx2()
+/* See header for documentation. */
+bool cpu_supports_sse41()
 {
-	if (g_cpu_has_avx2 == -1)
+	if (!g_init)
+	{
+		detect_cpu_isa();
+	}
+
+	return g_cpu_has_sse41;
+}
+
+/* See header for documentation. */
+bool cpu_supports_avx2()
+{
+	if (!g_init)
 	{
 		detect_cpu_isa();
 	}

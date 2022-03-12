@@ -27,18 +27,6 @@
 #include <cstdint>
 #include <cmath>
 
-#ifndef ASTCENC_NEON
-  #if defined(__aarch64__) || defined(__arm__)
-    #define ASTCENC_NEON 1
-
-    // these aren't valid on Neon
-    #define ASTCENC_AVX 0
-    #define ASTCENC_SSE 0
-  #else
-    #define ASTCENC_NEON 0
-  #endif
-#endif
-
 #ifndef ASTCENC_POPCNT
   #if defined(__POPCNT__)
     #define ASTCENC_POPCNT 1
@@ -79,8 +67,14 @@
   #endif
 #endif
 
-// 32-byte words in AVX and AVX2, but also a lot of 16-byte ops in AVX
-// Neon only has 16-byte ops for now, but new ISA on the way.
+#ifndef ASTCENC_NEON
+  #if defined(__aarch64__)
+    #define ASTCENC_NEON 1
+  #else
+    #define ASTCENC_NEON 0
+  #endif
+#endif
+
 #if ASTCENC_AVX
   #define ASTCENC_VECALIGN 32
 #else
@@ -422,79 +416,13 @@ uint64_t rand(uint64_t state[2]);
 }
 
 /* ============================================================================
-  Utility vector template classes with basic operations
-============================================================================ */
-
-template <typename T> class vtype2
-{
-public:
-	// Data storage
-	T r, g;
-
-	// Default constructor
-	vtype2() {}
-
-	// Initialize from 1 scalar
-	vtype2(T p) : r(p), g(p) {}
-
-	// Initialize from N scalars
-	vtype2(T p, T q) : r(p), g(q) {}
-
-	// Initialize from another vector
-	vtype2(const vtype2 & p) : r(p.r), g(p.g) {}
-
-	// Assignment operator
-	vtype2& operator=(const vtype2 &s) {
-		this->r = s.r;
-		this->g = s.g;
-		return *this;
-	}
-};
-
-// Vector by vector addition
-template <typename T>
-vtype2<T> operator+(vtype2<T> p, vtype2<T> q) {
-	return vtype2<T> { p.r + q.r, p.g + q.g };
-}
-
-// Vector by vector subtraction
-template <typename T>
-vtype2<T> operator-(vtype2<T> p, vtype2<T> q) {
-	return vtype2<T> { p.r - q.r, p.g - q.g };
-}
-
-// Vector by vector multiplication operator
-template <typename T>
-vtype2<T> operator*(vtype2<T> p, vtype2<T> q) {
-	return vtype2<T> { p.r * q.r, p.g * q.g };
-}
-
-// Vector by scalar multiplication operator
-template <typename T>
-vtype2<T> operator*(vtype2<T> p, T q) {
-	return vtype2<T> { p.r * q, p.g * q };
-}
-
-// Scalar by vector multiplication operator
-template <typename T>
-vtype2<T> operator*(T p, vtype2<T> q) {
-	return vtype2<T> { p * q.r, p * q.g };
-}
-
-typedef vtype2<float>        float2;
-
-static inline float dot(float2 p, float2 q)  { return p.r * q.r + p.g * q.g; }
-
-static inline float2 normalize(float2 p) { return p * astc::rsqrt(dot(p, p)); }
-
-/* ============================================================================
   Softfloat library with fp32 and fp16 conversion functionality.
 ============================================================================ */
-uint32_t clz32(uint32_t p);
-
-/* narrowing float->float conversions */
-uint16_t float_to_sf16(float val);
-float sf16_to_float(uint16_t val);
+#if (ASTCENC_F16C == 0) && (ASTCENC_NEON == 0)
+	/* narrowing float->float conversions */
+	uint16_t float_to_sf16(float val);
+	float sf16_to_float(uint16_t val);
+#endif
 
 /*********************************
   Vector library
@@ -508,8 +436,8 @@ float sf16_to_float(uint16_t val);
 
 struct line2
 {
-	float2 a;
-	float2 b;
+	vfloat4 a;
+	vfloat4 b;
 };
 
 // parametric line, 3D
@@ -528,23 +456,20 @@ struct line4
 
 struct processed_line2
 {
-	float2 amod;
-	float2 bs;
-	float2 bis;
+	vfloat4 amod;
+	vfloat4 bs;
 };
 
 struct processed_line3
 {
 	vfloat4 amod;
 	vfloat4 bs;
-	vfloat4 bis;
 };
 
 struct processed_line4
 {
 	vfloat4 amod;
 	vfloat4 bs;
-	vfloat4 bis;
 };
 
 #endif

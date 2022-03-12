@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
-// Copyright 2011-2021 Arm Limited
+// Copyright 2011-2022 Arm Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy
@@ -22,14 +22,14 @@
 #ifndef ASTCENC_INTERNAL_INCLUDED
 #define ASTCENC_INTERNAL_INCLUDED
 
-//#include <algorithm>
-//#include <atomic>
+#include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <condition_variable>
-//#include <functional>
+#include <functional>
 #include <mutex>
 #include <type_traits>
 
@@ -40,11 +40,10 @@
 /**
  * @brief Make a promise to the compiler's optimizer.
  *
- * A promise is an expression that the optimizer is can assume is true for to
- * help it generate faster code. Common use cases for this are to promise that
- * a for loop will iterate more than once, or that the loop iteration count is
- * a multiple of a vector length, which avoids pre-loop checks and can avoid
- * loop tails if loops are unrolled by the auto-vectorizer.
+ * A promise is an expression that the optimizer is can assume is true for to help it generate
+ * faster code. Common use cases for this are to promise that a for loop will iterate more than
+ * once, or that the loop iteration count is a multiple of a vector length, which avoids pre-loop
+ * checks and can avoid loop tails if loops are unrolled by the auto-vectorizer.
  */
 #if defined(NDEBUG)
 	#if !defined(__clang__) && defined(_MSC_VER)
@@ -61,59 +60,91 @@
 		#define promise(cond) if(!(cond)) { __builtin_unreachable(); }
 	#endif
 #else
-	#define promise(cond) assert(cond);
-#endif
-
-/**
- * @brief Make a promise to the compiler's optimizer parameters don't alias.
- *
- * This is a compiler extension to implement the equivalent of the C99
- *  @c restrict keyword. Mostly expected to help on functions which are
- * reading and writing to arrays via pointers of the same basic type.
- */
-#if !defined(__clang__) && defined(_MSC_VER)
-	#define RESTRICT __restrict
-#else // Assume Clang or GCC
-	#define RESTRICT __restrict__
+	#define promise(cond) assert(cond)
 #endif
 
 /* ============================================================================
   Constants
 ============================================================================ */
-#define MAX_TEXELS_PER_BLOCK 216
-#define MAX_KMEANS_TEXELS 64
-#define MAX_WEIGHTS_PER_BLOCK 64
-#define PLANE2_WEIGHTS_OFFSET (MAX_WEIGHTS_PER_BLOCK/2)
-#define MIN_WEIGHT_BITS_PER_BLOCK 24
-#define MAX_WEIGHT_BITS_PER_BLOCK 96
-#define PARTITION_BITS 10
-#define PARTITION_COUNT (1 << PARTITION_BITS)
+#if !defined(ASTCENC_BLOCK_MAX_TEXELS)
+	#define ASTCENC_BLOCK_MAX_TEXELS 216 // A 3D 6x6x6 block
+#endif
 
-// the sum of weights for one texel.
-#define TEXEL_WEIGHT_SUM 16
-#define MAX_DECIMATION_MODES 87
-#define MAX_WEIGHT_MODES 2048
+/** @brief The maximum number of texels a block can support (6x6x6 block). */
+static constexpr unsigned int BLOCK_MAX_TEXELS { ASTCENC_BLOCK_MAX_TEXELS };
 
-// A high default error value
-static const float ERROR_CALC_DEFAULT { 1e30f };
+/** @brief The maximum number of components a block can support. */
+static constexpr unsigned int BLOCK_MAX_COMPONENTS { 4 };
 
-/* ============================================================================
-  Compile-time tuning parameters
-============================================================================ */
-// The max texel count in a block which can try the one partition fast path.
-// Default: enabled for 4x4 and 5x4 blocks.
-static const unsigned int TUNE_MAX_TEXELS_MODE0_FASTPATH { 24 };
+/** @brief The maximum number of partitions a block can support. */
+static constexpr unsigned int BLOCK_MAX_PARTITIONS { 4 };
 
-// The maximum number of candidate encodings returned for each encoding mode.
-// Default: depends on quality preset
-static const unsigned int TUNE_MAX_TRIAL_CANDIDATES { 4 };
+/** @brief The number of partitionings, per partition count, suported by the ASTC format. */
+static constexpr unsigned int BLOCK_MAX_PARTITIONINGS { 1024 };
 
-/* ============================================================================
-  Other configuration parameters
-============================================================================ */
+/** @brief The maximum number of weights used during partition selection for texel clustering. */
+static constexpr uint8_t BLOCK_MAX_KMEANS_TEXELS { 64 };
 
-// Uncomment to enable checking for inappropriate NaNs; Linux only, and slow!
-// #define DEBUG_CAPTURE_NAN
+/** @brief The maximum number of weights a block can support. */
+static constexpr unsigned int BLOCK_MAX_WEIGHTS { 64 };
+
+/** @brief The maximum number of weights a block can support per plane in 2 plane mode. */
+static constexpr unsigned int BLOCK_MAX_WEIGHTS_2PLANE { BLOCK_MAX_WEIGHTS / 2 };
+
+/** @brief The minimum number of weight bits a candidate encoding must encode. */
+static constexpr unsigned int BLOCK_MIN_WEIGHT_BITS { 24 };
+
+/** @brief The maximum number of weight bits a candidate encoding can encode. */
+static constexpr unsigned int BLOCK_MAX_WEIGHT_BITS { 96 };
+
+/** @brief The index indicating a bad (unused) block mode in the remap array. */
+static constexpr uint16_t BLOCK_BAD_BLOCK_MODE { 0xFFFFu };
+
+/** @brief The index indicating a bad (unused) partitioning in the remap array. */
+static constexpr uint16_t BLOCK_BAD_PARTITIONING { 0xFFFFu };
+
+/** @brief The number of partition index bits supported by the ASTC format . */
+static constexpr unsigned int PARTITION_INDEX_BITS { 10 };
+
+/** @brief The offset of the plane 2 weights in shared weight arrays. */
+static constexpr unsigned int WEIGHTS_PLANE2_OFFSET { BLOCK_MAX_WEIGHTS_2PLANE };
+
+/** @brief The sum of quantized weights for one texel. */
+static constexpr float WEIGHTS_TEXEL_SUM { 16.0f };
+
+/** @brief The number of block modes suported by the ASTC format. */
+static constexpr unsigned int WEIGHTS_MAX_BLOCK_MODES { 2048 };
+
+/** @brief The number of weight grid decimation modes suported by the ASTC format. */
+static constexpr unsigned int WEIGHTS_MAX_DECIMATION_MODES { 87 };
+
+/** @brief The high default error used to initialize error trackers. */
+static constexpr float ERROR_CALC_DEFAULT { 1e30f };
+
+/**
+ * @brief The minimum texel count for a block to use the one partition fast path.
+ *
+ * This setting skips 4x4 and 5x4 block sizes.
+ */
+static constexpr unsigned int TUNE_MIN_TEXELS_MODE0_FASTPATH { 24 };
+
+/**
+ * @brief The maximum number of candidate encodings tested for each encoding mode..
+ *
+ * This can be dynamically reduced by the compression quality preset.
+ */
+static constexpr unsigned int TUNE_MAX_TRIAL_CANDIDATES { 4 };
+
+
+static_assert((BLOCK_MAX_TEXELS % ASTCENC_SIMD_WIDTH) == 0,
+              "BLOCK_MAX_TEXELS must be multiple of ASTCENC_SIMD_WIDTH");
+
+static_assert((BLOCK_MAX_WEIGHTS % ASTCENC_SIMD_WIDTH) == 0,
+              "BLOCK_MAX_WEIGHTS must be multiple of ASTCENC_SIMD_WIDTH");
+
+static_assert((WEIGHTS_MAX_BLOCK_MODES % ASTCENC_SIMD_WIDTH) == 0,
+              "WEIGHTS_MAX_BLOCK_MODES must be multiple of ASTCENC_SIMD_WIDTH");
+
 
 /* ============================================================================
   Parallel execution control
@@ -128,21 +159,18 @@ static const unsigned int TUNE_MAX_TRIAL_CANDIDATES { 4 };
  *     * A multi-threaded processing stage.
  *     * A condition variable so threads can wait for processing completion.
  *
- * The init stage will be executed by the first thread to arrive in the
- * critical section, there is no main thread in the thread pool.
+ * The init stage will be executed by the first thread to arrive in the critical section, there is
+ * no main thread in the thread pool.
  *
- * The processing stage uses dynamic dispatch to assign task tickets to threads
- * on an on-demand basis. Threads may each therefore executed different numbers
- * of tasks, depending on their processing complexity. The task queue and the
- * task tickets are just counters; the caller must map these integers to an
- * actual processing partition in a specific problem domain.
+ * The processing stage uses dynamic dispatch to assign task tickets to threads on an on-demand
+ * basis. Threads may each therefore executed different numbers of tasks, depending on their
+ * processing complexity. The task queue and the task tickets are just counters; the caller must map
+ * these integers to an actual processing partition in a specific problem domain.
  *
- * The exit wait condition is needed to ensure processing has finished before
- * a worker thread can progress to the next stage of the pipeline. Specifically
- * a worker may exit the processing stage because there are no new tasks to
- * assign to it while other worker threads are still processing. Calling wait()
- * will ensure that all other worker have finished before the thread can
- * proceed.
+ * The exit wait condition is needed to ensure processing has finished before a worker thread can
+ * progress to the next stage of the pipeline. Specifically a worker may exit the processing stage
+ * because there are no new tasks to assign to it while other worker threads are still processing.
+ * Calling @c wait() will ensure that all other worker have finished before the thread can proceed.
  *
  * The basic usage model:
  *
@@ -181,13 +209,9 @@ static const unsigned int TUNE_MAX_TRIAL_CANDIDATES { 4 };
  */
 class ParallelManager
 {
-    using mymutex = std::recursive_mutex;
-    using mylock = std::unique_lock<mymutex>;
-    using mycondition = std::condition_variable_any;
-
 private:
 	/** @brief Lock used for critical section and condition synchronization. */
-    mymutex m_lock;
+	std::mutex m_lock;
 
 	/** @brief True if the stage init() step has been executed. */
 	bool m_init_done;
@@ -196,7 +220,7 @@ private:
 	bool m_term_done;
 
 	/** @brief Contition variable for tracking stage processing completion. */
-	mycondition m_complete;
+	std::condition_variable m_complete;
 
 	/** @brief Number of tasks started, but not necessarily finished. */
 	std::atomic<unsigned int> m_start_count;
@@ -217,8 +241,8 @@ public:
 	/**
 	 * @brief Reset the tracker for a new processing batch.
 	 *
-	 * This must be called from single-threaded code before starting the
-	 * multi-threaded procesing operations.
+	 * This must be called from single-threaded code before starting the multi-threaded procesing
+	 * operations.
 	 */
 	void reset()
 	{
@@ -232,16 +256,15 @@ public:
 	/**
 	 * @brief Trigger the pipeline stage init step.
 	 *
-	 * This can be called from multi-threaded code. The first thread to
-	 * hit this will process the initialization. Other threads will block
-	 * and wait for it to complete.
+	 * This can be called from multi-threaded code. The first thread to hit this will process the
+	 * initialization. Other threads will block and wait for it to complete.
 	 *
-	 * @param init_func   Callable which executes the stage initialization.
-	 *                    Must return the number of tasks in the stage.
+	 * @param init_func   Callable which executes the stage initialization. It must return the
+	 *                    total number of tasks in the stage.
 	 */
 	void init(std::function<unsigned int(void)> init_func)
 	{
-		mylock lck(m_lock);
+		std::lock_guard<std::mutex> lck(m_lock);
 		if (!m_init_done)
 		{
 			m_task_count = init_func();
@@ -252,15 +275,14 @@ public:
 	/**
 	 * @brief Trigger the pipeline stage init step.
 	 *
-	 * This can be called from multi-threaded code. The first thread to
-	 * hit this will process the initialization. Other threads will block
-	 * and wait for it to complete.
+	 * This can be called from multi-threaded code. The first thread to hit this will process the
+	 * initialization. Other threads will block and wait for it to complete.
 	 *
 	 * @param task_count   Total number of tasks needing processing.
 	 */
 	void init(unsigned int task_count)
 	{
-        mylock lck(m_lock);
+		std::lock_guard<std::mutex> lck(m_lock);
 		if (!m_init_done)
 		{
 			m_task_count = task_count;
@@ -274,11 +296,9 @@ public:
 	 * Assign up to @c granule tasks to the caller for processing.
 	 *
 	 * @param      granule   Maximum number of tasks that can be assigned.
-	 * @param[out] count     Actual number of tasks assigned, or zero if
-	 *                       no tasks were assigned.
+	 * @param[out] count     Actual number of tasks assigned, or zero if no tasks were assigned.
 	 *
-	 * @return Task index of the first assigned task; assigned tasks
-	 *         increment from this.
+	 * @return Task index of the first assigned task; assigned tasks increment from this.
 	 */
 	unsigned int get_task_assignment(unsigned int granule, unsigned int& count)
 	{
@@ -296,16 +316,16 @@ public:
 	/**
 	 * @brief Complete a task assignment.
 	 *
-	 * Mark @c count tasks as complete. This will notify all threads blocked
-	 * on @c wait() if this completes the processing of the stage.
+	 * Mark @c count tasks as complete. This will notify all threads blocked on @c wait() if this
+	 * completes the processing of the stage.
 	 *
 	 * @param count   The number of completed tasks.
 	 */
 	void complete_task_assignment(unsigned int count)
 	{
-		// Note: m_done_count cannot use an atomic without the mutex; this has
-		// a race between the update here and the wait() for other threads
-        mylock lck(m_lock);
+		// Note: m_done_count cannot use an atomic without the mutex; this has a race between the
+		// update here and the wait() for other threads
+		std::unique_lock<std::mutex> lck(m_lock);
 		this->m_done_count += count;
 		if (m_done_count == m_task_count)
 		{
@@ -319,22 +339,22 @@ public:
 	 */
 	void wait()
 	{
-        mylock lck(m_lock);
+		std::unique_lock<std::mutex> lck(m_lock);
 		m_complete.wait(lck, [this]{ return m_done_count == m_task_count; });
 	}
 
 	/**
 	 * @brief Trigger the pipeline stage term step.
 	 *
-	 * This can be called from multi-threaded code. The first thread to
-	 * hit this will process the thread termintion. Caller must have called
-	 * wait() prior to calling this function to ensure processing is complete.
+	 * This can be called from multi-threaded code. The first thread to hit this will process the
+	 * thread termintion. Caller must have called @c wait() prior to calling this function to ensure
+	 * that processing is complete.
 	 *
 	 * @param term_func   Callable which executes the stage termination.
 	 */
 	void term(std::function<void(void)> term_func)
 	{
-        mylock lck(m_lock);
+		std::lock_guard<std::mutex> lck(m_lock);
 		if (!m_term_done)
 		{
 			term_func();
@@ -343,293 +363,40 @@ public:
 	}
 };
 
-struct partition_metrics
-{
-	vfloat4 range_sq;
-	vfloat4 error_weight;
-	vfloat4 icolor_scale;
-	vfloat4 color_scale;
-	vfloat4 avg;
-	vfloat4 dir;
-};
-
-struct partition_lines3
-{
-	line3 uncor_line;
-	line3 samec_line;
-
-	processed_line3 uncor_pline;
-	processed_line3 samec_pline;
-
-	float uncor_line_len;
-	float samec_line_len;
-};
-
-/*
-	Partition table representation:
-	For each block size, we have 3 tables, each with 1024 partitionings;
-	these three tables correspond to 2, 3 and 4 partitions respectively.
-	For each partitioning, we have:
-	* a 4-entry table indicating how many texels there are in each of the 4 partitions.
-	  This may be from 0 to a very large value.
-	* a table indicating the partition index of each of the texels in the block.
-	  Each index may be 0, 1, 2 or 3.
-	* Each element in the table is an uint8_t indicating partition index (0, 1, 2 or 3)
-*/
-
-struct partition_info
-{
-	int partition_count;
-	uint8_t partition_texel_count[4];
-	uint8_t partition_of_texel[MAX_TEXELS_PER_BLOCK];
-	uint8_t texels_of_partition[4][MAX_TEXELS_PER_BLOCK];
-	uint64_t coverage_bitmaps[4];
-};
-
-/*
-   In ASTC, we don't necessarily provide a weight for every texel.
-   As such, for each block size, there are a number of patterns where some texels
-   have their weights computed as a weighted average of more than 1 weight.
-   As such, the codec uses a data structure that tells us: for each texel, which
-   weights it is a combination of for each weight, which texels it contributes to.
-   The decimation_table is this data structure.
-*/
-struct decimation_table
-{
-	// TODO: Make these byte values
-	int texel_count;
-	int weight_count;
-	int weight_x;
-	int weight_y;
-	int weight_z;
-
-	uint8_t texel_weight_count[MAX_TEXELS_PER_BLOCK];	// number of indices that go into the calculation for a texel
-
-	// The 4t and t4 tables are the same data, but transposed to allow optimal
-	// data access patterns depending on how we can unroll loops
-	alignas(ASTCENC_VECALIGN) float texel_weights_float_4t[4][MAX_TEXELS_PER_BLOCK];	// the weight to assign to each weight
-	alignas(ASTCENC_VECALIGN) uint8_t texel_weights_4t[4][MAX_TEXELS_PER_BLOCK];	// the weights that go into a texel calculation
-
-	// TODO: Can we remove the copies?
-	float texel_weights_float_t4[MAX_TEXELS_PER_BLOCK][4];	// the weight to assign to each weight
-	uint8_t texel_weights_t4[MAX_TEXELS_PER_BLOCK][4];	// the weights that go into a texel calculation
-
-	uint8_t texel_weights_int_t4[MAX_TEXELS_PER_BLOCK][4];	// the weight to assign to each weight
-
-	uint8_t weight_texel_count[MAX_WEIGHTS_PER_BLOCK];	// the number of texels that a given weight contributes to
-	uint8_t weights_int[MAX_WEIGHTS_PER_BLOCK][MAX_TEXELS_PER_BLOCK];	// the weights that the weight contributes to a texel.
-
-	// Stored transposed to give better access patterns
-	uint8_t weight_texel[MAX_TEXELS_PER_BLOCK][MAX_WEIGHTS_PER_BLOCK];	// the texels that the weight contributes to
-	alignas(ASTCENC_VECALIGN) float weights_flt[MAX_TEXELS_PER_BLOCK][MAX_WEIGHTS_PER_BLOCK];	// the weights that the weight contributes to a texel.
-
-	// folded data structures:
-	//  * texel_weights_texel[i][j] = texel_weights[weight_texel[i][j]];
-	//  * texel_weights_float_texel[i][j] = texel_weights_float[weight_texel[i][j]]
-	uint8_t texel_weights_texel[MAX_WEIGHTS_PER_BLOCK][MAX_TEXELS_PER_BLOCK][4];
-	float texel_weights_float_texel[MAX_WEIGHTS_PER_BLOCK][MAX_TEXELS_PER_BLOCK][4];
-};
+/* ============================================================================
+  Commonly used data structures
+============================================================================ */
 
 /**
- * @brief Metadata for single block mode for a specific BSD.
- */
-struct block_mode
-{
-	int8_t decimation_mode;
-	int8_t quant_mode;
-	uint8_t is_dual_plane : 1;
-	uint8_t percentile_hit : 1;
-	uint8_t percentile_always : 1;
-	int16_t mode_index;
-};
-
-/**
- * @brief Metadata for single decimation mode for a specific BSD.
- */
-struct decimation_mode
-{
-	int8_t maxprec_1plane;
-	int8_t maxprec_2planes;
-	uint8_t percentile_hit : 1;
-	uint8_t percentile_always : 1;
-};
-
-/**
- * @brief Data tables for a single block size.
+ * @brief The ASTC endpoint formats.
  *
- * The decimation tables store the information to apply weight grid dimension
- * reductions. We only store the decimation modes that are actually needed by
- * the current context; many of the possible modes will be unused (too many
- * weights for the current block size or disabled by heuristics). The actual
- * number of weights stored is @c decimation_mode_count, and the
- * @c decimation_modes and @c decimation_tables arrays store the active modes
- * contiguously at the start of the array. These entries are not stored in any
- * particuar order.
+ * Note, the values here are used directly in the encoding in the format so do not rearrange.
+ */
+enum endpoint_formats
+{
+	FMT_LUMINANCE = 0,
+	FMT_LUMINANCE_DELTA = 1,
+	FMT_HDR_LUMINANCE_LARGE_RANGE = 2,
+	FMT_HDR_LUMINANCE_SMALL_RANGE = 3,
+	FMT_LUMINANCE_ALPHA = 4,
+	FMT_LUMINANCE_ALPHA_DELTA = 5,
+	FMT_RGB_SCALE = 6,
+	FMT_HDR_RGB_SCALE = 7,
+	FMT_RGB = 8,
+	FMT_RGB_DELTA = 9,
+	FMT_RGB_SCALE_ALPHA = 10,
+	FMT_HDR_RGB = 11,
+	FMT_RGBA = 12,
+	FMT_RGBA_DELTA = 13,
+	FMT_HDR_RGB_LDR_ALPHA = 14,
+	FMT_HDR_RGBA = 15
+};
+
+/**
+ * @brief The ASTC quantization methods.
  *
- * The block mode tables store the unpacked block mode settings. Block modes
- * are stored in the compressed block as an 11 bit field, but for any given
- * block size and set of compressor heuristics, only a subset of the block
- * modes will be used. The actual number of block modes stored is indicated in
- * @c block_mode_count, and the @c block_modes array store the active modes
- * contiguously at the start of the array. These entries are stored in
- * incrementing "packed" value order, which doesn't mean much once unpacked.
- * To allow decompressors to reference the packed data efficiently the
- * @c block_mode_packed_index array stores the mapping between physical ID and
- * the actual remapped array index.
+ * Note, the values here are used directly in the encoding in the format so do not rearrange.
  */
-struct block_size_descriptor
-{
-	/**< The block X dimension, in texels. */
-	int xdim;
-
-	/**< The block Y dimension, in texels. */
-	int ydim;
-
-	/**< The block Z dimension, in texels. */
-	int zdim;
-
-	/**< The block total texel count. */
-	int texel_count;
-
-
-	/**< The number of stored decimation modes. */
-	int decimation_mode_count;
-
-	/**< The active decimation modes, stored in low indices. */
-	decimation_mode decimation_modes[MAX_DECIMATION_MODES];
-
-	/**< The active decimation tables, stored in low indices. */
-	const decimation_table *decimation_tables[MAX_DECIMATION_MODES];
-
-
-	/**< The number of stored block modes. */
-	int block_mode_count;
-
-	/**< The active block modes, stored in low indices. */
-	block_mode block_modes[MAX_WEIGHT_MODES];
-
-	/**< The block mode array index, or -1 if not valid in current config. */
-	int16_t block_mode_packed_index[MAX_WEIGHT_MODES];
-
-
-	/**< The texel count for k-means partition selection. */
-	int kmeans_texel_count;
-
-	/**< The active texels for k-means partition selection. */
-	int kmeans_texels[MAX_KMEANS_TEXELS];
-
-	/**< The partion tables for all of the possible partitions. */
-	partition_info partitions[(3 * PARTITION_COUNT) + 1];
-};
-
-// data structure representing one block of an image.
-// it is expanded to float prior to processing to save some computation time
-// on conversions to/from uint8_t (this also allows us to handle HDR textures easily)
-struct imageblock
-{
-	float data_r[MAX_TEXELS_PER_BLOCK];  // the data that we will compress, either linear or LNS (0..65535 in both cases)
-	float data_g[MAX_TEXELS_PER_BLOCK];
-	float data_b[MAX_TEXELS_PER_BLOCK];
-	float data_a[MAX_TEXELS_PER_BLOCK];
-
-	vfloat4 origin_texel;
-	vfloat4 data_min;
-	vfloat4 data_max;
-	bool    grayscale;
-
-	uint8_t rgb_lns[MAX_TEXELS_PER_BLOCK];      // 1 if RGB data are being treated as LNS
-	uint8_t alpha_lns[MAX_TEXELS_PER_BLOCK];    // 1 if Alpha data are being treated as LNS
-	uint8_t nan_texel[MAX_TEXELS_PER_BLOCK];    // 1 if the texel is a NaN-texel.
-	int xpos, ypos, zpos;
-
-	inline vfloat4 texel(int index) const
-	{
-		return vfloat4(data_r[index],
-		               data_g[index],
-		               data_b[index],
-		               data_a[index]);
-	}
-
-	inline vfloat4 texel3(int index) const
-	{
-		return vfloat4(data_r[index],
-		               data_g[index],
-		               data_b[index],
-		               0.0f);
-	}
-};
-
-static inline float imageblock_default_alpha(const imageblock * blk)
-{
-	return blk->alpha_lns[0] ? (float)0x7800 : (float)0xFFFF;
-}
-
-
-static inline int imageblock_uses_alpha(const imageblock * blk)
-{
-	return blk->data_min.lane<3>() != blk->data_max.lane<3>();
-}
-
-static inline int imageblock_is_lum(const imageblock * blk)
-{
-	float default_alpha = imageblock_default_alpha(blk);
-	bool alpha1 = (blk->data_min.lane<3>() == default_alpha) &&
-	              (blk->data_max.lane<3>() == default_alpha);
-	return blk->grayscale && alpha1;
-}
-
-static inline int imageblock_is_lumalp(const imageblock * blk)
-{
-	float default_alpha = imageblock_default_alpha(blk);
-	bool alpha1 = (blk->data_min.lane<3>() == default_alpha) &&
-	              (blk->data_max.lane<3>() == default_alpha);
-	return blk->grayscale && !alpha1;
-}
-
-/*
-	Data structure representing error weighting for one block of an image. this is used as
-	a multiplier for the error weight to apply to each color component when computing PSNR.
-
-	This weighting has several uses: it's usable for RA, GA, BA, A weighting, which is useful
-	for alpha-textures it's usable for HDR textures, where weighting should be approximately inverse to
-	luminance it's usable for perceptual weighting, where we assign higher weight to low-variability
-	regions than to high-variability regions. it's usable for suppressing off-edge block content in
-	case the texture doesn't actually extend to the edge of the block.
-
-	For the default case (everything is evenly weighted), every weight is 1. For the RA,GA,BA,A case,
-	we multiply the R,G,B weights with that of the alpha.
-
-	Putting the same weight in every component should result in the default case.
-	The following relations should hold:
-
-	texel_weight_rg[i] = (texel_weight_r[i] + texel_weight_g[i]) / 2
-	texel_weight_lum[i] = (texel_weight_r[i] + texel_weight_g[i] + texel_weight_b[i]) / 3
-	texel_weight[i] = (texel_weight_r[i] + texel_weight_g[i] + texel_weight_b[i] + texel_weight_a[i] / 4
- */
-
-struct error_weight_block
-{
-	vfloat4 error_weights[MAX_TEXELS_PER_BLOCK];
-
-	float texel_weight[MAX_TEXELS_PER_BLOCK];
-
-	float texel_weight_gba[MAX_TEXELS_PER_BLOCK];
-	float texel_weight_rba[MAX_TEXELS_PER_BLOCK];
-	float texel_weight_rga[MAX_TEXELS_PER_BLOCK];
-	float texel_weight_rgb[MAX_TEXELS_PER_BLOCK];
-
-	float texel_weight_rg[MAX_TEXELS_PER_BLOCK];
-	float texel_weight_rb[MAX_TEXELS_PER_BLOCK];
-	float texel_weight_gb[MAX_TEXELS_PER_BLOCK];
-	float texel_weight_ra[MAX_TEXELS_PER_BLOCK];
-
-	float texel_weight_r[MAX_TEXELS_PER_BLOCK];
-	float texel_weight_g[MAX_TEXELS_PER_BLOCK];
-	float texel_weight_b[MAX_TEXELS_PER_BLOCK];
-	float texel_weight_a[MAX_TEXELS_PER_BLOCK];
-};
-
-// enumeration of all the quantization methods we support under this format.
 enum quant_method
 {
 	QUANT_2 = 0,
@@ -655,7 +422,14 @@ enum quant_method
 	QUANT_256 = 20
 };
 
-static inline int get_quant_method_levels(quant_method method)
+/**
+ * @brief The number of levels use by an ASTC quantization method.
+ *
+ * @param method   The quantization method
+ *
+ * @return   The number of levels used by @c method.
+ */
+static inline unsigned int get_quant_level(quant_method method)
 {
 	switch(method)
 	{
@@ -680,38 +454,741 @@ static inline int get_quant_method_levels(quant_method method)
 	case QUANT_160: return 160;
 	case QUANT_192: return 192;
 	case QUANT_256: return 256;
-	// Unreachable - the enum is fully described
-	default:        return   0;
 	}
+
+	// Unreachable - the enum is fully described
+	return 0;
 }
+
+/**
+ * @brief Computed metrics about a partition in a block.
+ */
+struct partition_metrics
+{
+	/** @brief The error-weighted average color in the partition. */
+	vfloat4 avg;
+
+	/** @brief The dominant error-weighted direction in the partition. */
+	vfloat4 dir;
+};
+
+/**
+ * @brief Computed lines for a a three component analysis.
+ */
+struct partition_lines3
+{
+	/** @brief Line for uncorrelated chroma. */
+	line3 uncor_line;
+
+	/** @brief Line for correlated chroma, passing though the origin. */
+	line3 samec_line;
+
+	/** @brief Postprocessed line for uncorrelated chroma. */
+	processed_line3 uncor_pline;
+
+	/** @brief Postprocessed line for correlated chroma, passing though the origin. */
+	processed_line3 samec_pline;
+
+	/** @brief The length of the line for uncorrelated chroma. */
+	float uncor_line_len;
+
+	/** @brief The length of the line for correlated chroma. */
+	float samec_line_len;
+};
+
+/**
+ * @brief The partition information for a single partition.
+ *
+ * ASTC has a total of 1024 candidate partitions for each of 2/3/4 partition counts, although this
+ * 1024 includes seeds that generate duplicates of other seeds and seeds that generate completely
+ * empty partitions. These are both valid encodings, but astcenc will skip both during compression
+ * as they are not useful.
+ */
+struct partition_info
+{
+	/** @brief The number of partitions in this partitioning. */
+	uint16_t partition_count;
+
+	/** @brief The index (seed) of this partitioning. */
+	uint16_t partition_index;
+
+	/**
+	 * @brief The number of texels in each partition.
+	 *
+	 * Note that some seeds result in zero texels assigned to a partition are valid, but are skipped
+	 * by this compressor as there is no point spending bits encoding an unused color endpoint.
+	 */
+	uint8_t partition_texel_count[BLOCK_MAX_PARTITIONS];
+
+	/** @brief The partition of each texel in the block. */
+	uint8_t partition_of_texel[BLOCK_MAX_TEXELS];
+
+	/** @brief The list of texels in each partition. */
+	uint8_t texels_of_partition[BLOCK_MAX_PARTITIONS][BLOCK_MAX_TEXELS];
+};
+
+/**
+ * @brief The weight grid information for a single decimation pattern.
+ *
+ * ASTC can store one weight per texel, but is also capable of storing lower resoution weight grids
+ * that are interpolated during decompression to assign a with to a texel. Storing fewer weights
+ * can free up a substantial amount of bits that we can then spend on more useful things, such as
+ * more accurate endpoints and weights, or additional partitions.
+ *
+ * This data structure is used to store information about a single weight grid decimation pattern,
+ * for a single block size.
+ */
+struct decimation_info
+{
+	// TODO: These structures are large. Any partitioning opportunities to
+	// improve caching and reduce miss rates?
+
+	/** @brief The total number of texels in the block. */
+	uint8_t texel_count;
+
+	/** @brief The total number of weights stored. */
+	uint8_t weight_count;
+
+	/** @brief The number of stored weights in the X dimension. */
+	uint8_t weight_x;
+
+	/** @brief The number of stored weights in the Y dimension. */
+	uint8_t weight_y;
+
+	/** @brief The number of stored weights in the Z dimension. */
+	uint8_t weight_z;
+
+	/** @brief The number of stored weights that contribute to each texel, between 1 and 4. */
+	uint8_t texel_weight_count[BLOCK_MAX_TEXELS];
+
+	/** @brief The weight index of the N weights that need to be interpolated for each texel. */
+	uint8_t texel_weights_4t[4][BLOCK_MAX_TEXELS];
+
+	/** @brief The bilinear interpolation weighting of the N input weights for each texel, between 0 and 16. */
+	uint8_t texel_weights_int_4t[4][BLOCK_MAX_TEXELS];
+
+	/** @brief The bilinear interpolation weighting of the N input weights for each texel, between 0 and 1. */
+	alignas(ASTCENC_VECALIGN) float texel_weights_float_4t[4][BLOCK_MAX_TEXELS];
+
+	/** @brief The number of texels that each stored weight contributes to. */
+	uint8_t weight_texel_count[BLOCK_MAX_WEIGHTS];
+
+	/** @brief The list of weights that contribute to each texel. */
+	uint8_t weight_texel[BLOCK_MAX_TEXELS][BLOCK_MAX_WEIGHTS];
+
+	/** @brief The list of weight indices that contribute to each texel. */
+	alignas(ASTCENC_VECALIGN) float weights_flt[BLOCK_MAX_TEXELS][BLOCK_MAX_WEIGHTS];
+
+	/**
+	 * @brief Folded structure for faster access:
+	 *     texel_weights_texel[i][j][.] = texel_weights[.][weight_texel[i][j]]
+	 */
+	uint8_t texel_weights_texel[BLOCK_MAX_WEIGHTS][BLOCK_MAX_TEXELS][4];
+
+	/**
+	 * @brief Folded structure for faster access:
+	 *     texel_weights_float_texel[i][j][.] = texel_weights_float[.][weight_texel[i][j]]
+	 */
+	float texel_weights_float_texel[BLOCK_MAX_WEIGHTS][BLOCK_MAX_TEXELS][4];
+};
+
+/**
+ * @brief Metadata for single block mode for a specific block size.
+ */
+struct block_mode
+{
+	/** @brief The block mode index in the ASTC encoded form. */
+	uint16_t mode_index;
+
+	/** @brief The decimation mode index in the compressor reindexed list. */
+	uint8_t decimation_mode;
+
+	/** @brief The weight quantization used by this block mode. */
+	uint8_t quant_mode;
+
+	/** @brief The weight quantization used by this block mode. */
+	uint8_t weight_bits;
+
+	/** @brief Is a dual weight plane used by this block mode? */
+	uint8_t is_dual_plane : 1;
+
+	/** @brief Is this mode enabled in the current search preset? */
+	uint8_t percentile_hit : 1;
+
+	/**
+	 * @brief Get the weight quantization used by this block mode.
+	 *
+	 * @return The quantization level.
+	 */
+	inline quant_method get_weight_quant_mode() const
+	{
+		return (quant_method)this->quant_mode;
+	}
+};
+
+/**
+ * @brief Metadata for single decimation mode for a specific block size.
+ */
+struct decimation_mode
+{
+	/** @brief The max weight precision for 1 plane, or -1 if not supported. */
+	int8_t maxprec_1plane;
+
+	/** @brief The max weight precision for 2 planes, or -1 if not supported. */
+	int8_t maxprec_2planes;
+
+	/** @brief Is this mode enabled in the current search preset? */
+	uint8_t percentile_hit;
+};
+
+/**
+ * @brief Data tables for a single block size.
+ *
+ * The decimation tables store the information to apply weight grid dimension reductions. We only
+ * store the decimation modes that are actually needed by the current context; many of the possible
+ * modes will be unused (too many weights for the current block size or disabled by heuristics). The
+ * actual number of weights stored is @c decimation_mode_count, and the @c decimation_modes and
+ * @c decimation_tables arrays store the active modes contiguously at the start of the array. These
+ * entries are not stored in any particuar order.
+ *
+ * The block mode tables store the unpacked block mode settings. Block modes are stored in the
+ * compressed block as an 11 bit field, but for any given block size and set of compressor
+ * heuristics, only a subset of the block modes will be used. The actual number of block modes
+ * stored is indicated in @c block_mode_count, and the @c block_modes array store the active modes
+ * contiguously at the start of the array. These entries are stored in incrementing "packed" value
+ * order, which doesn't mean much once unpacked. To allow decompressors to reference the packed data
+ * efficiently the @c block_mode_packed_index array stores the mapping between physical ID and the
+ * actual remapped array index.
+ */
+struct block_size_descriptor
+{
+	/** @brief The block X dimension, in texels. */
+	uint8_t xdim;
+
+	/** @brief The block Y dimension, in texels. */
+	uint8_t ydim;
+
+	/** @brief The block Z dimension, in texels. */
+	uint8_t zdim;
+
+	/** @brief The block total texel count. */
+	uint8_t texel_count;
+
+	/** @brief The number of stored decimation modes. */
+	unsigned int decimation_mode_count;
+
+	/**
+	 * @brief The number of stored decimation modes which are "always" modes.
+	 *
+	 * Always modes are stored at the start of the decimation_modes list.
+	 */
+	unsigned int always_decimation_mode_count;
+
+	/** @brief The number of stored block modes. */
+	unsigned int block_mode_count;
+
+	/** @brief The number of active partitionings for 1/2/3/4 partitionings. */
+	unsigned int partitioning_count[BLOCK_MAX_PARTITIONS];
+
+	/**
+	 * @brief The number of stored block modes which are "always" modes.
+	 *
+	 * Always modes are stored at the start of the block_modes list.
+	 */
+	unsigned int always_block_mode_count;
+
+	/** @brief The active decimation modes, stored in low indices. */
+	decimation_mode decimation_modes[WEIGHTS_MAX_DECIMATION_MODES];
+
+	/** @brief The active decimation tables, stored in low indices. */
+	alignas(ASTCENC_VECALIGN) decimation_info decimation_tables[WEIGHTS_MAX_DECIMATION_MODES];
+
+	/** @brief The packed block mode array index, or @c BLOCK_BAD_BLOCK_MODE if not active. */
+	uint16_t block_mode_packed_index[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The active block modes, stored in low indices. */
+	block_mode block_modes[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The active partition tables, stored in low indices per-count. */
+	partition_info partitionings[(3 * BLOCK_MAX_PARTITIONINGS) + 1];
+
+	/**
+	 * @brief The packed partition table array index, or @c BLOCK_BAD_PARTITIONING if not active.
+	 *
+	 * Indexed by partition_count - 2, containing 2, 3 and 4 partitions.
+	 */
+	uint16_t partitioning_packed_index[3][BLOCK_MAX_PARTITIONINGS];
+
+	/** @brief The active texels for k-means partition selection. */
+	uint8_t kmeans_texels[BLOCK_MAX_KMEANS_TEXELS];
+
+	/**
+	 * @brief Is 0 if this 2-partition is valid for compression 255 otherwise.
+	 *
+	 * Indexed by remapped index, not physical index.
+	 */
+	uint8_t partitioning_valid_2[BLOCK_MAX_PARTITIONINGS];
+
+	/**
+	 * @brief The canonical 2-partition coverage pattern used during block partition search.
+	 *
+	 * Indexed by remapped index, not physical index.
+	 */
+	uint64_t coverage_bitmaps_2[BLOCK_MAX_PARTITIONINGS][2];
+
+	/**
+	 * @brief Is 0 if this 3-partition is valid for compression 255 otherwise.
+	 *
+	 * Indexed by remapped index, not physical index.
+	 */
+	uint8_t partitioning_valid_3[BLOCK_MAX_PARTITIONINGS];
+
+	/**
+	 * @brief The canonical 3-partition coverage pattern used during block partition search.
+	 *
+	 * Indexed by remapped index, not physical index.
+	 */
+	uint64_t coverage_bitmaps_3[BLOCK_MAX_PARTITIONINGS][3];
+
+	/**
+	 * @brief Is 0 if this 4-partition is valid for compression 255 otherwise.
+	 *
+	 * Indexed by remapped index, not physical index.
+	 */
+	uint8_t partitioning_valid_4[BLOCK_MAX_PARTITIONINGS];
+
+	/**
+	 * @brief The canonical 4-partition coverage pattern used during block partition search.
+	 *
+	 * Indexed by remapped index, not physical index.
+	 */
+	uint64_t coverage_bitmaps_4[BLOCK_MAX_PARTITIONINGS][4];
+
+	/**
+	 * @brief Get the block mode structure for index @c block_mode.
+	 *
+	 * This function can only return block modes that are enabled by the current compressor config.
+	 * Decompression from an arbitrary source should not use this without first checking that the
+	 * packed block mode index is not @c BLOCK_BAD_BLOCK_MODE.
+	 *
+	 * @param block_mode   The packed block mode index.
+	 *
+	 * @return The block mode structure.
+	 */
+	const block_mode& get_block_mode(unsigned int block_mode) const
+	{
+		unsigned int packed_index = this->block_mode_packed_index[block_mode];
+		assert(packed_index != BLOCK_BAD_BLOCK_MODE && packed_index < this->block_mode_count);
+		return this->block_modes[packed_index];
+	}
+
+	/**
+	 * @brief Get the decimation mode structure for index @c decimation_mode.
+	 *
+	 * This function can only return decimation modes that are enabled by the current compressor
+	 * config. The mode array is stored packed, but this is only ever indexed by the packed index
+	 * stored in the @c block_mode and never exists in an unpacked form.
+	 *
+	 * @param decimation_mode   The packed decimation mode index.
+	 *
+	 * @return The decimation mode structure.
+	 */
+	const decimation_mode& get_decimation_mode(unsigned int decimation_mode) const
+	{
+		return this->decimation_modes[decimation_mode];
+	}
+
+	/**
+	 * @brief Get the decimation info structure for index @c decimation_mode.
+	 *
+	 * This function can only return decimation modes that are enabled by the current compressor
+	 * config. The mode array is stored packed, but this is only ever indexed by the packed index
+	 * stored in the @c block_mode and never exists in an unpacked form.
+	 *
+	 * @param decimation_mode   The packed decimation mode index.
+	 *
+	 * @return The decimation info structure.
+	 */
+	const decimation_info& get_decimation_info(unsigned int decimation_mode) const
+	{
+		return this->decimation_tables[decimation_mode];
+	}
+
+	/**
+	 * @brief Get the partition info table for a given partition count.
+	 *
+	 * @param partition_count   The number of partitions we want the table for.
+	 *
+	 * @return The pointer to the table of 1024 entries (for 2/3/4 parts) or 1 entry (for 1 part).
+	 */
+	const partition_info* get_partition_table(unsigned int partition_count) const
+	{
+		if (partition_count == 1)
+		{
+			partition_count = 5;
+		}
+		unsigned int index = (partition_count - 2) * BLOCK_MAX_PARTITIONINGS;
+		return this->partitionings + index;
+	}
+
+	/**
+	 * @brief Get the partition info structure for a given partition count and seed.
+	 *
+	 * @param partition_count   The number of partitions we want the info for.
+	 * @param index             The partition seed (between 0 and 1023).
+	 *
+	 * @return The partition info structure.
+	 */
+	const partition_info& get_partition_info(unsigned int partition_count, unsigned int index) const
+	{
+		unsigned int packed_index = 0;
+		if (partition_count >= 2)
+		{
+			packed_index = this->partitioning_packed_index[partition_count - 2][index];
+		}
+
+		assert(packed_index != BLOCK_BAD_PARTITIONING && packed_index < this->partitioning_count[partition_count - 1]);
+		auto& result = get_partition_table(partition_count)[packed_index];
+		assert(index == result.partition_index);
+		return result;
+	}
+
+	/**
+	 * @brief Get the partition info structure for a given partition count and seed.
+	 *
+	 * @param partition_count   The number of partitions we want the info for.
+	 * @param packed_index      The raw array offset.
+	 *
+	 * @return The partition info structure.
+	 */
+	const partition_info& get_raw_partition_info(unsigned int partition_count, unsigned int packed_index) const
+	{
+		assert(packed_index != BLOCK_BAD_PARTITIONING && packed_index < this->partitioning_count[partition_count - 1]);
+		auto& result = get_partition_table(partition_count)[packed_index];
+		return result;
+	}
+};
+
+/**
+ * @brief The image data for a single block.
+ *
+ * The @c data_[rgba] fields store the image data in an encoded SoA float form designed for easy
+ * vectorization. Input data is converted to float and stored as values between 0 and 65535. LDR
+ * data is stored as direct UNORM data, HDR data is stored as LNS data.
+ *
+ * The @c rgb_lns and @c alpha_lns fields that assigned a per-texel use of HDR are only used during
+ * decompression. The current compressor will always use HDR endpoint formats when in HDR mode.
+ */
+struct image_block
+{
+	/** @brief The input (compress) or output (decompress) data for the red color component. */
+	alignas(ASTCENC_VECALIGN) float data_r[BLOCK_MAX_TEXELS];
+
+	/** @brief The input (compress) or output (decompress) data for the green color component. */
+	alignas(ASTCENC_VECALIGN) float data_g[BLOCK_MAX_TEXELS];
+
+	/** @brief The input (compress) or output (decompress) data for the blue color component. */
+	alignas(ASTCENC_VECALIGN) float data_b[BLOCK_MAX_TEXELS];
+
+	/** @brief The input (compress) or output (decompress) data for the alpha color component. */
+	alignas(ASTCENC_VECALIGN) float data_a[BLOCK_MAX_TEXELS];
+
+	/** @brief The number of texels in the block. */
+	uint8_t texel_count;
+
+	/** @brief The original data for texel 0 for constant color block encoding. */
+	vfloat4 origin_texel;
+
+	/** @brief The min component value of all texels in the block. */
+	vfloat4 data_min;
+
+	/** @brief The mean component value of all texels in the block. */
+	vfloat4 data_mean;
+
+	/** @brief The max component value of all texels in the block. */
+	vfloat4 data_max;
+
+	/** @brief The relative error significance of the color channels. */
+	vfloat4 channel_weight;
+
+	/** @brief Is this grayscale block where R == G == B for all texels? */
+	bool grayscale;
+
+	/** @brief Set to 1 if a texel is using HDR RGB endpoints (decompression only). */
+	uint8_t rgb_lns[BLOCK_MAX_TEXELS];
+
+	/** @brief Set to 1 if a texel is using HDR alpha endpoints (decompression only). */
+	uint8_t alpha_lns[BLOCK_MAX_TEXELS];
+
+	/** @brief The X position of this block in the input or output image. */
+	unsigned int xpos;
+
+	/** @brief The Y position of this block in the input or output image. */
+	unsigned int ypos;
+
+	/** @brief The Z position of this block in the input or output image. */
+	unsigned int zpos;
+
+	/**
+	 * @brief Get an RGBA texel value from the data.
+	 *
+	 * @param index   The texel index.
+	 *
+	 * @return The texel in RGBA component ordering.
+	 */
+	inline vfloat4 texel(unsigned int index) const
+	{
+		return vfloat4(data_r[index],
+		               data_g[index],
+		               data_b[index],
+		               data_a[index]);
+	}
+
+	/**
+	 * @brief Get an RGB texel value from the data.
+	 *
+	 * @param index   The texel index.
+	 *
+	 * @return The texel in RGB0 component ordering.
+	 */
+	inline vfloat4 texel3(unsigned int index) const
+	{
+		return vfloat3(data_r[index],
+		               data_g[index],
+		               data_b[index]);
+	}
+
+	/**
+	 * @brief Get the default alpha value for endpoints that don't store it.
+	 *
+	 * The default depends on whether the alpha endpoint is LDR or HDR.
+	 *
+	 * @return The alpha value in the scaled range used by the compressor.
+	 */
+	inline float get_default_alpha() const
+	{
+		return this->alpha_lns[0] ? (float)0x7800 : (float)0xFFFF;
+	}
+
+	/**
+	 * @brief Test if a single color channel is constant across the block.
+	 *
+	 * Constant color channels are easier to compress as interpolating between two identical colors
+	 * always returns the same value, irrespective of the weight used. They therefore can be ignored
+	 * for the purposes of weight selection and use of a second weight plane.
+	 *
+	 * @return @c true if the channel is constant across the block, @c false otherwise.
+	 */
+	inline bool is_constant_channel(int channel) const
+	{
+		vmask4 lane_mask = vint4::lane_id() == vint4(channel);
+		vmask4 color_mask = this->data_min == this->data_max;
+		return any(lane_mask & color_mask);
+	}
+
+	/**
+	 * @brief Test if this block is a luminance block with constant 1.0 alpha.
+	 *
+	 * @return @c true if the block is a luminance block , @c false otherwise.
+	 */
+	inline bool is_luminance() const
+	{
+		float default_alpha = this->get_default_alpha();
+		bool alpha1 = (this->data_min.lane<3>() == default_alpha) &&
+		              (this->data_max.lane<3>() == default_alpha);
+		return this->grayscale && alpha1;
+	}
+
+	/**
+	 * @brief Test if this block is a luminance block with variable alpha.
+	 *
+	 * @return @c true if the block is a luminance + alpha block , @c false otherwise.
+	 */
+	inline bool is_luminancealpha() const
+	{
+		float default_alpha = this->get_default_alpha();
+		bool alpha1 = (this->data_min.lane<3>() == default_alpha) &&
+		              (this->data_max.lane<3>() == default_alpha);
+		return this->grayscale && !alpha1;
+	}
+};
+
+/**
+ * @brief Data structure storing the color endpoints for a block.
+ */
+struct endpoints
+{
+	/** @brief The number of partition endpoints stored. */
+	unsigned int partition_count;
+
+	/** @brief The colors for endpoint 0. */
+	vfloat4 endpt0[BLOCK_MAX_PARTITIONS];
+
+	/** @brief The colors for endpoint 1. */
+	vfloat4 endpt1[BLOCK_MAX_PARTITIONS];
+};
+
+/**
+ * @brief Data structure storing the color endpoints and weights.
+ */
+struct endpoints_and_weights
+{
+	/** @brief True if all active values in weight_error_scale are the same. */
+	bool is_constant_weight_error_scale;
+
+	/** @brief The color endpoints. */
+	endpoints ep;
+
+	/** @brief The ideal weight for each texel; may be undecimated or decimated. */
+	alignas(ASTCENC_VECALIGN) float weights[BLOCK_MAX_TEXELS];
+
+	/** @brief The ideal weight error scaling for each texel; may be undecimated or decimated. */
+	alignas(ASTCENC_VECALIGN) float weight_error_scale[BLOCK_MAX_TEXELS];
+};
+
+/**
+ * @brief Utility storing estimated errors from choosing particular endpoint encodings.
+ */
+struct encoding_choice_errors
+{
+	/** @brief Error of using LDR RGB-scale instead of complete endpoints. */
+	float rgb_scale_error;
+
+	/** @brief Error of using HDR RGB-scale instead of complete endpoints. */
+	float rgb_luma_error;
+
+	/** @brief Error of using luminance instead of RGB. */
+	float luminance_error;
+
+	/** @brief Error of discarding alpha and using a constant 1.0 alpha. */
+	float alpha_drop_error;
+
+	/** @brief Can we use delta offset encoding? */
+	bool can_offset_encode;
+
+	/** @brief CAn we use blue contraction encoding? */
+	bool can_blue_contract;
+};
+
+/**
+ * @brief Preallocated working buffers, allocated per thread during context creation.
+ */
+struct alignas(ASTCENC_VECALIGN) compression_working_buffers
+{
+	/** @brief Ideal endpoints and weights for plane 1. */
+	endpoints_and_weights ei1;
+
+	/** @brief Ideal endpoints and weights for plane 2. */
+	endpoints_and_weights ei2;
+
+	/** @brief Ideal decimated endpoints and weights for plane 1. */
+	endpoints_and_weights eix1[WEIGHTS_MAX_DECIMATION_MODES];
+
+	/** @brief Ideal decimated endpoints and weights for plane 2. */
+	endpoints_and_weights eix2[WEIGHTS_MAX_DECIMATION_MODES];
+
+	/**
+	 * @brief Decimated ideal weight values.
+	 *
+	 * For two plane encodings, second plane weights start at @c WEIGHTS_PLANE2_OFFSET offsets.
+	 */
+	alignas(ASTCENC_VECALIGN) float dec_weights_ideal_value[WEIGHTS_MAX_DECIMATION_MODES * BLOCK_MAX_WEIGHTS];
+
+	/**
+	 * @brief Decimated and quantized weight values stored in the unpacked quantized weight range.
+	 *
+	 * For two plane encodings, second plane weights start at @c WEIGHTS_PLANE2_OFFSET offsets.
+	 */
+	alignas(ASTCENC_VECALIGN) float dec_weights_quant_uvalue[WEIGHTS_MAX_BLOCK_MODES * BLOCK_MAX_WEIGHTS];
+
+	/**
+	 * @brief Decimated and quantized weight values stored in the packed quantized weight range.
+	 *
+	 * For two plane encodings, second plane weights start at @c WEIGHTS_PLANE2_OFFSET offsets.
+	 */
+	alignas(ASTCENC_VECALIGN) uint8_t dec_weights_quant_pvalue[WEIGHTS_MAX_BLOCK_MODES * BLOCK_MAX_WEIGHTS];
+
+	/** @brief Error of the best encoding combination for each block mode. */
+	alignas(ASTCENC_VECALIGN) float errors_of_best_combination[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The best color quant for each block mode. */
+	alignas(ASTCENC_VECALIGN) quant_method best_quant_levels[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The best color quant for each block mode if modes are the same and we have spare bits. */
+	quant_method best_quant_levels_mod[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The best endpoint format for each partition. */
+	int best_ep_formats[WEIGHTS_MAX_BLOCK_MODES][BLOCK_MAX_PARTITIONS];
+
+	/** @brief The total bit storage needed for quantized weights for each block mode. */
+	int qwt_bitcounts[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The cumulative error for quantized weights for each block mode. */
+	float qwt_errors[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The low weight value in plane 1 for each block mode. */
+	float weight_low_value1[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The high weight value in plane 1 for each block mode. */
+	float weight_high_value1[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The low weight value in plane 1 for each quant level and decimation mode. */
+	float weight_low_values1[WEIGHTS_MAX_DECIMATION_MODES][12];
+
+	/** @brief The high weight value in plane 1 for each quant level and decimation mode. */
+	float weight_high_values1[WEIGHTS_MAX_DECIMATION_MODES][12];
+
+	/** @brief The low weight value in plane 2 for each block mode. */
+	float weight_low_value2[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The high weight value in plane 2 for each block mode. */
+	float weight_high_value2[WEIGHTS_MAX_BLOCK_MODES];
+
+	/** @brief The low weight value in plane 2 for each quant level and decimation mode. */
+	float weight_low_values2[WEIGHTS_MAX_DECIMATION_MODES][12];
+
+	/** @brief The high weight value in plane 2 for each quant level and decimation mode. */
+	float weight_high_values2[WEIGHTS_MAX_DECIMATION_MODES][12];
+};
+
+struct dt_init_working_buffers
+{
+	uint8_t weight_count_of_texel[BLOCK_MAX_TEXELS];
+	uint8_t grid_weights_of_texel[BLOCK_MAX_TEXELS][4];
+	uint8_t weights_of_texel[BLOCK_MAX_TEXELS][4];
+
+	uint8_t texel_count_of_weight[BLOCK_MAX_WEIGHTS];
+	uint8_t texels_of_weight[BLOCK_MAX_WEIGHTS][BLOCK_MAX_TEXELS];
+	uint8_t texel_weights_of_weight[BLOCK_MAX_WEIGHTS][BLOCK_MAX_TEXELS];
+};
 
 /**
  * @brief Weight quantization transfer table.
  *
- * ASTC can store texel weights at many quantization levels, so for performance
- * we store essential information about each level as a precomputed data
- * structure.
+ * ASTC can store texel weights at many quantization levels, so for performance we store essential
+ * information about each level as a precomputed data structure. Unquantized weights are integers
+ * or floats in the range [0, 64].
  *
- * Unquantized weights are integers in the range [0, 64], or floats [0, 1].
- *
- * This structure provides the following information:
- * A table, used to estimate the closest quantized
-	weight for a given floating-point weight. For each quantized weight, the corresponding unquantized
-	and floating-point values. For each quantized weight, a previous-value and a next-value.
+ * This structure provides a table, used to estimate the closest quantized weight for a given
+ * floating-point weight. For each quantized weight, the corresponding unquantized values. For each
+ * quantized weight, a previous-value and a next-value.
 */
 struct quantization_and_transfer_table
 {
-	/** The quantization level used */
+	/** @brief The quantization level used */
 	quant_method method;
-	/** The unscrambled unquantized value. */
+
+	/** @brief The unscrambled unquantized value. */
 	float unquantized_value_unsc[33];
-	/** The scrambling order: value[map[i]] == value_unsc[i] */
+
+	/** @brief The scrambling order: value[map[i]] == value_unsc[i] */
 	int32_t scramble_map[32];
-	/** The scrambled unquantized values. */
+
+	/** @brief The scrambled unquantized values. */
 	uint8_t unquantized_value[32];
+
 	/**
-	 * An encoded table of previous-and-next weight values, indexed by the
-	 * current unquantized value.
+	 * @brief A table of previous-and-next weights, indexed by the current unquantized value.
 	 *  * bits 7:0 = previous-index, unquantized
 	 *  * bits 15:8 = next-index, unquantized
 	 *  * bits 23:16 = previous-index, quantized
@@ -720,107 +1197,273 @@ struct quantization_and_transfer_table
 	uint32_t prev_next_values[65];
 };
 
+
+/** @brief The precomputed quant and transfer table. */
 extern const quantization_and_transfer_table quant_and_xfer_tables[12];
 
-enum endpoint_formats
-{
-	FMT_LUMINANCE = 0,
-	FMT_LUMINANCE_DELTA = 1,
-	FMT_HDR_LUMINANCE_LARGE_RANGE = 2,
-	FMT_HDR_LUMINANCE_SMALL_RANGE = 3,
-	FMT_LUMINANCE_ALPHA = 4,
-	FMT_LUMINANCE_ALPHA_DELTA = 5,
-	FMT_RGB_SCALE = 6,
-	FMT_HDR_RGB_SCALE = 7,
-	FMT_RGB = 8,
-	FMT_RGB_DELTA = 9,
-	FMT_RGB_SCALE_ALPHA = 10,
-	FMT_HDR_RGB = 11,
-	FMT_RGBA = 12,
-	FMT_RGBA_DELTA = 13,
-	FMT_HDR_RGB_LDR_ALPHA = 14,
-	FMT_HDR_RGBA = 15
-};
+/** @brief The block is an error block, and will return error color or NaN. */
+static constexpr uint8_t SYM_BTYPE_ERROR { 0 };
 
+/** @brief The block is a constant color block using FP16 colors. */
+static constexpr uint8_t SYM_BTYPE_CONST_F16 { 1 };
+
+/** @brief The block is a constant color block using UNORM16 colors. */
+static constexpr uint8_t SYM_BTYPE_CONST_U16 { 2 };
+
+/** @brief The block is a normal non-constant color block. */
+static constexpr uint8_t SYM_BTYPE_NONCONST { 3 };
+
+/**
+ * @brief A symbolic representation of a compressed block.
+ *
+ * The symbolic representation stores the unpacked content of a single
+ * @c physical_compressed_block, in a form which is much easier to access for
+ * the rest of the compressor code.
+ */
 struct symbolic_compressed_block
 {
-	int error_block;			// 1 marks error block, 0 marks non-error-block.
-	int block_mode;				// 0 to 2047. Negative value marks constant-color block (-1: FP16, -2:UINT16)
-	int partition_count;		// 1 to 4; Zero marks a constant-color block.
-	int partition_index;		// 0 to 1023
-	int color_formats[4];		// color format for each endpoint color pair.
-	int color_formats_matched;	// color format for all endpoint pairs are matched.
-	int color_quant_level;
-	int plane2_color_component;	// color component for the secondary plane of weights
+	/** @brief The block type, one of the @c SYM_BTYPE_* constants. */
+	uint8_t block_type;
 
-	// TODO: Under what circumstances is this ever more than 8 (4 pairs) colors
-	int color_values[4][12];	// quantized endpoint color pairs.
-	int constant_color[4];		// constant-color, as FP16 or UINT16. Used for constant-color blocks only.
-	// Quantized and decimated weights. In the case of dual plane, the second
-	// index plane starts at weights[PLANE2_WEIGHTS_OFFSET]
-	float errorval;             // The error of the current encoding
-	uint8_t weights[MAX_WEIGHTS_PER_BLOCK];
+	/** @brief The number of partitions; valid for @c NONCONST blocks. */
+	uint8_t partition_count;
+
+	/** @brief Non-zero if the color formats matched; valid for @c NONCONST blocks. */
+	uint8_t color_formats_matched;
+
+	/** @brief The plane 2 color component, or -1 if single plane; valid for @c NONCONST blocks. */
+	// Try unsigned sentintel to avoid signext on load
+	int8_t plane2_component;
+
+	/** @brief The block mode; valid for @c NONCONST blocks. */
+	uint16_t block_mode;
+
+	/** @brief The partition index; valid for @c NONCONST blocks if 2 or more partitions. */
+	uint16_t partition_index;
+
+	/** @brief The endpoint color formats for each partition; valid for @c NONCONST blocks. */
+	uint8_t color_formats[BLOCK_MAX_PARTITIONS];
+
+	/** @brief The endpoint color quant mode; valid for @c NONCONST blocks. */
+	quant_method quant_mode;
+
+	/** @brief The error of the current encoding; valid for @c NONCONST blocks. */
+	float errorval;
+
+	// We can't have both of these at the same time
+	union {
+		/** @brief The constant color; valid for @c CONST blocks. */
+		int constant_color[BLOCK_MAX_COMPONENTS];
+
+		/** @brief The quantized endpoint color pairs; valid for @c NONCONST blocks. */
+		uint8_t color_values[BLOCK_MAX_PARTITIONS][8];
+	};
+
+	/** @brief The quantized and decimated weights.
+	 *
+	 * If dual plane, the second plane starts at @c weights[WEIGHTS_PLANE2_OFFSET].
+	 */
+	uint8_t weights[BLOCK_MAX_WEIGHTS];
+
+	/**
+	 * @brief Get the weight quantization used by this block mode.
+	 *
+	 * @return The quantization level.
+	 */
+	inline quant_method get_color_quant_mode() const
+	{
+		return this->quant_mode;
+	}
 };
 
+/**
+ * @brief A physical representation of a compressed block.
+ *
+ * The physical representation stores the raw bytes of the format in memory.
+ */
 struct physical_compressed_block
 {
+	/** @brief The ASTC encoded data for a single block. */
 	uint8_t data[16];
 };
 
+
+/**
+ * @brief Parameter structure for @c compute_pixel_region_variance().
+ *
+ * This function takes a structure to avoid spilling arguments to the stack on every function
+ * invocation, as there are a lot of parameters.
+ */
+struct pixel_region_args
+{
+	/** @brief The image to analyze. */
+	const astcenc_image* img;
+
+	/** @brief The component swizzle pattern. */
+	astcenc_swizzle swz;
+
+	/** @brief Should the algorithm bother with Z axis processing? */
+	bool have_z;
+
+	/** @brief The kernel radius for alpha processing. */
+	unsigned int alpha_kernel_radius;
+
+	/** @brief The X dimension of the working data to process. */
+	unsigned int size_x;
+
+	/** @brief The Y dimension of the working data to process. */
+	unsigned int size_y;
+
+	/** @brief The Z dimension of the working data to process. */
+	unsigned int size_z;
+
+	/** @brief The X position of first src and dst data in the data set. */
+	unsigned int offset_x;
+
+	/** @brief The Y position of first src and dst data in the data set. */
+	unsigned int offset_y;
+
+	/** @brief The Z position of first src and dst data in the data set. */
+	unsigned int offset_z;
+
+	/** @brief The working memory buffer. */
+	vfloat4 *work_memory;
+};
+
+/**
+ * @brief Parameter structure for @c compute_averages_proc().
+ */
+struct avg_args
+{
+	/** @brief The arguments for the nested variance computation. */
+	pixel_region_args arg;
+
+	// The above has a reference to the image altread?
+	/** @brief The image X dimensions. */
+	unsigned int img_size_x;
+
+	/** @brief The image Y dimensions. */
+	unsigned int img_size_y;
+
+	/** @brief The image Z dimensions. */
+	unsigned int img_size_z;
+
+	/** @brief The maximum working block dimensions in X and Y dimensions. */
+	unsigned int blk_size_xy;
+
+	/** @brief The maximum working block dimensions in Z dimensions. */
+	unsigned int blk_size_z;
+
+	/** @brief The working block memory size. */
+	unsigned int work_memory_size;
+};
+
+#if defined(ASTCENC_DIAGNOSTICS)
+/* See astcenc_diagnostic_trace header for details. */
+class TraceLog;
+#endif
+
+/**
+ * @brief The astcenc compression context.
+ */
+struct astcenc_context
+{
+	/** @brief The configuration this context was created with. */
+	astcenc_config config;
+
+	/** @brief The thread count supported by this context. */
+	unsigned int thread_count;
+
+	/** @brief The block size descriptor this context was created with. */
+	alignas(ASTCENC_VECALIGN) block_size_descriptor bsd;
+
+	/*
+	 * Fields below here are not needed in a decompress-only build, but some remain as they are
+	 * small and it avoids littering the code with #ifdefs. The most significant contributors to
+	 * large structure size are omitted.
+	 */
+
+	/** @brief The input image alpha channel averages table, may be @c nullptr if not needed. */
+	float *input_alpha_averages;
+
+	/** @brief The scratch working buffers, one per thread (see @c thread_count). */
+	compression_working_buffers* working_buffers;
+
+#if !defined(ASTCENC_DECOMPRESS_ONLY)
+	/** @brief The pixel region and variance worker arguments. */
+	avg_args avg_preprocess_args;
+
+	/** @brief The per-texel deblocking weights for the current block size. */
+	float deblock_weights[BLOCK_MAX_TEXELS];
+
+	/** @brief The parallel manager for averages computation. */
+	ParallelManager manage_avg;
+
+	/** @brief The parallel manager for compression. */
+	ParallelManager manage_compress;
+#endif
+
+	/** @brief The parallel manager for decompression. */
+	ParallelManager manage_decompress;
+
+#if defined(ASTCENC_DIAGNOSTICS)
+	/**
+	 * @brief The diagnostic trace logger.
+	 *
+	 * Note that this is a singleton, so can only be used in single threaded mode. It only exists
+	 * here so we have a reference to close the file at the end of the capture.
+	 */
+	TraceLog* trace_log;
+#endif
+};
+
 /* ============================================================================
-  Functions and data pertaining to quantization and encoding
+  Functionality for managing block sizes and partition tables.
 ============================================================================ */
 
 /**
- * @brief Populate the blocksize descriptor for the target block size.
+ * @brief Populate the block size descriptor for the target block size.
  *
- * This will also initialize the partition table metadata, which is stored
- * as part of the BSD structure.
+ * This will also initialize the partition table metadata, which is stored as part of the BSD
+ * structure.
  *
- * @param xdim        The x axis size of the block.
- * @param ydim        The y axis size of the block.
- * @param zdim        The z axis size of the block.
- * @param mode_cutoff The block mode percentil cutoff [0-1].
- * @param bsd         The structure to populate.
+ * @param      x_texels                 The number of texels in the block X dimension.
+ * @param      y_texels                 The number of texels in the block Y dimension.
+ * @param      z_texels                 The number of texels in the block Z dimension.
+ * @param      can_omit_modes           Can we discard modes and partitionings that astcenc won't use?
+ * @param      partition_count_cutoff   The partition count cutoff to use, if we can omit partitionings.
+ * @param      mode_cutoff              The block mode percentile cutoff [0-1].
+ * @param[out] bsd                      The descriptor to initialize.
  */
 void init_block_size_descriptor(
-	int xdim,
-	int ydim,
-	int zdim,
+	unsigned int x_texels,
+	unsigned int y_texels,
+	unsigned int z_texels,
 	bool can_omit_modes,
+	unsigned int partition_count_cutoff,
 	float mode_cutoff,
-	block_size_descriptor* bsd);
-
-void term_block_size_descriptor(
-	block_size_descriptor* bsd);
+	block_size_descriptor& bsd);
 
 /**
  * @brief Populate the partition tables for the target block size.
  *
- * Note the block_size_size descriptor must be initialized before calling this
- * function.
+ * Note the @c bsd descriptor must be initialized by calling @c init_block_size_descriptor() before
+ * calling this function.
  *
- * @param bsd  The structure to populate.
+ * @param[out] bsd                      The block size information structure to populate.
+ * @param      can_omit_partitionings   True if we can we drop partitionings that astcenc won't use.
+ * @param      partition_count_cutoff   The partition count cutoff to use, if we can omit partitionings.
  */
 void init_partition_tables(
-	block_size_descriptor* bsd);
-
-static inline const partition_info *get_partition_table(
-	const block_size_descriptor* bsd,
-	int partition_count
-) {
-	if (partition_count == 1) {
-		partition_count = 5;
-	}
-	int index = (partition_count - 2) * PARTITION_COUNT;
-	return bsd->partitions + index;
-}
+	block_size_descriptor& bsd,
+	bool can_omit_partitionings,
+	unsigned int partition_count_cutoff);
 
 /**
  * @brief Get the percentile table for 2D block modes.
  *
- * This is an empirically determined prioritization of which block modes to
- * use in the search in terms of their centile (lower centiles = more useful).
+ * This is an empirically determined prioritization of which block modes to use in the search in
+ * terms of their centile (lower centiles = more useful).
  *
  * Returns a dynamically allocated array; caller must free with delete[].
  *
@@ -830,588 +1473,868 @@ static inline const partition_info *get_partition_table(
  * @return The unpacked table.
  */
 const float *get_2d_percentile_table(
-	int xdim,
-	int ydim);
+	unsigned int xdim,
+	unsigned int ydim);
 
 /**
  * @brief Query if a 2D block size is legal.
  *
- * @return A non-zero value if legal, zero otherwise.
+ * @return True if legal, false otherwise.
  */
-int is_legal_2d_block_size(
-	int xdim,
-	int ydim);
+bool is_legal_2d_block_size(
+	unsigned int xdim,
+	unsigned int ydim);
 
 /**
  * @brief Query if a 3D block size is legal.
  *
- * @return A non-zero value if legal, zero otherwise.
+ * @return True if legal, false otherwise.
  */
-int is_legal_3d_block_size(
-	int xdim,
-	int ydim,
-	int zdim);
+bool is_legal_3d_block_size(
+	unsigned int xdim,
+	unsigned int ydim,
+	unsigned int zdim);
 
-// ***********************************************************
-// functions and data pertaining to quantization and encoding
-// **********************************************************
+/* ============================================================================
+  Functionality for managing BISE quantization and unquantization.
+============================================================================ */
 
+/**
+ * @brief The precomputed table for quantizing color values.
+ *
+ * Indexed by [quant_mode][data_value].
+ */
 extern const uint8_t color_quant_tables[21][256];
+
+/**
+ * @brief The precomputed table for unquantizing color values.
+ *
+ * Indexed by [quant_mode][data_value].
+ */
 extern const uint8_t color_unquant_tables[21][256];
-extern int8_t quant_mode_table[17][128];
 
+/**
+ * @brief The precomputed quant mode storage table.
+ *
+ * Indexing by [integercount/2][bits] gives us the quantization level for a given integer count and
+ * number of compressed storage bits. Returns -1 for cases where the requested integer count cannot
+ * ever fit in the supplied storage size.
+ */
+extern const int8_t quant_mode_table[17][128];
+
+/**
+ * @brief Encode a packed string using BISE.
+ *
+ * Note that BISE can return strings that are not a whole number of bytes in length, and ASTC can
+ * start storing strings in a block at arbitrary bit offsets in the encoded data.
+ *
+ * @param         quant_level      The BISE alphabet size.
+ * @param         character_count  The number of characters in the string.
+ * @param         input_data       The unpacked string, one byte per character.
+ * @param[in,out] output_data      The output packed string.
+ * @param         bit_offset       The starting offset in the output storage.
+ */
 void encode_ise(
-	int quant_level,
-	int elements,
+	quant_method quant_level,
+	unsigned int character_count,
 	const uint8_t* input_data,
 	uint8_t* output_data,
-	int bit_offset);
+	unsigned int bit_offset);
 
+/**
+ * @brief Decode a packed string using BISE.
+ *
+ * Note that BISE input strings are not a whole number of bytes in length, and ASTC can start
+ * strings at arbitrary bit offsets in the encoded data.
+ *
+ * @param         quant_level      The BISE alphabet size.
+ * @param         character_count  The number of characters in the string.
+ * @param         input_data       The packed string.
+ * @param[in,out] output_data      The output storage, one byte per character.
+ * @param         bit_offset       The starting offset in the output storage.
+ */
 void decode_ise(
-	int quant_level,
-	int elements,
+	quant_method quant_level,
+	unsigned int character_count,
 	const uint8_t* input_data,
 	uint8_t* output_data,
-	int bit_offset);
+	unsigned int bit_offset);
 
 /**
  * @brief Return the number of bits needed to encode an ISE sequence.
  *
- * This implementation assumes that the @c quant level is untrusted, given it
- * may come from random data being decompressed, so we return an unencodable
- * size if that is the case.
+ * This implementation assumes that the @c quant level is untrusted, given it may come from random
+ * data being decompressed, so we return an arbitrary unencodable size if that is the case.
  *
- * @param items   The number of items in the sequence.
- * @param quant   The desired quantization level.
+ * @param character_count   The number of items in the sequence.
+ * @param quant_level       The desired quantization level.
+ *
+ * @return The number of bits needed to encode the BISE string.
  */
-int get_ise_sequence_bitcount(
-	int items,
-	quant_method quant);
+unsigned int get_ise_sequence_bitcount(
+	unsigned int character_count,
+	quant_method quant_level);
 
-void build_quant_mode_table(void);
+/* ============================================================================
+  Functionality for managing color partitioning.
+============================================================================ */
 
-// **********************************************
-// functions and data pertaining to partitioning
-// **********************************************
-
-// functions to compute color averages and dominant directions
-// for each partition in a block
-void compute_avgs_and_dirs_4_comp(
-	const partition_info* pt,
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	partition_metrics pm[4]);
-
-void compute_avgs_and_dirs_3_comp(
-	const partition_info* pt,
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	int omitted_component,
-	partition_metrics pm[4]);
-
+/**
+ * @brief Compute averages and dominant directions for each partition in a 2 component texture.
+ *
+ * @param      pi           The partition info for the current trial.
+ * @param      blk          The image block color data to be compressed.
+ * @param      component1   The first component included in the analysis.
+ * @param      component2   The second component included in the analysis.
+ * @param[out] pm           The output partition metrics.
+ *                          - Only pi.partition_count array entries actually get initialized.
+ *                          - Direction vectors @c pm.dir are not normalized.
+ */
 void compute_avgs_and_dirs_2_comp(
-	const partition_info* pt,
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	const float2* color_scalefactors,
-	int component1,
-	int component2,
-	float2* averages,
-	float2* directions);
+	const partition_info& pi,
+	const image_block& blk,
+	unsigned int component1,
+	unsigned int component2,
+	partition_metrics pm[BLOCK_MAX_PARTITIONS]);
 
-void compute_error_squared_rgba(
-	const partition_info* pt,
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	const processed_line4* uncor_plines,
-	const processed_line4* samec_plines,
-	float* uncor_lengths,
-	float* samec_lengths,
-	float* uncor_errors,
-	float* samec_errors);
+/**
+ * @brief Compute averages and dominant directions for each partition in a 3 component texture.
+ *
+ * @param      pi                  The partition info for the current trial.
+ * @param      blk                 The image block color data to be compressed.
+ * @param      omitted_component   The component excluded from the analysis.
+ * @param[out] pm                  The output partition metrics.
+ *                                 - Only pi.partition_count array entries actually get initialized.
+ *                                 - Direction vectors @c pm.dir are not normalized.
+ */
+void compute_avgs_and_dirs_3_comp(
+	const partition_info& pi,
+	const image_block& blk,
+	unsigned int omitted_component,
+	partition_metrics pm[BLOCK_MAX_PARTITIONS]);
 
+/**
+ * @brief Compute averages and dominant directions for each partition in a 3 component texture.
+ *
+ * This is a specialization of @c compute_avgs_and_dirs_3_comp where the omitted component is
+ * always alpha, a common case during partition search.
+ *
+ * @param      pi                  The partition info for the current trial.
+ * @param      blk                 The image block color data to be compressed.
+ * @param[out] pm                  The output partition metrics.
+ *                                 - Only pi.partition_count array entries actually get initialized.
+ *                                 - Direction vectors @c pm.dir are not normalized.
+ */
+void compute_avgs_and_dirs_3_comp_rgb(
+	const partition_info& pi,
+	const image_block& blk,
+	partition_metrics pm[BLOCK_MAX_PARTITIONS]);
+
+/**
+ * @brief Compute averages and dominant directions for each partition in a 4 component texture.
+ *
+ * @param      pi    The partition info for the current trial.
+ * @param      blk   The image block color data to be compressed.
+ * @param[out] pm    The output partition metrics.
+ *                   - Only pi.partition_count array entries actually get initialized.
+ *                   - Direction vectors @c pm.dir are not normalized.
+ */
+void compute_avgs_and_dirs_4_comp(
+	const partition_info& pi,
+	const image_block& blk,
+	partition_metrics pm[BLOCK_MAX_PARTITIONS]);
+
+/**
+ * @brief Compute the RGB error for uncorrelated and same chroma projections.
+ *
+ * The output of compute averages and dirs is post processed to define two lines, both of which go
+ * through the mean-color-value.  One line has a direction defined by the dominant direction; this
+ * is used to assess the error from using an uncorrelated color representation. The other line goes
+ * through (0,0,0) and is used to assess the error from using an RGBS color representation.
+ *
+ * This function computes the squared error when using these two representations.
+ *
+ * @param         pi              The partition info for the current trial.
+ * @param         blk             The image block color data to be compressed.
+ * @param[in,out] plines          Processed line inputs, and line length outputs.
+ * @param[out]    uncor_error     The cumulative error for using the uncorrelated line.
+ * @param[out]    samec_error     The cumulative error for using the same chroma line.
+ */
 void compute_error_squared_rgb(
-	const partition_info *pt,
-	const imageblock *blk,
-	const error_weight_block *ewb,
-	partition_lines3 plines[4],
+	const partition_info& pi,
+	const image_block& blk,
+	partition_lines3 plines[BLOCK_MAX_PARTITIONS],
 	float& uncor_error,
 	float& samec_error);
 
-// for each partition, compute its color weightings.
-void compute_partition_error_color_weightings(
-	const error_weight_block& ewb,
-	const partition_info& pt,
-	partition_metrics pm[4]);
+/**
+ * @brief Compute the RGBA error for uncorrelated and same chroma projections.
+ *
+ * The output of compute averages and dirs is post processed to define two lines, both of which go
+ * through the mean-color-value.  One line has a direction defined by the dominant direction; this
+ * is used to assess the error from using an uncorrelated color representation. The other line goes
+ * through (0,0,0,1) and is used to assess the error from using an RGBS color representation.
+ *
+ * This function computes the squared error when using these two representations.
+ *
+ * @param      pi              The partition info for the current trial.
+ * @param      blk             The image block color data to be compressed.
+ * @param      uncor_plines    Processed uncorrelated partition lines for each partition.
+ * @param      samec_plines    Processed same chroma partition lines for each partition.
+ * @param[out] uncor_lengths   The length of each components deviation from the line.
+ * @param[out] samec_lengths   The length of each components deviation from the line.
+ * @param[out] uncor_error     The cumulative error for using the uncorrelated line.
+ * @param[out] samec_error     The cumulative error for using the same chroma line.
+ */
+void compute_error_squared_rgba(
+	const partition_info& pi,
+	const image_block& blk,
+	const processed_line4 uncor_plines[BLOCK_MAX_PARTITIONS],
+	const processed_line4 samec_plines[BLOCK_MAX_PARTITIONS],
+	float uncor_lengths[BLOCK_MAX_PARTITIONS],
+	float samec_lengths[BLOCK_MAX_PARTITIONS],
+	float& uncor_error,
+	float& samec_error);
 
 /**
  * @brief Find the best set of partitions to trial for a given block.
  *
- * On return @c best_partition_uncorrelated contains the best partition
- * assuming the data has noncorrelated chroma, @c best_partition_samechroma
- * contains the best partition assuming the data has corelated chroma, and
- * @c best_partition_dualplane contains the best partition assuming the data
- * has one uncorrelated color component.
+ * On return the @c best_partitions list will contain the two best partition
+ * candidates; one assuming data has uncorrelated chroma and one assuming the
+ * data has corelated chroma. The best candidate is returned first in the list.
  *
- * @c best_partition_dualplane is stored packed; bits [9:0] contain the
- * best partition, bits [11:10] contain the best color component.
+ * @param      bsd                        The block size information.
+ * @param      blk                        The image block color data to compress.
+ * @param      partition_count            The number of partitions in the block.
+ * @param      partition_search_limit     The number of candidate partition encodings to trial.
+ * @param[out] best_partitions            The best partition candidates.
  */
-void find_best_partitionings(
-	const block_size_descriptor* bsd,
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	int partition_count,
-	int partition_search_limit,
-	int* best_partition_uncorrelated,
-	int* best_partition_samechroma,
-	int* best_partition_dualplane);
+void find_best_partition_candidates(
+	const block_size_descriptor& bsd,
+	const image_block& blk,
+	unsigned int partition_count,
+	unsigned int partition_search_limit,
+	unsigned int best_partitions[2]);
 
-// use k-means clustering to compute a partition ordering for a block.
-void kmeans_compute_partition_ordering(
-	const block_size_descriptor* bsd,
-	int partition_count,
-	const imageblock* blk,
-	int *ordering);
-
-// *********************************************************
-// functions and data pertaining to images and imageblocks
-// *********************************************************
+/* ============================================================================
+  Functionality for managing images and image related data.
+============================================================================ */
 
 /**
- * @brief Parameter structure for compute_pixel_region_variance().
+ * @brief Setup computation of regional averages in an image.
  *
- * This function takes a structure to avoid spilling arguments to the stack
- * on every function invocation, as there are a lot of parameters.
- */
-struct pixel_region_variance_args
-{
-	/** The image to analyze. */
-	const astcenc_image* img;
-	/** The RGB channel power adjustment. */
-	float rgb_power;
-	/** The alpha channel power adjustment. */
-	float alpha_power;
-	/** The channel swizzle pattern. */
-	astcenc_swizzle swz;
-	/** Should the algorithm bother with Z axis processing? */
-	bool have_z;
-	/** The kernel radius for average and variance. */
-	int avg_var_kernel_radius;
-	/** The kernel radius for alpha processing. */
-	int alpha_kernel_radius;
-	/** The size of the working data to process. */
-	int size_x;
-	int size_y;
-	int size_z;
-	/** The position of first src and dst data in the data set. */
-	int offset_x;
-	int offset_y;
-	int offset_z;
-	/** The working memory buffer. */
-	vfloat4 *work_memory;
-};
-
-/**
- * @brief Parameter structure for compute_averages_and_variances_proc().
- */
-struct avg_var_args
-{
-	/** The arguments for the nested variance computation. */
-	pixel_region_variance_args arg;
-	/** The image dimensions. */
-	int img_size_x;
-	int img_size_y;
-	int img_size_z;
-	/** The maximum working block dimensions. */
-	int blk_size_xy;
-	int blk_size_z;
-	/** The working block memory size. */
-	int work_memory_size;
-};
-
-/**
- * @brief Compute regional averages and variances in an image.
+ * This must be done by only a single thread per image, before any thread calls
+ * @c compute_averages().
  *
- * Results are written back into img->input_averages, img->input_variances,
- * and img->input_alpha_averages.
+ * Results are written back into @c img->input_alpha_averages.
  *
- * @param img                   The input image data, also holds output data.
- * @param rgb_power             The RGB channel power.
- * @param alpha_power           The A channel power.
- * @param avg_var_kernel_radius The kernel radius (in pixels) for avg and var.
- * @param alpha_kernel_radius   The kernel radius (in pixels) for alpha mods.
- * @param swz                   Input data channel swizzle.
- * @param arg                   The pixel region arguments for this thread.
- * @param ag                    The average variance arguments for this thread.
+ * @param      img                     The input image data, also holds output data.
+ * @param      alpha_kernel_radius     The kernel radius (in pixels) for alpha mods.
+ * @param      swz                     Input data component swizzle.
+ * @param[out] ag                      The average variance arguments to init.
  *
  * @return The number of tasks in the processing stage.
  */
-unsigned int init_compute_averages_and_variances(
-	astcenc_image& img,
-	float rgb_power,
-	float alpha_power,
-	int avg_var_kernel_radius,
-	int alpha_kernel_radius,
-	astcenc_swizzle swz,
-	pixel_region_variance_args& arg,
-	avg_var_args& ag);
+unsigned int init_compute_averages(
+	const astcenc_image& img,
+	unsigned int alpha_kernel_radius,
+	const astcenc_swizzle& swz,
+	avg_args& ag);
 
-void compute_averages_and_variances(
+/**
+ * @brief Compute regional averages in an image.
+ *
+ * This function can be called by multiple threads, but only after a single
+ * thread calls the setup function @c init_compute_averages().
+ *
+ * Results are written back into @c img->input_alpha_averages.
+ *
+ * @param[out] ctx   The context.
+ * @param      ag    The average and variance arguments created during setup.
+ */
+void compute_averages(
 	astcenc_context& ctx,
-	const avg_var_args& ag);
+	const avg_args& ag);
 
-// fetch an image-block from the input file
-void fetch_imageblock(
+/**
+ * @brief Fetch a single image block from the input image
+ *
+ * @param      decode_mode   The compression color profile.
+ * @param      img           The input image data.
+ * @param[out] blk           The image block to populate.
+ * @param      bsd           The block size information.
+ * @param      xpos          The block X coordinate in the input image.
+ * @param      ypos          The block Y coordinate in the input image.
+ * @param      zpos          The block Z coordinate in the input image.
+ * @param      swz           The swizzle to apply on load.
+ */
+void fetch_image_block(
 	astcenc_profile decode_mode,
 	const astcenc_image& img,
-	imageblock* blk,	// picture-block to initialize with image data
-	const block_size_descriptor* bsd,
-	// position in picture to fetch block from
-	int xpos,
-	int ypos,
-	int zpos,
-	astcenc_swizzle swz);
-
-// write an image block to the output file buffer.
-// the data written are taken from orig_data.
-void write_imageblock(
-	astcenc_image& img,
-	const imageblock* blk,	// picture-block to initialize with image data
-	const block_size_descriptor* bsd,
-	// position in picture to write block to.
-	int xpos,
-	int ypos,
-	int zpos,
-	astcenc_swizzle swz);
-
-float compute_symbolic_block_difference(
-	const astcenc_config& config,
-	const block_size_descriptor* bsd,
-	const symbolic_compressed_block* scb,
-	const imageblock* blk,
-	const error_weight_block *ewb) ;
-
-// ***********************************************************
-// functions pertaining to computing texel weights for a block
-// ***********************************************************
-struct endpoints
-{
-	int partition_count;
-	vfloat4 endpt0[4];
-	vfloat4 endpt1[4];
-};
-
-struct endpoints_and_weights
-{
-	endpoints ep;
-	alignas(ASTCENC_VECALIGN) float weights[MAX_TEXELS_PER_BLOCK];
-	alignas(ASTCENC_VECALIGN) float weight_error_scale[MAX_TEXELS_PER_BLOCK];
-};
-
-void compute_endpoints_and_ideal_weights_1_plane(
-	const block_size_descriptor* bsd,
-	const partition_info* pt,
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	endpoints_and_weights* ei);
-
-void compute_endpoints_and_ideal_weights_2_planes(
-	const block_size_descriptor* bsd,
-	const partition_info* pt,
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	int separate_component,
-	endpoints_and_weights* ei1, // primary plane weights
-	endpoints_and_weights* ei2); // secondary plane weights
+	image_block& blk,
+	const block_size_descriptor& bsd,
+	unsigned int xpos,
+	unsigned int ypos,
+	unsigned int zpos,
+	const astcenc_swizzle& swz);
 
 /**
- * @brief Compute the optimal weights for a decimation table.
+ * @brief Write a single image block from the output image
  *
- * Compute the idealized weight set, assuming infinite precision and no
- * quantization. Later functions will use this as a staring points.
- *
- * @param      eai_in       The non-decimated endpoints and weights.
- * @param      eai_out      A copy of eai_in we can modify later.
- * @param      dt           The selected decimation table.
- * @param[out] weight_set   The output decimated weight set.
- * @param[out] weights      The output decimated weights.
+ * @param[out] img           The input image data.
+ * @param      blk           The image block to populate.
+ * @param      bsd           The block size information.
+ * @param      xpos          The block X coordinate in the input image.
+ * @param      ypos          The block Y coordinate in the input image.
+ * @param      zpos          The block Z coordinate in the input image.
+ * @param      swz           The swizzle to apply on store.
  */
-void compute_ideal_weights_for_decimation_table(
+void write_image_block(
+	astcenc_image& img,
+	const image_block& blk,
+	const block_size_descriptor& bsd,
+	unsigned int xpos,
+	unsigned int ypos,
+	unsigned int zpos,
+	const astcenc_swizzle& swz);
+
+/* ============================================================================
+  Functionality for computing endpoint colors and weights for a block.
+============================================================================ */
+
+/**
+ * @brief Compute ideal endpoint colors and weights for 1 plane of weights.
+ *
+ * The ideal endpoints define a color line for the partition. For each texel the ideal weight
+ * defines an exact position on the partition color line. We can then use these to assess the error
+ * introduced by removing and quantizing the weight grid.
+ *
+ * @param      blk   The image block color data to compress.
+ * @param      pi    The partition info for the current trial.
+ * @param[out] ei    The endpoint and weight values.
+ */
+void compute_ideal_colors_and_weights_1plane(
+	const image_block& blk,
+	const partition_info& pi,
+	endpoints_and_weights& ei);
+
+/**
+ * @brief Compute ideal endpoint colors and weights for 2 planes of weights.
+ *
+ * The ideal endpoints define a color line for the partition. For each texel the ideal weight
+ * defines an exact position on the partition color line. We can then use these to assess the error
+ * introduced by removing and quantizing the weight grid.
+ *
+ * @param      bsd                The block size information.
+ * @param      blk                The image block color data to compress.
+ * @param      plane2_component   The component assigned to plane 2.
+ * @param[out] ei1                The endpoint and weight values for plane 1.
+ * @param[out] ei2                The endpoint and weight values for plane 2.
+ */
+void compute_ideal_colors_and_weights_2planes(
+	const block_size_descriptor& bsd,
+	const image_block& blk,
+	unsigned int plane2_component,
+	endpoints_and_weights& ei1,
+	endpoints_and_weights& ei2);
+
+/**
+ * @brief Compute the optimal unquantized weights for a decimation table.
+ *
+ * After computing ideal weights for the case for a complete weight grid, we we want to compute the
+ * ideal weights for the case where weights exist only for some texels. We do this with a
+ * steepest-descent grid solver which works as follows:
+ *
+ * First, for each actual weight, perform a weighted averaging of the texels affected by the weight.
+ * Then, set step size to <some initial value> and attempt one step towards the original ideal
+ * weight if it helps to reduce error.
+ *
+ * @param      eai_in                   The non-decimated endpoints and weights.
+ * @param      eai_out                  A copy of eai_in we can modify later for refinement.
+ * @param      di                       The selected weight decimation.
+ * @param[out] dec_weight_ideal_value   The ideal values for the decimated weight set.
+ */
+void compute_ideal_weights_for_decimation(
 	const endpoints_and_weights& eai_in,
 	endpoints_and_weights& eai_out,
-	const decimation_table& dt,
-	float* weight_set,
-	float* weights);
+	const decimation_info& di,
+	float* dec_weight_ideal_value);
 
 /**
- * @brief Compute the best quantized weights for a decimation table.
+ * @brief Compute the optimal quantized weights for a decimation table.
  *
- * Compute the quantized weight set, for a specific quant level.
+ * We test the two closest weight indices in the allowed quantization range and keep the weight that
+ * is the closest match.
+ *
+ * @param      di                        The selected weight decimation.
+ * @param      low_bound                 The lowest weight allowed.
+ * @param      high_bound                The highest weight allowed.
+ * @param      dec_weight_ideal_value    The ideal weight set.
+ * @param[out] dec_weight_quant_uvalue   The output quantized weight as a float.
+ * @param[out] dec_weight_quant_pvalue   The output quantized weight as encoded int.
+ * @param      quant_level               The desired weight quant level.
  */
-void compute_quantized_weights_for_decimation_table(
-	const decimation_table* dt,
+void compute_quantized_weights_for_decimation(
+	const decimation_info& di,
 	float low_bound,
 	float high_bound,
-	const float* weight_set_in,
-	float* weight_set_out,
-	uint8_t* quantized_weight_set,
-	int quant_level);
+	const float* dec_weight_ideal_value,
+	float* dec_weight_quant_uvalue,
+	uint8_t* dec_weight_quant_pvalue,
+	quant_method quant_level);
 
-float compute_error_of_weight_set(
-	const endpoints_and_weights* eai,
-	const decimation_table* dt,
-	const float *weights);
+/**
+ * @brief Compute the infilled weight for a texel index in a decimated grid.
+ *
+ * @param di        The weight grid decimation to use.
+ * @param weights   The decimated weight values to use.
+ * @param index     The texel index to interpolate.
+ *
+ * @return The interpolated weight for the given texel.
+ */
+static inline float bilinear_infill(
+	const decimation_info& di,
+	const float* weights,
+	unsigned int index
+) {
+	return (weights[di.texel_weights_4t[0][index]] * di.texel_weights_float_4t[0][index] +
+	        weights[di.texel_weights_4t[1][index]] * di.texel_weights_float_4t[1][index]) +
+	       (weights[di.texel_weights_4t[2][index]] * di.texel_weights_float_4t[2][index] +
+	        weights[di.texel_weights_4t[3][index]] * di.texel_weights_float_4t[3][index]);
+}
 
-void merge_endpoints(
-	const endpoints* ep1,	// contains three of the color components
-	const endpoints* ep2,	// contains the remaining color component
-	int separate_component, endpoints* res);
+/**
+ * @brief Compute the infilled weight for N texel indices in a decimated grid.
+ *
+ * @param di        The weight grid decimation to use.
+ * @param weights   The decimated weight values to use.
+ * @param index     The first texel index to interpolate.
+ *
+ * @return The interpolated weight for the given set of SIMD_WIDTH texels.
+ */
+static inline vfloat bilinear_infill_vla(
+	const decimation_info& di,
+	const float* weights,
+	unsigned int index
+) {
+	// Load the bilinear filter texel weight indexes in the decimated grid
+	vint weight_idx0 = vint(di.texel_weights_4t[0] + index);
+	vint weight_idx1 = vint(di.texel_weights_4t[1] + index);
+	vint weight_idx2 = vint(di.texel_weights_4t[2] + index);
+	vint weight_idx3 = vint(di.texel_weights_4t[3] + index);
 
-// functions dealing with color endpoints
+	// Load the bilinear filter weights from the decimated grid
+	vfloat weight_val0 = gatherf(weights, weight_idx0);
+	vfloat weight_val1 = gatherf(weights, weight_idx1);
+	vfloat weight_val2 = gatherf(weights, weight_idx2);
+	vfloat weight_val3 = gatherf(weights, weight_idx3);
 
-// function to pack a pair of color endpoints into a series of integers.
-// the format used may or may not match the format specified;
-// the return value is the format actually used.
-int pack_color_endpoints(
+	// Load the weight contribution factors for each decimated weight
+	vfloat tex_weight_float0 = loada(di.texel_weights_float_4t[0] + index);
+	vfloat tex_weight_float1 = loada(di.texel_weights_float_4t[1] + index);
+	vfloat tex_weight_float2 = loada(di.texel_weights_float_4t[2] + index);
+	vfloat tex_weight_float3 = loada(di.texel_weights_float_4t[3] + index);
+
+	// Compute the bilinear interpolation to generate the per-texel weight
+	return (weight_val0 * tex_weight_float0 + weight_val1 * tex_weight_float1) +
+	       (weight_val2 * tex_weight_float2 + weight_val3 * tex_weight_float3);
+}
+
+/**
+ * @brief Compute the error of a decimated weight set for 1 plane.
+ *
+ * After computing ideal weights for the case with one weight per texel, we want to compute the
+ * error for decimated weight grids where weights are stored at a lower resolution. This function
+ * computes the error of the reduced grid, compared to the full grid.
+ *
+ * @param eai                       The ideal weights for the full grid.
+ * @param di                        The selected weight decimation.
+ * @param dec_weight_quant_uvalue   The quantized weights for the decimated grid.
+ *
+ * @return The accumulated error.
+ */
+float compute_error_of_weight_set_1plane(
+	const endpoints_and_weights& eai,
+	const decimation_info& di,
+	const float* dec_weight_quant_uvalue);
+
+/**
+ * @brief Compute the error of a decimated weight set for 2 planes.
+ *
+ * After computing ideal weights for the case with one weight per texel, we want to compute the
+ * error for decimated weight grids where weights are stored at a lower resolution. This function
+ * computes the error of the reduced grid, compared to the full grid.
+ *
+ * @param eai1                             The ideal weights for the full grid and plane 1.
+ * @param eai2                             The ideal weights for the full grid and plane 2.
+ * @param di                               The selected weight decimation.
+ * @param dec_weight_quant_uvalue_plane1   The quantized weights for the decimated grid plane 1.
+ * @param dec_weight_quant_uvalue_plane2   The quantized weights for the decimated grid plane 2.
+ *
+ * @return The accumulated error.
+ */
+float compute_error_of_weight_set_2planes(
+	const endpoints_and_weights& eai1,
+	const endpoints_and_weights& eai2,
+	const decimation_info& di,
+	const float* dec_weight_quant_uvalue_plane1,
+	const float* dec_weight_quant_uvalue_plane2);
+
+/**
+ * @brief Pack a single pair of color endpoints as effectively as possible.
+ *
+ * The user requests a base color endpoint mode in @c format, but the quantizer may choose a
+ * delta-based representation. It will report back the format variant it actually used.
+ *
+ * @param      color0       The input unquantized color0 endpoint for absolute endpoint pairs.
+ * @param      color1       The input unquantized color1 endpoint for absolute endpoint pairs.
+ * @param      rgbs_color   The input unquantized RGBS variant endpoint for same chroma endpoints.
+ * @param      rgbo_color   The input unquantized RGBS variant endpoint for HDR endpoints..
+ * @param      format       The desired base format.
+ * @param[out] output       The output storage for the quantized colors/
+ * @param      quant_level  The quantization level requested.
+ *
+ * @return The actual endpoint mode used.
+ */
+uint8_t pack_color_endpoints(
 	vfloat4 color0,
 	vfloat4 color1,
 	vfloat4 rgbs_color,
 	vfloat4 rgbo_color,
 	int format,
-	int* output,
-	int quant_level);
+	uint8_t* output,
+	quant_method quant_level);
 
-// unpack a pair of color endpoints from a series of integers.
+/**
+ * @brief Unpack a single pair of encoded and quantized color endpoints.
+ *
+ * @param      decode_mode   The decode mode (LDR, HDR).
+ * @param      format        The color endpoint mode used.
+ * @param      quant_level   The quantization level used.
+ * @param      input         The raw array of encoded input integers. The length of this array
+ *                           depends on @c format; it can be safely assumed to be large enough.
+ * @param[out] rgb_hdr       Is the endpoint using HDR for the RGB channels?
+ * @param[out] alpha_hdr     Is the endpoint using HDR for the A channel?
+ * @param[out] output0       The output color for endpoint 0.
+ * @param[out] output1       The output color for endpoint 1.
+ */
 void unpack_color_endpoints(
 	astcenc_profile decode_mode,
 	int format,
-	int quant_level,
-	const int* input,
-	int* rgb_hdr,
-	int* alpha_hdr,
-	int* nan_endpoint,
-	vint4* output0,
-	vint4* output1);
+	quant_method quant_level,
+	const uint8_t* input,
+	bool& rgb_hdr,
+	bool& alpha_hdr,
+	vint4& output0,
+	vint4& output1);
 
-// unquantize and undecimate a weight grid
+/**
+ * @brief Unpack a set of quantized and decimated weights.
+ *
+ * @param      bsd              The block size information.
+ * @param      scb              The symbolic compressed encoding.
+ * @param      di               The weight grid decimation table.
+ * @param      is_dual_plane    @c true if this is a dual plane block, @c false otherwise.
+ * @param      quant_level      The weight quantization level.
+ * @param[out] weights_plane1   The output array for storing the plane 1 weights.
+ * @param[out] weights_plane2   The output array for storing the plane 2 weights.
+ */
 void unpack_weights(
 	const block_size_descriptor& bsd,
 	const symbolic_compressed_block& scb,
-	const decimation_table& dt,
+	const decimation_info& di,
 	bool is_dual_plane,
-	int weight_quant_level,
-	int weights_plane1[MAX_TEXELS_PER_BLOCK],
-	int weights_plane2[MAX_TEXELS_PER_BLOCK]);
+	quant_method quant_level,
+	int weights_plane1[BLOCK_MAX_TEXELS],
+	int weights_plane2[BLOCK_MAX_TEXELS]);
 
-struct encoding_choice_errors
-{
-	// Error of using LDR RGB-scale instead of complete endpoints.
-	float rgb_scale_error;
-	// Error of using HDR RGB-scale instead of complete endpoints.
-	float rgb_luma_error;
-	// Error of using luminance instead of RGB.
-	float luminance_error;
-	// Error of discarding alpha.
-	float alpha_drop_error;
-	// Validity of using offset encoding.
-	bool can_offset_encode;
-	// Validity of using blue contraction encoding.
-	bool can_blue_contract;
-};
-
-// buffers used to store intermediate data in compress_symbolic_block_fixed_partition_*()
-struct alignas(ASTCENC_VECALIGN) compress_fixed_partition_buffers
-{
-	endpoints_and_weights ei1;
-	endpoints_and_weights ei2;
-	endpoints_and_weights eix1[MAX_DECIMATION_MODES];
-	endpoints_and_weights eix2[MAX_DECIMATION_MODES];
-	alignas(ASTCENC_VECALIGN) float decimated_quantized_weights[2 * MAX_DECIMATION_MODES * MAX_WEIGHTS_PER_BLOCK];
-	alignas(ASTCENC_VECALIGN) float decimated_weights[2 * MAX_DECIMATION_MODES * MAX_WEIGHTS_PER_BLOCK];
-	alignas(ASTCENC_VECALIGN) float flt_quantized_decimated_quantized_weights[2 * MAX_WEIGHT_MODES * MAX_WEIGHTS_PER_BLOCK];
-	alignas(ASTCENC_VECALIGN) uint8_t u8_quantized_decimated_quantized_weights[2 * MAX_WEIGHT_MODES * MAX_WEIGHTS_PER_BLOCK];
-};
-
-struct compress_symbolic_block_buffers
-{
-	error_weight_block ewb;
-	compress_fixed_partition_buffers planes;
-};
-
-void compute_encoding_choice_errors(
-	const block_size_descriptor* bsd,
-	const imageblock* blk,
-	const partition_info* pt,
-	const error_weight_block* ewb,
-	int separate_component,	// component that is separated out in 2-plane mode, -1 in 1-plane mode
-	encoding_choice_errors* eci);
-
-void determine_optimal_set_of_endpoint_formats_to_use(
-	const block_size_descriptor* bsd,
-	const partition_info* pt,
-	const imageblock* blk,
-	const error_weight_block* ewb,
-	const endpoints* ep,
-	int separate_component,	// separate color component for 2-plane mode; -1 for single-plane mode
-	 // bitcounts and errors computed for the various quantization methods
+/**
+ * @brief Identify, for each mode, which set of color endpoint produces the best result.
+ *
+ * Returns the best @c tune_candidate_limit best looking modes, along with the ideal color encoding
+ * combination for each. The modified quantization level can be used when all formats are the same,
+ * as this frees up two additional bits of storage.
+ *
+ * @param      bsd                           The block size information.
+ * @param      pi                            The partition info for the current trial.
+ * @param      blk                           The image block color data to compress.
+ * @param      ep                            The ideal endpoints.
+ * @param      qwt_bitcounts                 Bit counts for different quantization methods.
+ * @param      qwt_errors                    Errors for different quantization methods.
+ * @param      tune_candidate_limit          The max number of candidates to return, may be less.
+ * @param      block_mode_count              The number of blocks mofdes candidates to inspect.
+ * @param[out] partition_format_specifiers   The best formats per partition.
+ * @param[out] block_mode                    The best packed block mode indexes.
+ * @param[out] quant_level                   The best color quant level.
+ * @param[out] quant_level_mod               The best color quant level if endpoints are the same.
+ * @param[out] tmpbuf                        Preallocated scratch buffers for the compressor.
+ *
+ * @return The actual number of candidate matches returned.
+ */
+unsigned int compute_ideal_endpoint_formats(
+	const block_size_descriptor& bsd,
+	const partition_info& pi,
+	const image_block& blk,
+	const endpoints& ep,
 	const int* qwt_bitcounts,
 	const float* qwt_errors,
-	int tune_candidate_limit,
-	// output data
-	int partition_format_specifiers[4][4],
-	int quantized_weight[4],
-	int quant_level[4],
-	int quant_level_mod[4]);
+	unsigned int tune_candidate_limit,
+	unsigned int block_mode_count,
+	int partition_format_specifiers[TUNE_MAX_TRIAL_CANDIDATES][BLOCK_MAX_PARTITIONS],
+	int block_mode[TUNE_MAX_TRIAL_CANDIDATES],
+	quant_method quant_level[TUNE_MAX_TRIAL_CANDIDATES],
+	quant_method quant_level_mod[TUNE_MAX_TRIAL_CANDIDATES],
+	compression_working_buffers& tmpbuf);
 
+/**
+ * @brief For a given 1 plane weight set recompute the endpoint colors.
+ *
+ * As we quantize and decimate weights the optimal endpoint colors may change slightly, so we must
+ * recompute the ideal colors for a specific weight set.
+ *
+ * @param         blk                        The image block color data to compress.
+ * @param         pi                         The partition info for the current trial.
+ * @param         di                         The weight grid decimation table.
+ * @param         weight_quant_mode          The weight grid quantization level.
+ * @param         dec_weights_quant_pvalue   The quantized weight set.
+ * @param[in,out] ep                         The color endpoints (modifed in place).
+ * @param[out]    rgbs_vectors               The RGB+scale vectors for LDR blocks.
+ * @param[out]    rgbo_vectors               The RGB+offset vectors for HDR blocks.
+ */
 void recompute_ideal_colors_1plane(
+	const image_block& blk,
+	const partition_info& pi,
+	const decimation_info& di,
 	int weight_quant_mode,
-	endpoints* ep,	// contains the endpoints we wish to update
-	vfloat4* rgbs_vectors,	// used to return RGBS-vectors for endpoint mode #6 (LDR RGB base + scale)
-	vfloat4* rgbo_vectors,	// used to return RGBS-vectors for endpoint mode #7 (HDR RGB base + scale)
-	const uint8_t* weight_set8,	// the current set of weight values
-	const partition_info* pt,
-	const decimation_table* dt,
-	const imageblock* blk,	// picture-block containing the actual data.
-	const error_weight_block* ewb);
+	const uint8_t* dec_weights_quant_pvalue,
+	endpoints& ep,
+	vfloat4 rgbs_vectors[BLOCK_MAX_PARTITIONS],
+	vfloat4 rgbo_vectors[BLOCK_MAX_PARTITIONS]);
 
+/**
+ * @brief For a given 2 plane weight set recompute the endpoint colors.
+ *
+ * As we quantize and decimate weights the optimal endpoint colors may change slightly, so we must
+ * recompute the ideal colors for a specific weight set.
+ *
+ * @param         blk                               The image block color data to compress.
+ * @param         bsd                               The block_size descriptor.
+ * @param         di                                The weight grid decimation table.
+ * @param         weight_quant_mode                 The weight grid quantization level.
+ * @param         dec_weights_quant_pvalue_plane1   The quantized weight set for plane 1.
+ * @param         dec_weights_quant_pvalue_plane2   The quantized weight set for plane 2.
+ * @param[in,out] ep                                The color endpoints (modifed in place).
+ * @param[out]    rgbs_vector                       The RGB+scale color for LDR blocks.
+ * @param[out]    rgbo_vector                       The RGB+offset color for HDR blocks.
+ * @param         plane2_component                  The component assigned to plane 2.
+ */
 void recompute_ideal_colors_2planes(
+	const image_block& blk,
+	const block_size_descriptor& bsd,
+	const decimation_info& di,
 	int weight_quant_mode,
-	endpoints* ep,	// contains the endpoints we wish to update
-	vfloat4* rgbs_vectors,	// used to return RGBS-vectors for endpoint mode #6 (LDR RGB base + scale)
-	vfloat4* rgbo_vectors,	// used to return RGBS-vectors for endpoint mode #7 (HDR RGB base + scale)
-	const uint8_t* weight_set8,	// the current set of weight values
-	const uint8_t* plane2_weight_set8,	// nullptr if plane 2 is not actually used.
-	int plane2_color_component,	// color component for 2nd plane of weights; -1 if the 2nd plane of weights is not present
-	const partition_info* pt,
-	const decimation_table* dt,
-	const imageblock* blk,	// picture-block containing the actual data.
-	const error_weight_block* ewb);
+	const uint8_t* dec_weights_quant_pvalue_plane1,
+	const uint8_t* dec_weights_quant_pvalue_plane2,
+	endpoints& ep,
+	vfloat4& rgbs_vector,
+	vfloat4& rgbo_vector,
+	int plane2_component);
 
-void expand_deblock_weights(
-	astcenc_context& ctx);
-
-// functions pertaining to weight alignment
+/**
+ * @brief Expand the angular tables needed for the alternative to PCA that we use.
+ */
 void prepare_angular_tables();
 
-void imageblock_initialize_deriv(
-	const imageblock* blk,
-	int pixelcount,
-	vfloat4* dptr);
-
+/**
+ * @brief Compute the angular endpoints for one plane for each block mode.
+ *
+ * @param      tune_low_weight_limit     Weight count cutoff below which we use simpler searches.
+ * @param      only_always               Only consider block modes that are always enabled.
+ * @param      bsd                       The block size descriptor for the current trial.
+ * @param      dec_weight_quant_uvalue   The decimated and quantized weight values.
+ * @param[out] tmpbuf                    Preallocated scratch buffers for the compressor.
+ */
 void compute_angular_endpoints_1plane(
+	unsigned int tune_low_weight_limit,
 	bool only_always,
-	const block_size_descriptor* bsd,
-	const float* decimated_quantized_weights,
-	const float* decimated_weights,
-	float low_value[MAX_WEIGHT_MODES],
-	float high_value[MAX_WEIGHT_MODES]);
+	const block_size_descriptor& bsd,
+	const float* dec_weight_quant_uvalue,
+	compression_working_buffers& tmpbuf);
 
+/**
+ * @brief Compute the angular endpoints for two planes for each block mode.
+ *
+ * @param      tune_low_weight_limit     Weight count cutoff below which we use simpler searches.
+ * @param      bsd                       The block size descriptor for the current trial.
+ * @param      dec_weight_quant_uvalue   The decimated and quantized weight values.
+ * @param[out] tmpbuf                    Preallocated scratch buffers for the compressor.
+ */
 void compute_angular_endpoints_2planes(
-	bool only_always,
-	const block_size_descriptor * bsd,
-	const float* decimated_quantized_weights,
-	const float* decimated_weights,
-	float low_value1[MAX_WEIGHT_MODES],
-	float high_value1[MAX_WEIGHT_MODES],
-	float low_value2[MAX_WEIGHT_MODES],
-	float high_value2[MAX_WEIGHT_MODES]);
+	unsigned int tune_low_weight_limit,
+	const block_size_descriptor& bsd,
+	const float* dec_weight_quant_uvalue,
+	compression_working_buffers& tmpbuf);
 
-/* *********************************** high-level encode and decode functions ************************************ */
+/* ============================================================================
+  Functionality for high level compression and decompression access.
+============================================================================ */
 
+/**
+ * @brief Compress an image block into a physical block.
+ *
+ * @param      ctx      The compressor context and configuration.
+ * @param      blk      The image block color data to compress.
+ * @param[out] pcb      The physical compressed block output.
+ * @param[out] tmpbuf   Preallocated scratch buffers for the compressor.
+ */
 void compress_block(
 	const astcenc_context& ctx,
-	const astcenc_image& image,
-	const imageblock* blk,
-	symbolic_compressed_block& scb,
+	const image_block& blk,
 	physical_compressed_block& pcb,
-	compress_symbolic_block_buffers* tmpbuf);
+	compression_working_buffers& tmpbuf);
 
+/**
+ * @brief Decompress a symbolic block in to an image block.
+ *
+ * @param      decode_mode   The decode mode (LDR, HDR, etc).
+ * @param      bsd           The block size information.
+ * @param      xpos          The X coordinate of the block in the overall image.
+ * @param      ypos          The Y coordinate of the block in the overall image.
+ * @param      zpos          The Z coordinate of the block in the overall image.
+ * @param[out] blk           The decompressed image block color data.
+ */
 void decompress_symbolic_block(
 	astcenc_profile decode_mode,
-	const block_size_descriptor* bsd,
+	const block_size_descriptor& bsd,
 	int xpos,
 	int ypos,
 	int zpos,
-	const symbolic_compressed_block* scb,
-	imageblock* blk);
+	const symbolic_compressed_block& scb,
+	image_block& blk);
 
+/**
+ * @brief Compute the error between a symbolic block and the original input data.
+ *
+ * This function is specialized for 2 plane and 1 partition search.
+ *
+ * In RGBM mode this will reject blocks that attempt to encode a zero M value.
+ *
+ * @param config   The compressor config.
+ * @param bsd      The block size information.
+ * @param scb      The symbolic compressed encoding.
+ * @param blk      The original image block color data.
+ *
+ * @return Returns the computed error, or a negative value if the encoding
+ *         should be rejected for any reason.
+ */
+float compute_symbolic_block_difference_2plane(
+	const astcenc_config& config,
+	const block_size_descriptor& bsd,
+	const symbolic_compressed_block& scb,
+	const image_block& blk);
+
+/**
+ * @brief Compute the error between a symbolic block and the original input data.
+ *
+ * This function is specialized for 1 plane and N partition search.
+ *
+ * In RGBM mode this will reject blocks that attempt to encode a zero M value.
+ *
+ * @param config   The compressor config.
+ * @param bsd      The block size information.
+ * @param scb      The symbolic compressed encoding.
+ * @param blk      The original image block color data.
+ *
+ * @return Returns the computed error, or a negative value if the encoding
+ *         should be rejected for any reason.
+ */
+float compute_symbolic_block_difference_1plane(
+	const astcenc_config& config,
+	const block_size_descriptor& bsd,
+	const symbolic_compressed_block& scb,
+	const image_block& blk);
+
+/**
+ * @brief Compute the error between a symbolic block and the original input data.
+ *
+ * This function is specialized for 1 plane and 1 partition search.
+ *
+ * In RGBM mode this will reject blocks that attempt to encode a zero M value.
+ *
+ * @param config   The compressor config.
+ * @param bsd      The block size information.
+ * @param scb      The symbolic compressed encoding.
+ * @param blk      The original image block color data.
+ *
+ * @return Returns the computed error, or a negative value if the encoding
+ *         should be rejected for any reason.
+ */
+float compute_symbolic_block_difference_1plane_1partition(
+	const astcenc_config& config,
+	const block_size_descriptor& bsd,
+	const symbolic_compressed_block& scb,
+	const image_block& blk);
+
+/**
+ * @brief Convert a symbolic representation into a binary physical encoding.
+ *
+ * It is assumed that the symbolic encoding is valid and encodable, or
+ * previously flagged as an error block if an error color it to be encoded.
+ *
+ * @param      bsd   The block size information.
+ * @param      scb   The symbolic representation.
+ * @param[out] pcb   The binary encoded data.
+ */
 void symbolic_to_physical(
 	const block_size_descriptor& bsd,
 	const symbolic_compressed_block& scb,
 	physical_compressed_block& pcb);
 
+/**
+ * @brief Convert a binary physical encoding into a symbolic representation.
+ *
+ * This function can cope with arbitrary input data; output blocks will be
+ * flagged as an error block if the encoding is invalid.
+ *
+ * @param      bsd   The block size information.
+ * @param      pcb   The binary encoded data.
+ * @param[out] scb   The output symbolic representation.
+ */
 void physical_to_symbolic(
 	const block_size_descriptor& bsd,
 	const physical_compressed_block& pcb,
 	symbolic_compressed_block& scb);
 
-#if defined(ASTCENC_DIAGNOSTICS)
-class TraceLog; // See astcenc_diagnostic_trace for details.
-#endif
-
-struct astcenc_context
-{
-	astcenc_config config;
-	unsigned int thread_count;
-	block_size_descriptor* bsd;
-
-	// Fields below here are not needed in a decompress-only build, but some
-	// remain as they are small and it avoids littering the code with #ifdefs.
-	// The most significant contributors to large structure size are omitted.
-
-	// Regional average-and-variance information, initialized by
-	// compute_averages_and_variances() only if the astc encoder
-	// is requested to do error weighting based on averages and variances.
-	vfloat4 *input_averages;
-	vfloat4 *input_variances;
-	float *input_alpha_averages;
-
-	compress_symbolic_block_buffers* working_buffers;
-
-#if !defined(ASTCENC_DECOMPRESS_ONLY)
-	pixel_region_variance_args arg;
-	avg_var_args ag;
-
-	float deblock_weights[MAX_TEXELS_PER_BLOCK];
-
-	ParallelManager manage_avg_var;
-	ParallelManager manage_compress;
-#endif
-
-	ParallelManager manage_decompress;
-
-#if defined(ASTCENC_DIAGNOSTICS)
-	TraceLog* trace_log;
-#endif
-};
-
 /* ============================================================================
-  Platform-specific functions
+Platform-specific functions.
 ============================================================================ */
 /**
  * @brief Run-time detection if the host CPU supports the POPCNT extension.
- * @return Zero if not supported, positive value if it is.
+ *
+ * @return @c true if supported, @c false if not.
  */
-int cpu_supports_popcnt();
+bool cpu_supports_popcnt();
 
 /**
  * @brief Run-time detection if the host CPU supports F16C extension.
- * @return Zero if not supported, positive value if it is.
+ *
+ * @return @c true if supported, @c false if not.
  */
-int cpu_supports_f16c();
+bool cpu_supports_f16c();
 
 /**
  * @brief Run-time detection if the host CPU supports SSE 4.1 extension.
- * @return Zero if not supported, positive value if it is.
+ *
+ * @return @c true if supported, @c false if not.
  */
-int cpu_supports_sse41();
+bool cpu_supports_sse41();
 
 /**
  * @brief Run-time detection if the host CPU supports AVX 2 extension.
- * @return Zero if not supported, positive value if it is.
+ *
+ * @return @c true if supported, @c false if not.
  */
-int cpu_supports_avx2();
-
+bool cpu_supports_avx2();
 
 /**
  * @brief Allocate an aligned memory buffer.

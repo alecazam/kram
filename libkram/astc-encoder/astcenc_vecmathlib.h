@@ -47,7 +47,6 @@
  *     * 4-wide for x86-64 SSE2.
  *     * 4-wide for x86-64 SSE4.1.
  *     * 8-wide for x86-64 AVX2.
- *
  */
 
 #ifndef ASTC_VECMATHLIB_H_INCLUDED
@@ -149,7 +148,7 @@
  *
  * @return The rounded value.
  */
-ASTCENC_SIMD_INLINE int round_down_to_simd_multiple_8(int count)
+ASTCENC_SIMD_INLINE unsigned int round_down_to_simd_multiple_8(unsigned int count)
 {
 	return count & ~(8 - 1);
 }
@@ -161,7 +160,7 @@ ASTCENC_SIMD_INLINE int round_down_to_simd_multiple_8(int count)
  *
  * @return The rounded value.
  */
-ASTCENC_SIMD_INLINE int round_down_to_simd_multiple_4(int count)
+ASTCENC_SIMD_INLINE unsigned int round_down_to_simd_multiple_4(unsigned int count)
 {
 	return count & ~(4 - 1);
 }
@@ -175,7 +174,7 @@ ASTCENC_SIMD_INLINE int round_down_to_simd_multiple_4(int count)
  *
  * @return The rounded value.
  */
-ASTCENC_SIMD_INLINE int round_down_to_simd_multiple_vla(int count)
+ASTCENC_SIMD_INLINE unsigned int round_down_to_simd_multiple_vla(unsigned int count)
 {
 	return count & ~(ASTCENC_SIMD_WIDTH - 1);
 }
@@ -189,7 +188,7 @@ ASTCENC_SIMD_INLINE int round_down_to_simd_multiple_vla(int count)
  *
  * @return The rounded value.
  */
-ASTCENC_SIMD_INLINE int round_up_to_simd_multiple_vla(int count)
+ASTCENC_SIMD_INLINE unsigned int round_up_to_simd_multiple_vla(unsigned int count)
 {
 	int multiples = (count + ASTCENC_SIMD_WIDTH - 1) / ASTCENC_SIMD_WIDTH;
 	return multiples * ASTCENC_SIMD_WIDTH;
@@ -244,7 +243,33 @@ static ASTCENC_SIMD_INLINE vfloat4 unit4()
  */
 static ASTCENC_SIMD_INLINE vfloat4 unit3()
 {
-	return vfloat4(0.57735f, 0.57735f, 0.57735f, 0.0f);
+	float val = 0.577350258827209473f;
+	return vfloat4(val, val, val, 0.0f);
+}
+
+/**
+ * @brief Factory that returns a unit length 2 component vfloat4.
+ */
+static ASTCENC_SIMD_INLINE vfloat4 unit2()
+{
+	float val = 0.707106769084930420f;
+	return vfloat4(val, val, 0.0f, 0.0f);
+}
+
+/**
+ * @brief Factory that returns a 3 component vfloat4.
+ */
+static ASTCENC_SIMD_INLINE vfloat4 vfloat3(float a, float b, float c)
+{
+	return vfloat4(a, b, c, 0.0f);
+}
+
+/**
+ * @brief Factory that returns a 2 component vfloat4.
+ */
+static ASTCENC_SIMD_INLINE vfloat4 vfloat2(float a, float b)
+{
+	return vfloat4(a, b, 0.0f, 0.0f);
 }
 
 /**
@@ -358,7 +383,7 @@ static ASTCENC_SIMD_INLINE vfloat4 pow(vfloat4 x, vfloat4 y)
  *
  * Valid for all data values of @c a; will return a per-lane value [0, 32].
  */
-ASTCENC_SIMD_INLINE vint4 clz(vint4 a)
+static ASTCENC_SIMD_INLINE vint4 clz(vint4 a)
 {
 	// This function is a horrible abuse of floating point exponents to convert
 	// the original integer value into a 2^N encoding we can recover easily.
@@ -380,7 +405,7 @@ ASTCENC_SIMD_INLINE vint4 clz(vint4 a)
  *
  * Use of signed int mean that this is only valid for values in range [0, 31].
  */
-ASTCENC_SIMD_INLINE vint4 two_to_the_n(vint4 a)
+static ASTCENC_SIMD_INLINE vint4 two_to_the_n(vint4 a)
 {
 	// 2^30 is the largest signed number than can be represented
 	assert(all(a < vint4(31)));
@@ -400,7 +425,7 @@ ASTCENC_SIMD_INLINE vint4 two_to_the_n(vint4 a)
 /**
  * @brief Convert unorm16 [0, 65535] to float16 in range [0, 1].
  */
-ASTCENC_SIMD_INLINE vint4 unorm16_to_sf16(vint4 p)
+static ASTCENC_SIMD_INLINE vint4 unorm16_to_sf16(vint4 p)
 {
 	vint4 fp16_one = vint4(0x3C00);
 	vint4 fp16_small = lsl<8>(p);
@@ -408,9 +433,17 @@ ASTCENC_SIMD_INLINE vint4 unorm16_to_sf16(vint4 p)
 	vmask4 is_one = p == vint4(0xFFFF);
 	vmask4 is_small = p < vint4(4);
 
+	// Manually inline clz() on Visual Studio to avoid release build codegen bug
+	// see https://github.com/ARM-software/astc-encoder/issues/259
+#if !defined(__clang__) && defined(_MSC_VER)
+	vint4 a = (~lsr<8>(p)) & p;
+	a = float_as_int(int_to_float(a));
+	a = vint4(127 + 31) - lsr<23>(a);
+	vint4 lz = clamp(0, 32, a) - 16;
+#else
 	vint4 lz = clz(p) - 16;
+#endif
 
-	// TODO: Could use AVX2 _mm_sllv_epi32() instead of p * 2^<shift>
 	p = p * two_to_the_n(lz + 1);
 	p = p & vint4(0xFFFF);
 
@@ -426,7 +459,7 @@ ASTCENC_SIMD_INLINE vint4 unorm16_to_sf16(vint4 p)
 /**
  * @brief Convert 16-bit LNS to float16.
  */
-ASTCENC_SIMD_INLINE vint4 lns_to_sf16(vint4 p)
+static ASTCENC_SIMD_INLINE vint4 lns_to_sf16(vint4 p)
 {
 	vint4 mc = p & 0x7FF;
 	vint4 ec = lsr<11>(p);
@@ -455,7 +488,7 @@ ASTCENC_SIMD_INLINE vint4 lns_to_sf16(vint4 p)
  *
  * @return The mantissa.
  */
-static inline vfloat4 frexp(vfloat4 a, vint4& exp)
+static ASTCENC_SIMD_INLINE vfloat4 frexp(vfloat4 a, vint4& exp)
 {
 	// Interpret the bits as an integer
 	vint4 ai = float_as_int(a);
@@ -471,7 +504,7 @@ static inline vfloat4 frexp(vfloat4 a, vint4& exp)
 /**
  * @brief Convert float to 16-bit LNS.
  */
-static inline vfloat4 float_to_lns(vfloat4 a)
+static ASTCENC_SIMD_INLINE vfloat4 float_to_lns(vfloat4 a)
 {
 	vint4 exp;
 	vfloat4 mant = frexp(a, exp);

@@ -18,6 +18,7 @@
 /**
  * @brief Soft-float library for IEEE-754.
  */
+#if (ASTCENC_F16C == 0) && (ASTCENC_NEON == 0)
 
 #include "astcenc_mathlib.h"
 
@@ -61,7 +62,7 @@ typedef uint32_t sf32;
 
 /*
    32-bit count-leading-zeros function: use the Assembly instruction whenever possible. */
-uint32_t clz32(uint32_t inp)
+static uint32_t clz32(uint32_t inp)
 {
 	#if defined(__GNUC__) && (defined(__i386) || defined(__amd64))
 		uint32_t bsr;
@@ -146,49 +147,54 @@ static sf32 sf16_to_sf32(sf16 inp)
 		with just 1 table lookup, 2 shifts and 1 add.
 	*/
 
-	#define WITH_MB(a) INT32_C((a) | (1 << 31))
-	static const int32_t tbl[64] =
+	#define WITH_MSB(a) (UINT32_C(a) | (1u << 31))
+	static const uint32_t tbl[64] =
 	{
-		WITH_MB(0x00000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000),
-		INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000),
-		INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000),
-		INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), WITH_MB(0x38000),
-		WITH_MB(0x38000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000),
-		INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000),
-		INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000),
-		INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), WITH_MB(0x70000)
+		WITH_MSB(0x00000), 0x1C000, 0x1C000, 0x1C000, 0x1C000, 0x1C000, 0x1C000,          0x1C000,
+		         0x1C000,  0x1C000, 0x1C000, 0x1C000, 0x1C000, 0x1C000, 0x1C000,          0x1C000,
+		         0x1C000,  0x1C000, 0x1C000, 0x1C000, 0x1C000, 0x1C000, 0x1C000,          0x1C000,
+		         0x1C000,  0x1C000, 0x1C000, 0x1C000, 0x1C000, 0x1C000, 0x1C000, WITH_MSB(0x38000),
+		WITH_MSB(0x38000), 0x54000, 0x54000, 0x54000, 0x54000, 0x54000, 0x54000,          0x54000,
+		         0x54000,  0x54000, 0x54000, 0x54000, 0x54000, 0x54000, 0x54000,          0x54000,
+		         0x54000,  0x54000, 0x54000, 0x54000, 0x54000, 0x54000, 0x54000,          0x54000,
+		         0x54000,  0x54000, 0x54000, 0x54000, 0x54000, 0x54000, 0x54000, WITH_MSB(0x70000)
 	};
 
-	int32_t res = tbl[inpx >> 10];
+	uint32_t res = tbl[inpx >> 10];
 	res += inpx;
 
-	/* the normal cases: the MSB of 'res' is not set. */
-	if (res >= 0)				/* signed compare */
-		return res << 13;
-
-	/* Infinity and Zero: the bottom 10 bits of 'res' are clear. */
-	if ((res & UINT32_C(0x3FF)) == 0)
-		return res << 13;
-
-	/* NaN: the exponent field of 'inp' is not zero; NaNs must be quietened. */
-	if ((inpx & 0x7C00) != 0)
-		return (res << 13) | UINT32_C(0x400000);
-
-	/* the remaining cases are Denormals. */
+	/* Normal cases: MSB of 'res' not set. */
+	if ((res & WITH_MSB(0)) == 0)
 	{
-		uint32_t sign = (inpx & UINT32_C(0x8000)) << 16;
-		uint32_t mskval = inpx & UINT32_C(0x7FFF);
-		uint32_t leadingzeroes = clz32(mskval);
-		mskval <<= leadingzeroes;
-		return (mskval >> 8) + ((0x85 - leadingzeroes) << 23) + sign;
+		return res << 13;
 	}
+
+	/* Infinity and Zero: 10 LSB of 'res' not set. */
+	if ((res & 0x3FF) == 0)
+	{
+		return res << 13;
+	}
+
+	/* NaN: the exponent field of 'inp' is non-zero. */
+	if ((inpx & 0x7C00) != 0)
+	{
+		/* All NaNs are quietened. */
+		return (res << 13) | 0x400000;
+	}
+
+	/* Denormal cases */
+	uint32_t sign = (inpx & 0x8000) << 16;
+	uint32_t mskval = inpx & 0x7FFF;
+	uint32_t leadingzeroes = clz32(mskval);
+	mskval <<= leadingzeroes;
+	return (mskval >> 8) + ((0x85 - leadingzeroes) << 23) + sign;
 }
 
 /* Conversion routine that converts from FP32 to FP16. It supports denormals and all rounding modes. If a NaN is given as input, it is quietened. */
 static sf16 sf32_to_sf16(sf32 inp, roundmode rmode)
 {
 	/* for each possible sign/exponent combination, store a case index. This gives a 512-byte table */
-	static const uint8_t tab[512] = {
+	static const uint8_t tab[512] {
 		0, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
 		10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
 		10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
@@ -226,7 +232,7 @@ static sf16 sf32_to_sf16(sf32 inp, roundmode rmode)
 
 	/* many of the cases below use a case-dependent magic constant. So we look up a magic constant before actually performing the switch. This table allows us to group cases, thereby minimizing code
 	   size. */
-	static const uint32_t tabx[60] = {
+	static const uint32_t tabx[60] {
 		UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0x8000), UINT32_C(0x80000000), UINT32_C(0x8000), UINT32_C(0x8000), UINT32_C(0x8000),
 		UINT32_C(1), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0x8000), UINT32_C(0x8001), UINT32_C(0x8000), UINT32_C(0x8000), UINT32_C(0x8000),
 		UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0x8000), UINT32_C(0x8000), UINT32_C(0x8000), UINT32_C(0x8000), UINT32_C(0x8000),
@@ -401,3 +407,5 @@ uint16_t float_to_sf16(float p)
 	i.f = p;
 	return sf32_to_sf16(i.u, SF_NEARESTEVEN);
 }
+
+#endif

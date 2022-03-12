@@ -40,7 +40,7 @@
 	#error "Include astcenc_vecmathlib.h, do not include directly"
 #endif
 
-//#include <algorithm>
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <cfenv>
@@ -57,7 +57,7 @@ struct vfloat4
 	/**
 	 * @brief Construct from zero-initialized value.
 	 */
-	ASTCENC_SIMD_INLINE vfloat4() {}
+	ASTCENC_SIMD_INLINE vfloat4() = default;
 
 	/**
 	 * @brief Construct from 4 values loaded from an unaligned address.
@@ -150,9 +150,9 @@ struct vfloat4
 	/**
 	 * @brief Return a swizzled float 2.
 	 */
-	template <int l0, int l1> ASTCENC_SIMD_INLINE float2 swz() const
+	template <int l0, int l1> ASTCENC_SIMD_INLINE vfloat4 swz() const
 	{
-		return float2(lane<l0>(), lane<l1>());
+		return  vfloat4(lane<l0>(), lane<l1>(), 0.0f, 0.0f);
 	}
 
 	/**
@@ -189,7 +189,7 @@ struct vint4
 	/**
 	 * @brief Construct from zero-initialized value.
 	 */
-	ASTCENC_SIMD_INLINE vint4() {}
+	ASTCENC_SIMD_INLINE vint4() = default;
 
 	/**
 	 * @brief Construct from 4 values loaded from an unaligned address.
@@ -318,6 +318,17 @@ struct vmask4
 	}
 
 	/**
+	 * @brief Construct from 1 scalar value.
+	 */
+	ASTCENC_SIMD_INLINE explicit vmask4(bool a)
+	{
+		m[0] = a == false ? 0 : -1;
+		m[1] = a == false ? 0 : -1;
+		m[2] = a == false ? 0 : -1;
+		m[3] = a == false ? 0 : -1;
+	}
+
+	/**
 	 * @brief Construct from 4 scalar values.
 	 *
 	 * The value of @c a is stored to lane 0 (LSB) in the SIMD register.
@@ -329,6 +340,7 @@ struct vmask4
 		m[2] = c == false ? 0 : -1;
 		m[3] = d == false ? 0 : -1;
 	}
+
 
 	/**
 	 * @brief The vector ...
@@ -924,12 +936,10 @@ ASTCENC_SIMD_INLINE void storea(vfloat4 a, float* ptr)
  */
 ASTCENC_SIMD_INLINE vint4 float_to_int(vfloat4 a)
 {
-	// Casting to unsigned buys us an extra bit of precision in cases where
-	// we can use the integer as nasty bit hacks.
-	return vint4((unsigned int)a.m[0],
-	             (unsigned int)a.m[1],
-	             (unsigned int)a.m[2],
-	             (unsigned int)a.m[3]);
+	return vint4((int)a.m[0],
+	             (int)a.m[1],
+	             (int)a.m[2],
+	             (int)a.m[3]);
 }
 
 /**f
