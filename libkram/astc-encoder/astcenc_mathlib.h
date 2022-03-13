@@ -75,6 +75,7 @@
   #endif
 #endif
 
+// Alec changed this back to 16 bytes.
 //#if ASTCENC_AVX
 //  #define ASTCENC_VECALIGN 32
 //#else

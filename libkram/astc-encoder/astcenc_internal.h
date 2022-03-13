@@ -52,12 +52,12 @@
 		#if __has_builtin(__builtin_assume)
 			#define promise(cond) __builtin_assume(cond)
 		#elif __has_builtin(__builtin_unreachable)
-			#define promise(cond) if(!(cond)) { __builtin_unreachable(); }
+			#define promise(cond) if (!(cond)) { __builtin_unreachable(); }
 		#else
 			#define promise(cond)
 		#endif
 	#else // Assume GCC
-		#define promise(cond) if(!(cond)) { __builtin_unreachable(); }
+		#define promise(cond) if (!(cond)) { __builtin_unreachable(); }
 	#endif
 #else
 	#define promise(cond) assert(cond)
@@ -1375,7 +1375,7 @@ struct astcenc_context
 	unsigned int thread_count;
 
 	/** @brief The block size descriptor this context was created with. */
-	alignas(ASTCENC_VECALIGN) block_size_descriptor bsd;
+	block_size_descriptor* bsd;
 
 	/*
 	 * Fields below here are not needed in a decompress-only build, but some remain as they are
