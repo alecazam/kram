@@ -702,8 +702,8 @@ astcenc_error astcenc_context_alloc(
 	}
 #endif
 
-	astcenc_context* ctx = aligned_malloc<astcenc_context>(sizeof(astcenc_context), ASTCENC_VECALIGN);
-	ctx->thread_count = thread_count;
+    astcenc_context* ctx = new astcenc_context;
+    ctx->thread_count = thread_count;
 	ctx->config = config;
 	ctx->working_buffers = nullptr;
 
@@ -783,7 +783,7 @@ void astcenc_context_free(
 #if defined(ASTCENC_DIAGNOSTICS)
 		delete ctx->trace_log;
 #endif
-		aligned_free<astcenc_context>(ctx);
+		delete ctx;
 	}
 }
 
