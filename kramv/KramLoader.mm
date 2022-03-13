@@ -386,16 +386,20 @@ static_cast<NSUInteger>(image.height), 1 }  // MTLSize
             isSDF = true;
         }
 
-        //bool isSRGB = (!isNormal && !isSDF);
-
+        
         if (!imageData.open(path, image)) {
             return NO;
         }
 
         // have to adjust the format if srgb
-//        if (isSRGB) {
-//            image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
-//        }
+        // PS2022 finally added sRGB gama/iccp blocks to "Save As",
+        // but there are a lot of older files where this is not set
+        // or Figma always sets sRGB.  So set based on identified type.
+        bool doReplaceSrgbFromType = true;
+        if (doReplaceSrgbFromType) {
+            bool isSRGB = (!isNormal && !isSDF);
+            image.pixelFormat = isSRGB ?  MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+        }
     }
     else {
         if (!imageData.open(path, image)) {

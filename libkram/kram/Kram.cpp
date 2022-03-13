@@ -418,7 +418,7 @@ unsigned LodepngDeflateUsingMiniz(
 
 // TODO: fix this to identify srgb, otherwise will skip GAMA block
 // no docs on how to identify srgb from iccp, ImageMagick might
-// have code for this.
+// have code for this.˜
 static const bool doParseIccProfile = false;
 
 struct IccProfileTag
@@ -2854,12 +2854,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
         }
         else if (isDstKTX2) {
             KramEncoder encoder;
-
-            // default to zstd compressor
-            KTX2Compressor compressor;
-            compressor.compressorType = KTX2SupercompressionZstd;
-
-            success = encoder.saveKTX2(srcImageKTX, compressor, tmpFileHelper.pointer());
+            success = encoder.saveKTX2(srcImageKTX, infoArgs.compressor, tmpFileHelper.pointer());
         }
 
         if (!success) {

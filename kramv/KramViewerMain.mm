@@ -30,6 +30,7 @@
 #include "KramViewerBase.h"
 
 
+static bool doReplaceSrgbFromType = true;
 
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;
@@ -2701,7 +2702,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         isFound = searchPos != string::npos;
     }
 
-    //bool isSrgb = isFound;
+    bool isSrgb = isFound;
 
     string normalFilename;
     bool hasNormal = false;
@@ -2740,10 +2741,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             hasNormal = false;
         }
     }
-
-//    if (isPNG && isSrgb) {
-//        image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
-//    }
+    
+    if (doReplaceSrgbFromType && isPNG) {
+        image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+    }
 
     
     Renderer *renderer = (Renderer *)self.delegate;
@@ -2837,7 +2838,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         isFound = searchPos != string::npos;
     }
 
-    //bool isSrgb = isFound;
+    bool isSrgb = isFound;
 
     //---------------------------
 
@@ -2893,6 +2894,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         }
     }
 
+    if (doReplaceSrgbFromType && isPNG) {
+        image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+    }
+    
 //    if (isPNG && isSrgb) {
 //        image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
 //    }
