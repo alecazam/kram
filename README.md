@@ -43,8 +43,8 @@ Texture Types - 1darray (no mips), 2d, 2darray, 3d (no mips), cube, cube array
 
 ? - show keyboard shortcuts
 P - toggle preview, disables debug mode, shows lit normals, and mips and filtering are enabled
-G - advance through none, pixel grid, block grid, atlas grid (32, 64, 128, 256), must be zoomed-in to see pixel grid
-D - advance debug mode, this is texture content specific 
+G - advance grid, none, pixel grid, block grid, atlas grid (32, 64, 128, 256),
+D - advance debug mode
 H - toggle hud
 U - toggle ui
 V - toggle vertical vs. horizontal buttons
@@ -65,10 +65,10 @@ M - advance mip
 
 S - advance shape mesh (plane, unit box, sphere, capsule), displays list, esc to get out of list
 C - advance shape channel (depth, uv, face normal, vtx normal, tangent, bitangent, mip)
-L - advance lighting mode (lighting used in preview)
-T - advance tangent generation
+L - advance lighting mode (none, diffuse, diffuse + specular)
+T - toggle tangent generation
 
-N - advance bundle/folder image (can traverse zip of ktx/ktx2 files), displays list, esc to get out of list
+↓ - advance bundle/folder image (can traverse zip of ktx/ktx2 files), displays list, esc to get out of list
 
 ```
 
@@ -88,12 +88,12 @@ Mip filtering - 2x2 box filter that's reasonable for pow2, and a non-linear filt
     
 BC/ETC2/ASTC - supposedly WebGL requires pow2, and some implementation need top multiple of 4 for BC/ETC2
 
-BC1 - artifacts from limits of format, artifacts from encoder, use BC7 w/2x memory
-BC1 w/alpha - blocked
-BC2 - blocked
-BC6H - unsupported, no decode either, need to pull BCH encode/decode and pass 8u/16f/32f data
+These formats are disabled:
+BC1 w/alpha - may re-enable 3 color for black + rgb
+BC2 - not useful
+ETC2_RGB8A1 - broken in ETC2 optimizations
 
-ETC2_RGB8A1 - disabled, broken in ETC2 optimizations
+BC1 - artifacts from limits of format, artifacts from encoder, use BC7 w/2x memory
 
 ASTC LDR - rrr1, rrrg/gggr, rgb1, rgba must be followed to avoid endpoint storage, requires swizzles
 ASTC HDR - encoder uses 8-bit source image, need 16f/32f passed to encoder, no hw L+A mode
@@ -112,9 +112,9 @@ KTX - only uncompressed, mip levels are unaligned to block size from 4 byte leng
 
 KTX2 - works in kram and viewer, has aligned levels of mips when uncompressed, 
   libkram supports None/Zlib/Zstd supercompression for read/write
-  libkram does not support UASTC or BasisLZ yet
+  libkram does not support UASTC/BasisLZ yet
   
-DDS - works in kram and viewer, no mip compression, only BC and explicit formats
+DDS - works in kram and viewer, no mip compression, only BC and explicit formats, extended for ASTC/ETC
   kram/kramv only support newer DX10 style DDS format.  Can view in Preview on macOS too.
   DDSHelper provides load/save.  Pixel data ordered by chunk instead of by mips.
   
@@ -147,9 +147,7 @@ At runtime:
 ```
 
 ### Building
-kram has switched from CMake to an explicit Xcode workspace and projects on Apple platforms.  CMake can't clean, build workspaces, or handle app extensions needed for thumbnails/previews.  I spent a lot of time trying to keep this system working since it keeps kram from being tied to Xcode releases, but I also wanted to added better Finder integration and debugging.  These all live in 'build2' to distinguish from the 'build' directory created for CMake.  Like CMake, the cibuild.h script runs xcodebuild from the command line to generate all the libraries and apps into the bin directory.  Note that Xcode has never been able to simultaneously open the same project included in different workspaces, so organize derivative workspaces carefullly.
-
-I also tried to use a CMake framework build, but this required changing all the include paths to one parent directory.  Since libkram includes eastl, and other includes this requirement was not ideal.  So for now using libkram involves setting header and library search paths.  See the workspace projects for how this is setup.
+kram uses an explicit Xcode workspace and projects on Apple platforms.  CMake can't clean, build workspaces, or handle app extensions needed for thumbnails/previews.  I spent a lot of time trying to keep CMake working since it keeps kram from being tied to Xcode releases, but I also wanted to add better Finder integration.  These all live in 'build2' to distinguish from the 'build' directory created for CMake.  Like CMake, the cibuild.h script runs xcodebuild from the command line to generate all the libraries and apps into the bin directory.  Note that Xcode has never been able to simultaneously open the same project included in different workspaces, so organize derivative workspaces carefully.
 
 ```
 ./scripts/cibuild.h
@@ -274,7 +272,8 @@ kram includes the following encoders/decoders:
 | Astcenc  | Arm              | Apache 2.0  | ASTC4x4,5x5,6x6,8x8 LDR/HDR | same    |
 | Etc2comp | Google           | MIT         | ETC2r11,rg11,rgb,rgba       | same    |
 | Explicit | Me               | MIT         | r/rg/rgba 8u/16f/32f        | none    |
-
+| Compress | AMD              | MIT         | BC6                         | same    |
+| GTLFKit  | Warren Moore     | MIT         | gltf                        | same    |
 
 ```
 ATE
@@ -289,9 +288,9 @@ Squish
 Simplified to single folder.
 Replaced sse vector with float4/a for ARM/Neon support.
 
-Astcenc v2.5 (current is v3.0)
+Astcenc v3.4
 Provide rgba8u source pixels.  Converted to 32f at tile level.
-Improved 1 and 2 channel format encoding (not transfered to v2.1).
+Improved 1 and 2 channel format encoding (disable now).
 Avoid reading off end of arrays with padding.
 Support 2d array of src pixels instead of 3d.
 Force AVX and SSE path, and implement using sse2neon emlation on Neon.
@@ -344,11 +343,9 @@ kram includes additional open-source:
 * Motion vector direction analysis.
 * Split view comparison rendering.  Move horizontal slider like ShaderToy.
 * Add GPU encoder (use compute in Metal/Vulkan)
-* Add BC6H encoder
 * Save prop with args and compare args and modstamp before rebuilding to avoid --force
 * Multichannel SDF
-* Plumb half4/float4 through to ASTC HDR encoding.  Sending 8u.
-* Test Neon support and SSE2Neon
+* Plumb half4/float4 through to BC6 encoding.  Sending 8u.
 * Run srgb conversion on endpoint data after fitting linear color point cloud
 * PSNR stats off encode + decode
 * Dump stats on BC6/7 block types, and ASTC void extent, dual-plane, etc
