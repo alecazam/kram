@@ -121,12 +121,13 @@ public:
     // expands uv from [0,1] to [0,2] in shader to see the repeat pattern
     bool isWrap = false;
 
-    bool isNormal = false;
+    //bool isNormal = false;
     bool isSigned = false;
     bool isPremul = false;  // needed for png which only holds unmul
     bool isSwizzleAGToRG = false;
-    bool isSDF = false;
-
+    //bool isSDF = false;
+    TexContentType texContentType = TexContentTypeUnknown;
+    
     // this mode shows the content with lighting or with bilinear/mips active
     bool isPreview = false;
 

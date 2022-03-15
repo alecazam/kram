@@ -112,13 +112,8 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     uint32_t maxWidth = _imageView.frame.size.width;
     uint32_t maxHeight = _imageView.frame.size.height;
     
-    bool isKTX = isKTXFilename(filename);
-    bool isKTX2 = isKTX2Filename(filename);
-    bool isDDS = isDDSFilename(filename);
-    bool isPNG = isPNGFilename(filename);
-    
     // ignore upper case extensions
-    if (!(isKTX || isKTX2 || isDDS || isPNG)) {
+    if (!isSupportedFilename(filename)) {
         error = KLOGF(1, "kramv %s only supports ktx, ktx2, dds files\n", filename);
         handler(error);
         return;

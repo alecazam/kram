@@ -6,16 +6,9 @@
 
 #import <TargetConditionals.h>
 
-//#include <vector>
-//#include <algorithm> // for max
 #include <mutex>
 
 #include "KramLib.h"
-//#include "KramLog.h"
-//#include "KramImage.h"
-//#include "KramFileHelper.h"
-//#include "KramMmapHelper.h"
-//#include "KTXImage.h"
 
 using namespace kram;
 using namespace NAMESPACE_STL;
@@ -130,6 +123,7 @@ bool decodeImage(const KTXImage &image, KTXImage &imageDecoded)
 
 #if SUPPORT_RGB
 
+// TODO: move these into libkram
 inline bool isInternalRGBFormat(MyMTLPixelFormat format)
 {
     bool isInternal = false;
@@ -283,128 +277,13 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
     }
 }
 
-/*
-
-static uint32_t numberOfMipmapLevels(const Image& image) {
-    uint32_t w = image.width();
-    uint32_t h = image.height();
-    uint32_t maxDim = MAX(w,h);
-
-    uint32_t numberOfMips = 1;
-    while (maxDim > 1) {
-        numberOfMips++;
-        maxDim = maxDim >> 1;
-    }
-    return numberOfMips;
-}
-
-- (nullable id<MTLTexture>)_loadTextureFromPNGData:(const uint8_t*)data
-dataSize:(int32_t)dataSize isSRGB:(BOOL)isSRGB originalFormat:(nullable
-MTLPixelFormat*)originalFormat
-{
-    // can only load 8u and 16u from png, no hdr formats, no premul either, no
-props
-    // this also doesn't handle strips like done in libkram.
-
-   // Image sourceImage;
-    bool isLoaded = LoadPng(data, dataSize, false, false, image);
-    if (!isLoaded) {
-        return nil;
-    }
-
-
-    // TODO: replace this with code that gens a KTXImage from png (and cpu mips)
-    // instead of needing to use autogenmip that has it's own filters (probably
-a box)
-
-    id<MTLTexture> texture = [self createTexture:image isPrivate:true];
-    if (!texture) {
-        return nil;
-    }
-
-    if (originalFormat != nullptr) {
-        *originalFormat = (MTLPixelFormat)image.pixelFormat;
-    }
-
-    // this means KTXImage must hold data
-    [self blitTextureFromImage:image];
-
-
-    // cpu copy the bytes from the data object into the texture
-    const MTLRegion region = {
-        { 0, 0, 0 }, // MTLOrigin
-        { static_cast<NSUInteger>(image.width),
-static_cast<NSUInteger>(image.height), 1 }  // MTLSize
-    };
-
-    size_t bytesPerRow = 4 * sourceImage.width();
-
-    [texture replaceRegion:region
-                mipmapLevel:0
-                  withBytes:sourceImage.pixels().data()
-                bytesPerRow:bytesPerRow];
-
-
-    // have to schedule autogen inside render using MTLBlitEncoder
-    if (image.mipCount() > 1) {
-        [_mipgenTextures addObject: texture];
-    }
-
-    return texture;
-}
-*/
-
 - (BOOL)loadImageFromURL:(nonnull NSURL *)url
                    image:(KTXImage &)image
                imageData:(KTXImageData &)imageData
 {
     const char *path = url.absoluteURL.path.UTF8String;
-
-    // TODO: could also ignore extension, and look at header/signature instead
-    // files can be renamed to the incorrect extensions
-    string filename = toLower(path);
-
-    if (isPNGFilename(filename)) {
-        // set title to filename, chop this to just file+ext, not directory
-        string filenameShort = filename;
-        const char *filenameSlash = strrchr(filenameShort.c_str(), '/');
-        if (filenameSlash != nullptr) {
-            filenameShort = filenameSlash + 1;
-        }
-
-        // now chop off the extension
-        filenameShort = filenameShort.substr(0, filenameShort.find_last_of("."));
-
-        // dealing with png means fabricating the format, texture type, and other
-        // data
-        bool isNormal = false;
-        bool isSDF = false;
-        if (endsWith(filenameShort, "-n") || endsWith(filenameShort, "_normal")) {
-            isNormal = true;
-        }
-        else if (endsWith(filenameShort, "-sdf")) {
-            isSDF = true;
-        }
-
-        
-        if (!imageData.open(path, image)) {
-            return NO;
-        }
-
-        // have to adjust the format if srgb
-        // PS2022 finally added sRGB gama/iccp blocks to "Save As",
-        // but there are a lot of older files where this is not set
-        // or Figma always sets sRGB.  So set based on identified type.
-        bool doReplaceSrgbFromType = true;
-        if (doReplaceSrgbFromType) {
-            bool isSRGB = (!isNormal && !isSDF);
-            image.pixelFormat = isSRGB ?  MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
-        }
-    }
-    else {
-        if (!imageData.open(path, image)) {
-            return NO;
-        }
+    if (!imageData.open(path, image)) {
+        return NO;
     }
 
     return YES;
@@ -463,161 +342,6 @@ static_cast<NSUInteger>(image.height), 1 }  // MTLSize
 
     return texture;
 }
-
-/* just for reference now
-
-// Has a synchronous upload via replaceRegion that only works for shared/managed
-(f.e. ktx),
-// and another path for private that uses a blitEncoder and must have block
-aligned data (f.e. ktxa, ktx2).
-// Could repack ktx data into ktxa before writing to temporary file, or when
-copying NSData into MTLBuffer.
-- (nullable id<MTLTexture>)loadTextureFromImage:(KTXImage &)image
-{
-    // TODO: about aligning to 4k for base + length
-    // http://metalkit.org/2017/05/26/working-with-memory-in-metal-part-2.html
-
-    int32_t w = image.width;
-    int32_t h = image.height;
-    int32_t d = image.depth;
-
-    int32_t numMips     = MAX(1, image.mipCount());
-    int32_t numArrays   = MAX(1, image.arrayCount());
-    int32_t numFaces    = MAX(1, image.faceCount());
-    int32_t numSlices   = MAX(1, image.depth);
-
-    Int2 blockDims = image.blockDims();
-
-    uint32_t numChunks = image.totalChunks();
-
-    // TODO: reuse staging _buffer and _bufferOffset here, these large
-allocations take time vector<uint8_t> mipStorage;
-    mipStorage.resize(image.mipLengthLargest() * numChunks); // enough to hold
-biggest mip
-
-    //-----------------
-
-    id<MTLTexture> texture = [self createTexture:image isPrivate:false];
-    if (!texture) {
-        return nil;
-    }
-
-    const uint8_t* srcLevelData = image.fileData;
-
-    for (int mipLevelNumber = 0; mipLevelNumber < numMips; ++mipLevelNumber) {
-        // there's a 4 byte levelSize for each mipLevel
-        // the mipLevel.offset is immediately after this
-
-        const KTXImageLevel& mipLevel = image.mipLevels[mipLevelNumber];
-
-        // this is offset to a given level
-        uint64_t mipBaseOffset = mipLevel.offset;
-
-        // unpack the whole level in-place
-        if (image.isSupercompressed()) {
-            if (!image.unpackLevel(mipLevelNumber, image.fileData +
-mipLevel.offset, mipStorage.data())) { return nil;
-            }
-            srcLevelData = mipStorage.data();
-
-            // going to upload from mipStorage temp array
-            mipBaseOffset = 0;
-        }
-
-        // only have face, face+array, or slice but this handles all cases
-        for (int array = 0; array < numArrays; ++array) {
-            for (int face = 0; face < numFaces; ++face) {
-                for (int slice = 0; slice < numSlices; ++slice) {
-
-                    uint32_t bytesPerRow = 0;
-
-                    // 1D/1DArray textures set bytesPerRow to 0
-                    if (//image.textureType != MyMTLTextureType1D &&
-                        image.textureType != MyMTLTextureType1DArray)
-                    {
-                        // for compressed, bytesPerRow needs to be multiple of
-block size
-                        // so divide by the number of blocks making up the
-height
-                        //int xBlocks = ((w + blockDims.x - 1) / blockDims.x);
-                        uint32_t yBlocks = ((h + blockDims.y - 1) /
-blockDims.y);
-
-                        // Calculate the number of bytes per row in the image.
-                        // for compressed images this is xBlocks * blockSize
-                        bytesPerRow = (uint32_t)mipLevel.length / yBlocks;
-                    }
-
-                    int32_t chunkNum = 0;
-
-                    if (image.header.numberOfArrayElements > 0) {
-                        // can be 1d, 2d, or cube array
-                        chunkNum = array;
-                        if (numFaces > 1) {
-                            chunkNum = 6 * chunkNum + face;
-                        }
-                    }
-                    else {
-                        // can be 1d, 2d, or 3d
-                        chunkNum = slice;
-                        if (numFaces > 1) {
-                            chunkNum = face;
-                        }
-                    }
-
-                    // this is size of one face/slice/texture, not the levels
-size uint64_t mipStorageSize = mipLevel.length;
-
-                    uint64_t mipOffset = mipBaseOffset + chunkNum *
-mipStorageSize;
-
-                    // offset into the level
-                    const uint8_t *srcBytes = srcLevelData + mipOffset;
-
-                    {
-                        // Note: this only works for managed/shared textures.
-                        // For private upload to buffer and then use blitEncoder
-to copy to texture.
-                        // See KramBlitLoader for that.  This is all synchronous
-upload too.
-                        //
-                        // Note: due to API limit we can only copy one chunk at
-a time.  With KramBlitLoader
-                        // can copy the whole level to buffer, and then
-reference chunks within.
-
-                        bool is3D = image.textureType == MyMTLTextureType3D;
-
-                        // sync cpu copy the bytes from the data object into the
-texture MTLRegion region = { { 0, 0, 0 }, // MTLOrigin { (NSUInteger)w,
-(NSUInteger)h, 1 }  // MTLSize
-                        };
-
-                        size_t bytesPerImage = 0;
-                        if (is3D) {
-                            region.origin.z = chunkNum;
-                            chunkNum = 0;
-                            bytesPerImage = mipStorageSize;
-                        }
-
-                        [texture replaceRegion:region
-                                    mipmapLevel:mipLevelNumber
-                                         slice:chunkNum
-                                      withBytes:srcBytes
-                                    bytesPerRow:bytesPerRow
-                                 bytesPerImage:bytesPerImage];
-
-                    }
-                }
-            }
-        }
-
-        mipDown(w, h, d);
-    }
-
-    return texture;
-}
-*/
 
 //--------------------------
 

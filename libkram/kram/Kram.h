@@ -52,11 +52,13 @@ bool isKTXFilename(const char* filename);
 bool isKTX2Filename(const char* filename);
 bool isDDSFilename(const char* filename);
 bool isPNGFilename(const char* filename);
+bool isSupportedFilename(const char* filename);
 
 inline bool isKTXFilename(const string& filename) { return isKTXFilename(filename.c_str()); }
 inline bool isKTX2Filename(const string& filename) { return isKTX2Filename(filename.c_str()); }
 inline bool isDDSFilename(const string& filename) { return isDDSFilename(filename.c_str()); }
 inline bool isPNGFilename(const string& filename) { return isPNGFilename(filename.c_str()); }
+inline bool isSupportedFilename(const string& filename) { return isSupportedFilename(filename.c_str()); }
 
 // helpers to source from a png or single level of a ktx
 bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage);
@@ -71,4 +73,22 @@ string kramInfoToString(const string& srcFilename, bool isVerbose);
 
 // this is entry point to library for cli app
 int32_t kramAppMain(int32_t argc, char* argv[]);
+
+enum TexContentType
+{
+    TexContentTypeUnknown = 0,
+    TexContentTypeAlbedo,
+    TexContentTypeNormal,
+    TexContentTypeHeight,
+    TexContentTypeSDF
+};
+
+// this is a helper to override the format, since sRGB blocks and settings
+// often don't indicate the actual color type on PNG, or is omitted
+void fixPixelFormat(KTXImage& image, const char* filename);
+
+// This is using naming conventions on filenames, but KTX/KTX2 hold channel props
+TexContentType findContentTypeFromFilename(const char* filename);
+
+
 }  // namespace kram

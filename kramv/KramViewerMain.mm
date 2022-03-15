@@ -29,9 +29,6 @@
 //#include "KramImage.h"
 #include "KramViewerBase.h"
 
-
-static bool doReplaceSrgbFromType = true;
-
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;
 #else
@@ -1395,7 +1392,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
     int32_t numChannels = _showSettings->numChannels;
 
-    bool isNormal = _showSettings->isNormal;
+    bool isNormal = _showSettings->texContentType == TexContentTypeNormal;
     bool isColor = !isNormal;
 
     bool isDirection = false;
@@ -1764,7 +1761,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     bool isRedHidden = _showSettings->numChannels == 0; // models don't show rgba
     bool isGreenHidden = _showSettings->numChannels <= 1;
     bool isBlueHidden = _showSettings->numChannels <= 2 &&
-                        !_showSettings->isNormal;  // reconstruct z = b on normals
+                        _showSettings->texContentType != TexContentTypeNormal;  // reconstruct z = b on normals
 
     // TODO: also need a hasAlpha for pixels, since many compressed formats like
     // ASTC always have 4 channels but internally store R,RG01,... etc.  Can get
@@ -2660,6 +2657,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return isFound;
 }
 
+
+
+
+
 - (BOOL)loadFileFromFolder
 {
     // now lookup the filename and data at that entry
@@ -2674,12 +2675,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         return [self loadModelFile:nil filename:filename];
     
     // have already filtered filenames out, so this should never get hit
-    bool isPNG = isPNGFilename(filename);
-    if (!(isPNG ||
-          isKTXFilename(filename) ||
-          isKTX2Filename(filename) ||
-          isDDSFilename(filename))
-    ) {
+    if (!isSupportedFilename(filename)) {
         return NO;
     }
 
@@ -2701,8 +2697,6 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         searchPos = fullFilename.find(search);
         isFound = searchPos != string::npos;
     }
-
-    bool isSrgb = isFound;
 
     string normalFilename;
     bool hasNormal = false;
@@ -2741,11 +2735,6 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             hasNormal = false;
         }
     }
-    
-    if (doReplaceSrgbFromType && isPNG) {
-        image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
-    }
-
     
     Renderer *renderer = (Renderer *)self.delegate;
     [renderer releaseAllPendingTextures];
@@ -2795,6 +2784,8 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return YES;
 }
 
+
+
 - (BOOL)loadFileFromArchive
 {
     // now lookup the filename and data at that entry
@@ -2811,12 +2802,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     
     //--------
     
-    bool isPNG = isPNGFilename(filename);
-
-    if (!(isPNG ||
-          isKTXFilename(filename) ||
-          isKTX2Filename(filename) ||
-          isDDSFilename(filename))) {
+    if (!isSupportedFilename(filename)) {
         return NO;
     }
 
@@ -2837,9 +2823,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         searchPos = fullFilename.find(search);
         isFound = searchPos != string::npos;
     }
-
-    bool isSrgb = isFound;
-
+    
     //---------------------------
 
     const uint8_t *imageData = nullptr;
@@ -2893,14 +2877,6 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             hasNormal = false;
         }
     }
-
-    if (doReplaceSrgbFromType && isPNG) {
-        image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
-    }
-    
-//    if (isPNG && isSrgb) {
-//        image.pixelFormat = MyMTLPixelFormatRGBA8Unorm_sRGB;
-//    }
 
     Renderer *renderer = (Renderer *)self.delegate;
     [renderer releaseAllPendingTextures];
@@ -3027,13 +3003,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
                 while (NSURL *fileOrDirectoryURL = [directoryEnumerator nextObject]) {
                     const char *name = fileOrDirectoryURL.fileSystemRepresentation;
 
-                    // filter only types that are supported
-                    bool isPNG = isPNGFilename(name);
-                    bool isKTX = isKTXFilename(name);
-                    bool isKTX2 = isKTX2Filename(name);
-                    bool isDDS = isDDSFilename(name);
-    
-                    if (isPNG || isKTX || isKTX2 || isDDS)
+                    if (isSupportedFilename(name))
                     {
                         files.push_back(name);
                     }
@@ -3149,10 +3119,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
           endsWithExtension(filename, ".zip") ||
           
           // images
-          isPNGFilename(filename) ||
-          isKTXFilename(filename) ||
-          isKTX2Filename(filename) ||
-          isDDSFilename(filename) ||
+          isSupportedFilename(filename) ||
           
           // models
           endsWithExtension(filename, ".gltf") ||

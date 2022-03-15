@@ -132,7 +132,12 @@ bool KTXImageData::open(const char* filename, KTXImage& image, bool isInfoOnly_)
     _name = toFilenameShort(filename);
 
     if (isPNGFilename(filename)) {
-        return openPNG(filename, image);
+       bool success = openPNG(filename, image);
+        
+        if (success)
+            fixPixelFormat(image, filename);
+        
+        return success;
     }
 
     isMmap = true;
@@ -3324,6 +3329,67 @@ int32_t kramAppMain(int32_t argc, char* argv[])
     setupTestArgs(args);
 
     return kramAppCommand(args);
+}
+
+bool isSupportedFilename(const char* filename) {
+    if (isPNGFilename(filename) ||
+        isKTXFilename(filename) ||
+        isKTX2Filename(filename) ||
+        isDDSFilename(filename)) {
+    return true;
+    }
+    return false;
+}
+
+void fixPixelFormat(KTXImage& image, const char* filename)
+{
+    // have to adjust the format if srgb png
+    // PS2022 finally added sRGB gama/iccp blocks to "Save As",
+    // but there are a lot of older files where this is not set
+    // or Figma always sets sRGB.  So set based on content type.
+    static bool doReplacePixelFormatFromContentType = true;
+    if (!doReplacePixelFormatFromContentType)
+        return;
+    
+    bool isPNG = isPNGFilename(filename);
+    if (!isPNG)
+        return;
+    
+    TexContentType contentType = findContentTypeFromFilename(filename);
+    
+    bool isSrgb = contentType == TexContentTypeAlbedo;
+    image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+}
+
+// Use naming convention for PNG/DDS, can pull from props on KTX/KTX2
+// This is mostly useful for source content.
+TexContentType findContentTypeFromFilename(const char* filename)
+{
+    string filenameShort = filename;
+    
+    auto dotPos = filenameShort.find_last_of(".");
+    if (dotPos == string::npos)
+        return TexContentTypeUnknown;
+    
+    // now chop off the extension
+    filenameShort = filenameShort.substr(0, dotPos);
+
+    // dealing with png means fabricating the format, texture type, and other data
+    if (endsWith(filenameShort, "-n") || endsWith(filenameShort, "_normal")) {
+        return TexContentTypeNormal;
+    }
+    else if (endsWith(filenameShort, "-sdf")) {
+        return TexContentTypeSDF;
+    }
+    else if (endsWith(filenameShort, "-h")) {
+        return TexContentTypeHeight;
+    }
+    else if (endsWith(filenameShort, "-a") || endsWith(filenameShort, "-d") || endsWith(filenameShort, "_baseColor")) {
+        return TexContentTypeAlbedo;
+    }
+    
+    // fallback to albedo for now
+    return TexContentTypeAlbedo;
 }
 
 }  // namespace kram

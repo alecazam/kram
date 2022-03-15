@@ -51,12 +51,7 @@ struct ImageToPass
     string errorText;
     
     // TODO: use first x-many bytes also to validate, open will do that
-    bool isKTX = isKTXFilename(filename);
-    bool isKTX2 = isKTX2Filename(filename);
-    bool isDDS = isDDSFilename(filename);
-    bool isPNG = isPNGFilename(filename);
-    
-    if (!(isKTX || isKTX2 || isDDS || isPNG)) {
+    if (!isSupportedFilename(filename)) {
         error = KLOGF(1, "kramv %s only supports ktx,ktx2,dds,png files\n", filename);
         handler(nil, error);
         return;

@@ -254,6 +254,9 @@ void ShowSettings::advanceDebugMode(bool decrement)
     // (hasColor) if (_showSettings->debugMode == DebugModeGray && !hasColor)
     // advanceDebugMode(isShiftKeyDown);
 
+    bool isNormal = texContentType == TexContentTypeNormal;
+    bool isSDF = texContentType == TexContentTypeSDF;
+    
     // for normals show directions
     if (debugMode == DebugModePosX && !(isNormal || isSDF)) {
         advanceDebugMode(decrement);

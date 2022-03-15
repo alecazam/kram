@@ -1241,57 +1241,22 @@ inline const char* toFilenameShort(const char* filename) {
     _showSettings->blockY = image.blockDims().y;
 
     _showSettings->isSigned = isSignedFormat(format);
-
-    string fullFilenameCopy = fullFilename;
-    string filename = toLower(fullFilenameCopy);
-
-    // set title to filename, chop this to just file+ext, not directory
-    string filenameShort = filename;
-    const char *filenameSlash = strrchr(filenameShort.c_str(), '/');
-    if (filenameSlash != nullptr) {
-        filenameShort = filenameSlash + 1;
-    }
-
-    // now chop off the extension
-    filenameShort = filenameShort.substr(0, filenameShort.find_last_of("."));
-
-    bool isAlbedo = false;
-    bool isNormal = false;
-    bool isSDF = false;
-
-    // could cycle between rrr1 and r001.
-    int32_t numChannels = numChannelsOfFormat(originalFormat);
-    bool isSigned = isSignedFormat(originalFormat);
-
-    // note that decoded textures are 3/4 channel even though they are normal/sdf
-    // originally, so test those first
-    if (/*numChannels == 2 || */ endsWith(filenameShort, "-n") ||
-        endsWith(filenameShort, "_normal")) {
-        isNormal = true;
-    }
-    else if ((numChannels == 1 && isSigned) ||
-             endsWith(filenameShort, "-sdf")) {
-        isSDF = true;
-    }
-    else if (numChannels == 3 || numChannels == 4 || // TODO: elim channel test, only rely on suffix?, also have key-value pairs
-             endsWith(filenameShort, "-a") ||
-             endsWith(filenameShort, "_basecolor")) {
-        isAlbedo = true;
-    }
-
-    _showSettings->isNormal = isNormal;
-    _showSettings->isSDF = isSDF;
+    
+    TexContentType texContentType = findContentTypeFromFilename(fullFilename.c_str());
+    _showSettings->texContentType = texContentType;
+    //_showSettings->isSDF = isSDF;
 
     // textures are already premul, so don't need to premul in shader
     // should really have 3 modes, unmul, default, premul
-    bool isPNG = isPNGFilename(filename.c_str());
+    bool isPNG = isPNGFilename(fullFilename.c_str());
 
     _showSettings->isPremul = false;
-    if (isAlbedo && isPNG) {
+    if (texContentType == TexContentTypeAlbedo && isPNG) {
         _showSettings->isPremul =
             true;  // convert to premul in shader, so can see other channels
     }
 
+    int32_t numChannels = numChannelsOfFormat(originalFormat);
     _showSettings->numChannels = numChannels;
 
     // TODO: identify if texture holds normal data from the props
@@ -1469,12 +1434,12 @@ float4 inverseScaleSquared(const float4x4 &m)
     Uniforms &uniforms =
         *(Uniforms *)_dynamicUniformBuffer[_uniformBufferIndex].contents;
 
-    uniforms.isNormal = _showSettings->isNormal;
+    uniforms.isNormal = _showSettings->texContentType == TexContentTypeAlbedo;
     uniforms.isPremul = _showSettings->isPremul;
     uniforms.isSigned = _showSettings->isSigned;
     uniforms.isSwizzleAGToRG = _showSettings->isSwizzleAGToRG;
 
-    uniforms.isSDF = _showSettings->isSDF;
+    uniforms.isSDF = _showSettings->texContentType == TexContentTypeSDF;
     uniforms.numChannels = _showSettings->numChannels;
     uniforms.lightingMode = (ShaderLightingMode)_showSettings->lightingMode;
 
