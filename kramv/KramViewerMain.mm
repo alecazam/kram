@@ -2659,6 +2659,35 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
 
 
+static string findNormalMapFromAlbedoFilename(const char* filename)
+{
+    string filenameShort = filename;
+    
+    const char *ext = strrchr(filename, '.');
+
+    auto dotPos = filenameShort.find_last_of(".");
+    if (dotPos == string::npos)
+        return "";
+    
+    // now chop off the extension
+    filenameShort = filenameShort.substr(0, dotPos);
+
+    const char* searches[] = { "-a", "-d" };
+    
+    for (uint32_t i = 0; i < ArrayCount(searches); ++i) {
+        const char* search = searches[i];
+        if (endsWith(filenameShort, search)) {
+            filenameShort = filenameShort.substr(0, filenameShort.length()-strlen(search));
+            break;
+        }
+    }
+     
+    // may need to try various names, and see if any exist
+    filenameShort += "-n";
+    filenameShort += ext;
+    
+    return filenameShort;
+}
 
 
 - (BOOL)loadFileFromFolder
@@ -2679,37 +2708,17 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         return NO;
     }
 
-    const char *ext = strrchr(filename, '.');
-
-    // first only do this on albedo/diffuse textures
-
-    // find matching png
-    string search = "-a";
-    search += ext;
-
-    auto searchPos = fullFilename.find(search);
-    bool isFound = searchPos != string::npos;
-
-    if (!isFound) {
-        search = "-d";
-        search += ext;
-
-        searchPos = fullFilename.find(search);
-        isFound = searchPos != string::npos;
-    }
-
     string normalFilename;
     bool hasNormal = false;
 
-    if (isFound) {
-        normalFilename = fullFilename;
-        normalFilename = normalFilename.erase(searchPos);
-        normalFilename += "-n";
-        normalFilename += ext;
-
-        hasNormal = [self findFilenameInFolders:normalFilename];
+    TexContentType texContentType = findContentTypeFromFilename(filename);
+    if (texContentType == TexContentTypeAlbedo) {
+        normalFilename = findNormalMapFromAlbedoFilename(filename);
+     
+        if (!normalFilename.empty())
+            hasNormal = [self findFilenameInFolders:normalFilename];
     }
-
+    
     //-------------------------------
 
     KTXImage image;
@@ -2805,50 +2814,29 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     if (!isSupportedFilename(filename)) {
         return NO;
     }
-
-    const char *ext = strrchr(filename, '.');
-
-    // first only do this on albedo/diffuse textures
-
-    string search = "-a";
-    search += ext;
-
-    auto searchPos = fullFilename.find(search);
-    bool isFound = searchPos != string::npos;
-
-    if (!isFound) {
-        search = "-d";
-        search += ext;
-
-        searchPos = fullFilename.find(search);
-        isFound = searchPos != string::npos;
-    }
     
-    //---------------------------
-
     const uint8_t *imageData = nullptr;
     uint64_t imageDataLength = 0;
-
-    const uint8_t *imageNormalData = nullptr;
-    uint64_t imageNormalDataLength = 0;
 
     // search for main file - can be albedo or normal
     if (!_zip.extractRaw(filename, &imageData, imageDataLength)) {
         return NO;
     }
 
-    // search for normal map in the same archive
+    const uint8_t *imageNormalData = nullptr;
+    uint64_t imageNormalDataLength = 0;
+    
     string normalFilename;
     bool hasNormal = false;
 
-    if (isFound) {
-        normalFilename = fullFilename;
-        normalFilename = normalFilename.erase(searchPos);
-        normalFilename += "-n";
-        normalFilename += ext;
-
-        hasNormal = _zip.extractRaw(normalFilename.c_str(), &imageNormalData,
-                                    imageNormalDataLength);
+    
+    TexContentType texContentType = findContentTypeFromFilename(filename);
+    if (texContentType == TexContentTypeAlbedo) {
+        normalFilename = findNormalMapFromAlbedoFilename(filename);
+     
+        if (!normalFilename.empty())
+            hasNormal = _zip.extractRaw(normalFilename.c_str(), &imageNormalData,
+                                        imageNormalDataLength);
     }
 
     //---------------------------
