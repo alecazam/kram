@@ -115,7 +115,7 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     bool isKTX = isKTXFilename(filename);
     bool isKTX2 = isKTX2Filename(filename);
     bool isDDS = isDDSFilename(filename);
-    bool isPNG = isDDSFilename(filename);
+    bool isPNG = isPNGFilename(filename);
     
     // ignore upper case extensions
     if (!(isKTX || isKTX2 || isDDS || isPNG)) {

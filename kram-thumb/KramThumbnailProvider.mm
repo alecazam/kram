@@ -54,7 +54,7 @@ struct ImageToPass
     bool isKTX = isKTXFilename(filename);
     bool isKTX2 = isKTX2Filename(filename);
     bool isDDS = isDDSFilename(filename);
-    bool isPNG = isDDSFilename(filename);
+    bool isPNG = isPNGFilename(filename);
     
     if (!(isKTX || isKTX2 || isDDS || isPNG)) {
         error = KLOGF(1, "kramv %s only supports ktx,ktx2,dds,png files\n", filename);
