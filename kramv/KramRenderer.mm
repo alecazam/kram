@@ -1434,7 +1434,7 @@ float4 inverseScaleSquared(const float4x4 &m)
     Uniforms &uniforms =
         *(Uniforms *)_dynamicUniformBuffer[_uniformBufferIndex].contents;
 
-    uniforms.isNormal = _showSettings->texContentType == TexContentTypeAlbedo;
+    uniforms.isNormal = _showSettings->texContentType == TexContentTypeNormal;
     uniforms.isPremul = _showSettings->isPremul;
     uniforms.isSigned = _showSettings->isSigned;
     uniforms.isSwizzleAGToRG = _showSettings->isSwizzleAGToRG;
