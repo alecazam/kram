@@ -31,6 +31,7 @@
 				<string>org.khronos.ktx</string>
 				<string>public.ktx2</string>
 				<string>image/dds</string>
+				<string>public.png</string>
 			</array>
 			<key>QLSupportsSearchableItems</key>
 			<false/>
