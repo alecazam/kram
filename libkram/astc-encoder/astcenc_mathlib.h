@@ -75,12 +75,11 @@
   #endif
 #endif
 
-// Alec changed this back to 16 bytes.
-//#if ASTCENC_AVX
-//  #define ASTCENC_VECALIGN 32
-//#else
+#if ASTCENC_AVX
+  #define ASTCENC_VECALIGN 32
+#else
   #define ASTCENC_VECALIGN 16
-//#endif
+#endif
 
 #if ASTCENC_SSE != 0 || ASTCENC_AVX != 0 || ASTCENC_POPCNT != 0
 	#include <immintrin.h>
