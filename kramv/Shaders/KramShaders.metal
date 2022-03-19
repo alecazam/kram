@@ -144,6 +144,19 @@ half4 toPremul(half4 c) {
     return c;
 }
 
+float4 fromPremul(float4 c) {
+    // TODO: should this saturate, or how does premul and HDR work?
+    if (c.a >= 1.0/255.0)
+        c.rgb /= c.a;
+    return c;
+}
+half4 fromPremul(half4 c) {
+    if (c.a >= 1.0h/255.0h)
+        c.rgb /= c.a;
+    return c;
+}
+
+
 // TODO: note that Metal must pass the same half3 from vertex to fragment shader
 // so can't mix a float vs with half fs.
 
@@ -954,7 +967,7 @@ float4 DrawPixels(
             
             // to premul, but also need to see without premul
             if (uniforms.isPremul) {
-                c.xyz *= c.a;
+                c = toPremul(c);
             }
         }
         
@@ -1004,7 +1017,7 @@ float4 DrawPixels(
                 // Note: premul on signed should occur while still signed, since it's a pull to zoer
                 // to premul, but also need to see without premul
                 if (uniforms.isPremul) {
-                    c.xyz *= c.a;
+                    c = toPremul(c);
                 }
                 
                 sc = c;
@@ -1012,7 +1025,7 @@ float4 DrawPixels(
             }
             else {
                 if (uniforms.isPremul) {
-                    c.xyz *= c.a;
+                    c = toPremul(c);
                 }
             }
             

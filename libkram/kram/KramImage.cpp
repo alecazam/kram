@@ -2856,6 +2856,8 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     ASTCENC_PRF_HDR;  // TODO: also ASTCENC_PRF_HDR_RGB_LDR_A
             }
 
+            
+            
             // not generating 3d ASTC ever, even for 3D textures
             //Int2 blockDims = image.blockDims();
 
@@ -2875,6 +2877,19 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
             // don't really need this
             // flags |= ASTCENC_FLG_USE_ALPHA_WEIGHT;
 
+            // Pete Harris recommended this flag https://github.com/alecazam/kram/issues/10
+            // This allows the codec to repack the data tables with only the entries it needs
+            // for the compression configuration in use.
+            //
+            // However, it cannot reliably decompress arbitrary images as the table entries
+            // are missing for things the current compressor configuration isn't using, so only
+            // do this for compression-only contexts or cases where you are decompressing images
+            // made in the same compressor session.
+            //
+            // Using this option for compression give 10-20% more performance, depending on
+            // block size, so is highly recommended.
+            flags |= ASTCENC_FLG_SELF_DECOMPRESS_ONLY;
+            
             // convert quality to present
             float quality = info.quality;
 

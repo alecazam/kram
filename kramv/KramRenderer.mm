@@ -528,6 +528,9 @@ struct ViewFramebufferData {
     pipelineStateDescriptor.colorAttachments[0].pixelFormat =
         _viewFramebuffer.colorPixelFormat;
 
+    // Note: blending is disabled on color target, all blending done in shader
+    // since have checkerboard and other stuff to blend against.
+    
     // TODO: could drop these for images, but want a 3D preview of content
     // or might make these memoryless.
     pipelineStateDescriptor.depthAttachmentPixelFormat =

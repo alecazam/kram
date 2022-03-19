@@ -511,6 +511,8 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     Action* _actionArray;
     Action* _actionItem;
     Action* _actionPrevItem;
+    Action* _actionCounterpart;
+    Action* _actionPrevCounterpart;
     Action* _actionReload;
     Action* _actionFit;
     
@@ -656,6 +658,9 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         
         Action("↑", "Prev Item", Key::UpArrow),
         Action("↓", "Next Item", Key::DownArrow),
+        Action("←", "Prev Counterpart", Key::LeftArrow),
+        Action("→", "Next Counterpart", Key::RightArrow),
+        
         Action("R", "Reload", Key::R),
         Action("0", "Fit", Key::Num0),
 
@@ -700,6 +705,9 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         
         &_actionPrevItem,
         &_actionItem,
+        &_actionPrevCounterpart,
+        &_actionCounterpart,
+        
         &_actionReload,
         &_actionFit,
         
@@ -744,6 +752,35 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         button.bordered = NO;
         [button setFrame:rect];
 
+        // https://stackoverflow.com/questions/4467597/how-do-you-stroke-the-outside-of-an-nsattributedstring
+        
+        NSMutableDictionary* attribs = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+            //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
+            [NSColor whiteColor],NSForegroundColorAttributeName,
+            [NSNumber numberWithFloat:-2.0],NSStrokeWidthAttributeName,
+            [NSColor blackColor],NSStrokeColorAttributeName,
+            nil];
+
+        button.attributedTitle = [[NSMutableAttributedString alloc] initWithString:name attributes:attribs];
+        
+#if 0 // this isn't appearing
+        button.wantsLayer = YES;
+        if (button.layer) {
+//            CGFloat glowColor[] = {1.0, 0.0, 0.0, 1.0};
+//            button.layer.masksToBounds = false;
+//            button.layer.shadowColor = CGColorCreate(CGColorSpaceCreateDeviceRGB(), glowColor);
+//            button.layer.shadowRadius = 10.0;
+//            button.layer.shadowOpacity = 1.0;
+//            //button.layer.shadowOffset = .zero;
+            
+            NSShadow* dropShadow = [[NSShadow alloc] init];
+            [dropShadow setShadowColor:[NSColor redColor]];
+            [dropShadow setShadowOffset:NSMakeSize(0, 0)];
+            [dropShadow setShadowBlurRadius:10.0];
+            [button setShadow: dropShadow];
+        }
+#endif
+        
         // stackView seems to disperse the items evenly across the area, so this
         // doesn't work
         bool isSeparator = icon[0] == 0;
@@ -851,6 +888,8 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // don't want these buttons showing up, menu only
     _actionPrevItem->disableButton();
     _actionItem->disableButton();
+    _actionPrevCounterpart->disableButton();
+    _actionCounterpart->disableButton();
     
     _actionHud->disableButton();
     _actionHelp->disableButton();
@@ -1789,6 +1828,9 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     _actionItem->setHidden(isJumpToNextHidden);
     _actionPrevItem->setHidden(isJumpToNextHidden);
     
+    _actionCounterpart->setHidden(isJumpToNextHidden);
+    _actionPrevCounterpart->setHidden(isJumpToNextHidden);
+    
     _actionR->setHidden(isRedHidden);
     _actionG->setHidden(isGreenHidden);
     _actionB->setHidden(isBlueHidden);
@@ -1857,6 +1899,9 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     // these never show check state
     _actionItem->setHighlight(Off);
     _actionPrevItem->setHighlight(Off);
+    
+    _actionCounterpart->setHighlight(Off);
+    _actionPrevCounterpart->setHighlight(Off);
     
     _actionHideUI->setHighlight(uiState); // note below button always off, menu has state
     
@@ -2111,7 +2156,8 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
             "Info, Hud, Reload, 0-fit\n"
             "Checker, Grid\n"
             "Wrap, 8-signed, 9-premul\n"
-            "Mip, Face, Y-array, ↓-next item\n"
+            "Mip, Face, Y-array\n"
+            "↓-next item, →-next counterpart\n"
             "Lighting, S-shape, C-shape channel\n";
         
         // just to update toggle state to Off
@@ -2338,6 +2384,36 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         }
     }
 
+    else if (action == _actionCounterpart || action == _actionPrevCounterpart) {
+        if (!action->isHidden) {
+            // invert shift key for prev, since it's reversese
+            if (action == _actionPrevCounterpart)
+                isShiftKeyDown = !isShiftKeyDown;
+            
+            /* Archive probably only holds one type of file, so no counterparts
+            if (_showSettings->isArchive) {
+                if ([self advanceCounterpartFromAchive:!isShiftKeyDown]) {
+                    _hudHidden = true;
+                    [self updateHudVisibility];
+                    
+                    isChanged = true;
+                    text = "Loaded " + _showSettings->lastFilename;
+                }
+            }
+            else */
+            
+            /* TODO: finish this, should only cycle through counterpart files
+                those are files with same name but different extension under the same folder.
+            if (_showSettings->isFolder) {
+                if ([self advanceCounterpartFromFolder:!isShiftKeyDown]) {
+                    isChanged = true;
+                    text = "Loaded " + _showSettings->lastFilename;
+                }
+            }
+            */
+        }
+    }
+    
     // test out different shapes
     else if (action == _actionShapeMesh) {
         if (_showSettings->meshCount > 1) {
