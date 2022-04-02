@@ -33,9 +33,13 @@ using namespace NAMESPACE_STL;
 extern const char* LODEPNG_VERSION_STRING;
 
 // TODO: Alec - move these to config
+
+// don't need io
 #define LODEPNG_NO_COMPILE_DISK
-#define LODEPNG_COMPILE_ZLIB
-#define LODEPNG_NO_COMPILE_ENCODER
+// using miniz now
+#define LODEPNG_NO_COMPILE_ZLIB
+// was not doing png saves, but to strip blocks now need to
+#define LODEPNG_COMPILE_ENCODER
 
 /*
 The following #defines are used to create code sections. They can be disabled

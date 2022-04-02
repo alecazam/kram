@@ -2390,7 +2390,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             if (action == _actionPrevCounterpart)
                 isShiftKeyDown = !isShiftKeyDown;
             
-            /* Archive probably only holds one type of file, so no counterparts
+            /* Archive probably only holds one type of file, could pull in zips?
             if (_showSettings->isArchive) {
                 if ([self advanceCounterpartFromAchive:!isShiftKeyDown]) {
                     _hudHidden = true;

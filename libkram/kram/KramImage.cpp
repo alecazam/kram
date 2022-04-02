@@ -453,13 +453,20 @@ bool Image::loadImageFromPixels(const vector<Color>& pixels, int32_t width,
     // Format can also affect this, since 1/2 channel don't have color or alpha.
     _hasColor = hasColor;  // grayscale or no rgb when false
     _hasAlpha = hasAlpha;
-
+    
     // always assumes 4 rgba8 channels
     // _pixels.resize(4 * _width * _height);
     assert((int32_t)pixels.size() == (width * height));
     _pixels = pixels;
 
     return true;
+}
+
+void Image::setSrgbState(bool isSrgb, bool hasSrgbBlock, bool hasNonSrgbBlocks)
+{
+    _isSrgb = isSrgb;
+    _hasSrgbBlock = hasSrgbBlock;
+    _hasNonSrgbBlocks = hasNonSrgbBlocks;
 }
 
 // Can average any channels per block, this means they are constant across the

@@ -402,8 +402,8 @@ bool LoadKtx(const uint8_t* data, size_t dataSize, Image& sourceImage)
     return sourceImage.loadImageFromKTX(image);
 }
 
-// wrap miniz decoder, since it ignores crc checksum and is faster than default png
-unsigned LodepngDeflateUsingMiniz(
+// wrap miniz decompress, since it ignores crc checksum and is faster than default png
+unsigned LodepngDecompressUsingMiniz(
     unsigned char** dstData, size_t* dstDataSize,
     const unsigned char* srcData, size_t srcDataSize,
     const LodePNGDecompressSettings* settings)
@@ -418,6 +418,24 @@ unsigned LodepngDeflateUsingMiniz(
 
     return result;
 }
+
+// wrap miniz compress
+unsigned LodepngCompressUsingMiniz(
+    unsigned char** dstData, size_t* dstDataSize,
+    const unsigned char* srcData, size_t srcDataSize,
+    const LodePNGCompressSettings* settings)
+{
+    // mz_ulong doesn't line up with size_t on Windows, but does on macOS
+    mz_ulong dstDataSizeUL = *dstDataSize;
+
+    int result = mz_compress(*dstData, &dstDataSizeUL,
+                               srcData, srcDataSize);
+
+    *dstDataSize = dstDataSizeUL;
+
+    return result;
+}
+
 
 //-----------------------
 
@@ -595,7 +613,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
 
     // Point deflate on decoder to faster version in miniz.
     auto& settings = lodepng_default_decompress_settings;
-    settings.custom_zlib = LodepngDeflateUsingMiniz;
+    settings.custom_zlib = LodepngDecompressUsingMiniz;
 
     // can identify 16unorm data for heightmaps via this call
     LodePNGState state;
@@ -615,10 +633,24 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     if (!end)
         end = data + dataSize;
     
+    bool hasNonSrgbBlocks = false;
+    bool hasSrgbBlock = false;
+    {
+        // Apps like Photoshop never set sRGB block
+        hasNonSrgbBlocks =
+            lodepng_chunk_find_const(data, end, "iCCP") != nullptr ||
+            lodepng_chunk_find_const(data, end, "gAMA") != nullptr ||
+            lodepng_chunk_find_const(data, end, "cHRM") != nullptr;
+        
+        // Apps like Figma always set this
+        hasSrgbBlock = lodepng_chunk_find_const(data, end, "sRGB") != nullptr;
+    }
+    
     const uint8_t* chunkData = lodepng_chunk_find_const(data, end, "sRGB");
     if (chunkData) {
         lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
         isSrgb = state.info_png.srgb_defined;
+        //state.info_png.srgb_intent; // 0-3
     }
     
     if (doParseIccProfile && !chunkData) {
@@ -737,7 +769,75 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
         }
     }
 
+    sourceImage.setSrgbState(isSrgb, hasSrgbBlock, hasNonSrgbBlocks);
+    
     return sourceImage.loadImageFromPixels(pixels, width, height, hasColor, hasAlpha);
+}
+
+// Use this to fix the src png, will only have a single block with srgb or not.
+// Can then run ImageOptim on it, with block preservation set.
+// Need this since Photoshop refuses to save the srgb flag, and stuff a giant
+// ICCP block which isn't easy to parse, and a Gama/Chrm block which is easier.
+// Really just want all png to either specify srgb block or not.  Don't need other
+// blocks.
+bool SavePNG(Image& image, const char* filename)
+{
+    // TODO: would be nice to skip this work if the blocks are already
+    // removed (could detect no iccp/chrm/gama in src png, and only srgb or no).
+    // Then if srgb, see if that matches content type srgb state below.
+    TexContentType contentType = findContentTypeFromFilename(filename);
+    bool isSrgb = contentType == TexContentTypeAlbedo;
+
+    // Skip file if it has srgb block, and none of the other block types.
+    // This code will also strip the sRGB block from apps like Figma that always set it.
+    if (isSrgb == image.isSrgb()) {
+        if (isSrgb == image.hasSrgbBlock() && !image.hasNonSrgbBlocks()) {
+            KLOGI("Kram", "skipping srgb correction");
+            return true;
+        }
+    }
+    
+    // This is the only block written or not
+    lodepng::State state;
+    if (isSrgb) {
+        // this is the only block that gets written
+        state.info_png.srgb_defined = 1;
+        state.info_png.srgb_intent = 0;
+    }
+    
+    // TODO: could write other data into Txt block
+    // or try to preserve those
+    
+    // TODO: image converted to 32-bit, so will save out large ?
+    // Can we write out L, LA, RGB, RGBA based on image state?
+ 
+    // use miniz as the encoder
+    auto& settings = lodepng_default_compress_settings;
+    settings.custom_zlib = LodepngCompressUsingMiniz;
+
+    // encode to png
+    vector<unsigned char> outputData;
+    unsigned success = lodepng::encode(outputData, (const uint8_t*)(image.pixels().data()), image.width(), image.height(), state);
+    
+    if (!success) {
+        return false;
+    }
+    
+    FileHelper fileHelper;
+    if (!fileHelper.open(filename, "w+")) {
+        return false;
+    }
+    
+    // this is overrwriting the source file currently
+    // TODO: could use tmp file, and then replace existing
+    // this could destroy original png on failure otherwise
+    if (!fileHelper.write((const uint8_t*)outputData.data(), outputData.size())) {
+        return false;
+    }
+    
+    KLOGI("Kram", "saved %s %s sRGB block", filename, isSrgb ? "with" : "without");
+    
+    return true;
 }
 
 bool SetupTmpFile(FileHelper& tmpFileHelper, const char* suffix)
@@ -1470,6 +1570,18 @@ void kramDecodeUsage(bool showVersion = true)
           showVersion ? usageName : "");
 }
 
+void kramFixUsage(bool showVersion = true)
+{
+    KLOGI("Kram",
+          "%s\n"
+          "Usage: kram fixup\n"
+          "\t -i/nput <.png>\n"
+          "\t -srgb\n"
+          "\n",
+          showVersion ? usageName : "");
+}
+
+
 void kramInfoUsage(bool showVersion = true)
 {
     KLOGI("Kram",
@@ -1717,7 +1829,6 @@ static int32_t kramAppInfo(vector<const char*>& args)
             }
 
             dstFilename = args[i];
-            //continue;
         }
         else if (isStringEqual(word, "-input") ||
                  isStringEqual(word, "-i")) {
@@ -1729,7 +1840,6 @@ static int32_t kramAppInfo(vector<const char*>& args)
             }
 
             srcFilename = args[i];
-            //continue;
         }
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
@@ -1870,7 +1980,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     uint32_t errorLode = 0;
 
     auto& settings = lodepng_default_decompress_settings;
-    settings.custom_zlib = LodepngDeflateUsingMiniz;
+    settings.custom_zlib = LodepngDecompressUsingMiniz;
 
     // can identify 16unorm data for heightmaps via this call
     LodePNGState state;
@@ -1894,6 +2004,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     if (chunkData) {
         lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
         isSrgb = state.info_png.srgb_defined;
+        //state.info_png.srgb_intent; // 0-3
     }
     
     // Adobe Photoshop 2022 only sets iccp + gama instead of sRGB flag, but iccp takes
@@ -2239,7 +2350,6 @@ static int32_t kramAppDecode(vector<const char*>& args)
 
             // TODO: if args ends with /, then output to that dir
             dstFilename = args[i];
-            //continue;
         }
         else if (isStringEqual(word, "-input") ||
                  isStringEqual(word, "-i")) {
@@ -2251,7 +2361,6 @@ static int32_t kramAppDecode(vector<const char*>& args)
             }
 
             srcFilename = args[i];
-            //continue;
         }
 
         else if (isStringEqual(word, "-swizzle")) {
@@ -2269,7 +2378,6 @@ static int32_t kramAppDecode(vector<const char*>& args)
                 break;
             }
             swizzleText = swizzleString;
-            //continue;
         }
         // this is really decoder, but keep same argument as encoder
         else if (isStringEqual(word, "-e") ||
@@ -2282,14 +2390,12 @@ static int32_t kramAppDecode(vector<const char*>& args)
             }
 
             textureDecoder = parseEncoder(args[i]);
-            //continue;
         }
 
         // probably should be per-command and global verbose
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
             isVerbose = true;
-            //continue;
         }
         else {
             KLOGE("Kram", "unexpected argument \"%s\"\n",
@@ -2378,6 +2484,90 @@ static int32_t kramAppDecode(vector<const char*>& args)
     return success ? 0 : -1;
 }
 
+int32_t kramAppFixup(vector<const char*>& args)
+{
+    // this is help
+    int32_t argc = (int32_t)args.size();
+    if (argc == 0) {
+        kramFixUsage();
+        return 0;
+    }
+
+    string srcFilename;
+    bool doFixupSrgb = false;
+    bool error = false;
+    
+    for (int32_t i = 0; i < argc; ++i) {
+        // check for options
+        const char* word = args[i];
+        if (word[0] != '-') {
+            KLOGE("Kram", "unexpected argument \"%s\"\n",
+                  word);
+            error = true;
+            break;
+        }
+        
+        // TDOO: may want to add output command too
+        
+        if (isStringEqual(word, "-srgb")) {
+            doFixupSrgb = true;
+        }
+        else if (isStringEqual(word, "-input") ||
+                 isStringEqual(word, "-i")) {
+            ++i;
+            if (i >= argc) {
+                KLOGE("Kram", "no input file defined");
+                error = true;
+                break;
+            }
+
+            srcFilename = args[i];
+        }
+        else {
+            KLOGE("Kram", "unexpected argument \"%s\"\n",
+                  word);
+            error = true;
+            break;
+        }
+    }
+        
+    if (srcFilename.empty()) {
+        KLOGE("Kram", "no input file given\n");
+        error = true;
+    }
+        
+    if (doFixupSrgb) {
+        bool isPNG = isPNGFilename(srcFilename);
+
+        if (!isPNG) {
+            KLOGE("Kram", "fixup srgb only supports png input");
+            error = true;
+        }
+        
+        bool success = !error;
+        
+        Image srcImage;
+        
+        // load the png, this doesn't return srgb state of original png
+        if (success)
+            success = SetupSourceImage(srcFilename, srcImage);
+
+        // stuff srgb block based on filename to content conversion for now
+        if (success) {
+            success = SavePNG(srcImage, srcFilename.c_str());
+            
+            if (!success) {
+                KLOGE("Kram", "fixup srgb could not save to file");
+            }
+        }
+        
+        if (!success)
+            error = true;
+    }
+    
+    return error ? -1 : 0;
+}
+
 static int32_t kramAppEncode(vector<const char*>& args)
 {
     // this is help
@@ -2410,15 +2600,12 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
         if (isStringEqual(word, "-sdf")) {
             infoArgs.doSDF = true;
-            //continue;
         }
         else if (isStringEqual(word, "-optopaque")) {
             infoArgs.optimizeFormatForOpaque = true;
-            //continue;
         }
         else if (isStringEqual(word, "-gray")) {
             isGray = true;
-            //continue;
         }
 
         // mip setting
@@ -2436,8 +2623,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-
-            //continue;
         }
         else if (isStringEqual(word, "-mipmin")) {
             ++i;
@@ -2453,7 +2638,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-            //continue;
         }
         else if (isStringEqual(word, "-mipskip")) {
             ++i;
@@ -2469,13 +2653,10 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-
-            //continue;
         }
         else if (isStringEqual(word, "-mipnone")) {
             // disable mips even if pow2
             infoArgs.doMipmaps = false;
-            //continue;
         }
 
         else if (isStringEqual(word, "-heightScale")) {
@@ -2494,17 +2675,14 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 KLOGE("Kram", "heightScale arg cannot be 0");
                 error = true;
             }
-            //continue;
         }
         else if (isStringEqual(word, "-height")) {
             // converted to a normal map
             infoArgs.isHeight = true;
-            //continue;
         }
         else if (isStringEqual(word, "-wrap")) {
             // whether texture is clamp or wrap
             infoArgs.isWrap = true;
-            //continue;
         }
 
         else if (isStringEqual(word, "-e") ||
@@ -2517,7 +2695,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.textureEncoder = parseEncoder(args[i]);
-            //continue;
         }
 
         else if (isStringEqual(word, "-swizzle")) {
@@ -2535,7 +2712,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
             infoArgs.swizzleText = swizzleString;
-            //continue;
         }
 
         else if (isStringEqual(word, "-chunks")) {
@@ -2561,8 +2737,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
             infoArgs.chunksX = chunksX;
             infoArgs.chunksY = chunksY;
             infoArgs.chunksCount = chunksX * chunksY;
-
-            //continue;
         }
 
         else if (isStringEqual(word, "-avg")) {
@@ -2574,7 +2748,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
             infoArgs.averageChannels = channelString;
-            //continue;
         }
         else if (isStringEqual(word, "-type")) {
             ++i;
@@ -2585,7 +2758,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.textureType = parseTextureType(args[i]);
-            //continue;
         }
         else if (isStringEqual(word, "-quality")) {
             ++i;
@@ -2596,7 +2768,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.quality = atoi(args[i]);
-            //continue;
         }
 
         else if (isStringEqual(word, "-output") ||
@@ -2610,7 +2781,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
             // TODO: if args ends with /, then output to that dir
             dstFilename = args[i];
-            //continue;
         }
         else if (isStringEqual(word, "-input") ||
                  isStringEqual(word, "-i")) {
@@ -2622,29 +2792,24 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             srcFilename = args[i];
-            //continue;
         }
 
         // these affect the format
         else if (isStringEqual(word, "-hdr")) {
             // not validating format for whether it's srgb or not
             infoArgs.isHDR = true;
-            //continue;
         }
         else if (isStringEqual(word, "-srgb")) {
             // not validating format for whether it's srgb or not
             infoArgs.isSRGB = true;
-            //continue;
         }
         else if (isStringEqual(word, "-signed")) {
             // not validating format for whether it's signed or not
             infoArgs.isSigned = true;
-            //continue;
         }
 
         else if (isStringEqual(word, "-normal")) {
             infoArgs.isNormal = true;
-            //continue;
         }
         else if (isStringEqual(word, "-resize")) {
             ++i;
@@ -2655,7 +2820,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             resizeString = args[i];
-            //continue;
         }
 
         // This means to post-multiply alpha after loading, not that incoming data in already premul
@@ -2663,22 +2827,18 @@ static int32_t kramAppEncode(vector<const char*>& args)
         // really would prefer to premul them when building the texture.
         else if (isStringEqual(word, "-premul")) {
             infoArgs.isPremultiplied = true;
-            //continue;
         }
         else if (isStringEqual(word, "-prezero")) {
             infoArgs.isPrezero = true;
-            //continue;
         }
         // this means premul the data at read from srgb, this it to match photoshop
         else if (isStringEqual(word, "-premulrgb")) {
             isPremulRgb = true;
-            //continue;
         }
 
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
             infoArgs.isVerbose = true;
-            //continue;
         }
         else if (isStringEqual(word, "-f") ||
                  isStringEqual(word, "-format")) {
@@ -2690,7 +2850,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
             }
 
             infoArgs.formatString = args[i];
-            //continue;
         }
 
         // compressor for ktx2 mips
@@ -2704,8 +2863,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
             infoArgs.compressor.compressorLevel = atoi(args[i]);
-
-            //continue;
         }
         else if (isStringEqual(word, "-zlib")) {
             infoArgs.compressor.compressorType = KTX2SupercompressionZlib;
@@ -2716,7 +2873,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
             infoArgs.compressor.compressorLevel = atoi(args[i]);
-            //continue;
         }
         else {
             KLOGE("Kram", "unexpected argument \"%s\"\n",
@@ -2973,6 +3129,9 @@ static int32_t kramAppEncode(vector<const char*>& args)
     return success ? 0 : -1;
 }
 
+
+                   
+                   
 int32_t kramAppScript(vector<const char*>& args)
 {
     // this is help
@@ -3014,7 +3173,6 @@ int32_t kramAppScript(vector<const char*>& args)
             }
 
             srcFilename = args[i];
-            //continue;
         }
         else if (isStringEqual(word, "-jobs") ||
                  isStringEqual(word, "-j")) {
@@ -3027,7 +3185,6 @@ int32_t kramAppScript(vector<const char*>& args)
             }
 
             numJobs = atoi(args[i]);
-            //continue;
         }
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {
@@ -3180,6 +3337,7 @@ enum CommandType {
     kCommandTypeDecode,
     kCommandTypeInfo,
     kCommandTypeScript,
+    kCommandTypeFixup,
     // TODO: more commands, but scripting doesn't deal with failure or dependency
     //    kCommandTypeMerge, // combine channels from multiple png/ktx into one ktx
     //    kCommandTypeAtlas, // combine images into a single texture + atlas table (atlas to 2d or 2darray)
@@ -3202,7 +3360,9 @@ CommandType parseCommandType(const char* command)
     else if (isStringEqual(command, "script")) {
         commandType = kCommandTypeScript;
     }
-
+    else if (isStringEqual(command, "fixup")) {
+        commandType = kCommandTypeFixup;
+    }
     return commandType;
 }
 
@@ -3300,6 +3460,9 @@ int32_t kramAppCommand(vector<const char*>& args)
         case kCommandTypeScript:
             args.erase(args.begin());
             return kramAppScript(args);
+        case kCommandTypeFixup:
+            args.erase(args.begin());
+            return kramAppFixup(args);
         default:
             break;
     }

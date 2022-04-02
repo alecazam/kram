@@ -39,8 +39,12 @@ public:
     Image();
 
     // these 3 calls for Encode
-    bool loadImageFromPixels(const vector<Color>& pixels, int32_t width,
-                             int32_t height, bool hasColor, bool hasAlpha);
+    bool loadImageFromPixels(const vector<Color>& pixels,
+                             int32_t width, int32_t height,
+                             bool hasColor, bool hasAlpha);
+    
+    // set state off png blocks
+    void setSrgbState(bool isSrgb, bool hasSrgbBlock, bool hasNonSrgbBlocks);
 
     // convert mip level of explicit format to single-image
     bool loadImageFromKTX(const KTXImage& image, uint32_t mipNumber = 0);
@@ -58,9 +62,16 @@ public:
     const vector<Color>& pixels() const { return _pixels; }
     const vector<float4>& pixelsFloat() const { return _pixelsFloat; }
 
+    // content analysis
     bool hasColor() const { return _hasColor; }
     bool hasAlpha() const { return _hasAlpha; }
 
+    // only for png files, detects ICCP/CHRM/GAMA blocks vs. sRGB block
+    // so that these can be stripped by fixup -srgb
+    bool isSrgb() const { return _isSrgb; }
+    bool hasSrgbBlock() const { return _hasSrgbBlock; }
+    bool hasNonSrgbBlocks() const { return _hasNonSrgbBlocks; }
+    
     // if converted a KTX/2 image to Image, then this field will be non-zero
     uint32_t chunksY() const { return _chunksY; }
     void setChunksY(uint32_t chunksY) { _chunksY = chunksY; }
@@ -82,6 +93,10 @@ private:
     bool _hasColor = true;
     bool _hasAlpha = true;
 
+    bool _isSrgb = false;
+    bool _hasNonSrgbBlocks = false;
+    bool _hasSrgbBlock = false;
+    
     // this is the entire strip data, float version can be passed for HDR
     // sources always 4 channels RGBA for 8 and 32f data.  16f promoted to 32f.
     vector<Color> _pixels;
