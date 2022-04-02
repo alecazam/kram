@@ -51,6 +51,10 @@ namespace kram {
 
 using namespace NAMESPACE_STL;
 
+// lodepng iccp decode is failing when setting this for some reason, find out why
+// Must set in with LODEPNG_NO_COMPILE_ZLIB in lodepng.h if true
+static bool useMiniZ = false;
+
 template <typename T>
 void releaseVector(vector<T>& v)
 {
@@ -613,7 +617,8 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
 
     // Point deflate on decoder to faster version in miniz.
     auto& settings = lodepng_default_decompress_settings;
-    settings.custom_zlib = LodepngDecompressUsingMiniz;
+    if (useMiniZ)
+        settings.custom_zlib = LodepngDecompressUsingMiniz;
 
     // can identify 16unorm data for heightmaps via this call
     LodePNGState state;
@@ -813,13 +818,14 @@ bool SavePNG(Image& image, const char* filename)
  
     // use miniz as the encoder
     auto& settings = lodepng_default_compress_settings;
-    settings.custom_zlib = LodepngCompressUsingMiniz;
+    if (useMiniZ)
+        settings.custom_zlib = LodepngCompressUsingMiniz;
 
     // encode to png
     vector<unsigned char> outputData;
-    unsigned success = lodepng::encode(outputData, (const uint8_t*)(image.pixels().data()), image.width(), image.height(), state);
+    unsigned error = lodepng::encode(outputData, (const uint8_t*)(image.pixels().data()), image.width(), image.height(), state);
     
-    if (!success) {
+    if (error) {
         return false;
     }
     
@@ -1570,7 +1576,7 @@ void kramDecodeUsage(bool showVersion = true)
           showVersion ? usageName : "");
 }
 
-void kramFixUsage(bool showVersion = true)
+void kramFixupUsage(bool showVersion = true)
 {
     KLOGI("Kram",
           "%s\n"
@@ -1787,12 +1793,13 @@ void kramUsage()
     KLOGI("Kram",
           usageName
           "\n"
-          "SYNTAX\nkram [encode | decode | info | script | ...]\n");
+          "SYNTAX\nkram [encode | decode | info | script | fixup | ...]\n");
 
     kramEncodeUsage(false);
     kramInfoUsage(false);
     kramDecodeUsage(false);
     kramScriptUsage(false);
+    kramFixupUsage(false);
 }
 
 static int32_t kramAppInfo(vector<const char*>& args)
@@ -1980,7 +1987,8 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     uint32_t errorLode = 0;
 
     auto& settings = lodepng_default_decompress_settings;
-    settings.custom_zlib = LodepngDecompressUsingMiniz;
+    if (useMiniZ)
+        settings.custom_zlib = LodepngDecompressUsingMiniz;
 
     // can identify 16unorm data for heightmaps via this call
     LodePNGState state;
@@ -2489,7 +2497,7 @@ int32_t kramAppFixup(vector<const char*>& args)
     // this is help
     int32_t argc = (int32_t)args.size();
     if (argc == 0) {
-        kramFixUsage();
+        kramFixupUsage();
         return 0;
     }
 

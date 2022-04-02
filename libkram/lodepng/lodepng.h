@@ -37,7 +37,7 @@ extern const char* LODEPNG_VERSION_STRING;
 // don't need io
 #define LODEPNG_NO_COMPILE_DISK
 // using miniz now
-#define LODEPNG_NO_COMPILE_ZLIB
+//#define LODEPNG_NO_COMPILE_ZLIB
 // was not doing png saves, but to strip blocks now need to
 #define LODEPNG_COMPILE_ENCODER
 
