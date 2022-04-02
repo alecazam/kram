@@ -754,14 +754,22 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
         // https://stackoverflow.com/questions/4467597/how-do-you-stroke-the-outside-of-an-nsattributedstring
         
-        NSMutableDictionary* attribs = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+        NSMutableDictionary* attribsOff = [NSMutableDictionary dictionaryWithObjectsAndKeys:
             //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
             [NSColor whiteColor],NSForegroundColorAttributeName,
             [NSNumber numberWithFloat:-2.0],NSStrokeWidthAttributeName,
             [NSColor blackColor],NSStrokeColorAttributeName,
             nil];
-
-        button.attributedTitle = [[NSMutableAttributedString alloc] initWithString:name attributes:attribs];
+        NSMutableDictionary* attribsOn = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+            //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
+            [NSColor systemBlueColor],NSForegroundColorAttributeName,
+            [NSNumber numberWithFloat:-2.0],NSStrokeWidthAttributeName,
+            [NSColor blackColor],NSStrokeColorAttributeName,
+            nil];
+        button.attributedTitle = [[NSMutableAttributedString alloc] initWithString:name attributes:attribsOff];
+        
+        // Have to set this too, or button doesn't go blue
+        button.attributedAlternateTitle = [[NSMutableAttributedString alloc] initWithString:name attributes:attribsOn];
         
 #if 0 // this isn't appearing
         button.wantsLayer = YES;
