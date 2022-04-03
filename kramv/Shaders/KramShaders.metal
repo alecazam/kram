@@ -655,10 +655,10 @@ vertex ColorInOut DrawCubeVS(
     // convert to -1 to 1
     float3 uvw;
 
-    // if preview, then actually sample from cube map
+    // if preview and not plance, then actually sample from cube map
     // and don't override to the face
-    if (uniforms.isPreview) {
-        uvw = 2 * in.position.xyz; // use model-space pos
+    if (uniforms.isPreview && uniforms.is3DView) {
+        uvw = in.position.xyz; // use model-space pos
     }
     else {
         uvw = out.texCoordXYZ;
