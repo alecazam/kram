@@ -829,6 +829,18 @@ struct packed_float3 {
             MIN((float)_showSettings->viewSizeX, (float)_showSettings->viewSizeY) /
             MAX(1, MAX((float)_showSettings->imageBoundsX,
                        (float)_showSettings->imageBoundsY));
+        
+        static bool useImageAndViewBounds = true;
+        if (useImageAndViewBounds) {
+            float invWidth = 1.0f / MAX(1.0f, (float)_showSettings->imageBoundsX);
+            float invHeight = 1.0f / MAX(1.0f, (float)_showSettings->imageBoundsY);
+
+            // DONE: adjust zoom to fit the entire image to the window
+            // the best fit depends on dimension of image and window
+            _showSettings->zoomFit =
+                MIN( (float)_showSettings->viewSizeX * invWidth,
+                     (float)_showSettings->viewSizeY * invHeight);
+        }
     }
 #endif
 }
@@ -1332,43 +1344,33 @@ float zoom3D = 1.0f;
 
     _showSettings->zoom = _showSettings->zoomFit;
 
-    // test rendering with inversion and mirroring and non-uniform scale
-    bool doInvertX = false;
-    bool doScaleX = false;
-
+    // Y is always 1.0 on the plane, so scale to imageBoundsY
+    // plane is already a non-uniform size, so can keep uniform scale
+    
     // have one of these for each texture added to the viewer
-    float scaleX = MAX(1, _showSettings->imageBoundsX);
+    //float scaleX = MAX(1, _showSettings->imageBoundsX);
     float scaleY = MAX(1, _showSettings->imageBoundsY);
-    float scaleZ = MAX(scaleX, scaleY);  // don't want 1.0f, or specular is all off
-                                         // due to extreme scale differences
-
-    float tmpScaleX = scaleX;
-    if (doInvertX) {
-        tmpScaleX = -tmpScaleX;
-    }
-    if (doScaleX) {
-        tmpScaleX *= 2.0f;
-    }
+    float scaleX = scaleY;
+    float scaleZ = scaleY;
 
     _modelMatrix =
-        float4x4(float4m(tmpScaleX, scaleY, scaleZ, 1.0f));  // non uniform scale
+        float4x4(float4m(scaleX, scaleY, scaleZ, 1.0f)); // uniform scale
     _modelMatrix = _modelMatrix *
                    matrix4x4_translation(0.0f, 0.0f, -1.0);  // set z=-1 unit back
 
     // uniform scaled 3d primitive
-    float scale = MAX(scaleX, scaleY);
+    float scale = scaleY; // MAX(scaleX, scaleY);
 
     // store the zoom into thew view matrix
     // fragment tangents seem to break down at high model scale due to precision
     // differences between worldPos and uv
-    static bool useZoom3D = false;
-    if (useZoom3D) {
-        zoom3D = scale;  // * _showSettings->viewSizeX / 2.0f;
-        scale = 1.0;
-    }
+//    static bool useZoom3D = false;
+//    if (useZoom3D) {
+//        zoom3D = scale;  // * _showSettings->viewSizeX / 2.0f;
+//        scale = 1.0;
+//    }
 
-    _modelMatrix3D = float4x4(float4m((doScaleX || doInvertX) ? tmpScaleX : scale,
-                                      scale, scale, 1.0f));  // uniform scale
+    _modelMatrix3D = float4x4(float4m(scale, scale, scale, 1.0f));  // uniform scale
     _modelMatrix3D =
         _modelMatrix3D *
         matrix4x4_translation(0.0f, 0.0f, -1.0f);  // set z=-1 unit back

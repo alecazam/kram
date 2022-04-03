@@ -1009,17 +1009,20 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // No checks on this zoom
     // old - newPosition from the zoom
 
+    // normalized coords to pixel coords
+    pixel.x *= _showSettings->imageBoundsX;
+    pixel.y *= _showSettings->imageBoundsY;
+    
+    // this fixes pinch-zoom on cube which are 6:1
+    pixel.x /= ar;
+    
 #if USE_PERSPECTIVE
     // TODO: this doesn't work for perspective
-    newPan.x = _showSettings->panX - (_showSettings->zoom - newZoom) *
-                                         _showSettings->imageBoundsX * pixel.x;
-    newPan.y = _showSettings->panY + (_showSettings->zoom - newZoom) *
-                                         _showSettings->imageBoundsY * pixel.y;
+    newPan.x = _showSettings->panX - (_showSettings->zoom - newZoom) * pixel.x;
+    newPan.y = _showSettings->panY + (_showSettings->zoom - newZoom) * pixel.y;
 #else
-    newPan.x = _showSettings->panX - (_showSettings->zoom - newZoom) *
-                                         _showSettings->imageBoundsX * pixel.x;
-    newPan.y = _showSettings->panY + (_showSettings->zoom - newZoom) *
-                                         _showSettings->imageBoundsY * pixel.y;
+    newPan.x = _showSettings->panX - (_showSettings->zoom - newZoom) * pixel.x;
+    newPan.y = _showSettings->panY + (_showSettings->zoom - newZoom) * pixel.y;
 #endif
 }
 
