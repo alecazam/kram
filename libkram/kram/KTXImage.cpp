@@ -1565,7 +1565,7 @@ bool KTXImage::validateMipLevels() const
         if (textureType == MyMTLTextureTypeCube) {
             // Xcode GPU Capture is saving KTX cube files out wit4h length * 6
             // which is incorrect, but it's en easy to miss "feature" in the KTX spec
-            if (levelSizeFromRead != level.length) {
+            if (levelSizeFromRead != level.length * numChunks) {
                 levelSizeFromRead *= 6;
             }
             else {
