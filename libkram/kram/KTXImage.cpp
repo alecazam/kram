@@ -1563,7 +1563,15 @@ bool KTXImage::validateMipLevels() const
 
         // cube only stores size of one face, ugh
         if (textureType == MyMTLTextureTypeCube) {
-            levelSizeFromRead *= 6;
+            // Xcode GPU Capture is saving KTX cube files out wit4h length * 6
+            // which is incorrect, but it's en easy to miss "feature" in the KTX spec
+            if (levelSizeFromRead != level.length) {
+                levelSizeFromRead *= 6;
+            }
+            else {
+                // This won't appear in kramv, but will if reading ktx cubes in kram
+                KLOGW("kram", "LevelSize in image data for cube needs to be faceSize, not faceSize * 6");
+            }
         }
 
         if (levelSizeFromRead != level.length * numChunks) {
