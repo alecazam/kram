@@ -14,7 +14,7 @@
 //  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 //
 
-#import "GLTFEnums.h"
+#import <GLTF/GLTFEnums.h>
 
 @import Foundation;
 @import simd;

@@ -1215,7 +1215,7 @@ bool KTXImage::open(const uint8_t* imageData, size_t imageDataLength, bool isInf
 
     // since KTX1 doesn't have compressed mips, can alias the file data directly
     fileData = imageData;
-    fileDataLength = imageDataLength;
+    fileDataLength = (int32_t)imageDataLength;
 
     // copy out the header, TODO: should make sure bytes exist
     header = *(const KTXHeader*)fileData;
@@ -1496,7 +1496,7 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
         mipLevels.push_back(level);
     }
 
-    header.numberOfMipmapLevels = mipLevels.size();
+    header.numberOfMipmapLevels = (uint32_t)mipLevels.size();
 
     header.pixelWidth = width;
     header.pixelHeight = height;
@@ -1521,7 +1521,7 @@ void KTXImage::initMipLevels(size_t mipOffset)
     for (uint32_t i = 0; i < numMips; ++i) {
         size_t dataSize = mipLengthCalc(w, h);
 
-        uint32_t levelSize = dataSize * numChunks;
+        uint32_t levelSize = (uint32_t)(dataSize * numChunks);
 
         // TODO: align mip offset to multiple of 4 bytes for KTX1, may need for kTX2
         // make sure when adding up offsets with length to include this padding

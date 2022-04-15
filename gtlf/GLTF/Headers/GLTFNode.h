@@ -14,9 +14,9 @@
 //  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 //
 
-#import "GLTFObject.h"
-#import "GLTFUtilities.h"
-#import "GLTFNodeVisitor.h"
+#import <GLTF/GLTFObject.h>
+#import <GLTF/GLTFUtilities.h>
+#import <GLTF/GLTFNodeVisitor.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

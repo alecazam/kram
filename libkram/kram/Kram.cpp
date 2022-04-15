@@ -2155,7 +2155,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     // for now driving everything off metal type, but should switch to neutral
     MyMTLPixelFormat metalFormat = srcImage.pixelFormat;
 
-    int32_t dataSize = srcImage.fileDataLength;
+    int32_t dataSize = (int32_t)srcImage.fileDataLength;
 
     //string tmp;
     bool isMB = (dataSize > (512 * 1024));

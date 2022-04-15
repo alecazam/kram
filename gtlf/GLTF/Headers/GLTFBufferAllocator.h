@@ -14,7 +14,7 @@
 //  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 //
 
-#import "GLTFBuffer.h"
+#import <GLTF/GLTFBuffer.h>
 
 @import Foundation;
 

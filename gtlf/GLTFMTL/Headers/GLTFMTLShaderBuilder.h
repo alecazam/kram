@@ -15,7 +15,7 @@
 //
 
 #import <GLTF/GLTF.h>
-#import "GLTFMTLUtilities.h"
+#import <GLTFMTL/GLTFMTLUtilities.h>
 
 @import Metal;
 

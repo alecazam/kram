@@ -15,7 +15,7 @@
 //
 
 #import <GLTF/GLTF.h>
-#import "GLTFMTLTextureLoader.h"
+#import <GLTFMTL/GLTFMTLTextureLoader.h>
 
 @import Foundation;
 @import Metal;

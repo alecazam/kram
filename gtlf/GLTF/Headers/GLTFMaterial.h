@@ -14,8 +14,8 @@
 //  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 //
 
-#import "GLTFObject.h"
-#import "GLTFTexture.h"
+#import <GLTF/GLTFObject.h>
+#import <GLTF/GLTFTexture.h>
 
 @import simd;
 

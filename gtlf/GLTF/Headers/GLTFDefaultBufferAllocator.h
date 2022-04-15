@@ -16,7 +16,7 @@
 
 @import Foundation;
 
-#import "GLTFBufferAllocator.h"
+#import <GLTF/GLTFBufferAllocator.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
