@@ -14,7 +14,7 @@
 //  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 //
 
-#include "TargetConditionals.h"
+#include <TargetConditionals.h>
 
 #if TARGET_OS_OSX
 @import Cocoa;

@@ -375,8 +375,8 @@ struct ViewFramebufferData {
     // Important to set color space, or colors are wrong.  Why doesn't one of these work (or the default)
     // false is good for srgb -> rgba16f
     // true is good for non-srgb -> rgba16f
-    bool pickOne = false;
     CGColorSpaceRef viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
+    //bool pickOne = false;
     // pickOne ? kCGColorSpaceSRGB : kCGColorSpaceLinearSRGB);
     view.colorspace = viewColorSpace;
     
