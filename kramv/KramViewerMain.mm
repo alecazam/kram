@@ -597,6 +597,8 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     _hudLabel = [self _addHud:NO];
     [self setHudText:""];
     
+   
+    
     return self;
 }
 
@@ -2009,7 +2011,18 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
 - (void)hideTables
 {
-    _tableView.hidden = true;
+    // fix broken NSTableView, keeps showing scroll and responding to pan
+    // so set scroll to hidden instead of tables
+    NSScrollView* scrollView = [_tableView enclosingScrollView];
+    scrollView.hidden = YES;
+}
+
+- (void)showFileTable
+{
+    \// fix broken NSTableView, keeps showing scroll and responding to pan
+    // so set scroll to hidden instead of tables
+    NSScrollView* scrollView = [_tableView enclosingScrollView];
+    scrollView.hidden = NO;
 }
 
 - (void)updateHudVisibility {
@@ -2630,7 +2643,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     [_tableView scrollRowToVisible:_fileArchiveIndex];
     
     // want it to respond to arrow keys
-    [self.window makeFirstResponder: _tableView];
+    //[self.window makeFirstResponder: _tableView];
     
     // hack to see table
     [self hideTables];
@@ -2658,11 +2671,11 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     [_tableView scrollRowToVisible:_fileArchiveIndex];
     
     // want it to respond to arrow keys
-    [self.window makeFirstResponder: _tableView];
+    //[self.window makeFirstResponder: _tableView];
     
     // show the files table
     [self hideTables];
-    _tableView.hidden = NO;
+    [self showFileTable];
     
     // also have to hide hud or it will obscure the visible table
     _hudHidden = true;
@@ -2691,11 +2704,11 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     [_tableView scrollRowToVisible:_fileFolderIndex];
     
     // want it to respond to arrow keys
-    [self.window makeFirstResponder: _tableView];
+    //[self.window makeFirstResponder: _tableView];
     
     // show the files table
     [self hideTables];
-    _tableView.hidden = NO;
+    [self showFileTable];
     
     _hudHidden = true;
     [self updateHudVisibility];
@@ -3134,6 +3147,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
             }
             [_tableView reloadData];
             
+            
             [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileFolderIndex] byExtendingSelection:NO];
             [_tableView scrollRowToVisible:_fileFolderIndex];
             
@@ -3291,7 +3305,13 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         return success;
     }
 
-    return [self loadImageFile:url];
+    bool success = [self loadImageFile:url];
+    
+    // hide table in case last had archive open
+    if (success)
+        [self hideTables];
+    
+    return success;
 }
 
 -(BOOL)loadModelFile:(NSURL*)url filename:(const char*)filename
@@ -3367,7 +3387,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         _showSettings->isFolder = false;
         
         // no need for file table on single files
-        _tableView.hidden = YES;
+        [self hideTables];
     }
     
     // show the controls
@@ -3443,7 +3463,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     // show/hide button
     [self updateUIAfterLoad];
     // no need for file table on single files
-    _tableView.hidden = YES;
+    [self hideTables];
     
     self.needsDisplay = YES;
     return YES;
