@@ -2019,7 +2019,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
 - (void)showFileTable
 {
-    \// fix broken NSTableView, keeps showing scroll and responding to pan
+    // fix broken NSTableView, keeps showing scroll and responding to pan
     // so set scroll to hidden instead of tables
     NSScrollView* scrollView = [_tableView enclosingScrollView];
     scrollView.hidden = NO;
