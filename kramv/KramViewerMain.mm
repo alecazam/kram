@@ -1981,7 +1981,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
     // for now hit esc to hide the table views
     if (keyCode == Key::Escape) {
-        [self hideTables];
+        [self hideFileTable];
         
         _hudHidden = false;
         [self updateHudVisibility];
@@ -2009,7 +2009,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     }
 }
 
-- (void)hideTables
+- (void)hideFileTable
 {
     // fix broken NSTableView, keeps showing scroll and responding to pan
     // so set scroll to hidden instead of tables
@@ -2646,7 +2646,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     //[self.window makeFirstResponder: _tableView];
     
     // hack to see table
-    [self hideTables];
+    [self hideFileTable];
     
     return YES;
 }
@@ -2674,7 +2674,6 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     //[self.window makeFirstResponder: _tableView];
     
     // show the files table
-    [self hideTables];
     [self showFileTable];
     
     // also have to hide hud or it will obscure the visible table
@@ -2707,7 +2706,6 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     //[self.window makeFirstResponder: _tableView];
     
     // show the files table
-    [self hideTables];
     [self showFileTable];
     
     _hudHidden = true;
@@ -3151,7 +3149,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
             [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileFolderIndex] byExtendingSelection:NO];
             [_tableView scrollRowToVisible:_fileFolderIndex];
             
-            [self hideTables];
+            [self hideFileTable];
         }
 
         // now load image from directory
@@ -3309,7 +3307,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     
     // hide table in case last had archive open
     if (success)
-        [self hideTables];
+        [self hideFileTable];
     
     return success;
 }
@@ -3387,7 +3385,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         _showSettings->isFolder = false;
         
         // no need for file table on single files
-        [self hideTables];
+        [self hideFileTable];
     }
     
     // show the controls
@@ -3463,7 +3461,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     // show/hide button
     [self updateUIAfterLoad];
     // no need for file table on single files
-    [self hideTables];
+    [self hideFileTable];
     
     self.needsDisplay = YES;
     return YES;
@@ -3471,7 +3469,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
 
 - (void)setupUI
 {
-    [self hideTables];
+    [self hideFileTable];
 }
 
 - (void)concludeDragOperation:(id)sender
