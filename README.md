@@ -69,6 +69,7 @@ L - advance lighting mode (none, diffuse, diffuse + specular)
 T - toggle tangent generation
 
 ↓ - advance bundle/folder image (can traverse zip of ktx/ktx2 files), displays list, esc to get out of list
+→ - advance counterpart (can see png, then encodes if viewing folders).  Not yet finished.
 
 ```
 
@@ -116,7 +117,7 @@ KTX2 - works in kram and viewer, has aligned levels of mips when uncompressed,
   
 DDS - works in kram and viewer, no mip compression, only BC and explicit formats, extended for ASTC/ETC
   kram/kramv only support newer DX10 style DDS format.  Can view in Preview on macOS too.
-  DDSHelper provides load/save.  Pixel data ordered by chunk instead of by mips.
+  DDSHelper provides load/save.  Pixel data ordered by chunk instead of by mips.  No metadata.
   
 ```
 
@@ -268,12 +269,12 @@ kram includes the following encoders/decoders:
 |----------|------------------|-------------|-----------------------------|---------|
 | BCEnc    | Rich Geldreich   | MIT         | BC1,3,4,5,7                 | same    |
 | Squish   | Simon Brown      | MIT         | BC1,3,4,5                   | same    |
-| ATE      | Apple            | no sources  | BC1,4,5,7 ASTC4x4,8x8 LDR   | all LDR |
+| ATE      | Apple            | no sources  | BC1,4,5,7 ASTC4x4,8x8 LDR   | LDR     |
 | Astcenc  | Arm              | Apache 2.0  | ASTC4x4,5x5,6x6,8x8 LDR/HDR | same    |
 | Etc2comp | Google           | MIT         | ETC2r11,rg11,rgb,rgba       | same    |
 | Explicit | Me               | MIT         | r/rg/rgba 8u/16f/32f        | none    |
 | Compress | AMD              | MIT         | BC6                         | same    |
-| GTLFKit  | Warren Moore     | MIT         | gltf                        | same    |
+| GTLFKit  | Warren Moore     | MIT         | none                        | gltf    |
 
 ```
 ATE
@@ -321,6 +322,7 @@ kram includes additional open-source:
 | mmap universal | Mike Frysinger     | Pub       | mmap on Windows           |
 | zstd           | Yann Collett (FB)  | BSD-2     | KTX2 mip decode           |
 | miniz	         | Rich Gelreich      | Unlicense | bundle support via zip    |
+| gltfKit        | Warren Moore       | MIT       | gltf decoder/renderer     |
 
 #### Open source changes
 
@@ -332,6 +334,7 @@ kram includes additional open-source:
 * mmap universal - may leak a file mapping handle on Win.
 * zstd - using single file version of zstd for decode, disabled encode paths
 * miniz - expose raw data and offset for mmap-ed zip files, disabled writer, disable read crc checks, in .cpp file
+* gltfkit - several warning fixes, changes to support kram texture loader
 
 ## kram unstarted features:
 
