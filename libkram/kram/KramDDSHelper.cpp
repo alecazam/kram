@@ -16,6 +16,104 @@ const uint32_t DDS_MAGIC = 0x20534444; // "DDS "
     ((uint32_t)(uint8_t)(str[0]) | ((uint32_t)(uint8_t)(str[1]) << 8) |       \
     ((uint32_t)(uint8_t)(str[2]) << 16) | ((uint32_t)(uint8_t)(str[3]) << 24 ))
 
+// DX9 era formats, only for reading dds files in dx9 style
+enum D3DFORMAT : uint32_t
+{
+    D3DFMT_UNKNOWN              =  0,
+
+//    D3DFMT_R8G8B8               = 20,
+    D3DFMT_A8R8G8B8             = 21,
+//    D3DFMT_X8R8G8B8             = 22,
+//    D3DFMT_R5G6B5               = 23,
+//    D3DFMT_X1R5G5B5             = 24,
+//    D3DFMT_A1R5G5B5             = 25,
+//    D3DFMT_A4R4G4B4             = 26,
+//    D3DFMT_R3G3B2               = 27,
+//    D3DFMT_A8                   = 28,
+//    D3DFMT_A8R3G3B2             = 29,
+//    D3DFMT_X4R4G4B4             = 30,
+//    D3DFMT_A2B10G10R10          = 31,
+    D3DFMT_A8B8G8R8             = 32,
+//    D3DFMT_X8B8G8R8             = 33,
+//    D3DFMT_G16R16               = 34,
+//    D3DFMT_A2R10G10B10          = 35,
+//    D3DFMT_A16B16G16R16         = 36,
+
+//    D3DFMT_A8P8                 = 40,
+//    D3DFMT_P8                   = 41,
+
+//    D3DFMT_L8                   = 50,
+//    D3DFMT_A8L8                 = 51,
+//    D3DFMT_A4L4                 = 52,
+
+//    D3DFMT_V8U8                 = 60,
+//    D3DFMT_L6V5U5               = 61,
+//    D3DFMT_X8L8V8U8             = 62,
+//    D3DFMT_Q8W8V8U8             = 63,
+//    D3DFMT_V16U16               = 64,
+//    D3DFMT_A2W10V10U10          = 67,
+
+//    D3DFMT_UYVY                 = MAKEFOURCC("UYVY"),
+//    D3DFMT_R8G8_B8G8            = MAKEFOURCC("RGBG"),
+//    D3DFMT_YUY2                 = MAKEFOURCC("YUY2"),
+//    D3DFMT_G8R8_G8B8            = MAKEFOURCC("GRGB"),
+    
+    D3DFMT_DXT1                 = MAKEFOURCC("DXT1"),
+    D3DFMT_DXT2                 = MAKEFOURCC("DXT2"),
+    D3DFMT_DXT3                 = MAKEFOURCC("DXT3"),
+    D3DFMT_DXT4                 = MAKEFOURCC("DXT4"),
+    D3DFMT_DXT5                 = MAKEFOURCC("DXT5"),
+
+    // Not worth support dx9-style files, these don't even hold srgb state
+    D3DFMT_ATI1 = MAKEFOURCC("ATI1"),
+    D3DFMT_BC4U = MAKEFOURCC("BC4U"),
+    D3DFMT_BC4S = MAKEFOURCC("BC4S"),
+    
+    D3DFMT_ATI2 = MAKEFOURCC("ATI2"),
+    D3DFMT_BC5U = MAKEFOURCC("BC5U"),
+    D3DFMT_BC5S = MAKEFOURCC("BC5S"),
+    
+//    D3DFMT_D16_LOCKABLE         = 70,
+//    D3DFMT_D32                  = 71,
+//    D3DFMT_D15S1                = 73,
+//    D3DFMT_D24S8                = 75,
+//    D3DFMT_D24X8                = 77,
+//    D3DFMT_D24X4S4              = 79,
+//    D3DFMT_D16                  = 80,
+//
+//    D3DFMT_D32F_LOCKABLE        = 82,
+//    D3DFMT_D24FS8               = 83,
+
+    //D3DFMT_D32_LOCKABLE         = 84,
+    //D3DFMT_S8_LOCKABLE          = 85,
+
+//    D3DFMT_L16                  = 81,
+//
+//    D3DFMT_VERTEXDATA           =100,
+//    D3DFMT_INDEX16              =101,
+//    D3DFMT_INDEX32              =102,
+
+    //D3DFMT_Q16W16V16U16         =110,
+
+    //D3DFMT_MULTI2_ARGB8         = MAKEFOURCC("MET1"),
+
+    D3DFMT_R16F                 = 111,
+    D3DFMT_G16R16F              = 112,
+    D3DFMT_A16B16G16R16F        = 113,
+
+    D3DFMT_R32F                 = 114,
+    D3DFMT_G32R32F              = 115,
+    D3DFMT_A32B32G32R32F        = 116,
+
+//    D3DFMT_CxV8U8               = 117,
+
+    //D3DFMT_A1                   = 118,
+    //D3DFMT_A2B10G10R10_XR_BIAS  = 119,
+    //D3DFMT_BINARYBUFFER         = 199,
+
+    D3DFMT_FORCE_DWORD          =0x7fffffff
+};
+
 enum DDS_FLAGS : uint32_t
 {
     
@@ -34,10 +132,10 @@ enum DDS_FLAGS : uint32_t
     DDSPF_ALPHAPIXELS = 0x00000001,
     DDSPF_FOURCC =      0x00000004,
     DDSPF_RGB =         0x00000040,
-    //DDSPF_LUMINANCE =   0x00020000,
-    //DDSPF_ALPHA =       0x00000002,
+    DDSPF_LUMINANCE =   0x00020000, // dx9
+    DDSPF_ALPHA =       0x00000002, // dx9
     //DDSPF_BUMPDUDV =    0x00080000,
-
+    
     // caps
     DDSCAPS_TEXTURE = 0x00001000,
     DDSCAPS_MIPMAP  = 0x00400000,
@@ -63,10 +161,6 @@ enum DDS_FLAGS : uint32_t
     DDS_ALPHA_MODE_PREMULTIPLIED = 2,
     DDS_ALPHA_MODE_OPAQUE = 3,
     DDS_ALPHA_MODE_CUSTOM = 4,
-    
-    // Not worth support dx9-style files, these don't even hold srgb state
-    //FOURCC_BC1 = MAKEFOURCC("DXT1"),
-    //FOURCC_BC3 = MAKEFOURCC("DXT5"),
 };
 
 struct DDS_PIXELFORMAT
@@ -108,10 +202,115 @@ struct DDS_HEADER_DXT10
     uint32_t        miscFlags2;
 };
 
+// DX9 bitmask parsing adapted from GetPixelFormat() call here https://github.com/microsoft/DirectXTex/blob/main/DDSTextureLoader/DDSTextureLoader12.cpp
+static MyMTLPixelFormat getMetalFormatFromDDS9(const DDS_PIXELFORMAT& ddpf)
+{
+    // Copyright (c) Microsoft Corporation.
+    // Licensed under the MIT License.
+    #define ISBITMASK( r,g,b,a ) ( ddpf.RBitMask == r && ddpf.GBitMask == g && ddpf.BBitMask == b && ddpf.ABitMask == a )
+
+    if (ddpf.flags & DDSPF_RGB)
+    {
+        // Note that sRGB formats are written using the "DX10" extended header
+        // here would need to force the format to an srgb format from cli
+        switch (ddpf.RGBBitCount)
+        {
+        case 32:
+            if (ISBITMASK(0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000))
+            {
+                return MyMTLPixelFormatRGBA8Unorm;
+            }
+
+            if (ISBITMASK(0xffffffff, 0, 0, 0))
+            {
+                // Only 32-bit color channel format in D3D9 was R32F
+                return MyMTLPixelFormatR32Float; // D3DX writes this out as a FourCC of 114
+            }
+            break;
+
+        case 8:
+            // NVTT versions 1.x wrote this as RGB instead of LUMINANCE
+            if (ISBITMASK(0xff, 0, 0, 0))
+            {
+                return MyMTLPixelFormatR8Unorm;
+            }
+
+            // No 3:3:2 or paletted DXGI formats aka D3DFMT_R3G3B2, D3DFMT_P8
+            break;
+        }
+    }
+    else if (ddpf.flags & DDSPF_LUMINANCE)
+    {
+        // TODO: need rrrg swizzle on these
+        switch (ddpf.RGBBitCount)
+        {
+        case 16:
+            if (ISBITMASK(0x00ff, 0, 0, 0xff00))
+            {
+                return MyMTLPixelFormatRG8Unorm; // D3DX10/11 writes this out as DX10 extension
+            }
+            break;
+
+        case 8:
+            if (ISBITMASK(0xff, 0, 0, 0))
+            {
+                return MyMTLPixelFormatR8Unorm; // D3DX10/11 writes this out as DX10 extension
+            }
+
+            // No DXGI format maps to ISBITMASK(0x0f,0,0,0xf0) aka D3DFMT_A4L4
+
+            if (ISBITMASK(0x00ff, 0, 0, 0xff00))
+            {
+                return MyMTLPixelFormatRG8Unorm; // Some DDS writers assume the bitcount should be 8 instead of 16
+            }
+            break;
+        }
+    }
+    else if (ddpf.flags & DDSPF_ALPHA)
+    {
+        if (8 == ddpf.RGBBitCount)
+        {
+            // TODO: need rrrr swizzle
+            return MyMTLPixelFormatR8Unorm; // really A8, but use a swizzle
+        }
+    }
+    else if (ddpf.flags & DDSPF_FOURCC)
+    {
+        switch (ddpf.fourCC)
+        {
+            case D3DFMT_DXT1: return MyMTLPixelFormatBC1_RGBA;
+            //case D3DFMT_DXT2: return MyMTLPixelFormatBC2_RGBA; // isPremul
+            //case D3DFMT_DXT3: return MyMTLPixelFormatBC2_RGBA;
+            case D3DFMT_DXT4: return MyMTLPixelFormatBC3_RGBA; // isPremul
+            case D3DFMT_DXT5: return MyMTLPixelFormatBC3_RGBA;
+                
+            case D3DFMT_ATI1: return MyMTLPixelFormatBC4_RUnorm;
+            case D3DFMT_BC4U: return MyMTLPixelFormatBC4_RUnorm;
+            case D3DFMT_BC4S: return MyMTLPixelFormatBC4_RSnorm;
+            
+            case D3DFMT_ATI2: return MyMTLPixelFormatBC5_RGUnorm;
+            case D3DFMT_BC5U: return MyMTLPixelFormatBC5_RGUnorm;
+            case D3DFMT_BC5S: return MyMTLPixelFormatBC5_RGSnorm;
+            
+            case D3DFMT_R16F: return MyMTLPixelFormatR16Float;
+            case D3DFMT_G16R16F: return MyMTLPixelFormatRG16Float;
+            case D3DFMT_A16B16G16R16F: return MyMTLPixelFormatRGBA16Float;
+                
+            case D3DFMT_R32F: return MyMTLPixelFormatR32Float;
+            case D3DFMT_G32R32F: return MyMTLPixelFormatRG32Float;
+            case D3DFMT_A32B32G32R32F: return MyMTLPixelFormatRGBA32Float;
+        }
+        
+    }
+
+    return MyMTLPixelFormatInvalid;
+    #undef ISBITMASK
+}
+
 bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool isInfoOnly)
 {
     const uint32_t magicSize = sizeof(uint32_t);
-    uint32_t mipDataOffset = magicSize + sizeof(DDS_HEADER) + sizeof(DDS_HEADER_DXT10);
+    uint32_t mipDataOffset = magicSize + sizeof(DDS_HEADER);
     
     if (dataSize <= mipDataOffset) {
         KLOGE("kram", "bad dataSize too small %zu <= %d", dataSize, mipDataOffset);
@@ -120,7 +319,6 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool
     
     const uint32_t& magic = *(const uint32_t*)data;
     const DDS_HEADER& hdr = *(const DDS_HEADER*)(data + magicSize);
-    const DDS_HEADER_DXT10& hdr10 = *(const DDS_HEADER_DXT10*)(data + magicSize + sizeof(DDS_HEADER));
     const DDS_PIXELFORMAT& format = hdr.ddspf;
     
     if (magic != DDS_MAGIC) {
@@ -128,7 +326,6 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool
         return false;
     }
 
-    // only load DX10 formatted DDS for now
     if (hdr.size != sizeof(DDS_HEADER)) {
         KLOGE("kram", "bad header size %d", hdr.size);
         return false;
@@ -143,15 +340,22 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool
         KLOGE("kram", "missing format.fourCC flag");
         return false;
     }
-    if (format.fourCC != FOURCC_DX10) {
-        KLOGE("kram", "format.fourCC 0x%08X must be DX10", format.fourCC);
-        return false;
+    
+    bool isDDS10 = format.fourCC == FOURCC_DX10;
+    const DDS_HEADER_DXT10& hdr10 = *(const DDS_HEADER_DXT10*)(data + magicSize + sizeof(DDS_HEADER));
+    
+    MyMTLPixelFormat pixelFormat = MyMTLPixelFormatInvalid;
+    if (isDDS10) {
+        mipDataOffset += sizeof(DDS_HEADER_DXT10);
+        pixelFormat = directxToMetalFormat(hdr10.dxgiFormat);
+    }
+    else {
+        pixelFormat = getMetalFormatFromDDS9(format);
     }
     
     // Kram only supports a subset of DDS formats
-    auto pixelFormat = directxToMetalFormat(hdr10.dxgiFormat);
     if (pixelFormat == MyMTLPixelFormatInvalid) {
-        KLOGE("kram", "bad format.dxgiFormat %d", hdr10.dxgiFormat);
+        KLOGE("kram", "unsupported dds format");
         return false;
     }
     
@@ -161,7 +365,11 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool
     uint32_t depth = (hdr.flags & DDSD_DEPTH) ? hdr.depth : 1;
     
     uint32_t mipCount = (hdr.flags & DDSD_MIPMAPCOUNT) ? hdr.mipMapCount : 1;
-    uint32_t arrayCount = hdr10.arraySize;
+    uint32_t arrayCount = 1;
+    
+    if (isDDS10) {
+        arrayCount = hdr10.arraySize;
+    }
     
     // make sure that counts are reasonable
     const uint32_t kMaxMipCount = 16;
@@ -202,30 +410,45 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool
     if (arrayCount == 0)
         arrayCount = 1;
     
-    bool isCube = (hdr10.miscFlag & DDS_RESOURCE_MISC_TEXTURECUBE);
+    bool isCube = false;
     bool isArray = arrayCount > 1;
+    bool isPremul = false;
     
-    switch(hdr10.resourceDimension) {
-        case DDS_DIMENSION_TEXTURE1D:
-            image.textureType = MyMTLTextureType1DArray;
-            isArray = true; // kram doesn't support 1d
-            break;
-        case DDS_DIMENSION_TEXTURE2D:
-            if (isCube) {
-                image.textureType = isArray ? MyMTLTextureTypeCubeArray : MyMTLTextureTypeCube;
-            }
-            else {
-                image.textureType = isArray ? MyMTLTextureType2DArray : MyMTLTextureType2D;
-            }
-            break;
-        case DDS_DIMENSION_TEXTURE3D:
+    if (isDDS10) {
+        isCube = (hdr10.miscFlag & DDS_RESOURCE_MISC_TEXTURECUBE);
+        
+        switch(hdr10.resourceDimension) {
+            case DDS_DIMENSION_TEXTURE1D:
+                image.textureType = MyMTLTextureType1DArray;
+                isArray = true; // kram doesn't support 1d
+                break;
+            case DDS_DIMENSION_TEXTURE2D:
+                if (isCube) {
+                    image.textureType = isArray ? MyMTLTextureTypeCubeArray : MyMTLTextureTypeCube;
+                }
+                else {
+                    image.textureType = isArray ? MyMTLTextureType2DArray : MyMTLTextureType2D;
+                }
+                break;
+            case DDS_DIMENSION_TEXTURE3D:
+                image.textureType = MyMTLTextureType3D;
+                isArray = false;
+                break;
+        }
+        isPremul = (hdr10.miscFlags2 & DDS_ALPHA_MODE_PREMULTIPLIED) != 0;
+    }
+    else {
+        isArray = false;
+        
+        if (hdr.flags & DDSD_DEPTH) {
             image.textureType = MyMTLTextureType3D;
-            isArray = false;
-            break;
+        }
+        else if (hdr.caps2 & DDSCAPS2_CUBEMAP) {
+            image.textureType = MyMTLTextureTypeCube;
+        }
     }
     
     // transfer premul setting, would like to not depend on "info" to carry this
-    bool isPremul = (hdr10.miscFlags2 & DDS_ALPHA_MODE_PREMULTIPLIED) != 0;
     if (isPremul)
         image.addChannelProps("Alb.ra,Alb.ga,Alb.ba,Alb.a");
     
