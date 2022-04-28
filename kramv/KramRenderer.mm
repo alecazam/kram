@@ -135,7 +135,7 @@ struct ViewFramebufferData {
     id<MTLDepthStencilState> _depthStateFull;
     id<MTLDepthStencilState> _depthStateNone;
 
-    MTLVertexDescriptor *_mtlVertexDescriptor;
+    MTLVertexDescriptor* _mtlVertexDescriptor;
 
     // TODO: Array< id<MTLTexture> > _textures;
     id<MTLTexture> _colorMap;
@@ -173,31 +173,31 @@ struct ViewFramebufferData {
     float4x4 _modelMatrix3D;
 
     // float _rotation;
-    KramLoader *_loader;
-    MTKMesh *_mesh;
+    KramLoader* _loader;
+    MTKMesh* _mesh;
 
     MDLVertexDescriptor *_mdlVertexDescriptor;
 
-    MTKMesh *_meshRect;
-    MTKMesh *_meshBox;
-    MTKMesh *_meshSphere;
-    MTKMesh *_meshSphereMirrored;
-    // MTKMesh *_meshCylinder;
-    MTKMesh *_meshCapsule;
+    MTKMesh* _meshRect;
+    MTKMesh* _meshBox;
+    MTKMesh* _meshSphere;
+    MTKMesh* _meshSphereMirrored;
+    // MTKMesh* _meshCylinder;
+    MTKMesh* _meshCapsule;
     MTKMeshBufferAllocator *_metalAllocator;
 
     id<MTLLibrary> _shaderLibrary;
-    NSURL *_metallibFileURL;
-    NSDate *_metallibFileDate;
+    NSURL* _metallibFileURL;
+    NSDate* _metallibFileDate;
     ViewFramebufferData _viewFramebuffer;
 
-    ShowSettings *_showSettings;
+    ShowSettings* _showSettings;
     
 #if USE_GLTF
     KramGLTFTextureLoader* _textureLoader;
     id<GLTFBufferAllocator> _bufferAllocator;
     GLTFMTLRenderer* _gltfRenderer;
-    GLTFAsset *_asset; // only 1 for now
+    GLTFAsset* _asset; // only 1 for now
     double _animationTime;
     
     id<MTLTexture> _environmentTexture;
@@ -436,8 +436,8 @@ struct ViewFramebufferData {
     _metallibFileURL =
         [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
 
-    NSError *err = nil;
-    NSDate *fileDate = nil;
+    NSError* err = nil;
+    NSDate* fileDate = nil;
     [_metallibFileURL getResourceValue:&fileDate
                                 forKey:NSURLContentModificationDateKey
                                  error:&err];
@@ -478,8 +478,8 @@ struct ViewFramebufferData {
 
 - (id<MTLComputePipelineState>)_createComputePipeline:(const char *)name
 {
-    NSString *nameNS = [NSString stringWithUTF8String:name];
-    NSError *error = nil;
+    NSString* nameNS = [NSString stringWithUTF8String:name];
+    NSError* error = nil;
     id<MTLFunction> computeFunction = [_shaderLibrary newFunctionWithName:nameNS];
 
     id<MTLComputePipelineState> pipe;
@@ -514,13 +514,13 @@ struct ViewFramebufferData {
 - (id<MTLRenderPipelineState>)_createRenderPipeline:(const char *)vs
                                                  fs:(const char *)fs
 {
-    NSString *vsNameNS = [NSString stringWithUTF8String:vs];
-    NSString *fsNameNS = [NSString stringWithUTF8String:fs];
+    NSString* vsNameNS = [NSString stringWithUTF8String:vs];
+    NSString* fsNameNS = [NSString stringWithUTF8String:fs];
 
     id<MTLFunction> vertexFunction;
     id<MTLFunction> fragmentFunction;
 
-    MTLRenderPipelineDescriptor *pipelineStateDescriptor =
+    MTLRenderPipelineDescriptor* pipelineStateDescriptor =
         [[MTLRenderPipelineDescriptor alloc] init];
     pipelineStateDescriptor.label = fsNameNS;
     pipelineStateDescriptor.sampleCount = _viewFramebuffer.sampleCount;
@@ -538,7 +538,7 @@ struct ViewFramebufferData {
     pipelineStateDescriptor.stencilAttachmentPixelFormat =
         _viewFramebuffer.depthStencilPixelFormat;
 
-    NSError *error = NULL;
+    NSError* error = NULL;
 
     //-----------------------
 
@@ -587,7 +587,7 @@ struct ViewFramebufferData {
 {
     {
         // writing to this texture
-        MTLTextureDescriptor *textureDesc = [MTLTextureDescriptor
+        MTLTextureDescriptor* textureDesc = [MTLTextureDescriptor
             texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float
                                          width:1
                                         height:1
@@ -601,7 +601,7 @@ struct ViewFramebufferData {
     {
         // this must match drawable format due to using a blit to copy pixel out of
         // drawable
-        MTLTextureDescriptor *textureDesc = [MTLTextureDescriptor
+        MTLTextureDescriptor* textureDesc = [MTLTextureDescriptor
             texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA16Float
                                          width:1
                                         height:1
@@ -618,7 +618,7 @@ struct ViewFramebufferData {
                       mdlMesh:(MDLMesh *)mdlMesh
                      doFlipUV:(bool)doFlipUV
 {
-    NSError *error = nil;
+    NSError* error = nil;
 
     mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
 
@@ -628,9 +628,9 @@ struct ViewFramebufferData {
     // flip the u coordinate
     if (doFlipUV) {
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
-        MDLMeshBufferMap *uvsMap = [uvs map];
+        MDLMeshBufferMap* uvsMap = [uvs map];
 
-        packed_float2 *uvData = (packed_float2 *)uvsMap.bytes;
+        packed_float2* uvData = (packed_float2 *)uvsMap.bytes;
 
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
             auto &uv = uvData[i];
@@ -650,8 +650,8 @@ struct ViewFramebufferData {
     bool doFlipBitangent = true;
     if (doFlipBitangent) {
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshTangent];
-        MDLMeshBufferMap *uvsMap = [uvs map];
-        packed_float4 *uvData = (packed_float4 *)uvsMap.bytes;
+        MDLMeshBufferMap* uvsMap = [uvs map];
+        packed_float4* uvData = (packed_float4 *)uvsMap.bytes;
 
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
             //            if (uvData[i].w != -1.0f && uvData[i].w != 1.0f) {
@@ -664,7 +664,7 @@ struct ViewFramebufferData {
     }
 
     // now set it into mtk mesh
-    MTKMesh *mesh = [[MTKMesh alloc] initWithMesh:mdlMesh
+    MTKMesh* mesh = [[MTKMesh alloc] initWithMesh:mdlMesh
                                            device:_device
                                             error:&error];
     mesh.name = [NSString stringWithUTF8String:name];
@@ -673,10 +673,10 @@ struct ViewFramebufferData {
     // These don't seem to appear as the buffer name that is suballocated from
     {
         // name the vertex range on the vb
-        MTKMeshBuffer *pos = mesh.vertexBuffers[BufferIndexMeshPosition];
-        MTKMeshBuffer *uvs = mesh.vertexBuffers[BufferIndexMeshUV0];
-        MTKMeshBuffer *normals = mesh.vertexBuffers[BufferIndexMeshNormal];
-        MTKMeshBuffer *tangents = mesh.vertexBuffers[BufferIndexMeshTangent];
+        MTKMeshBuffer* pos = mesh.vertexBuffers[BufferIndexMeshPosition];
+        MTKMeshBuffer* uvs = mesh.vertexBuffers[BufferIndexMeshUV0];
+        MTKMeshBuffer* normals = mesh.vertexBuffers[BufferIndexMeshNormal];
+        MTKMeshBuffer* tangents = mesh.vertexBuffers[BufferIndexMeshTangent];
 
         [pos.buffer addDebugMarker:@"Pos"
                              range:NSMakeRange(pos.offset, pos.length)];
@@ -689,7 +689,7 @@ struct ViewFramebufferData {
 
         // This seems to already be named "ellisoid-Indices",
         // need to do for ib as well
-        for (MTKSubmesh *submesh in mesh.submeshes) {
+        for (MTKSubmesh* submesh in mesh.submeshes) {
             [submesh.indexBuffer.buffer
                 addDebugMarker:mesh.name
                          range:NSMakeRange(submesh.indexBuffer.offset,
@@ -870,7 +870,7 @@ struct packed_float3 {
 {
     /// Load assets into metal objects
 
-    MDLMesh *mdlMesh;
+    MDLMesh* mdlMesh;
 
     mdlMesh = [MDLMesh newBoxWithDimensions:(vector_float3){1, 1, 1}
                                    segments:(vector_uint3){1, 1, 1}
@@ -905,13 +905,13 @@ struct packed_float3 {
 
         id<MDLMeshBuffer> posBuffer =
             mdlMesh.vertexBuffers[BufferIndexMeshPosition];
-        MDLMeshBufferMap *posMap = [posBuffer map];
-        packed_float3 *posData = (packed_float3 *)posMap.bytes;
+        MDLMeshBufferMap* posMap = [posBuffer map];
+        packed_float3* posData = (packed_float3 *)posMap.bytes;
 
         id<MDLMeshBuffer> normalBuffer =
             mdlMesh.vertexBuffers[BufferIndexMeshNormal];
-        MDLMeshBufferMap *normalsMap = [normalBuffer map];
-        packed_float3 *normalData = (packed_float3 *)normalsMap.bytes;
+        MDLMeshBufferMap* normalsMap = [normalBuffer map];
+        packed_float3* normalData = (packed_float3 *)normalsMap.bytes;
 
         // vertexCount reports 306, but vertex 289+ are garbage
         uint32_t numVertices = 289;  // mdlMesh.vertexCount
@@ -963,20 +963,20 @@ struct packed_float3 {
         mdlMesh.vertexDescriptor = _mdlVertexDescriptor;
 
         id<MDLMeshBuffer> uvsBuffer = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
-        MDLMeshBufferMap *uvsMap = [uvsBuffer map];
-        packed_float2 *uvData = (packed_float2 *)uvsMap.bytes;
+        MDLMeshBufferMap* uvsMap = [uvsBuffer map];
+        packed_float2* uvData = (packed_float2 *)uvsMap.bytes;
 
         // this is all aos
 
         id<MDLMeshBuffer> posBuffer =
             mdlMesh.vertexBuffers[BufferIndexMeshPosition];
-        MDLMeshBufferMap *posMap = [posBuffer map];
+        MDLMeshBufferMap* posMap = [posBuffer map];
         packed_float3 *posData = (packed_float3 *)posMap.bytes;
 
         id<MDLMeshBuffer> normalsBuffe =
             mdlMesh.vertexBuffers[BufferIndexMeshNormal];
-        MDLMeshBufferMap *normalsMap = [normalsBuffe map];
-        packed_float3 *normalData = (packed_float3 *)normalsMap.bytes;
+        MDLMeshBufferMap* normalsMap = [normalsBuffe map];
+        packed_float3* normalData = (packed_float3 *)normalsMap.bytes;
 
         // vertexCount reports 306, but vertex 289+ are garbage
         uint32_t numVertices = 289;  // mdlMesh.vertexCount
@@ -1168,8 +1168,8 @@ inline const char* toFilenameShort(const char* filename) {
     string fullFilename = url.path.UTF8String;
 
     // can use this to pull, or use fstat on FileHelper
-    NSDate *fileDate = nil;
-    NSError *error = nil;
+    NSDate* fileDate = nil;
+    NSError* error = nil;
     [url getResourceValue:&fileDate
                    forKey:NSURLContentModificationDateKey
                     error:&error];
@@ -1813,8 +1813,8 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 _animationTime += 1.0/60.0;
     
                 NSTimeInterval maxAnimDuration = 0;
-                for (GLTFAnimation *animation in _asset.animations) {
-                    for (GLTFAnimationChannel *channel in animation.channels) {
+                for (GLTFAnimation* animation in _asset.animations) {
+                    for (GLTFAnimationChannel* channel in animation.channels) {
                         if (channel.duration > maxAnimDuration) {
                             maxAnimDuration = channel.duration;
                         }
@@ -1823,7 +1823,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
             
                 NSTimeInterval animTime = fmod(_animationTime, maxAnimDuration);
     
-                for (GLTFAnimation *animation in _asset.animations) {
+                for (GLTFAnimation* animation in _asset.animations) {
                     [animation runAtTime:animTime];
                 }
             }
@@ -1962,7 +1962,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 // use exisiting lod, and mip
                 [renderEncoder setFragmentSamplerState:sampler atIndex:SamplerIndexColor];
 
-                for (MTKSubmesh *submesh in _mesh.submeshes) {
+                for (MTKSubmesh* submesh in _mesh.submeshes) {
                     [renderEncoder drawIndexedPrimitives:submesh.primitiveType
                                               indexCount:submesh.indexCount
                                                indexType:submesh.indexType
@@ -2033,7 +2033,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         // and mips on on screen faces and arrays and slices go across in a
                         // row, and mips are displayed down from each of those in a column
 
-                        for (MTKSubmesh *submesh in _mesh.submeshes) {
+                        for (MTKSubmesh* submesh in _mesh.submeshes) {
                             [renderEncoder drawIndexedPrimitives:submesh.primitiveType
                                                       indexCount:submesh.indexCount
                                                        indexType:submesh.indexType
@@ -2068,7 +2068,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 // mips on on screen faces and arrays and slices go across in a row, and
                 // mips are displayed down from each of those in a column
 
-                for (MTKSubmesh *submesh in _mesh.submeshes) {
+                for (MTKSubmesh* submesh in _mesh.submeshes) {
                     [renderEncoder drawIndexedPrimitives:submesh.primitiveType
                                               indexCount:submesh.indexCount
                                                indexType:submesh.indexType

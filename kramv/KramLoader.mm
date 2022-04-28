@@ -45,12 +45,12 @@ struct KramBlit {
 @implementation KramLoader {
     // only one of these for now
     id<MTLBuffer> _buffer;
-    uint8_t *_data;
+    uint8_t* _data;
     uint32_t _bufferOffset;
 
     vector<KramBlit> _blits;
-    NSMutableArray<id<MTLTexture>> *_blitTextures;
-    NSMutableArray<id<MTLTexture>> *_mipgenTextures;
+    NSMutableArray<id<MTLTexture>>* _blitTextures;
+    NSMutableArray<id<MTLTexture>>* _mipgenTextures;
 }
 
 - (instancetype)init
@@ -278,10 +278,10 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
 }
 
 - (BOOL)loadImageFromURL:(nonnull NSURL *)url
-                   image:(KTXImage &)image
-               imageData:(KTXImageData &)imageData
+                   image:(KTXImage&)image
+               imageData:(KTXImageData&)imageData
 {
-    const char *path = url.absoluteURL.path.UTF8String;
+    const char* path = url.absoluteURL.path.UTF8String;
     if (!imageData.open(path, image)) {
         return NO;
     }
@@ -289,9 +289,9 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
     return YES;
 }
 
-- (nullable id<MTLTexture>)loadTextureFromURL:(nonnull NSURL *)url
+- (nullable id<MTLTexture>)loadTextureFromURL:(nonnull NSURL*)url
                                originalFormat:
-                                   (nullable MTLPixelFormat *)originalFormat
+                                   (nullable MTLPixelFormat*)originalFormat
 {
     KTXImage image;
     KTXImageData imageData;
@@ -306,7 +306,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
 - (nullable id<MTLTexture>)createTexture:(const KTXImage &)image
                                isPrivate:(bool)isPrivate
 {
-    MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
+    MTLTextureDescriptor* textureDescriptor = [[MTLTextureDescriptor alloc] init];
 
     // Indicate that each pixel has a blue, green, red, and alpha channel, where
     // each channel is an 8-bit unsigned normalized value (i.e. 0 maps to 0.0 and
@@ -375,7 +375,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
     
     if (!_blits.empty()) {
         // now upload from staging MTLBuffer to private MTLTexture
-        for (const auto &blit : _blits) {
+        for (const auto& blit : _blits) {
             MTLRegion region = {
                 {0, 0, 0},                                   // MTLOrigin
                 {(NSUInteger)blit.w, (NSUInteger)blit.h, 1}  // MTLSize
@@ -504,8 +504,8 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
     size_t blockSize = image.blockSize();
 
     vector<uint64_t> bufferOffsets;
-    uint8_t *bufferData = (uint8_t *)_buffer.contents;
-    const uint8_t *mipData = (const uint8_t *)image.fileData;
+    uint8_t* bufferData = (uint8_t*)_buffer.contents;
+    const uint8_t* mipData = (const uint8_t*)image.fileData;
     bufferOffsets.resize(image.mipLevels.size());
 
     uint32_t numChunks = image.totalChunks();

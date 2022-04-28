@@ -250,8 +250,8 @@ public:
 // NSTableViewDelegate
 -(NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
 {
-    NSString *identifier = tableColumn.identifier;
-    NSTableCellView *cell = [tableView makeViewWithIdentifier:identifier owner:self];
+    NSString* identifier = tableColumn.identifier;
+    NSTableCellView* cell = [tableView makeViewWithIdentifier:identifier owner:self];
     cell.textField.stringValue = [self.items objectAtIndex:row];
     return cell;
 }
@@ -337,8 +337,8 @@ withCurrentSearchString:(NSString *)searchString
     // TODO: This is only getting called on first open on macOS 12.0 even with hack below.
     // find out why.
     
-    NSApplication *app = [NSApplication sharedApplication];
-    MyMTKView *view = app.mainWindow.contentView;
+    NSApplication* app = [NSApplication sharedApplication];
+    MyMTKView* view = app.mainWindow.contentView;
     BOOL success = [view loadTextureFromURL:url];
     if (success) {
         // Note: if I return NO from this call then a dialog pops up that image
@@ -398,7 +398,7 @@ withCurrentSearchString:(NSString *)searchString
     // TODO: also do an overlapping diff if two files are dropped with same
     // dimensions.
 
-    NSURL *url = urls.firstObject;
+    NSURL* url = urls.firstObject;
     [view loadTextureFromURL:url];
     [view fixupDocumentList];
 }
@@ -408,7 +408,7 @@ withCurrentSearchString:(NSString *)searchString
 - (IBAction)showAboutDialog:(id)sender
 {
     // calls openDocumentWithContentsOfURL above
-    NSMutableDictionary<NSAboutPanelOptionKey, id> *options =
+    NSMutableDictionary<NSAboutPanelOptionKey, id>* options =
         [[NSMutableDictionary alloc] init];
 
     // name and icon are already supplied
@@ -418,7 +418,7 @@ withCurrentSearchString:(NSString *)searchString
         [NSString stringWithUTF8String:"kram ©2020-2022 by Alec Miller"];
 
     // add a link to kram website, skip the Visit text
-    NSMutableAttributedString *str = [[NSMutableAttributedString alloc]
+    NSMutableAttributedString* str = [[NSMutableAttributedString alloc]
         initWithString:@"https://github.com/alecazam/kram"];
     [str addAttribute:NSLinkAttributeName
                 value:@"https://github.com/alecazam/kram"
@@ -442,7 +442,7 @@ withCurrentSearchString:(NSString *)searchString
     options[NSAboutPanelOptionCredits] = str;
 
     // skip the v character
-    const char *version = KRAM_VERSION;
+    const char* version = KRAM_VERSION;
     version += 1;
 
     // this is the build version, should be github hash?
@@ -465,19 +465,19 @@ withCurrentSearchString:(NSString *)searchString
 NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
 @implementation MyMTKView {
-    NSMenu *_viewMenu;  // really the items
-    NSStackView *_buttonStack;
-    NSMutableArray<NSButton *> *_buttonArray;
-    NSTextField *_hudLabel;
-    NSTextField *_hudLabel2;
+    NSMenu* _viewMenu;  // really the items
+    NSStackView* _buttonStack;
+    NSMutableArray<NSButton *>* _buttonArray;
+    NSTextField* _hudLabel;
+    NSTextField* _hudLabel2;
     
     // Offer list of files in archives
     // TODO: move to NSOutlineView since that can show archive folders with content inside
-    IBOutlet NSTableView *_tableView;
-    IBOutlet TableViewController *_tableViewController;
+    IBOutlet NSTableView* _tableView;
+    IBOutlet TableViewController* _tableViewController;
     
     vector<string> _textSlots;
-    ShowSettings *_showSettings;
+    ShowSettings* _showSettings;
 
     // allow zip files to be dropped and opened, and can advance through bundle
     // content
@@ -617,15 +617,15 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
    
     // Clear the document list so readFromURL keeps getting called
     // Can't remove currentDoc, so have to skip that
-    NSDocumentController *dc = [NSDocumentController sharedDocumentController];
-    NSDocument *currentDoc = dc.currentDocument;
-    NSMutableArray *docsToRemove = [[NSMutableArray alloc] init];
-    for (NSDocument *doc in dc.documents) {
+    NSDocumentController* dc = [NSDocumentController sharedDocumentController];
+    NSDocument* currentDoc = dc.currentDocument;
+    NSMutableArray* docsToRemove = [[NSMutableArray alloc] init];
+    for (NSDocument* doc in dc.documents) {
         if (doc != currentDoc)
             [docsToRemove addObject:doc];
     }
 
-    for (NSDocument *doc in docsToRemove) {
+    for (NSDocument* doc in docsToRemove) {
         [dc removeDocument:doc];
     }
 }
@@ -731,17 +731,17 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
     int32_t numActions = ArrayCount(actions);
     
-    NSMutableArray *buttons = [[NSMutableArray alloc] init];
+    NSMutableArray* buttons = [[NSMutableArray alloc] init];
 
     for (int32_t i = 0; i < numActions; ++i) {
         Action& action = actions[i];
-        const char *icon = action.icon;
-        const char *tip = action.tip;
+        const char* icon = action.icon;
+        const char* tip = action.tip;
 
-        NSString *name = [NSString stringWithUTF8String:icon];
-        NSString *toolTip = [NSString stringWithUTF8String:tip];
+        NSString* name = [NSString stringWithUTF8String:icon];
+        NSString* toolTip = [NSString stringWithUTF8String:tip];
 
-        NSButton *button = nil;
+        NSButton* button = nil;
 
         button = [NSButton buttonWithTitle:name
                                     target:self
@@ -814,7 +814,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         [buttons addObject:button];
     }
 
-    NSStackView *stackView = [NSStackView stackViewWithViews:buttons];
+    NSStackView* stackView = [NSStackView stackViewWithViews:buttons];
     stackView.orientation = NSUserInterfaceLayoutOrientationVertical;
     stackView.detachesHiddenViews =
         YES;  // default, but why have to have _buttonArrary
@@ -822,10 +822,10 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
     // Want menus, so user can define their own shortcuts to commands
     // Also need to enable/disable this via validateUserInterfaceItem
-    NSApplication *app = [NSApplication sharedApplication];
+    NSApplication* app = [NSApplication sharedApplication];
 
-    NSMenu *mainMenu = app.mainMenu;
-    NSMenuItem *viewMenuItem = mainMenu.itemArray[2];
+    NSMenu* mainMenu = app.mainMenu;
+    NSMenuItem* viewMenuItem = mainMenu.itemArray[2];
     _viewMenu = viewMenuItem.submenu;
 
     // TODO: add a view menu in the storyboard
@@ -834,11 +834,11 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
     for (int32_t i = 0; i < numActions; ++i) {
         Action& action = actions[i];
-        const char *icon = action.icon;  // single char
-        const char *title = action.tip;
+        const char* icon = action.icon;  // single char
+        const char* title = action.tip;
 
-        NSString *toolTip = [NSString stringWithUTF8String:icon];
-        NSString *name = [NSString stringWithUTF8String:title];
+        NSString* toolTip = [NSString stringWithUTF8String:icon];
+        NSString* name = [NSString stringWithUTF8String:title];
         bool isSeparator = icon[0] == 0;
         
         if (isSeparator) {
@@ -846,9 +846,9 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         }
         else {
             // NSString *shortcut = @"";  // for now, or AppKit turns key int cmd+shift+key
-            NSString *shortcut = [NSString stringWithUTF8String:icon];
+            NSString* shortcut = [NSString stringWithUTF8String:icon];
             
-            NSMenuItem *menuItem =
+            NSMenuItem* menuItem =
                 [[NSMenuItem alloc] initWithTitle:name
                                            action:@selector(handleAction:)
                                     keyEquivalent:shortcut];
@@ -880,7 +880,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // copy all of them to a vector, and then assign the action ptrs
     for (int32_t i = 0; i < numActions; ++i) {
         Action& action = actions[i];
-        const char *icon = action.icon;  // single char
+        const char* icon = action.icon;  // single char
         
         // skip separators
         bool isSeparator = icon[0] == 0;
@@ -917,7 +917,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     uint32_t h = 1220;
     
     // add a label for the hud
-    NSTextField *label = [[MyNSTextField alloc]
+    NSTextField* label = [[MyNSTextField alloc]
         initWithFrame:NSMakeRect(isShadow ? 21 : 20, isShadow ? 21 : 20, w,
                                  h)];
     
@@ -954,7 +954,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 - (void)doZoomMath:(float)newZoom newPan:(float2 &)newPan
 {
     // transform the cursor to texture coordinate, or clamped version if outside
-    Renderer *renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer *)self.delegate;
     float4x4 projectionViewModelMatrix =
         [renderer computeImageTransform:_showSettings->panX
                                    panY:_showSettings->panY
@@ -1084,7 +1084,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     float4 bottomLeftCorner = float4m(-0.5 * ar, -0.5f, 0.0f, 1.0f);
     float4 topRightCorner = float4m(0.5 * ar, 0.5f, 0.0f, 1.0f);
 
-    Renderer *renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer *)self.delegate;
     float4x4 newMatrix = [renderer computeImageTransform:_showSettings->panX
                                                     panY:_showSettings->panY
                                                     zoom:zoom];
@@ -1299,7 +1299,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     }
 
     // don't wait on renderer to update this matrix
-    Renderer *renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer *)self.delegate;
 
     if (_showSettings->isEyedropperFromDrawable()) {
         // this only needs the cursor location, but can't supply uv to
@@ -1722,7 +1722,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
 - (void)updatePan:(float)panX panY:(float)panY
 {
-    Renderer *renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer *)self.delegate;
     float4x4 projectionViewModelMatrix =
         [renderer computeImageTransform:panX
                                    panY:panY
@@ -1943,12 +1943,12 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 
 - (IBAction)handleAction:(id)sender
 {
-    NSEvent *theEvent = [NSApp currentEvent];
+    NSEvent* theEvent = [NSApp currentEvent];
     bool isShiftKeyDown = (theEvent.modifierFlags & NSEventModifierFlagShift);
 
     const Action* action = nullptr;
     if ([sender isKindOfClass:[NSButton class]]) {
-        NSButton *button = (NSButton *)sender;
+        NSButton* button = (NSButton *)sender;
         for (const auto& search: _actions) {
             if (search.button == button) {
                 action = &search;
@@ -1957,7 +1957,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
         }
     }
     else if ([sender isKindOfClass:[NSMenuItem class]]) {
-        NSMenuItem *menuItem = (NSMenuItem *)sender;
+        NSMenuItem* menuItem = (NSMenuItem *)sender;
         for (const auto& search: _actions) {
             if (search.menuItem == menuItem) {
                 action = &search;
@@ -2561,30 +2561,30 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
 - (BOOL)performDragOperation:(id)sender
 {
-    NSPasteboard *pasteboard = [sender draggingPasteboard];
+    NSPasteboard* pasteboard = [sender draggingPasteboard];
 
-    NSString *desiredType = [pasteboard availableTypeFromArray:pasteboardTypes];
+    NSString* desiredType = [pasteboard availableTypeFromArray:pasteboardTypes];
 
     if ([desiredType isEqualToString:NSPasteboardTypeFileURL]) {
         // TODO: use readObjects to drag multiple files onto one view
         // load one mip of all those, use smaller mips for thumbnail
 
         // the pasteboard contains a list of filenames
-        NSString *urlString =
+        NSString* urlString =
             [pasteboard propertyListForType:NSPasteboardTypeFileURL];
 
         // this turns it into a real path (supposedly works even with sandbox)
-        NSURL *url = [NSURL URLWithString:urlString];
+        NSURL* url = [NSURL URLWithString:urlString];
 
         // convert the original path and then back to a url, otherwise reload fails
         // when this file is replaced.
-        const char *filename = url.fileSystemRepresentation;
+        const char* filename = url.fileSystemRepresentation;
         if (filename == nullptr) {
             KLOGE("kramv", "Fix this drop url returning nil issue");
             return NO;
         }
 
-        NSString *filenameString = [NSString stringWithUTF8String:filename];
+        NSString* filenameString = [NSString stringWithUTF8String:filename];
 
         url = [NSURL fileURLWithPath:filenameString];
 
@@ -2633,7 +2633,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     // copy names into the files view
     [_tableViewController.items removeAllObjects];
     for (const auto& entry: _zip.zipEntrys()) {
-        const char *filenameShort = toFilenameShort(entry.filename);
+        const char* filenameShort = toFilenameShort(entry.filename);
         [_tableViewController.items addObject: [NSString stringWithUTF8String: filenameShort]];
     }
     [_tableView reloadData];
@@ -2761,7 +2761,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
 {
     string filenameShort = filename;
     
-    const char *ext = strrchr(filename, '.');
+    const char* ext = strrchr(filename, '.');
 
     auto dotPos = filenameShort.find_last_of(".");
     if (dotPos == string::npos)
@@ -2791,7 +2791,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
 - (BOOL)loadFileFromFolder
 {
     // now lookup the filename and data at that entry
-    const char *filename = _folderFiles[_fileFolderIndex].c_str();
+    const char* filename = _folderFiles[_fileFolderIndex].c_str();
     string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
     
@@ -2843,7 +2843,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         }
     }
     
-    Renderer *renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer *)self.delegate;
     [renderer releaseAllPendingTextures];
     
     if (![renderer loadTextureFromImage:fullFilename.c_str()
@@ -2857,7 +2857,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     //-------------------------------
 
     // set title to filename, chop this to just file+ext, not directory
-    const char *filenameShort = strrchr(filename, '/');
+    const char* filenameShort = strrchr(filename, '/');
     if (filenameShort == nullptr) {
         filenameShort = filename;
     }
@@ -2913,7 +2913,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         return NO;
     }
     
-    const uint8_t *imageData = nullptr;
+    const uint8_t* imageData = nullptr;
     uint64_t imageDataLength = 0;
 
     // search for main file - can be albedo or normal
@@ -2921,7 +2921,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         return NO;
     }
 
-    const uint8_t *imageNormalData = nullptr;
+    const uint8_t* imageNormalData = nullptr;
     uint64_t imageNormalDataLength = 0;
     
     string normalFilename;
@@ -2964,7 +2964,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         }
     }
 
-    Renderer *renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer *)self.delegate;
     [renderer releaseAllPendingTextures];
     
     if (![renderer loadTextureFromImage:fullFilename.c_str()
@@ -2978,7 +2978,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     //---------------------------------
 
     // set title to filename, chop this to just file+ext, not directory
-    const char *filenameShort = strrchr(filename, '/');
+    const char* filenameShort = strrchr(filename, '/');
     if (filenameShort == nullptr) {
         filenameShort = filename;
     }
@@ -3021,7 +3021,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     _hudHidden = false;
     [self updateHudVisibility];
     
-    const char *filename = url.fileSystemRepresentation;
+    const char* filename = url.fileSystemRepresentation;
     if (filename == nullptr) {
         // Fixed by converting dropped urls into paths then back to a url.
         // When file replaced the drop url is no longer valid.
@@ -3029,7 +3029,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         return NO;
     }
     
-    Renderer *renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer *)self.delegate;
     
     // folders can have a . in them f.e. 2.0/blah/...
     bool isDirectory = url.hasDirectoryPath;
@@ -3039,7 +3039,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         // make list of all file in the directory
 
         if (!self.imageURL || (!([self.imageURL isEqualTo:url]))) {
-            NSDirectoryEnumerator *directoryEnumerator =
+            NSDirectoryEnumerator* directoryEnumerator =
                 [[NSFileManager defaultManager]
                                enumeratorAtURL:url
                     includingPropertiesForKeys:[NSArray array]
@@ -3056,8 +3056,8 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
             vector<string> files;
 #if USE_GLTF
             // only display models in folder if found, ignore the png/jpg files
-            while (NSURL *fileOrDirectoryURL = [directoryEnumerator nextObject]) {
-                const char *name = fileOrDirectoryURL.fileSystemRepresentation;
+            while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
+                const char* name = fileOrDirectoryURL.fileSystemRepresentation;
 
                 bool isGLTF = endsWithExtension(name, ".gltf");
                 bool isGLB = endsWithExtension(name, ".glb");
@@ -3078,7 +3078,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
                         includingPropertiesForKeys:[NSArray array]
                                            options:0
                                       errorHandler:  // nil
-                                          ^BOOL(NSURL *urlArg, NSError *error) {
+                                          ^BOOL(NSURL* urlArg, NSError* error) {
                                               macroUnusedVar(urlArg);
                                               macroUnusedVar(error);
 
@@ -3086,8 +3086,8 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
                                               return NO;
                                           }];
 #endif
-                while (NSURL *fileOrDirectoryURL = [directoryEnumerator nextObject]) {
-                    const char *name = fileOrDirectoryURL.fileSystemRepresentation;
+                while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
+                    const char* name = fileOrDirectoryURL.fileSystemRepresentation;
 
                     if (isSupportedFilename(name))
                     {
@@ -3101,7 +3101,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
             }
 
             // add it to recent docs
-            NSDocumentController *dc =
+            NSDocumentController* dc =
                 [NSDocumentController sharedDocumentController];
             [dc noteNewRecentDocumentURL:url];
 
@@ -3140,7 +3140,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
             
             [_tableViewController.items removeAllObjects];
             for (const auto& file: files) {
-                const char *filenameShort = toFilenameShort(file.c_str());
+                const char* filenameShort = toFilenameShort(file.c_str());
                 [_tableViewController.items addObject: [NSString stringWithUTF8String: filenameShort]];
             }
             [_tableView reloadData];
@@ -3187,11 +3187,11 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     
     if (endsWithExtension(filename, ".metallib")) {
         if ([renderer hotloadShaders:filename]) {
-            NSURL *metallibFileURL =
+            NSURL* metallibFileURL =
                 [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
 
             // add to recent docs, so can reload quickly
-            NSDocumentController *dc =
+            NSDocumentController* dc =
                 [NSDocumentController sharedDocumentController];
             [dc noteNewRecentDocumentURL:metallibFileURL];
 
@@ -3259,13 +3259,13 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
             self.lastArchiveTimestamp = archiveTimestamp;
 
             // add it to recent docs
-            NSDocumentController *dc =
+            NSDocumentController* dc =
                 [NSDocumentController sharedDocumentController];
             [dc noteNewRecentDocumentURL:url];
 
             // now reload the filename if needed
             if (!existingFilename.empty()) {
-                const ZipEntry *formerEntry = _zip.zipEntry(existingFilename.c_str());
+                const ZipEntry* formerEntry = _zip.zipEntry(existingFilename.c_str());
                 if (formerEntry) {
                     // lookup the index in the remapIndices table
                     _fileArchiveIndex =
@@ -3287,8 +3287,8 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
             getErrorLogCaptureText(errorText);
             setErrorLogCapture(false);
 
-            const auto &entry = _zip.zipEntrys()[_fileArchiveIndex];
-            const char *archiveFilename = entry.filename;
+            const auto& entry = _zip.zipEntrys()[_fileArchiveIndex];
+            const char* archiveFilename = entry.filename;
 
             // prepend filename
             string finalErrorText;
@@ -3373,7 +3373,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     if (url != nil)
     {
         // add to recent docs, so can reload quickly
-        NSDocumentController *dc =
+        NSDocumentController* dc =
             [NSDocumentController sharedDocumentController];
         [dc noteNewRecentDocumentURL:gltfFileURL];
 
@@ -3406,7 +3406,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
 
 -(BOOL)loadImageFile:(NSURL*)url
 {
-    Renderer *renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer *)self.delegate;
     setErrorLogCapture(true);
 
     // set title to filename, chop this to just file+ext, not directory
@@ -3444,7 +3444,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     // list
 
     // add to recent document menu
-    NSDocumentController *dc = [NSDocumentController sharedDocumentController];
+    NSDocumentController* dc = [NSDocumentController sharedDocumentController];
     [dc noteNewRecentDocumentURL:url];
 
     self.imageURL = url;
@@ -3549,11 +3549,11 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
 @end
 
 @implementation GameViewController {
-    MyMTKView *_view;
+    MyMTKView* _view;
 
-    Renderer *_renderer;
+    Renderer* _renderer;
 
-    NSTrackingArea *_trackingArea;
+    NSTrackingArea* _trackingArea;
 }
 
 - (void)viewWillDisappear

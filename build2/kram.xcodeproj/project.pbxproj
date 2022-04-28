@@ -311,8 +311,6 @@
 		70871E0827DDDBCD00D0B9E1 /* astcenc_diagnostic_trace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DC627DDDBCD00D0B9E1 /* astcenc_diagnostic_trace.cpp */; };
 		70871E0927DDDBCD00D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DC727DDDBCD00D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp */; };
 		70871E0A27DDDBCD00D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DC727DDDBCD00D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp */; };
-		70871E0B27DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_armv7_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871DC827DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_armv7_4.h */; };
-		70871E0C27DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_armv7_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871DC827DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_armv7_4.h */; };
 		708A6A962708CE4700BA5410 /* bc6h_decode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */; };
 		708A6A972708CE4700BA5410 /* bc6h_decode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */; };
 		708A6A982708CE4700BA5410 /* bc6h_decode.h in Headers */ = {isa = PBXBuildFile; fileRef = 708A6A8C2708CE4700BA5410 /* bc6h_decode.h */; };
@@ -633,7 +631,6 @@
 		70871DC527DDDBCC00D0B9E1 /* astcenc_platform_isa_detection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_platform_isa_detection.cpp; sourceTree = "<group>"; };
 		70871DC627DDDBCD00D0B9E1 /* astcenc_diagnostic_trace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_diagnostic_trace.cpp; sourceTree = "<group>"; };
 		70871DC727DDDBCD00D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_ideal_endpoints_and_weights.cpp; sourceTree = "<group>"; };
-		70871DC827DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_armv7_4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = astcenc_vecmathlib_neon_armv7_4.h; sourceTree = "<group>"; };
 		708A6A8B2708CE4700BA5410 /* bc6h_decode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bc6h_decode.cpp; sourceTree = "<group>"; };
 		708A6A8C2708CE4700BA5410 /* bc6h_decode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bc6h_decode.h; sourceTree = "<group>"; };
 		708A6A8D2708CE4700BA5410 /* bc6h_encode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bc6h_encode.cpp; sourceTree = "<group>"; };
@@ -789,7 +786,6 @@
 				70871DBF27DDDBCC00D0B9E1 /* astcenc_vecmathlib_avx2_8.h */,
 				70871DA727DDDBCC00D0B9E1 /* astcenc_vecmathlib_common_4.h */,
 				70871DBE27DDDBCC00D0B9E1 /* astcenc_vecmathlib_neon_4.h */,
-				70871DC827DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_armv7_4.h */,
 				70871DC027DDDBCC00D0B9E1 /* astcenc_vecmathlib_none_4.h */,
 				70871DB127DDDBCC00D0B9E1 /* astcenc_vecmathlib_sse_4.h */,
 				70871DC127DDDBCC00D0B9E1 /* astcenc_vecmathlib.h */,
@@ -1268,7 +1264,6 @@
 				706EF01426D15985001C950E /* alpha.h in Headers */,
 				708A6A982708CE4700BA5410 /* bc6h_decode.h in Headers */,
 				706EF01526D15985001C950E /* singlecolourfit.h in Headers */,
-				70871E0B27DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_armv7_4.h in Headers */,
 				706EF01626D15985001C950E /* maths.h in Headers */,
 				706EF01726D15985001C950E /* colourset.h in Headers */,
 				708A6AA42708CE4700BA5410 /* bc6h_utils.h in Headers */,
@@ -1357,7 +1352,6 @@
 				706EF18E26D166C5001C950E /* alpha.h in Headers */,
 				708A6A992708CE4700BA5410 /* bc6h_decode.h in Headers */,
 				706EF18F26D166C5001C950E /* singlecolourfit.h in Headers */,
-				70871E0C27DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_armv7_4.h in Headers */,
 				706EF19026D166C5001C950E /* maths.h in Headers */,
 				706EF19126D166C5001C950E /* colourset.h in Headers */,
 				708A6AA52708CE4700BA5410 /* bc6h_utils.h in Headers */,
