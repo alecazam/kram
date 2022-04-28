@@ -30,7 +30,7 @@ void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
 
 #elif KRAM_WIN
     // each processor group only has 64 bits
-    SetThreadAffinityMask(handle, &affinityMask);
+    SetThreadAffinityMask(handle, (DWORD_PTR)&affinityMask);
 #else
     // most systems are pthread-based, this is represented with array of bits
     cpu_set_t cpuset;
