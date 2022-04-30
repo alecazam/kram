@@ -351,7 +351,8 @@ float compute_symbolic_block_difference_2plane(
 
 	vmask4 plane2_mask = vint4::lane_id() == vint4(scb.plane2_component);
 
-	float summa = 0.0f;
+	vfloat4 summa = vfloat4::zero();
+
 	// Decode the color endpoints for this partition
 	vint4 ep0;
 	vint4 ep1;
@@ -409,11 +410,10 @@ float compute_symbolic_block_difference_2plane(
 		error = min(abs(error), 1e15f);
 		error = error * error;
 
-		float metric = dot_s(error, blk.channel_weight);
-		summa += astc::min(metric, ERROR_CALC_DEFAULT);
+		summa += min(dot(error, blk.channel_weight), ERROR_CALC_DEFAULT);
 	}
 
-	return summa;
+	return summa.lane<0>();
 }
 
 /* See header for documentation. */
@@ -445,7 +445,7 @@ float compute_symbolic_block_difference_1plane(
 	int plane1_weights[BLOCK_MAX_TEXELS];
 	unpack_weights(bsd, scb, di, false, bm.get_weight_quant_mode(), plane1_weights, nullptr);
 
-	float summa = 0.0f;
+	vfloat4 summa = vfloat4::zero();
 	for (unsigned int i = 0; i < partition_count; i++)
 	{
 		// Decode the color endpoints for this partition
@@ -506,12 +506,11 @@ float compute_symbolic_block_difference_1plane(
 			error = min(abs(error), 1e15f);
 			error = error * error;
 
-			float metric = dot_s(error, blk.channel_weight);
-			summa += astc::min(metric, ERROR_CALC_DEFAULT);
+			summa += min(dot(error, blk.channel_weight), ERROR_CALC_DEFAULT);
 		}
 	}
 
-	return summa;
+	return summa.lane<0>();
 }
 
 /* See header for documentation. */
@@ -560,7 +559,7 @@ float compute_symbolic_block_difference_1plane_1partition(
 	}
 
 	// Unpack and compute error for each texel in the partition
-	vfloat4 summav = vfloat4::zero();
+	vfloatacc summav = vfloatacc::zero();
 
 	vint lane_id = vint::lane_id();
 	vint srgb_scale(config.profile == ASTCENC_PRF_LDR_SRGB ? 257 : 1);
@@ -618,9 +617,7 @@ float compute_symbolic_block_difference_1plane_1partition(
 		// Mask off bad lanes
 		vmask mask = lane_id < vint(texel_count);
 		lane_id += vint(ASTCENC_SIMD_WIDTH);
-		metric = select(vfloat::zero(), metric, mask);
-
-		haccumulate(summav, metric);
+		haccumulate(summav, metric, mask);
 	}
 
 	return hadd_s(summav);
