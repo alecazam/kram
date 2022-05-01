@@ -2048,10 +2048,6 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     _hudLabel2.hidden = _hudHidden || !_showSettings->isHudShown;
 }
 
-- (void)clearHud {
-   
-}
-
 - (bool)handleEventAction:(const Action*)action isShiftKeyDown:(bool)isShiftKeyDown
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
@@ -2703,6 +2699,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     // also have to hide hud or it will obscure the visible table
     //_hudHidden = true;
     //[self updateHudVisibility];
+    [self setEyedropperText:""];
     
     return [self loadFileFromArchive];
 }
@@ -2734,6 +2731,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     
     //_hudHidden = true;
     //[self updateHudVisibility];
+    [self setEyedropperText:""];
     
     return [self loadFileFromFolder];
 }
