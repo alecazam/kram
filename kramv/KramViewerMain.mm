@@ -39,6 +39,19 @@ using namespace simd;
 using namespace kram;
 using namespace NAMESPACE_STL;
 
+bool isSupportedModelFilename(const char* filename) {
+#if USE_GLTF
+    return endsWithExtension(filename, ".gltf") ||
+           endsWithExtension(filename, ".glb");
+#else
+    return false;
+#endif
+}
+
+bool isSupportedArchiveFilename(const char* filename) {
+    return endsWithExtension(filename, ".zip");
+}
+
 struct MouseData
 {
     NSPoint originPoint;
@@ -533,6 +546,13 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 {
     [super awakeFromNib];
 
+    // vertical offset of table down so hud can display info
+    NSScrollView* scrollView = [_tableView enclosingScrollView];
+    CGRect rect = scrollView.frame;
+    rect.origin.y += 50;
+    scrollView.frame = rect;
+    
+
     // TODO: see if can only open this
     // NSLog(@"AwakeFromNIB");
 }
@@ -596,8 +616,6 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     _hudLabel2 = [self _addHud:YES];
     _hudLabel = [self _addHud:NO];
     [self setHudText:""];
-    
-   
     
     return self;
 }
@@ -2030,6 +2048,10 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     _hudLabel2.hidden = _hudHidden || !_showSettings->isHudShown;
 }
 
+- (void)clearHud {
+   
+}
+
 - (bool)handleEventAction:(const Action*)action isShiftKeyDown:(bool)isShiftKeyDown
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
@@ -2389,8 +2411,9 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             
             if (_showSettings->isArchive) {
                 if ([self advanceFileFromAchive:!isShiftKeyDown]) {
-                    _hudHidden = true;
-                    [self updateHudVisibility];
+                    //_hudHidden = true;
+                    //[self updateHudVisibility];
+                    [self setEyedropperText:""];
                     
                     isChanged = true;
                     text = "Loaded " + _showSettings->lastFilename;
@@ -2398,9 +2421,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             }
             else if (_showSettings->isFolder) {
                 if ([self advanceFileFromFolder:!isShiftKeyDown]) {
-                    _hudHidden = true;
-                    [self updateHudVisibility];
-                    
+                    //_hudHidden = true;
+                    //[self updateHudVisibility];
+                    [self setEyedropperText:""];
+                   
                     isChanged = true;
                     text = "Loaded " + _showSettings->lastFilename;
                 }
@@ -2677,8 +2701,8 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     [self showFileTable];
     
     // also have to hide hud or it will obscure the visible table
-    _hudHidden = true;
-    [self updateHudVisibility];
+    //_hudHidden = true;
+    //[self updateHudVisibility];
     
     return [self loadFileFromArchive];
 }
@@ -2708,8 +2732,8 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     // show the files table
     [self showFileTable];
     
-    _hudHidden = true;
-    [self updateHudVisibility];
+    //_hudHidden = true;
+    //[self updateHudVisibility];
     
     return [self loadFileFromFolder];
 }
@@ -2795,9 +2819,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
     
-    bool isModel =
-        endsWithExtension(filename, ".gltf") ||
-        endsWithExtension(filename, ".gtb");
+    bool isModel = isSupportedModelFilename(filename);
     if (isModel)
         return [self loadModelFile:nil filename:filename];
     
@@ -2901,9 +2923,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     string fullFilename = filename;
     double timestamp = (double)entry.modificationDate;
 
-    bool isModel =
-        endsWithExtension(filename, ".gltf") ||
-        endsWithExtension(filename, ".gtb");
+    bool isModel = isSupportedModelFilename(filename);
     if (isModel)
         return [self loadModelFile:nil filename:filename];
     
@@ -3059,9 +3079,8 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
             while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
                 const char* name = fileOrDirectoryURL.fileSystemRepresentation;
 
-                bool isGLTF = endsWithExtension(name, ".gltf");
-                bool isGLB = endsWithExtension(name, ".glb");
-                if (isGLTF || isGLB)
+                bool isModel = isSupportedModelFilename(filename);
+                if (isModel)
                 {
                     files.push_back(name);
                 }
@@ -3201,16 +3220,9 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     }
 
     // file is not a supported extension
-    if (!(
-          // archive
-          endsWithExtension(filename, ".zip") ||
-          
-          // images
+    if (!(isSupportedArchiveFilename(filename) ||
           isSupportedFilename(filename) ||
-          
-          // models
-          endsWithExtension(filename, ".gltf") ||
-          endsWithExtension(filename, ".glb")
+          isSupportedModelFilename(filename)
         ))
     {
         string errorText =
@@ -3225,8 +3237,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         return NO;
     }
 
-    if (endsWithExtension(filename, ".gltf") ||
-        endsWithExtension(filename, ".glb"))
+    if (isSupportedModelFilename(filename))
     {
         return [self loadModelFile:url filename:nullptr];
     }
@@ -3237,7 +3248,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     
     //-------------------
 
-    if (endsWithExtension(filename, ".zip")) {
+    if (isSupportedArchiveFilename(filename)) {
         auto archiveTimestamp = FileHelper::modificationTimestamp(filename);
 
         if (!self.imageURL || (!([self.imageURL isEqualTo:url])) ||
@@ -3326,7 +3337,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     // save out a scene with all of them in a single scene.  But that should
     // probably reference original content in case it's updated.
     
-    Renderer *renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer *)self.delegate;
     [renderer releaseAllPendingTextures];
     
     setErrorLogCapture(true);
@@ -3599,7 +3610,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     [_view addNotifications];
     
     [_view setupUI];
-    
+
     // original sample code was sending down _view.bounds.size, but need
     // drawableSize this was causing all sorts of inconsistencies
     [_renderer mtkView:_view drawableSizeWillChange:_view.drawableSize];
