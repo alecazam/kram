@@ -1668,16 +1668,22 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     // TODO: Stuff these on clipboard with a click, or use cmd+C?
 }
 
+enum TextSlot
+{
+    kTextSlotHud,
+    kTextSlotEyedropper
+};
+
 - (void)setEyedropperText:(const char *)text
 {
-    _textSlots[0] = text;
+    _textSlots[kTextSlotEyedropper] = text;
 
     [self updateHudText];
 }
 
 - (void)setHudText:(const char *)text
 {
-    _textSlots[1] = text;
+    _textSlots[kTextSlotHud] = text;
 
     [self updateHudText];
 }
@@ -1685,7 +1691,11 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
 - (void)updateHudText
 {
     // combine textSlots
-    string text = _textSlots[0] + _textSlots[1];
+    string text = _textSlots[kTextSlotHud];
+    
+    // don't show eyedropper text with table up, it's many lines and overlaps
+    if (!_tableView.hidden)
+        text += _textSlots[kTextSlotEyedropper];
 
     NSString *textNS = [NSString stringWithUTF8String:text.c_str()];
     _hudLabel2.stringValue = textNS;
