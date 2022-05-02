@@ -7,7 +7,8 @@ using namespace NAMESPACE_STL;
 int32_t ShowSettings::totalChunks() const
 {
     int32_t one = 1;
-    return std::max(one, faceCount) * std::max(one, arrayCount) *
+    return std::max(one, faceCount) *
+           std::max(one, arrayCount) *
            std::max(one, sliceCount);
 }
 

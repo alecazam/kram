@@ -1692,7 +1692,9 @@ enum TextSlot
 {
     // combine textSlots
     string text = _textSlots[kTextSlotHud];
-    
+    if (!text.empty() && text.back() != '\n')
+        text += "\n";
+        
     // don't show eyedropper text with table up, it's many lines and overlaps
     if (!_tableView.hidden)
         text += _textSlots[kTextSlotEyedropper];
@@ -3234,7 +3236,11 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         ))
     {
         string errorText =
-            "Unsupported file extension, must be .zip, .png, .ktx, .ktx2, .dds, .gltf, .glb\n";
+            "Unsupported file extension, must be .zip"
+#if USE_GLTF
+            ", .gltf, .glb"
+#endif
+            ", .png, .ktx, .ktx2, .dds\n";
 
         string finalErrorText;
         append_sprintf(finalErrorText, "Could not load from file:\n %s\n",
