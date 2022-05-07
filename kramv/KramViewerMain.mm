@@ -3105,7 +3105,7 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
             while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
                 const char* name = fileOrDirectoryURL.fileSystemRepresentation;
 
-                bool isModel = isSupportedModelFilename(filename);
+                bool isModel = isSupportedModelFilename(name);
                 if (isModel)
                 {
                     files.push_back(name);
