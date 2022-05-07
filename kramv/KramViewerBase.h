@@ -134,6 +134,10 @@ public:
     // Can collapse 3d to 2d and overlay the uv
     bool isUVPreview = false;
     
+    uint32_t uvPreviewFrames = 0;
+    float uvPreviewStep = 1.0f / 10.0f;
+    float uvPreview = 0.0f;
+    
     // the 2d view doesn't want to inset pixels for clamp, or point sampling is
     // thrown off expecially on small 4x4 textures
 #if USE_PERSPECTIVE
@@ -239,6 +243,8 @@ public:
     const char *lightingModeText() const;
     
     const char *meshNumberName(uint32_t meshNumber) const;
+    
+    void updateUVPreviewState();
     
     float imageAspectRatio() const {
         float ar = 1.0f;

@@ -275,6 +275,31 @@ void ShowSettings::advanceDebugMode(bool decrement)
     // clear color of farPlane.
 }
 
+void ShowSettings::updateUVPreviewState()
+{
+    if (is3DView) {
+        if (isUVPreview) {
+            if (uvPreview < 1.0)
+                uvPreview += uvPreviewStep;
+        }
+        else
+        {
+            if (uvPreview > 0.0)
+                uvPreview -= uvPreviewStep;
+        }
+
+        uvPreview = saturate(uvPreview);
+    }
+    else {
+        uvPreview = 0.0;
+    }
+    
+    // stop the frame update
+    if (uvPreview == 0.0f || uvPreview == 1.0f) {
+        uvPreviewFrames = 0;
+    }
+}
+
 void printChannels(string &tmp, const string &label, float4 c,
                    int32_t numChannels, bool isFloat, bool isSigned)
 {

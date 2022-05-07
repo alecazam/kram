@@ -722,6 +722,23 @@ struct packed_float3 {
     }
 }
 
+- (void)updateAnimationState:(MTKView*)view
+{
+    bool animateDisplay = self.playAnimations;
+    
+    // animate the uvPreviw until it reaches endPoint, no scrubber yet
+    _showSettings->updateUVPreviewState();
+    
+    if (_showSettings->uvPreviewFrames > 0) {
+        _showSettings->uvPreviewFrames--;
+        animateDisplay = true;
+    }
+    
+    view.enableSetNeedsDisplay = !animateDisplay;
+    view.paused = !animateDisplay;
+}
+
+
 - (void)updateModelSettings:(const string &)fullFilename
 {
     _showSettings->isModel = true;
@@ -1545,33 +1562,9 @@ float4 inverseScaleSquared(const float4x4 &m)
     float4x4 panTransform =
         matrix4x4_translation(-_showSettings->panX, _showSettings->panY, 0.0);
 
-    // interpolate this, also need to draw wireframe
     // this is an animated effect, that overlays the shape uv wires over the image
-    // but it needs to set needsDisplay until animation finishes
-    
-    // TODO: need to reset these when shape changes
-    static float delta = 1.0 / 60.0;
-    static float uvPreviewAmount = 0.0;
-    
-    // hack to see uvPreview
-    //_showSettings->isUVPreview = true;
-    
-    if (_showSettings->is3DView && _showSettings->isUVPreview) {
-        uvPreviewAmount += delta;
-        
-        if (uvPreviewAmount > 1.0) {
-            delta = -1.0 / 60.0;
-            uvPreviewAmount = 1.0;
-        }
-        else if (uvPreviewAmount < 0.0) {
-            delta = 1.0 / 60.0;
-            uvPreviewAmount = 0.0;
-        }
-    }
-    else {
-        uvPreviewAmount = 0.0;
-    }
-    uniforms.uvPreview = uvPreviewAmount;
+    uniforms.isUVPreview = _showSettings->uvPreview > 0.0;
+    uniforms.uvPreview = _showSettings->uvPreview;
     
     // scale
     float zoom = _showSettings->zoom;
@@ -1669,8 +1662,11 @@ float4 inverseScaleSquared(const float4x4 &m)
 - (void)drawInMTKView:(nonnull MTKView *)view
 {
     @autoreleasepool {
-        /// Per frame updates here
+        // Per frame updates here
 
+        // update per frame state
+        [self updateAnimationState:view];
+        
         // TODO: move this out, needs to get called off mouseMove, but don't want to
         // call drawMain
         [self drawSample];
@@ -2107,7 +2103,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 }
                 
                 // Draw uv wire overlay
-                if (_showSettings->is3DView && _showSettings->isUVPreview) {
+                if (_showSettings->is3DView && _showSettings->uvPreview > 0.0) {
                     // need to force color in shader or it's still sampling texture
                     // also need to add z offset
                     

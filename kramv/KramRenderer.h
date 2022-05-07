@@ -65,6 +65,9 @@ class KTXImage;
 // unload gltf model
 - (void)unloadModel;
 
+// called from view and renderer in render loop
+- (void)updateAnimationState:(MTKView*)view;
+
 // can play animations in gltf models
 @property (nonatomic) BOOL playAnimations;
 

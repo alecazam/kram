@@ -503,6 +503,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     int32_t _fileFolderIndex;
     
     Action* _actionPlay;
+    Action* _actionShapeUVPreview;
     Action* _actionHelp;
     Action* _actionInfo;
     Action* _actionHud;
@@ -687,6 +688,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         Action("", "", Key::A), // sep
 
         Action(" ", "Play", Key::Space), // TODO: really need icon on this
+        Action("6", "Shape UVPreview", Key::Num6),
         Action("S", "Shape", Key::S),
         Action("C", "Shape Channel", Key::C),
         Action("L", "Lighting", Key::L),
@@ -732,6 +734,7 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
         &_actionFit,
         
         &_actionPlay,
+        &_actionShapeUVPreview,
         &_actionShapeMesh,
         &_actionShapeChannel,
         &_actionLighting,
@@ -2055,10 +2058,13 @@ enum TextSlot
     scrollView.hidden = NO;
 }
 
-- (void)updateHudVisibility {
+- (void)updateHudVisibility
+{
     _hudLabel.hidden = _hudHidden || !_showSettings->isHudShown;
     _hudLabel2.hidden = _hudHidden || !_showSettings->isHudShown;
 }
+
+
 
 - (bool)handleEventAction:(const Action*)action isShiftKeyDown:(bool)isShiftKeyDown
 {
@@ -2070,6 +2076,8 @@ enum TextSlot
     // f.e. clamped values don't need to re-render
     string text;
 
+    Renderer* renderer = (Renderer*)self.delegate;
+    
     if (action == _actionVertical) {
         bool isVertical =
             _buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical;
@@ -2162,23 +2170,31 @@ enum TextSlot
     }
     else if (action == _actionPlay) {
         if (!action->isHidden) {
-            Renderer* renderer = (Renderer*)self.delegate;
-            
+           
             renderer.playAnimations = !renderer.playAnimations;
             
             text = renderer.playAnimations ? "Play" : "Pause";
             isChanged = true;
             
-            self.enableSetNeedsDisplay = !renderer.playAnimations;
-            self.paused = !renderer.playAnimations;
+            [renderer updateAnimationState:self];
         }
         else {
-            self.enableSetNeedsDisplay = YES;
-            self.paused = YES;
+            [renderer updateAnimationState:self];
         }
-       
     }
-
+    else if (action == _actionShapeUVPreview) {
+        
+        // toggle state
+        _showSettings->isUVPreview = !_showSettings->isUVPreview;
+        text = _showSettings->isUVPreview ? "Show UVPreview" : "Hide UvPreview";
+        isChanged = true;
+        
+        _showSettings->uvPreviewFrames = 10;
+        
+        // also need to call this in display link, for when it reaches end
+        [renderer updateAnimationState:self];
+    }
+    
     else if (action == _actionShapeChannel) {
         _showSettings->advanceShapeChannel(isShiftKeyDown);
         
