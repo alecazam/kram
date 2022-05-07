@@ -1554,7 +1554,7 @@ float4 inverseScaleSquared(const float4x4 &m)
     static float uvPreviewAmount = 0.0;
     
     // hack to see uvPreview
-    _showSettings->isUVPreview = true;
+    //_showSettings->isUVPreview = true;
     
     if (_showSettings->is3DView && _showSettings->isUVPreview) {
         uvPreviewAmount += delta;
