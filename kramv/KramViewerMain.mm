@@ -2277,7 +2277,11 @@ enum TextSlot
             _showSettings->zoom = 1.0f;
         }
 
-        text = "Reload Image";
+        // Name change if image
+        if (_showSettings->isModel)
+            text = "Reload Model\n";
+        else
+            text = "Reload Image\n";
         if (doPrintPanZoom) {
             string tmp;
             sprintf(tmp,
@@ -3353,6 +3357,20 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     return success;
 }
 
+-(double)getTimestampForFile:(NSURL*)url
+{
+    // TODO: could just use FileHelper::modificationTimestamp(filename);
+    
+    NSDate* fileDate = nil;
+    NSError* error = nil;
+    [url getResourceValue:&fileDate
+                   forKey:NSURLContentModificationDateKey
+                    error:&error];
+
+    double timestamp = fileDate.timeIntervalSince1970;
+    return timestamp;
+}
+
 -(BOOL)loadModelFile:(NSURL*)url filename:(const char*)filename
 {
 #if USE_GLTF
@@ -3379,7 +3397,8 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
 
     NSURL* gltfFileURL =
         [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
-
+    double timestamp = [self getTimestampForFile:gltfFileURL];
+    
     BOOL success = [renderer loadModel:gltfFileURL];
     
     // TODO: split this off to a completion handler, since loadModel is async
@@ -3437,6 +3456,10 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
 
     setErrorLogCapture(false);
 
+    // store the filename
+    _showSettings->lastFilename = filename;
+    _showSettings->lastTimestamp = timestamp;
+    
     self.needsDisplay = YES;
 
     return success;
