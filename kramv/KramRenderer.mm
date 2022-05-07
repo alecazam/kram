@@ -1545,6 +1545,30 @@ float4 inverseScaleSquared(const float4x4 &m)
     float4x4 panTransform =
         matrix4x4_translation(-_showSettings->panX, _showSettings->panY, 0.0);
 
+    // interpolate this, also need to draw wireframe
+    // this is an animated effect, that overlays the shape uv wires over the image
+    // but it needs to set needsDisplay until animation finishes
+    static float delta = 1.0 / 60.0;
+    
+    // hack to see uvPreview
+    //_showSettings->isUVPreview = true;
+    
+    if (_showSettings->is3DView && _showSettings->isUVPreview) {
+        uniforms.uvPreview += delta;
+        
+        if (uniforms.uvPreview > 1.0) {
+            delta = -1.0 / 60.0;
+            uniforms.uvPreview = 1.0;
+        }
+        else if (uniforms.uvPreview < 0.0) {
+            delta = 1.0 / 60.0;
+            uniforms.uvPreview = 0.0;
+        }
+    }
+    else {
+        uniforms.uvPreview = 0.0;
+    }
+    
     // scale
     float zoom = _showSettings->zoom;
 
@@ -1945,7 +1969,8 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
 
             UniformsLevel uniformsLevel;
             uniformsLevel.drawOffset = float2m(0.0f);
-
+            uniformsLevel.passNumber = kPassDefault;
+            
             if (_showSettings->isPreview) {
                 // upload this on each face drawn, since want to be able to draw all
                 // mips/levels at once
@@ -2068,12 +2093,52 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 // mips on on screen faces and arrays and slices go across in a row, and
                 // mips are displayed down from each of those in a column
 
+                
                 for (MTKSubmesh* submesh in _mesh.submeshes) {
                     [renderEncoder drawIndexedPrimitives:submesh.primitiveType
                                               indexCount:submesh.indexCount
                                                indexType:submesh.indexType
                                              indexBuffer:submesh.indexBuffer.buffer
                                        indexBufferOffset:submesh.indexBuffer.offset];
+                }
+                
+                // Draw uv wire overlay
+                if (_showSettings->isUVPreview) {
+                    // need to force color in shader or it's still sampling texture
+                    // also need to add z offset
+                    
+                    [renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
+                    
+                    // only applies to tris, not points/lines, pushes depth away (towards 0), after clip
+                    // affects reads/tests and writes.  Could also add in vertex shader.
+                    // depthBias * 2^(exp(max abs(z) in primitive) - r) + slopeScale * maxSlope
+                    [renderEncoder setDepthBias:0.015 slopeScale:3.0 clamp: 0.02];
+                    
+                    uniformsLevel.passNumber = kPassUVPreview;
+                    
+                    [renderEncoder setVertexBytes:&uniformsLevel
+                                           length:sizeof(uniformsLevel)
+                                          atIndex:BufferIndexUniformsLevel];
+
+                    [renderEncoder setFragmentBytes:&uniformsLevel
+                                             length:sizeof(uniformsLevel)
+                                            atIndex:BufferIndexUniformsLevel];
+
+                    for (MTKSubmesh* submesh in _mesh.submeshes) {
+                        [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                                  indexCount:submesh.indexCount
+                                                   indexType:submesh.indexType
+                                                 indexBuffer:submesh.indexBuffer.buffer
+                                           indexBufferOffset:submesh.indexBuffer.offset];
+                    }
+                    
+                    uniformsLevel.passNumber = kPassDefault;
+                    
+                    // restore state, even though this isn't a true state shadow
+                    [renderEncoder setDepthBias:0.0 slopeScale:0.0 clamp:0.0];
+                    
+                    [renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
+                    
                 }
             }
         }

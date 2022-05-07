@@ -131,6 +131,9 @@ public:
     // this mode shows the content with lighting or with bilinear/mips active
     bool isPreview = false;
 
+    // Can collapse 3d to 2d and overlay the uv
+    bool isUVPreview = false;
+    
     // the 2d view doesn't want to inset pixels for clamp, or point sampling is
     // thrown off expecially on small 4x4 textures
 #if USE_PERSPECTIVE

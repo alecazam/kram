@@ -6,6 +6,8 @@
 
 using namespace metal;
 
+
+    
 //---------------------------------
 // helpers
 
@@ -565,6 +567,25 @@ struct ColorInOut
     half4 tangent;
 };
 
+void doUVPreview(
+    thread float3& position,
+    thread float3& normal,
+    thread float4& tangent,
+    float2 texCoord,
+    float uvPreview
+)
+{
+    // convert [0,1] to [-1,1] plane
+    float3 uv(toSnorm(texCoord), 0.0);
+    uv.y *= -1;
+    uv.xy *= 0.5;  // shrink it
+    position.xyz = mix(position.xyz, uv.xyz, uvPreview);
+  
+    // interpolate norma and tangent too
+    normal = mix(normal.xyz, float3(0,0,1), uvPreview);
+    tangent = mix(tangent, float4(1,0,0,1), uvPreview);
+}
+
 ColorInOut DrawImageFunc(
     Vertex in [[stage_in]],
     constant Uniforms& uniforms,
@@ -573,11 +594,6 @@ ColorInOut DrawImageFunc(
 {
     ColorInOut out;
 
-    float4 position = in.position;
-    //position.xy += uniformsLevel.drawOffset;
-    
-    float4 worldPos = uniforms.modelMatrix * position;
-    
     // deal with full basis
     
     bool needsWorldBasis =
@@ -588,20 +604,34 @@ ColorInOut DrawImageFunc(
         uniforms.shapeChannel == ShaderShapeChannel::ShShapeChannelNormal ||
         uniforms.shapeChannel == ShaderShapeChannel::ShShapeChannelBitangent;
 
+    float4 position = in.position;
+    //position.xy += uniformsLevel.drawOffset;
+    float3 normal = in.normal;
+    float4 tangent = in.tangent;
+    
+    // interpolate position to uv plane coordinates (will flatten the shape
+    if (uniforms.uvPreview > 0.0) {
+        float3 pos = position.xyz;
+        doUVPreview(pos, normal, tangent, in.texCoord, uniforms.uvPreview);
+        position.xyz = pos;
+    }
+    
+    float4 worldPos = uniforms.modelMatrix * position;
+    
     if (needsWorldBasis) {
-        float3 normal = in.normal;
-        float3 tangent = in.tangent.xyz;
-        transformBasis(normal, tangent, uniforms.modelMatrix, uniforms.modelMatrixInvScale2.xyz, uniforms.useTangent);
+        float3 t = tangent.xyz;
+        transformBasis(normal, t, uniforms.modelMatrix, uniforms.modelMatrixInvScale2.xyz, uniforms.useTangent);
+        tangent.xyz = t;
         
         out.normal = toHalf(normal);
         
         // may be invalid if useTangent is false
-        out.tangent.xyz = toHalf(tangent);
-        out.tangent.w = toHalf(in.tangent.w);
+        out.tangent.xyz = toHalf(tangent.xyz);
+        out.tangent.w = toHalf(tangent.w);
     }
     else {
-        out.normal = toHalf(in.normal);
-        out.tangent = toHalf(in.tangent);
+        out.normal = toHalf(normal);
+        out.tangent = toHalf(tangent);
     }
     // try adding pixel offset to pixel values
     worldPos.xy += uniformsLevel.drawOffset;
@@ -889,7 +919,8 @@ float4 DrawPixels(
     constant Uniforms& uniforms,
     float4 c,
     float4 nmap,
-    float2 textureSize
+    float2 textureSize,
+    uint passNumber
 )
 {
     // auto-swizzle BC4 and EAC_R11 to rrr1
@@ -1256,6 +1287,15 @@ float4 DrawPixels(
         }
     }
     
+    // draw grayscale at alpha value
+    if (passNumber == kPassUVPreview) {
+        // always want to draw lines, even in low alpha
+        if (c.a < 0.1)
+            c = float4(0.1);
+        else
+            c = c.a;
+    }
+    
     return c;
 }
 
@@ -1277,7 +1317,7 @@ fragment float4 Draw1DArrayPS(
     // colorMap.get_num_mip_levels();
 
     float4 n = float4(0,0,1,1);
-    return DrawPixels(in, facing, uniforms, c, n, textureSize);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
 }
 
 fragment float4 DrawImagePS(
@@ -1298,7 +1338,7 @@ fragment float4 DrawImagePS(
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, n, textureSize);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
 }
 
 fragment float4 DrawImageArrayPS(
@@ -1319,7 +1359,7 @@ fragment float4 DrawImageArrayPS(
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, n, textureSize);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
 }
 
 
@@ -1341,7 +1381,7 @@ fragment float4 DrawCubePS(
     // colorMap.get_num_mip_levels();
 
     float4 n = float4(0,0,1,1);
-    return DrawPixels(in, facing, uniforms, c, n, textureSize);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
 }
 
 fragment float4 DrawCubeArrayPS(
@@ -1362,7 +1402,7 @@ fragment float4 DrawCubeArrayPS(
     // colorMap.get_num_mip_levels();
 
     float4 n = float4(0,0,1,1);
-    return DrawPixels(in, facing, uniforms, c, n, textureSize);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
 }
 
 
@@ -1394,7 +1434,7 @@ fragment float4 DrawVolumePS(
     // colorMap.get_num_mip_levels();
 
     float4 n = float4(0,0,1,1);
-    return DrawPixels(in, facing, uniforms, c, n, textureSize);
+    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
 }
 
 //--------------------------------------------------

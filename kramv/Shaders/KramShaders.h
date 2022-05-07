@@ -113,7 +113,8 @@ struct Uniforms {
     simd::float4x4 modelMatrix;
     simd::float4 modelMatrixInvScale2;  // to supply inverse, w is determinant
     simd::float3 cameraPosition;        // world-space
-
+    float uvPreview;
+    
     bool isSigned;
     bool isNormal;
     bool isSwizzleAGToRG;
@@ -122,8 +123,9 @@ struct Uniforms {
     bool isCheckerboardShown;
     bool isWrap;
     bool isSDF;
-    bool isPreview;
-
+    bool isPreview; // render w/lighting, normals, etc
+    bool isUVPreview; // show uv overlay
+    
     bool is3DView;
     bool isNormalMapPreview;  // for isNormal or combined
 
@@ -156,6 +158,12 @@ struct Uniforms {
     ShaderLightingMode lightingMode;
 };
 
+enum PassNumber
+{
+    kPassDefault = 0,
+    kPassUVPreview = 1
+};
+
 // uploaded separately, so multiple mips, faces, array can be drawn to the
 // screen at one time although modelMatrix offset changes.  Could store offset
 // in here.
@@ -165,6 +173,7 @@ struct UniformsLevel {
     uint32_t arrayOrSlice;
     simd::float2 drawOffset;   // pixel offset to apply
     simd::float4 textureSize;  // width, height, 1/width, 1/height
+    uint32_t passNumber; // switch to enum
 };
 
 // This is all tied to a single level sample
