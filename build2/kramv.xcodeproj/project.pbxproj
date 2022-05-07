@@ -218,12 +218,12 @@
 			isa = PBXGroup;
 			children = (
 				706EF22A26D17A81001C950E /* KramViewerBase.h */,
-				706EF22C26D17A81001C950E /* KramViewerMain.mm */,
 				706EF22F26D17A81001C950E /* KramViewerBase.cpp */,
-				706EF23026D17A81001C950E /* KramLoader.mm */,
+				706EF22C26D17A81001C950E /* KramViewerMain.mm */,
 				706EF23226D17A81001C950E /* KramRenderer.h */,
-				706EF23526D17A81001C950E /* KramLoader.h */,
 				706EF23726D17A81001C950E /* KramRenderer.mm */,
+				706EF23526D17A81001C950E /* KramLoader.h */,
+				706EF23026D17A81001C950E /* KramLoader.mm */,
 				706EF22B26D17A81001C950E /* kramv.entitlements */,
 				706EF23126D17A81001C950E /* Assets.xcassets */,
 				706EF23326D17A81001C950E /* Main.storyboard */,

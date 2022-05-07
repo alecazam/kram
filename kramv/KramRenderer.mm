@@ -1548,26 +1548,30 @@ float4 inverseScaleSquared(const float4x4 &m)
     // interpolate this, also need to draw wireframe
     // this is an animated effect, that overlays the shape uv wires over the image
     // but it needs to set needsDisplay until animation finishes
+    
+    // TODO: need to reset these when shape changes
     static float delta = 1.0 / 60.0;
+    static float uvPreviewAmount = 0.0;
     
     // hack to see uvPreview
-    //_showSettings->isUVPreview = true;
+    _showSettings->isUVPreview = true;
     
     if (_showSettings->is3DView && _showSettings->isUVPreview) {
-        uniforms.uvPreview += delta;
+        uvPreviewAmount += delta;
         
-        if (uniforms.uvPreview > 1.0) {
+        if (uvPreviewAmount > 1.0) {
             delta = -1.0 / 60.0;
-            uniforms.uvPreview = 1.0;
+            uvPreviewAmount = 1.0;
         }
-        else if (uniforms.uvPreview < 0.0) {
+        else if (uvPreviewAmount < 0.0) {
             delta = 1.0 / 60.0;
-            uniforms.uvPreview = 0.0;
+            uvPreviewAmount = 0.0;
         }
     }
     else {
-        uniforms.uvPreview = 0.0;
+        uvPreviewAmount = 0.0;
     }
+    uniforms.uvPreview = uvPreviewAmount;
     
     // scale
     float zoom = _showSettings->zoom;
@@ -2103,7 +2107,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 }
                 
                 // Draw uv wire overlay
-                if (_showSettings->isUVPreview) {
+                if (_showSettings->is3DView && _showSettings->isUVPreview) {
                     // need to force color in shader or it's still sampling texture
                     // also need to add z offset
                     
