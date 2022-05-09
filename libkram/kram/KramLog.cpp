@@ -280,7 +280,7 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
     
     // TODO: split string up into multiple logs
     // this can only write 4K - 40? chars at time, don't use print it's 1023
-    __android_log_write(androidLogLevel, buffer.c_str());
+    __android_log_write(androidLogLevel, tag, buffer.c_str());
 #else
     fprintf(fp, "%s", buffer.c_str());
 #endif
