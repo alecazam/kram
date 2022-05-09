@@ -11,6 +11,11 @@
 
 #include <mutex>
 
+#if KRAM_WIN
+#include <windows.h>
+#elif KRAM_ANDROID
+#include <log.h>
+#endif
 namespace kram {
 
 using mymutex = std::recursive_mutex;
