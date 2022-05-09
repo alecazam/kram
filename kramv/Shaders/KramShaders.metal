@@ -575,13 +575,16 @@ void doUVPreview(
     float uvPreview
 )
 {
+    // TODO: should honor aspect ratio of original image
+    // this will convert to square -1,1
+    
     // convert [0,1] to [-1,1] plane
     float3 uv(toSnorm(texCoord), 0.0);
     uv.y *= -1;
     uv.xy *= 0.5;  // shrink it
     position.xyz = mix(position.xyz, uv.xyz, uvPreview);
   
-    // interpolate norma and tangent too
+    // interpolate normal and tangent too
     normal = mix(normal.xyz, float3(0,0,1), uvPreview);
     tangent = mix(tangent, float4(1,0,0,1), uvPreview);
 }

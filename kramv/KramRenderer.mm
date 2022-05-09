@@ -722,7 +722,7 @@ struct packed_float3 {
     }
 }
 
-- (void)updateAnimationState:(MTKView*)view
+- (void)updateAnimationState:(nonnull MTKView*)view
 {
     bool animateDisplay = self.playAnimations;
     

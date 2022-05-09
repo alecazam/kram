@@ -122,6 +122,16 @@ public:
     type(const type&) = delete; \
     void operator=(const type&) = delete
 
+// only for ioS/macOS
+enum class ThreadQos
+{
+    Low = 1,
+    Medium = 2,
+    Default = 3,
+    High = 4,
+    Interactive = 5,
+};
+
 class task_system {
     NOT_COPYABLE(task_system);
 
@@ -135,6 +145,7 @@ class task_system {
     void run(int32_t threadIndex);
 
     void set_affinity(std::thread& thread, uint32_t threadIndex);
+    void set_qos(std::thread& thread, ThreadQos level);
     
 public:
     task_system(int32_t count = 1);

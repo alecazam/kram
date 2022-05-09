@@ -67,6 +67,8 @@ fragment half4 blur_horizontal7_fragment_main(FragmentIn in [[stage_in]],
     float weights[]{ 0.134032, 0.126854, 0.107545, 0.08167, 0.055555, 0.033851, 0.018476, 0.009033 };
     float offset = 1.0 / sourceTexture.get_width();
     half4 color(0);
+    
+    // TODO: do this in half the samples with offsets and linearSampler, a 15x15 px blur w/8 weights
     color += weights[7] * sourceTexture.sample(nearestSampler, in.texCoords - float2(offset * 7, 0));
     color += weights[6] * sourceTexture.sample(nearestSampler, in.texCoords - float2(offset * 6, 0));
     color += weights[5] * sourceTexture.sample(nearestSampler, in.texCoords - float2(offset * 5, 0));
@@ -91,6 +93,8 @@ fragment half4 blur_vertical7_fragment_main(FragmentIn in [[stage_in]],
     float weights[]{ 0.134032, 0.126854, 0.107545, 0.08167, 0.055555, 0.033851, 0.018476, 0.009033 };
     float offset = 1.0 / sourceTexture.get_height();
     half4 color(0);
+    
+    // TODO: do this in half the samples with offsets and linearSampler
     color += weights[7] * sourceTexture.sample(nearestSampler, in.texCoords - float2(0, offset * 7));
     color += weights[6] * sourceTexture.sample(nearestSampler, in.texCoords - float2(0, offset * 6));
     color += weights[5] * sourceTexture.sample(nearestSampler, in.texCoords - float2(0, offset * 5));

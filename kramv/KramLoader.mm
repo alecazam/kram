@@ -74,7 +74,7 @@ struct KramBlit {
 
 // for macOS/win Intel need to decode astc/etc
 // on macOS/arm, the M1 supports all 3 encode formats
-#define DO_DECODE TARGET_CPU_X86_64
+#define DO_DECODE KRAM_SSE
 
 #if DO_DECODE
 

@@ -2176,10 +2176,10 @@ enum TextSlot
             text = renderer.playAnimations ? "Play" : "Pause";
             isChanged = true;
             
-            [renderer updateAnimationState:self];
+            //[renderer updateAnimationState:self];
         }
         else {
-            [renderer updateAnimationState:self];
+            //[renderer updateAnimationState:self];
         }
     }
     else if (action == _actionShapeUVPreview) {
@@ -2192,7 +2192,7 @@ enum TextSlot
         _showSettings->uvPreviewFrames = 10;
         
         // also need to call this in display link, for when it reaches end
-        [renderer updateAnimationState:self];
+        //[renderer updateAnimationState:self];
     }
     
     else if (action == _actionShapeChannel) {
