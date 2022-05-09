@@ -248,13 +248,14 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
     sprintf(buffer, "%s%s%s%s%s%s", tag, groupString, space, msg, needsNewline ? "\n" : "", fileLineFunc.c_str());
     
 #if KRAM_WIN
-    // won't this print twice?
-    //fprintf(fp, "%s", buffer.c_str());
-    
     if (::IsDebuggerPresent()) {
         // TODO: split string up into multiple logs
         // this is limited to 32K
         OutputDebugString(buffer.c_str());
+    }
+    else {
+        // avoid double print to debugger
+        fprintf(fp, "%s", buffer.c_str());
     }
 #elif KRAM_ANDROID
     AndroidLogLevel androidLogLevel = ANDROID_LOG_ERROR;
