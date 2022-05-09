@@ -278,20 +278,23 @@ void ShowSettings::advanceDebugMode(bool decrement)
 void ShowSettings::updateUVPreviewState()
 {
     if (is3DView) {
-        if (isUVPreview) {
-            if (uvPreview < 1.0)
-                uvPreview += uvPreviewStep;
-        }
-        else
-        {
-            if (uvPreview > 0.0)
-                uvPreview -= uvPreviewStep;
-        }
+        if (uvPreviewFrames > 0) {
+            if (isUVPreview) {
+                if (uvPreview < 1.0)
+                    uvPreview += uvPreviewStep;
+            }
+            else
+            {
+                if (uvPreview > 0.0)
+                    uvPreview -= uvPreviewStep;
+            }
 
-        uvPreview = saturate(uvPreview);
+            uvPreview = saturate(uvPreview);
+        }
     }
     else {
-        uvPreview = 0.0;
+        // This hides the uvView even when switchig back to 3d shape
+        //uvPreview = 0.0;
     }
     
     // stop the frame update
