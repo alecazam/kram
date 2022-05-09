@@ -202,7 +202,7 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
             groupString = group;
             space = " ";
 
-#if _WIN32
+#if KRAM_WIN
             const char fileSeparator = '\\';
 #else
             const char fileSeparator = '/';
@@ -238,7 +238,46 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
         }
     }
 
-    fprintf(fp, "%s%s%s%s%s%s", tag, groupString, space, msg, needsNewline ? "\n" : "", fileLineFunc.c_str());
+    // format into a buffer
+    static string buffer;
+    sprintf(buffer, "%s%s%s%s%s%s", tag, groupString, space, msg, needsNewline ? "\n" : "", fileLineFunc.c_str());
+    
+#if KRAM_WIN
+    // won't this print twice?
+    //fprintf(fp, "%s", buffer.c_str());
+    
+    if (::IsDebuggerPresent()) {
+        // TODO: split string up into multiple logs
+        // this is limited to 32K
+        OutputDebugString(buffer.c_str());
+    }
+#elif KRAM_ANDROID
+    AndroidLogLevel androidLogLevel = ANDROID_LOG_ERROR;
+    switch (logLevel) {
+        case LogLevelDebug:
+            androidLogLevel = ANDROID_LOG_DEBUG;
+            break;
+        case LogLevelInfo:
+            androidLogLevel = ANDROID_LOG_INFO;
+            break;
+
+        case LogLevelWarning:
+            androidLogLevel = ANDROID_LOG_WARNING;
+            break;
+        case LogLevelError:
+            androidLogLevel = ANDROID_LOG_ERROR;
+            break;
+    }
+    
+    // TODO: can also fix printf to work on Android
+    // but can't set log level like with this call, but no dump buffer limit
+    
+    // TODO: split string up into multiple logs
+    // this can only write 4K - 40? chars at time, don't use print it's 1023
+    __android_log_write(androidLogLevel, buffer.c_str());
+#else
+    fprintf(fp, "%s", buffer.c_str());
+#endif
 
     return 0;  // reserved for later
 }
