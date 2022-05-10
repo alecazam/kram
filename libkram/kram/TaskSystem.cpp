@@ -6,6 +6,7 @@
     #include <mach/thread_policy.h>
 
     #include <pthread/qos.h>
+    #include <pthread/pthread.h>
     #include <sys/sysctl.h>
 #elif KRAM_IOS
     #include <pthread/qos.h>
@@ -19,13 +20,235 @@
 namespace kram {
 using namespace NAMESPACE_STL;
 
-void task_system::set_qos(std::thread& thread, ThreadQos level)
+enum class CoreType : uint8_t
 {
+    Little,
+    // Medium,
+    Big,
+};
+
+struct CoreNum
+{
+    uint8_t index;
+    CoreType type;
+};
+
+struct CoreInfo
+{
+    // hyperthreading can result in logical = 2x physical cores (1.5x on Alderlake)
+    uint32_t logicalCoreCount;
+    uint32_t physicalCoreCount;
+    
+    // ARM is has big-little and big-medium-little, no HT, 2/4, 4/4, 6/2, 8/2.
+    // Intel x64 AlderLake has big-little. 24 threads (8x2HT/8)
+    uint32_t bigCoreCount;
+    uint32_t littleCoreCount;
+    
+    // x64 under Rosetta2 on M1 Arm chip, no AVX only SSE 4.2
+    uint32_t isTranslated;
+    uint32_t isHyperthreaded;
+    
+    vector<CoreNum> remapTable;
+};
+
+#if KRAM_WIN
+// Helper function to count set bits in the processor mask.
+static DWORD CountSetBits(ULONG_PTR bitMask)
+{
+    DWORD LSHIFT = sizeof(ULONG_PTR)*8 - 1;
+    DWORD bitSetCount = 0;
+    ULONG_PTR bitTest = (ULONG_PTR)1 << LSHIFT;
+    DWORD i;
+    
+    for (i = 0; i <= LSHIFT; ++i)
+    {
+        bitSetCount += ((bitMask & bitTest)?1:0);
+        bitTest /= 2;
+    }
+
+    return bitSetCount;
+}
+#endif
+
+static const CoreInfo& GetCoreInfo()
+{
+    static CoreInfo coreInfo = {};
+    if (coreInfo.logicalCoreCount != 0)
+        return coreInfo;
+
+    // this includes hyperthreads
+    coreInfo.logicalCoreCount = std::thread::hardware_concurrency();
+    coreInfo.physicalCoreCount = coreInfo.logicalCoreCount;
+        
+    #if KRAM_IOS || KRAM_MAC
+    // get big/little core counts
+    // use sysctl -a from command line to see all
+    size_t size = sizeof(coreInfo.bigCoreCount);
+    
+    uint32_t perfLevelCount = 0;
+    
+    // only big-little core counts on macOS12/iOS15
+    sysctlbyname("hw.nperflevels", &perfLevelCount, &size, nullptr, 0);
+    if (perfLevelCount > 0) {
+        sysctlbyname("hw.perflevel0.physicalcpu", &coreInfo.bigCoreCount, &size, nullptr, 0);
+        if (perfLevelCount > 1)
+            sysctlbyname("hw.perflevel1.physicalcpu", &coreInfo.littleCoreCount, &size, nullptr, 0);
+    }
+    else {
+        // can't identify little cores
+        sysctlbyname("hw.perflevel0.physicalcpu", &coreInfo.bigCoreCount, &size, nullptr, 0);
+    }
+    
+    // may not work on A10 2/2 exclusive
+    coreInfo.physicalCoreCount = std::min(coreInfo.bigCoreCount + coreInfo.littleCoreCount, coreInfo.physicalCoreCount);
+    
+    // no affinity, so core order here doesn't really matter.
+    for (uint32_t i = 0; i < coreInfo.bigCoreCount; ++i) {
+        coreInfo.remapTable.push_back({(uint8_t)i, CoreType::Big});
+    }
+    for (uint32_t i = 0; i < coreInfo.littleCoreCount; ++i) {
+        coreInfo.remapTable.push_back({(uint8_t)(i + coreInfo.bigCoreCount), CoreType::Little});
+    }
+    
+    coreInfo.isHyperthreaded = coreInfo.logicalCoreCount != coreInfo.physicalCoreCount;
+    
+    #if KRAM_MAC
+    // Call the sysctl and if successful return the result
+    sysctlbyname("sysctl.proc_translated", &coreInfo.isTranslated, &size, NULL, 0);
+    #endif
+    
+    #elif KRAM_WIN
+    
+    // have to walk array of data, and assemble this info, ugh
+    // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformation
+    
+    DWORD logicalCoreCount = 0;
+    DWORD physicalCoreCount = 0;
+      
+    DWORD returnLength = 0;
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = nullptr;
+    DWORD rc = GetLogicalProcessorInformation(buffer, &returnLength);
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr = nullptr;
+    DWORD byteOffset = 0;
+    
+    // walk the array
+    bool isHyperthreaded = false;
+    ptr = buffer;
+    byteOffset = 0;
+    while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength) {
+        switch (ptr->Relationship) {
+            case RelationProcessorCore: {
+                uint32_t logicalCores = CountSetBits(ptr->ProcessorMask);
+                if (logicalCores > 1) {
+                    isHyperthreaded = true;
+                }
+                break;
+            }
+        }
+        
+        if (isHyperthreaded)
+            break;
+        
+        byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+        ptr++;
+    }
+    
+    ptr = buffer;
+    byteOffset = 0;
+    uint32_t coreNumber = 0;
+    while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength) {
+        switch (ptr->Relationship) {
+            case RelationProcessorCore: {
+                physicalCoreCount++;
+                
+                // A hyperthreaded core supplies more than one logical processor.
+                // Can identify AlderLake big vs. little off this
+                uint32_t logicalCores = CountSetBits(ptr->ProcessorMask);
+                if (logicalCores > 1 || !isHyperthreaded) {
+                    coreInfo.bigCoreCount++;
+                    coreInfo.remapTable.push_back({(uint8_t)coreNumber++, CoreType::Big});
+                }
+                else {
+                    coreInfo.littleCoreCount++;
+                    coreInfo.remapTable.push_back({(uint8_t)coreNumber++, CoreType::Little});
+                }
+                
+                logicalCoreCount += logicalCores;
+                break;
+            }
+        }
+        byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+        ptr++;
+    }
+    
+    coreInfo.isHyperthreaded = isHyperthreaded;
+    coreInfo.physicalCoreCount = physicalCoreCount;
+    
+    #elif KRAM_ANDROID
+
+    // TODO: have to walk array of proc/cpuinfo, and assemble this info, ugh
+    // then build a core remap table since big core are typically last, little early
+    // https://stackoverflow.com/questions/26239956/how-to-get-specific-information-of-an-android-device-from-proc-cpuinfo-file
+
+    // JDK and NDK version of library with workarounds
+    // https://github.com/google/cpu_features
+    
+    // hack - assume all big cores, typical 1/3/4 or 2/2/4
+    coreInfo.bigCoreCount = coreInfo.physicalCoreCount;
+    
+    for (int32_t i = coreInfo.bigCoreCount-1; i >= 0; --i) {
+        coreInfo.remapTable.push_back({(uint8_t)i, CoreType::Big});
+    }
+    
+    #endif
+    
+    // sort faster cores first in the remap table
+    sort(coreInfo.remapTable.begin(), coreInfo.remapTable.end(), [](const CoreNum& lhs, const CoreNum& rhs){
+        if (lhs.type == rhs.type)
+            return lhs.index > rhs.index;
+        
+        return lhs.type > rhs.type;
+    });
+    
+    return coreInfo;
+}
+
+
+//------------------
+
 #if KRAM_MAC || KRAM_IOS
+
+void task_system::set_rr_priority(std::thread& thread, uint8_t priority)
+{
     auto handle = thread.native_handle();
    
+    struct sched_param param = { priority };
+    pthread_setschedparam(handle, SCHED_RR, &param);
+}
+
+void task_system::set_main_rr_priority(uint8_t priority)
+{
+    auto handle = pthread_self();
+   
+    struct sched_param param = { priority };
+    pthread_setschedparam(handle, SCHED_RR, &param);
+}
+
+void task_system::set_main_qos(ThreadQos level)
+{
+    set_qos(pthread_self(), level);
+}
+
+void task_system::set_qos(std::thread& thread, ThreadQos level)
+{
+    auto handle = thread.native_handle();
+    set_qos(handle, level);
+}
+
+void task_system::set_qos(std::thread::native_handle_type handle, ThreadQos level)
+{
     // https://abhimuralidharan.medium.com/understanding-threads-in-ios-5b8d7ab16f09
-    // user-interative, user-initiated, default, utility, background, unspecified
+    // user-interactive, user-initiated, default, utility, background, unspecified
     
     qos_class_t qos = QOS_CLASS_UNSPECIFIED;
     switch(level) {
@@ -36,17 +259,40 @@ void task_system::set_qos(std::thread& thread, ThreadQos level)
         case ThreadQos::Low: qos = QOS_CLASS_BACKGROUND; break;
     }
     
-    // note here the priority = 0, but is negative offsets
+    // qos is transferred to GCD jobs, and can experience thread depriority
+    // can system can try to adjust priority inversion.
+    
+    // note here the priorityOffset = 0, but is negative offsets
+    // there is a narrow range of offsets
+    
     // note this is a start/end overide call, but can set override on existing thread
     pthread_override_qos_class_start_np(handle, qos, 0);
-#endif
 }
+
+#endif
 
 void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
 {
     // https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
     
     auto handle = thread.native_handle();
+    
+    set_affinity(handle, threadIndex);
+}
+
+void task_system::set_main_affinity(uint32_t threadIndex)
+{
+    set_affinity(pthread_self(), threadIndex);
+}
+
+void task_system::set_affinity(std::thread::native_handle_type handle, uint32_t threadIndex)
+{
+    const auto& coreInfo = GetCoreInfo();
+    
+    if (threadIndex > coreInfo.remapTable.size())
+        threadIndex = coreInfo.remapTable.size() - 1;
+    
+    threadIndex = coreInfo.remapTable[threadIndex].index;
     
     // for now only allow single core mask
     uint64_t affinityMask = ((uint64_t)1) << threadIndex;
@@ -65,7 +311,8 @@ void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
         int returnVal = thread_policy_set(pthread_mach_thread_np(handle), THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
         
         if (returnVal != 0) {
-            // TODO: unsupported on M1, only have QoS
+            // TODO: unsupported on iOS/M1, only have QoS and priority
+            // big P cores can also be disabled to resolve thermals
         }
     }
     #endif
@@ -152,195 +399,27 @@ void task_system::run(int32_t threadIndex)
     }
 }
 
-enum class CoreType
-{
-    Little,
-    // Medium,
-    Big,
-};
 
-struct CoreInfo
-{
-    // hyperthreading can result in logical = 2x physical cores (1.5x on Alderlake)
-    uint32_t logicalCoreCount;
-    uint32_t physicalCoreCount;
-    
-    // ARM is has big-little and big-medium-little, no HT, 2/4, 4/4, 6/2, 8/2.
-    // Intel x64 AlderLake has big-little. 24 threads (8x2HT/8)
-    uint32_t bigCoreCount;
-    uint32_t littleCoreCount;
-    
-    // x64 under Rosetta2 on M1 Arm chip, no AVX only SSE 4.2
-    uint32_t isTranslated;
-    uint32_t isHyperthreaded;
-    
-    // TODO: this needs coreIndex, and then sort big to little
-    vector<CoreType> typeTable;
-    vector<uint8_t> remapTable;
-};
 
-#if KRAM_WIN
-// Helper function to count set bits in the processor mask.
-DWORD CountSetBits(ULONG_PTR bitMask)
-{
-    DWORD LSHIFT = sizeof(ULONG_PTR)*8 - 1;
-    DWORD bitSetCount = 0;
-    ULONG_PTR bitTest = (ULONG_PTR)1 << LSHIFT;
-    DWORD i;
-    
-    for (i = 0; i <= LSHIFT; ++i)
-    {
-        bitSetCount += ((bitMask & bitTest)?1:0);
-        bitTest /= 2;
-    }
-
-    return bitSetCount;
-}
-#endif
-
-static const CoreInfo& GetCoreInfo()
-{
-    static CoreInfo coreInfo = {};
-    if (coreInfo.logicalCoreCount != 0)
-        return coreInfo;
-
-    // this includes hyperthreads
-    coreInfo.logicalCoreCount = std::thread::hardware_concurrency();
-    coreInfo.physicalCoreCount = coreInfo.logicalCoreCount;
-        
-    #if KRAM_IOS || KRAM_MAC
-    // get big/little core counts
-    // use sysctl -a from command line to see all
-    size_t size = sizeof(coreInfo.bigCoreCount);
-    sysctlbyname("hw.perflevel0.physicalcpu", &coreInfo.bigCoreCount, &size, nullptr, 0);
-    sysctlbyname("hw.perflevel1.physicalcpu", &coreInfo.littleCoreCount, &size, nullptr, 0);
-    
-    // may not work on A10 2/2 exclusive
-    coreInfo.physicalCoreCount = std::min(coreInfo.bigCoreCount + coreInfo.littleCoreCount, coreInfo.physicalCoreCount);
-    
-    // no affinity, so core order here doesn't really matter.
-    for (uint32_t i = 0; i < coreInfo.bigCoreCount; ++i) {
-        coreInfo.typeTable.push_back(CoreType::Big);
-        coreInfo.remapTable.push_back(i);
-    }
-    for (uint32_t i = 0; i < coreInfo.littleCoreCount; ++i) {
-        coreInfo.typeTable.push_back(CoreType::Little);
-        coreInfo.remapTable.push_back(i + coreInfo.bigCoreCount);
-    }
-    
-    coreInfo.isHyperthreaded = coreInfo.logicalCoreCount != coreInfo.physicalCoreCount;
-    
-    #if KRAM_MAC
-    // Call the sysctl and if successful return the result
-    sysctlbyname("sysctl.proc_translated", &coreInfo.isTranslated, &size, NULL, 0);
-    #endif
-    
-    #elif KRAM_WIN
-    
-    // have to walk array of data, and assemble this info, ugh
-    // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformation
-    
-    DWORD logicalCoreCount = 0;
-    DWORD physicalCoreCount = 0;
-      
-    DWORD returnLength = 0;
-    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = nullptr;
-    DWORD rc = GetLogicalProcessorInformation(buffer, &returnLength);
-    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr = nullptr;
-    DWORD byteOffset = 0;
-    
-    // walk the array
-    bool isHyperthreaded = false;
-    ptr = buffer;
-    byteOffset = 0;
-    while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength) {
-        switch (ptr->Relationship) {
-            case RelationProcessorCore: {
-                uint32_t logicalCores = CountSetBits(ptr->ProcessorMask);
-                if (logicalCores > 1) {
-                    isHyperthreaded = true;
-                }
-                break;
-            }
-        }
-        
-        if (isHyperthreaded)
-            break;
-        
-        byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
-        ptr++;
-    }
-    
-    ptr = buffer;
-    byteOffset = 0;
-    uint32_t coreNumber = 0;
-    while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength) {
-        switch (ptr->Relationship) {
-            case RelationProcessorCore: {
-                physicalCoreCount++;
-                
-                // A hyperthreaded core supplies more than one logical processor.
-                // Can identify AlderLake big vs. little off this
-                uint32_t logicalCores = CountSetBits(ptr->ProcessorMask);
-                if (logicalCores > 1 || !isHyperthreaded) {
-                    coreInfo.bigCoreCount++;
-                    coreInfo.typeTable.push_back(CoreType::Big);
-                    coreInfo.remapTable.push_back(coreNumber++);
-                }
-                else {
-                    coreInfo.littleCoreCount++;
-                    coreInfo.typeTable.push_back(CoreType::Little);
-                    coreInfo.remapTable.push_back(coreNumber++);
-                }
-                
-                logicalCoreCount += logicalCores;
-                break;
-            }
-        }
-        byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
-        ptr++;
-    }
-    
-    coreInfo.isHyperthreaded = isHyperthreaded;
-    coreInfo.physicalCoreCount = physicalCoreCount;
-    
-    #elif KRAM_ANDROID
-
-    // TODO: have to walk array of proc/cpuinfo, and assemble this info, ugh
-    // then build a core remap table since big core are typically last, little early
-    // https://stackoverflow.com/questions/26239956/how-to-get-specific-information-of-an-android-device-from-proc-cpuinfo-file
-
-    // JDK and NDK version of library with workarounds
-    // https://github.com/google/cpu_features
-    
-    // hack - assume all big cores, typical 1/3/4 or 2/2/4
-    coreInfo.bigCoreCount = coreInfo.physicalCoreCount;
-    
-    for (int32_t i = coreInfo.bigCoreCount-1; i >= 0; --i) {
-        coreInfo.typeTable.push_back(CoreType::Big);
-        coreInfo.remapTable.push_back(i);
-    }
-    
-    #endif
-    
-    return coreInfo;
-}
 
 task_system::task_system(int32_t count) :
     _count(std::min(count, (int32_t)GetCoreInfo().physicalCoreCount)),
     _q{(size_t)_count},
     _index(0)
 {
+#if KRAM_IOS || KRAM_MAC
+        set_main_rr_priority(45);
+#else
+        set_main_affinity(0);
+#endif
+        
     // start up the threads
     for (int32_t threadIndex = 0; threadIndex != _count; ++threadIndex) {
         _threads.emplace_back([&, threadIndex] { run(threadIndex); });
         
 #if KRAM_IOS || KRAM_MAC
-        // No exposed affinity on Apple platforms, just this lame QoS setting
-        // which acts more like thread-priority.  Good luck monitoring
-        // work on specific threads in profile captures.  Even swift
-        // now doesn't allocate more threads than cores to avoid thread explosion.
-        set_qos(_threads.back(), ThreadQos::High);
+        // it's either this or qos
+        set_rr_priority(_threads.back(), 41);
 #else
         set_affinity(_threads.back(), threadIndex);
 #endif

@@ -144,9 +144,24 @@ class task_system {
 
     void run(int32_t threadIndex);
 
+    // affinity isn't really supported on Apple
     void set_affinity(std::thread& thread, uint32_t threadIndex);
+    static void set_main_affinity(uint32_t threadIndex);
+
+#if KRAM_MAC || KRAM_IOS
+    // these are Apple specific, due to lack of affinity control
+    // once priority set, can't use qos
     void set_qos(std::thread& thread, ThreadQos level);
+    static void set_main_qos(ThreadQos level);
+   
+    void set_rr_priority(std::thread& thread, uint8_t priority);
+    static void set_main_rr_priority(uint8_t priority);
+#endif
     
+    // impl
+    static void set_qos(std::thread::native_handle_type handle, ThreadQos level);
+    static void set_affinity(std::thread::native_handle_type handle, uint32_t threadIndex);
+
 public:
     task_system(int32_t count = 1);
     ~task_system();
