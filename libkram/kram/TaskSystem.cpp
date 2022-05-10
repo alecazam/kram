@@ -289,8 +289,9 @@ void task_system::set_affinity(std::thread::native_handle_type handle, uint32_t 
 {
     const auto& coreInfo = GetCoreInfo();
     
-    if (threadIndex > coreInfo.remapTable.size())
-        threadIndex = coreInfo.remapTable.size() - 1;
+    uint32_t maxIndex = coreInfo.remapTable.size() - 1;
+    if (threadIndex > maxIndex)
+        threadIndex = maxIndex;
     
     threadIndex = coreInfo.remapTable[threadIndex].index;
     
