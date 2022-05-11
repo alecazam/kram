@@ -124,7 +124,8 @@ static const CoreInfo& GetCoreInfo()
     
     DWORD logicalCoreCount = 0;
     DWORD physicalCoreCount = 0;
-      
+    bool isHyperthreaded = false;
+    
     DWORD returnLength = 0;
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = nullptr;
     DWORD rc = GetLogicalProcessorInformation(buffer, &returnLength);
@@ -132,7 +133,6 @@ static const CoreInfo& GetCoreInfo()
     DWORD byteOffset = 0;
     
     // walk the array
-    bool isHyperthreaded = false;
     ptr = buffer;
     byteOffset = 0;
     while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength) {
@@ -204,10 +204,19 @@ static const CoreInfo& GetCoreInfo()
     
     // sort faster cores first in the remap table
     sort(coreInfo.remapTable.begin(), coreInfo.remapTable.end(), [](const CoreNum& lhs, const CoreNum& rhs){
+#if KRAM_ANDROID
+        // sort largest index
         if (lhs.type == rhs.type)
             return lhs.index > rhs.index;
-        
         return lhs.type > rhs.type;
+#else
+        // sort smallest index
+        if (lhs.type == rhs.type)
+            return lhs.index < rhs.index;
+        return lhs.type > rhs.type;
+#endif
+        
+       
     });
     
     return coreInfo;
@@ -282,7 +291,11 @@ void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
 
 void task_system::set_main_affinity(uint32_t threadIndex)
 {
+#if KRAM_WIN
+    set_affinity(::GetCurrentThread(), threadIndex);
+#else
     set_affinity(pthread_self(), threadIndex);
+#endif
 }
 
 void task_system::set_affinity(std::thread::native_handle_type handle, uint32_t threadIndex)
@@ -303,6 +316,7 @@ void task_system::set_affinity(std::thread::native_handle_type handle, uint32_t 
     macroUnusedVar(affinityMask);
     
 #if KRAM_MAC
+    // don't use this, it's unsupported on ARM chips, and only an affinity hints on x64
     #if KRAM_SSE
     if (!coreInfo.isTranslated) {
         thread_affinity_policy_data_t policy = { (int)affinityMask };
@@ -408,10 +422,13 @@ task_system::task_system(int32_t count) :
     _q{(size_t)_count},
     _index(0)
 {
+    // see WWDC 2021 presentation here
+    // Tune CPU job scheduling for Apple silicon games
+    // https://developer.apple.com/videos/play/tech-talks/110147/
 #if KRAM_IOS || KRAM_MAC
-        set_main_rr_priority(45);
+    set_main_rr_priority(45);
 #else
-        set_main_affinity(0);
+    set_main_affinity(0);
 #endif
         
     // start up the threads
