@@ -479,7 +479,7 @@ void task_system::set_priority(std::thread& thread, uint8_t priority)
 
 void task_system::set_current_priority(uint8_t priority)
 {
-    setThreadPriority(pthread_self(), priority);
+    setThreadPriority(::GetCurrentThread(), priority);
 }
 
 void task_system::set_current_qos(ThreadQos level)
