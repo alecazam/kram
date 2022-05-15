@@ -222,39 +222,123 @@ static const CoreInfo& GetCoreInfo()
     return coreInfo;
 }
 
+//----------------------
+
+// Ugh C++ "portable" thread classes that don't do anything useful
+// and make you define all this over and over again in so many apps.
+// https://stackoverflow.com/questions/10121560/stdthread-naming-your-thread
+// Of course, Windows has to make portability difficult.
+// And Mac non-standardly, doesn't even pass thread to call.
+//   This requires it to be set from thread itself).
+
+#if KRAM_WIN
+
+// Isn't this in a header?
+#pragma pack(push,8)
+typedef struct tagTHREADNAME_INFO
+{
+   DWORD dwType; // Must be 0x1000.
+   LPCSTR szName; // Pointer to name (in user addr space).
+   DWORD dwThreadID; // Thread ID (-1=caller thread).
+   DWORD dwFlags; // Reserved for future use, must be zero.
+} THREADNAME_INFO;
+#pragma pack(pop)
+
+void setThreadName(std::thread::native_handle_type handle, const char* threadName)
+{
+   DWORD threadID = ::GetThreadId(handle);
+
+   THREADNAME_INFO info;
+   info.dwType = 0x1000;
+   info.szName = threadName;
+   info.dwThreadID = threadID;
+   info.dwFlags = 0;
+
+   __try
+   {
+       // Limits to how long this name can be.  Also copy into ptr to change name.
+      RaiseException(0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+   }
+   __except(EXCEPTION_EXECUTE_HANDLER)
+   {
+   }
+}
+
+void setCurrentThreadName(const char* threadName)
+{
+    setThreadName(GetCurrentThread(), threadName);
+}
+
+void setThreadName(std::thread& thread, const char* threadName)
+{
+    DWORD threadId = ::GetThreadId(thread.native_handle());
+    setThreadName(threadId, threadName);
+}
+
+#elif KRAM_MAC || KRAM_IOS
+
+void setThreadName(std::thread::native_handle_type macroUnusedArg(handle), const char* threadName)
+{
+    // This can only set on self
+    int val = pthread_setname_np(threadName);
+    if (val != 0)
+        KLOGW("Thread", "Could not set thread name");
+}
+
+void setCurrentThreadName(const char* threadName)
+{
+    auto handle = pthread_self();
+    setThreadName(handle, threadName);
+}
+
+// This doesn't exist on macOS. What a pain.  Doesn't line up with getter calls.
+// Means can't set threadName externally without telling thread to wake and set itself.
+//void setThreadName(std::thread& thread, const char* threadName)
+//{
+//    auto handle = thread.native_handle();
+//    setThreadName(handle, threadName);
+//}
+
+#else
+
+void setThreadName(std::thread::native_handle_type handle, const char* threadName)
+{
+    // This can only set on self
+    int val = pthread_setname_np(handle, threadName);
+    if (val != 0)
+        KLOGW("Thread", "Could not set thread name");
+}
+
+void setCurrentThreadName(const char* threadName)
+{
+    auto handle = pthread_self();
+    setThreadName(handle, threadName);
+}
+
+void setThreadName(std::thread& thread, const char* threadName)
+{
+    auto handle = thread.native_handle();
+    setThreadName(handle, threadName);
+}
+
+#endif
 
 //------------------
 
+#if SUPPORT_PRIORITY
 #if KRAM_MAC || KRAM_IOS
 
-void task_system::set_rr_priority(std::thread& thread, uint8_t priority)
+static void setThreadPriority(std::thread::native_handle_type handle, uint8_t priority)
 {
-    auto handle = thread.native_handle();
-   
     struct sched_param param = { priority };
-    pthread_setschedparam(handle, SCHED_RR, &param);
+
+    // this sets policy to round-robin and priority
+    int val = pthread_setschedparam(handle, SCHED_RR, &param);
+    if (val != 0)
+        KLOGW("Thread", "Failed to set priority %d", priority);
 }
 
-void task_system::set_main_rr_priority(uint8_t priority)
-{
-    auto handle = pthread_self();
-   
-    struct sched_param param = { priority };
-    pthread_setschedparam(handle, SCHED_RR, &param);
-}
-
-void task_system::set_main_qos(ThreadQos level)
-{
-    set_qos(pthread_self(), level);
-}
-
-void task_system::set_qos(std::thread& thread, ThreadQos level)
-{
-    auto handle = thread.native_handle();
-    set_qos(handle, level);
-}
-
-void task_system::set_qos(std::thread::native_handle_type handle, ThreadQos level)
+static void setThreadQos(std::thread::native_handle_type handle, ThreadQos level)
 {
     // https://abhimuralidharan.medium.com/understanding-threads-in-ios-5b8d7ab16f09
     // user-interactive, user-initiated, default, utility, background, unspecified
@@ -275,30 +359,93 @@ void task_system::set_qos(std::thread::native_handle_type handle, ThreadQos leve
     // there is a narrow range of offsets
     
     // note this is a start/end overide call, but can set override on existing thread
-    pthread_override_qos_class_start_np(handle, qos, 0);
+    // TODO: this returns a newly allocated object which isn't released here
+    // need to release with pthread_override_qos_class_end_np(override);
+    auto val = pthread_override_qos_class_start_np(handle, qos, 0);
+    if (val != nullptr)
+        KLOGW("Thread", "Failed to set qos %d", (int)qos);
 }
 
-#endif
-
-void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
+void task_system::set_priority(std::thread& thread, uint8_t priority)
 {
-    // https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
-    
+    setThreadPriority(thread.native_handle(), priority);
+}
+
+void task_system::set_current_priority(uint8_t priority)
+{
+    setThreadPriority(pthread_self(), priority);
+}
+
+void task_system::set_current_qos(ThreadQos level)
+{
+    setThreadQos(pthread_self(), level);
+}
+
+void task_system::set_qos(std::thread& thread, ThreadQos level)
+{
     auto handle = thread.native_handle();
-    
-    set_affinity(handle, threadIndex);
+    setThreadQos(handle, level);
 }
 
-void task_system::set_main_affinity(uint32_t threadIndex)
+
+
+#elif KRAM_ANDROID
+
+void setThreadPriority(std::thread::native_handle_type handle, uint8_t priority)
 {
-#if KRAM_WIN
-    set_affinity(::GetCurrentThread(), threadIndex);
-#else
-    set_affinity(pthread_self(), threadIndex);
-#endif
+    struct sched_param param = { priority };
+    
+    // Android doesn not allow policy change (prob SCHED_OTHER), and only allows setting priority;
+    // Only from Android 10 (API 28).
+    int val = pthread_setschedprio(handle, priority);
+    if (val != 0)
+        KLOGW("Thread", "Failed to set priority %d", priority);
 }
 
-void task_system::set_affinity(std::thread::native_handle_type handle, uint32_t threadIndex)
+
+static uint8_t convertQosToPriority(ThreadQos level)
+{
+    // TODO: fix these priorities.  Linux had 20 to -20 as priorities
+    // but unclear what Android wants set from the docs.
+    uint8_t priority = 30;
+    switch(level) {
+        case ThreadQos::Interactive: priority = 45; break;
+        case ThreadQos::High: priority = 41; break;
+        case ThreadQos::Default: priority = 31; break;
+        case ThreadQos::Medium: priority = 20; break;
+        case ThreadQos::Low: priority = 10; break;
+    }
+    return priority;
+}
+
+void task_system::set_priority(std::thread& thread, uint8_t priority)
+{
+    setThreadPriority(thread.native_handle(), priority);
+}
+
+void task_system::set_current_priority(uint8_t priority)
+{
+    setThreadPriority(pthread_self(), priority);
+}
+
+
+void task_system::set_main_qos(ThreadQos level)
+{
+    uint8_t priority = convertQosToPriority(level);
+    set_current_priority(priority);
+}
+
+void task_system::set_qos(std::thread& thread, ThreadQos level)
+{
+    uint8_t priority = convertQosToPriority(level);
+    set_priority(thread, priority);
+}
+#endif
+#endif
+
+#if SUPPORT_AFFINITY
+
+static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t threadIndex)
 {
     const auto& coreInfo = GetCoreInfo();
     
@@ -317,20 +464,20 @@ void task_system::set_affinity(std::thread::native_handle_type handle, uint32_t 
     
 #if KRAM_MAC
     // don't use this, it's unsupported on ARM chips, and only an affinity hints on x64
-    #if KRAM_SSE
-    if (!coreInfo.isTranslated) {
-        thread_affinity_policy_data_t policy = { (int)affinityMask };
-
-        // TODO: consider skipping affinity on macOS altogether
-        // this is just a hint on x64-based macOS
-        int returnVal = thread_policy_set(pthread_mach_thread_np(handle), THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
-        
-        if (returnVal != 0) {
-            // TODO: unsupported on iOS/M1, only have QoS and priority
-            // big P cores can also be disabled to resolve thermals
-        }
-    }
-    #endif
+//    #if KRAM_SSE
+//    if (!coreInfo.isTranslated) {
+//        thread_affinity_policy_data_t policy = { (int)affinityMask };
+//
+//        // TODO: consider skipping affinity on macOS altogether
+//        // this is just a hint on x64-based macOS
+//        int returnVal = thread_policy_set(pthread_mach_thread_np(handle), THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
+//
+//        if (returnVal != 0) {
+//            // TODO: unsupported on iOS/M1, only have QoS and priority
+//            // big P cores can also be disabled to resolve thermal throttling
+//        }
+//    }
+//    #endif
     
 #elif KRAM_IOS
     // no support
@@ -366,6 +513,25 @@ void task_system::set_affinity(std::thread::native_handle_type handle, uint32_t 
     }
 #endif
 }
+
+void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
+{
+    // https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
+    auto handle = thread.native_handle();
+    setThreadAffinity(handle, threadIndex);
+}
+
+void task_system::set_main_affinity(uint32_t threadIndex)
+{
+#if KRAM_WIN
+    setThreadAffinity(::GetCurrentThread(), threadIndex);
+#else
+    setThreadAffinity(pthread_self(), threadIndex);
+#endif
+}
+
+
+#endif
 
 void task_system::run(int32_t threadIndex)
 {
@@ -425,24 +591,94 @@ task_system::task_system(int32_t count) :
     // see WWDC 2021 presentation here
     // Tune CPU job scheduling for Apple silicon games
     // https://developer.apple.com/videos/play/tech-talks/110147/
-#if KRAM_IOS || KRAM_MAC
-    set_main_rr_priority(45);
-#else
-    set_main_affinity(0);
+#if SUPPORT_PRIORITY
+    set_current_priority(45);
 #endif
         
-    // start up the threads
-    for (int32_t threadIndex = 0; threadIndex != _count; ++threadIndex) {
-        _threads.emplace_back([&, threadIndex] { run(threadIndex); });
+#if SUPPORT_AFFINITY
+    set_current_affinity(0);
+#endif
         
-#if KRAM_IOS || KRAM_MAC
+    setCurrentThreadName("Main");
+        
+    // Note that running work on core0 when core0 may starve it
+    // from assigning work to threads.
+        
+    // start up the threads
+    string name;
+    for (int32_t threadIndex = 0; threadIndex != _count; ++threadIndex) {
+        
+        // Generate a name, also corresponds to core for affinity
+        // May want to include priority too.
+        sprintf(name, "Task%d", threadIndex);
+        _threadNames.push_back(name);
+        
+        _threads.emplace_back([&, threadIndex, name] {
+            // Have to set name from thread only for Apple.
+            setCurrentThreadName(name.c_str());
+            
+            run(threadIndex);
+        });
+        
+#if SUPPORT_PRIORITY
         // it's either this or qos
-        set_rr_priority(_threads.back(), 41);
-#else
+        set_priority(_threads.back(), 41);
+#endif
+        
+#if SUPPORT_AFFINITY
         set_affinity(_threads.back(), threadIndex);
 #endif
     }
+        
+    // dump out thread data
+    log_threads();
+}
+
+struct ThreadInfo {
+    const char* name;
+    int policy;
+    int priority;
+    int affinity; // single core for now
+};
+
+static void getThreadInfo(std::thread::native_handle_type handle, int& policy, int& priority)
+{
+#if KRAM_MAC || KRAM_IOS || KRAM_ANDROID
+    struct sched_param priorityVal;
+    int val = pthread_getschedparam(handle, &policy, &priorityVal);
+    if (val != 0)
+        KLOGW("Thread", "failed to retrieve thread data");
+    priority = priorityVal.sched_priority;
+#endif
+}
+
+
+void task_system::log_threads()
+{
+    ThreadInfo info = {};
+    info.name = "Main";
+#if SUPPORT_AFFINITY
+    info.affinity = 0;
+#endif
     
+    getThreadInfo(pthread_self(), info.policy, info.priority);
+    KLOGI("Thread", "Thread:%s (pol:%d pri:%d aff:%d)",
+          info.name, info.policy, info.priority, info.affinity);
+    
+    for (uint32_t i = 0; i < _threads.size(); ++i)
+    {
+        info.policy = 0;
+        info.priority = 0;
+        info.name = _threadNames[i].c_str();
+#if SUPPORT_AFFINITY
+        // TODO: if more tasks/threads than cores, then this isn't accurate
+        // but don't want to write a getter for this right now.
+        info.affinity = i;
+#endif
+        getThreadInfo(_threads[i].native_handle(), info.policy, info.priority);
+        KLOGI("Thread", "Thread:%s (pol:%d pri:%d aff:%d)",
+              info.name, info.policy, info.priority, info.affinity);
+    }
 }
 
 task_system::~task_system()
@@ -451,7 +687,7 @@ task_system::~task_system()
     for (auto& e : _q)
         e.set_done();
 
-    // wait until threads are all done, but joining each thread
+    // wait until threads are all done by joining each thread
     for (auto& e : _threads)
         e.join();
 }

@@ -122,6 +122,10 @@ public:
     type(const type&) = delete; \
     void operator=(const type&) = delete
 
+#define SUPPORT_AFFINITY (KRAM_ANDROID || KRAM_WIN)
+#define SUPPORT_PRIORITY (KRAM_MAC || KRAM_IOS || KRAM_ANDROID)
+
+
 // only for ioS/macOS
 enum class ThreadQos
 {
@@ -137,31 +141,35 @@ class task_system {
 
     const int32_t _count;
     vector<std::thread> _threads;
-
+    
+    // want to store with thread itself, but no field.  Also have affinity, priority data.
+    vector<string> _threadNames;
+    
     // currently one queue to each thread, but can steal from other queues
     vector<notification_queue> _q;
     std::atomic<int32_t> _index;
 
     void run(int32_t threadIndex);
 
+#if SUPPORT_AFFINITY
     // affinity isn't really supported on Apple
     void set_affinity(std::thread& thread, uint32_t threadIndex);
-    static void set_main_affinity(uint32_t threadIndex);
-
-#if KRAM_MAC || KRAM_IOS
-    // these are Apple specific, due to lack of affinity control
-    // once priority set, can't use qos
-    void set_qos(std::thread& thread, ThreadQos level);
-    static void set_main_qos(ThreadQos level);
-   
-    void set_rr_priority(std::thread& thread, uint8_t priority);
-    static void set_main_rr_priority(uint8_t priority);
+    static void set_current_affinity(uint32_t threadIndex);
 #endif
     
-    // impl
-    static void set_qos(std::thread::native_handle_type handle, ThreadQos level);
-    static void set_affinity(std::thread::native_handle_type handle, uint32_t threadIndex);
+#if SUPPORT_PRIORITY
+    // these are Apple specific, due to lack of affinity control
+    // once priority set, can't use qos.  Also Android can't control
+    // policy, only the priority in API 28.
+    void set_qos(std::thread& thread, ThreadQos level);
+    static void set_current_qos(ThreadQos level);
 
+    void set_priority(std::thread& thread, uint8_t priority);
+    static void set_current_priority(uint8_t priority);
+#endif
+    
+    void log_threads();
+    
 public:
     task_system(int32_t count = 1);
     ~task_system();
