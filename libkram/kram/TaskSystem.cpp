@@ -166,12 +166,16 @@ static const CoreInfo& GetCoreInfo()
                 uint32_t logicalCores = CountSetBits(ptr->ProcessorMask);
                 if (logicalCores > 1 || !isHyperthreaded) {
                     coreInfo.bigCoreCount++;
-                    coreInfo.remapTable.push_back({(uint8_t)coreNumber++, CoreType::Big});
+                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, CoreType::Big});
                 }
                 else {
                     coreInfo.littleCoreCount++;
-                    coreInfo.remapTable.push_back({(uint8_t)coreNumber++, CoreType::Little});
+                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, CoreType::Little});
                 }
+                
+                // Is this the correct index for physical cores?
+                // Always go through remap table
+                coreNumber += logicalCores;
                 
                 logicalCoreCount += logicalCores;
                 break;
@@ -392,13 +396,14 @@ void task_system::set_qos(std::thread& thread, ThreadQos level)
 
 void setThreadPriority(std::thread::native_handle_type handle, uint8_t priority)
 {
+/* TODO: finish priority remap first
     struct sched_param param = { priority };
-    
-    // Android doesn not allow policy change (prob SCHED_OTHER), and only allows setting priority;
-    // Only from Android 10 (API 28).
+   
+    // Win has 0 to 15 normal, then 16-31 real time priority
     int val = pthread_setschedprio(handle, priority);
     if (val != 0)
         KLOGW("Thread", "Failed to set priority %d", priority);
+*/
 }
 
 
@@ -439,6 +444,56 @@ void task_system::set_qos(std::thread& thread, ThreadQos level)
     uint8_t priority = convertQosToPriority(level);
     set_priority(thread, priority);
 }
+
+#elif KRAM_WIN
+
+static uint8_t convertQosToPriority(ThreadQos level)
+{
+    // TODO: fix these priorities.  Linux had 20 to -20 as priorities
+    // but unclear what Android wants set from the docs.
+    uint8_t priority = 30;
+    switch(level) {
+        case ThreadQos::Interactive: priority = 45; break;
+        case ThreadQos::High: priority = 41; break;
+        case ThreadQos::Default: priority = 31; break;
+        case ThreadQos::Medium: priority = 20; break;
+        case ThreadQos::Low: priority = 10; break;
+    }
+    return priority;
+}
+
+void setThreadPriority(std::thread::native_handle_type handle, uint8_t priority)
+{
+/* TODO: finish priority remap first
+
+    BOOL success = SetThreadPriority(handle, priority);
+    if (!success)
+        LOGW("Thread", "Failed to set priority %d", priority);
+*/
+}
+
+void task_system::set_priority(std::thread& thread, uint8_t priority)
+{
+    setThreadPriority(thread.native_handle(), priority);
+}
+
+void task_system::set_current_priority(uint8_t priority)
+{
+    setThreadPriority(pthread_self(), priority);
+}
+
+void task_system::set_current_qos(ThreadQos level)
+{
+    uint8_t priority = convertQosToPriority(level);
+    set_current_priority(priority);
+}
+
+void task_system::set_qos(std::thread& thread, ThreadQos level)
+{
+    uint8_t priority = convertQosToPriority(level);
+    set_priority(thread, priority);
+}
+
 #endif
 #endif
 
@@ -648,6 +703,17 @@ static void getThreadInfo(std::thread::native_handle_type handle, int& policy, i
     if (val != 0)
         KLOGW("Thread", "failed to retrieve thread data");
     priority = priorityVal.sched_priority;
+#elif KRAM_WIN
+    // all threads same policy on Win?
+    // https://www.microsoftpressstore.com/articles/article.aspx?p=2233328&seqNum=7#:~:text=Windows%20never%20adjusts%20the%20priority,the%20process%20that%20created%20it.
+    
+    // scheduling based on process priority class, thread priority is +/- offset
+    // DWORD priorityClass = GetPriorityClass(GetCurrentProcess());
+    
+    // The handle must have the THREAD_QUERY_INFORMATION or THREAD_QUERY_LIMITED_INFORMATION access right.
+    priority = GetThreadPriority(handle);
+    if (priority == THREAD_PRIORITY_ERROR_RETURN)
+        priority = 0;
 #endif
 }
 

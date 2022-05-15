@@ -123,7 +123,7 @@ public:
     void operator=(const type&) = delete
 
 #define SUPPORT_AFFINITY (KRAM_ANDROID || KRAM_WIN)
-#define SUPPORT_PRIORITY (KRAM_MAC || KRAM_IOS || KRAM_ANDROID)
+#define SUPPORT_PRIORITY (KRAM_MAC || KRAM_IOS || KRAM_ANDROID || KRAM_WIN)
 
 
 // only for ioS/macOS
