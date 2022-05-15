@@ -271,8 +271,7 @@ void setCurrentThreadName(const char* threadName)
 
 void setThreadName(std::thread& thread, const char* threadName)
 {
-    DWORD threadId = ::GetThreadId(thread.native_handle());
-    setThreadName(threadId, threadName);
+    setThreadName(thread.native_handle(), threadName);
 }
 
 #elif KRAM_MAC || KRAM_IOS
