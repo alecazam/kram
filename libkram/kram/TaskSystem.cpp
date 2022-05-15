@@ -228,6 +228,15 @@ static const CoreInfo& GetCoreInfo()
 
 //----------------------
 
+std::thread::native_handle_type getCurrentThread()
+{
+#if KRAM_WIN
+    return ::GetCurrentThread();
+#else
+    return pthread_self();
+#endif
+}
+
 // Ugh C++ "portable" thread classes that don't do anything useful
 // and make you define all this over and over again in so many apps.
 // https://stackoverflow.com/questions/10121560/stdthread-naming-your-thread
@@ -270,7 +279,7 @@ void setThreadName(std::thread::native_handle_type handle, const char* threadNam
 
 void setCurrentThreadName(const char* threadName)
 {
-    setThreadName(::GetCurrentThread(), threadName);
+    setThreadName(getCurrentThread(), threadName);
 }
 
 void setThreadName(std::thread& thread, const char* threadName)
@@ -290,8 +299,7 @@ void setThreadName(std::thread::native_handle_type macroUnusedArg(handle), const
 
 void setCurrentThreadName(const char* threadName)
 {
-    auto handle = pthread_self();
-    setThreadName(handle, threadName);
+    setThreadName(getCurrentThread(), threadName);
 }
 
 // This doesn't exist on macOS. What a pain.  Doesn't line up with getter calls.
@@ -314,14 +322,12 @@ void setThreadName(std::thread::native_handle_type handle, const char* threadNam
 
 void setCurrentThreadName(const char* threadName)
 {
-    auto handle = pthread_self();
-    setThreadName(handle, threadName);
+    setThreadName(getCurrentThread(), threadName);
 }
 
 void setThreadName(std::thread& thread, const char* threadName)
 {
-    auto handle = thread.native_handle();
-    setThreadName(handle, threadName);
+    setThreadName(thread.native_handle(), threadName);
 }
 
 #endif
@@ -376,18 +382,17 @@ void task_system::set_priority(std::thread& thread, uint8_t priority)
 
 void task_system::set_current_priority(uint8_t priority)
 {
-    setThreadPriority(pthread_self(), priority);
+    setThreadPriority(getCurrentThread(), priority);
 }
 
 void task_system::set_current_qos(ThreadQos level)
 {
-    setThreadQos(pthread_self(), level);
+    setThreadQos(getCurrentThread(), level);
 }
 
 void task_system::set_qos(std::thread& thread, ThreadQos level)
 {
-    auto handle = thread.native_handle();
-    setThreadQos(handle, level);
+    setThreadQos(thread.native_handle(), level);
 }
 
 
@@ -429,7 +434,7 @@ void task_system::set_priority(std::thread& thread, uint8_t priority)
 
 void task_system::set_current_priority(uint8_t priority)
 {
-    setThreadPriority(pthread_self(), priority);
+    setThreadPriority(getCurrentThread(), priority);
 }
 
 
@@ -479,7 +484,7 @@ void task_system::set_priority(std::thread& thread, uint8_t priority)
 
 void task_system::set_current_priority(uint8_t priority)
 {
-    setThreadPriority(::GetCurrentThread(), priority);
+    setThreadPriority(getCurrentThread(), priority);
 }
 
 void task_system::set_current_qos(ThreadQos level)
@@ -571,17 +576,12 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
 void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
 {
     // https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
-    auto handle = thread.native_handle();
-    setThreadAffinity(handle, threadIndex);
+    setThreadAffinity(thread.native_handle(), threadIndex);
 }
 
 void task_system::set_current_affinity(uint32_t threadIndex)
 {
-#if KRAM_WIN
-    setThreadAffinity(::GetCurrentThread(), threadIndex);
-#else
-    setThreadAffinity(pthread_self(), threadIndex);
-#endif
+    setThreadAffinity(getCurrentThread(), threadIndex);
 }
 
 
@@ -634,8 +634,25 @@ void task_system::run(int32_t threadIndex)
     }
 }
 
+struct ThreadInfo {
+    const char* name;
+    int policy;
+    int priority;
+    int affinity; // single core for now
+};
 
+// This only works for current thread, but simplifies setting several thread params.
+void setThreadInfo(ThreadInfo& info) {
+    setCurrentThreadName(info.name);
 
+    #if SUPPORT_PRIORITY
+    setThreadPriority(getCurrentThread(), info.priority);
+    #endif
+
+    #if SUPPORT_AFFINITY
+    setThreadAffinity(getCurrentThread(), info.affinity);
+    #endif
+}
 
 task_system::task_system(int32_t count) :
     _count(std::min(count, (int32_t)GetCoreInfo().physicalCoreCount)),
@@ -645,16 +662,9 @@ task_system::task_system(int32_t count) :
     // see WWDC 2021 presentation here
     // Tune CPU job scheduling for Apple silicon games
     // https://developer.apple.com/videos/play/tech-talks/110147/
-#if SUPPORT_PRIORITY
-    set_current_priority(45);
-#endif
-        
-#if SUPPORT_AFFINITY
-    set_current_affinity(0);
-#endif
-        
-    setCurrentThreadName("Main");
-        
+    ThreadInfo infoMain = { "Main", 0, 45, 0 };
+    setThreadInfo(infoMain);
+    
     // Note that running work on core0 when core0 may starve it
     // from assigning work to threads.
         
@@ -668,32 +678,17 @@ task_system::task_system(int32_t count) :
         _threadNames.push_back(name);
         
         _threads.emplace_back([&, threadIndex, name] {
-            // Have to set name from thread only for Apple.
-            setCurrentThreadName(name.c_str());
-            
+            ThreadInfo infoTask = { name.c_str(), 0, 41, threadIndex };
+            setThreadInfo(infoTask);
+
             run(threadIndex);
         });
-        
-#if SUPPORT_PRIORITY
-        // it's either this or qos
-        set_priority(_threads.back(), 41);
-#endif
-        
-#if SUPPORT_AFFINITY
-        set_affinity(_threads.back(), threadIndex);
-#endif
     }
         
     // dump out thread data
     log_threads();
 }
 
-struct ThreadInfo {
-    const char* name;
-    int policy;
-    int priority;
-    int affinity; // single core for now
-};
 
 static void getThreadInfo(std::thread::native_handle_type handle, int& policy, int& priority)
 {
@@ -726,11 +721,7 @@ void task_system::log_threads()
     info.affinity = 0;
 #endif
     
-#if KRAM_WIN
-    getThreadInfo(GetCurrentThread(), info.policy, info.priority);
-#else
-    getThreadInfo(pthread_self(), info.policy, info.priority);
-#endif
+    getThreadInfo(getCurrentThread(), info.policy, info.priority);
     KLOGI("Thread", "Thread:%s (pol:%d pri:%d aff:%d)",
           info.name, info.policy, info.priority, info.affinity);
     
