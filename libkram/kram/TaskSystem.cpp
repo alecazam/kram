@@ -266,7 +266,7 @@ void setThreadName(std::thread::native_handle_type handle, const char* threadNam
 
 void setCurrentThreadName(const char* threadName)
 {
-    setThreadName(GetCurrentThread(), threadName);
+    setThreadName(::GetCurrentThread(), threadName);
 }
 
 void setThreadName(std::thread& thread, const char* threadName)
@@ -429,7 +429,7 @@ void task_system::set_current_priority(uint8_t priority)
 }
 
 
-void task_system::set_main_qos(ThreadQos level)
+void task_system::set_current_qos(ThreadQos level)
 {
     uint8_t priority = convertQosToPriority(level);
     set_current_priority(priority);
@@ -521,7 +521,7 @@ void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
     setThreadAffinity(handle, threadIndex);
 }
 
-void task_system::set_main_affinity(uint32_t threadIndex)
+void task_system::set_current_affinity(uint32_t threadIndex)
 {
 #if KRAM_WIN
     setThreadAffinity(::GetCurrentThread(), threadIndex);
@@ -661,7 +661,11 @@ void task_system::log_threads()
     info.affinity = 0;
 #endif
     
+#if KRAM_WIN
+    getThreadInfo(GetCurrentThread(), info.policy, info.priority);
+#else
     getThreadInfo(pthread_self(), info.policy, info.priority);
+#endif
     KLOGI("Thread", "Thread:%s (pol:%d pri:%d aff:%d)",
           info.name, info.policy, info.priority, info.affinity);
     
