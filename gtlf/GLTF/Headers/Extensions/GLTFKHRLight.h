@@ -16,7 +16,7 @@
 
 #import <GLTF/GLTFObject.h>
 
-@import simd;
+//@import simd;
 
 typedef NS_ENUM(NSInteger, GLTFKHRLightType) {
     GLTFKHRLightTypeAmbient,

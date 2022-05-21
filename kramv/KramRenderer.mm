@@ -4,9 +4,9 @@
 
 #import "KramRenderer.h"
 
-@import ModelIO;
-//#import <ModelIO/ModelIO.h>
-//#import <TargetConditionals.h>
+//@import ModelIO;
+#import <ModelIO/ModelIO.h>
+#import <TargetConditionals.h>
 
 // Include header shared between C code here, which executes Metal API commands,
 // and .metal files

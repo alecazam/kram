@@ -17,9 +17,9 @@
 #import <TargetConditionals.h>
 
 #if TARGET_OS_OSX
-@import Cocoa;
+#import <Cocoa/Cocoa.h>
 #elif TARGET_OS_IOS
-@import UIKit;
+#import <UIKit/UIKit.h>
 #endif
 
 //! Project version number for GLTFMTL.

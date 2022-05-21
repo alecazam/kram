@@ -16,8 +16,8 @@
 
 #import <GLTF/GLTFEnums.h>
 
-@import Foundation;
-@import simd;
+//@import Foundation;
+//@import simd;
 
 NS_ASSUME_NONNULL_BEGIN
 

@@ -17,7 +17,7 @@
 #import <GLTF/GLTFObject.h>
 #import <GLTF/GLTFEnums.h>
 
-@import simd;
+//@import simd;
 
 typedef struct {
     simd_float2 offset;

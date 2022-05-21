@@ -17,9 +17,10 @@
 #include <TargetConditionals.h>
 
 #if TARGET_OS_OSX
-@import Cocoa;
+// eliminate Cocoa, can't this use AppKit?
+#include <Cocoa/Cocoa.h>
 #elif TARGET_OS_IOS
-@import UIKit;
+#include <UIKit/UIKit.h>
 #endif
 
 //! Project version number for GLTF.

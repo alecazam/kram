@@ -248,13 +248,13 @@ std::thread::native_handle_type getCurrentThread()
 
 // Isn't this in a header?
 #pragma pack(push,8)
-typedef struct tagTHREADNAME_INFO
+struct THREADNAME_INFO
 {
    DWORD dwType; // Must be 0x1000.
    LPCSTR szName; // Pointer to name (in user addr space).
    DWORD dwThreadID; // Thread ID (-1=caller thread).
    DWORD dwFlags; // Reserved for future use, must be zero.
-} THREADNAME_INFO;
+};
 #pragma pack(pop)
 
 void setThreadName(std::thread::native_handle_type handle, const char* threadName)

@@ -17,7 +17,7 @@
 #import <GLTF/GLTF.h>
 #import <GLTFMTL/GLTFMTLUtilities.h>
 
-@import Metal;
+//@import Metal;
 
 #define GLTFMTLMaximumLightCount 3
 

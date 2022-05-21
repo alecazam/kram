@@ -5,7 +5,8 @@
 #import "KramThumbnailProvider.h"
 #include "KramLib.h"
 
-#include <CoreGraphics/CoreGraphics.h>
+#import <CoreGraphics/CoreGraphics.h>
+#import <Foundation/Foundation.h>
 #import <Accelerate/Accelerate.h> // for vImage
 
 using namespace kram;

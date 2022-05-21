@@ -3,14 +3,14 @@
 // in all copies or substantial portions of the Software.
 
 // using -fmodules and -fcxx-modules
-@import Cocoa;
-@import Metal;
-@import MetalKit;
+//@import Cocoa;
+//@import Metal;
+//@import MetalKit;
 
-//#import <Cocoa/Cocoa.h>
-//#import <Metal/Metal.h>
-//#import <MetalKit/MetalKit.h>
-//#import <TargetConditionals.h>
+#import <Cocoa/Cocoa.h>
+#import <Metal/Metal.h>
+#import <MetalKit/MetalKit.h>
+#import <TargetConditionals.h>
 
 #import "KramRenderer.h"
 #import "KramShaders.h"

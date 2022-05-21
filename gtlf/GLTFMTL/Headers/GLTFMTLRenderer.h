@@ -17,8 +17,8 @@
 #import <GLTF/GLTF.h>
 #import <GLTFMTL/GLTFMTLTextureLoader.h>
 
-@import Foundation;
-@import Metal;
+//@import Foundation;
+//@import Metal;
 
 NS_ASSUME_NONNULL_BEGIN
 

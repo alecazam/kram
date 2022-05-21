@@ -2,10 +2,10 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-@import Foundation;
-@import MetalKit;
-//#import <Foundation/NSURL.h>
-//#import <MetalKit/MetalKit.h>
+//@import Foundation;
+//@import MetalKit;
+#import <Foundation/NSURL.h>
+#import <MetalKit/MetalKit.h>
 
 #include "KramLib.h"
 #import "KramShaders.h"  // for TextureChannels
@@ -18,8 +18,10 @@
 #define USE_PERSPECTIVE 0
 
 #if USE_GLTF
-@import GLTF;
-@import GLTFMTL;
+#import "GLTF/GLTF.h"
+#import "GLTFMTL/GLTFMTL.h"
+//@import GLTF;
+//@import GLTFMTL;
 #endif
 
 

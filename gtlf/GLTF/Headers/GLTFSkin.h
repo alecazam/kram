@@ -14,7 +14,7 @@
 //  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 //
 
-@import Foundation;
+//@import Foundation;
 #import <GLTF/GLTFObject.h>
 
 NS_ASSUME_NONNULL_BEGIN

@@ -17,7 +17,7 @@
 #import <GLTF/GLTFObject.h>
 #import <GLTF/GLTFBufferView.h>
 
-@import Foundation;
+//@import Foundation;
 
 NS_ASSUME_NONNULL_BEGIN
 

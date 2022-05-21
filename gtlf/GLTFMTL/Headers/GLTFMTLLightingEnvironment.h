@@ -15,9 +15,12 @@
 //
 
 #import <GLTF/GLTF.h>
+#import <Foundation/Foundation.h>
+#import <simd/simd.h>
+#import <Metal/Metal.h>
 
-@import Foundation;
-@import Metal;
+//@import Foundation;
+//@import Metal;
 
 NS_ASSUME_NONNULL_BEGIN
 

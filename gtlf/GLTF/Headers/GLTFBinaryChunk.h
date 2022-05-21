@@ -14,7 +14,8 @@
 //  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 //
 
-@import Foundation;
+//@import Foundation;
+#import <Foundation/Foundation.h>
 
 extern const UInt32 GLTFBinaryMagic;
 

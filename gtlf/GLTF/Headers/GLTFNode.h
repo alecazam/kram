@@ -20,7 +20,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@import simd;
+//@import simd;
 
 @class GLTFCamera, GLTFSkin, GLTFMesh;
 @class GLTFKHRLight;
