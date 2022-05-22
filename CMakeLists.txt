@@ -121,7 +121,7 @@ if (BUILD_MAC OR BUILD_IOS)
     endif()
 
     # check the SDK
-    set(XCODE_MIN_SDK_IOS 14.0)
+    set(XCODE_MIN_SDK_IOS 14.1)
     set(XCODE_MIN_SDK_MACOS 11.0)
 
     execute_process(

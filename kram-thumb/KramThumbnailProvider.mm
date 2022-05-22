@@ -243,7 +243,7 @@ struct ImageToPass
             .bitsPerPixel       = 32,
         };
         
-        format.bitmapInfo = kCGBitmapByteOrderDefault | (isPremul ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast);
+        format.bitmapInfo = kCGBitmapByteOrderDefault | (CGBitmapInfo)(isPremul ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast);
         format.colorSpace = isSrgb ? CGColorSpaceCreateWithName(kCGColorSpaceSRGB) : CGColorSpaceCreateDeviceRGB();
         
         // don't need to allocate, can reuse memory from mip

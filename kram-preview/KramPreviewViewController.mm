@@ -262,7 +262,7 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
         .bitsPerPixel       = 32,
     };
     
-    format.bitmapInfo = kCGBitmapByteOrderDefault | (isPremul ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast);
+    format.bitmapInfo = kCGBitmapByteOrderDefault | (CGBitmapInfo)(isPremul ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast);
     format.colorSpace = isSrgb ? CGColorSpaceCreateWithName(kCGColorSpaceSRGB) : CGColorSpaceCreateDeviceRGB();
     
     // don't need to allocate, can requse memory from mip

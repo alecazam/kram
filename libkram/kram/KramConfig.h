@@ -191,6 +191,17 @@
 
 #else
 
+/*
+// seems that Modules have "partial" support in Xcode, whatever that means
+// these imports are taken from MSVC which has a full implementation
+ 
+import std.memory;
+import std.threading;
+import std.core;
+import std.filesystem;
+import std.regex;
+*/
+
 #include <algorithm>  // for max
 #include <functional>
 
@@ -206,6 +217,7 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
+
 
 #define NAMESPACE_STL std
 
