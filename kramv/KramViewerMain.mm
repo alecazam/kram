@@ -1717,6 +1717,12 @@ enum TextSlot
         return;
     }
     
+    // From ImGui notes:
+    // From macOS 12.1, scrolling with two fingers and then decelerating
+    // by tapping two fingers results in two events appearing.
+    if (event.phase == NSEventPhaseCancelled)
+        return;
+    
     double wheelX = [event scrollingDeltaX];
     double wheelY = [event scrollingDeltaY];
 

@@ -2787,7 +2787,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
 
-            // TODO: if args ends with /, then output to that dir
+            // TODO: if args Ωƒends with /, then output to that dir
             dstFilename = args[i];
         }
         else if (isStringEqual(word, "-input") ||
