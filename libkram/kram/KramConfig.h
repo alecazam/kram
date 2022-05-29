@@ -438,7 +438,7 @@ inline float4 toFloat4(const half4& vv)
 }
 inline half4 toHalf4(const float4& vv)
 {
-    return half(vcvt_f16_f32(*(const float32x4_t*)&vv));
+    return half4(vcvt_f16_f32(*(const float32x4_t*)&vv));
 }
 #endif
 
