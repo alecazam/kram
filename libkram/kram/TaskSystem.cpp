@@ -294,7 +294,7 @@ void setThreadName(std::thread::native_handle_type handle, const char* threadNam
     std::wstring str;
     str.reserve(len);
     for (uint32_t i = 0; i < len; ++i) {
-        if (threadname[i] <= 127)
+        if (threadName[i] <= 127)
             str.push_back((char)threadName[i]);
     }
     
