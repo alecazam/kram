@@ -438,7 +438,7 @@ bool ATEEncoder::Decode(uint32_t metalPixelFormat, size_t dstDataSize, int32_t b
     // decode is leaving a=60 for some bizarro reason, so correct that
     if (srcAlphaType == at_alpha_opaque)
     {
-        for (uint32_t i = 0, iEnd = w*h; i < iEnd; ++i)
+        for (uint32_t i = 0, iEnd = (uint32_t)w*h; i < iEnd; ++i)
         {
             dstData[4*i+3] = 255;
         }

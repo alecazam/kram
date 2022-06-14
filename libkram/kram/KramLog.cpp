@@ -53,8 +53,8 @@ void getErrorLogCaptureText(string& text)
 //
 //}
 
-// Note: careful with stdio sscanf.  In clang, this does and initial strlen which for long buffers
-// being parsed (f.e. mmapped Json) this can significantly slow a parser down.
+// Note: careful with stdio sscanf.  In clang, this does an initial strlen which for long buffers
+// being parsed (f.e. mmapped Json) can significantly slow a parser down.
 
 int32_t append_vsprintf(string& str, const char* format, va_list args)
 {
@@ -62,7 +62,7 @@ int32_t append_vsprintf(string& str, const char* format, va_list args)
     if (strcmp(format, "%s") == 0) {
         const char* firstArg = va_arg(args, const char*);
         str += firstArg;
-        return strlen(firstArg);
+        return (int32_t)strlen(firstArg);
     }
 
     // This is important for the case where ##VAR_ARGS only leaves the format.
@@ -70,7 +70,7 @@ int32_t append_vsprintf(string& str, const char* format, va_list args)
     // for KLOGE("group", "text")
     if (strrchr(format, '%') == nullptr) {
         str += format;
-        return strlen(format);
+        return (int32_t)strlen(format);
     }
 
     // format once to get length (without NULL at end)

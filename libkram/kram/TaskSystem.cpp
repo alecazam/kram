@@ -13,6 +13,7 @@
     #include <sys/sysctl.h>
 #elif KRAM_WIN
     #include <windows.h>
+    #include <processthreadsapi.h>
 #else
     #include <pthread/pthread.h>
 #endif
@@ -246,6 +247,8 @@ std::thread::native_handle_type getCurrentThread()
 
 #if KRAM_WIN
 
+/* This is the old way.  This name is only available if debugger attached.
+ 
 // Isn't this in a header?
 #pragma pack(push,8)
 struct THREADNAME_INFO
@@ -275,6 +278,27 @@ void setThreadName(std::thread::native_handle_type handle, const char* threadNam
    __except(EXCEPTION_EXECUTE_HANDLER)
    {
    }
+}
+*/
+
+// TODO: on Win, also need to set the following.  Then use Windows Termnial.
+// SetConsoleOutputCP(CP_UTF8);
+
+void setThreadName(std::thread::native_handle_type handle, const char* threadName)
+{
+    // TODO: use std::wstring_convert();
+    // std::codecvt_utf8_utf16
+    
+    // ugh, win still using char16_t.  TODO: this isn't utf8 to utf16 conversion
+    uint32_t len = strlen(threadName);
+    std::wstring str;
+    str.reserve(len);
+    for (uint32_t i = 0; i < len; ++i) {
+        if (threadname[i] <= 127)
+            str.push_back((char)threadName[i]);
+    }
+    
+    ::SetThreadDescription(handle, str.c_str());
 }
 
 void setCurrentThreadName(const char* threadName)
@@ -314,7 +338,6 @@ void setCurrentThreadName(const char* threadName)
 
 void setThreadName(std::thread::native_handle_type handle, const char* threadName)
 {
-    // This can only set on self
     int val = pthread_setname_np(handle, threadName);
     if (val != 0)
         KLOGW("Thread", "Could not set thread name");

@@ -176,7 +176,7 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
 
     size_t bytesRemaining = size_;
     while (bytesRemaining > 0) {
-        int bytesToRead = min(bufferSize, bytesRemaining);
+        size_t bytesToRead = min(bufferSize, bytesRemaining);
         bytesRemaining -= bytesToRead;
 
         if (!read(tmpBuf.data(), bytesToRead) ||

@@ -109,9 +109,12 @@
  */
 #define OPEN_ _open
 #define FDOPEN_ _fdopen
+#define FILE_SEPARATOR "\\"
+#define snprintf sprintf_s
 #else
 #define OPEN_ open
 #define FDOPEN_ fdopen
+#define FILE_SEPARATOR "/"
 #endif
 
 
@@ -120,13 +123,6 @@
 #define DPRINTF1(s, a1) printf(s, a1)
 #else
 #define DPRINTF1(s, a1)
-#endif
-
-
-#ifdef _WIN32
-#define FILE_SEPARATOR "\\"
-#else
-#define FILE_SEPARATOR "/"
 #endif
 
 #define RANDCHARS   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
@@ -243,7 +239,7 @@ static FILE *mktempfile_internal(const char *tmpdir, const char *pfx, const char
     /* If we don't manage to create a file after 10 goes, there is something wrong... */
     for (i = 0; i < 10; i++)
     {
-        sprintf(tmpname, "%s%s%s%s%s", tmpdir, separator, pfx, set_randpart(randpart), sfx);
+        snprintf(tmpname, lentempname + 1, "%s%s%s%s%s", tmpdir, separator, pfx, set_randpart(randpart), sfx);
         DPRINTF1("[%s]\n", tmpname);
         fd = OPEN_(tmpname, oflag, pmode);
         if (fd != -1) break;

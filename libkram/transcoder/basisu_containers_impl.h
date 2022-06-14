@@ -3,6 +3,7 @@
 
 #ifdef _MSC_VER
 #pragma warning (disable:4127) // warning C4127: conditional expression is constant
+#define snprintf sprintf_s
 #endif
 
 namespace basisu
@@ -46,11 +47,7 @@ namespace basisu
                return false;
 
             char buf[256];
-#ifdef _MSC_VER
-            sprintf_s(buf, sizeof(buf), "vector: realloc() failed allocating %u bytes", (uint32_t)desired_size);
-#else
-            sprintf(buf, "vector: realloc() failed allocating %u bytes", (uint32_t)desired_size);
-#endif
+             snprintf(buf, sizeof(buf), "vector: realloc() failed allocating %u bytes", (uint32_t)desired_size);
             fprintf(stderr, "%s", buf);
             abort();
          }
@@ -73,11 +70,7 @@ namespace basisu
                return false;
 
             char buf[256];
-#ifdef _MSC_VER
-            sprintf_s(buf, sizeof(buf), "vector: malloc() failed allocating %u bytes", (uint32_t)desired_size);
-#else
-            sprintf(buf, "vector: malloc() failed allocating %u bytes", (uint32_t)desired_size);
-#endif
+            snprintf(buf, sizeof(buf), "vector: malloc() failed allocating %u bytes", (uint32_t)desired_size);
             fprintf(stderr, "%s", buf);
             abort();
          }

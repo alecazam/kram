@@ -1089,7 +1089,7 @@ bool KramDecoder::decodeImpl(const KTXImage& srcImage, FILE* dstFile, KTXImage& 
                 }
             }
 
-            int32_t dstMipOffset = dstMipLevel.offset + chunk * dstMipLevel.length;
+            uint32_t dstMipOffset = dstMipLevel.offset + chunk * dstMipLevel.length;
 
             if (!writeDataAtOffset(outputTexture.data(), dstMipLevel.length, dstMipOffset, dstFile, dstImage)) {
                 return false;
