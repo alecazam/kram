@@ -530,11 +530,6 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
 #endif
 }
 
-//void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
-//{
-//    setThreadAffinity(thread.native_handle(), threadIndex);
-//}
-
 void task_system::set_current_affinity(uint32_t threadIndex)
 {
     setThreadAffinity(getCurrentThread(), threadIndex);
@@ -642,10 +637,14 @@ task_system::task_system(int32_t count) :
     log_threads();
 }
 
-// TEODO: rename to getThreadPriority
-static void getThreadInfo(std::thread::native_handle_type handle, ThreadPriority& priority)
+static ThreadPriority getThreadPriority(std::thread::native_handle_type handle)
 {
-#if KRAM_MAC || KRAM_IOS
+    ThreadPriority priority = ThreadPriority::Default;
+    
+#if KRAM_MAC || KRAM_IOS || KRAM_ANDROID
+    // Note: this doesn't handle qOS, and returns default priority
+    // on those threads.
+    
     int policy = 0;
     struct sched_param priorityVal;
     int val = pthread_getschedparam(handle, &policy, &priorityVal);
@@ -660,11 +659,19 @@ static void getThreadInfo(std::thread::native_handle_type handle, ThreadPriority
         default: priority = ThreadPriority::Default; break;
     }
     
+/* Using code above since it may work with other threads
 #elif KRAM_ANDROID
+    // Note: only for current thread
+    
     // only have getpriority call on current thread
     // pthread_getschedparam never returns valid data
-    priority = ThreadPriority::Default; // TODO: fix
-    
+    int priority = getpriority(PRIO_PROCESS, 0);
+    switch(prioritySys) {
+        case 41: priority = ThreadPriority::High; break;
+        case 45: priority = ThreadPriority::Interactive; break;
+        default: priority = ThreadPriority::Default; break;
+    }
+*/
 #elif KRAM_WIN
     // all threads same policy on Win?
     // https://www.microsoftpressstore.com/articles/article.aspx?p=2233328&seqNum=7#:~:text=Windows%20never%20adjusts%20the%20priority,the%20process%20that%20created%20it.
@@ -682,9 +689,9 @@ static void getThreadInfo(std::thread::native_handle_type handle, ThreadPriority
         case 2: priority = ThreadPriority::Interactive; break;
         default: priority = ThreadPriority::Default; break;
     }
-    
-    // TODO: remap back to enum
 #endif
+    
+    return priority;
 }
 
 
@@ -696,7 +703,7 @@ void task_system::log_threads()
     info.affinity = 0;
 #endif
     
-    getThreadInfo(getCurrentThread(), info.priority);
+    info.priority = getThreadPriority(getCurrentThread());
     KLOGI("Thread", "Thread:%s (pri:%d aff:%d)",
           info.name, info.priority, info.affinity);
     
@@ -708,7 +715,7 @@ void task_system::log_threads()
         // but don't want to write a getter for this right now.
         info.affinity = i;
 #endif
-        getThreadInfo(_threads[i].native_handle(), info.priority);
+        info.priority = getThreadPriority(_threads[i].native_handle());
         KLOGI("Thread", "Thread:%s (pri:%d aff:%d)",
               info.name, info.priority, info.affinity);
     }
