@@ -126,14 +126,13 @@ public:
 // isn't ideal.  It will force work onto the same cores.  Especially if
 // limiting cores to say 4/16, then can run 4 processes faster w/o affinity.
 #define SUPPORT_AFFINITY (KRAM_ANDROID || KRAM_WIN)
-#define SUPPORT_PRIORITY (KRAM_MAC || KRAM_IOS || KRAM_ANDROID || KRAM_WIN)
 
 
 // only for ioS/macOS
-enum class ThreadQos
+enum class ThreadPriority
 {
-    Low = 1,
-    Medium = 2,
+    //Low = 1,
+    //Medium = 2,
     Default = 3,
     High = 4,
     Interactive = 5,
@@ -155,21 +154,10 @@ class task_system {
     void run(int32_t threadIndex);
 
 #if SUPPORT_AFFINITY
-    // affinity isn't really supported on Apple
-    void set_affinity(std::thread& thread, uint32_t threadIndex);
     static void set_current_affinity(uint32_t threadIndex);
 #endif
     
-#if SUPPORT_PRIORITY
-    // these are Apple specific, due to lack of affinity control
-    // once priority set, can't use qos.  Also Android can't control
-    // policy, only the priority in API 28.
-    void set_qos(std::thread& thread, ThreadQos level);
-    static void set_current_qos(ThreadQos level);
-
-    void set_priority(std::thread& thread, uint8_t priority);
-    static void set_current_priority(uint8_t priority);
-#endif
+    static void set_current_priority(ThreadPriority priority);
     
     void log_threads();
     
