@@ -434,7 +434,7 @@ static void setThreadPriority(std::thread::native_handle_type handle, uint8_t pr
 
 #elif KRAM_WIN
 
-static void setThreadPriority(std::thread::native_handle_type handle, uint8_t priority)
+static void setThreadPriority(std::thread::native_handle_type handle, ThreadPriority priority)
 {
     // Win has 0 to 15 normal, then 16-31 real time priority
     int prioritySys = 0;
@@ -461,6 +461,8 @@ void task_system::set_current_priority(ThreadPriority priority)
 
 static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t threadIndex)
 {
+    // https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
+    //
     const auto& coreInfo = GetCoreInfo();
     
     uint32_t maxIndex = coreInfo.remapTable.size() - 1;
@@ -528,11 +530,10 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
 #endif
 }
 
-void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
-{
-    // https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
-    setThreadAffinity(thread.native_handle(), threadIndex);
-}
+//void task_system::set_affinity(std::thread& thread, uint32_t threadIndex)
+//{
+//    setThreadAffinity(thread.native_handle(), threadIndex);
+//}
 
 void task_system::set_current_affinity(uint32_t threadIndex)
 {
