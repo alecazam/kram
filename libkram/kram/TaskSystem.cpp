@@ -446,7 +446,7 @@ static void setThreadPriority(std::thread::native_handle_type handle, ThreadPrio
     
     BOOL success = SetThreadPriority(handle, prioritySys);
     if (!success)
-        LOGW("Thread", "Failed to set priority %d", prioritySys);
+        KLOGW("Thread", "Failed to set priority %d", prioritySys);
 }
 
 #endif
