@@ -2399,6 +2399,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     // that info
     else if (action == _actionInfo) {
         if (_showSettings->isHudShown) {
+            
+            // also hide the file table, since this can be long
+            [self hideFileTable];
+            
             sprintf(text, "%s",
                     isShiftKeyDown ? _showSettings->imageInfoVerbose.c_str()
                                    : _showSettings->imageInfo.c_str());
