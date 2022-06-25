@@ -701,6 +701,23 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
         }
     }
     
+    // because Apple finder thumbnails can't be overridden with custom thumbanailer
+    // and defaults to white bkgd (making white icons impossible to see).
+    // track the bkgd block, and set/re-define as all black.  Maybe will honor that.
+    bool hasBackground = false;
+    bool hasBlackBackground = false;
+    chunkData = lodepng_chunk_find_const(data, data + dataSize, "bKGD");
+    if (chunkData) {
+        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+        if (state.info_png.background_defined) {
+            hasBackground = true;
+            hasBlackBackground =
+                state.info_png.background_r == 0 && // gray/pallete uses this only
+                state.info_png.background_g == 0 &&
+                state.info_png.background_b == 0;
+        }
+    }
+    
     // don't convert png bit depths, but can convert pallete data
     //    if (state.info_png.color.bitdepth != 8) {
     //        return false;
@@ -775,6 +792,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     }
 
     sourceImage.setSrgbState(isSrgb, hasSrgbBlock, hasNonSrgbBlocks);
+    sourceImage.setBackgroundState(hasBlackBackground);
     
     return sourceImage.loadImageFromPixels(pixels, width, height, hasColor, hasAlpha);
 }
@@ -792,16 +810,18 @@ bool SavePNG(Image& image, const char* filename)
     // Then if srgb, see if that matches content type srgb state below.
     TexContentType contentType = findContentTypeFromFilename(filename);
     bool isSrgb = contentType == TexContentTypeAlbedo;
-
+    
     // Skip file if it has srgb block, and none of the other block types.
     // This code will also strip the sRGB block from apps like Figma that always set it.
-    if (isSrgb == image.isSrgb()) {
-        if (isSrgb == image.hasSrgbBlock() && !image.hasNonSrgbBlocks()) {
-            KLOGI("Kram", "skipping srgb correction");
-            return true;
+    if (image.hasBlackBackground()) {
+        if (isSrgb == image.isSrgb()) {
+            if (isSrgb == image.hasSrgbBlock() && !image.hasNonSrgbBlocks()) {
+                KLOGI("Kram", "skipping srgb correction");
+                return true;
+            }
         }
     }
-    
+
     // This is the only block written or not
     lodepng::State state;
     if (isSrgb) {
@@ -809,6 +829,16 @@ bool SavePNG(Image& image, const char* filename)
         state.info_png.srgb_defined = 1;
         state.info_png.srgb_intent = 0;
     }
+    
+    // always redefine background to black, so Finder thumbnails are not white
+    // this makes viewing any white icons nearly impossible.  Make suer lodepng
+    // ignores this background on import, want the stored pixels not ones composited.
+    // Note that _r is only used for grayscale/pallete, and these values are in same
+    // color depth as pixels.  But 0 works for all bit-depths.
+    state.info_png.background_defined = true;
+    state.info_png.background_r = 0;
+    state.info_png.background_g = 0;
+    state.info_png.background_b = 0;
     
     // TODO: could write other data into Txt block
     // or try to preserve those
@@ -2060,9 +2090,22 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
         }
     }
     
-    // TODO: also bkgd blocks.
-    
-    
+    // because Apple finder thumbnails can't be overridden with custom thumbanailer
+    // and defaults to white bkgd (making white icons impossible to see).
+    // track the bkgd block, and set/re-define as all black.  Maybe will honor that.
+    bool hasBackground = false;
+    bool hasBlackBackground = false;
+    chunkData = lodepng_chunk_find_const(data, data + dataSize, "bKGD");
+    if (chunkData) {
+        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+        if (state.info_png.background_defined) {
+            hasBackground = true;
+            hasBlackBackground =
+                state.info_png.background_r == 0 && // gray/pallete uses this only
+                state.info_png.background_g == 0 &&
+                state.info_png.background_b == 0;
+        }
+    }
     
     string info;
 
@@ -2117,7 +2160,8 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
             "colr: %s\n"
             "alph: %s\n"
             "palt: %s\n"
-            "srgb: %s\n",
+            "srgb: %s\n"
+            "bkgd: %s\n",
             textureTypeName(MyMTLTextureType2D),
             width, height,
             width * height / (1000.0f * 1000.0f),
@@ -2125,7 +2169,9 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
             hasColor ? "y" : "n",
             hasAlpha ? "y" : "n",
             hasPalette ? "y" : "n",
-            isSrgb ? "y" : "n");
+            isSrgb ? "y" : "n",
+            hasBackground ? "y" : "n"
+            );
     info += tmp;
 
     // optional block with ppi

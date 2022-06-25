@@ -45,7 +45,8 @@ public:
     
     // set state off png blocks
     void setSrgbState(bool isSrgb, bool hasSrgbBlock, bool hasNonSrgbBlocks);
-
+    void setBackgroundState(bool hasBlackBackground) { _hasBlackBackground = hasBlackBackground; }
+    
     // convert mip level of explicit format to single-image
     bool loadImageFromKTX(const KTXImage& image, uint32_t mipNumber = 0);
 
@@ -72,6 +73,8 @@ public:
     bool hasSrgbBlock() const { return _hasSrgbBlock; }
     bool hasNonSrgbBlocks() const { return _hasNonSrgbBlocks; }
     
+    bool hasBlackBackground() const { return _hasBlackBackground; }
+    
     // if converted a KTX/2 image to Image, then this field will be non-zero
     uint32_t chunksY() const { return _chunksY; }
     void setChunksY(uint32_t chunksY) { _chunksY = chunksY; }
@@ -93,9 +96,13 @@ private:
     bool _hasColor = true;
     bool _hasAlpha = true;
 
+    // track to fix incorrect sRGB state from Figma/Photoshop on PNG files
     bool _isSrgb = false;
     bool _hasNonSrgbBlocks = false;
     bool _hasSrgbBlock = false;
+    
+    // track to fix Apple Finder previews that are always white background
+    bool _hasBlackBackground = false;
     
     // this is the entire strip data, float version can be passed for HDR
     // sources always 4 channels RGBA for 8 and 32f data.  16f promoted to 32f.
