@@ -2524,29 +2524,29 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     uberLevel = 0;
                     maxPartitions = 0;
                     bc7params.m_try_least_squares = false;
-                    bc7params.m_mode_partition_estimation_filterbank = true;
+                    bc7params.m_mode17_partition_estimation_filterbank = true;
                 }
                 else if (info.quality <= 40) {
                     uberLevel = 0;
                     maxPartitions = 16;
                     bc7params.m_try_least_squares = false;
-                    bc7params.m_mode_partition_estimation_filterbank = true;
+                    bc7params.m_mode17_partition_estimation_filterbank = true;
                 }
                 else if (info.quality <= 90) {
                     uberLevel = 1;
                     maxPartitions = 64;
                     bc7params.m_try_least_squares = true;  // true = 0.7s on test case
-                    bc7params.m_mode_partition_estimation_filterbank = true;
+                    bc7params.m_mode17_partition_estimation_filterbank = true;
                 }
                 else {
                     uberLevel = 4;
                     maxPartitions = 64;
                     bc7params.m_try_least_squares = true;
-                    bc7params.m_mode_partition_estimation_filterbank = true;
+                    bc7params.m_mode17_partition_estimation_filterbank = true;
                 }
 
                 bc7params.m_uber_level = std::min(uberLevel, (uint32_t)BC7ENC_MAX_UBER_LEVEL);
-                bc7params.m_max_partitions_mode = std::min(maxPartitions, (uint32_t)BC7ENC_MAX_PARTITIONS1);
+                bc7params.m_max_partitions = std::min(maxPartitions, (uint32_t)BC7ENC_MAX_PARTITIONS);
             }
             else if (info.pixelFormat == MyMTLPixelFormatBC1_RGBA ||
                      info.pixelFormat == MyMTLPixelFormatBC1_RGBA_sRGB ||
