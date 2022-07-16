@@ -451,7 +451,8 @@ namespace Etc
 				float fGrayDistance2ToColor2 = CalcGrayDistance2(m_pafrgbaSource[uiPixel], m_frgbaOriginalColor2_TAndH);
 
 				ColorFloatRGBA frgbaAlphaWeightedSource = m_pafrgbaSource[uiPixel] * alpha;
-					
+                frgbaAlphaWeightedSource.fA = 1.0f;
+                
 				if (fGrayDistance2ToColor1 <= fGrayDistance2ToColor2)
 				{
 					fPixelsCloserToColor1 += alpha;
@@ -468,9 +469,13 @@ namespace Etc
 				break;
 			}
 
+            // this doesn't scale alpha
 			ColorFloatRGBA frgbAvgColor1Pixels = (frgbSumPixelsCloserToColor1 * (1.0f / fPixelsCloserToColor1)).QuantizeR4G4B4();
 			ColorFloatRGBA frgbAvgColor2Pixels = (frgbSumPixelsCloserToColor2 * (1.0f / fPixelsCloserToColor2)).QuantizeR4G4B4();
 
+            frgbAvgColor1Pixels.fA = 1.0f;
+            frgbAvgColor2Pixels.fA = 1.0f;
+            
 			if (frgbAvgColor1Pixels.fR == m_frgbaOriginalColor1_TAndH.fR &&
 				frgbAvgColor1Pixels.fG == m_frgbaOriginalColor1_TAndH.fG &&
 				frgbAvgColor1Pixels.fB == m_frgbaOriginalColor1_TAndH.fB &&

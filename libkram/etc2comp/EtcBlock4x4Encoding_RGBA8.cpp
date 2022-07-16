@@ -145,7 +145,7 @@ namespace Etc
             m_boolDone = true;
         }
         else if ((sourceAlphaMix == Block4x4::SourceAlphaMix::ALL_ZERO_ALPHA) ||
-                (sourceAlphaMix == Block4x4::SourceAlphaMix::TRANSPARENT))
+                 (sourceAlphaMix == Block4x4::SourceAlphaMix::TRANSPARENT))
         {
             // set the A8 portion
             m_fBase = 0;
@@ -504,6 +504,9 @@ namespace Etc
 		{
             m_alpha.PerformIteration(a_fEffort);
             
+            /* TODO: can only do this if color if encoding premul color
+                but kram already knocks out all the color channels in this cae
+             
             // this skips writing out color too
             if (m_pblockParent->GetSourceAlphaMix() == Block4x4::SourceAlphaMix::TRANSPARENT)
             {
@@ -530,6 +533,7 @@ namespace Etc
                 m_boolDone = true;
                 //m_uiEncodingIterations++;
             }
+            */
 		}
 
         if (!m_boolDone)

@@ -409,7 +409,7 @@ namespace Etc
 			ColorFloatRGBA frgbaSumUR = m_pafrgbaSource[8] + m_pafrgbaSource[9] + m_pafrgbaSource[12] + m_pafrgbaSource[13];
 			ColorFloatRGBA frgbaSumLR = m_pafrgbaSource[10] + m_pafrgbaSource[11] + m_pafrgbaSource[14] + m_pafrgbaSource[15];
 
-            // aveerage value of 8 pixels for each of the 4 corners
+            // average value of 8 pixels for each of the 4 corners
 			m_frgbaSourceAverageLeft = (frgbaSumUL + frgbaSumLL) * 0.125f;
 			m_frgbaSourceAverageRight = (frgbaSumUR + frgbaSumLR) * 0.125f;
 			m_frgbaSourceAverageTop = (frgbaSumUL + frgbaSumUR) * 0.125f;
