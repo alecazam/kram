@@ -72,25 +72,26 @@ struct KramBlit {
                       originalFormat:originalFormat];
 }
 
-// for macOS/win Intel need to decode astc/etc
-// on macOS/arm, the M1 supports all 3 encode formats
-#define DO_DECODE USE_SSE
 
-#if DO_DECODE
 
 // this means format isnt supported on platform, but can be decoded to rgba to
 // display
-bool isDecodeImageNeeded(MyMTLPixelFormat pixelFormat)
+bool isDecodeImageNeeded(MyMTLPixelFormat pixelFormat, MyMTLTextureType type)
 {
     bool needsDecode = false;
 
+#if USE_SSE
     if (isETCFormat(pixelFormat)) {
         needsDecode = true;
     }
     else if (isASTCFormat(pixelFormat)) {
         needsDecode = true;
     }
-
+#else
+    if (isETCFormat(pixelFormat) && type == MyMTLTextureType3D) {
+        needsDecode = true;
+    }
+#endif
     return needsDecode;
 }
 
@@ -98,7 +99,7 @@ bool decodeImage(const KTXImage &image, KTXImage &imageDecoded)
 {
     KramDecoderParams decoderParams;
     KramDecoder decoder;
-
+#if USE_SSE
     if (isETCFormat(image.pixelFormat)) {
         if (!decoder.decode(image, imageDecoded, decoderParams)) {
             return NO;
@@ -109,6 +110,13 @@ bool decodeImage(const KTXImage &image, KTXImage &imageDecoded)
             return NO;
         }
     }
+#else
+    if (isETCFormat(image.pixelFormat) && image.textureType == MyMTLTextureType3D) {
+        if (!decoder.decode(image, imageDecoded, decoderParams)) {
+            return NO;
+        }
+    }
+#endif
     else {
         assert(false);  // don't call this routine if decode not needed
     }
@@ -118,8 +126,6 @@ bool decodeImage(const KTXImage &image, KTXImage &imageDecoded)
 
     return YES;
 }
-
-#endif
 
 #if SUPPORT_RGB
 
@@ -260,8 +266,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
         *originalFormat = (MTLPixelFormat)image.pixelFormat;
     }
 
-#if DO_DECODE
-    if (isDecodeImageNeeded(image.pixelFormat)) {
+    if (isDecodeImageNeeded(image.pixelFormat, image.textureType)) {
         KTXImage imageDecoded;
         if (!decodeImage(image, imageDecoded)) {
             return nil;
@@ -270,7 +275,6 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
         return [self blitTextureFromImage:imageDecoded name:name];
     }
     else
-#endif
     {
         // fast load path directly from mmap'ed data, decompress direct to staging
         return [self blitTextureFromImage:image name:name];
