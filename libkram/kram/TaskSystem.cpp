@@ -480,7 +480,7 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
     
 #if KRAM_MAC
     // don't use this, it's unsupported on ARM chips, and only affinity hints on x64
-//    #if KRAM_SSE
+//    #if USE_SSE
 //    if (!coreInfo.isTranslated) {
 //        thread_affinity_policy_data_t policy = { (int)affinityMask };
 //
