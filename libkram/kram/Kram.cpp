@@ -52,7 +52,7 @@ namespace kram {
 using namespace NAMESPACE_STL;
 
 // lodepng iccp decode is failing when setting this for some reason, find out why
-// Must set in with LODEPNG_NO_COMPILE_ZLIB in lodepng.h if true
+// Must set it with LODEPNG_NO_COMPILE_ZLIB in lodepng.h if true
 static bool useMiniZ = false;
 
 template <typename T>
@@ -64,22 +64,22 @@ void releaseVector(vector<T>& v)
 
 bool isKTXFilename(const char* filename)
 {
-    // should really lookg at first 4 bytes of data
+    // should really look at first 4 bytes of data
     return endsWithExtension(filename, ".ktx");
 }
 bool isKTX2Filename(const char* filename)
 {
-    // should really lookg at first 4 bytes of data
+    // should really look at first 4 bytes of data
     return endsWithExtension(filename, ".ktx2");
 }
 bool isDDSFilename(const char* filename)
 {
-    // should really lookg at first 4 bytes of data
+    // should really look at first 4 bytes of data
     return endsWithExtension(filename, ".dds");
 }
 bool isPNGFilename(const char* filename)
 {
-    // should really lookg at first 4 bytes of data
+    // should really look at first 4 bytes of data
     return endsWithExtension(filename, ".png");
 }
 

@@ -511,6 +511,11 @@ bool DDSHelper::load(const uint8_t* data, size_t dataSize, KTXImage& image, bool
                 size_t dstOffset = image.chunkOffset(mipNum, chunkNum);
                 size_t mipLength = image.mipLevels[mipNum].length;
         
+                if ((mipDataOffset + srcOffset + mipLength) > dataSize) {
+                    KLOGE("kram", "source image data incomplete");
+                    return false;
+                }
+                
                 memcpy(dstImageData + dstOffset, srcImageData + srcOffset, mipLength);
                 
                 srcOffset += mipLength;
