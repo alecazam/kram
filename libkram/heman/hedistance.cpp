@@ -114,15 +114,20 @@ static void heman_image_destroy(heman_image* img)
 // and an array of (w * h * nbands) floats, in scanline order.  For simplicity
 // the API disallows struct definitions, so this is just an opaque handle.
 
+using hfloat = float;
+
 // 1E20 isn't big enough to process a 2k image with 1 pixel in each corner
-const float INF = 1E20;
+const hfloat INF = 1E20;
 // 2k max image is 11-bits x squared = 22 + 1
 // this is also the limit of single-float precision in the mantissa
-//const float INF = 1E23;
+//const hfloat INF = 1E23;
 
 #define NEW(t, n) (t*)calloc(n, sizeof(t))
 #define SQR(x) ((x) * (x))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+// Compare here
+// https://github.com/prideout/heman/blob/master/src/distance.c
 
 // @ 8k x 8K resolution, this needs 1/2 GB for the fp32 buffers
 // so it resizes to the dst area.  It doesn't re-eval off parabolas until the very end.
@@ -131,8 +136,9 @@ const float INF = 1E20;
 // This is really the sedt (squared euclidian distance transform).
 // The advantage is this can be stored in integer values, but this does parabolic lookup.
 // Also since EDT is done as a separable filter, it completes very quickly in O(N) of two passes.
+
 static void squared_edt(
-    const float* f, float* d, float* z, int32_t* w, int32_t numSrcSamples, int32_t numDstSamples)
+    const hfloat* f, hfloat* d, hfloat* z, int32_t* w, int32_t numSrcSamples, int32_t numDstSamples)
 {
     // hull vertices
     w[0] = 0;
@@ -141,19 +147,20 @@ static void squared_edt(
     z[0] = -INF;
     z[1] = +INF;
     
-    for (int32_t k = 0, q = 1; q < numSrcSamples; ++q) {
+    int32_t k = 0;
+    for (int32_t q = 1; q < numSrcSamples; ++q) {
         int32_t wk = w[k];
-        float s;
+        const hfloat sConst = (f[q] + SQR(q));
         
-        s = ((f[q] - f[wk]) + (float)(SQR(q) - SQR(wk))) / (float)(2 * (q - wk));
+        hfloat s = (sConst - f[wk] - SQR(wk)) / (2 * (q - wk));
         
         // this additional parabolic search completes in 0 or 1 iterations, so algorithm still O(n)
-        // sarch back and replace any higher parabola
+        // search back and replace any higher parabola
         while (s <= z[k]) {
             --k;
             wk = w[k];
             
-            s = ((f[q] - f[wk]) + (float)(SQR(q) - SQR(wk))) / (float)(2 * (q - wk));
+            s = (sConst - f[wk] - SQR(wk)) / (2 * (q - wk));
         }
         
         k++;
@@ -169,24 +176,28 @@ static void squared_edt(
     // Note: this can resample do a different sample count, since the stored parabolas
     // can be evaluated at any point along the curve.
     bool isResampling = numSrcSamples > numDstSamples;
-    float conversion = (numSrcSamples / (float)numDstSamples);
+    float conversion = (numDstSamples / (float)numSrcSamples);
     
-    for (int32_t k = 0, q = 0; q < numDstSamples; ++q) {
-        float qSrc = (float)q;
-        // convert q in dstSamples into sample in srcSamples
-        if (isResampling) {
-            qSrc *= conversion;
-        }
-        
-        // lookup the parabola, and evalute distance squared from that
-        while (z[k + 1] < qSrc) {
+    k = 0;
+    for (int32_t q = 0; q < numSrcSamples; ++q) {
+        // lookup the parabola, and evalute distance-squared from that
+        while (z[k + 1] < q) {
             ++k;
         }
-        int32_t wk = w[k];
-        d[q] = f[wk] + (float)SQR(qSrc - (float)wk);
         
-        // above is adding intersection height to existing sample
+        // convert to dst sample
+        int32_t qDst = q;
+        if (isResampling) {
+            // this may overwrite the same value > 1 time
+            // TODO: what if this skips an entry in d[]? - is that possible
+            qDst = (int32_t)((float)q * conversion); // don't roundf
+            assert(qDst < numDstSamples);
+        }
+        
+        // add intersection height to existing sample
         // of the lowest point intersection
+        int32_t wk = w[k];
+        d[qDst] = f[wk] + SQR(q - wk);
     }
 }
 
@@ -202,18 +213,18 @@ static void transform_to_distance(heman_image* temp, const my_image* src, int32_
     assert(srcWidth >= dstWidth && srcHeight >= dstHeight);
     
     // these can all just be strip buffers per thread, but only one thread
-    // these were originall turned into 2d arrays for omp
+    // these were originally turned into 2d arrays for omp
     int32_t maxDim = MAX(srcWidth, srcHeight);
-    float* f = NEW(float, maxDim);
-    float* d = NEW(float, maxDim);
-    float* z = NEW(float, maxDim+1); // padded by 1
+    hfloat* f = NEW(hfloat, maxDim);
+    hfloat* d = NEW(hfloat, maxDim);
+    hfloat* z = NEW(hfloat, maxDim+1); // padded by 1
     int32_t* w = NEW(int32_t, maxDim);
 
     // process rows
     for (int32_t y = 0; y < srcHeight; ++y) {
         const uint8_t* s = src->data + y * srcWidth;
         
-        // load data into the rows, this is because tmp width is dstWidth, not srcWidth
+        // load data into the rows,
         if (isPositive) {
             for (int32_t x = 0; x < srcWidth; ++x) {
                 f[x] = s[x] ? INF : 0;
@@ -229,6 +240,7 @@ static void transform_to_distance(heman_image* temp, const my_image* src, int32_
         // this is only pulling from closest parabola, not bilerping
         squared_edt(f, d, z, w, srcWidth, dstWidth);
         
+        // now have dstWidth * srcHeight image for column pass below
         float* t = temp->data + y * dstWidth;
         for (int32_t x = 0; x < dstWidth; ++x) {
             t[x] = d[x];
@@ -237,6 +249,7 @@ static void transform_to_distance(heman_image* temp, const my_image* src, int32_
     
     // process columns
     for (int32_t x = 0; x < dstWidth; ++x) {
+        // Note offset by x references a specific column
         float* t = temp->data + x;
         
         for (int32_t y = 0; y < srcHeight; ++y) {
@@ -247,8 +260,9 @@ static void transform_to_distance(heman_image* temp, const my_image* src, int32_
         // this is only pulling from closest parabola, not bilerping
         squared_edt(f, d, z, w, srcHeight, dstHeight);
         
+        // can write over the same src column from t, it's already offet by x
         for (int32_t y = 0; y < dstHeight; ++y) {
-            t[y * dstWidth] = sqrtf(d[y]); // back to distance
+            t[y * dstWidth] = sqrtf(d[y]); // convert d^2 -> d
         }
     }
     
@@ -283,7 +297,6 @@ void heman_distance_create_sdf(const my_image* src, my_image* dst, float& maxD, 
     transform_to_distance(negative, src, dstHeight, false);
     
     if (maxD == 0) {
-        // now find signed distance, and store back into positive array
         float minV = 0.0f, maxV = 0.0f;
         
         for (int32_t y = 0; y < dstHeight; ++y) {

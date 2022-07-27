@@ -1015,6 +1015,8 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     isNormal = args.isNormal;
 
     doSDF = args.doSDF;
+    sdfThreshold = args.sdfThreshold;
+    
     //skipImageLength = args.skipImageLength;
 
     // mips

@@ -2154,7 +2154,7 @@ bool KramEncoder::createMipsFromChunks(
             }
 
             if (info.doSDF) {
-                sdfMipper.init(srcImage, info.isVerbose);
+                sdfMipper.init(srcImage, info.sdfThreshold, info.isVerbose);
             }
             else {
                 // copy and convert to half4 or float4 image

@@ -14,14 +14,15 @@ namespace kram {
 using namespace heman;
 using namespace NAMESPACE_STL;
 
-void SDFMipper::init(ImageData& srcImage, bool isVerbose_)
+void SDFMipper::init(ImageData& srcImage, uint8_t sdfThreshold, bool isVerbose_)
 {
     // this resets maxD, which is determined off first mip generated
     // all mips are using same source, so distances should be same range to
     // scale
     maxD = 0.0;
     isVerbose = isVerbose_;
-
+    threshold = sdfThreshold;
+    
     int32_t w = srcImage.width;
     int32_t h = srcImage.height;
 

@@ -22,7 +22,7 @@ struct my_image {
 
 class SDFMipper {
 public:
-    void init(ImageData& srcImage, bool isVerbose = false);
+    void init(ImageData& srcImage, uint8_t sdfThreshold, bool isVerbose = false);
     void mipmap(ImageData& dstImage, int32_t mipLevel);
 
 private:

@@ -85,6 +85,8 @@ public:
     int32_t chunksX = 0;
     int32_t chunksY = 0;
     int32_t chunksCount = 0;
+    
+    int32_t sdfThreshold = 120;
 };
 
 // preset data that contains all inputs about the encoding
@@ -179,6 +181,9 @@ public:
     int32_t chunksX = 0;
     int32_t chunksY = 0;
     int32_t chunksCount = 0;
+    
+    // This converts incoming image channel to bitmap
+    int32_t sdfThreshold = 120;
 };
 
 bool isSwizzleValid(const char* swizzle);

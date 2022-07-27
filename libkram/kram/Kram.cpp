@@ -1688,6 +1688,7 @@ void kramEncodeUsage(bool showVersion = true)
           "\t [-swizzle rg01]\n"
           "\t [-avg rxbx]\n"
           "\t [-sdf]\n"
+          "\t [-sdfThreshold 120]\n"
           "\t [-premul] [-prezero] [-premulrgb]\n"
           "\t [-gray]\n"
           "\t [-optopaque]\n"
@@ -1767,7 +1768,9 @@ void kramEncodeUsage(bool showVersion = true)
           "\tNormal map rg storage signed for etc/bc (rg01), only unsigned astc L+A (gggr).\n"
           "\t-sdf"
           "\tGenerate single-channel SDF from a bitmap, can mip and drop large mips. Encode to r8, bc4, etc2r, astc4x4 (Unorm LLL1) to encode\n"
-
+          "\t-sdfThreshold 120"
+          "\tSDF generation uses bitmap converted from 8-bit red channel\n"
+          
           "\t-gray"
           "\tConvert to grayscale before premul\n"
 
@@ -2654,6 +2657,21 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
         if (isStringEqual(word, "-sdf")) {
             infoArgs.doSDF = true;
+        }
+        else if (isStringEqual(word, "-sdfThreshold")) {
+            ++i;
+            if (i >= argc) {
+                KLOGE("Kram", "sdfThreshold arg invalid");
+                error = true;
+                break;
+            }
+            
+            infoArgs.sdfThreshold = atoi(args[i]);
+            if (infoArgs.sdfThreshold < 1 || infoArgs.sdfThreshold > 255) {
+                KLOGE("Kram", "sdfThreshold arg invalid");
+                error = true;
+                break;
+            }
         }
         else if (isStringEqual(word, "-optopaque")) {
             infoArgs.optimizeFormatForOpaque = true;
