@@ -2197,10 +2197,9 @@ bool KramEncoder::createMipsFromChunks(
             }
             else {
                 if (info.doSDF) {
-                    // have to process all images to SDF
                     // sdf mipper has to build from origin sourceImage
                     // but it can in-place write to the same dstImage
-                    sdfMipper.mipmap(dstImageData, mipLevel);
+                    sdfMipper.mipmap(dstImageData, mipLevel + numSkippedMips);
 
                     w = dstImageData.width;
                     h = dstImageData.height;
