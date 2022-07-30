@@ -2821,20 +2821,22 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
 
 
-static string findNormalMapFromAlbedoFilename(const char* filename)
+static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector<string>& normalFilenames)
 {
+    normalFilenames.clear();
+    
     string filenameShort = filename;
     
     const char* ext = strrchr(filename, '.');
 
     auto dotPos = filenameShort.find_last_of(".");
     if (dotPos == string::npos)
-        return "";
+        return;
     
     // now chop off the extension
     filenameShort = filenameShort.substr(0, dotPos);
 
-    const char* searches[] = { "-a", "-d" };
+    const char* searches[] = { "-a", "-d", "_Color", "_baseColor" };
     
     for (uint32_t i = 0; i < ArrayCount(searches); ++i) {
         const char* search = searches[i];
@@ -2844,11 +2846,20 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         }
     }
      
-    // may need to try various names, and see if any exist
-    filenameShort += "-n";
-    filenameShort += ext;
+    const char* suffixes[] = { "-n", "_normal", "_Normal" };
     
-    return filenameShort;
+    string normalFilename;
+    for (uint32_t i = 0; i < ArrayCount(suffixes); ++i) {
+        const char* suffix = suffixes[i];
+        
+        // may need to try various names, and see if any exist
+        normalFilename = filenameShort;
+        normalFilename += suffix;
+        normalFilename += ext;
+        
+        normalFilenames.push_back( normalFilename );
+    }
+    
 }
 
 
@@ -2868,15 +2879,22 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
         return NO;
     }
 
+    vector<string> normalFilenames;
     string normalFilename;
     bool hasNormal = false;
 
     TexContentType texContentType = findContentTypeFromFilename(filename);
     if (texContentType == TexContentTypeAlbedo) {
-        normalFilename = findNormalMapFromAlbedoFilename(filename);
+        findPossibleNormalMapFromAlbedoFilename(filename, normalFilenames);
      
-        if (!normalFilename.empty())
-            hasNormal = [self findFilenameInFolders:normalFilename];
+       for (const auto& name: normalFilenames) {
+            hasNormal = [self findFilenameInFolders:name];
+            
+            if (hasNormal) {
+                normalFilename = name;
+                break;
+            }
+        }
     }
     
     //-------------------------------
@@ -2986,15 +3004,20 @@ static string findNormalMapFromAlbedoFilename(const char* filename)
     
     string normalFilename;
     bool hasNormal = false;
-
+    vector<string> normalFilenames;
     
     TexContentType texContentType = findContentTypeFromFilename(filename);
     if (texContentType == TexContentTypeAlbedo) {
-        normalFilename = findNormalMapFromAlbedoFilename(filename);
+        findPossibleNormalMapFromAlbedoFilename(filename, normalFilenames);
      
-        if (!normalFilename.empty())
-            hasNormal = _zip.extractRaw(normalFilename.c_str(), &imageNormalData,
+        for (const auto& name: normalFilenames) {
+            hasNormal = _zip.extractRaw(name.c_str(), &imageNormalData,
                                         imageNormalDataLength);
+            if (hasNormal) {
+                normalFilename = name;
+                break;
+            }
+        }
     }
 
     //---------------------------

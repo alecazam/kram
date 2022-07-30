@@ -3610,18 +3610,29 @@ TexContentType findContentTypeFromFilename(const char* filename)
     filenameShort = filenameShort.substr(0, dotPos);
 
     // dealing with png means fabricating the format, texture type, and other data
-    if (endsWith(filenameShort, "-n") || endsWith(filenameShort, "_normal")) {
-        return TexContentTypeNormal;
-    }
-    else if (endsWith(filenameShort, "-sdf")) {
+    if (endsWith(filenameShort, "-sdf")) {
         return TexContentTypeSDF;
     }
     else if (endsWith(filenameShort, "-h")) {
         return TexContentTypeHeight;
     }
-    else if (endsWith(filenameShort, "-a") || endsWith(filenameShort, "-d") || endsWith(filenameShort, "_baseColor")) {
+    else if (endsWith(filenameShort, "-n") ||
+             endsWith(filenameShort, "_normal") ||
+             endsWith(filenameShort, "_Normal")
+             )
+    {
+        return TexContentTypeNormal;
+    }
+    else if (endsWith(filenameShort, "-a") ||
+             endsWith(filenameShort, "-d") ||
+             endsWith(filenameShort, "_baseColor") ||
+             endsWith(filenameShort, "_Color")
+             )
+    {
         return TexContentTypeAlbedo;
     }
+    
+    // TODO: also _AO, _Metallic, _Roughness
     
     // fallback to albedo for now
     return TexContentTypeAlbedo;
