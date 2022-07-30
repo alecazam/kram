@@ -201,10 +201,11 @@ typedef struct {
         texture.label = image.name ? image.name : image.url.lastPathComponent;
     } else if (image.bufferView != nil) {
         GLTFBufferView *bufferView = image.bufferView;
-        NSData *data = [NSData dataWithBytesNoCopy:bufferView.buffer.contents + bufferView.offset length:bufferView.length freeWhenDone:NO];
+        const uint8_t* buffer = bufferView.buffer.contents + bufferView.offset;
+        NSData *data = [NSData dataWithBytesNoCopy:buffer length:bufferView.length freeWhenDone:NO];
         
-        // TODO: identify jpg data by first 4 chars, hande with textureLoaderJpb
-        bool isJpg = false;
+        // identify jpg data by first 3 chars, handle with textureLoaderJpb
+        bool isJpg = buffer[0] == 0xFF && buffer[1] == 0xD8 && buffer[2] == 0xFF;
         
         if (isJpg)
             texture = [self.textureLoaderJpg newTextureWithData:data options:options error:&error];
