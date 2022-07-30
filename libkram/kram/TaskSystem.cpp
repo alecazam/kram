@@ -473,30 +473,16 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
     
     // for now only allow single core mask
     uint64_t affinityMask = ((uint64_t)1) << threadIndex;
-          
+    
     // These are used in most of the paths
     macroUnusedVar(handle);
     macroUnusedVar(affinityMask);
     
-#if KRAM_MAC
-    // don't use this, it's unsupported on ARM chips, and only affinity hints on x64
-//    #if USE_SSE
-//    if (!coreInfo.isTranslated) {
-//        thread_affinity_policy_data_t policy = { (int)affinityMask };
-//
-//        // TODO: consider skipping affinity on macOS altogether
-//        // this is just a hint on x64-based macOS
-//        int returnVal = thread_policy_set(pthread_mach_thread_np(handle), THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
-//
-//        if (returnVal != 0) {
-//            // TODO: unsupported on iOS/M1, only have QoS and priority
-//            // big P cores can also be disabled to resolve thermal throttling
-//        }
-//    }
-//    #endif
+    bool success = false;
     
-#elif KRAM_IOS
-    // no support
+#if KRAM_MAC || KRAM_IOS
+    // no support, don't use thread_policy_set it's not on M1 and just a hint
+    success = true;
     
 #elif KRAM_ANDROID
     cpu_set_t cpuset;
@@ -506,16 +492,57 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
     // convert pthread to pid
     pid_t pid;
     pthread_getunique_np(handle, &pid);
-    if (!sched_setaffinity(pid, sizeof(cpu_set_t), &cpuset)) {
-        // TODO: this can fail on some/all cores
-    }
-
+    success = sched_setaffinity(pid, sizeof(cpu_set_t), &cpuset) == 0;
+    
 #elif KRAM_WIN
     // each processor group only has 64 bits
     DWORD_PTR mask = SetThreadAffinityMask(handle, *(const DWORD_PTR*)&affinityMask);
-    if (mask == 0) {
-        // TODO: failure case
+    success = mask != 0;
+    
+#if 0 // TODO: finish this
+    // Revisit Numa groups on Win, have 128-core/256 ThreadRipper
+    // https://chrisgreendevelopmentblog.wordpress.com/2017/08/29/thread-pools-and-windows-processor-groups/
+    
+    // win thread pool, but seems to limit to group 0
+    //  https://github.com/stlab/libraries/blob/develop/stlab/concurrency/default_executor.hpp
+    
+    int32_t threadIndexToGroup(int32_t threadIndex)
+    {
+        for (int32_t i = 0; i < nNumGroups; i++)
+        {
+            if (threadIndex < totalCores[i])
+                return i;
+        }
+        return 0; // error
     }
+    
+    void setupWinCoreGroups()
+    {
+        // Also have to test for HT on these, and fix remap table.
+        // Table will need to be larger to accomodate.
+        
+        int32_t nNumGroups = GetActiveProcessorGroupCount();
+        int32_t numCores[16] = {}; // TODO: make members
+        int32_t totalCores[16] = 0;
+        for (int32_t i = 0; i < nNumGroups; i++)
+        {
+            numCores[i] = GetMaximumProcessorCount(i);
+            totalCores[i] += numCores[i];
+        }
+    }
+
+    // have to adjust the mask for the core group
+    int32_t groupNum = threadIndexToGroup(threadIndex);
+    int32_t groupThreadIndex = (groupNum == 0) ? 0 : totalCores[groupNum-1];
+    affinityMask = ((uint64_t)1) << (threadIndex - groupThreadIndex);
+
+    // set group and affinity
+    GROUP_AFFINITY affinity;
+    affinity.group = groupNum;
+    affinity.mask = *(const DWORD_PTR*)&affinityMask;
+    success = SetThreadGroupAffinity(hndl, &affinity, nullptr);
+#endif
+    
 #else
     // most systems are pthread-based, this is represented with array of bits
     cpu_set_t cpuset;
@@ -523,11 +550,10 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
     CPU_SET(threadIndex, &cpuset);
 
     // TODO: check return
-    int returnVal = pthread_setaffinity_np(handle, sizeof(cpu_set_t), &cpuset);
-    if (returnVal != 0) {
-        // TODO: linux pthread failure case
-    }
+    success = pthread_setaffinity_np(handle, sizeof(cpu_set_t), &cpuset) == 0;
 #endif
+    if (!success)
+        KLOGW("Thread", "Failed to set affinity");
 }
 
 void task_system::set_current_affinity(uint32_t threadIndex)
