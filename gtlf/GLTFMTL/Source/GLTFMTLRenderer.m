@@ -202,7 +202,7 @@ typedef struct {
     } else if (image.bufferView != nil) {
         GLTFBufferView *bufferView = image.bufferView;
         const uint8_t* buffer = bufferView.buffer.contents + bufferView.offset;
-        NSData *data = [NSData dataWithBytesNoCopy:buffer length:bufferView.length freeWhenDone:NO];
+        NSData *data = [NSData dataWithBytesNoCopy:(void*)buffer length:bufferView.length freeWhenDone:NO];
         
         // identify jpg data by first 3 chars, handle with textureLoaderJpb
         bool isJpg = buffer[0] == 0xFF && buffer[1] == 0xD8 && buffer[2] == 0xFF;

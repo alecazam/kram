@@ -3631,8 +3631,20 @@ TexContentType findContentTypeFromFilename(const char* filename)
     {
         return TexContentTypeAlbedo;
     }
-    
-    // TODO: also _AO, _Metallic, _Roughness
+    else if (endsWith(filenameShort, "-ao") ||
+             endsWith(filenameShort, "_AO")
+             )
+    {
+        return TexContentTypeAO;
+    }
+    else if (endsWith(filenameShort, "-mr") ||
+             endsWith(filenameShort, "_Metallic") ||
+             endsWith(filenameShort, "_Roughness") ||
+             endsWith(filenameShort, "_MetaliicRoughness")
+             )
+    {
+        return TexContentTypeMetallicRoughness;
+    }
     
     // fallback to albedo for now
     return TexContentTypeAlbedo;

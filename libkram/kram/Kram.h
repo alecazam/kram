@@ -80,7 +80,9 @@ enum TexContentType
     TexContentTypeAlbedo,
     TexContentTypeNormal,
     TexContentTypeHeight,
-    TexContentTypeSDF
+    TexContentTypeSDF,
+    TexContentTypeAO,
+    TexContentTypeMetallicRoughness,
 };
 
 // this is a helper to override the format, since sRGB blocks and settings
