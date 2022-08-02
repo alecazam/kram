@@ -1282,9 +1282,10 @@ inline const char* toFilenameShort(const char* filename) {
     // should really have 3 modes, unmul, default, premul
     bool isPNG = isPNGFilename(fullFilename.c_str());
 
-    _showSettings->isPremul = false;
+    _showSettings->isPremul = image.isPremul();
+    _showSettings->doShaderPremul = false;
     if (texContentType == TexContentTypeAlbedo && isPNG) {
-        _showSettings->isPremul =
+        _showSettings->doShaderPremul =
             true;  // convert to premul in shader, so can see other channels
     }
 
@@ -1457,7 +1458,7 @@ float4 inverseScaleSquared(const float4x4 &m)
         *(Uniforms *)_dynamicUniformBuffer[_uniformBufferIndex].contents;
 
     uniforms.isNormal = _showSettings->texContentType == TexContentTypeNormal;
-    uniforms.isPremul = _showSettings->isPremul;
+    uniforms.doShaderPremul = _showSettings->doShaderPremul;
     uniforms.isSigned = _showSettings->isSigned;
     uniforms.isSwizzleAGToRG = _showSettings->isSwizzleAGToRG;
 

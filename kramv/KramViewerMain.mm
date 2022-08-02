@@ -1906,7 +1906,7 @@ enum TextSlot
 
     Renderer* renderer = (Renderer*)self.delegate;
     auto showAllState = toState(_showSettings->isShowingAllLevelsAndMips);
-    auto premulState = toState(_showSettings->isPremul);
+    auto premulState = toState(_showSettings->doShaderPremul);
     auto signedState = toState(_showSettings->isSigned);
     auto checkerboardState = toState(_showSettings->isCheckerboardShown);
     auto previewState = toState(_showSettings->isPreview);
@@ -2434,10 +2434,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     // toggle premul alpha vs. unmul
     else if (action == _actionPremul) {
         if (!action->isHidden) {
-            _showSettings->isPremul = !_showSettings->isPremul;
+            _showSettings->doShaderPremul = !_showSettings->doShaderPremul;
             isChanged = true;
             text = "Premul ";
-            text += _showSettings->isPremul ? "On" : "Off";
+            text += _showSettings->doShaderPremul ? "On" : "Off";
         }
     }
 
@@ -2948,6 +2948,25 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     // was using subtitle, but that's macOS 11.0 feature.
     string title = "kramv - ";
     title += formatTypeName(_showSettings->originalFormat);
+    title += " - ";
+    
+    // identify what we think the content type is
+    const char* typeText = "";
+    switch(_showSettings->texContentType) {
+        case TexContentTypeAlbedo: typeText = "a"; break;
+        case TexContentTypeNormal: typeText = "n"; break;
+        case TexContentTypeAO: typeText = "ao"; break;
+        case TexContentTypeMetallicRoughness: typeText = "mr"; break;
+        case TexContentTypeSDF: typeText = "sdf"; break;
+        case TexContentTypeHeight: typeText = "h"; break;
+    }
+    title += typeText;
+    // add some info about the texture to avoid needing to go to info
+    // srgb src would be useful too.
+    if (_showSettings->texContentType == TexContentTypeAlbedo && _showSettings->isPremul) {
+        title += ",p";
+        
+    }
     title += " - ";
     title += filenameShort;
 

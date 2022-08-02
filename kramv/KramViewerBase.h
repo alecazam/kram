@@ -123,7 +123,8 @@ public:
 
     //bool isNormal = false;
     bool isSigned = false;
-    bool isPremul = false;  // needed for png which only holds unmul
+    bool isPremul = false; // copy of whether image.isPremul()
+    bool doShaderPremul = false; // needed for png which only holds unmul
     bool isSwizzleAGToRG = false;
     //bool isSDF = false;
     TexContentType texContentType = TexContentTypeUnknown;

@@ -1000,7 +1000,7 @@ float4 DrawPixels(
             }
             
             // to premul, but also need to see without premul
-            if (uniforms.isPremul) {
+            if (uniforms.doShaderPremul) {
                 c = toPremul(c);
             }
         }
@@ -1050,7 +1050,7 @@ float4 DrawPixels(
             if (uniforms.isSigned) {
                 // Note: premul on signed should occur while still signed, since it's a pull to zoer
                 // to premul, but also need to see without premul
-                if (uniforms.isPremul) {
+                if (uniforms.doShaderPremul) {
                     c = toPremul(c);
                 }
                 
@@ -1058,7 +1058,7 @@ float4 DrawPixels(
                 c.xyz = toUnorm(c.xyz);
             }
             else {
-                if (uniforms.isPremul) {
+                if (uniforms.doShaderPremul) {
                     c = toPremul(c);
                 }
             }

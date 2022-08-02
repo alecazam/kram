@@ -118,7 +118,7 @@ struct Uniforms {
     bool isSigned;
     bool isNormal;
     bool isSwizzleAGToRG;
-    bool isPremul;
+    bool doShaderPremul;
 
     bool isCheckerboardShown;
     bool isWrap;
