@@ -2959,6 +2959,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         case TexContentTypeMetallicRoughness: typeText = "mr"; break;
         case TexContentTypeSDF: typeText = "sdf"; break;
         case TexContentTypeHeight: typeText = "h"; break;
+        case TexContentTypeUnknown: typeText = ""; break;
     }
     title += typeText;
     // add some info about the texture to avoid needing to go to info
