@@ -7,25 +7,15 @@ endif()
 
 #-----------------------------------------------------
 
-set(BUILD_IOS FALSE)
 set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
-set(BUILD_UNIX FALSE)
 
 if (APPLE)
-    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
-        message("build for iOS")
-        set(BUILD_IOS TRUE)
-    else()
-        message("build for macOS")
-        set(BUILD_MAC TRUE)
-    endif()
+    message("build for macOS")
+    set(BUILD_MAC TRUE)
 elseif (WIN32)
     message("build for win x64")
     set(BUILD_WIN TRUE)
-elseif (UNIX AND NOT APPLE)
-    message("build for unix")
-    set(BUILD_UNIX TRUE)
 endif()
 
 #-----------------------------------------------------
@@ -54,10 +44,7 @@ set(CMAKE_CXX_EXTENSIONS NO)
 # set(CMAKE_OSX_SYSROOT macos)  # this doesn't work
 
 # CMAKE_OSX_DEPLOYMENT_TARGET must be set as a CACHE variable, or it will be stripped
-if (BUILD_IOS)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.1" CACHE STRING "Minimum iOS")
-    set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Architecture iOS")
-elseif (BUILD_MAC)
+if (BUILD_MAC)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS")
     set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)" CACHE STRING "Architecture macOS")
 endif()
@@ -66,8 +53,6 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 set(CMAKE_BUILD_TYPE Release)
 
 if (BUILD_MAC)
-    set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
-elseif (BUILD_IOS)
     set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
 elseif (BUILD_WIN)
     set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
@@ -80,7 +65,7 @@ endif()
 # No way to make xcode workspaces, but could do manually.
 set(myTargetWorkspace kramWorkspace)
 
-if (BUILD_MAC OR BUILD_IOS)
+if (BUILD_MAC)
     project(${myTargetWorkspace} LANGUAGES C CXX OBJCXX)
 elseif (BUILD_WIN)
     project(${myTargetWorkspace} LANGUAGES C CXX)
@@ -108,7 +93,7 @@ endif()
 # https://discourse.cmake.org/t/specifying-cmake-osx-sysroot-breaks-xcode-projects-but-no-other-choice/2532/8
 # use snipet from Alian Martin to validate SDK
 
-if (BUILD_MAC OR BUILD_IOS)
+if (BUILD_MAC)
     if(NOT DEFINED CMAKE_OSX_SYSROOT)
         message(FATAL_ERROR "Cannot check SDK version if CMAKE_OSX_SYSROOT is not defined."
     )
@@ -129,18 +114,8 @@ if (BUILD_MAC OR BUILD_IOS)
         OUTPUT_VARIABLE SDK_VERSION
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-
-    if (BUILD_IOS)
-        message("iOS SDK ${SDK_VERSION}")
-        message("iOS deploy ${CMAKE_OSX_DEPLOYMENT_TARGET}")
-        message("iOS arch ${CMAKE_OSX_ARCHITECTURES}")
-                
-        if (SDK_VERSION VERSION_LESS XCODE_MIN_SDK_IOS)
-            message(FATAL_ERROR "This project requires at least iPhoneOS ${XCODE_MIN_SDK_IOS}"
-        )
-        endif()
-        
-    elseif (BUILD_MAC)
+    
+    if (BUILD_MAC)
         message("macOS SDK ${SDK_VERSION}")
         message("macOS deploy ${CMAKE_OSX_DEPLOYMENT_TARGET}")
         message("macOS arch ${CMAKE_OSX_ARCHITECTURES}")
@@ -157,9 +132,7 @@ endif()
 # was considering platform-specific builds, but mac/win don't conflict
 set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
     
-#if (BUILD_IOS)
-#    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/ios)
-#elseif (BUILD_MAC)
+#if (BUILD_MAC)
 #    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/mac)
 #elseif (BUILD_WIN)
 #    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin/win)

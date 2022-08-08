@@ -2,25 +2,15 @@
 
 #-----------------------------------------------------
 
-set(BUILD_IOS FALSE)
 set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
-set(BUILD_UNIX FALSE)
 
 if (APPLE)
-    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
-        message("build for iOS")
-        set(BUILD_IOS TRUE)
-    else()
-        message("build for macOS")
-        set(BUILD_MAC TRUE)
-    endif()
+    message("build for macOS")
+    set(BUILD_MAC TRUE)
 elseif (WIN32)
     message("build for win x64")
     set(BUILD_WIN TRUE)
-elseif (UNIX AND NOT APPLE)
-    message("build for unix")
-    set(BUILD_UNIX TRUE)
 endif()
 
 #-----------------------------------------------------
@@ -34,6 +24,7 @@ option(BCENC "Compile BCenc Encoder" ON)
 option(COMP "Compile Compressonator Encoder" ON)
 
 option(EASTL "Compile EASTL" OFF)
+option(FASTL "Compile FASTL" ON)
 
 # convert ON to 1, UGH
 set(COMPILE_ATE 0)
@@ -43,7 +34,7 @@ set(COMPILE_SQUISH 0)
 set(COMPILE_ASTCENC 0)
 set(COMPILE_COMP 0)
 
-if (ATE AND (BUILD_MAC OR BUILD_IOS))
+if (ATE AND BUILD_MAC)
     set(COMPILE_ATE 1)
 endif()
 
@@ -67,13 +58,21 @@ if (COMP)
     set(COMPILE_COMP 1)
 endif()
 
+#-----------------------------------------------------
+# stl used
 
-# this isn't an encoder, but replaces stl with eastl
+# replaces parts of std/stl with eastl
 set(COMPILE_EASTL 0)
-
 if (EASTL)
     set(COMPILE_EASTL 1)
 endif()
+
+# replace parts of std/stdl with fastl
+set(COMPILE_EASTL 0)
+if (FASTL)
+    set(COMPILE_FASTL 1)
+endif()
+
 
 #-----------------------------------------------------
 # libkram
@@ -133,6 +132,9 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/eastl/*.cpp"
     "${SOURCE_DIR}/eastl/*.h"
     
+    "${SOURCE_DIR}/fastl/*.cpp"
+    "${SOURCE_DIR}/fastl/*.h"
+
     "${SOURCE_DIR}/lodepng/lodepng.cpp"
     "${SOURCE_DIR}/lodepng/lodepng.h"
 
@@ -164,9 +166,6 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
 if (BUILD_WIN)
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.mm$")
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.h$")
-elseif (BUILD_UNIX)
-    list(FILTER libSources EXCLUDE REGEX ".*ateencoder.mm$")
-    list(FILTER libSources EXCLUDE REGEX ".*ateencoder.h$")
 endif()
 
 # remove files not used
@@ -194,6 +193,8 @@ target_include_directories(${myTargetLib} PUBLIC
     
     # why are these public, must be in public headers
     "${SOURCE_DIR}/eastl/include/"
+
+    "${SOURCE_DIR}/fastl/"
 )
 
 target_include_directories(${myTargetLib} PRIVATE
@@ -213,11 +214,12 @@ target_include_directories(${myTargetLib} PRIVATE
 # only add sources to the library
 target_sources(${myTargetLib} PRIVATE ${libSources})
 
+# note: mac build is all done via Xcode workspace/project now, this cmake build is legacy
 if (BUILD_MAC)
     set_target_properties(${myTargetLib} PROPERTIES
         # Note: match this up with CXX version
         # c++11 min
-        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14"
+        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++17"
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
 
         # avx1 (ignored by universal?)
@@ -231,31 +233,13 @@ if (BUILD_MAC)
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
     )
 
-    target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h -W -Wall)
-    
-elseif (BUILD_IOS)
-    set_target_properties(${myTargetLib} PROPERTIES
-        # Note: match this up with CXX version
-        # c++11 min
-        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14"
-        XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
-
-        # avx1
-        #XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx"
-        
-        # turn off exceptions/rtti
-        XCODE_ATTRIBUTE_GCC_ENABLE_CPP_EXCEPTIONS NO
-        XCODE_ATTRIBUTE_GCC_ENABLE_CPP_RTTI NO
-        
-        # can't believe this isn't on by default in CMAKE
-        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
-    )
-
+    # TODO: switch to pch setup (KramConfig.pch)
     target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h -W -Wall)
     
 elseif (BUILD_WIN)
     
     # TODO: switch to add_target_definitions
+    # TODO: turn on C++17
 
     # to turn off exceptions/rtti use /GR and /EHsc replacement
     string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -269,12 +253,7 @@ elseif (BUILD_WIN)
     
     # fix STL
     target_compile_definitions(${myTargetLib} PRIVATE "-D_D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
-    
-elseif (BUILD_UNIX)
-    # TODO: finish this
-    
-    target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h -W -Wall)
-    
+        
 endif()
 
 target_compile_definitions(${myTargetLib} PUBLIC
@@ -285,4 +264,5 @@ target_compile_definitions(${myTargetLib} PUBLIC
     "-DCOMPILE_ASTCENC=${COMPILE_ASTCENC}"
     "-DCOMPILE_COMP=${COMPILE_COMP}"
     "-DCOMPILE_EASTL=${COMPILE_EASTL}"
+    "-DCOMPILE_FASTL=${COMPILE_FASTL}"
 )
