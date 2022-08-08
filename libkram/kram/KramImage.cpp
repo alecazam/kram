@@ -1689,7 +1689,7 @@ bool KramEncoder::saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compr
 
         // allocate big enough to hold entire uncompressed level
         vector<uint8_t> compressedData;
-        compressedData.resize(mz_compressBound(ktx2Levels.front().length));  // largest mip
+        compressedData.resize(mz_compressBound(ktx2Levels[0].length));  // largest mip
         size_t compressedDataSize = 0;
 
         // reuse a context here

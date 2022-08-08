@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "KramConfig.h"
+//#include "KramConfig.h"
 
 // this holds onto the open file and address from mmap operation
 class MmapHelper {

@@ -7,7 +7,7 @@
 #include <cassert>
 //#include <string>
 
-#include "KramConfig.h"
+//#include "KramConfig.h"
 
 namespace kram {
 

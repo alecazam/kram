@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "KramConfig.h"
+//#include "KramConfig.h"
 
 namespace kram {
 using namespace NAMESPACE_STL;

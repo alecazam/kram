@@ -1279,8 +1279,12 @@ void KTXImage::initProps(const uint8_t* propsData, size_t propDataSize)
             }
 
             //LOGD("KTXImage", "KTXProp '%s': %s\n", keyStart, valueStart);
-
-            props.push_back(make_pair(string((const char*)keyStart), string((const char*)valueStart)));
+            auto propPair = NAMESPACE_STL::make_pair(
+                string((const char*)keyStart),
+                string((const char*)valueStart)
+            );
+                          
+            props.emplace_back(propPair);
 
             // pad to 4 byte alignment
             int32_t valuePadding = 3 - ((dataSize + 3) % 4);
@@ -1297,7 +1301,11 @@ void KTXImage::addProp(const char* name, const char* value)
             return;
         }
     }
-    props.push_back(make_pair(string(name), string(value)));
+    auto propPair = NAMESPACE_STL::make_pair(
+        string(name),
+        string(value)
+    );
+    props.emplace_back(propPair);
 }
 
 string KTXImage::getProp(const char* name) const
@@ -1399,8 +1407,8 @@ void KTXImage::toPropsData(vector<uint8_t>& propsData) const
         const char* value = prop.second.c_str();
 
         // add null-terminate key, and value data
-        propsData.insert(propsData.end(), key, key + prop.first.length() + 1);
-        propsData.insert(propsData.end(), value, value + prop.second.length() + 1);
+        propsData.insert(propsData.end(), (const uint8_t*)key, (const uint8_t*)key + prop.first.length() + 1);
+        propsData.insert(propsData.end(), (const uint8_t*)value, (const uint8_t*)value + prop.second.length() + 1);
 
         // padding to 4 byte multiple
         uint32_t numPadding = 3 - ((size + 3) % 4);

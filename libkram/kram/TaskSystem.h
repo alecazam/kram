@@ -30,14 +30,17 @@ using mymutex = std::recursive_mutex;
 using mylock = std::unique_lock<mymutex>;
 using mycondition = std::condition_variable_any;
 
+#define mydeque std::deque
+#define myfunction std::function
+
 class notification_queue {
-    deque<function<void()>> _q;
+    mydeque<myfunction<void()>> _q;
     bool _done = false;
     mymutex _mutex;
     mycondition _ready;
 
 public:
-    bool try_pop(function<void()>& x)
+    bool try_pop(myfunction<void()>& x)
     {
         mylock lock{_mutex, std::try_to_lock};
         if (!lock || _q.empty()) {
@@ -48,7 +51,7 @@ public:
         return true;
     }
 
-    bool pop(function<void()>& x)
+    bool pop(myfunction<void()>& x)
     {
         mylock lock{_mutex};
         while (_q.empty() && !_done) {
@@ -85,12 +88,12 @@ public:
     {
         {
             mylock lock{_mutex};
-            // TODO: fix this construct, it's saying no matching sctor for eastl::deque<eastl::function<void ()>>>::value_type
+            // TODO: fix this construct, it's saying no matching sctor for mydeque<eastl::function<void ()>>>::value_type
 #if USE_EASTL
             KLOGE("TaskSystem", "Fix eastl deque or function");
             //_q.emplace_back(forward<F>(f));
 #else
-            _q.emplace_back(forward<F>(f));
+            _q.emplace_back(std::forward<F>(f));
 #endif
         }
         // allow a waiting pop() to awaken
@@ -184,7 +187,7 @@ public:
         //        }
 
         // otherwise just push to the next indexed queue
-        _q[i % _count].push(forward<F>(f));
+        _q[i % _count].push(std::forward<F>(f));
     }
 };
 

@@ -7,7 +7,7 @@
 // This is a master header.  Can be used if turning this into a framework.
 // But found frameworks to be more difficult to use than libs.
 
-#include "KramConfig.h"
+//#include "KramConfig.h"
 
 // helpers
 #include "KTXImage.h"

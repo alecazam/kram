@@ -64,7 +64,7 @@ private:
     int32_t zipEntryIndex(const char* name) const;
 
 private:
-    unique_ptr<mz_zip_archive> zip;
+    std::unique_ptr<mz_zip_archive> zip;
     vector<ZipEntry> _zipEntrys;
 
     const uint8_t* zipData;  // aliased

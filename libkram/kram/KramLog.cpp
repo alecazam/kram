@@ -130,7 +130,16 @@ bool endsWith(const string& value, const string& ending)
     }
 
     // reverse comparison at end of value
-    return equal(ending.rbegin(), ending.rend(), value.rbegin());
+    if (value.size() < ending.size())
+        return false;
+    uint32_t start = value.size() - ending.size();
+        
+    for (uint32_t i = 0; i < ending.size(); ++i) {
+        if (value[start + i] != ending[i])
+            return false;
+    }
+    
+    return true;
 }
 
 bool endsWithExtension(const char* str, const string& substring)

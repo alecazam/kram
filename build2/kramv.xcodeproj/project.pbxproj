@@ -562,6 +562,7 @@
 				MTL_LANGUAGE_REVISION = UseDeploymentTarget;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
+					"-DCOMPILE_FASTL=1",
 					"-DCOMPILE_EASTL=0",
 					"-include",
 					KramConfig.h,
@@ -627,6 +628,7 @@
 				MTL_FAST_MATH = YES;
 				MTL_LANGUAGE_REVISION = UseDeploymentTarget;
 				OTHER_CFLAGS = (
+					"-DCOMPILE_FASTL=1",
 					"-DCOMPILE_EASTL=0",
 					"-include",
 					KramConfig.h,

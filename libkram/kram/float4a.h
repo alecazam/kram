@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "KramConfig.h"
+//#include "KramConfig.h"
 
 // This is only meant to emulate float4 when lib not available
 // (f.e. win or linux w/o clang) but may move off simd lib to this.  So

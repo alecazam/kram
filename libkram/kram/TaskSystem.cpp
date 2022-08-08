@@ -212,7 +212,7 @@ static const CoreInfo& GetCoreInfo()
     #endif
     
     // sort faster cores first in the remap table
-    sort(coreInfo.remapTable.begin(), coreInfo.remapTable.end(), [](const CoreNum& lhs, const CoreNum& rhs){
+    std::sort(coreInfo.remapTable.begin(), coreInfo.remapTable.end(), [](const CoreNum& lhs, const CoreNum& rhs){
 #if KRAM_ANDROID
         // sort largest index
         if (lhs.type == rhs.type)
@@ -250,40 +250,6 @@ std::thread::native_handle_type getCurrentThread()
 //   This requires it to be set from thread itself.
 
 #if KRAM_WIN
-
-/* This is the old way.  This name is only available if debugger attached.
- 
-// Isn't this in a header?
-#pragma pack(push,8)
-struct THREADNAME_INFO
-{
-   DWORD dwType; // Must be 0x1000.
-   LPCSTR szName; // Pointer to name (in user addr space).
-   DWORD dwThreadID; // Thread ID (-1=caller thread).
-   DWORD dwFlags; // Reserved for future use, must be zero.
-};
-#pragma pack(pop)
-
-void setThreadName(std::thread::native_handle_type handle, const char* threadName)
-{
-   DWORD threadID = ::GetThreadId(handle);
-
-   THREADNAME_INFO info;
-   info.dwType = 0x1000;
-   info.szName = threadName;
-   info.dwThreadID = threadID;
-   info.dwFlags = 0;
-
-   __try
-   {
-       // Limits to how long this name can be.  Also copy into ptr to change name.
-      RaiseException(0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info);
-   }
-   __except(EXCEPTION_EXECUTE_HANDLER)
-   {
-   }
-}
-*/
 
 // TODO: on Win, also need to set the following.  Then use Windows Termnial.
 // SetConsoleOutputCP(CP_UTF8);
@@ -569,7 +535,7 @@ void task_system::run(int32_t threadIndex)
     while (true) {
         // pop() wait avoids a spinloop.
 
-        function<void()> f;
+        myfunction<void()> f;
 
         // start with ours, but steal from other queues if nothing found
         // Note that if threadIndex queue is empty and stays empty

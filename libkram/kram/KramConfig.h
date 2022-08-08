@@ -151,6 +151,10 @@
 #define COMPILE_EASTL 0
 #endif
 
+#ifndef COMPILE_FASTL
+#define COMPILE_FASTL 0
+#endif
+
 // basis transcoder only (read not writes)
 #ifndef COMPILE_BASIS
 #define COMPILE_BASIS 0
@@ -164,7 +168,11 @@
 // This needs debug support that native stl already has.
 // EASTL only seems to define that for Visual Studio, and not lldb
 #define USE_EASTL COMPILE_EASTL
+#define USE_FASTL COMPILE_FASTL
+
 #if USE_EASTL
+
+#define NAMESPACE_STL eastl
 
 // this probably breaks all STL debugging
 #include <EASTL/algorithm.h>  // for max
@@ -185,9 +193,37 @@
 #include <EASTL/unique_ptr.h>
 #include <EASTL/initializer_list.h>
 
+// std - simpler than using eastl version
 #include <atomic>
 
-#define NAMESPACE_STL eastl
+
+#elif USE_FASTL
+
+#define NAMESPACE_STL fastl
+
+// these are all vector based
+#include "../fastl/falgorithm.h"
+#include "../fastl/vector.h"
+#include "../fastl/map.h"
+#include "../fastl/set.h"
+#include "../fastl/unordered_map.h"
+#include "../fastl/unordered_set.h"
+
+// still too many holes in this (rfind, insert, back, pop_back, find_last_of, substr)
+//#include "../fastl/fstring.h"
+#include <string>
+namespace NAMESPACE_STL
+{
+    using string = std::string;
+}
+
+// std - for missing functionality
+#include <atomic>
+#include <functional>
+#include <array>
+#include <deque>
+#include <memory> // for unique_ptr/shared_ptr
+#include <initializer_list>
 
 #else
 
@@ -202,6 +238,7 @@ import std.filesystem;
 import std.regex;
 */
 
+// all std
 #include <algorithm>  // for max
 #include <functional>
 
@@ -217,7 +254,6 @@ import std.regex;
 #include <map>
 #include <unordered_map>
 #include <vector>
-
 
 #define NAMESPACE_STL std
 
@@ -295,18 +331,21 @@ public:
 
 #if !USE_EASTL
 
-namespace std {
-inline float clamp(float x, float minValue, float maxValue) { return min(max(x, minValue), maxValue); }
-inline double clamp(double x, double minValue, double maxValue) { return min(max(x, minValue), maxValue); }
+namespace NAMESPACE_STL {
 
-inline double clamp(int8_t x, int8_t minValue, int8_t maxValue) { return min(max(x, minValue), maxValue); }
-inline double clamp(uint8_t x, uint8_t minValue, uint8_t maxValue) { return min(max(x, minValue), maxValue); }
+// scalar ops
+#if USE_FASTL
+template<typename T>
+inline T min(T x, T minValue) { return x < minValue ? x : minValue; }
+template<typename T>
+inline T max(T x, T maxValue) { return x > maxValue ? x : maxValue; }
+#endif
 
-inline double clamp(int16_t x, int16_t minValue, int16_t maxValue) { return min(max(x, minValue), maxValue); }
-inline double clamp(uint16_t x, uint16_t minValue, uint16_t maxValue) { return min(max(x, minValue), maxValue); }
+// already defined in C++17
+//template<typename T>
+//inline T clamp(T x, T minValue, T maxValue) { return min(max(x, minValue), maxValue); }
 
-inline double clamp(int32_t x, int32_t minValue, int32_t maxValue) { return min(max(x, minValue), maxValue); }
-inline double clamp(int64_t x, int64_t minValue, int64_t maxValue) { return min(max(x, minValue), maxValue); }
+
 }  // namespace std
 
 #endif
@@ -358,11 +397,11 @@ inline float4 float4m(float x)
 
 inline float saturate(float v)
 {
-    return NAMESPACE_STL::clamp(v, 0.0f, 1.0f);
+    return std::clamp(v, 0.0f, 1.0f);
 }
 inline double saturate(double v)
 {
-    return NAMESPACE_STL::clamp(v, 0.0, 1.0);
+    return std::clamp(v, 0.0, 1.0);
 }
 inline float2 saturate(const float2& v)
 {

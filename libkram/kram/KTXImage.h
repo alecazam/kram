@@ -7,7 +7,7 @@
 //#include <string>
 //#include <vector>
 
-#include "KramConfig.h"
+//#include "KramConfig.h"
 
 namespace kram {
 

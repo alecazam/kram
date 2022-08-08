@@ -459,7 +459,7 @@ namespace Etc
             }
             
             // sorts largest errors to front
-            NAMESPACE_STL::sort(sortedBlocks.begin(), sortedBlocks.end(), std::greater<SortedBlock>());
+            std::sort(sortedBlocks.begin(), sortedBlocks.end(), std::greater<SortedBlock>());
             
             // lop off the end of the array where blocks are 0 error or don
             int counter = 0;

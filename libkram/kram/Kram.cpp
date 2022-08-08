@@ -1221,7 +1221,8 @@ string formatInputAndOutput(int32_t testNumber, const char* srcFilename, MyMTLPi
     cmd += " -input " srcDir;
     cmd += srcFilename;
 
-    cmd += " -output " dstDir + dst;
+    cmd += " -output " dstDir;
+    cmd += dst;
 
     // replace png with ktx
     dst = srcFilename;
@@ -1264,9 +1265,8 @@ bool kramTestCommand(int32_t testNumber,
             // Encoder may be fast, but want quality.  Just decode this file using astcenc to see.
             testNumber = 1;
             encoder = kTexEncoderATE;
-            cmd +=
-                " -normal" ASTCSwizzle2nm +
-                formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatASTC_4x4_LDR, encoder, isNotPremul);
+            cmd += " -normal" ASTCSwizzle2nm;
+            cmd += formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatASTC_4x4_LDR, encoder, isNotPremul);
 
             break;
 
@@ -1281,9 +1281,8 @@ bool kramTestCommand(int32_t testNumber,
         case 3:
             testNumber = 3;
             encoder = kTexEncoderATE;
-            cmd +=
-                " -normal" +  // " -quality 100"
-                formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatBC5_RGUnorm, encoder);
+            cmd += " -normal"; // " -quality 100"
+            cmd += formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatBC5_RGUnorm, encoder);
 
             break;
 
@@ -1306,9 +1305,8 @@ bool kramTestCommand(int32_t testNumber,
         case 10:
             testNumber = 10;
             encoder = kTexEncoderAstcenc;
-            cmd +=
-                " -normal" ASTCSwizzle2nm +
-                formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatASTC_4x4_LDR, encoder, isNotPremul);
+            cmd += " -normal" ASTCSwizzle2nm;
+            cmd += formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatASTC_4x4_LDR, encoder, isNotPremul);
 
             break;
 
@@ -1323,17 +1321,15 @@ bool kramTestCommand(int32_t testNumber,
         case 12:
             testNumber = 12;
             encoder = kTexEncoderSquish;
-            cmd +=
-                " -normal" +
-                formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatBC5_RGUnorm, encoder);
+            cmd += " -normal";
+            cmd += formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatBC5_RGUnorm, encoder);
 
             break;
         case 13:
             testNumber = 13;
             encoder = kTexEncoderBcenc;
-            cmd +=
-                " -normal" +
-                formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatBC5_RGUnorm, encoder);
+            cmd += " -normal";
+            cmd += formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatBC5_RGUnorm, encoder);
 
             break;
 
@@ -1362,8 +1358,8 @@ bool kramTestCommand(int32_t testNumber,
             testNumber = 1020;
             // bc7enc with source, also handles other bc formats, way slower than ATE but why?
             encoder = kTexEncoderBcenc;
-            cmd += " -optopaque" +
-                   formatInputAndOutput(testNumber, "ColorMap-a.png", MyMTLPixelFormatBC7_RGBAUnorm_sRGB, encoder);
+            cmd += " -optopaque";
+            cmd += formatInputAndOutput(testNumber, "ColorMap-a.png", MyMTLPixelFormatBC7_RGBAUnorm_sRGB, encoder);
             break;
 
         // this takes 12s to process, may need to adjust quality to settings, but they're low already
@@ -1395,17 +1391,16 @@ bool kramTestCommand(int32_t testNumber,
         case 2002:
             testNumber = 2002;
             encoder = kTexEncoderEtcenc;
-            cmd +=
-                " -normal" +
-                formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatEAC_RG11Unorm, encoder);
+            cmd += " -normal";
+            cmd += formatInputAndOutput(testNumber, "collectorbarrel-n.png", MyMTLPixelFormatEAC_RG11Unorm, encoder);
 
             break;
 
         case 2003:
             testNumber = 2003;
             encoder = kTexEncoderEtcenc;
-            cmd += " -optopaque" +
-                   formatInputAndOutput(testNumber, "color_grid-a.png", MyMTLPixelFormatEAC_RGBA8_sRGB, encoder);
+            cmd += " -optopaque";
+            cmd += formatInputAndOutput(testNumber, "color_grid-a.png", MyMTLPixelFormatEAC_RGBA8_sRGB, encoder);
             break;
 
             //--------------
@@ -1414,35 +1409,31 @@ bool kramTestCommand(int32_t testNumber,
         case 3001:
             testNumber = 3001;
             encoder = kTexEncoderExplicit;
-            cmd +=
-                " -sdf" +
-                formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatR8Unorm, encoder);
+            cmd += " -sdf";
+            cmd += formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatR8Unorm, encoder);
             break;
 
         case 3002:
             testNumber = 3002;
             encoder = kTexEncoderSquish;
-            cmd +=
-                " -sdf" +
-                formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatBC4_RUnorm, encoder);
+            cmd += " -sdf";
+            cmd += formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatBC4_RUnorm, encoder);
 
             break;
 
         case 3003:
             testNumber = 3003;
             encoder = kTexEncoderEtcenc;
-            cmd +=
-                " -sdf" +
-                formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatEAC_R11Unorm, encoder);
+            cmd += " -sdf";
+            cmd +=   formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatEAC_R11Unorm, encoder);
 
             break;
 
         case 3004:
             testNumber = 3004;
             encoder = kTexEncoderATE;
-            cmd +=
-                " -sdf" ASTCSwizzleL1 +
-                formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatASTC_4x4_LDR, encoder, isNotPremul);
+            cmd += " -sdf" ASTCSwizzleL1;
+            cmd +=     formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatASTC_4x4_LDR, encoder, isNotPremul);
             break;
 
         default:

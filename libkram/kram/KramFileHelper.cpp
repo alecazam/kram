@@ -152,7 +152,7 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
 
     // DONE: copy in smaller buffered chunks
     size_t maxBufferSize = 256 * 1024;
-    size_t bufferSize = min(size_, maxBufferSize);
+    size_t bufferSize = std::min(size_, maxBufferSize);
     vector<uint8_t> tmpBuf;
     tmpBuf.resize(bufferSize);
 
@@ -176,7 +176,7 @@ bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
 
     size_t bytesRemaining = size_;
     while (bytesRemaining > 0) {
-        size_t bytesToRead = min(bufferSize, bytesRemaining);
+        size_t bytesToRead = std::min(bufferSize, bytesRemaining);
         bytesRemaining -= bytesToRead;
 
         if (!read(tmpBuf.data(), bytesToRead) ||

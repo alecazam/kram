@@ -1025,8 +1025,8 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
 
     // X bound may need adjusted for ar ?
     // that's in model space (+/0.5f, +/0.5f), so convert to texture space
-    pixel.x = NAMESPACE_STL::clamp(pixel.x, -0.5f * ar, maxX);
-    pixel.y = NAMESPACE_STL::clamp(pixel.y, minY, 0.5f);
+    pixel.x = std::clamp(pixel.x, -0.5f * ar, maxX);
+    pixel.y = std::clamp(pixel.y, minY, 0.5f);
 
     // now that's the point that we want to zoom towards
     // No checks on this zoom
@@ -1737,7 +1737,7 @@ enum TextSlot
         float zoom = _zoomGesture.magnification;
         if (wheelY != 0.0) {
             wheelY *= 0.01;
-            wheelY = clamp(wheelY, -0.1, 0.1);
+            wheelY = std::clamp(wheelY, -0.1, 0.1);
             
             zoom *= 1.0 + wheelY;
             
@@ -3211,7 +3211,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
 #if USE_EASTL
             NAMESPACE_STL::quick_sort(files.begin(), files.end());
 #else
-            NAMESPACE_STL::sort(files.begin(), files.end());
+            std::sort(files.begin(), files.end());
 #endif
             // replicate archive logic below
 
@@ -3367,7 +3367,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
                 if (formerEntry) {
                     // lookup the index in the remapIndices table
                     _fileArchiveIndex =
-                        (uintptr_t)(formerEntry - &_zip.zipEntrys().front());
+                        (uintptr_t)(formerEntry - &_zip.zipEntrys()[0]);
                 }
                 else {
                     _fileArchiveIndex = 0;

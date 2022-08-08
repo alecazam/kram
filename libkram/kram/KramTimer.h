@@ -6,7 +6,7 @@
 
 #include <cassert>
 
-#include "KramConfig.h"
+//#include "KramConfig.h"
 
 namespace kram {
 // Can obtain a timestamp to nanosecond accuracy.

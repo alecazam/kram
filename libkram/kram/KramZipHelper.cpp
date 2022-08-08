@@ -37,7 +37,7 @@ bool ZipHelper::openForRead(const uint8_t* zipData_, uint64_t zipDataSize)
 
     zipData = zipData_;
 
-    zip = make_unique<mz_zip_archive>();
+    zip = std::make_unique<mz_zip_archive>();
     mz_zip_zero_struct(zip.get());
 
     mz_uint flags = 0;

@@ -57,8 +57,8 @@ struct ImageToPass
         handler(nil, error);
         return;
     }
-        
-    shared_ptr<ImageToPass> imageToPass = make_shared<ImageToPass>();
+       
+    std::shared_ptr<ImageToPass> imageToPass = std::make_shared<ImageToPass>();
     TexEncoder decoderType = kTexEncoderUnknown;
     uint32_t imageWidth, imageHeight;
     
@@ -98,11 +98,11 @@ struct ImageToPass
     if (imageAspect >= 1.0f)
     {
         requestWidth = contextSize.width;
-        requestHeight = NAMESPACE_STL::clamp((contextSize.width / imageAspect), 1.0, contextSize.height);
+        requestHeight = clamp((contextSize.width / imageAspect), 1.0, contextSize.height);
     }
     else
     {
-        requestWidth = NAMESPACE_STL::clamp((contextSize.height * imageAspect), 1.0, contextSize.width);
+        requestWidth = clamp((contextSize.height * imageAspect), 1.0, contextSize.width);
         requestHeight = contextSize.height;
     }
     

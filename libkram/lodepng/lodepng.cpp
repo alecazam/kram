@@ -6325,7 +6325,7 @@ unsigned decompress(vector<unsigned char>& out, const unsigned char* in, size_t 
   size_t buffersize = 0;
   unsigned error = zlib_decompress(&buffer, &buffersize, 0, in, insize, &settings);
   if(buffer) {
-    out.insert(out.end(), &buffer[0], &buffer[buffersize]);
+    out.insert(out.end(), buffer, buffer + buffersize);
     lodepng_free(buffer);
   }
   return error;
@@ -6344,7 +6344,7 @@ unsigned compress(vector<unsigned char>& out, const unsigned char* in, size_t in
   size_t buffersize = 0;
   unsigned error = zlib_compress(&buffer, &buffersize, in, insize, &settings);
   if(buffer) {
-    out.insert(out.end(), &buffer[0], &buffer[buffersize]);
+    out.insert(out.end(), buffer, buffer + buffersize);
     lodepng_free(buffer);
   }
   return error;
