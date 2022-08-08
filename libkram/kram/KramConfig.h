@@ -224,6 +224,7 @@ namespace NAMESPACE_STL
 #include <deque>
 #include <memory> // for unique_ptr/shared_ptr
 #include <initializer_list>
+#include <iterator>  // for copy_if and back_inserter on Win
 
 #else
 
