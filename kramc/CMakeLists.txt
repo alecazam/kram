@@ -2,10 +2,8 @@
 
 #-----------------------------------------------------
 
-set(BUILD_IOS FALSE)
 set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
-set(BUILD_UNIX FALSE)
 
 if (APPLE)
     if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -18,9 +16,6 @@ if (APPLE)
 elseif (WIN32)
     message("build for win x64")
     set(BUILD_WIN TRUE)
-elseif (UNIX AND NOT APPLE)
-    message("build for unix")
-    set(BUILD_UNIX TRUE)
 endif()
 
 #-----------------------------------------------------

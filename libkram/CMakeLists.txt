@@ -219,7 +219,7 @@ if (BUILD_MAC)
     set_target_properties(${myTargetLib} PROPERTIES
         # Note: match this up with CXX version
         # c++11 min
-        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++17"
+        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
 
         # avx1 (ignored by universal?)
@@ -245,8 +245,8 @@ elseif (BUILD_WIN)
     string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-    # force include
-    target_compile_options(${myTargetLib} PRIVATE /FIKramConfig.h)
+    # force include (public)
+    target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
         
     # all warnings, AVX1, and multiprocess compiles
     target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX /MP)
@@ -256,6 +256,7 @@ elseif (BUILD_WIN)
         
 endif()
 
+# public
 target_compile_definitions(${myTargetLib} PUBLIC
     "-DCOMPILE_ATE=${COMPILE_ATE}"
     "-DCOMPILE_BCENC=${COMPILE_BCENC}"
