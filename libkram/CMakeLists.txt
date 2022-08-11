@@ -104,8 +104,9 @@ endif()
 set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/libkram)
 
 # this will be force include (-include, /FI) on GCC/clang/VS
-target_precompile_headers(${myTargetLib} PUBLIC
-    ${SOURCE_DIR}/kram/KramPrefix.pch
+# can't seem to ref KramPrefix.pch file, since this goes into cmake_pch.hxx file
+target_precompile_headers(${myTargetLib} PRIVATE
+    ${SOURCE_DIR}/kram/KramPrefix.h
 )
 
 file(GLOB_RECURSE libSources CONFIGURE_DEPENDS 
