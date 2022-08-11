@@ -100,9 +100,9 @@ else()
     )
 endif()
 
-set_target_properties(${myTargetLib} PROPERTIES
-    # turn off pch
-    DISABLE_PRECOMPILE_HEADERS ON
+# this will be force include (-include, /FI) on GCC/clang/VS
+target_precompile_headers(${myTargetLib} PUBLIC
+    ${SOURCE_DIR}/kram/KramPrefix.pch
 )
 
 # add_library doesn't establish a project, so still pointing at root CMake
@@ -125,6 +125,7 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/heman/hedistance.cpp"
     "${SOURCE_DIR}/heman/hedistance.h"
 
+    "${SOURCE_DIR}/kram/*.pch"
     "${SOURCE_DIR}/kram/*.cpp"
     "${SOURCE_DIR}/kram/*.h"
 
