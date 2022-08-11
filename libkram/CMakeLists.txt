@@ -100,13 +100,13 @@ else()
     )
 endif()
 
+# add_library doesn't establish a project, so still pointing at root CMake
+set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/libkram)
+
 # this will be force include (-include, /FI) on GCC/clang/VS
 target_precompile_headers(${myTargetLib} PUBLIC
     ${SOURCE_DIR}/kram/KramPrefix.pch
 )
-
-# add_library doesn't establish a project, so still pointing at root CMake
-set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/libkram)
 
 file(GLOB_RECURSE libSources CONFIGURE_DEPENDS 
 	"${SOURCE_DIR}/astc-encoder/*.cpp"
