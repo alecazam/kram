@@ -28,7 +28,7 @@ namespace rdo_bc
 		return "?";
 	}
 
-	static std::vector<float> compute_block_mse_scales(const image_u8& source_image, uint32_t blocks_x, uint32_t blocks_y, uint32_t total_blocks, bool rdo_debug_output)
+	static vector<float> compute_block_mse_scales(const image_u8& source_image, uint32_t blocks_x, uint32_t blocks_y, uint32_t total_blocks, bool rdo_debug_output)
 	{
 		const float ULTRASMOOTH_BLOCK_STD_DEV_THRESHOLD = 2.9f;
 		const float DARK_THRESHOLD = 13.0f;
@@ -134,7 +134,7 @@ namespace rdo_bc
 				if (!is_ultrasmooth)
 					continue;
 
-				std::vector<image_u8::pixel_coord> filled_pixels;
+				vector<image_u8::pixel_coord> filled_pixels;
 				filled_pixels.reserve(256);
 
 				uint32_t total_set_pixels = ultrasmooth_blocks_vis.flood_fill(bx, by, color_quad_u8(255, 255, 255, 255), color_quad_u8(0, 0, 0, 255), &filled_pixels);
@@ -155,7 +155,7 @@ namespace rdo_bc
 			save_png("ultrasmooth_block_mask.png", ultrasmooth_blocks_vis, false);
 		}
 
-		std::vector<float> block_mse_scales(total_blocks);
+		vector<float> block_mse_scales(total_blocks);
 
 		uint32_t total_ultrasmooth_blocks = 0;
 		for (uint32_t by = 0; by < blocks_y; by++)
@@ -674,7 +674,7 @@ namespace rdo_bc
 			printf("rdo_total_threads: %u\n", rdo_total_threads);
 
 		int blocks_remaining = m_total_blocks, cur_block_index = 0;
-		std::vector<int> blocks_to_do(rdo_total_threads), first_block_index(rdo_total_threads);
+		vector<int> blocks_to_do(rdo_total_threads), first_block_index(rdo_total_threads);
 		for (int p = 0; p < rdo_total_threads; p++)
 		{
 			const int num_blocks = (p == (rdo_total_threads - 1)) ? blocks_remaining : (m_total_blocks / rdo_total_threads);
@@ -699,9 +699,9 @@ namespace rdo_bc
 		ert_p.m_allow_relative_movement = m_params.m_rdo_allow_relative_movement;
 		ert_p.m_skip_zero_mse_blocks = false;
 		
-		std::vector<float> block_rgb_mse_scales(compute_block_mse_scales(m_source_image, m_blocks_x, m_blocks_y, m_total_blocks, m_params.m_rdo_debug_output));
+		vector<float> block_rgb_mse_scales(compute_block_mse_scales(m_source_image, m_blocks_x, m_blocks_y, m_total_blocks, m_params.m_rdo_debug_output));
 
-		std::vector<rgbcx::color32> block_pixels(m_total_blocks * 16);
+		vector<rgbcx::color32> block_pixels(m_total_blocks * 16);
 
 		for (uint32_t by = 0; by < m_blocks_y; by++)
 			for (uint32_t bx = 0; bx < m_blocks_x; bx++)
@@ -758,7 +758,7 @@ namespace rdo_bc
 
 				uint32_t total_modified_local = 0;
 
-				std::vector<float> local_block_rgb_mse_scales(num_blocks_to_encode);
+				vector<float> local_block_rgb_mse_scales(num_blocks_to_encode);
 				for (int i = 0; i < num_blocks_to_encode; i++)
 					local_block_rgb_mse_scales[i] = block_rgb_mse_scales[first_block_to_encode + i];
 
@@ -817,7 +817,7 @@ namespace rdo_bc
 
 			ert_p.m_lookback_window_size = std::max(16U, m_params.m_lookback_window_size);
 
-			std::vector<rgbcx::color32> block_pixels_r(m_total_blocks * 16), block_pixels_g(m_total_blocks * 16);
+			vector<rgbcx::color32> block_pixels_r(m_total_blocks * 16), block_pixels_g(m_total_blocks * 16);
 
 			for (uint32_t by = 0; by < m_blocks_y; by++)
 			{
@@ -1004,7 +1004,7 @@ namespace rdo_bc
 
 				uint32_t total_modified_local = 0;
 
-				std::vector<float> local_block_rgb_mse_scales(num_blocks_to_encode);
+				vector<float> local_block_rgb_mse_scales(num_blocks_to_encode);
 				for (int i = 0; i < num_blocks_to_encode; i++)
 					local_block_rgb_mse_scales[i] = block_rgb_mse_scales[first_block_to_encode + i];
 
@@ -1036,7 +1036,7 @@ namespace rdo_bc
 
 			ert_p.m_lookback_window_size = std::max(16U, m_params.m_lookback_window_size);
 
-			std::vector<rgbcx::color32> block_pixels_a(m_total_blocks * 16);
+			vector<rgbcx::color32> block_pixels_a(m_total_blocks * 16);
 
 			for (uint32_t by = 0; by < m_blocks_y; by++)
 			{
@@ -1112,7 +1112,7 @@ namespace rdo_bc
 					(ert::color_rgba*)&block_pixels_a[16 * first_block_to_encode], ert_alpha_p, total_modified_local_alpha,
 					unpacker_funcs::unpack_bc4_block, &block_unpackers);
 
-				std::vector<float> local_block_rgb_mse_scales(num_blocks_to_encode);
+				vector<float> local_block_rgb_mse_scales(num_blocks_to_encode);
 				for (int i = 0; i < num_blocks_to_encode; i++)
 					local_block_rgb_mse_scales[i] = block_rgb_mse_scales[first_block_to_encode + i];
 

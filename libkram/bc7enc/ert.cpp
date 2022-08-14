@@ -282,7 +282,7 @@ namespace ert
 		uint32_t total_block_stride_in_bytes, uint32_t block_size_to_optimize_in_bytes, uint32_t block_width, uint32_t block_height, uint32_t num_comps,
 		const color_rgba* pBlock_pixels, const reduce_entropy_params& params, uint32_t& total_modified,
 		pUnpack_block_func pUnpack_block_func, void* pUnpack_block_func_user_data,
-		std::vector<float>* pBlock_mse_scales)
+		vector<float>* pBlock_mse_scales)
 	{
 		assert(total_block_stride_in_bytes && block_size_to_optimize_in_bytes);
 		assert(total_block_stride_in_bytes >= block_size_to_optimize_in_bytes);
@@ -311,8 +311,8 @@ namespace ert
 
 		const int total_blocks_to_check = std::max<uint32_t>(1U, params.m_lookback_window_size / total_block_stride_in_bytes);
 
-		std::vector<uint32_t> len_hist(MAX_BLOCK_SIZE_IN_BYTES + 1);
-		std::vector<uint32_t> second_len_hist(MAX_BLOCK_SIZE_IN_BYTES + 1);
+		vector<uint32_t> len_hist(MAX_BLOCK_SIZE_IN_BYTES + 1);
+		vector<uint32_t> second_len_hist(MAX_BLOCK_SIZE_IN_BYTES + 1);
 		uint32_t total_second_matches = 0;
 
 		int prev_match_window_ofs_to_favor_cont = -1, prev_match_dist_to_favor = -1;

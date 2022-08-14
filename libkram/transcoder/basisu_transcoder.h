@@ -39,6 +39,8 @@
 
 namespace basist
 {
+    using namespace NAMESPACE_STL;
+
 	// High-level composite texture formats supported by the transcoder.
 	// Each of these texture formats directly correspond to OpenGL/D3D/Vulkan etc. texture formats.
 	// Notes:
@@ -857,7 +859,7 @@ namespace basist
 		// The order of key values fields in this array exactly matches the order they were stored in the file. The keys are supposed to be sorted by their Unicode code points.
 		const key_value_vec& get_key_values() const { return m_key_values; }
 
-		const basisu::uint8_vec *find_key(const std::string& key_name) const;
+		const basisu::uint8_vec *find_key(const string& key_name) const;
 
 		// Low-level ETC1S specific accessors
 

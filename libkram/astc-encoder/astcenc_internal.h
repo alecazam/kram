@@ -22,15 +22,16 @@
 #ifndef ASTCENC_INTERNAL_INCLUDED
 #define ASTCENC_INTERNAL_INCLUDED
 
-#include <algorithm>
+//#include <algorithm>
+//#include <condition_variable>
+//#include <functional>
+//#include <mutex>
+
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <condition_variable>
-#include <functional>
-#include <mutex>
 #include <type_traits>
 
 #include "astcenc.h"

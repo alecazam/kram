@@ -87,15 +87,15 @@ namespace fastl
 
 		void push_back(const value_type& value);
 		iterator insert(iterator it, const value_type& value);
-        void insert(iterator it, const value_type* begin , const value_type* end)
+        void insert(iterator it, const value_type* beg, const value_type* en)
         {
             // TODO: fix this isn't fast
-            while (begin != end)
+            while (beg != en)
             {
-                insert(it, *begin);
+                insert(it, *beg);
                 
                 ++it;
-                ++begin;
+                ++beg;
             }
         }
       
@@ -115,6 +115,14 @@ namespace fastl
         
         // TODO: no-op for now, but should release memory
         void shrink_to_fit() { }
+        
+        void swap(vector<T>& rhs)
+        {
+            if (this == &rhs) return;
+            std::swap(m_data, rhs.m_data);
+            std::swap(m_size, rhs.m_size);
+            std::swap(m_capacity, rhs.m_capacity);
+        }
         
 	private: 
 		void Destroy();

@@ -9,19 +9,20 @@
 
 
 namespace utils 
-{
-		
+{		
+using namespace NAMESPACE_STL;
+
 #define FLOOD_PUSH(y, xl, xr, dy) if (((y + (dy)) >= 0) && ((y + (dy)) < (int)m_height)) { stack.push_back(fill_segment(y, xl, xr, dy)); }
 
 // See http://www.realtimerendering.com/resources/GraphicsGems/gems/SeedFill.c
-uint32_t image_u8::flood_fill(int x, int y, const color_quad_u8& c, const color_quad_u8& b, std::vector<pixel_coord>* pSet_pixels)
+uint32_t image_u8::flood_fill(int x, int y, const color_quad_u8& c, const color_quad_u8& b, vector<pixel_coord>* pSet_pixels)
 {
 	uint32_t total_set = 0;
 
 	if (!flood_fill_is_inside(x, y, b))
 		return 0;
 
-	std::vector<fill_segment> stack;
+	vector<fill_segment> stack;
 	stack.reserve(64);
 
 	FLOOD_PUSH(y, x, x, 1);
@@ -173,7 +174,7 @@ bool load_png(const char* pFilename, image_u8& img)
 {
 	img.clear();
 
-	std::vector<unsigned char> pixels;
+	vector<unsigned char> pixels;
 	unsigned int w = 0, h = 0;
 	unsigned int e = lodepng::decode(pixels, w, h, pFilename);
 	if (e != 0)
@@ -193,7 +194,7 @@ bool save_png(const char* pFilename, const image_u8& img, bool save_alpha)
 	const uint32_t w = img.width();
 	const uint32_t h = img.height();
 
-	std::vector<unsigned char> pixels;
+	vector<unsigned char> pixels;
 	if (save_alpha)
 	{
 		pixels.resize(w * h * sizeof(color_quad_u8));
@@ -285,7 +286,7 @@ void gaussian_filter(imagef& dst, const imagef& orig_img, uint32_t odd_filter_wi
 	assert(odd_filter_width && (odd_filter_width & 1));
 	odd_filter_width |= 1;
 
-	std::vector<float> kernel(odd_filter_width * odd_filter_width);
+	vector<float> kernel(odd_filter_width * odd_filter_width);
 	compute_gaussian_kernel(&kernel[0], odd_filter_width, odd_filter_width, sigma_sqr, cComputeGaussianFlagNormalize);
 
 	const int dst_width = orig_img.get_width() / width_divisor;
@@ -682,7 +683,7 @@ bool save_dds(const char* pFilename, uint32_t width, uint32_t height, const void
 	return true;
 }
 
-void strip_extension(std::string& s)
+void strip_extension(string& s)
 {
 	for (int32_t i = (int32_t)s.size() - 1; i >= 0; i--)
 	{
@@ -694,7 +695,7 @@ void strip_extension(std::string& s)
 	}
 }
 
-void strip_path(std::string& s)
+void strip_path(string& s)
 {
 	for (int32_t i = (int32_t)s.size() - 1; i >= 0; i--)
 	{

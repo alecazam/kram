@@ -158,7 +158,7 @@ public:
 	/**
 	 * @brief The stack of nodes (newest at the back).
 	 */
-	std::vector<TraceNode*> m_stack;
+	vector<TraceNode*> m_stack;
 
 private:
 	/**

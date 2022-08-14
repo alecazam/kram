@@ -85,7 +85,7 @@ int32_t append_vsprintf(string& str, const char* format, va_list args)
         // resize and format again into string
         str.resize(existingLen + len, 0);
 
-        vsnprintf((char*)str.data() + existingLen, len + 1, format, args);
+        vsnprintf((char*)str.c_str() + existingLen, len + 1, format, args);
     }
 
     return len;

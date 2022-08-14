@@ -183,6 +183,7 @@ namespace basisu
 
 namespace basist
 {
+    using namespace NAMESPACE_STL;
 
 #if BASISD_ENABLE_DEBUG_FLAGS
 	static uint32_t g_debug_flags = 0;
@@ -17069,7 +17070,7 @@ namespace basist
 		return get_etc1s_image_descs()[etc1s_image_index].m_image_flags;
 	}
 
-	const basisu::uint8_vec* ktx2_transcoder::find_key(const std::string& key_name) const
+	const basisu::uint8_vec* ktx2_transcoder::find_key(const string& key_name) const
 	{
 		for (uint32_t i = 0; i < m_key_values.size(); i++)
 			if (strcmp((const char *)m_key_values[i].m_key.data(), key_name.c_str()) == 0)

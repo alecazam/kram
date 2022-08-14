@@ -210,21 +210,36 @@
 #include "../fastl/unordered_set.h"
 
 // still too many holes in this (rfind, insert, back, pop_back, find_last_of, substr)
-//#include "../fastl/fstring.h"
-#include <string>
-namespace NAMESPACE_STL
-{
-    using string = std::string;
-}
+
+#include "../fastl/fstring.h"
+//#include <string>
+//namespace NAMESPACE_STL
+//{
+//    using string = std::string;
+//}
+
+// what is causing string to instantiate?
+//namespace std
+//{
+//class basic_string
+//{
+//    int32_t b;
+//};
+//}
 
 // std - for missing functionality
-#include <atomic>
-#include <functional>
 #include <array>
 #include <deque>
 #include <memory> // for unique_ptr/shared_ptr
-#include <initializer_list>
+//#include <initializer_list>
 #include <iterator>  // for copy_if and back_inserter on Win
+
+// threads
+#include <functional>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
 
 #else
 

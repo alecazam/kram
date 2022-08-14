@@ -103,12 +103,6 @@ endif()
 # add_library doesn't establish a project, so still pointing at root CMake
 set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/libkram)
 
-# this will be force include (-include, /FI) on GCC/clang/VS
-# can't seem to ref KramPrefix.pch file, since this goes into cmake_pch.hxx file
-target_precompile_headers(${myTargetLib} PRIVATE
-    ${SOURCE_DIR}/kram/KramPrefix.h
-)
-
 file(GLOB_RECURSE libSources CONFIGURE_DEPENDS 
 	"${SOURCE_DIR}/astc-encoder/*.cpp"
 	"${SOURCE_DIR}/astc-encoder/*.h"
@@ -247,8 +241,9 @@ elseif (BUILD_WIN)
     string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
+    # this is already done by pch
     # force include (public)
-    target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
+    #target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
         
     # all warnings, AVX1, and multiprocess compiles
     target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX /MP)
@@ -258,14 +253,24 @@ elseif (BUILD_WIN)
         
 endif()
 
+# This will be force include (-include, /FI) on GCC/clang/VS.
+# Can't seem to ref KramPrefix.pch file.  Goes into cmake_pch.hxx file
+target_precompile_headers(${myTargetLib} PRIVATE
+    ${SOURCE_DIR}/kram/KramPrefix.h
+)
+
 # public
-target_compile_definitions(${myTargetLib} PUBLIC
+target_compile_definitions(${myTargetLib} 
+    PUBLIC
+    "-DCOMPILE_EASTL=${COMPILE_EASTL}"
+    "-DCOMPILE_FASTL=${COMPILE_FASTL}"
+
+    PRIVATE
     "-DCOMPILE_ATE=${COMPILE_ATE}"
     "-DCOMPILE_BCENC=${COMPILE_BCENC}"
     "-DCOMPILE_ETCENC=${COMPILE_ETCENC}"
     "-DCOMPILE_SQUISH=${COMPILE_SQUISH}"
     "-DCOMPILE_ASTCENC=${COMPILE_ASTCENC}"
     "-DCOMPILE_COMP=${COMPILE_COMP}"
-    "-DCOMPILE_EASTL=${COMPILE_EASTL}"
-    "-DCOMPILE_FASTL=${COMPILE_FASTL}"
+   
 )

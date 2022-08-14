@@ -1226,8 +1226,9 @@ string formatInputAndOutput(int32_t testNumber, const char* srcFilename, MyMTLPi
 
     // replace png with ktx
     dst = srcFilename;
-    size_t extSeparator = dst.rfind('.');
-    assert(extSeparator != string::npos);
+    const char* extSeparatorStr = strchr(dst.c_str(), '.');
+    assert(extSeparatorStr != nullptr);
+    size_t extSeparator = extSeparatorStr - dst.c_str();
     dst.erase(extSeparator);
     dst.append(".ktx");  // TODO: test ktx2 too
 
@@ -3593,9 +3594,10 @@ TexContentType findContentTypeFromFilename(const char* filename)
 {
     string filenameShort = filename;
     
-    auto dotPos = filenameShort.find_last_of(".");
-    if (dotPos == string::npos)
+    const char* dotPosStr = strrchr(filenameShort.c_str(), '.');
+    if (dotPosStr == nullptr)
         return TexContentTypeUnknown;
+    auto dotPos = dotPosStr - filenameShort.c_str();
     
     // now chop off the extension
     filenameShort = filenameShort.substr(0, dotPos);

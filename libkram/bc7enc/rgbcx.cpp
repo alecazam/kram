@@ -2,7 +2,7 @@
 #include "rgbcx.h"
 #include <string.h>
 #include <math.h>
-#include <vector>
+//#include <vector>
 
 namespace rgbcx
 {

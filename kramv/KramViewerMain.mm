@@ -2454,7 +2454,8 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
                     [self setEyedropperText:""];
                     
                     isChanged = true;
-                    text = "Loaded " + _showSettings->lastFilename;
+                    text = "Loaded ";
+                    text += _showSettings->lastFilename;
                 }
             }
             else if (_showSettings->isFolder) {
@@ -2464,7 +2465,8 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
                     [self setEyedropperText:""];
                    
                     isChanged = true;
-                    text = "Loaded " + _showSettings->lastFilename;
+                    text = "Loaded ";
+                    text += _showSettings->lastFilename;
                 }
             }
         }
@@ -2829,9 +2831,11 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     
     const char* ext = strrchr(filename, '.');
 
-    auto dotPos = filenameShort.find_last_of(".");
-    if (dotPos == string::npos)
+    const char* dosPosStr = strchr(filenameShort.c_str(), '.');
+    if (dosPosStr == nullptr)
         return;
+    
+    auto dotPos = dosPosStr - filenameShort.c_str();
     
     // now chop off the extension
     filenameShort = filenameShort.substr(0, dotPos);

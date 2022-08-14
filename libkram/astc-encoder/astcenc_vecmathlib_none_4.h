@@ -40,7 +40,7 @@
 	#error "Include astcenc_vecmathlib.h, do not include directly"
 #endif
 
-#include <algorithm>
+//#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <cfenv>

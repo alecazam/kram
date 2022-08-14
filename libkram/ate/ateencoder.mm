@@ -2,7 +2,7 @@
 
 #if COMPILE_ATE
 
-#include <vector>
+//#include <vector>
 #include "KTXImage.h" // for MyMTLPixelFormat
 
 // this contains ATE encoder (libate.dylib)
