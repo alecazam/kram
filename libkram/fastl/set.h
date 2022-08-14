@@ -57,6 +57,9 @@ namespace fastl
 		iterator entryIt = fastl::lower_bound( begin(), end(), inputValue, [=]( value_type& a, const value_type& b ) {return a < b; } );
 		if( entryIt == end() || *entryIt != inputValue )
 		{
+            // TODO: this isn't fast to emplace into a vector, all elements above shift
+            // and addresses are no longer constant on elements
+            
 			entryIt = m_data.emplace( entryIt, args... );
 			return pair<iterator, bool>( entryIt, true );
 		}
@@ -69,6 +72,9 @@ namespace fastl
 		iterator found = find( key );
 		if( found != end() )
 		{
+            // TODO: this isn't fast to erase from a vector, all elements above shift
+            // and addresses are no longer constant on elements
+            
 			erase( found );
 		}
 		return size();

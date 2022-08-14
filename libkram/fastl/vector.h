@@ -13,9 +13,12 @@ namespace fastl
 { 
 	//------------------------------------------------------------------------------------------
 	//Consider moving this around if needed somewhere else 
-	template <class T> struct remove_reference { typedef T type; };
-	template <class T> struct remove_reference<T&> { typedef T type; };
-	template <class T> struct remove_reference<T&&> { typedef T type; };
+	template <class T>
+    struct remove_reference { typedef T type; };
+	template <class T>
+    struct remove_reference<T&> { typedef T type; };
+	template <class T>
+    struct remove_reference<T&&> { typedef T type; };
 	
     // This is ambigous if included
     //template <typename T> typename remove_reference<T>::type&& move(T&& arg) { return static_cast<typename remove_reference<T>::type&&>(arg); }
@@ -78,7 +81,10 @@ namespace fastl
 		const_iterator begin() const { return m_data; }
 		iterator end() { return m_data+m_size;	} 
 		const_iterator end() const { return m_data+m_size;	}
+        
+        // TOOD: need front
 		reference back() { return m_data[m_size-1]; }
+        
 		bool empty() const { return m_size == 0u; }
 
 		void reserve(const size_type size);
@@ -86,10 +92,15 @@ namespace fastl
 		void clear();
 
 		void push_back(const value_type& value);
+        
 		iterator insert(iterator it, const value_type& value);
         void insert(iterator it, const value_type* beg, const value_type* en)
         {
-            // TODO: fix this isn't fast
+            size_type len = en - beg;
+            reserve(size() + len);
+            
+            // TODO: fix this isn't fast, since it has to shift all elements above
+            // the iterator.  Do that once.
             while (beg != en)
             {
                 insert(it, *beg);
@@ -113,7 +124,7 @@ namespace fastl
         const value_type* data() const { return m_data; }
         value_type* data() { return m_data; }
         
-        // TODO: no-op for now, but should release memory
+        // TODO: no-op for now, but should copy and release memory
         void shrink_to_fit() { }
         
         void swap(vector<T>& rhs)
@@ -129,6 +140,8 @@ namespace fastl
 
 	private:
 		value_type* m_data;
+        
+        // TODO: could map size_type to int32_t
 		size_type   m_size;
 		size_type   m_capacity;
 	};

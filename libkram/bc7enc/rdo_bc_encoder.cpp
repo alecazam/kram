@@ -57,7 +57,7 @@ namespace rdo_bc
 
 				float yl = max_std_dev / ULTRASMOOTH_BLOCK_STD_DEV_THRESHOLD;
 
-				yl = clamp(yl, 0.0f, 1.0f);
+				yl = std::clamp(yl, 0.0f, 1.0f);
 				yl *= yl;
 
 				float y_avg = y_stats.get_mean();

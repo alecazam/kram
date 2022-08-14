@@ -58,7 +58,11 @@ namespace fastl
 	{ 
 		iterator entryIt = fastl::lower_bound(begin(), end(), key, [=](value_type& value, const TKey& key) {return value.first < key; });
 		if (entryIt == end() || entryIt->first != key)
-		{ 
+		{
+            // TODO: this is expensive to insertion sort into a vector
+            // This causes all elements above to have to be copied and they don't have constant addresses.
+            // Also keys for unordered_map/set only provide == and hash, and not <
+            
 			entryIt = m_data.emplace(entryIt,key,TValue());
 		}
 
@@ -70,7 +74,11 @@ namespace fastl
 	{ 
 		iterator entryIt = fastl::lower_bound(begin(), end(), inputValue, [=](value_type& a, const value_type& b) {return a.first < b.first; });
 		if (entryIt == end() || entryIt->first != inputValue.first)
-		{ 
+		{
+            // TODO: this is expensive to insertion sort into a vector
+            // This causes all elements above to have to be copied and they don't have constant addresses.
+            // Also keys for unordered_map/set only provide == and hash, and not <
+            
 			entryIt = m_data.emplace(entryIt,move(inputValue));
 			return pair<iterator,bool>(entryIt,true);
 		}
@@ -83,6 +91,10 @@ namespace fastl
 		iterator found = find(key);
 		if (found != end())
 		{
+            // TODO: this is expensive to erase an element from a vector
+            // This causes all elements above to have to be copied and they don't have constant addresses.
+            // Also keys for unordered_map/set only provide == and hash, and not <
+            
 			erase(found);
 		} 
 		return size();

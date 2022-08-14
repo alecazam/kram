@@ -24,7 +24,7 @@ option(BCENC "Compile BCenc Encoder" ON)
 option(COMP "Compile Compressonator Encoder" ON)
 
 option(EASTL "Compile EASTL" OFF)
-option(FASTL "Compile FASTL" ON)
+option(FASTL "Compile FASTL" OFF)
 
 # convert ON to 1, UGH
 set(COMPILE_ATE 0)
@@ -245,13 +245,15 @@ elseif (BUILD_WIN)
     # force include (public)
     #target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
         
-    # all warnings, AVX1, and multiprocess compiles
+    # all warnings, AVX, and multiprocess compiles
     target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX /MP)
     
     # fix STL
     target_compile_definitions(${myTargetLib} PRIVATE "-D_D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
         
 endif()
+
+# TODO: Missing dead-strip on Release builds for macOS/Win.  Needed to minimize app size.
 
 # This will be force include (-include, /FI) on GCC/clang/VS.
 # Can't seem to ref KramPrefix.pch file.  Goes into cmake_pch.hxx file
