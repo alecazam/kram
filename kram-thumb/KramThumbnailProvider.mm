@@ -98,11 +98,11 @@ struct ImageToPass
     if (imageAspect >= 1.0f)
     {
         requestWidth = contextSize.width;
-        requestHeight = clamp((contextSize.width / imageAspect), 1.0, contextSize.height);
+        requestHeight = std::clamp((contextSize.width / imageAspect), 1.0, contextSize.height);
     }
     else
     {
-        requestWidth = clamp((contextSize.height * imageAspect), 1.0, contextSize.width);
+        requestWidth = std::clamp((contextSize.height * imageAspect), 1.0, contextSize.width);
         requestHeight = contextSize.height;
     }
     
