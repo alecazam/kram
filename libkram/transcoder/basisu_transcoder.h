@@ -13,6 +13,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+#if COMPILE_BASIS
+
 #pragma once
 
 // By default KTX2 support is enabled to simplify compilation. This implies the need for the Zstandard library (which we distribute as a single source file in the "zstd" directory) by default.
@@ -941,3 +944,4 @@ namespace basist
 
 } // namespace basisu
 
+#endif

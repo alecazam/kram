@@ -1806,10 +1806,9 @@
 					"-DCOMPILE_SQUISH=1",
 					"-DCOMPILE_BCENC=1",
 					"-DCOMPILE_COMP=1",
-					"-DCOMPILE_BASIS=1",
+					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
 					"-DCOMPILE_FASTL=1",
-					"-ftime-trace",
 				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
@@ -1889,10 +1888,9 @@
 					"-DCOMPILE_SQUISH=1",
 					"-DCOMPILE_BCENC=1",
 					"-DCOMPILE_COMP=1",
-					"-DCOMPILE_BASIS=1",
+					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
 					"-DCOMPILE_FASTL=1",
-					"-ftime-trace",
 				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;

@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#if COMPILE_BASIS
+
 #include "basisu_transcoder.h"
 #include <limits.h>
 #include "basisu_containers_impl.h"
@@ -17615,3 +17617,5 @@ namespace basist
 	}
 
 } // namespace basist
+
+#endif
