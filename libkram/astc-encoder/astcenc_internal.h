@@ -27,10 +27,10 @@
 
 #define ASTCENC_USE_THREADS 0
 #if ASTCENC_USE_THREADS
-// these pull in string from system_error which is slow to instantiate on macOS
-#include <condition_variable>
-#include <mutex>
-#include <atomic>
+    // these pull in string from system_error which is slow to instantiate on macOS
+    #include <condition_variable>
+    #include <mutex>
+    #include <atomic>
 #endif
 
 #include <cstddef>
