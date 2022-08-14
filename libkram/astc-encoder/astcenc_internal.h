@@ -25,11 +25,14 @@
 //#include <algorithm>
 //#include <functional>
 
+#define ASTCENC_USE_THREADS 0
+#if ASTCENC_USE_THREADS
 // these pull in string from system_error which is slow to instantiate on macOS
 #include <condition_variable>
 #include <mutex>
-
 #include <atomic>
+#endif
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -213,20 +216,26 @@ static_assert((WEIGHTS_MAX_BLOCK_MODES % ASTCENC_SIMD_WIDTH) == 0,
 class ParallelManager
 {
 private:
+    
+#if ASTCENC_USE_THREADS
 	/** @brief Lock used for critical section and condition synchronization. */
 	std::mutex m_lock;
 
+    /** @brief Contition variable for tracking stage processing completion. */
+    std::condition_variable m_complete;
+
+    /** @brief Number of tasks started, but not necessarily finished. */
+    std::atomic<unsigned int> m_start_count;
+#else
+    
+    unsigned int m_start_count;
+#endif
+    
 	/** @brief True if the stage init() step has been executed. */
 	bool m_init_done;
 
 	/** @brief True if the stage term() step has been executed. */
 	bool m_term_done;
-
-	/** @brief Contition variable for tracking stage processing completion. */
-	std::condition_variable m_complete;
-
-	/** @brief Number of tasks started, but not necessarily finished. */
-	std::atomic<unsigned int> m_start_count;
 
 	/** @brief Number of tasks finished. */
 	unsigned int m_done_count;
@@ -256,6 +265,79 @@ public:
 		m_task_count = 0;
 	}
 
+#if !ASTCENC_USE_THREADS
+    void init(std::function<unsigned int(void)> init_func)
+    {
+        if (!m_init_done)
+        {
+            m_task_count = init_func();
+            m_init_done = true;
+        }
+    }
+    
+    void init(unsigned int task_count)
+    {
+        if (!m_init_done)
+        {
+            m_task_count = task_count;
+            m_init_done = true;
+        }
+    }
+    
+    unsigned int get_task_assignment(unsigned int granule, unsigned int& count)
+    {
+        unsigned int base = m_start_count + granule;
+        if (base >= m_task_count)
+        {
+            count = 0;
+            return 0;
+        }
+
+        count = astc::min(m_task_count - base, granule);
+        return base;
+    }
+    
+    void complete_task_assignment(unsigned int count)
+    {
+        // Note: m_done_count cannot use an atomic without the mutex; this has a race between the
+        // update here and the wait() for other threads
+        m_done_count += count;
+        
+//        if (m_done_count == m_task_count)
+//        {
+//            lck.unlock();
+//            m_complete.notify_all();
+//        }
+    }
+
+    /**
+     * @brief Wait for stage processing to complete.
+     */
+    void wait()
+    {
+        // no wait
+    }
+
+    /**
+     * @brief Trigger the pipeline stage term step.
+     *
+     * This can be called from multi-threaded code. The first thread to hit this will process the
+     * thread termintion. Caller must have called @c wait() prior to calling this function to ensure
+     * that processing is complete.
+     *
+     * @param term_func   Callable which executes the stage termination.
+     */
+    void term(std::function<void(void)> term_func)
+    {
+        if (!m_term_done)
+        {
+            term_func();
+            m_term_done = true;
+        }
+    }
+    
+#else
+    
 	/**
 	 * @brief Trigger the pipeline stage init step.
 	 *
@@ -364,6 +446,8 @@ public:
 			m_term_done = true;
 		}
 	}
+    
+#endif
 };
 
 /* ============================================================================
