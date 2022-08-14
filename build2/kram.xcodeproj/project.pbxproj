@@ -237,7 +237,6 @@
 		706EFF7626D34740001C950E /* assert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5826D3473F001C950E /* assert.cpp */; };
 		706EFF7726D34740001C950E /* string.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5926D3473F001C950E /* string.cpp */; };
 		706EFF7826D34740001C950E /* string.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5926D3473F001C950E /* string.cpp */; };
-		706EFF7926D34740001C950E /* allocator_eastl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5A26D3473F001C950E /* allocator_eastl.cpp */; };
 		706EFF7A26D34740001C950E /* allocator_eastl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5A26D3473F001C950E /* allocator_eastl.cpp */; };
 		706EFF7B26D34740001C950E /* numeric_limits.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5B26D3473F001C950E /* numeric_limits.cpp */; };
 		706EFF7C26D34740001C950E /* numeric_limits.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EFD5B26D3473F001C950E /* numeric_limits.cpp */; };
@@ -1622,7 +1621,6 @@
 				70871DFF27DDDBCD00D0B9E1 /* astcenc_pick_best_endpoint_format.cpp in Sources */,
 				70871E0927DDDBCD00D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */,
 				70871DCF27DDDBCD00D0B9E1 /* astcenc_symbolic_physical.cpp in Sources */,
-				706EFF7926D34740001C950E /* allocator_eastl.cpp in Sources */,
 				706EEFC026D1595E001C950E /* maths.cpp in Sources */,
 				706EEFC126D1595E001C950E /* singlecolourfit.cpp in Sources */,
 				706EEFC226D1595E001C950E /* zstd.cpp in Sources */,
@@ -1807,10 +1805,11 @@
 					"-DCOMPILE_ETCENC=1",
 					"-DCOMPILE_SQUISH=1",
 					"-DCOMPILE_BCENC=1",
-					"-DCOMPILE_EASTL=0",
-					"-DCOMPILE_FASTL=1",
 					"-DCOMPILE_COMP=1",
 					"-DCOMPILE_BASIS=1",
+					"-DCOMPILE_EASTL=0",
+					"-DCOMPILE_FASTL=1",
+					"-ftime-trace",
 				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
@@ -1889,10 +1888,11 @@
 					"-DCOMPILE_ETCENC=1",
 					"-DCOMPILE_SQUISH=1",
 					"-DCOMPILE_BCENC=1",
-					"-DCOMPILE_EASTL=0",
-					"-DCOMPILE_FASTL=1",
 					"-DCOMPILE_COMP=1",
 					"-DCOMPILE_BASIS=1",
+					"-DCOMPILE_EASTL=0",
+					"-DCOMPILE_FASTL=1",
+					"-ftime-trace",
 				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;

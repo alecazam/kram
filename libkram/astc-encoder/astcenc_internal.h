@@ -23,9 +23,11 @@
 #define ASTCENC_INTERNAL_INCLUDED
 
 //#include <algorithm>
-//#include <condition_variable>
 //#include <functional>
-//#include <mutex>
+
+// these pull in string from system_error which is slow to instantiate on macOS
+#include <condition_variable>
+#include <mutex>
 
 #include <atomic>
 #include <cstddef>

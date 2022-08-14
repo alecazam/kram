@@ -12,9 +12,13 @@
 //#include <deque>
 //#include <functional>
 //#include <memory>
+
+// TODO: get these three out of header, they pull in basic_string via system_errror header
+// but this file isn't included in many places.
 #include <mutex>
 #include <condition_variable>
 #include <thread>
+
 //#include <vector>
 
 

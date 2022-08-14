@@ -237,9 +237,12 @@
 // threads
 #include <functional>
 #include <atomic>
-#include <mutex>
-#include <condition_variable>
-#include <thread>
+
+// On macOS, mutex, codition_variable, thread pull in system_error which pulls in std::string
+// when then instantiates 5 versions of basic_string into all files
+//#include <mutex>
+//#include <condition_variable>
+//#include <thread>
 
 #else
 
@@ -275,9 +278,10 @@ import std.regex;
 
 #endif
 
-#if COMPILE_BASIS
-#include "basisu_transcoder.h"
-#endif
+// Get this out of config, it pulls in random and other std::fields
+//#if COMPILE_BASIS
+//#include "basisu_transcoder.h"
+//#endif
 
 // includes that are usable across all files
 #include "KramLog.h"

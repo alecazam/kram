@@ -10,10 +10,10 @@
 #pragma warning (disable: 4127) // conditional expression is constant
 #endif
 
-using namespace utils;
-
 namespace rdo_bc
 {
+    using namespace utils;
+
 	static const char* get_dxgi_format_string(DXGI_FORMAT fmt)
 	{
 		switch (fmt)

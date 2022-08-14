@@ -14,7 +14,10 @@
 //#include <algorithm>
 //#include <vector>
 //#include <string>
+
+// on macOS, random pulls in std::string w/5x impls instanciated
 #include <random>
+
 #include <utility>
 #include <limits.h>
 //#include "dds_defs.h"

@@ -64,6 +64,8 @@
 //#include <iterator>
 #include <type_traits>
 #include <assert.h>
+
+// on macOS, random pulls in std::string w/5x impls instanciated
 #include <random>
 
 #include "basisu_containers.h"
