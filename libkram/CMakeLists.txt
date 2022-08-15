@@ -68,7 +68,7 @@ if (EASTL)
 endif()
 
 # replace parts of std/stdl with fastl
-set(COMPILE_EASTL 0)
+set(COMPILE_FASTL 0)
 if (FASTL)
     set(COMPILE_FASTL 1)
 endif()
