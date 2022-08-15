@@ -229,8 +229,12 @@ if (BUILD_MAC)
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
     )
 
+    target_compile_options(${myTargetLib} PRIVATE -W -Wall)
+
     # TODO: switch to pch setup (KramConfig.pch)
-    target_compile_options(${myTargetLib} PRIVATE -include KramConfig.h -W -Wall)
+    # this is already done by pch for libkram, but other projects need the force include inherited
+    # force include (public)
+    target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
     
 elseif (BUILD_WIN)
     
@@ -241,10 +245,10 @@ elseif (BUILD_WIN)
     string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-    # this is already done by pch
+    # this is already done by pch for libkram, but other projects need the force include inherited
     # force include (public)
-    #target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
-        
+    target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
+       
     # all warnings, AVX, and multiprocess compiles
     target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX /MP)
     
@@ -253,7 +257,11 @@ elseif (BUILD_WIN)
         
 endif()
 
-# TODO: Missing dead-strip on Release builds for macOS/Win.  Needed to minimize app size.
+# turn on dead-code stripping in release.  Don't set this in debug.
+# does this make sense on lib, or just on apps ?
+if (CMAKE_BUILD_TYPE STREQUAL "RELEASE") 
+    target_compile_options(${myTargetLib} PUBLIC -dead_strip)
+endif()
 
 # This will be force include (-include, /FI) on GCC/clang/VS.
 # Can't seem to ref KramPrefix.pch file.  Goes into cmake_pch.hxx file

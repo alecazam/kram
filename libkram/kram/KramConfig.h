@@ -204,6 +204,8 @@
 // these are all vector based
 #include "../fastl/falgorithm.h"
 #include "../fastl/vector.h"
+
+// These don't really work.  They are constantly shifting the key-value pairs on add/revmoe
 #include "../fastl/map.h"
 #include "../fastl/set.h"
 #include "../fastl/unordered_map.h"
@@ -212,19 +214,12 @@
 // still too many holes in this (rfind, insert, back, pop_back, find_last_of, substr)
 
 #include "../fastl/fstring.h"
+
+// This was to fallback on sso of basic_string
 //#include <string>
 //namespace NAMESPACE_STL
 //{
 //    using string = std::string;
-//}
-
-// what is causing string to instantiate?
-//namespace std
-//{
-//class basic_string
-//{
-//    int32_t b;
-//};
 //}
 
 // std - for missing functionality
@@ -257,6 +252,8 @@ import std.filesystem;
 import std.regex;
 */
 
+#define NAMESPACE_STL std
+
 // all std
 #include <algorithm>  // for max
 #include <functional>
@@ -274,7 +271,6 @@ import std.regex;
 #include <unordered_map>
 #include <vector>
 
-#define NAMESPACE_STL std
 
 #endif
 
