@@ -184,6 +184,9 @@ list(FILTER libSources EXCLUDE REGEX ".astcenccli_toplevel.cpp$")
 list(FILTER libSources EXCLUDE REGEX ".atomic.h$")
 list(FILTER libSources EXCLUDE REGEX ".atomic.cpp$")
 
+# this is trying to setup C++20 module, but that causes compile failures
+list(FILTER libSources EXCLUDE REGEX ".format.cpp$")
+
 # this will preserve hierarchy of sources in a build project
 source_group(TREE "${SOURCE_DIR}" PREFIX "source" FILES ${libSources})
 
