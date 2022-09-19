@@ -117,6 +117,9 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/etc2comp/*.cpp"
     "${SOURCE_DIR}/etc2comp/*.h"
 
+    "${SOURCE_DIR}/fmt/*.cpp"
+    "${SOURCE_DIR}/fmt/*.h"
+
     "${SOURCE_DIR}/heman/hedistance.cpp"
     "${SOURCE_DIR}/heman/hedistance.h"
 
@@ -199,6 +202,7 @@ target_include_directories(${myTargetLib} PRIVATE
     "${SOURCE_DIR}/bc7enc/"
     "${SOURCE_DIR}/compressonator/bc6h/"
     "${SOURCE_DIR}/etc2comp/"
+    "${SOURCE_DIR}/fmt/"
     "${SOURCE_DIR}/heman/"
     "${SOURCE_DIR}/lodepng"
     "${SOURCE_DIR}/miniz/"

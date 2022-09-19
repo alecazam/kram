@@ -16,6 +16,10 @@
 #elif KRAM_ANDROID
 #include <log.h>
 #endif
+
+#include "KramFmt.h"
+#include "format.h" // really fmt/format.h
+
 namespace kram {
 
 using mymutex = std::recursive_mutex;
@@ -117,6 +121,39 @@ int32_t append_sprintf(string& str, const char* format, ...)
     return len;
 }
 
+//----------------------------------
+
+static size_t my_formatted_size(fmt::string_view format, fmt::format_args args)
+{
+    auto buf = fmt::detail::counting_buffer<>();
+    fmt::detail::vformat_to(buf, format, args, {});
+    return buf.count();
+}
+
+// returns length of chars appended, -1 if failure
+int32_t append_sprintf_impl(string& str, fmt::string_view format, fmt::format_args args)
+{
+    size_t size = my_formatted_size(format, args);
+    
+    // TODO: write directly to end of str
+    string text = vformat(format, args);
+    
+    // this does all formatting work
+    str.resize(str.size() + size);
+    str.insert(str.back(), text);
+    
+    return size; // how many chars appended, no real failure case yet
+}
+
+// returns length of string, -1 if failure
+int32_t sprintf_impl(string& str, fmt::string_view format, fmt::format_args args)
+{
+    str.clear();
+    return append_sprintf_impl(str, format, args);
+}
+
+//----------------------------------
+
 bool startsWith(const char* str, const string& substring)
 {
     return strncmp(str, substring.c_str(), substring.size()) == 0;
@@ -152,27 +189,13 @@ bool endsWithExtension(const char* str, const string& substring)
     return strcmp(search, substring.c_str()) == 0;
 }
 
-extern int32_t logMessage(const char* group, int32_t logLevel,
+//----------------------------------
+
+static int32_t logMessageImpl(const char* group, int32_t logLevel,
                           const char* file, int32_t line, const char* func,
-                          const char* fmt, ...)
+                          const char* fmt, const char* msg)
 {
-    // TOOD: add any filtering up here
-
-    // convert var ags to a msg
-    const char* msg;
-
-    string str;
-    if (strrchr(fmt, '%') == nullptr) {
-        msg = fmt;
-    }
-    else {
-        va_list args;
-        va_start(args, fmt);
-        vsprintf(str, fmt, args);
-        va_end(args);
-
-        msg = str.c_str();
-    }
+    // TOOD: add any filtering up here, or before msg is built
 
     // pipe to correct place, could even be file output
     FILE* fp = stdout;
@@ -295,6 +318,52 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
 #endif
 
     return 0;  // reserved for later
+}
+
+int32_t logMessage(const char* group, int32_t logLevel,
+                          const char* file, int32_t line, const char* func,
+                          const char* fmt, ...)
+{
+    // convert var ags to a msg
+    const char* msg;
+
+    string str;
+    if (strrchr(fmt, '%') == nullptr) {
+        msg = fmt;
+    }
+    else {
+        va_list args;
+        va_start(args, fmt);
+        vsprintf(str, fmt, args);
+        va_end(args);
+
+        msg = str.c_str();
+    }
+    
+    return logMessageImpl(group, logLevel, file, line, func,
+                          fmt, msg);
+}
+
+
+// This is the api reference for fmt.
+// Might be able to use std::format in C++20 instead, but nice
+// to have full source to impl to fix things in fmt.
+// https://fmt.dev/latest/api.html#_CPPv4IDpEN3fmt14formatted_sizeE6size_t13format_stringIDp1TEDpRR1T
+
+// TODO: can this use NAMESPACE_STL::string_view instead ?
+int32_t logMessage(const char* group, int32_t logLevel,
+                          const char* file, int32_t line, const char* func,
+                          fmt::string_view format, fmt::format_args args)
+{
+    // TODO: size_t size = std::formatted_size(format, args);
+    // and then reserve that space in str.  Use that for impl of append_format.
+    // can then append to existing string (see vsprintf)
+    
+    string str = fmt::vformat(format, args);
+    const char* msg = str.c_str();
+    
+    return logMessageImpl(group, logLevel, file, line, func,
+                          format.data(), msg);
 }
 
 }  // namespace kram

@@ -40,8 +40,9 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
 #define KVERIFY(x) (x)
 #endif
 
-#define KLOGD(group, fmt, ...) logMessage(group, kram::LogLevelDebug, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
-#define KLOGI(group, fmt, ...) logMessage(group, kram::LogLevelInfo, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
+// save code space, since file/func aren't output for debug/info
+#define KLOGD(group, fmt, ...) logMessage(group, kram::LogLevelDebug, /* __FILE__ */ nullptr, __LINE__, /* __FUNCTION__ */ nullptr, fmt, ##__VA_ARGS__)
+#define KLOGI(group, fmt, ...) logMessage(group, kram::LogLevelInfo, /* __FILE__ */ nullptr, __LINE__, /* __FUNCTION__ */ nullptr, fmt, ##__VA_ARGS__)
 #define KLOGW(group, fmt, ...) logMessage(group, kram::LogLevelWarning, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 #define KLOGE(group, fmt, ...) logMessage(group, kram::LogLevelError, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 
