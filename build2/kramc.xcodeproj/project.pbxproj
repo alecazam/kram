@@ -204,6 +204,12 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"-DCOMPILE_FASTL=0",
+					"-DCOMPILE_EASTL=0",
+					"-include",
+					KramConfig.h,
+				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
 			};
@@ -260,6 +266,12 @@
 				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OTHER_CFLAGS = (
+					"-DCOMPILE_FASTL=0",
+					"-DCOMPILE_EASTL=0",
+					"-include",
+					KramConfig.h,
+				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
 			};

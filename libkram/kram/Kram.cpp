@@ -250,10 +250,8 @@ bool KTXImageData::openPNG(const char* filename, KTXImage& image)
 
 bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image)
 {
-    //close();
-
-    // the mmap/filehelper point to the png data
-    // use Image to
+    // This is returned by LoadPng.  Note that many png have this set
+    // by default and not controllable by artists.
     bool isSrgb = false;
     
     Image singleImage;

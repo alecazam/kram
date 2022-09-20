@@ -35,13 +35,13 @@ int32_t logMessageConverter(const char* group, int32_t logLevel,
 }
 
 // save code space, since file/func aren't output for debug/info
-#define KFLOGD(group, fmt, ...) \
+#define KLOGFD(group, fmt, ...) \
     logMessageConverter(group, kram::LogLevelDebug, /* __FILE__ */ nullptr, __LINE__, /* __FUNCTION__ */ nullptr, FMT_STRING(fmt), ##__VA_ARGS__)
-#define KFLOGI(group, fmt, ...) \
+#define KLOGFI(group, fmt, ...) \
     logMessageConverter(group, kram::LogLevelInfo, /* __FILE__ */ nullptr, __LINE__, /* __FUNCTION__ */ nullptr, FMT_STRING(fmt), ##__VA_ARGS__)
-#define KFLOGW(group, fmt, ...) \
+#define KLOGFW(group, fmt, ...) \
     logMessageConverter(group, kram::LogLevelWarning, __FILE__, __LINE__, __FUNCTION__, FMT_STRING(fmt), ##__VA_ARGS__)
-#define KFLOGE(group, fmt, ...) \
+#define KLOGFE(group, fmt, ...) \
     logMessageConverter(group, kram::LogLevelError, __FILE__, __LINE__, __FUNCTION__, FMT_STRING(fmt), ##__VA_ARGS__)
 
 // fmt already has versions of these in printf.h, but want buried impls

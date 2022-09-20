@@ -33,9 +33,6 @@ enum TexEncoder {
     kTexEncoderEtcenc,  // etc-r,rg11, etc2, no HDR format
 
     kTexEncoderAstcenc,
-
-    // TODO: add these for cross-platform support
-    // bc - icbc, dxtex (BC6H)
 };
 
 // Fill this out from CLI, and hand to ImageInfo::init
@@ -56,7 +53,6 @@ public:
     KTX2Compressor compressor;
     bool isKTX2 = false;
 
-    //bool skipImageLength = false;
     bool doMipmaps = true;  // default to mips on
     bool isVerbose = false;
     bool doSDF = false;
@@ -120,7 +116,6 @@ private:
 
 public:
     MyMTLTextureType textureType = MyMTLTextureType2D;
-    //MyTexFormat format = kUnknown;
     MyMTLPixelFormat pixelFormat = MyMTLPixelFormatInvalid;
     TexEncoder textureEncoder = kTexEncoderUnknown;
 
@@ -134,16 +129,15 @@ public:
     // output image state
     // Note: difference between input srgb and output srgb, but it's mingled
     // here a bit
-    //bool isSnorm = false; // TODO: rename to isNormalized (with isSigned = snorm, without = unorm)
+    bool isSRGB = false;
+    
     bool isSigned = false;
     bool isNormal = false;
-    bool isSRGB = false;
     bool isColorWeighted = false;
     bool isPremultiplied = false;  // don't premul
     bool isPrezero = false;
     bool isHDR = false;
 
-    //bool skipImageLength = false;  // gen ktxa
     bool doSDF = false;
     bool doMipmaps = false;
     bool optimizeFormatForOpaque = false;
