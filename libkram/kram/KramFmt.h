@@ -55,13 +55,13 @@ int32_t append_sprintf_impl(string& str, fmt::string_view format, fmt::format_ar
 // This is a way to convert to single function call, so handling
 // can be buried within that.  May need to wrap format with FMT_STRING
 template <typename S, typename... Args>
-int32_t sprintf(string& s, const S& format, Args&&... args)
+int32_t sprintf_fmt(string& s, const S& format, Args&&... args)
 {
     return sprintf_impl(s, format, fmt::make_format_args(args...));
 }
 
 template <typename S, typename... Args>
-int32_t append_sprintf(string& s, const S& format, Args&&... args)
+int32_t append_sprintf_fmt(string& s, const S& format, Args&&... args)
 {
     return append_sprintf_impl(s, format, fmt::make_format_args(args...));
 }
