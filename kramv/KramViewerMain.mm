@@ -41,11 +41,26 @@ using namespace simd;
 using namespace kram;
 using namespace NAMESPACE_STL;
 
+// this aliases the existing string, so can't chop extension
+inline const char* toFilenameShort(const char* filename) {
+    const char* filenameShort = strrchr(filename, '/');
+    if (filenameShort == nullptr) {
+        filenameShort = filename;
+    }
+    else {
+        filenameShort += 1;
+    }
+    return filenameShort;
+}
+
+
 struct File {
     string name;
     int32_t urlIndex;
     
-    bool operator <(const File& rhs) const { return strcasecmp(name.c_str(), rhs.name.c_str()) < 0; }
+    // Note: not sorting by urlIndex currently
+    bool operator <(const File& rhs) const
+        { return strcasecmp(toFilenameShort(name.c_str()), toFilenameShort(rhs.name.c_str())) < 0; }
 };
 
 bool isSupportedModelFilename(const char* filename) {
@@ -70,17 +85,6 @@ struct MouseData
     NSPoint pan;
 };
 
-// this aliases the existing string, so can't chop extension
-inline const char* toFilenameShort(const char* filename) {
-    const char* filenameShort = strrchr(filename, '/');
-    if (filenameShort == nullptr) {
-        filenameShort = filename;
-    }
-    else {
-        filenameShort += 1;
-    }
-    return filenameShort;
-}
 
 //-------------
 
@@ -505,19 +509,22 @@ NSArray<NSString*>* utis = @[
   [UTType typeWithFilenameExtension: @"ktx2"].identifier,
   [UTType typeWithFilenameExtension: @"dds"].identifier,
   
-  [UTType typeWithFilenameExtension: @"zip"].identifier, // UTTypeZIP
+  [UTType typeWithFilenameExtension: @"zip"].identifier,
   [UTType typeWithFilenameExtension: @"metallib"].identifier,
   
+#if USE_GLTF
   [UTType typeWithFilenameExtension: @"gltf"].identifier,
   [UTType typeWithFilenameExtension: @"glb"].identifier
-#if USE_GLTF
-  //@"model/gltf+stream",
+  //@"model/gltf+json",
   //@"model/gltf+binary"
 #endif
 ];
 NSDictionary* pasteboardOptions = @{
+    // This means only these uti can be droped.
     NSPasteboardURLReadingContentsConformToTypesKey: utis
-    //NSPasteboardURLReadingFileURLsOnlyKey: @YES
+    
+    // Don't use this it prevents folder urls
+    //, NSPasteboardURLReadingFileURLsOnlyKey: @YES
 };
 
 @implementation MyMTKView {
@@ -540,8 +547,7 @@ NSDictionary* pasteboardOptions = @{
     ZipHelper _zip;
     MmapHelper _zipMmap;
     BOOL _noImageLoaded;
-    int32_t _archiveStartIndex;
-
+    
     // folders and archives and multi-drop files are filled into this
     vector<File> _files;
     int32_t _fileIndex;
@@ -643,7 +649,7 @@ NSDictionary* pasteboardOptions = @{
     
     // added for drag-drop support
     [self registerForDraggedTypes:pasteboardTypes];
-
+    
     // This gesture only works for trackpad
     _zoomGesture = [[NSMagnificationGestureRecognizer alloc]
         initWithTarget:self
@@ -2514,22 +2520,12 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             
             // TODO: build up counterparts when listing out files
             
-            /* Archive probably only holds one type of file, could pull in zips?
-            if (_showSettings->isArchive) {
-                if ([self advanceCounterpartFromAchive:!isShiftKeyDown]) {
+            /* can mark counterparts on load, and cycle png vs. ktx/ktx2/dds files of same name
+             if (_files.size() > 1) {
+                if ([self advanceCounterpart:!isShiftKeyDown]) {
                     _hudHidden = true;
                     [self updateHudVisibility];
                     
-                    isChanged = true;
-                    text = "Loaded " + _showSettings->lastFilename;
-                }
-            }
-            else */
-            
-            /* TODO: finish this, should only cycle through counterpart files
-                those are files with same name but different extension under the same folder.
-            if (_showSettings->isFolder) {
-                if ([self advanceCounterpartFromFolder:!isShiftKeyDown]) {
                     isChanged = true;
                     text = "Loaded " + _showSettings->lastFilename;
                 }
@@ -2630,7 +2626,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
 // Note: docs state that drag&drop should be handled automatically by UTI setup
 // via openURLs but I find these calls are needed, or it doesn't work.  Maybe
-// need to register for NSRUL instead of NSPasteboardTypeFileURL.  For example,
+// need to register for NSURL instead of NSPasteboardTypeFileURL.  For example,
 // in canReadObjectForClasses had to use NSURL.
 
 // drag and drop support
@@ -2840,7 +2836,8 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
 
 - (BOOL)loadFile
 {
-    if ([self isArchive]) return [self loadFileFromArchive];
+    if ([self isArchive])
+        return [self loadFileFromArchive];
     
     // now lookup the filename and data at that entry
     const char* filename = _files[_fileIndex].name.c_str();
@@ -2848,9 +2845,11 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
     
+#if USE_GLTF
     bool isModel = isSupportedModelFilename(filename);
     if (isModel)
         return [self loadModelFile:filename];
+#endif
     
     // have already filtered filenames out, so this should never get hit
     if (!isSupportedFilename(filename)) {
@@ -2969,12 +2968,17 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
 - (BOOL)loadFileFromArchive
 {
     // now lookup the filename and data at that entry
-    uint32_t archiveIndex = _fileIndex - _archiveStartIndex;
-    const auto& entry = _zip.zipEntrys()[_fileIndex - archiveIndex];
-
-    const char* filename = entry.filename;
-    string fullFilename = filename;
-    double timestamp = (double)entry.modificationDate;
+    const File& file = _files[_fileIndex];
+    
+    // now lookup the file in the entrys
+    //for (uint32_t i = 0; i < )
+    //const auto& entry = _zip.zipEntrys()[archiveIndex];
+    //const char* filename = entry.filename;
+    
+    const char* filename = file.name.c_str();
+    const auto* entry = _zip.zipEntry(filename);
+    string fullFilename = entry->filename;
+    double timestamp = (double)entry->modificationDate;
 
 // TODO: don't have a version which loads gltf model from memory block
 //    bool isModel = isSupportedModelFilename(filename);
@@ -3155,8 +3159,6 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     // but that's probably okay for now.  Add a separate array of open
     // archives if want > 1.
 
-    _archiveStartIndex = 0;
-    
     // copy the existing files list
     string existingFilename;
     if (_fileIndex < (int32_t)_files.size())
@@ -3174,9 +3176,8 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         const char* filename = url.fileSystemRepresentation;
         
         if (archiveCount == 0 && isSupportedArchiveFilename(filename)) {
-            uint32_t fileIndexCopy = _fileIndex;
+            //uint32_t fileCount = _files.size();
             if ([self listFilesInArchive:filename urlIndex:urlIndex]) {
-                _archiveStartIndex = fileIndexCopy;
                 archiveCount++;
             }
         }
@@ -3411,36 +3412,18 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         
         return NO;
     }
+    setErrorLogCapture(false);
 
     // was using subtitle, but that's macOS 11.0 feature.
     string title = "kramv - ";
     title += filenameShort;
-
     self.window.title = [NSString stringWithUTF8String:title.c_str()];
-
-    // if url is nil, then loading out of archive or folder
-    // and don't want to save that or set imageURL
-//    if (url != nil)
-//    {
-//        // add to recent docs, so can reload quickly
-//        NSDocumentController* dc =
-//            [NSDocumentController sharedDocumentController];
-//        [dc noteNewRecentDocumentURL:gltfFileURL];
-//
-//        // TODO: not really an image
-//        //self.imageURL = gltfFileURL;
-//
-//        // no need for file table on single files
-//        [self hideFileTable];
-//    }
     
     // show the controls
     if (_noImageLoaded) {
         _buttonStack.hidden = NO;  // show controls
         _noImageLoaded = NO;
     }
-
-    setErrorLogCapture(false);
 
     // store the filename
     _showSettings->lastFilename = filename;
