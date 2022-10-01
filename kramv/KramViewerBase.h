@@ -161,6 +161,9 @@ public:
     // image vs. gltf model
     bool isModel = false;
     
+    // if diff texture available, can show diff against source
+    bool isDiff = false;
+    
     // can sample from drawable or from single source texture
     bool isEyedropperFromDrawable();
 

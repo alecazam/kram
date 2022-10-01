@@ -41,6 +41,64 @@ using namespace simd;
 using namespace kram;
 using namespace NAMESPACE_STL;
 
+#define ArrayCount(x) (sizeof(x) / sizeof(x[0]))
+
+static string filenameNoExtension(const char* filename)
+{
+    const char* ext = strrchr(filename, '.');
+    
+    const char* dotPosStr = strchr(filename, '.');
+    if (dotPosStr == nullptr)
+        return filename;
+    auto dotPos = dotPosStr - filename;
+    
+    // now chop off the extension
+    string filenameNoExt = filename;
+    return filenameNoExt.substr(0, dotPos);
+}
+
+static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector<string>& normalFilenames)
+{
+    normalFilenames.clear();
+    
+    string filenameShort = filename;
+    
+    const char* ext = strrchr(filename, '.');
+
+    const char* dotPosStr = strchr(filenameShort.c_str(), '.');
+    if (dotPosStr == nullptr)
+        return;
+    
+    auto dotPos = dotPosStr - filenameShort.c_str();
+    
+    // now chop off the extension
+    filenameShort = filenameShort.substr(0, dotPos);
+
+    const char* searches[] = { "-a", "-d", "_Color", "_baseColor" };
+    
+    for (uint32_t i = 0; i < ArrayCount(searches); ++i) {
+        const char* search = searches[i];
+        if (endsWith(filenameShort, search)) {
+            filenameShort = filenameShort.substr(0, filenameShort.length()-strlen(search));
+            break;
+        }
+    }
+     
+    const char* suffixes[] = { "-n", "_normal", "_Normal" };
+    
+    string normalFilename;
+    for (uint32_t i = 0; i < ArrayCount(suffixes); ++i) {
+        const char* suffix = suffixes[i];
+        
+        // may need to try various names, and see if any exist
+        normalFilename = filenameShort;
+        normalFilename += suffix;
+        normalFilename += ext;
+        
+        normalFilenames.push_back( normalFilename );
+    }
+}
+
 // this aliases the existing string, so can't chop extension
 inline const char* toFilenameShort(const char* filename) {
     const char* filenameShort = strrchr(filename, '/');
@@ -481,9 +539,11 @@ withCurrentSearchString:(NSString *)searchString
 
 @end
 
-// also NSPasteboardTypeURL
-// also NSPasteboardTypeTIFF
 NSArray<NSString *>* pasteboardTypes = @[
+    // don't really want generic urls, but need folders to drop
+    //NSPasteboardTypeURL
+    
+    // this is preventing folder drops ?
     NSPasteboardTypeFileURL
 ];
 
@@ -566,6 +626,7 @@ NSDictionary* pasteboardOptions = @{
     Action* _actionPremul;
     Action* _actionSigned;
     
+    Action* _actionDiff;
     Action* _actionDebug;
     Action* _actionGrid;
     Action* _actionChecker;
@@ -711,6 +772,7 @@ NSDictionary* pasteboardOptions = @{
         Action("U", "UI", Key::U),
         Action("V", "UI Vertical", Key::V),
 
+        Action("Q", "Quick Diff", Key::Q), // C/D already taken
         Action("D", "Debug", Key::D),
         Action("G", "Grid", Key::G),
         Action("B", "Checkerboard", Key::B),
@@ -763,6 +825,7 @@ NSDictionary* pasteboardOptions = @{
         &_actionHideUI,
         &_actionVertical,
        
+        &_actionDiff,
         &_actionDebug,
         &_actionGrid,
         &_actionChecker,
@@ -800,9 +863,7 @@ NSDictionary* pasteboardOptions = @{
     
     NSRect rect = NSMakeRect(0, 10, 30, 30);
 
-    #define ArrayCount(x) (sizeof(x) / sizeof(x[0]))
-
-    int32_t numActions = ArrayCount(actions);
+   int32_t numActions = ArrayCount(actions);
     
     NSMutableArray* buttons = [[NSMutableArray alloc] init];
 
@@ -1899,6 +1960,7 @@ enum TextSlot
     bool isMipHidden = _showSettings->mipCount <= 1;
 
     bool isJumpToNextHidden = _files.size() <= 1;
+    bool isJumpToCounterpartHidden = isJumpToNextHidden; // really should disable if no counterparts
     
     bool isRedHidden = _showSettings->numChannels == 0; // models don't show rgba
     bool isGreenHidden = _showSettings->numChannels <= 1;
@@ -1920,7 +1982,8 @@ enum TextSlot
     bool isCheckerboardHidden = !hasAlpha;
 
     bool isSignedHidden = !isSignedFormat(_showSettings->originalFormat);
-    bool isPlayHidden = !_showSettings->isModel;
+    bool isPlayHidden = !_showSettings->isModel; // only for models
+    bool isDiffHidden = _showSettings->isModel; // only for images
     
     _actionPlay->setHidden(isPlayHidden);
     _actionArray->setHidden(isArrayHidden);
@@ -1928,11 +1991,12 @@ enum TextSlot
     _actionMip->setHidden(isMipHidden);
     _actionShowAll->setHidden(isShowAllHidden);
     
+    _actionDiff->setHidden(isDiffHidden);
     _actionItem->setHidden(isJumpToNextHidden);
     _actionPrevItem->setHidden(isJumpToNextHidden);
     
-    _actionCounterpart->setHidden(isJumpToNextHidden);
-    _actionPrevCounterpart->setHidden(isJumpToNextHidden);
+    _actionCounterpart->setHidden(isJumpToCounterpartHidden);
+    _actionPrevCounterpart->setHidden(isJumpToCounterpartHidden);
     
     _actionR->setHidden(isRedHidden);
     _actionG->setHidden(isGreenHidden);
@@ -1986,7 +2050,8 @@ enum TextSlot
 
     auto verticalState = toState(_buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical);
     auto uiState = toState(_buttonStack.hidden);
-
+    auto diffState = toState(_showSettings->isDiff);
+    
     _actionVertical->setHighlight(verticalState);
     
     // TODO: pass boolean, and change in the call
@@ -2015,6 +2080,7 @@ enum TextSlot
     
     _actionShowAll->setHighlight(showAllState);
     _actionPreview->setHighlight(previewState);
+    _actionDiff->setHighlight(diffState);
     _actionShapeMesh->setHighlight(meshState);
     _actionShapeChannel->setHighlight(meshChannelState);
     _actionLighting->setHighlight(lightingState);
@@ -2350,11 +2416,16 @@ enum TextSlot
 
         isChanged = true;
     }
-    // P already used for premul
     else if (action == _actionPreview) {
         _showSettings->isPreview = !_showSettings->isPreview;
         isChanged = true;
         text = "Preview ";
+        text += _showSettings->isPreview ? "On" : "Off";
+    }
+    else if (action == _actionDiff) {
+        _showSettings->isDiff = !_showSettings->isDiff;
+        isChanged = true;
+        text = "Diff ";
         text += _showSettings->isPreview ? "On" : "Off";
     }
     // TODO: might switch c to channel cycle, so could just hit that
@@ -2517,11 +2588,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             if (action == _actionPrevCounterpart) {
                 isShiftKeyDown = !isShiftKeyDown;
             }
-            
-            // TODO: build up counterparts when listing out files
-            
-            /* can mark counterparts on load, and cycle png vs. ktx/ktx2/dds files of same name
-             if (_files.size() > 1) {
+            if (_files.size() > 1) {
                 if ([self advanceCounterpart:!isShiftKeyDown]) {
                     _hudHidden = true;
                     [self updateHudVisibility];
@@ -2530,7 +2597,6 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
                     text = "Loaded " + _showSettings->lastFilename;
                 }
             }
-            */
         }
     }
     
@@ -2632,14 +2698,21 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 // drag and drop support
 - (NSDragOperation)draggingEntered:(id)sender
 {
-    if ((NSDragOperationGeneric & [sender draggingSourceOperationMask]) ==
+    if (([sender draggingSourceOperationMask] & NSDragOperationGeneric) ==
         NSDragOperationGeneric) {
-        NSPasteboard *pasteboard = [sender draggingPasteboard];
+        NSPasteboard* pasteboard = [sender draggingPasteboard];
         
         bool canReadPasteboardObjects =
             [pasteboard canReadObjectForClasses:@[ [NSURL class] ]
                                         options:pasteboardOptions];
 
+        // when this fails, toss the pasteboardOptions
+        // like when I drag folders
+        if (!canReadPasteboardObjects) {
+            canReadPasteboardObjects =
+                [pasteboard canReadObjectForClasses:@[ [NSURL class] ]
+                                        options:@{}];
+        }
         // don't copy dropped item, want to alias large files on disk without that
         if (canReadPasteboardObjects) {
             return NSDragOperationGeneric;
@@ -2658,17 +2731,22 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 - (BOOL)performDragOperation:(id)sender
 {
     NSPasteboard* pasteboard = [sender draggingPasteboard];
+    
+    // This doesn't work when folders are dropped, urls count is 0
     NSArray<NSURL*>* urls = [pasteboard readObjectsForClasses:@[[NSURL class]]
                                                       options: pasteboardOptions];
     int filesCount = [urls count];
     
+    // Could just stop passing the utis
+    if (filesCount == 0) {
+        urls = [pasteboard readObjectsForClasses:@[[NSURL class]]
+                                         options:@{}];
+        filesCount = [urls count];
+    }
+    
     if (filesCount > 0) {
         if ([self loadTextureFromURLs:urls]) {
             [self setHudText:""];
-
-            //        if (_files.size() == 2) {
-            //            // TODO: default to diff
-            //        }
             return YES;
         }
     }
@@ -2719,6 +2797,49 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return [self listFilesInArchive:urlIndex];
 }
 
+- (BOOL)advanceCounterpart:(BOOL)increment
+{
+    if (_files.empty()) {
+        return NO;
+    }
+    
+    // see if file has counterparts
+    const File& file = _files[_fileIndex];
+    string currentFilename = filenameNoExtension(toFilenameShort(file.name.c_str()));
+    
+    // TODO: this should cycle through only the counterparts
+    uint32_t nextFileIndex = _fileIndex;
+    
+    size_t numEntries = _files.size();
+    if (increment)
+        nextFileIndex++;
+    else
+        nextFileIndex += numEntries - 1;  // back 1
+
+    nextFileIndex = nextFileIndex % numEntries;
+    
+    const File& nextFile = _files[nextFileIndex];
+    string nextFilename = filenameNoExtension(toFilenameShort(nextFile.name.c_str()));
+    
+    if (currentFilename != nextFilename)
+        return NO;
+    
+    _fileIndex = nextFileIndex;
+    
+    // set selection
+    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileIndex] byExtendingSelection:NO];
+    [_tableView scrollRowToVisible:_fileIndex];
+    
+    // want it to respond to arrow keys
+    //[self.window makeFirstResponder: _tableView];
+    
+    // show the files table
+    [self showFileTable];
+    [self setEyedropperText:""];
+    
+    return [self loadFile];
+}
+
 - (BOOL)advanceFile:(BOOL)increment
 {
     if (_files.empty()) {
@@ -2742,10 +2863,6 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     
     // show the files table
     [self showFileTable];
-    
-    // also have to hide hud or it will obscure the visible table
-    //_hudHidden = true;
-    //[self updateHudVisibility];
     [self setEyedropperText:""];
     
     return [self loadFile];
@@ -2785,47 +2902,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return isFound;
 }
 
-static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector<string>& normalFilenames)
-{
-    normalFilenames.clear();
-    
-    string filenameShort = filename;
-    
-    const char* ext = strrchr(filename, '.');
 
-    const char* dosPosStr = strchr(filenameShort.c_str(), '.');
-    if (dosPosStr == nullptr)
-        return;
-    
-    auto dotPos = dosPosStr - filenameShort.c_str();
-    
-    // now chop off the extension
-    filenameShort = filenameShort.substr(0, dotPos);
-
-    const char* searches[] = { "-a", "-d", "_Color", "_baseColor" };
-    
-    for (uint32_t i = 0; i < ArrayCount(searches); ++i) {
-        const char* search = searches[i];
-        if (endsWith(filenameShort, search)) {
-            filenameShort = filenameShort.substr(0, filenameShort.length()-strlen(search));
-            break;
-        }
-    }
-     
-    const char* suffixes[] = { "-n", "_normal", "_Normal" };
-    
-    string normalFilename;
-    for (uint32_t i = 0; i < ArrayCount(suffixes); ++i) {
-        const char* suffix = suffixes[i];
-        
-        // may need to try various names, and see if any exist
-        normalFilename = filenameShort;
-        normalFilename += suffix;
-        normalFilename += ext;
-        
-        normalFilenames.push_back( normalFilename );
-    }
-}
 
 - (BOOL)isArchive
 {
@@ -2874,6 +2951,10 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         }
     }
     
+    // TODO: if it's a compressed file, then set a diff target if a corresponding png
+    // is found.  Eventually see if a src dds/ktx/ktx2 exists.  Want to stop
+    // using png as source images.
+    
     //-------------------------------
 
     KTXImage image;
@@ -2900,6 +2981,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         }
     }
     
+    // Release any loading model textures
     Renderer* renderer = (Renderer *)self.delegate;
     [renderer releaseAllPendingTextures];
     
@@ -2969,11 +3051,6 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
 {
     // now lookup the filename and data at that entry
     const File& file = _files[_fileIndex];
-    
-    // now lookup the file in the entrys
-    //for (uint32_t i = 0; i < )
-    //const auto& entry = _zip.zipEntrys()[archiveIndex];
-    //const char* filename = entry.filename;
     
     const char* filename = file.name.c_str();
     const auto* entry = _zip.zipEntry(filename);
@@ -3348,19 +3425,19 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
 //    return success;
 }
 
--(double)getTimestampForFile:(NSURL*)url
-{
-    // TODO: could just use FileHelper::modificationTimestamp(filename);
-    
-    NSDate* fileDate = nil;
-    NSError* error = nil;
-    [url getResourceValue:&fileDate
-                   forKey:NSURLContentModificationDateKey
-                    error:&error];
-
-    double timestamp = fileDate.timeIntervalSince1970;
-    return timestamp;
-}
+//-(double)getTimestampForFile:(NSURL*)url
+//{
+//    // TODO: could just use FileHelper::modificationTimestamp(filename);
+//
+//    NSDate* fileDate = nil;
+//    NSError* error = nil;
+//    [url getResourceValue:&fileDate
+//                   forKey:NSURLContentModificationDateKey
+//                    error:&error];
+//
+//    double timestamp = fileDate.timeIntervalSince1970;
+//    return timestamp;
+//}
 
 -(BOOL)loadModelFile:(const char*)filename
 {
@@ -3381,15 +3458,12 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     
     setErrorLogCapture(true);
 
-    // set title to filename, chop this to just file+ext, not directory
-    //if (url != nil)
-    //    filename = url.fileSystemRepresentation;
     const char* filenameShort = toFilenameShort(filename);
-
+    double timestamp = FileHelper::modificationTimestamp(filename);
+    
+    // This code only takes url, so construct one
     NSURL* gltfFileURL =
         [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
-    double timestamp = [self getTimestampForFile:gltfFileURL];
-    
     BOOL success = [renderer loadModel:gltfFileURL];
     
     // TODO: split this off to a completion handler, since loadModel is async
