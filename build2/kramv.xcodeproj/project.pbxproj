@@ -32,6 +32,7 @@
 		708D44D0272B03BF00783DCE /* pbr.txt in Resources */ = {isa = PBXBuildFile; fileRef = 708D44CF272B03BF00783DCE /* pbr.txt */; };
 		708D44D4272FA4C800783DCE /* tropical_beach.ktx in Resources */ = {isa = PBXBuildFile; fileRef = 708D44D2272FA4C800783DCE /* tropical_beach.ktx */; };
 		708D44D5272FA4C800783DCE /* piazza_san_marco.ktx in Resources */ = {isa = PBXBuildFile; fileRef = 708D44D3272FA4C800783DCE /* piazza_san_marco.ktx */; };
+		7099CFBD28E8319C008D4ABF /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */; };
 		70E33EC826E536BF00CBA422 /* QuickLookThumbnailing.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC726E536BF00CBA422 /* QuickLookThumbnailing.framework */; };
 		70E33ECA26E536BF00CBA422 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC926E536BF00CBA422 /* Quartz.framework */; };
 		70E33ECE26E536BF00CBA422 /* KramThumbnailProvider.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70E33ECD26E536BF00CBA422 /* KramThumbnailProvider.mm */; };
@@ -128,6 +129,7 @@
 		708D44CF272B03BF00783DCE /* pbr.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = pbr.txt; sourceTree = "<group>"; };
 		708D44D2272FA4C800783DCE /* tropical_beach.ktx */ = {isa = PBXFileReference; lastKnownFileType = file; path = tropical_beach.ktx; sourceTree = "<group>"; };
 		708D44D3272FA4C800783DCE /* piazza_san_marco.ktx */ = {isa = PBXFileReference; lastKnownFileType = file; path = piazza_san_marco.ktx; sourceTree = "<group>"; };
+		7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
 		70E33EC626E536BF00CBA422 /* kram-thumb.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "kram-thumb.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E33EC726E536BF00CBA422 /* QuickLookThumbnailing.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLookThumbnailing.framework; path = System/Library/Frameworks/QuickLookThumbnailing.framework; sourceTree = SDKROOT; };
 		70E33EC926E536BF00CBA422 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
@@ -154,6 +156,7 @@
 				706EF25226D17C6F001C950E /* MetalKit.framework in Frameworks */,
 				70871D4327CAD3EA00D0B9E1 /* libkram.a in Frameworks */,
 				706EF25526D17C85001C950E /* Metal.framework in Frameworks */,
+				7099CFBD28E8319C008D4ABF /* UniformTypeIdentifiers.framework in Frameworks */,
 				706EF25726D17C9D001C950E /* AppKit.framework in Frameworks */,
 				70833669271575EA0077BCB6 /* GLTFMTL.framework in Frameworks */,
 				706EF26726D17DFA001C950E /* libate.tbd in Frameworks */,
@@ -236,6 +239,7 @@
 		706EF24726D17BC2001C950E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */,
 				70833668271575EA0077BCB6 /* GLTFMTL.framework */,
 				70833664271575E50077BCB6 /* GLTF.framework */,
 				70833661271564320077BCB6 /* GLTFMTL.framework */,

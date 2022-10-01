@@ -129,7 +129,7 @@
 			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>image/dds</string>
+				<string>com.microsoft.dds</string>
 			</array>
 			<key>NSDocumentClass</key>
 			<string>KramDocument</string>

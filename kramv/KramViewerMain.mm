@@ -35,9 +35,18 @@ static bool doPrintPanZoom = false;
 static bool doPrintPanZoom = false;
 #endif
 
+#include <UniformTypeIdentifiers/UTType.h>
+
 using namespace simd;
 using namespace kram;
 using namespace NAMESPACE_STL;
+
+struct File {
+    string name;
+    int32_t urlIndex;
+    
+    bool operator <(const File& rhs) const { return strcasecmp(name.c_str(), rhs.name.c_str()) < 0; }
+};
 
 bool isSupportedModelFilename(const char* filename) {
 #if USE_GLTF
@@ -207,7 +216,7 @@ public:
 
 @interface MyMTKView : MTKView
 // for now only have a single imageURL
-@property(retain, nonatomic, readwrite, nullable) NSURL *imageURL;
+//@property(retain, nonatomic, readwrite, nullable) NSURL *imageURL;
 
 //@property (nonatomic, readwrite, nullable) NSPanGestureRecognizer* panGesture;
 @property(retain, nonatomic, readwrite, nullable)
@@ -224,7 +233,7 @@ public:
 @property(nonatomic, readwrite) MouseData mouseData;
 
 
-- (BOOL)loadTextureFromURL:(NSURL *)url;
+- (BOOL)loadTextureFromURLs:(NSArray<NSURL*>*)url;
 
 - (void)setHudText:(const char *)text;
 
@@ -350,9 +359,13 @@ withCurrentSearchString:(NSString *)searchString
     // TODO: This is only getting called on first open on macOS 12.0 even with hack below.
     // find out why.
     
+    // throw into an array
+    NSArray<NSURL*>* urls = @[url];
+    
     NSApplication* app = [NSApplication sharedApplication];
     MyMTKView* view = app.mainWindow.contentView;
-    BOOL success = [view loadTextureFromURL:url];
+    
+    BOOL success = [view loadTextureFromURLs:urls];
     if (success) {
         // Note: if I return NO from this call then a dialog pops up that image
         // couldn't be loaded, but then the readFromURL is called everytime a new
@@ -402,17 +415,8 @@ withCurrentSearchString:(NSString *)searchString
            openURLs:(nonnull NSArray<NSURL *> *)urls
 {
     // this is called from "Open In..."
-    MyMTKView *view = sender.mainWindow.contentView;
-
-    // TODO: if more than one url dropped, and they are albedo/nmap, then display
-    // them together with the single uv set.  Need controls to show one or all
-    // together.
-
-    // TODO: also do an overlapping diff if two files are dropped with same
-    // dimensions.
-
-    NSURL* url = urls.firstObject;
-    [view loadTextureFromURL:url];
+    MyMTKView* view = sender.mainWindow.contentView;
+    [view loadTextureFromURLs:urls];
     [view fixupDocumentList];
 }
 
@@ -475,7 +479,52 @@ withCurrentSearchString:(NSString *)searchString
 
 // also NSPasteboardTypeURL
 // also NSPasteboardTypeTIFF
-NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
+NSArray<NSString *>* pasteboardTypes = @[
+    NSPasteboardTypeFileURL
+];
+
+/* correlates with
+ 
+public.png,
+org.khronos.ktx,
+public.ktx2,
+com.microsoft.dds,
+public.zip-archive,
+dyn.ah62d4rv4ge8043pyqf0g24pc, // ick - metallib
+dyn.ah62d4rv4ge80s5dyq2,       // ick - gltf
+dyn.ah62d4rv4ge80s5dc          // ick - glb
+ 
+*/
+
+// ktx, ktx2, png, and dds for images
+// zip, metallib
+// gltf, glb files for models
+NSArray<NSString*>* utis = @[
+//  @"public.png",
+//  @"org.khronos.ktx",
+//  @"public.ktx2",
+  //@"public.dds",
+  [UTType typeWithFilenameExtension: @"png"].identifier,
+  [UTType typeWithFilenameExtension: @"ktx"].identifier,
+  [UTType typeWithFilenameExtension: @"ktx2"].identifier,
+  [UTType typeWithFilenameExtension: @"dds"].identifier,
+  
+  [UTType typeWithFilenameExtension: @"zip"].identifier, // UTTypeZIP
+  [UTType typeWithFilenameExtension: @"metallib"].identifier,
+  
+  [UTType typeWithFilenameExtension: @"gltf"].identifier,
+  [UTType typeWithFilenameExtension: @"glb"].identifier
+  //@"public/zip-archive", // zip file
+  //@"application/octet-stream", // metallib
+#if USE_GLTF
+  //@"model/gltf+stream",
+  //@"model/gltf+binary"
+#endif
+];
+NSDictionary* pasteboardOptions = @{
+    NSPasteboardURLReadingContentsConformToTypesKey: utis,
+    NSPasteboardURLReadingFileURLsOnlyKey: @YES
+};
 
 @implementation MyMTKView {
     NSMenu* _viewMenu;  // really the items
@@ -496,11 +545,14 @@ NSArray<NSString *> *pasteboardTypes = @[ NSPasteboardTypeFileURL ];
     // content
     ZipHelper _zip;
     MmapHelper _zipMmap;
-    int32_t _fileArchiveIndex;
     BOOL _noImageLoaded;
+    int32_t _archiveStartIndex;
 
-    vector<string> _folderFiles;
-    int32_t _fileFolderIndex;
+    // folders and archives and multi-drop files are filled into this
+    vector<File> _files;
+    int32_t _fileIndex;
+   
+    NSArray<NSURL*>* _urls;
     
     Action* _actionPlay;
     Action* _actionShapeUVPreview;
@@ -1846,9 +1898,8 @@ enum TextSlot
         _showSettings->faceCount <= 1 && _showSettings->sliceCount <= 1;
     bool isMipHidden = _showSettings->mipCount <= 1;
 
-    bool isJumpToNextHidden =
-        !(_showSettings->isArchive || _showSettings->isFolder);
-
+    bool isJumpToNextHidden = _files.size() <= 1;
+    
     bool isRedHidden = _showSettings->numChannels == 0; // models don't show rgba
     bool isGreenHidden = _showSettings->numChannels <= 1;
     bool isBlueHidden = _showSettings->numChannels <= 2 &&
@@ -2276,7 +2327,7 @@ enum TextSlot
     }
     // reload key (also a quick way to reset the settings)
     else if (action == _actionReload) {
-        [self loadTextureFromURL:self.imageURL];
+        [self loadFile];
 
         // reload at actual size
         if (isShiftKeyDown) {
@@ -2444,30 +2495,18 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     else if (action == _actionItem || action == _actionPrevItem) {
         if (!action->isHidden) {
             // invert shift key for prev, since it's reversese
-            if (action == _actionPrevItem)
+            if (action == _actionPrevItem) {
                 isShiftKeyDown = !isShiftKeyDown;
-            
-            if (_showSettings->isArchive) {
-                if ([self advanceFileFromAchive:!isShiftKeyDown]) {
-                    //_hudHidden = true;
-                    //[self updateHudVisibility];
-                    [self setEyedropperText:""];
-                    
-                    isChanged = true;
-                    text = "Loaded ";
-                    text += _showSettings->lastFilename;
-                }
             }
-            else if (_showSettings->isFolder) {
-                if ([self advanceFileFromFolder:!isShiftKeyDown]) {
-                    //_hudHidden = true;
-                    //[self updateHudVisibility];
-                    [self setEyedropperText:""];
-                   
-                    isChanged = true;
-                    text = "Loaded ";
-                    text += _showSettings->lastFilename;
-                }
+            
+            if ([self advanceFile:!isShiftKeyDown]) {
+                //_hudHidden = true;
+                //[self updateHudVisibility];
+                [self setEyedropperText:""];
+                
+                isChanged = true;
+                text = "Loaded ";
+                text += _showSettings->lastFilename;
             }
         }
     }
@@ -2475,8 +2514,11 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     else if (action == _actionCounterpart || action == _actionPrevCounterpart) {
         if (!action->isHidden) {
             // invert shift key for prev, since it's reversese
-            if (action == _actionPrevCounterpart)
+            if (action == _actionPrevCounterpart) {
                 isShiftKeyDown = !isShiftKeyDown;
+            }
+            
+            // TODO: build up counterparts when listing out files
             
             /* Archive probably only holds one type of file, could pull in zips?
             if (_showSettings->isArchive) {
@@ -2603,10 +2645,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     if ((NSDragOperationGeneric & [sender draggingSourceOperationMask]) ==
         NSDragOperationGeneric) {
         NSPasteboard *pasteboard = [sender draggingPasteboard];
-
+        
         bool canReadPasteboardObjects =
             [pasteboard canReadObjectForClasses:@[ [NSURL class] ]
-                                        options:nil];
+                                        options:pasteboardOptions];
 
         // don't copy dropped item, want to alias large files on disk without that
         if (canReadPasteboardObjects) {
@@ -2626,35 +2668,17 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 - (BOOL)performDragOperation:(id)sender
 {
     NSPasteboard* pasteboard = [sender draggingPasteboard];
-
-    NSString* desiredType = [pasteboard availableTypeFromArray:pasteboardTypes];
-
-    if ([desiredType isEqualToString:NSPasteboardTypeFileURL]) {
-        // TODO: use readObjects to drag multiple files onto one view
-        // load one mip of all those, use smaller mips for thumbnail
-
-        // the pasteboard contains a list of filenames
-        NSString* urlString =
-            [pasteboard propertyListForType:NSPasteboardTypeFileURL];
-
-        // this turns it into a real path (supposedly works even with sandbox)
-        NSURL* url = [NSURL URLWithString:urlString];
-
-        // convert the original path and then back to a url, otherwise reload fails
-        // when this file is replaced.
-        const char* filename = url.fileSystemRepresentation;
-        if (filename == nullptr) {
-            KLOGE("kramv", "Fix this drop url returning nil issue");
-            return NO;
-        }
-
-        NSString* filenameString = [NSString stringWithUTF8String:filename];
-
-        url = [NSURL fileURLWithPath:filenameString];
-
-        if ([self loadTextureFromURL:url]) {
+    NSArray<NSURL*>* urls = [pasteboard readObjectsForClasses:@[[NSURL class]]
+                                                      options: pasteboardOptions];
+    int filesCount = [urls count];
+    
+    if (filesCount > 0) {
+        if ([self loadTextureFromURLs:urls]) {
             [self setHudText:""];
 
+            //        if (_files.size() == 2) {
+            //            // TODO: default to diff
+            //        }
             return YES;
         }
     }
@@ -2662,77 +2686,66 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return NO;
 }
 
-- (BOOL)loadArchive:(const char *)zipFilename
+// requires zip to be open, lists into _files
+- (BOOL)listFilesInArchive:(int32_t)urlIndex
 {
-    _zipMmap.close();
-    if (!_zipMmap.open(zipFilename)) {
-        return NO;
-    }
-
-    // Note: if mmap fails, could read entire zip into memory
-    // and then still use the same code below.
-
-    if (!_zip.openForRead(_zipMmap.data(), _zipMmap.dataLength())) {
-        return NO;
-    }
-
     // filter out unsupported extensions
     vector<string> extensions = {
         ".ktx", ".ktx2", ".png", ".dds" // textures
-#if USE_GLTF
-        , ".glb", ".gltf" // models
-#endif
+//#if USE_GLTF
+        // TODO: can't support these until have a loader from memory block
+        // GLTFAsset requires a URL.
+        //, ".glb", ".gltf" // models
+//#endif
     };
     
     _zip.filterExtensions(extensions);
-
+    
     // don't switch to empty archive
     if (_zip.zipEntrys().empty()) {
         return NO;
     }
-
-    // load the first entry in the archive
-    _fileArchiveIndex = 0;
     
-    // copy names into the files view
-    [_tableViewController.items removeAllObjects];
     for (const auto& entry: _zip.zipEntrys()) {
-        const char* filenameShort = toFilenameShort(entry.filename);
-        [_tableViewController.items addObject: [NSString stringWithUTF8String: filenameShort]];
+        _files.push_back({string(entry.filename), urlIndex});
     }
-    [_tableView reloadData];
-    
-    // set selection
-    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileArchiveIndex] byExtendingSelection:NO];
-    [_tableView scrollRowToVisible:_fileArchiveIndex];
-    
-    // want it to respond to arrow keys
-    //[self.window makeFirstResponder: _tableView];
-    
-    // hack to see table
-    [self hideFileTable];
     
     return YES;
 }
 
-- (BOOL)advanceFileFromAchive:(BOOL)increment
+// opens single archive, and lists into _files
+- (BOOL)listFilesInArchive:(const char *)zipFilename urlIndex:(int32_t)urlIndex
 {
-    if ((!_zipMmap.data()) || _zip.zipEntrys().empty()) {
-        // no archive loaded or it's empty
+    _zipMmap.close();
+    
+    // open the mmap again
+    if (!_zipMmap.open(zipFilename)) {
         return NO;
     }
-    size_t numEntries = _zip.zipEntrys().size();
+    if (!_zip.openForRead(_zipMmap.data(), _zipMmap.dataLength())) {
+        return NO;
+    }
+    
+    return [self listFilesInArchive:urlIndex];
+}
 
+- (BOOL)advanceFile:(BOOL)increment
+{
+    if (_files.empty()) {
+        return NO;
+    }
+    
+    size_t numEntries = _files.size();
     if (increment)
-        _fileArchiveIndex++;
+        _fileIndex++;
     else
-        _fileArchiveIndex += numEntries - 1;  // back 1
+        _fileIndex += numEntries - 1;  // back 1
 
-    _fileArchiveIndex = _fileArchiveIndex % numEntries;
+    _fileIndex = _fileIndex % numEntries;
 
     // set selection
-    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileArchiveIndex] byExtendingSelection:NO];
-    [_tableView scrollRowToVisible:_fileArchiveIndex];
+    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileIndex] byExtendingSelection:NO];
+    [_tableView scrollRowToVisible:_fileIndex];
     
     // want it to respond to arrow keys
     //[self.window makeFirstResponder: _tableView];
@@ -2745,55 +2758,17 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     //[self updateHudVisibility];
     [self setEyedropperText:""];
     
-    return [self loadFileFromArchive];
-}
-
-- (BOOL)advanceFileFromFolder:(BOOL)increment
-{
-    if (_folderFiles.empty()) {
-        // no archive loaded
-        return NO;
-    }
-
-    size_t numEntries = _folderFiles.size();
-    if (increment)
-        _fileFolderIndex++;
-    else
-        _fileFolderIndex += numEntries - 1;  // back 1
-
-    _fileFolderIndex = _fileFolderIndex % numEntries;
-
-    // set selection
-    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileFolderIndex] byExtendingSelection:NO];
-    [_tableView scrollRowToVisible:_fileFolderIndex];
-    
-    // want it to respond to arrow keys
-    //[self.window makeFirstResponder: _tableView];
-    
-    // show the files table
-    [self showFileTable];
-    
-    //_hudHidden = true;
-    //[self updateHudVisibility];
-    [self setEyedropperText:""];
-    
-    return [self loadFileFromFolder];
+    return [self loadFile];
 }
 
 - (BOOL)setImageFromSelection:(NSInteger)index {
-    if (_zipMmap.data() && !_zip.zipEntrys().empty()) {
-        if (_fileArchiveIndex != index) {
-            _fileArchiveIndex = index;
-            return [self loadFileFromArchive];
+    if (!_files.empty()) {
+        if (_fileIndex != index) {
+            _fileIndex = index;
+            return [self loadFile];
         }
     }
-
-    if (!_folderFiles.empty()) {
-        if (_fileFolderIndex != index) {
-            _fileFolderIndex = index;
-            return [self loadFileFromFolder];
-        }
-    }
+    
     return NO;
 }
 
@@ -2806,22 +2781,19 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return NO;
 }
 
-- (BOOL)findFilenameInFolders:(const string &)filename
+- (BOOL)findFilename:(const string&)filename
 {
-    // TODO: binary search for the filename in the array, but would have to be in
-    // same directory
-
     bool isFound = false;
-    for (const auto &search : _folderFiles) {
-        if (search == filename) {
+    
+    // linear search
+    for (const auto& search : _files) {
+        if (search.name == filename) {
             isFound = true;
             break;
         }
     }
     return isFound;
 }
-
-
 
 static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector<string>& normalFilenames)
 {
@@ -2863,20 +2835,28 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         
         normalFilenames.push_back( normalFilename );
     }
-    
 }
 
-
-- (BOOL)loadFileFromFolder
+- (BOOL)isArchive
 {
+    NSURL* url = _urls[_files[_fileIndex].urlIndex];
+    const char* filename = url.fileSystemRepresentation;
+    return isSupportedArchiveFilename(filename);
+}
+
+- (BOOL)loadFile
+{
+    if ([self isArchive]) return [self loadFileFromArchive];
+    
     // now lookup the filename and data at that entry
-    const char* filename = _folderFiles[_fileFolderIndex].c_str();
+    const char* filename = _files[_fileIndex].name.c_str();
+   
     string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
     
     bool isModel = isSupportedModelFilename(filename);
     if (isModel)
-        return [self loadModelFile:nil filename:filename];
+        return [self loadModelFile:filename];
     
     // have already filtered filenames out, so this should never get hit
     if (!isSupportedFilename(filename)) {
@@ -2892,7 +2872,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         findPossibleNormalMapFromAlbedoFilename(filename, normalFilenames);
      
        for (const auto& name: normalFilenames) {
-            hasNormal = [self findFilenameInFolders:name];
+            hasNormal = [self findFilename:name];
             
             if (hasNormal) {
                 normalFilename = name;
@@ -2985,9 +2965,6 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         _noImageLoaded = NO;
     }
 
-    _showSettings->isArchive = false;
-    _showSettings->isFolder = true;
-
     // show/hide button
     [self updateUIAfterLoad];
     
@@ -2995,19 +2972,20 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     return YES;
 }
 
-
-
 - (BOOL)loadFileFromArchive
 {
     // now lookup the filename and data at that entry
-    const auto& entry = _zip.zipEntrys()[_fileArchiveIndex];
+    uint32_t archiveIndex = _fileIndex - _archiveStartIndex;
+    const auto& entry = _zip.zipEntrys()[_fileIndex - archiveIndex];
+
     const char* filename = entry.filename;
     string fullFilename = filename;
     double timestamp = (double)entry.modificationDate;
 
-    bool isModel = isSupportedModelFilename(filename);
-    if (isModel)
-        return [self loadModelFile:nil filename:filename];
+// TODO: don't have a version which loads gltf model from memory block
+//    bool isModel = isSupportedModelFilename(filename);
+//    if (isModel)
+//        return [self loadModelFile:filename];
     
     //--------
     
@@ -3109,9 +3087,6 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         _noImageLoaded = NO;
     }
 
-    _showSettings->isArchive = true;
-    _showSettings->isFolder = false;
-
     // show/hide button
     [self updateUIAfterLoad];
 
@@ -3120,178 +3095,169 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     return YES;
 }
 
-- (BOOL)loadTextureFromURL:(NSURL *)url
+-(void)listFilesInFolder:(NSURL*)url urlIndex:(int32_t)urlIndex
 {
-    // NSLog(@"LoadTexture");
+    NSDirectoryEnumerator* directoryEnumerator =
+    [[NSFileManager defaultManager]
+     enumeratorAtURL:url
+     includingPropertiesForKeys:[NSArray array]
+     options:0
+     errorHandler:  // nil
+     ^BOOL(NSURL *urlArg, NSError *error) {
+        macroUnusedVar(urlArg);
+        macroUnusedVar(error);
+        
+        // handle error
+        return NO;
+    }];
+    
+#if USE_GLTF
+    bool foundModel = false;
+    // only display models in folder if found, ignore the png/jpg files
+    while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
+        const char* name = fileOrDirectoryURL.fileSystemRepresentation;
+        
+        bool isModel = isSupportedModelFilename(name);
+        if (isModel)
+        {
+            _files.push_back({string(name),urlIndex});
+            foundModel = true;
+        }
+    }
+#endif
+    
+    // don't change to this folder if it's devoid of content
+    if (!foundModel) {
+#if USE_GLTF
+        // reset the enumerator
+        directoryEnumerator =
+        [[NSFileManager defaultManager]
+         enumeratorAtURL:url
+         includingPropertiesForKeys:[NSArray array]
+         options:0
+         errorHandler:  // nil
+         ^BOOL(NSURL* urlArg, NSError* error) {
+            macroUnusedVar(urlArg);
+            macroUnusedVar(error);
+            
+            // handle error
+            return NO;
+        }];
+#endif
+        while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
+            const char* name = fileOrDirectoryURL.fileSystemRepresentation;
+            
+            if (isSupportedFilename(name))
+            {
+                _files.push_back({name, urlIndex});
+            }
+        }
+    }
+}
 
+-(void)loadFilesFromUrls:(NSArray<NSURL*>*)urls
+{
+    // Using a member for archives, so limited to one archive in a drop
+    // but that's probably okay for now.  Add a separate array of open
+    // archives if want > 1.
+
+    _archiveStartIndex = 0;
+    
+    // copy the existing files list
+    string existingFilename;
+    if (_fileIndex < (int32_t)_files.size())
+        existingFilename = _files[_fileIndex].name;
+    
+    // Fill this out again
+    _files.clear();
+    
+    // this will flatten the list
+    int32_t urlIndex = 0;
+    uint32_t archiveCount = 0;
+    
+    for (NSURL* url in urls) {
+        // These will flatten out to a list of files
+        const char* filename = url.fileSystemRepresentation;
+        
+        if (archiveCount == 0 && isSupportedArchiveFilename(filename)) {
+            uint32_t fileIndexCopy = _fileIndex;
+            if ([self listFilesInArchive:filename urlIndex:urlIndex]) {
+                _archiveStartIndex = fileIndexCopy;
+                archiveCount++;
+            }
+        }
+        else if (url.hasDirectoryPath) {
+            // this first loads only models, then textures if only those
+            [self listFilesInFolder:url urlIndex:urlIndex];
+        }
+        else if(isSupportedFilename(filename) ||
+                isSupportedModelFilename(filename)) {
+            _files.push_back({filename, urlIndex});
+        }
+        
+        urlIndex++;
+    }
+    
+    // TODO: sort by urlIndex
+#if USE_EASTL
+    NAMESPACE_STL::quick_sort(_files.begin(), _files.end());
+#else
+    std::sort(_files.begin(), _files.end());
+#endif
+    
+    // preserve old file selection
+
+    _urls = urls;
+   
+    // preserve filename before load, and restore that index, by finding
+    // that name in refreshed folder list
+    _fileIndex = 0;
+    if (!existingFilename.empty()) {
+        for (uint32_t i = 0; i < _files.size(); ++i) {
+            if (_files[i].name == existingFilename) {
+                _fileIndex = i;
+                break;
+            }
+        }
+    }
+    
+    // add the files into the file list
+    [_tableViewController.items removeAllObjects];
+    for (const auto& file: _files) {
+        const char* filenameShort = toFilenameShort(file.name.c_str());
+        [_tableViewController.items addObject: [NSString stringWithUTF8String: filenameShort]];
+    }
+    [_tableView reloadData];
+    
+    // Set the active file
+    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileIndex] byExtendingSelection:NO];
+    [_tableView scrollRowToVisible:_fileIndex];
+    
+    [self hideFileTable];
+    
+    // add it to recent docs (only 10 slots))
+    if (urls.count == 1) {
+        NSDocumentController* dc =
+        [NSDocumentController sharedDocumentController];
+        [dc noteNewRecentDocumentURL:urls[0]];
+    }
+}
+
+
+- (BOOL)loadTextureFromURLs:(NSArray<NSURL*>*)urls
+{
     // turn back on the hud if was in a list view
     _hudHidden = false;
     [self updateHudVisibility];
     
+    NSURL* url = urls[0];
     const char* filename = url.fileSystemRepresentation;
-    if (filename == nullptr) {
-        // Fixed by converting dropped urls into paths then back to a url.
-        // When file replaced the drop url is no longer valid.
-        KLOGE("kramv", "Fix this load url returning nil issue");
-        return NO;
-    }
+    bool isSingleFile = urls.count == 1;
     
     Renderer* renderer = (Renderer *)self.delegate;
-    
-    // folders can have a . in them f.e. 2.0/blah/...
-    bool isDirectory = url.hasDirectoryPath;
-    
-    // this likely means it's a local file directory
-    if (isDirectory) {
-        // make list of all file in the directory
-
-        if (!self.imageURL || (!([self.imageURL isEqualTo:url]))) {
-            NSDirectoryEnumerator* directoryEnumerator =
-                [[NSFileManager defaultManager]
-                               enumeratorAtURL:url
-                    includingPropertiesForKeys:[NSArray array]
-                                       options:0
-                                  errorHandler:  // nil
-                                      ^BOOL(NSURL *urlArg, NSError *error) {
-                                          macroUnusedVar(urlArg);
-                                          macroUnusedVar(error);
-
-                                          // handle error
-                                          return NO;
-                                      }];
-
-            vector<string> files;
-#if USE_GLTF
-            // only display models in folder if found, ignore the png/jpg files
-            while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
-                const char* name = fileOrDirectoryURL.fileSystemRepresentation;
-
-                bool isModel = isSupportedModelFilename(name);
-                if (isModel)
-                {
-                    files.push_back(name);
-                }
-            }
-#endif
-
-            // don't change to this folder if it's devoid of content
-            if (files.empty()) {
-#if USE_GLTF
-                // reset the enumerator
-                directoryEnumerator =
-                    [[NSFileManager defaultManager]
-                                   enumeratorAtURL:url
-                        includingPropertiesForKeys:[NSArray array]
-                                           options:0
-                                      errorHandler:  // nil
-                                          ^BOOL(NSURL* urlArg, NSError* error) {
-                                              macroUnusedVar(urlArg);
-                                              macroUnusedVar(error);
-
-                                              // handle error
-                                              return NO;
-                                          }];
-#endif
-                while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
-                    const char* name = fileOrDirectoryURL.fileSystemRepresentation;
-
-                    if (isSupportedFilename(name))
-                    {
-                        files.push_back(name);
-                    }
-                }
-            }
-            
-            if (files.empty()) {
-                return NO;
-            }
-
-            // add it to recent docs
-            NSDocumentController* dc =
-                [NSDocumentController sharedDocumentController];
-            [dc noteNewRecentDocumentURL:url];
-
-            // sort them
-#if USE_EASTL
-            NAMESPACE_STL::quick_sort(files.begin(), files.end());
-#else
-            std::sort(files.begin(), files.end());
-#endif
-            // replicate archive logic below
-
-            self.imageURL = url;
-
-            // preserve old folder
-            string existingFilename;
-            if (_fileFolderIndex < (int32_t)_folderFiles.size())
-                existingFilename = _folderFiles[_fileFolderIndex];
-            else
-                _fileFolderIndex = 0;
-
-            _folderFiles = files;
-
-            // TODO: preserve filename before load, and restore that index, by finding
-            // that name in refreshed folder list
-
-            if (!existingFilename.empty()) {
-                uint32_t index = 0;
-                for (const auto &fileIt : _folderFiles) {
-                    if (fileIt == existingFilename) {
-                        break;
-                    }
-                }
-
-                _fileFolderIndex = index;
-            }
-            
-            [_tableViewController.items removeAllObjects];
-            for (const auto& file: files) {
-                const char* filenameShort = toFilenameShort(file.c_str());
-                [_tableViewController.items addObject: [NSString stringWithUTF8String: filenameShort]];
-            }
-            [_tableView reloadData];
-            
-            
-            [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileFolderIndex] byExtendingSelection:NO];
-            [_tableView scrollRowToVisible:_fileFolderIndex];
-            
-            [self hideFileTable];
-        }
-
-        // now load image from directory
-        _showSettings->isArchive = false;
-        _showSettings->isFolder = true;
-
-        
-        // now load the file at the index
-        setErrorLogCapture(true);
-
-        BOOL success = [self loadFileFromFolder];
-
-        if (!success) {
-            // get back error text from the failed load
-            string errorText;
-            getErrorLogCaptureText(errorText);
-            setErrorLogCapture(false);
-
-            const string &folder = _folderFiles[_fileFolderIndex];
-
-            // prepend filename
-            string finalErrorText;
-            append_sprintf(finalErrorText, "Could not load from folder:\n %s\n",
-                           folder.c_str());
-            finalErrorText += errorText;
-
-            [self setHudText:finalErrorText.c_str()];
-        }
-
-        setErrorLogCapture(false);
-        return success;
-    }
-
-    //-------------------
-    
-    if (endsWithExtension(filename, ".metallib")) {
+   
+    // Handle shader hotload
+    if (isSingleFile && endsWithExtension(filename, ".metallib")) {
         if ([renderer hotloadShaders:filename]) {
             NSURL* metallibFileURL =
                 [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
@@ -3305,113 +3271,86 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         }
         return NO;
     }
-
-    // file is not a supported extension
-    if (!(isSupportedArchiveFilename(filename) ||
-          isSupportedFilename(filename) ||
-          isSupportedModelFilename(filename)
-        ))
-    {
-        string errorText =
-            "Unsupported file extension, must be .zip"
-#if USE_GLTF
-            ", .gltf, .glb"
-#endif
-            ", .png, .ktx, .ktx2, .dds\n";
-
-        string finalErrorText;
-        append_sprintf(finalErrorText, "Could not load from file:\n %s\n",
-                       filename);
-        finalErrorText += errorText;
-
-        [self setHudText:finalErrorText.c_str()];
-        return NO;
-    }
-
-    if (isSupportedModelFilename(filename))
-    {
-        return [self loadModelFile:url filename:nullptr];
-    }
     
-    // for now, knock out model if loading an image
-    // TODO: might want to unload even before loading a new model
-    [renderer unloadModel];
-    
-    //-------------------
-
-    if (isSupportedArchiveFilename(filename)) {
-        auto archiveTimestamp = FileHelper::modificationTimestamp(filename);
-
-        if (!self.imageURL || (!([self.imageURL isEqualTo:url])) ||
-            (self.lastArchiveTimestamp != archiveTimestamp)) {
-            // copy this out before it's replaced
-            string existingFilename;
-            if (_fileArchiveIndex < (int32_t)_zip.zipEntrys().size())
-                existingFilename = _zip.zipEntrys()[_fileArchiveIndex].filename;
-            else
-                _fileArchiveIndex = 0;
-
-            BOOL isArchiveLoaded = [self loadArchive:filename];
-            if (!isArchiveLoaded) {
-                return NO;
-            }
-
-            // store the archive url
-            self.imageURL = url;
-            self.lastArchiveTimestamp = archiveTimestamp;
-
-            // add it to recent docs
-            NSDocumentController* dc =
-                [NSDocumentController sharedDocumentController];
-            [dc noteNewRecentDocumentURL:url];
-
-            // now reload the filename if needed
-            if (!existingFilename.empty()) {
-                const ZipEntry* formerEntry = _zip.zipEntry(existingFilename.c_str());
-                if (formerEntry) {
-                    // lookup the index in the remapIndices table
-                    _fileArchiveIndex =
-                        (uintptr_t)(formerEntry - &_zip.zipEntrys()[0]);
-                }
-                else {
-                    _fileArchiveIndex = 0;
-                }
-            }
-        }
-
-        setErrorLogCapture(true);
-
-        BOOL success = [self loadFileFromArchive];
-
-        if (!success) {
-            // get back error text from the failed load
-            string errorText;
-            getErrorLogCaptureText(errorText);
-            setErrorLogCapture(false);
-
-            const auto& entry = _zip.zipEntrys()[_fileArchiveIndex];
-            const char* archiveFilename = entry.filename;
-
-            // prepend filename
-            string finalErrorText;
-            append_sprintf(finalErrorText, "Could not load from archive:\n %s\n",
-                           archiveFilename);
-            finalErrorText += errorText;
-
-            [self setHudText:finalErrorText.c_str()];
-        }
-
-        setErrorLogCapture(false);
-        return success;
-    }
-
-    bool success = [self loadImageFile:url];
-    
-    // hide table in case last had archive open
-    if (success)
+    // don't leave archive table open
+    if (isSingleFile)
         [self hideFileTable];
     
+    
+    [self loadFilesFromUrls:urls];
+    
+    BOOL success = [self loadFile];
     return success;
+    
+    //------------
+    
+//    // now load the file at the index
+//    setErrorLogCapture(true);
+//
+//    BOOL success = [self loadFile];
+//
+//    if (!success) {
+//        // get back error text from the failed load
+//        string errorText;
+//        getErrorLogCaptureText(errorText);
+//        setErrorLogCapture(false);
+//
+//        const string &folder = _files[_fileIndex];
+//
+//        // prepend filename
+//        string finalErrorText;
+//        append_sprintf(finalErrorText, "Could not load from folder:\n %s\n",
+//                       folder.c_str());
+//        finalErrorText += errorText;
+//
+//        [self setHudText:finalErrorText.c_str()];
+//    }
+//
+//    setErrorLogCapture(false);
+//    return success;
+//
+//
+////    // file is not a supported extension
+////    if (files.empty())
+////    {
+////        string errorText =
+////            "Unsupported file extension, must be .zip"
+////#if USE_GLTF
+////            ", .gltf, .glb"
+////#endif
+////            ", .png, .ktx, .ktx2, .dds\n";
+////
+////        string finalErrorText;
+////        if (url.count == 1)
+////            append_sprintf(finalErrorText, "Could not load from file:\n %s\n",
+////                       filename);
+////        finalErrorText += errorText;
+////
+////        [self setHudText:finalErrorText.c_str()];
+////        return NO;
+////    }
+////
+////    if (isSupportedModelFilename(filename))
+////    {
+////        return [self loadModelFile:url filename:nullptr];
+////    }
+////
+//    // for now, knock out model if loading an image
+//    // TODO: might want to unload even before loading a new model
+// //   [renderer unloadModel];
+//
+// //   bool success = [self loadImageFile:url];
+//
+//
+////    //-------------------
+////
+////    bool success = [self loadImageFile:url];
+//
+//    // hide table in case last had archive open
+////    if (success)
+////        [self hideFileTable];
+//
+//    return success;
 }
 
 -(double)getTimestampForFile:(NSURL*)url
@@ -3428,7 +3367,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     return timestamp;
 }
 
--(BOOL)loadModelFile:(NSURL*)url filename:(const char*)filename
+-(BOOL)loadModelFile:(const char*)filename
 {
 #if USE_GLTF
     // Right now can only load these if they are embedded, since sandbox will
@@ -3448,8 +3387,8 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     setErrorLogCapture(true);
 
     // set title to filename, chop this to just file+ext, not directory
-    if (url != nil)
-        filename = url.fileSystemRepresentation;
+    //if (url != nil)
+    //    filename = url.fileSystemRepresentation;
     const char* filenameShort = toFilenameShort(filename);
 
     NSURL* gltfFileURL =
@@ -3487,23 +3426,19 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
 
     // if url is nil, then loading out of archive or folder
     // and don't want to save that or set imageURL
-    if (url != nil)
-    {
-        // add to recent docs, so can reload quickly
-        NSDocumentController* dc =
-            [NSDocumentController sharedDocumentController];
-        [dc noteNewRecentDocumentURL:gltfFileURL];
-
-        // TODO: not really an image
-        self.imageURL = gltfFileURL;
-        
-        // this may be loading out of folder/archive, but if url passed then it isn't
-        _showSettings->isArchive = false;
-        _showSettings->isFolder = false;
-        
-        // no need for file table on single files
-        [self hideFileTable];
-    }
+//    if (url != nil)
+//    {
+//        // add to recent docs, so can reload quickly
+//        NSDocumentController* dc =
+//            [NSDocumentController sharedDocumentController];
+//        [dc noteNewRecentDocumentURL:gltfFileURL];
+//
+//        // TODO: not really an image
+//        //self.imageURL = gltfFileURL;
+//
+//        // no need for file table on single files
+//        [self hideFileTable];
+//    }
     
     // show the controls
     if (_noImageLoaded) {
@@ -3525,6 +3460,8 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
 #endif
 }
 
+/* Don't need this anymore
+ 
 -(BOOL)loadImageFile:(NSURL*)url
 {
     Renderer* renderer = (Renderer *)self.delegate;
@@ -3564,20 +3501,18 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     // some entries may go stale if directories change, not sure who validates the
     // list
 
+    // this is already handled by drop
     // add to recent document menu
-    NSDocumentController* dc = [NSDocumentController sharedDocumentController];
-    [dc noteNewRecentDocumentURL:url];
+    //NSDocumentController* dc = [NSDocumentController sharedDocumentController];
+    //[dc noteNewRecentDocumentURL:url];
 
-    self.imageURL = url;
+    //self.imageURL = url;
 
     // show the controls
     if (_noImageLoaded) {
         _buttonStack.hidden = NO;  // show controls
         _noImageLoaded = NO;
     }
-
-    _showSettings->isArchive = false;
-    _showSettings->isFolder = false;
 
     // show/hide button
     [self updateUIAfterLoad];
@@ -3587,6 +3522,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     self.needsDisplay = YES;
     return YES;
 }
+*/
 
 - (void)setupUI
 {

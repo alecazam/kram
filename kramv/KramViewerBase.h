@@ -158,12 +158,6 @@ public:
     // draw with reverseZ to better match perspective
     bool isReverseZ = true;
 
-    // whether files are pulled from zip archive.
-    bool isArchive = false;
-
-    // whether files are pulled from folder(s)
-    bool isFolder = false;
-
     // image vs. gltf model
     bool isModel = false;
     
