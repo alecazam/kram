@@ -500,10 +500,6 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
 // zip, metallib
 // gltf, glb files for models
 NSArray<NSString*>* utis = @[
-//  @"public.png",
-//  @"org.khronos.ktx",
-//  @"public.ktx2",
-  //@"public.dds",
   [UTType typeWithFilenameExtension: @"png"].identifier,
   [UTType typeWithFilenameExtension: @"ktx"].identifier,
   [UTType typeWithFilenameExtension: @"ktx2"].identifier,
@@ -514,16 +510,14 @@ NSArray<NSString*>* utis = @[
   
   [UTType typeWithFilenameExtension: @"gltf"].identifier,
   [UTType typeWithFilenameExtension: @"glb"].identifier
-  //@"public/zip-archive", // zip file
-  //@"application/octet-stream", // metallib
 #if USE_GLTF
   //@"model/gltf+stream",
   //@"model/gltf+binary"
 #endif
 ];
 NSDictionary* pasteboardOptions = @{
-    NSPasteboardURLReadingContentsConformToTypesKey: utis,
-    NSPasteboardURLReadingFileURLsOnlyKey: @YES
+    NSPasteboardURLReadingContentsConformToTypesKey: utis
+    //NSPasteboardURLReadingFileURLsOnlyKey: @YES
 };
 
 @implementation MyMTKView {
