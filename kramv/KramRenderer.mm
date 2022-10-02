@@ -1112,11 +1112,9 @@ inline const char* toFilenameShort(const char* filename) {
     string fullFilename = fullFilenameString;
     const char* filenameShort = toFilenameShort(fullFilename.c_str());
     
-    // Note that modstamp can change, but content data hash may be the same
-    bool isNewFile = (fullFilename != _showSettings->lastFilename);
-    bool isTextureChanged =
-        isNewFile || (timestamp != _showSettings->lastTimestamp);
-
+    bool isTextureNew = _showSettings->isFileNew(fullFilename.c_str());
+    bool isTextureChanged = _showSettings->isFileChanged(fullFilename.c_str(), timestamp);
+    
     if (isTextureChanged) {
         // synchronously cpu upload from ktx file to buffer, with eventual gpu blit
         // from buffer to returned texture.  TODO: If buffer is full, then something
@@ -1175,7 +1173,7 @@ inline const char* toFilenameShort(const char* filename) {
                             image:image];
     }
 
-    [self resetSomeImageSettings:isNewFile];
+    [self resetSomeImageSettings:isTextureNew];
 
     return YES;
 }
@@ -1193,11 +1191,10 @@ inline const char* toFilenameShort(const char* filename) {
 
     // DONE: tie this to url and modstamp differences
     double timestamp = fileDate.timeIntervalSince1970;
-    bool isNewFile = (fullFilename != _showSettings->lastFilename);
-
-    bool isTextureChanged =
-        isNewFile || (timestamp != _showSettings->lastTimestamp);
-
+    
+    bool isTextureNew = _showSettings->isFileNew(fullFilename.c_str());
+    bool isTextureChanged = _showSettings->isFileChanged(fullFilename.c_str(), timestamp);
+    
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
     if (isTextureChanged) {
@@ -1251,7 +1248,7 @@ inline const char* toFilenameShort(const char* filename) {
                             image:image];
     }
 
-    [self resetSomeImageSettings:isNewFile];
+    [self resetSomeImageSettings:isTextureNew];
 
     return YES;
 }

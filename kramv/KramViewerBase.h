@@ -250,6 +250,15 @@ public:
             ar = imageBoundsX / (float)imageBoundsY;
         return ar;
     }
+    
+    bool isFileNew(const char* fullFilename) const {
+        return lastFilename != fullFilename;
+    }
+    bool isFileChanged(const char* fullFilename, double timestamp) const {
+        // Note that modstamp can change, but content data hash may be the same
+        return isFileNew(fullFilename) || (timestamp != lastTimestamp);
+    }
+    
     string lastFilename;
     double lastTimestamp = 0.0;
 

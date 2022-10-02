@@ -549,6 +549,7 @@ NSArray<NSString *>* pasteboardTypes = @[
 
 /* correlates with
  
+public.directory.
 public.png,
 org.khronos.ktx,
 public.ktx2,
@@ -564,6 +565,8 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
 // zip, metallib
 // gltf, glb files for models
 NSArray<NSString*>* utis = @[
+  @"public.directory",
+    
   [UTType typeWithFilenameExtension: @"png"].identifier,
   [UTType typeWithFilenameExtension: @"ktx"].identifier,
   [UTType typeWithFilenameExtension: @"ktx2"].identifier,
@@ -2393,7 +2396,7 @@ enum TextSlot
     }
     // reload key (also a quick way to reset the settings)
     else if (action == _actionReload) {
-        [self loadFile];
+        bool success = [self loadFile];
 
         // reload at actual size
         if (isShiftKeyDown) {
@@ -2706,13 +2709,6 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             [pasteboard canReadObjectForClasses:@[ [NSURL class] ]
                                         options:pasteboardOptions];
 
-        // when this fails, toss the pasteboardOptions
-        // like when I drag folders
-        if (!canReadPasteboardObjects) {
-            canReadPasteboardObjects =
-                [pasteboard canReadObjectForClasses:@[ [NSURL class] ]
-                                        options:@{}];
-        }
         // don't copy dropped item, want to alias large files on disk without that
         if (canReadPasteboardObjects) {
             return NSDragOperationGeneric;
@@ -2732,18 +2728,9 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 {
     NSPasteboard* pasteboard = [sender draggingPasteboard];
     
-    // This doesn't work when folders are dropped, urls count is 0
     NSArray<NSURL*>* urls = [pasteboard readObjectsForClasses:@[[NSURL class]]
                                                       options: pasteboardOptions];
     int filesCount = [urls count];
-    
-    // Could just stop passing the utis
-    if (filesCount == 0) {
-        urls = [pasteboard readObjectsForClasses:@[[NSURL class]]
-                                         options:@{}];
-        filesCount = [urls count];
-    }
-    
     if (filesCount > 0) {
         if ([self loadTextureFromURLs:urls]) {
             [self setHudText:""];
@@ -2913,8 +2900,9 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
 - (BOOL)loadFile
 {
-    if ([self isArchive])
+    if ([self isArchive]) {
         return [self loadFileFromArchive];
+    }
     
     // now lookup the filename and data at that entry
     const char* filename = _files[_fileIndex].name.c_str();
@@ -2922,10 +2910,16 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
     
+    bool isTextureChanged = _showSettings->isFileChanged(filename, timestamp);
+    if (!isTextureChanged) {
+        return YES;
+    }
+    
 #if USE_GLTF
     bool isModel = isSupportedModelFilename(filename);
-    if (isModel)
+    if (isModel) {
         return [self loadModelFile:filename];
+    }
 #endif
     
     // have already filtered filenames out, so this should never get hit
@@ -3057,6 +3051,11 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     string fullFilename = entry->filename;
     double timestamp = (double)entry->modificationDate;
 
+    bool isTextureChanged = _showSettings->isFileChanged(filename, timestamp);
+    if (!isTextureChanged) {
+        return YES;
+    }
+    
 // TODO: don't have a version which loads gltf model from memory block
 //    bool isModel = isSupportedModelFilename(filename);
 //    if (isModel)
@@ -3447,7 +3446,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     // related items, but they must all be named the same.  I think if folder
     // instead of the file is selected, then could search and find the gltf files
     // and the other files.
-
+    
     //----------------------
     // These assets should be combined into a single hierarchy, and be able to
     // save out a scene with all of them in a single scene.  But that should
@@ -3457,9 +3456,11 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     [renderer releaseAllPendingTextures];
     
     setErrorLogCapture(true);
-
+    
     const char* filenameShort = toFilenameShort(filename);
     double timestamp = FileHelper::modificationTimestamp(filename);
+    
+    
     
     // This code only takes url, so construct one
     NSURL* gltfFileURL =
