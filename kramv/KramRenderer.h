@@ -14,6 +14,10 @@
 // which only handles import and synchronous loading.
 #define USE_GLTF 1
 
+// Could use ModelIO on macOS/iOS to support usd files.  Adding here for completeness.
+// But would prefer cross-platform C++ solution.
+#define USE_USD 0
+
 // Only use a perspective transform for models/images, otherwise perspective only used for models
 #define USE_PERSPECTIVE 0
 

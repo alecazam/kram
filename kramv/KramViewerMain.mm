@@ -45,8 +45,6 @@ using namespace NAMESPACE_STL;
 
 static string filenameNoExtension(const char* filename)
 {
-    const char* ext = strrchr(filename, '.');
-    
     const char* dotPosStr = strchr(filename, '.');
     if (dotPosStr == nullptr)
         return filename;
@@ -111,6 +109,16 @@ inline const char* toFilenameShort(const char* filename) {
     return filenameShort;
 }
 
+static const vector<const char*> supportedModelExt = {
+#if USE_GLTF
+     ".gltf",
+     ".glb",
+#endif
+#if USE_USD
+    ".gltf",
+    ".glb",
+#endif
+};
 
 struct File {
     string name;
@@ -122,14 +130,13 @@ struct File {
 };
 
 bool isSupportedModelFilename(const char* filename) {
-#if USE_GLTF
-    return endsWithExtension(filename, ".gltf") ||
-           endsWithExtension(filename, ".glb");
-#else
+    for (const char* ext: supportedModelExt) {
+        if (endsWithExtension(filename, ext)) {
+            return true;
+        }
+    }
     return false;
-#endif
 }
-
 bool isSupportedArchiveFilename(const char* filename) {
     return endsWithExtension(filename, ".zip");
 }
@@ -581,6 +588,11 @@ NSArray<NSString*>* utis = @[
   //@"model/gltf+json",
   //@"model/gltf+binary"
 #endif
+#if USE_USD
+  [UTType typeWithFilenameExtension: @"usd"].identifier,
+  [UTType typeWithFilenameExtension: @"usd"].identifier,
+  [UTType typeWithFilenameExtension: @"usda"].identifier
+#endif
 ];
 NSDictionary* pasteboardOptions = @{
     // This means only these uti can be droped.
@@ -616,6 +628,7 @@ NSDictionary* pasteboardOptions = @{
     int32_t _fileIndex;
    
     NSArray<NSURL*>* _urls;
+    string _containerName; // folder, archive, or blank
     
     Action* _actionPlay;
     Action* _actionShapeUVPreview;
@@ -1963,7 +1976,14 @@ enum TextSlot
     bool isMipHidden = _showSettings->mipCount <= 1;
 
     bool isJumpToNextHidden = _files.size() <= 1;
-    bool isJumpToCounterpartHidden = isJumpToNextHidden; // really should disable if no counterparts
+    
+    bool isJumpToCounterpartHidden = true;
+    bool isJumpToPrevCounterpartHidden = true;
+    
+    if ( _files.size() <= 1) {
+        isJumpToCounterpartHidden = [self hasCounterpart:YES];
+        isJumpToPrevCounterpartHidden  = [self hasCounterpart:NO];
+    }
     
     bool isRedHidden = _showSettings->numChannels == 0; // models don't show rgba
     bool isGreenHidden = _showSettings->numChannels <= 1;
@@ -1999,7 +2019,7 @@ enum TextSlot
     _actionPrevItem->setHidden(isJumpToNextHidden);
     
     _actionCounterpart->setHidden(isJumpToCounterpartHidden);
-    _actionPrevCounterpart->setHidden(isJumpToCounterpartHidden);
+    _actionPrevCounterpart->setHidden(isJumpToPrevCounterpartHidden);
     
     _actionR->setHidden(isRedHidden);
     _actionG->setHidden(isGreenHidden);
@@ -2396,7 +2416,8 @@ enum TextSlot
     }
     // reload key (also a quick way to reset the settings)
     else if (action == _actionReload) {
-        bool success = [self loadFile];
+        //bool success =
+            [self loadFile];
 
         // reload at actual size
         if (isShiftKeyDown) {
@@ -2580,7 +2601,11 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
                 
                 isChanged = true;
                 text = "Loaded ";
-                text += _showSettings->lastFilename;
+                text += toFilenameShort(_showSettings->lastFilename.c_str());
+                if (!_containerName.empty()) {
+                    text += " in ";
+                    text += _containerName;
+                }
             }
         }
     }
@@ -2595,9 +2620,16 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
                 if ([self advanceCounterpart:!isShiftKeyDown]) {
                     _hudHidden = true;
                     [self updateHudVisibility];
+                    [self setEyedropperText:""];
                     
                     isChanged = true;
-                    text = "Loaded " + _showSettings->lastFilename;
+                    
+                    text = "Loaded ";
+                    text += toFilenameShort(_showSettings->lastFilename.c_str());
+                    if (!_containerName.empty()) {
+                        text += " in ";
+                        text += _containerName;
+                    }
                 }
             }
         }
@@ -2752,6 +2784,9 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         // GLTFAsset requires a URL.
         //, ".glb", ".gltf" // models
 //#endif
+#if USE_USD
+        , ".usd", ".usda", ".usb"
+#endif
     };
     
     _zip.filterExtensions(extensions);
@@ -2782,6 +2817,34 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     }
     
     return [self listFilesInArchive:urlIndex];
+}
+
+// TODO: can simplify by storing counterpart id when file list is created
+- (BOOL)hasCounterpart:(BOOL)increment {
+    if (_files.size() <= 1) {
+        return NO;
+    }
+    
+    const File& file = _files[_fileIndex];
+    string currentFilename = filenameNoExtension(toFilenameShort(file.name.c_str()));
+   
+    uint32_t nextFileIndex = _fileIndex;
+    
+    size_t numEntries = _files.size();
+    if (increment)
+        nextFileIndex++;
+    else
+        nextFileIndex += numEntries - 1;  // back 1
+    
+    nextFileIndex = nextFileIndex % numEntries;
+    
+    const File& nextFile = _files[nextFileIndex];
+    string nextFilename = filenameNoExtension(toFilenameShort(nextFile.name.c_str()));
+    
+    if (currentFilename != nextFilename)
+        return NO;
+    
+    return YES;
 }
 
 - (BOOL)advanceCounterpart:(BOOL)increment
@@ -2903,8 +2966,9 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     if ([self isArchive]) {
         return [self loadFileFromArchive];
     }
-    
+
     // now lookup the filename and data at that entry
+    const File& file = _files[_fileIndex];
     const char* filename = _files[_fileIndex].name.c_str();
    
     string fullFilename = filename;
@@ -2915,7 +2979,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         return YES;
     }
     
-#if USE_GLTF
+#if USE_GLTF || USE_USD
     bool isModel = isSupportedModelFilename(filename);
     if (isModel) {
         return [self loadModelFile:filename];
@@ -2927,6 +2991,13 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         return NO;
     }
 
+    _containerName.clear();
+    NSURL* url = _urls[file.urlIndex];
+    if (url.hasDirectoryPath) {
+        _containerName = "folder ";
+        _containerName += toFilenameShort(url.fileSystemRepresentation);
+    }
+    
     vector<string> normalFilenames;
     string normalFilename;
     bool hasNormal = false;
@@ -3075,6 +3146,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         return NO;
     }
 
+    NSURL* archiveURL = _urls[file.urlIndex];
+    _containerName = "archive ";
+    _containerName += toFilenameShort(archiveURL.fileSystemRepresentation);
+    
     const uint8_t* imageNormalData = nullptr;
     uint64_t imageNormalDataLength = 0;
     
@@ -3163,10 +3238,37 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
     // show/hide button
     [self updateUIAfterLoad];
-
     
     self.needsDisplay = YES;
     return YES;
+}
+
+-(void)listArchivesInFolder:(NSURL*)url archiveFiles:(vector<File>&)archiveFiles
+{
+    NSDirectoryEnumerator* directoryEnumerator =
+    [[NSFileManager defaultManager]
+     enumeratorAtURL:url
+     includingPropertiesForKeys:[NSArray array]
+     options:0
+     errorHandler:  // nil
+     ^BOOL(NSURL *urlArg, NSError *error) {
+        macroUnusedVar(urlArg);
+        macroUnusedVar(error);
+        
+        // handle error
+        return NO;
+    }];
+    
+    // only display models in folder if found, ignore the png/jpg files
+    while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
+        const char* name = fileOrDirectoryURL.fileSystemRepresentation;
+        
+        bool isArchive = isSupportedArchiveFilename(name);
+        if (isArchive)
+        {
+            archiveFiles.push_back({string(name),0});
+        }
+    }
 }
 
 -(void)listFilesInFolder:(NSURL*)url urlIndex:(int32_t)urlIndex
@@ -3247,26 +3349,59 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     int32_t urlIndex = 0;
     uint32_t archiveCount = 0;
     
+    NSMutableArray<NSURL*>* urlsExtracted = [NSMutableArray new];
+    
     for (NSURL* url in urls) {
         // These will flatten out to a list of files
         const char* filename = url.fileSystemRepresentation;
         
         if (archiveCount == 0 && isSupportedArchiveFilename(filename)) {
-            //uint32_t fileCount = _files.size();
             if ([self listFilesInArchive:filename urlIndex:urlIndex]) {
                 archiveCount++;
+                
+                // only add 1 archive, since only support 1 currently
+                [urlsExtracted addObject:url];
+                urlIndex++;
             }
         }
         else if (url.hasDirectoryPath) {
+            
             // this first loads only models, then textures if only those
             [self listFilesInFolder:url urlIndex:urlIndex];
+            
+            // could skip if nothing added
+            [urlsExtracted addObject:url];
+            urlIndex++;
+            
+            
+            // handle archives within folder
+            if (archiveCount == 0) {
+                vector<File> archiveFiles;
+                [self listArchivesInFolder:url archiveFiles:archiveFiles];
+            
+                for (const File& archiveFile: archiveFiles) {
+                    const char* archiveFilename = archiveFile.name.c_str();
+                    if ([self listFilesInArchive:archiveFilename urlIndex:urlIndex]) {
+                        archiveCount++;
+                        
+                        NSURL* urlArchive = [NSURL fileURLWithPath:[NSString stringWithUTF8String:archiveFilename]];
+                        [urlsExtracted addObject:urlArchive];
+                        urlIndex++;
+                        
+                        // stop search becausing only support 1 archive
+                        break;
+                    }
+
+                }
+            }
         }
         else if(isSupportedFilename(filename) ||
                 isSupportedModelFilename(filename)) {
             _files.push_back({filename, urlIndex});
+            
+            [urlsExtracted addObject:url];
+            urlIndex++;
         }
-        
-        urlIndex++;
     }
     
     // TODO: sort by urlIndex
@@ -3278,7 +3413,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     
     // preserve old file selection
 
-    _urls = urls;
+    _urls = urlsExtracted;
    
     // preserve filename before load, and restore that index, by finding
     // that name in refreshed folder list
@@ -3460,12 +3595,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     const char* filenameShort = toFilenameShort(filename);
     double timestamp = FileHelper::modificationTimestamp(filename);
     
-    
-    
     // This code only takes url, so construct one
-    NSURL* gltfFileURL =
+    NSURL* fileURL =
         [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
-    BOOL success = [renderer loadModel:gltfFileURL];
+    BOOL success = [renderer loadModel:fileURL];
     
     // TODO: split this off to a completion handler, since loadModel is async
     // and should probably also have a cancellation (or counter)
