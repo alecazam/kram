@@ -626,7 +626,7 @@ struct FileContainer {
     ShowSettings* _showSettings;
 
     BOOL _noImageLoaded;
-    string _containerName; // folder, archive, or blank
+    string _archiveName; // archive or blank
     
     // folders and archives and multi-drop files are filled into this
     vector<File> _files;
@@ -2216,7 +2216,30 @@ enum TextSlot
     _hudLabel2.hidden = _hudHidden || !_showSettings->isHudShown;
 }
 
+- (void)setLoadedText:(string&)text
+{
+    text = "Loaded ";
 
+    string filename = _showSettings->lastFilename;
+    text += toFilenameShort(filename.c_str());
+
+    // archives and file systems have folders, split that off
+    string folderName;
+    const char* slashPos = strrchr(filename.c_str(), '/');
+    if (slashPos != nullptr) {
+        folderName = filename.substr(0, slashPos - filename.c_str());
+    }
+
+    if (!folderName.empty()) {
+        text += " in folder ";
+        text += folderName;
+    }
+
+    if (!_archiveName.empty()) {
+        text += " from archive ";
+        text += _archiveName;
+    }
+}
 
 - (bool)handleEventAction:(const Action*)action isShiftKeyDown:(bool)isShiftKeyDown
 {
@@ -2606,12 +2629,8 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
                 [self setEyedropperText:""];
                 
                 isChanged = true;
-                text = "Loaded ";
-                text += toFilenameShort(_showSettings->lastFilename.c_str());
-                if (!_containerName.empty()) {
-                    text += " in ";
-                    text += _containerName;
-                }
+                
+                [self setLoadedText:text];
             }
         }
     }
@@ -2630,12 +2649,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
                     
                     isChanged = true;
                     
-                    text = "Loaded ";
-                    text += toFilenameShort(_showSettings->lastFilename.c_str());
-                    if (!_containerName.empty()) {
-                        text += " in ";
-                        text += _containerName;
-                    }
+                    [self setLoadedText:text];
                 }
             }
         }
@@ -3012,15 +3026,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         return NO;
     }
 
-    // TODO: better to extract from filename instead of root of folder dropped
+    // Note: better to extract from filename instead of root of folder dropped
     // or just keep displaying full path of filename.
     
-    _containerName.clear();
-    NSURL* url = _urls[file.urlIndex];
-    if (url.hasDirectoryPath) {
-        _containerName = "folder ";
-        _containerName += toFilenameShort(url.fileSystemRepresentation);
-    }
+    _archiveName.clear();
     
     vector<string> normalFilenames;
     string normalFilename;
@@ -3249,8 +3258,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     title += filenameShort;
 
     NSURL* archiveURL = _urls[file.urlIndex];
-    _containerName = "archive ";
-    _containerName += toFilenameShort(archiveURL.fileSystemRepresentation);
+    _archiveName = toFilenameShort(archiveURL.fileSystemRepresentation);
     
     self.window.title = [NSString stringWithUTF8String:title.c_str()];
 
