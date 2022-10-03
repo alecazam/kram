@@ -602,6 +602,14 @@ NSDictionary* pasteboardOptions = @{
     //, NSPasteboardURLReadingFileURLsOnlyKey: @YES
 };
 
+// This can be archive or folder
+struct FileContainer {
+    // allow zip files to be dropped and opened, and can advance through bundle
+    // content
+    ZipHelper zip;
+    MmapHelper zipMmap;
+};
+
 @implementation MyMTKView {
     NSMenu* _viewMenu;  // really the items
     NSStackView* _buttonStack;
@@ -617,18 +625,16 @@ NSDictionary* pasteboardOptions = @{
     vector<string> _textSlots;
     ShowSettings* _showSettings;
 
-    // allow zip files to be dropped and opened, and can advance through bundle
-    // content
-    ZipHelper _zip;
-    MmapHelper _zipMmap;
     BOOL _noImageLoaded;
+    string _containerName; // folder, archive, or blank
     
     // folders and archives and multi-drop files are filled into this
     vector<File> _files;
     int32_t _fileIndex;
    
     NSArray<NSURL*>* _urls;
-    string _containerName; // folder, archive, or blank
+    // One of these per url in _urlss
+    vector<FileContainer*> _containers;
     
     Action* _actionPlay;
     Action* _actionShapeUVPreview;
@@ -2773,50 +2779,65 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return NO;
 }
 
-// requires zip to be open, lists into _files
+// opens archive
+- (BOOL)openArchive:(const char *)zipFilename urlIndex:(int32_t)urlIndex
+{
+    // grow the array, how does this not destroy existing helpers though?
+    if (urlIndex > _containers.size()) {
+        _containers.resize(urlIndex + 1, nullptr);
+    }
+    
+    if (_containers[urlIndex] == nullptr)
+        _containers[urlIndex] = new FileContainer;
+    
+    FileContainer& container = *_containers[urlIndex];
+    MmapHelper& zipMmap = container.zipMmap;
+    ZipHelper& zip = container.zip;
+    
+    // close any previous zip
+    zipMmap.close();
+    
+    // open the mmap again
+    if (!zipMmap.open(zipFilename)) {
+        return NO;
+    }
+    if (!zip.openForRead(zipMmap.data(), zipMmap.dataLength())) {
+        return NO;
+    }
+    return YES;
+}
+
+// lists archive into _files
 - (BOOL)listFilesInArchive:(int32_t)urlIndex
 {
+    FileContainer& container = *_containers[urlIndex];
+    ZipHelper& zip = container.zip;
+    
     // filter out unsupported extensions
     vector<string> extensions = {
         ".ktx", ".ktx2", ".png", ".dds" // textures
-//#if USE_GLTF
+#if USE_GLTF
         // TODO: can't support these until have a loader from memory block
         // GLTFAsset requires a URL.
         //, ".glb", ".gltf" // models
-//#endif
+#endif
 #if USE_USD
         , ".usd", ".usda", ".usb"
 #endif
     };
     
-    _zip.filterExtensions(extensions);
+    container.zip.filterExtensions(extensions);
     
     // don't switch to empty archive
-    if (_zip.zipEntrys().empty()) {
+    if (zip.zipEntrys().empty()) {
         return NO;
     }
     
-    for (const auto& entry: _zip.zipEntrys()) {
+    for (const auto& entry: zip.zipEntrys()) {
         _files.push_back({string(entry.filename), urlIndex});
     }
     
     return YES;
-}
-
-// opens single archive, and lists into _files
-- (BOOL)listFilesInArchive:(const char *)zipFilename urlIndex:(int32_t)urlIndex
-{
-    _zipMmap.close();
-    
-    // open the mmap again
-    if (!_zipMmap.open(zipFilename)) {
-        return NO;
-    }
-    if (!_zip.openForRead(_zipMmap.data(), _zipMmap.dataLength())) {
-        return NO;
-    }
-    
-    return [self listFilesInArchive:urlIndex];
 }
 
 // TODO: can simplify by storing counterpart id when file list is created
@@ -2991,6 +3012,9 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         return NO;
     }
 
+    // TODO: better to extract from filename instead of root of folder dropped
+    // or just keep displaying full path of filename.
+    
     _containerName.clear();
     NSURL* url = _urls[file.urlIndex];
     if (url.hasDirectoryPath) {
@@ -3116,9 +3140,11 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 {
     // now lookup the filename and data at that entry
     const File& file = _files[_fileIndex];
+    FileContainer& container = *_containers[file.urlIndex];
+    ZipHelper& zip = container.zip;
     
     const char* filename = file.name.c_str();
-    const auto* entry = _zip.zipEntry(filename);
+    const auto* entry = zip.zipEntry(filename);
     string fullFilename = entry->filename;
     double timestamp = (double)entry->modificationDate;
 
@@ -3142,14 +3168,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     uint64_t imageDataLength = 0;
 
     // search for main file - can be albedo or normal
-    if (!_zip.extractRaw(filename, &imageData, imageDataLength)) {
+    if (!zip.extractRaw(filename, &imageData, imageDataLength)) {
         return NO;
     }
 
-    NSURL* archiveURL = _urls[file.urlIndex];
-    _containerName = "archive ";
-    _containerName += toFilenameShort(archiveURL.fileSystemRepresentation);
-    
     const uint8_t* imageNormalData = nullptr;
     uint64_t imageNormalDataLength = 0;
     
@@ -3162,7 +3184,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         findPossibleNormalMapFromAlbedoFilename(filename, normalFilenames);
      
         for (const auto& name: normalFilenames) {
-            hasNormal = _zip.extractRaw(name.c_str(), &imageNormalData,
+            hasNormal = zip.extractRaw(name.c_str(), &imageNormalData,
                                         imageNormalDataLength);
             if (hasNormal) {
                 normalFilename = name;
@@ -3226,6 +3248,10 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     title += " - ";
     title += filenameShort;
 
+    NSURL* archiveURL = _urls[file.urlIndex];
+    _containerName = "archive ";
+    _containerName += toFilenameShort(archiveURL.fileSystemRepresentation);
+    
     self.window.title = [NSString stringWithUTF8String:title.c_str()];
 
     // doesn't set imageURL or update the recent document menu
@@ -3345,9 +3371,13 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     // Fill this out again
     _files.clear();
     
+    // clear pointers
+    for (FileContainer* container: _containers)
+        delete container;
+    _containers.clear();
+    
     // this will flatten the list
     int32_t urlIndex = 0;
-    uint32_t archiveCount = 0;
     
     NSMutableArray<NSURL*>* urlsExtracted = [NSMutableArray new];
     
@@ -3355,14 +3385,12 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         // These will flatten out to a list of files
         const char* filename = url.fileSystemRepresentation;
         
-        if (archiveCount == 0 && isSupportedArchiveFilename(filename)) {
-            if ([self listFilesInArchive:filename urlIndex:urlIndex]) {
-                archiveCount++;
-                
-                // only add 1 archive, since only support 1 currently
-                [urlsExtracted addObject:url];
-                urlIndex++;
-            }
+        if (isSupportedArchiveFilename(filename) &&
+            [self openArchive:filename urlIndex:urlIndex] &&
+            [self listFilesInArchive:urlIndex])
+        {
+            [urlsExtracted addObject:url];
+            urlIndex++;
         }
         else if (url.hasDirectoryPath) {
             
@@ -3373,26 +3401,20 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             [urlsExtracted addObject:url];
             urlIndex++;
             
-            
             // handle archives within folder
-            if (archiveCount == 0) {
-                vector<File> archiveFiles;
-                [self listArchivesInFolder:url archiveFiles:archiveFiles];
-            
-                for (const File& archiveFile: archiveFiles) {
-                    const char* archiveFilename = archiveFile.name.c_str();
-                    if ([self listFilesInArchive:archiveFilename urlIndex:urlIndex]) {
-                        archiveCount++;
-                        
-                        NSURL* urlArchive = [NSURL fileURLWithPath:[NSString stringWithUTF8String:archiveFilename]];
-                        [urlsExtracted addObject:urlArchive];
-                        urlIndex++;
-                        
-                        // stop search becausing only support 1 archive
-                        break;
-                    }
-
+            vector<File> archiveFiles;
+            [self listArchivesInFolder:url archiveFiles:archiveFiles];
+        
+            for (const File& archiveFile: archiveFiles) {
+                const char* archiveFilename = archiveFile.name.c_str();
+                if ([self openArchive:archiveFilename urlIndex:urlIndex] &&
+                    [self listFilesInArchive:urlIndex]) {
+                    
+                    NSURL* urlArchive = [NSURL fileURLWithPath:[NSString stringWithUTF8String:archiveFilename]];
+                    [urlsExtracted addObject:urlArchive];
+                    urlIndex++;
                 }
+
             }
         }
         else if(isSupportedFilename(filename) ||
