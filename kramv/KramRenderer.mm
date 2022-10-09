@@ -1879,16 +1879,15 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
             _gltfRenderer.viewMatrix = _viewMatrix * regularizationMatrix;
             _gltfRenderer.projectionMatrix = _projectionMatrix;
     
-            [renderEncoder pushDebugGroup:@"DrawModel"];
+            RenderScope drawModelScope( renderEncoder, "DrawModel" );
             [_gltfRenderer renderScene:_asset.defaultScene commandBuffer:commandBuffer commandEncoder:renderEncoder];
-            [renderEncoder popDebugGroup];
         }
     }
     #endif
     
     if (drawShape) {
-        [renderEncoder pushDebugGroup:@"DrawShape"];
-
+        RenderScope drawShapeScope( renderEncoder, "DrawShape" );
+        
         // set the mesh shape
         for (NSUInteger bufferIndex = 0; bufferIndex < _mesh.vertexBuffers.count;
              bufferIndex++) {
@@ -2016,6 +2015,71 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                     // mips/levels at once
                     
                     [self _setUniformsLevel:uniformsLevel mipLOD:mip];
+                    
+                    if (mip == 0) {
+                        uniformsLevel.drawOffset.y = 0.0f;
+                    }
+                    else {
+                        // all mips draw at top mip size currently
+                        uniformsLevel.drawOffset.y -= h + gap;
+                    }
+                    
+                    // this its ktxImage.totalChunks()
+                    int32_t numLevels = _showSettings->totalChunks();
+                    
+                    for (int32_t level = 0; level < numLevels; ++level) {
+                        RenderScope drawLevelScope( renderEncoder, "DrawLevel" );
+                        
+                        if (isCube) {
+                            uniformsLevel.face = level % 6;
+                            uniformsLevel.arrayOrSlice = level / 6;
+                        }
+                        else {
+                            uniformsLevel.arrayOrSlice = level;
+                        }
+                        
+                        // advance x across faces/slices/array elements, 1d array and 2d thin
+                        // array are weird though.
+                        if (level == 0) {
+                            uniformsLevel.drawOffset.x = 0.0f;
+                        }
+                        else {
+                            uniformsLevel.drawOffset.x += w + gap;
+                        }
+                        
+                        [renderEncoder setVertexBytes:&uniformsLevel
+                                               length:sizeof(uniformsLevel)
+                                              atIndex:BufferIndexUniformsLevel];
+                        
+                        [renderEncoder setFragmentBytes:&uniformsLevel
+                                                 length:sizeof(uniformsLevel)
+                                                atIndex:BufferIndexUniformsLevel];
+                        
+                        // force lod, and don't mip
+                        [renderEncoder setFragmentSamplerState:sampler
+                                                   lodMinClamp:mip
+                                                   lodMaxClamp:mip + 1
+                                                       atIndex:SamplerIndexColor];
+                        
+                        // TODO: since this isn't a preview, have mode to display all faces
+                        // and mips on on screen faces and arrays and slices go across in a
+                        // row, and mips are displayed down from each of those in a column
+                        
+                        for (MTKSubmesh* submesh in _mesh.submeshes) {
+                            [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                                      indexCount:submesh.indexCount
+                                                       indexType:submesh.indexType
+                                                     indexBuffer:submesh.indexBuffer.buffer
+                                               indexBufferOffset:submesh.indexBuffer.offset];
+                        }
+                    }
+                }
+                
+                for (int32_t mip = 0; mip < _showSettings->mipCount; ++mip) {
+                    // upload this on each face drawn, since want to be able to draw all
+                    // mips/levels at once
+                    
+                    [self _setUniformsLevel:uniformsLevel mipLOD:mip];
 
                     if (mip == 0) {
                         uniformsLevel.drawOffset.y = 0.0f;
@@ -2029,8 +2093,6 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                     int32_t numLevels = _showSettings->totalChunks();
 
                     for (int32_t level = 0; level < numLevels; ++level) {
-                        [renderEncoder pushDebugGroup:@"DrawLevel"];
-
                         if (isCube) {
                             uniformsLevel.face = level % 6;
                             uniformsLevel.arrayOrSlice = level / 6;
@@ -2038,7 +2100,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         else {
                             uniformsLevel.arrayOrSlice = level;
                         }
-
+                        
                         // advance x across faces/slices/array elements, 1d array and 2d thin
                         // array are weird though.
                         if (level == 0) {
@@ -2047,32 +2109,22 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         else {
                             uniformsLevel.drawOffset.x += w + gap;
                         }
-
+                        
                         [renderEncoder setVertexBytes:&uniformsLevel
                                                length:sizeof(uniformsLevel)
                                               atIndex:BufferIndexUniformsLevel];
-
-                        [renderEncoder setFragmentBytes:&uniformsLevel
-                                                 length:sizeof(uniformsLevel)
-                                                atIndex:BufferIndexUniformsLevel];
-
+                        
+//                        [renderEncoder setFragmentBytes:&uniformsLevel
+//                                                 length:sizeof(uniformsLevel)
+//                                                atIndex:BufferIndexUniformsLevel];
+                        
                         // force lod, and don't mip
-                        [renderEncoder setFragmentSamplerState:sampler
-                                                   lodMinClamp:mip
-                                                   lodMaxClamp:mip + 1
-                                                       atIndex:SamplerIndexColor];
-
-                        // TODO: since this isn't a preview, have mode to display all faces
-                        // and mips on on screen faces and arrays and slices go across in a
-                        // row, and mips are displayed down from each of those in a column
-
-                        for (MTKSubmesh* submesh in _mesh.submeshes) {
-                            [renderEncoder drawIndexedPrimitives:submesh.primitiveType
-                                                      indexCount:submesh.indexCount
-                                                       indexType:submesh.indexType
-                                                     indexBuffer:submesh.indexBuffer.buffer
-                                               indexBufferOffset:submesh.indexBuffer.offset];
-                        }
+//                        [renderEncoder setFragmentSamplerState:sampler
+//                                                   lodMinClamp:mip
+//                                                   lodMaxClamp:mip + 1
+//                                                       atIndex:SamplerIndexColor];
+//                        
+                        [self drawAtlas:renderEncoder];
                     }
                 }
             }
@@ -2113,8 +2165,9 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 if (_showSettings->is3DView && _showSettings->uvPreview > 0.0) {
                     // need to force color in shader or it's still sampling texture
                     // also need to add z offset
-                    [renderEncoder pushDebugGroup:@"DrawUVPreview"];
-
+                    
+                    RenderScope drawUVPreviewScope( renderEncoder, "DrawUVPreview" );
+                    
                     [renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
                     
                     // only applies to tris, not points/lines, pushes depth away (towards 0), after clip
@@ -2144,74 +2197,98 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                     
                     // restore state, even though this isn't a true state shadow
                     [renderEncoder setDepthBias:0.0 slopeScale:0.0 clamp:0.0];
-                    
                     [renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
                     
-                    [renderEncoder popDebugGroup];
-
                 }
                 
-                // draw last since this changes pipeline state
-                if (!_showSettings->is3DView && !_showSettings->atlas.empty()) { // && _showSettings->drawAtlas) {
-                    [renderEncoder pushDebugGroup:@"DrawAtlas"];
-                    
-                    [renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
-                
-                    //[renderEncoder setDepthBias:0.015 slopeScale:3.0 clamp: 0.02];
-                    
-                    [renderEncoder setCullMode:MTLCullModeNone];
-                    
-                    [renderEncoder setRenderPipelineState:_pipelineStateDrawLines];
-                    
-                    // TODO: draw line strip with prim reset
-                    // need atlas data in push constants or in vb
-                    
-                    // TOOO: also need to hover name or show names on canvas
-                    
-                    [renderEncoder setVertexBytes:&uniformsLevel
-                                           length:sizeof(uniformsLevel)
-                                          atIndex:BufferIndexUniformsLevel];
-
-                    UniformsDebug uniformsDebug;
-                    
-                    for (const Atlas& atlas: _showSettings->atlas) {
-                        // not accounting for slice
-                        uniformsDebug.rect = float4m(atlas.x, atlas.y, atlas.w, atlas.h);
-                        
-                        
-                        [renderEncoder setVertexBytes:&uniformsDebug
-                                               length:sizeof(uniformsDebug)
-                                              atIndex:BufferIndexUniformsDebug];
-                        
-                        // this will draw diagonal
-                        for (MTKSubmesh* submesh in _mesh.submeshes) {
-                            [renderEncoder drawIndexedPrimitives:submesh.primitiveType
-                                                      indexCount:submesh.indexCount
-                                                       indexType:submesh.indexType
-                                                     indexBuffer:submesh.indexBuffer.buffer
-                                               indexBufferOffset:submesh.indexBuffer.offset];
-                        }
-                    }
-                    
-                    // restore state, even though this isn't a true state shadow
-                    //[renderEncoder setDepthBias:0.0 slopeScale:0.0 clamp:0.0];
-                    
-                    // restore
-                    [renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
-                    
-                    [renderEncoder popDebugGroup];
-                }
-                
+                [self drawAtlas:renderEncoder];
             }
         }
-
-        [renderEncoder popDebugGroup];
     }
 
     [renderEncoder endEncoding];
 
     // TODO: run any post-processing on each texture visible as fsq
     // TODO: environment map preview should be done as fsq
+}
+
+class RenderScope
+{
+public:
+    RenderScope(id encoder_, const char* name)
+        : encoder(encoder_)
+    {
+        id<MTLRenderCommandEncoder> enc = (id<MTLRenderCommandEncoder>)encoder;
+        [enc pushDebugGroup: [NSString stringWithUTF8String: name]];
+    }
+    
+    void close()
+    {
+        if (encoder) {
+            id<MTLRenderCommandEncoder> enc = (id<MTLRenderCommandEncoder>)encoder;
+            [enc popDebugGroup];
+            encoder = nil;
+        }
+    }
+    
+    ~RenderScope()
+    {
+        close();
+    }
+private:
+    id encoder;
+};
+
+- (void)drawAtlas:(nonnull id<MTLRenderCommandEncoder>)renderEncoder {
+    // draw last since this changes pipeline state
+    if (_showSettings->is3DView && _showSettings->atlas.empty())
+        return;
+    
+    //if (!_showSettings->drawAtlas)
+    //    return;
+        
+    RenderScope drawAtlasScope( renderEncoder, "DrawAtlas" );
+    
+    [renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
+    [renderEncoder setDepthBias:5.0 slopeScale:0.0 clamp: 0.0];
+    [renderEncoder setCullMode:MTLCullModeNone];
+    
+    [renderEncoder setRenderPipelineState:_pipelineStateDrawLines];
+    
+    // TODO: draw line strip with prim reset
+    // need atlas data in push constants or in vb
+    
+    // TOOO: also need to hover name or show names on canvas
+    
+//                    [renderEncoder setVertexBytes:&uniformsLevel
+//                                           length:sizeof(uniformsLevel)
+//                                          atIndex:BufferIndexUniformsLevel];
+
+    UniformsDebug uniformsDebug;
+    
+    for (const Atlas& atlas: _showSettings->atlas) {
+        // not accounting for slice
+        uniformsDebug.rect = float4m(atlas.x, atlas.y, atlas.w, atlas.h);
+        
+        
+        [renderEncoder setVertexBytes:&uniformsDebug
+                               length:sizeof(uniformsDebug)
+                              atIndex:BufferIndexUniformsDebug];
+        
+        // this will draw diagonal
+        for (MTKSubmesh* submesh in _mesh.submeshes) {
+            [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                      indexCount:submesh.indexCount
+                                       indexType:submesh.indexType
+                                     indexBuffer:submesh.indexBuffer.buffer
+                               indexBufferOffset:submesh.indexBuffer.offset];
+        }
+    }
+    
+    // restore state, even though this isn't a true state shadow
+    [renderEncoder setCullMode:MTLCullModeBack];
+    [renderEncoder setDepthBias:0.0 slopeScale:0.0 clamp:0.0];
+    [renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
 }
 
 // want to run samples independent of redrawing the main view
@@ -2336,8 +2413,8 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
 
     renderEncoder.label = @"SampleCompute";
 
-    [renderEncoder pushDebugGroup:@"DrawShape"];
-
+    RenderScope drawShapeScope( renderEncoder, "DrawShape" );
+    
     UniformsCS uniforms;
     uniforms.uv.x = lookupX;
     uniforms.uv.y = lookupY;
@@ -2391,7 +2468,6 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
     [renderEncoder dispatchThreads:MTLSizeMake(1, 1, 1)
              threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
 
-    [renderEncoder popDebugGroup];
     [renderEncoder endEncoding];
 }
 

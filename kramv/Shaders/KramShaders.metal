@@ -1682,7 +1682,7 @@ vertex VertexLinesOutput DrawLinesVS(
     // bias it
     // use hw bias instead, but image is at 0.9993
     // and this will be at 0.9994 which is closer w/reverseZ
-    out.position.z += 0.0001;
+    // out.position.z += 0.0001;
     
     return out;
 }
