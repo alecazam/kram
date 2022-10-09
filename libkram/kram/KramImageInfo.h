@@ -64,9 +64,11 @@ public:
     bool optimizeFormatForOpaque = false;
 
     // these and formatString set the pixelFormat
-    // if pixelFOrmat set directly, then these are updated off that format
-    bool isSigned = false;
+    // if pixelFormat set directly, then these are updated off that format
+    // This means src is srgb on s/unorm formats, or dst is srgb if pixel format supports.
     bool isSRGB = false;
+    
+    bool isSigned = false;
     bool isHDR = false;
 
     // for now these are only usable with normal to height
@@ -126,11 +128,13 @@ public:
     KTX2Compressor compressor;
     bool isKTX2 = false;
 
-    // output image state
-    // Note: difference between input srgb and output srgb, but it's mingled
-    // here a bit
-    bool isSRGB = false;
+    // source image state
+    bool hasColor = false;
+    bool hasAlpha = false;
+    bool isSRGBSrc = false;
     
+    // output image state
+    bool isSRGBDst = false;
     bool isSigned = false;
     bool isNormal = false;
     bool isColorWeighted = false;
@@ -142,18 +146,15 @@ public:
     bool doMipmaps = false;
     bool optimizeFormatForOpaque = false;
 
-    // source image state
-    bool hasColor = false;
-    bool hasAlpha = false;
-
     bool isVerbose = false;
 
-    // info about the format
+    // compression format
     bool isASTC = false;
     bool isBC = false;
     bool isETC = false;
     bool isExplicit = false;
 
+    // encoder
     bool useATE = false;
     bool useSquish = false;
     bool useBcenc = false;

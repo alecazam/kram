@@ -27,6 +27,7 @@ typedef NS_ENUM(int32_t, BufferIndex) {
 
     BufferIndexUniforms = 16,
     BufferIndexUniformsLevel = 17,
+    BufferIndexUniformsDebug = 18,
 
     // for compute
     BufferIndexUniformsCS = 16,
@@ -185,4 +186,8 @@ struct UniformsCS {
     uint32_t mipLOD;
 };
 
+struct UniformsDebug {
+    simd::float4 rect;
+};
+    
 #endif

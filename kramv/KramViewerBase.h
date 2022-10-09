@@ -75,6 +75,15 @@ enum LightingMode {
     LightingModeCount,
 };
 
+struct Atlas
+{
+    string name;
+    float x,y,w,h;
+    float u,v; // padding - to both or just left or right?
+    bool isVertical;
+    uint32_t level;
+};
+
 class ShowSettings {
 public:
     // Can mask various channels (r/g/b/a only, vs. all), may also add toggle of
@@ -230,6 +239,8 @@ public:
     MyMTLPixelFormat originalFormat;
     MyMTLPixelFormat decodedFormat;
 
+    string windowTitleString(const char* filename) const;
+
     void advanceMeshNumber(bool decrement);
     void advanceDebugMode(bool decrement);
     void advanceShapeChannel(bool decrement);
@@ -264,6 +275,8 @@ public:
 
     int32_t meshNumber = 0;
     int32_t meshCount = 5;
+    
+    vector<Atlas> atlas;
 };
 
 float4x4 matrix4x4_translation(float tx, float ty, float tz);

@@ -45,7 +45,7 @@ using namespace NAMESPACE_STL;
 
 static string filenameNoExtension(const char* filename)
 {
-    const char* dotPosStr = strchr(filename, '.');
+    const char* dotPosStr = strrchr(filename, '.');
     if (dotPosStr == nullptr)
         return filename;
     auto dotPos = dotPosStr - filename;
@@ -63,7 +63,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     
     const char* ext = strrchr(filename, '.');
 
-    const char* dotPosStr = strchr(filenameShort.c_str(), '.');
+    const char* dotPosStr = strrchr(filenameShort.c_str(), '.');
     if (dotPosStr == nullptr)
         return;
     
@@ -150,7 +150,6 @@ struct MouseData
     NSPoint pan;
 };
 
-
 //-------------
 
 enum Key {
@@ -218,7 +217,8 @@ enum Key {
 // This makes dealing with ui much simpler
 class Action {
 public:
-    Action(const char* icon_, const char* tip_, Key keyCode_): icon(icon_), tip(tip_), keyCode(keyCode_) {}
+    Action(const char* icon_, const char* tip_, Key keyCode_)
+        : icon(icon_), tip(tip_), keyCode(keyCode_) {}
     
     const char* icon;
     const char* tip;
@@ -584,15 +584,18 @@ NSArray<NSString*>* utis = @[
   
 #if USE_GLTF
   [UTType typeWithFilenameExtension: @"gltf"].identifier,
-  [UTType typeWithFilenameExtension: @"glb"].identifier
+  [UTType typeWithFilenameExtension: @"glb"].identifier,
   //@"model/gltf+json",
   //@"model/gltf+binary"
 #endif
 #if USE_USD
   [UTType typeWithFilenameExtension: @"usd"].identifier,
   [UTType typeWithFilenameExtension: @"usd"].identifier,
-  [UTType typeWithFilenameExtension: @"usda"].identifier
+  [UTType typeWithFilenameExtension: @"usda"].identifier,
 #endif
+  
+  // read -atlas.json files
+  [UTType typeWithFilenameExtension: @"json"].identifier
 ];
 NSDictionary* pasteboardOptions = @{
     // This means only these uti can be droped.
@@ -602,10 +605,14 @@ NSDictionary* pasteboardOptions = @{
     //, NSPasteboardURLReadingFileURLsOnlyKey: @YES
 };
 
-// This can be archive or folder
+// This is an open archive
 struct FileContainer {
     // allow zip files to be dropped and opened, and can advance through bundle
-    // content
+    // content.
+    
+    // TODO: Add FileHelper if acrhive file is networked, but would require
+    // full load to memory.
+    
     ZipHelper zip;
     MmapHelper zipMmap;
 };
@@ -716,7 +723,7 @@ struct FileContainer {
 
     _showSettings = new ShowSettings;
 
-    self.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+    self.clearColor = MTLClearColorMake(0.005f, 0.005f, 0.005f, 0.0f);
 
     self.clearDepth = _showSettings->isReverseZ ? 0.0f : 1.0f;
 
@@ -823,7 +830,7 @@ struct FileContainer {
 
         Action("", "", Key::A), // sep
 
-        Action(" ", "Play", Key::Space), // TODO: really need icon on this
+        Action(" ", "Play", Key::Space),
         Action("6", "Shape UVPreview", Key::Num6),
         Action("S", "Shape", Key::S),
         Action("C", "Shape Channel", Key::C),
@@ -2793,6 +2800,64 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return NO;
 }
 
+// TODO: convert to using a C++ json lib like yyJson or simdJson
+// Then can move into libkram, and embed in the ktx/ktx2 metadata.
+- (BOOL)loadAtlasFile:(const char*)filename
+{
+    NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
+    NSData* assetData = [NSData dataWithContentsOfURL:url];
+    
+    NSError* error = nil;
+    NSDictionary* rootObject = [NSJSONSerialization JSONObjectWithData:assetData options:NSJSONReadingFragmentsAllowed error:&error];
+    
+    if (error != nil) {
+        // TODO: avoid NSLog
+        NSLog(@"%@", error);
+        return NO;
+    }
+    
+    // Can use hover or a show all on these entries and names.
+    // Draw names on screen using system text in the upper left corner if 1
+    // if showing all, then show names across each mip level.  May want to
+    // snap to pixels on each mip level so can see overlap.
+    
+    _showSettings->atlas.clear();
+    
+    for (NSDictionary* atlasProps in rootObject)
+    {
+        const char* name = [atlasProps[@"name"] UTF8String];
+        
+        // Note: could convert pixel and mip0 size to uv.
+        // normalized uv make these easier to draw across all mips
+        float x = [atlasProps[@"x"] floatValue];
+        float y = [atlasProps[@"y"] floatValue];
+        float w = [atlasProps[@"w"] floatValue];
+        float h = [atlasProps[@"h"] floatValue];
+    
+        // optional
+        // optional uv padding - need two values for non-square
+        // could be inherited by all elements to avoid redundancy
+        // optional horizontal and vertical orient
+        // optional props for 2d arrays
+        
+        float uPad = [atlasProps[@"u"] floatValue];
+        float vPad = [atlasProps[@"v"] floatValue];
+        const char* verticalProp = [atlasProps[@"o"] UTF8String];
+        int slice = [atlasProps[@"slice"] intValue];
+
+        bool isVertical = verticalProp && verticalProp[0] == 't';
+        
+        Atlas atlas = {name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
+        _showSettings->atlas.emplace_back(std::move(atlas));
+    }
+    
+    // TODO: also need to be able to bring in vector shapes
+    // maybe from svg or files written out from figma or photoshop.
+    // Can triangulate those, and use xatlas to pack those.
+    
+    return YES;
+}
+
 // opens archive
 - (BOOL)openArchive:(const char *)zipFilename urlIndex:(int32_t)urlIndex
 {
@@ -2987,8 +3052,6 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return isFound;
 }
 
-
-
 - (BOOL)isArchive
 {
     NSURL* url = _urls[_files[_fileIndex].urlIndex];
@@ -3004,7 +3067,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
     // now lookup the filename and data at that entry
     const File& file = _files[_fileIndex];
-    const char* filename = _files[_fileIndex].name.c_str();
+    const char* filename = file.name.c_str();
    
     string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
@@ -3031,15 +3094,15 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     
     _archiveName.clear();
     
-    vector<string> normalFilenames;
+    vector<string> possibleNormalFilenames;
     string normalFilename;
     bool hasNormal = false;
 
     TexContentType texContentType = findContentTypeFromFilename(filename);
     if (texContentType == TexContentTypeAlbedo) {
-        findPossibleNormalMapFromAlbedoFilename(filename, normalFilenames);
+        findPossibleNormalMapFromAlbedoFilename(filename, possibleNormalFilenames);
      
-       for (const auto& name: normalFilenames) {
+       for (const auto& name: possibleNormalFilenames) {
             hasNormal = [self findFilename:name];
             
             if (hasNormal) {
@@ -3049,9 +3112,47 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         }
     }
     
-    // TODO: if it's a compressed file, then set a diff target if a corresponding png
+    // see if there is an atlas file too, and load the rectangles for preview
+    // note sidecar atlas files are a pain to view with a sandbox, may want to
+    // splice into ktx/ktx2 files, but no good metadata for png/dds.
+    _showSettings->atlas.clear();
+    
+    string atlasFilename = filenameNoExtension(filename);
+    bool hasAtlas = false;
+    
+    // replace -a, -d, with -atlas.json
+    const char* dashPosStr = strrchr(atlasFilename.c_str(), '-');
+    if (dashPosStr != nullptr) {
+        atlasFilename = atlasFilename.substr(0, dashPosStr - atlasFilename.c_str());
+    }
+    atlasFilename += "-atlas.json";
+    if ( [self findFilename:atlasFilename.c_str()]) {
+        if ([self loadAtlasFile:atlasFilename.c_str()]) {
+            hasAtlas = true;
+        }
+    }
+    if (!hasAtlas) {
+        atlasFilename.clear();
+    }
+    
+    // if it's a compressed file, then set a diff target if a corresponding png
     // is found.  Eventually see if a src dds/ktx/ktx2 exists.  Want to stop
-    // using png as source images.
+    // using png as source images.  Note png don't have custom mips, unless
+    // flattened to one image.  So have to fabricate mips here.
+    
+    string diffFilename = filenameNoExtension(filename);
+    bool hasDiff = false;
+    
+    diffFilename += ".png";
+    if ( diffFilename != filename && [self findFilename:diffFilename.c_str()]) {
+        // TODO: defer load until diff enabled
+        //if ([self loadDiffFile:diffFilename.c_str()]) {
+            hasDiff = true;
+        //}
+    }
+    if (!hasDiff) {
+        diffFilename.clear();
+    }
     
     //-------------------------------
 
@@ -3093,41 +3194,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
     //-------------------------------
 
-    // set title to filename, chop this to just file+ext, not directory
-    const char* filenameShort = strrchr(filename, '/');
-    if (filenameShort == nullptr) {
-        filenameShort = filename;
-    }
-    else {
-        filenameShort += 1;
-    }
-
-    // was using subtitle, but that's macOS 11.0 feature.
-    string title = "kramv - ";
-    title += formatTypeName(_showSettings->originalFormat);
-    title += " - ";
-    
-    // identify what we think the content type is
-    const char* typeText = "";
-    switch(_showSettings->texContentType) {
-        case TexContentTypeAlbedo: typeText = "a"; break;
-        case TexContentTypeNormal: typeText = "n"; break;
-        case TexContentTypeAO: typeText = "ao"; break;
-        case TexContentTypeMetallicRoughness: typeText = "mr"; break;
-        case TexContentTypeSDF: typeText = "sdf"; break;
-        case TexContentTypeHeight: typeText = "h"; break;
-        case TexContentTypeUnknown: typeText = ""; break;
-    }
-    title += typeText;
-    // add some info about the texture to avoid needing to go to info
-    // srgb src would be useful too.
-    if (_showSettings->texContentType == TexContentTypeAlbedo && _showSettings->isPremul) {
-        title += ",p";
-        
-    }
-    title += " - ";
-    title += filenameShort;
-
+    string title = _showSettings->windowTitleString(filename);
     self.window.title = [NSString stringWithUTF8String:title.c_str()];
 
     // doesn't set imageURL or update the recent document menu
@@ -3241,25 +3308,11 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     }
 
     //---------------------------------
-
-    // set title to filename, chop this to just file+ext, not directory
-    const char* filenameShort = strrchr(filename, '/');
-    if (filenameShort == nullptr) {
-        filenameShort = filename;
-    }
-    else {
-        filenameShort += 1;
-    }
-
-    // was using subtitle, but that's macOS 11.0 feature.
-    string title = "kramv - ";
-    title += formatTypeName(_showSettings->originalFormat);
-    title += " - ";
-    title += filenameShort;
-
+    
     NSURL* archiveURL = _urls[file.urlIndex];
     _archiveName = toFilenameShort(archiveURL.fileSystemRepresentation);
     
+    string title = _showSettings->windowTitleString(filename);
     self.window.title = [NSString stringWithUTF8String:title.c_str()];
 
     // doesn't set imageURL or update the recent document menu
@@ -3317,54 +3370,38 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         macroUnusedVar(urlArg);
         macroUnusedVar(error);
         
-        // handle error
+        // handle error - don't change to folder if devoid of valid content
         return NO;
     }];
     
-#if USE_GLTF
-    bool foundModel = false;
-    // only display models in folder if found, ignore the png/jpg files
     while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
         const char* name = fileOrDirectoryURL.fileSystemRepresentation;
         
-        bool isModel = isSupportedModelFilename(name);
-        if (isModel)
-        {
-            _files.push_back({string(name),urlIndex});
-            foundModel = true;
+        bool isValid = isSupportedFilename(name);
+        
+#if USE_GLTF || USE_USD
+        // note: many gltf reference jpg which will load via GltfAsset, but
+        // kram and kramv do not import jpg files.
+        if (!isValid) {
+            isValid = isSupportedModelFilename(name);
         }
-    }
 #endif
-    
-    // don't change to this folder if it's devoid of content
-    if (!foundModel) {
-#if USE_GLTF
-        // reset the enumerator
-        directoryEnumerator =
-        [[NSFileManager defaultManager]
-         enumeratorAtURL:url
-         includingPropertiesForKeys:[NSArray array]
-         options:0
-         errorHandler:  // nil
-         ^BOOL(NSURL* urlArg, NSError* error) {
-            macroUnusedVar(urlArg);
-            macroUnusedVar(error);
-            
-            // handle error
-            return NO;
-        }];
-#endif
-        while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
-            const char* name = fileOrDirectoryURL.fileSystemRepresentation;
-            
-            if (isSupportedFilename(name))
-            {
-                _files.push_back({name, urlIndex});
-            }
+        
+        if (!isValid) {
+            isValid = isSupportedJsonFilename(name);
+        }
+        if (isValid) {
+            _files.push_back({name,urlIndex});
         }
     }
 }
 
+bool isSupportedJsonFilename(const char* filename)
+{
+    return endsWith(filename, "-atlas.json");
+}
+
+    
 -(void)loadFilesFromUrls:(NSArray<NSURL*>*)urls
 {
     // Using a member for archives, so limited to one archive in a drop
@@ -3425,13 +3462,23 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
             }
         }
-        else if(isSupportedFilename(filename) ||
-                isSupportedModelFilename(filename)) {
+        else if (isSupportedFilename(filename)
+#if USE_GLTF
+                 || isSupportedModelFilename(filename)
+#endif
+            ) {
             _files.push_back({filename, urlIndex});
             
             [urlsExtracted addObject:url];
             urlIndex++;
         }
+        else if (isSupportedJsonFilename(filename)) {
+            _files.push_back({filename, urlIndex});
+            
+            [urlsExtracted addObject:url];
+            urlIndex++;
+        }
+    
     }
     
     // TODO: sort by urlIndex

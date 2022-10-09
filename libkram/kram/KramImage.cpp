@@ -1462,7 +1462,7 @@ void KramEncoder::addBaseProps(const ImageInfo& info, KTXImage& dstImage) const
     if (info.isNormal) {
         dstImage.addChannelProps("Nrm.x,Nrm.y,X,X");
     }
-    else if (info.isSRGB) {
+    else if (info.isSRGBDst) {
         // !hasAlpha doesn't change the channel designation
         if (info.isPremultiplied) {
             dstImage.addChannelProps("Alb.ra,Alb.ga,Alb.ba,Alb.a");
@@ -2010,7 +2010,7 @@ bool KramEncoder::createMipsFromChunks(
     srcImage.height = data.chunkHeight;
 
     // KramMipper uses these
-    srcImage.isSRGB = info.isSRGB;
+    srcImage.isSRGB = info.isSRGBSrc;
     srcImage.isHDR = info.isHDR;
 
     int32_t w = srcImage.width;
@@ -2082,7 +2082,7 @@ bool KramEncoder::createMipsFromChunks(
         }
 
         // used to store premul and linear color
-        if (info.isSRGB || doPremultiply) {
+        if (info.isSRGBSrc || doPremultiply) {
             halfImage.resize(w * h);
 
             // so large mips even if clamped with -mipmax allocate to largest mip size (2k x 2k @16 = 64MB)
@@ -2168,8 +2168,10 @@ bool KramEncoder::createMipsFromChunks(
         }
 
         // doing in-place mips
+        // could be reading in srgb gray, and writing out bc4 unorm
         ImageData dstImageData = srcImage;
-
+        dstImageData.isSRGB = isSrgbFormat(info.pixelFormat);
+        
         //----------------------------------------------
 
         // build mips for the chunk, dropping mips as needed, but downsampling
@@ -2209,8 +2211,11 @@ bool KramEncoder::createMipsFromChunks(
                     mipper.mipmap(srcImage, dstImageData);
 
                     // dst becomes src for next in-place mipmap
+                    // preserve the isSRGB state
+                    bool isSRGBSrc = srcImage.isSRGB;
                     srcImage = dstImageData;
-
+                    srcImage.isSRGB = isSRGBSrc;
+                    
                     w = dstImageData.width;
                     h = dstImageData.height;
                 }
@@ -2610,6 +2615,10 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     //                        doPrintBlock = true;
                     //                    }
 
+                    // could tie to quality parameter, high quality uses the two
+                    // modes of bc3/4/5.
+                    bool useHighQuality = true;
+                    
                     switch (info.pixelFormat) {
                         case MyMTLPixelFormatBC1_RGBA:
                         case MyMTLPixelFormatBC1_RGBA_sRGB: {
@@ -2619,20 +2628,28 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                         }
                         case MyMTLPixelFormatBC3_RGBA:
                         case MyMTLPixelFormatBC3_RGBA_sRGB: {
-                            rgbcx::encode_bc3(bc3QualityLevel, dstBlock,
-                                              srcPixelCopy);
+                            if (useHighQuality)
+                                rgbcx::encode_bc3_hq(bc3QualityLevel, dstBlock, srcPixelCopy);
+                            else
+                                rgbcx::encode_bc3(bc3QualityLevel, dstBlock, srcPixelCopy);
                             break;
                         }
 
                         case MyMTLPixelFormatBC4_RUnorm:
                         case MyMTLPixelFormatBC4_RSnorm: {
-                            rgbcx::encode_bc4(dstBlock, srcPixelCopy);
+                            if (useHighQuality)
+                                rgbcx::encode_bc4_hq(dstBlock, srcPixelCopy);
+                            else
+                                rgbcx::encode_bc4(dstBlock, srcPixelCopy);
                             break;
                         }
 
                         case MyMTLPixelFormatBC5_RGUnorm:
                         case MyMTLPixelFormatBC5_RGSnorm: {
-                            rgbcx::encode_bc5(dstBlock, srcPixelCopy);
+                            if (useHighQuality)
+                                rgbcx::encode_bc5_hq(dstBlock, srcPixelCopy);
+                            else
+                                rgbcx::encode_bc5(dstBlock, srcPixelCopy);
                             break;
                         }
 
@@ -2856,14 +2873,12 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
             }
 
             astcenc_profile profile;
-            profile = info.isSRGB ? ASTCENC_PRF_LDR_SRGB : ASTCENC_PRF_LDR;
+            profile = info.isSRGBDst ? ASTCENC_PRF_LDR_SRGB : ASTCENC_PRF_LDR;
             if (info.isHDR) {
                 profile =
                     ASTCENC_PRF_HDR;  // TODO: also ASTCENC_PRF_HDR_RGB_LDR_A
             }
 
-            
-            
             // not generating 3d ASTC ever, even for 3D textures
             //Int2 blockDims = image.blockDims();
 

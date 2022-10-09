@@ -608,7 +608,6 @@ ColorInOut DrawImageFunc(
         uniforms.shapeChannel == ShaderShapeChannel::ShShapeChannelBitangent;
 
     float4 position = in.position;
-    //position.xy += uniformsLevel.drawOffset;
     float3 normal = in.normal;
     float4 tangent = in.tangent;
     
@@ -1442,7 +1441,6 @@ fragment float4 DrawVolumePS(
 
 //--------------------------------------------------
 
-
 /* not using this yet, need a fsq and some frag coord to sample the normal map at discrete points
  
 // https://www.shadertoy.com/view/4s23DG
@@ -1645,4 +1643,52 @@ kernel void SampleVolumeCS(
     result.write(color, index);
 }
 
+//--------------------------------------------------
 
+// TODO: use instancing to draw these, since to avoid diagonal
+// have to use line strip and prim reset, or 4 line segs.
+struct VertexLinesInput
+{
+    //float4 position [[attribute(VertexAttributePosition)]];
+    float2 texCoord [[attribute(VertexAttributeTexcoord)]];
+};
+
+struct VertexLinesOutput
+{
+    float4 position [[position]];
+};
+
+vertex VertexLinesOutput DrawLinesVS(
+    VertexLinesInput in [[stage_in]],
+    constant Uniforms& uniforms [[ buffer(BufferIndexUniforms) ]],
+    constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
+    constant UniformsDebug& uniformsDebug [[ buffer(BufferIndexUniformsDebug) ]])
+{
+    float4 rect = uniformsDebug.rect;
+    
+    // this reverses orient when applied to meshRect,
+    // due to using uv
+    float2 pos = (rect.xy + in.texCoord * rect.zw) - float2(0.5);
+    pos.y = -pos.y;
+    
+    float4 worldPos = uniforms.modelMatrix * float4(pos, 0.0, 1.0);
+    
+    // try adding pixel offset to pixel values
+    worldPos.xy += uniformsLevel.drawOffset;
+    
+    VertexLinesOutput out;
+    out.position = uniforms.projectionViewMatrix * worldPos;
+    
+    // bias it
+    // use hw bias instead, but image is at 0.9993
+    // and this will be at 0.9994 which is closer w/reverseZ
+    out.position.z += 0.0001;
+    
+    return out;
+}
+
+fragment float4 DrawLinesPS(
+    VertexLinesOutput in [[stage_in]])
+{
+    return float4(1.0);
+}

@@ -125,6 +125,8 @@ struct ViewFramebufferData {
     id<MTLRenderPipelineState> _pipelineStateCubeArray;
     id<MTLRenderPipelineState> _pipelineStateVolume;
 
+    id<MTLRenderPipelineState> _pipelineStateDrawLines;
+    
     id<MTLComputePipelineState> _pipelineState1DArrayCS;
     id<MTLComputePipelineState> _pipelineStateImageCS;
     id<MTLComputePipelineState> _pipelineStateImageArrayCS;
@@ -135,6 +137,7 @@ struct ViewFramebufferData {
     id<MTLDepthStencilState> _depthStateFull;
     id<MTLDepthStencilState> _depthStateNone;
 
+    
     MTLVertexDescriptor* _mtlVertexDescriptor;
 
     // TODO: Array< id<MTLTexture> > _textures;
@@ -581,6 +584,10 @@ struct ViewFramebufferData {
                                                        fs:"DrawCubeArrayPS"];
     _pipelineStateVolume = [self _createRenderPipeline:"DrawVolumeVS"
                                                     fs:"DrawVolumePS"];
+    
+    _pipelineStateDrawLines = [self _createRenderPipeline:"DrawLinesVS"
+                                                       fs:"DrawLinesPS"];
+     
 }
 
 - (void)_createSampleRender
@@ -2007,6 +2014,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 for (int32_t mip = 0; mip < _showSettings->mipCount; ++mip) {
                     // upload this on each face drawn, since want to be able to draw all
                     // mips/levels at once
+                    
                     [self _setUniformsLevel:uniformsLevel mipLOD:mip];
 
                     if (mip == 0) {
@@ -2021,6 +2029,8 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                     int32_t numLevels = _showSettings->totalChunks();
 
                     for (int32_t level = 0; level < numLevels; ++level) {
+                        [renderEncoder pushDebugGroup:@"DrawLevel"];
+
                         if (isCube) {
                             uniformsLevel.face = level % 6;
                             uniformsLevel.arrayOrSlice = level / 6;
@@ -2091,7 +2101,6 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 // mips on on screen faces and arrays and slices go across in a row, and
                 // mips are displayed down from each of those in a column
 
-                
                 for (MTKSubmesh* submesh in _mesh.submeshes) {
                     [renderEncoder drawIndexedPrimitives:submesh.primitiveType
                                               indexCount:submesh.indexCount
@@ -2104,7 +2113,8 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 if (_showSettings->is3DView && _showSettings->uvPreview > 0.0) {
                     // need to force color in shader or it's still sampling texture
                     // also need to add z offset
-                    
+                    [renderEncoder pushDebugGroup:@"DrawUVPreview"];
+
                     [renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
                     
                     // only applies to tris, not points/lines, pushes depth away (towards 0), after clip
@@ -2137,7 +2147,61 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                     
                     [renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
                     
+                    [renderEncoder popDebugGroup];
+
                 }
+                
+                // draw last since this changes pipeline state
+                if (!_showSettings->is3DView && !_showSettings->atlas.empty()) { // && _showSettings->drawAtlas) {
+                    [renderEncoder pushDebugGroup:@"DrawAtlas"];
+                    
+                    [renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
+                
+                    //[renderEncoder setDepthBias:0.015 slopeScale:3.0 clamp: 0.02];
+                    
+                    [renderEncoder setCullMode:MTLCullModeNone];
+                    
+                    [renderEncoder setRenderPipelineState:_pipelineStateDrawLines];
+                    
+                    // TODO: draw line strip with prim reset
+                    // need atlas data in push constants or in vb
+                    
+                    // TOOO: also need to hover name or show names on canvas
+                    
+                    [renderEncoder setVertexBytes:&uniformsLevel
+                                           length:sizeof(uniformsLevel)
+                                          atIndex:BufferIndexUniformsLevel];
+
+                    UniformsDebug uniformsDebug;
+                    
+                    for (const Atlas& atlas: _showSettings->atlas) {
+                        // not accounting for slice
+                        uniformsDebug.rect = float4m(atlas.x, atlas.y, atlas.w, atlas.h);
+                        
+                        
+                        [renderEncoder setVertexBytes:&uniformsDebug
+                                               length:sizeof(uniformsDebug)
+                                              atIndex:BufferIndexUniformsDebug];
+                        
+                        // this will draw diagonal
+                        for (MTKSubmesh* submesh in _mesh.submeshes) {
+                            [renderEncoder drawIndexedPrimitives:submesh.primitiveType
+                                                      indexCount:submesh.indexCount
+                                                       indexType:submesh.indexType
+                                                     indexBuffer:submesh.indexBuffer.buffer
+                                               indexBufferOffset:submesh.indexBuffer.offset];
+                        }
+                    }
+                    
+                    // restore state, even though this isn't a true state shadow
+                    //[renderEncoder setDepthBias:0.0 slopeScale:0.0 clamp:0.0];
+                    
+                    // restore
+                    [renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
+                    
+                    [renderEncoder popDebugGroup];
+                }
+                
             }
         }
 
@@ -2146,7 +2210,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
 
     [renderEncoder endEncoding];
 
-    // TODO: run any post-processing on each texture visible as fsw
+    // TODO: run any post-processing on each texture visible as fsq
     // TODO: environment map preview should be done as fsq
 }
 

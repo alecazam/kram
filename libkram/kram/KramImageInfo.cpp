@@ -77,16 +77,18 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
 {
     MyMTLPixelFormat format = MyMTLPixelFormatInvalid;
     const char* formatString = infoArgs.formatString.c_str();
-
+    
+    bool isSRGBDst = infoArgs.isSRGB;
+    
     // bc
     if (isStringEqual(formatString, "bc1")) {
-        format = infoArgs.isSRGB ? MyMTLPixelFormatBC1_RGBA_sRGB : MyMTLPixelFormatBC1_RGBA;
+        format = isSRGBDst ? MyMTLPixelFormatBC1_RGBA_sRGB : MyMTLPixelFormatBC1_RGBA;
     }
     //    else if (isStringEqual(formatString, "bc2")) {
     //        format = MyMTLPixelFormatBC2_RGBA;
     //    }
     else if (isStringEqual(formatString, "bc3")) {
-        format = infoArgs.isSRGB ? MyMTLPixelFormatBC3_RGBA_sRGB : MyMTLPixelFormatBC3_RGBA;
+        format = isSRGBDst ? MyMTLPixelFormatBC3_RGBA_sRGB : MyMTLPixelFormatBC3_RGBA;
     }
     else if (isStringEqual(formatString, "bc4")) {
         format = infoArgs.isSigned ? MyMTLPixelFormatBC4_RSnorm : MyMTLPixelFormatBC4_RUnorm;
@@ -98,7 +100,7 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
         format = infoArgs.isSigned ? MyMTLPixelFormatBC6H_RGBFloat : MyMTLPixelFormatBC6H_RGBUfloat;
     }
     else if (isStringEqual(formatString, "bc7")) {
-        format = infoArgs.isSRGB ? MyMTLPixelFormatBC7_RGBAUnorm_sRGB : MyMTLPixelFormatBC7_RGBAUnorm;
+        format = isSRGBDst ? MyMTLPixelFormatBC7_RGBAUnorm_sRGB : MyMTLPixelFormatBC7_RGBAUnorm;
     }
 
     // etc2
@@ -109,41 +111,40 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
         format = infoArgs.isSigned ? MyMTLPixelFormatEAC_RG11Snorm : MyMTLPixelFormatEAC_RG11Unorm;
     }
     else if (isStringEqual(formatString, "etc2rgb")) {
-        format = infoArgs.isSRGB ? MyMTLPixelFormatETC2_RGB8_sRGB : MyMTLPixelFormatETC2_RGB8;
+        format = isSRGBDst ? MyMTLPixelFormatETC2_RGB8_sRGB : MyMTLPixelFormatETC2_RGB8;
     }
     else if (isStringEqual(formatString, "etc2rgba")) {  // for rgb/rgba
-        format = infoArgs.isSRGB ? MyMTLPixelFormatEAC_RGBA8_sRGB : MyMTLPixelFormatEAC_RGBA8;
+        format = isSRGBDst ? MyMTLPixelFormatEAC_RGBA8_sRGB : MyMTLPixelFormatEAC_RGBA8;
     }
 
     // astc is always 4 channels, but can be swizzled to LLL1, LLLA, RG0, RGB1,
     // or RGBA to save endpoint storage dual plane can occur for more than just
     // RGB+A, any one channel can be a plane to itself if encoder supports
     else if (isStringEqual(formatString, "astc4x4")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_4x4_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_4x4_sRGB
-                                                                                 : MyMTLPixelFormatASTC_4x4_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_4x4_HDR : isSRGBDst ? MyMTLPixelFormatASTC_4x4_sRGB : MyMTLPixelFormatASTC_4x4_LDR;
     }
     else if (isStringEqual(formatString, "astc5x5")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_5x5_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_5x5_sRGB
-                                                                                 : MyMTLPixelFormatASTC_5x5_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_5x5_HDR : isSRGBDst ? MyMTLPixelFormatASTC_5x5_sRGB : MyMTLPixelFormatASTC_5x5_LDR;
     }
     else if (isStringEqual(formatString, "astc6x6")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_6x6_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_6x6_sRGB
-                                                                                 : MyMTLPixelFormatASTC_6x6_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_6x6_HDR : isSRGBDst ? MyMTLPixelFormatASTC_6x6_sRGB : MyMTLPixelFormatASTC_6x6_LDR;
     }
     else if (isStringEqual(formatString, "astc8x8")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_8x8_HDR : infoArgs.isSRGB ? MyMTLPixelFormatASTC_8x8_sRGB
-                                                                                 : MyMTLPixelFormatASTC_8x8_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_8x8_HDR : isSRGBDst ? MyMTLPixelFormatASTC_8x8_sRGB : MyMTLPixelFormatASTC_8x8_LDR;
     }
 
     // explicit formats
     else if (isStringEqual(formatString, "r8")) {
-        format = MyMTLPixelFormatR8Unorm;
+        // also signed and integer forms
+        format = // isSRGBDst // ? MyMTLPixelFormatRGBA8Unorm_sRGB :
+            MyMTLPixelFormatR8Unorm;
     }
     else if (isStringEqual(formatString, "rg8")) {
-        format = MyMTLPixelFormatRG8Unorm;
+        format = // isSRGBDst ? MyMTLPixelFormatRG8Unorm_sRGB :
+            MyMTLPixelFormatRG8Unorm;
     }
     else if (isStringEqual(formatString, "rgba8")) {  // for rgb/rgba
-        format = infoArgs.isSRGB ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
+        format = isSRGBDst ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
     }
 
     else if (isStringEqual(formatString, "r16f")) {
@@ -1062,8 +1063,12 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
 
     isSigned = isSignedFormat(pixelFormat);
 
-    isSRGB = isSrgbFormat(pixelFormat);
-
+    // formats that aren't srgb, assume the -srgb flag implies isSRGBSrc
+    // image will undergo srgb to linear conversion and then get written out
+    isSRGBDst = isSrgbFormat(pixelFormat);
+    if (!isSRGBDst)
+        isSRGBSrc = args.isSRGB;
+    
     hasAlpha = true;
     hasColor = true;
     if (!isAlphaFormat(pixelFormat))
@@ -1169,8 +1174,13 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
     // But BC1 565 and 2-bit endpoints are no match for BC7, and bc7enc's BC1 is introducing artifacts into Toof-a.
     optimizeFormat();
 
+    // formats that aren't srgb, assume the -srgb flag implies isSRGBSrc
+    // image will undergo srgb to linear conversion and then get written out
+    isSRGBDst = isSrgbFormat(pixelFormat);
+    isSRGBSrc = sourceImage.isSrgb();
+    
     // this implies color is stored in rgb
-    if (isSRGB) {
+    if (isSRGBDst) {
         isColorWeighted = hasColor;
     }
 

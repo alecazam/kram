@@ -388,6 +388,10 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
     float invWidth = 1.0f / width;
     float invHeight = 1.0f / height;
 
+    // After linear combine, convert back to srgb
+    // mip source is always linear to build all levels.
+    bool isSRGBDst = dstImage.isSRGB;
+    
     for (int32_t y = isOddY ? 1 : 0; y < height; y += 2) {
         int32_t ym = y - 1;
         int32_t y0 = y;
@@ -513,7 +517,7 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
-                    if (srcImage.isSRGB) {
+                    if (isSRGBDst) {
                         // getting some values > 1m, but this saturates
                         cFloat = linearToSRGB(cFloat);
                     }
@@ -532,7 +536,7 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
-                    if (srcImage.isSRGB) {
+                    if (isSRGBDst) {
                         // getting some values > 1, but this saturates
                         cFloat = linearToSRGB(cFloat);
                     }
@@ -582,7 +586,11 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
     const half4* srcHalf = srcImage.pixelsHalf;
 
     // Note the ptrs above may point to same memory
-
+    
+    // After linear combine, convert back to srgb
+    // mip source is always linear to build all levels.
+    bool isSRGBDst = dstImage.isSRGB;
+    
     int32_t dstIndex = 0;
 
     for (int32_t y = 0; y < height; y += 2) {
@@ -612,7 +620,7 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
-                    if (srcImage.isSRGB) {
+                    if (isSRGBDst) {
                         cFloat = linearToSRGB(cFloat);
                     }
 
@@ -640,7 +648,7 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
                     // convert back to srgb for encode
-                    if (srcImage.isSRGB) {
+                    if (isSRGBDst) {
                         cFloat = linearToSRGB(cFloat);
                     }
 
@@ -652,7 +660,7 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
                 }
             }
             else {
-                // faster 8-bit only path for LDR and unmultiplied
+                // faster 8-bit only path for LDR, linear, and not premul
                 const Color& c0 = srcColor[y0 + x0];
                 const Color& c1 = srcColor[y0 + x1];
 

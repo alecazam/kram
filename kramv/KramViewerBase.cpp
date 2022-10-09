@@ -345,6 +345,54 @@ void printChannels(string &tmp, const string &label, float4 c,
     }
 }
 
+string ShowSettings::windowTitleString(const char* filename) const
+{    
+    // set title to filename, chop this to just file+ext, not directory
+    const char* filenameShort = strrchr(filename, '/');
+    if (filenameShort == nullptr) {
+        filenameShort = filename;
+    }
+    else {
+        filenameShort += 1;
+    }
+    
+    string title = "kramv - ";
+    
+    if (isModel) {
+        title += formatTypeName(originalFormat);
+        title += " - ";
+        title += filenameShort;
+    }
+    else {
+        // was using subtitle, but that's macOS 11.0 feature.
+        title += formatTypeName(originalFormat);
+        title += " - ";
+        
+        // identify what we think the content type is
+        const char* typeText = "";
+        switch(texContentType) {
+            case TexContentTypeAlbedo: typeText = "a"; break;
+            case TexContentTypeNormal: typeText = "n"; break;
+            case TexContentTypeAO: typeText = "ao"; break;
+            case TexContentTypeMetallicRoughness: typeText = "mr"; break;
+            case TexContentTypeSDF: typeText = "sdf"; break;
+            case TexContentTypeHeight: typeText = "h"; break;
+            case TexContentTypeUnknown: typeText = ""; break;
+        }
+        title += typeText;
+        // add some info about the texture to avoid needing to go to info
+        // srgb src would be useful too.
+        if (texContentType == TexContentTypeAlbedo && isPremul) {
+            title += ",p";
+            
+        }
+        title += " - ";
+        title += filenameShort;
+    }
+    
+    return title;
+}
+
 float4x4 matrix4x4_translation(float tx, float ty, float tz)
 {
     float4x4 m = {(float4){1, 0, 0, 0},

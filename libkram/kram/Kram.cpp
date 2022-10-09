@@ -1224,7 +1224,7 @@ string formatInputAndOutput(int32_t testNumber, const char* srcFilename, MyMTLPi
 
     // replace png with ktx
     dst = srcFilename;
-    const char* extSeparatorStr = strchr(dst.c_str(), '.');
+    const char* extSeparatorStr = strrchr(dst.c_str(), '.');
     assert(extSeparatorStr != nullptr);
     size_t extSeparator = extSeparatorStr - dst.c_str();
     dst.erase(extSeparator);
@@ -3222,11 +3222,8 @@ int32_t kramAppScript(vector<const char*>& args)
             break;
         }
 
-        if (false) {
-            // TODO: add jobs count
-        }
-        else if (isStringEqual(word, "-input") ||
-                 isStringEqual(word, "-i")) {
+        if (isStringEqual(word, "-input") ||
+            isStringEqual(word, "-i")) {
             ++i;
             if (i >= argc) {
                 KLOGE("Kram", "no input file defined");
