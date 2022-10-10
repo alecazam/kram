@@ -1679,6 +1679,9 @@ vertex VertexLinesOutput DrawLinesVS(
     VertexLinesOutput out;
     out.position = uniforms.projectionViewMatrix * worldPos;
     
+    // for now, to always have it show up, can't see to bias properly
+    out.position.z = 1.0;
+    
     // bias it
     // use hw bias instead, but image is at 0.9993
     // and this will be at 0.9994 which is closer w/reverseZ
@@ -1690,5 +1693,8 @@ vertex VertexLinesOutput DrawLinesVS(
 fragment float4 DrawLinesPS(
     VertexLinesOutput in [[stage_in]])
 {
+    // TODO: could switch color for contrast on white
+    // if could read the underlying image color or usr fb fetch.
+    
     return float4(1.0);
 }

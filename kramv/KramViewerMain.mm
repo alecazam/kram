@@ -2827,24 +2827,31 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     {
         const char* name = [atlasProps[@"name"] UTF8String];
         
+        NSArray<NSNumber*>* rectuv = atlasProps[@"ruv"];
+        
         // Note: could convert pixel and mip0 size to uv.
         // normalized uv make these easier to draw across all mips
-        float x = [atlasProps[@"x"] floatValue];
-        float y = [atlasProps[@"y"] floatValue];
-        float w = [atlasProps[@"w"] floatValue];
-        float h = [atlasProps[@"h"] floatValue];
+        float x = [rectuv[0] floatValue];
+        float y = [rectuv[1] floatValue];
+        float w = [rectuv[2] floatValue];
+        float h = [rectuv[3] floatValue];
     
         // optional
         // optional uv padding - need two values for non-square
         // could be inherited by all elements to avoid redundancy
         // optional horizontal and vertical orient
-        // optional props for 2d arrays
-        
-        float uPad = [atlasProps[@"u"] floatValue];
-        float vPad = [atlasProps[@"v"] floatValue];
-        const char* verticalProp = [atlasProps[@"o"] UTF8String];
+        // optional slice for 2d arrays
         int slice = [atlasProps[@"slice"] intValue];
 
+        float uPad = 0.0f;
+        float vPad = 0.0f;
+        NSArray<NSNumber*>* pad = atlasProps[@"puv"];
+        if (pad)
+        {
+            uPad = [pad[0] floatValue];
+            vPad = [pad[1] floatValue];
+        }
+        const char* verticalProp = "f"; // [atlasProps[@"o"] UTF8String];
         bool isVertical = verticalProp && verticalProp[0] == 't';
         
         Atlas atlas = {name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
