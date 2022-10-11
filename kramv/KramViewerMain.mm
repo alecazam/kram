@@ -412,21 +412,11 @@ withCurrentSearchString:(NSString *)searchString
     return nil;
 }
 
-
-
 - (BOOL)readFromURL:(nonnull NSURL *)url
              ofType:(nonnull NSString *)typeName
               error:(NSError *_Nullable __autoreleasing *)outError
 {
     // called from OpenRecent documents menu
-
-#if 0
-    //MyMTKView* view = self.windowControllers.firstObject.window.contentView;
-    //return [view loadTextureFromURL:url];
-#else
-
-    // TODO: This is only getting called on first open on macOS 12.0 even with hack below.
-    // find out why.
     
     // throw into an array
     NSArray<NSURL*>* urls = @[url];
@@ -445,7 +435,6 @@ withCurrentSearchString:(NSString *)searchString
     }
 
     return success;
-#endif
 }
 
 @end
@@ -681,6 +670,9 @@ struct FileContainer {
     Action* _actionG;
     Action* _actionB;
     Action* _actionA;
+    
+    // copy of modifier flags, can tie drop actions to this
+    NSEventModifierFlags _modifierFlags;
     
     vector<Action> _actions;
 }
@@ -2166,6 +2158,11 @@ enum TextSlot
     [self handleEventAction:action isShiftKeyDown:isShiftKeyDown];
 }
 
+- (void)flagsChanged:(NSEvent *)theEvent
+{
+    _modifierFlags = theEvent.modifierFlags;
+}
+
 - (void)keyDown:(NSEvent *)theEvent
 {
     bool isShiftKeyDown = theEvent.modifierFlags & NSEventModifierFlagShift;
@@ -3337,13 +3334,17 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     return YES;
 }
 
--(void)listArchivesInFolder:(NSURL*)url archiveFiles:(vector<File>&)archiveFiles
+-(void)listArchivesInFolder:(NSURL*)url archiveFiles:(vector<File>&)archiveFiles skipSubdirs:(BOOL)skipSubdirs
 {
+    NSDirectoryEnumerationOptions options = NSDirectoryEnumerationSkipsHiddenFiles;
+    if (skipSubdirs)
+        options = NSDirectoryEnumerationSkipsSubdirectoryDescendants;
+    
     NSDirectoryEnumerator* directoryEnumerator =
     [[NSFileManager defaultManager]
      enumeratorAtURL:url
      includingPropertiesForKeys:[NSArray array]
-     options:0
+     options:options
      errorHandler:  // nil
      ^BOOL(NSURL *urlArg, NSError *error) {
         macroUnusedVar(urlArg);
@@ -3365,8 +3366,12 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     }
 }
 
--(void)listFilesInFolder:(NSURL*)url urlIndex:(int32_t)urlIndex
+-(void)listFilesInFolder:(NSURL*)url urlIndex:(int32_t)urlIndex skipSubdirs:(BOOL)skipSubdirs
 {
+    NSDirectoryEnumerationOptions options = NSDirectoryEnumerationSkipsHiddenFiles;
+    if (skipSubdirs)
+        options = NSDirectoryEnumerationSkipsSubdirectoryDescendants;
+    
     NSDirectoryEnumerator* directoryEnumerator =
     [[NSFileManager defaultManager]
      enumeratorAtURL:url
@@ -3411,6 +3416,9 @@ bool isSupportedJsonFilename(const char* filename)
     
 -(void)loadFilesFromUrls:(NSArray<NSURL*>*)urls
 {
+    // don't recurse down subdirs, if cmd key held during drop or recent menu item selection
+    BOOL skipSubdirs = _modifierFlags & NSEventModifierFlagCommand;
+    
     // Using a member for archives, so limited to one archive in a drop
     // but that's probably okay for now.  Add a separate array of open
     // archives if want > 1.
@@ -3447,7 +3455,7 @@ bool isSupportedJsonFilename(const char* filename)
         else if (url.hasDirectoryPath) {
             
             // this first loads only models, then textures if only those
-            [self listFilesInFolder:url urlIndex:urlIndex];
+            [self listFilesInFolder:url urlIndex:urlIndex skipSubdirs:skipSubdirs];
             
             // could skip if nothing added
             [urlsExtracted addObject:url];
@@ -3455,7 +3463,7 @@ bool isSupportedJsonFilename(const char* filename)
             
             // handle archives within folder
             vector<File> archiveFiles;
-            [self listArchivesInFolder:url archiveFiles:archiveFiles];
+            [self listArchivesInFolder:url archiveFiles:archiveFiles skipSubdirs:skipSubdirs];
         
             for (const File& archiveFile: archiveFiles) {
                 const char* archiveFilename = archiveFile.name.c_str();
@@ -3545,18 +3553,18 @@ bool isSupportedJsonFilename(const char* filename)
     bool isSingleFile = urls.count == 1;
     
     Renderer* renderer = (Renderer *)self.delegate;
-   
+    
     // Handle shader hotload
     if (isSingleFile && endsWithExtension(filename, ".metallib")) {
         if ([renderer hotloadShaders:filename]) {
             NSURL* metallibFileURL =
-                [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
-
+            [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
+            
             // add to recent docs, so can reload quickly
             NSDocumentController* dc =
-                [NSDocumentController sharedDocumentController];
+            [NSDocumentController sharedDocumentController];
             [dc noteNewRecentDocumentURL:metallibFileURL];
-
+            
             return YES;
         }
         return NO;
@@ -3565,98 +3573,13 @@ bool isSupportedJsonFilename(const char* filename)
     // don't leave archive table open
     if (isSingleFile)
         [self hideFileTable];
-    
-    
+
     [self loadFilesFromUrls:urls];
     
     BOOL success = [self loadFile];
     return success;
-    
-    //------------
-    
-//    // now load the file at the index
-//    setErrorLogCapture(true);
-//
-//    BOOL success = [self loadFile];
-//
-//    if (!success) {
-//        // get back error text from the failed load
-//        string errorText;
-//        getErrorLogCaptureText(errorText);
-//        setErrorLogCapture(false);
-//
-//        const string &folder = _files[_fileIndex];
-//
-//        // prepend filename
-//        string finalErrorText;
-//        append_sprintf(finalErrorText, "Could not load from folder:\n %s\n",
-//                       folder.c_str());
-//        finalErrorText += errorText;
-//
-//        [self setHudText:finalErrorText.c_str()];
-//    }
-//
-//    setErrorLogCapture(false);
-//    return success;
-//
-//
-////    // file is not a supported extension
-////    if (files.empty())
-////    {
-////        string errorText =
-////            "Unsupported file extension, must be .zip"
-////#if USE_GLTF
-////            ", .gltf, .glb"
-////#endif
-////            ", .png, .ktx, .ktx2, .dds\n";
-////
-////        string finalErrorText;
-////        if (url.count == 1)
-////            append_sprintf(finalErrorText, "Could not load from file:\n %s\n",
-////                       filename);
-////        finalErrorText += errorText;
-////
-////        [self setHudText:finalErrorText.c_str()];
-////        return NO;
-////    }
-////
-////    if (isSupportedModelFilename(filename))
-////    {
-////        return [self loadModelFile:url filename:nullptr];
-////    }
-////
-//    // for now, knock out model if loading an image
-//    // TODO: might want to unload even before loading a new model
-// //   [renderer unloadModel];
-//
-// //   bool success = [self loadImageFile:url];
-//
-//
-////    //-------------------
-////
-////    bool success = [self loadImageFile:url];
-//
-//    // hide table in case last had archive open
-////    if (success)
-////        [self hideFileTable];
-//
-//    return success;
 }
-
-//-(double)getTimestampForFile:(NSURL*)url
-//{
-//    // TODO: could just use FileHelper::modificationTimestamp(filename);
-//
-//    NSDate* fileDate = nil;
-//    NSError* error = nil;
-//    [url getResourceValue:&fileDate
-//                   forKey:NSURLContentModificationDateKey
-//                    error:&error];
-//
-//    double timestamp = fileDate.timeIntervalSince1970;
-//    return timestamp;
-//}
-
+   
 -(BOOL)loadModelFile:(const char*)filename
 {
 #if USE_GLTF
