@@ -1985,9 +1985,9 @@ enum TextSlot
     bool isJumpToCounterpartHidden = true;
     bool isJumpToPrevCounterpartHidden = true;
     
-    if ( _files.size() <= 1) {
-        isJumpToCounterpartHidden = [self hasCounterpart:YES];
-        isJumpToPrevCounterpartHidden  = [self hasCounterpart:NO];
+    if ( _files.size() > 1) {
+        isJumpToCounterpartHidden = ![self hasCounterpart:YES];
+        isJumpToPrevCounterpartHidden  = ![self hasCounterpart:NO];
     }
     
     bool isRedHidden = _showSettings->numChannels == 0; // models don't show rgba
@@ -2945,15 +2945,16 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     const File& nextFile = _files[nextFileIndex];
     string nextFilename = filenameNoExtension(toFilenameShort(nextFile.name.c_str()));
     
+    // if short name matches (no ext) then it's a counterpart
     if (currentFilename != nextFilename)
-        return NO;
+       return NO;
     
     return YES;
 }
 
 - (BOOL)advanceCounterpart:(BOOL)increment
 {
-    if (_files.empty()) {
+    if (_files.size() <= 1) {
         return NO;
     }
     
