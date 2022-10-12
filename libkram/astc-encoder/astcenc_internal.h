@@ -286,12 +286,10 @@ public:
     
     unsigned int get_task_assignment(unsigned int granule, unsigned int& count)
     {
-        unsigned int base = m_start_count + granule;
-        
-        // need to update start count in single-threaded case
-        // This is to match fetch_add in threaded case, but really should be done after test below
-        m_start_count = base;
-       
+        // match fetch_add which addsd to m_start_count atomically then returns original m_start_count
+        unsigned int base = m_start_count;
+        m_start_count += granule;
+    
         if (base >= m_task_count)
         {
             count = 0;
