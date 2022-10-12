@@ -2865,8 +2865,8 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 // opens archive
 - (BOOL)openArchive:(const char *)zipFilename urlIndex:(int32_t)urlIndex
 {
-    // grow the array, how does this not destroy existing helpers though?
-    if (urlIndex > _containers.size()) {
+    // grow the array, ptrs so that existing mmaps aren't destroyed
+    if (urlIndex >= _containers.size()) {
         _containers.resize(urlIndex + 1, nullptr);
     }
     
