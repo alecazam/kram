@@ -287,12 +287,17 @@ public:
     unsigned int get_task_assignment(unsigned int granule, unsigned int& count)
     {
         unsigned int base = m_start_count + granule;
+        
+        // need to update start count in single-threaded case
+        // This is to match fetch_add in threaded case, but really should be done after test below
+        m_start_count = base;
+       
         if (base >= m_task_count)
         {
             count = 0;
             return 0;
         }
-
+        
         count = astc::min(m_task_count - base, granule);
         return base;
     }
