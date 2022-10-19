@@ -1,6 +1,16 @@
-[
-{"name":"red", "ruv":[0.0,0.0,0.25,0.25]},
-{"name":"green", "ruv":[0.0,0.5,0.25,0.25]},
-{"name" : "blue", "ruv": [0.5,0.25,0.25,0.25]},
-]
+{
+"name": "AtlastTest",
+"width": 128,
+"height": 128,
 
+"pad": 0,
+"padh": 0,
+"slice": 0,
+
+"regions":
+[
+    {"name":"red", "rpx":[0,0,32,32]},
+    {"name":"green", "rpx":[0,64,32,32]},
+    {"name": "blue", "rpx": [64,32,32,32]},
+]    
+}

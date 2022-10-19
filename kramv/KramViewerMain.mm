@@ -2820,39 +2820,93 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
     
     _showSettings->atlas.clear();
     
-    for (NSDictionary* atlasProps in rootObject)
-    {
-        const char* name = [atlasProps[@"name"] UTF8String];
-        
-        NSArray<NSNumber*>* rectuv = atlasProps[@"ruv"];
-        
-        // Note: could convert pixel and mip0 size to uv.
-        // normalized uv make these easier to draw across all mips
-        float x = [rectuv[0] floatValue];
-        float y = [rectuv[1] floatValue];
-        float w = [rectuv[2] floatValue];
-        float h = [rectuv[3] floatValue];
+    // TODO: this ObjC parser is insanely slow, dump it
+    // look into yyJson (dom) or sax parsers.
     
-        // optional
-        // optional uv padding - need two values for non-square
-        // could be inherited by all elements to avoid redundancy
-        // optional horizontal and vertical orient
-        // optional slice for 2d arrays
+    
+    // TODO: support multiple atlases in one file, but need to then
+    // parse an store and apply to differently named textures.
+    
+    NSDictionary* atlasProps = rootObject;
+    
+    {
+        const char* atlasName = [atlasProps[@"name"] UTF8String];
+        
+        NSNumber* widthProp = atlasProps[@"width"];
+        NSNumber* heightProp = atlasProps[@"height"];
+        if (!heightProp) heightProp = widthProp;
+        
+        int width = [widthProp intValue];
+        int height = [heightProp intValue];
+        
         int slice = [atlasProps[@"slice"] intValue];
-
+        
         float uPad = 0.0f;
         float vPad = 0.0f;
-        NSArray<NSNumber*>* pad = atlasProps[@"puv"];
-        if (pad)
+        NSArray<NSNumber*>* pauvProp = atlasProps[@"paduv"];
+        if (pauvProp)
         {
-            uPad = [pad[0] floatValue];
-            vPad = [pad[1] floatValue];
+            uPad = [pauvProp[0] floatValue];
+            vPad = [pauvProp[1] floatValue];
         }
-        const char* verticalProp = "f"; // [atlasProps[@"o"] UTF8String];
-        bool isVertical = verticalProp && verticalProp[0] == 't';
         
-        Atlas atlas = {name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
-        _showSettings->atlas.emplace_back(std::move(atlas));
+        NSArray<NSNumber*>* padpxProp = atlasProps[@"padpx"];
+        if (padpxProp)
+        {
+            uPad = [padpxProp[0] intValue];
+            vPad = [padpxProp[1] intValue];
+            
+            uPad /= width;
+            vPad /= height;
+        }
+        
+        NSDictionary* regions = atlasProps[@"regions"];
+        
+        for (NSDictionary* regionProps in regions)
+        {
+            const char* name = [regionProps[@"name"] UTF8String];
+            
+            float x = 0.0f;
+            float y = 0.0f;
+            float w = 0.0f;
+            float h = 0.0f;
+            
+            NSArray<NSNumber*>* rectuv = regionProps[@"ruv"];
+            if (rectuv) {
+                // Note: could convert pixel and mip0 size to uv.
+                // normalized uv make these easier to draw across all mips
+                x = [rectuv[0] floatValue];
+                y = [rectuv[1] floatValue];
+                w = [rectuv[2] floatValue];
+                h = [rectuv[3] floatValue];
+            }
+            
+            NSArray<NSNumber*>* rectpx = regionProps[@"rpx"];
+            if (rectpx) {
+                x = [rectpx[0] intValue];
+                y = [rectpx[1] intValue];
+                w = [rectpx[2] intValue];
+                h = [rectpx[3] intValue];
+                
+                // normalize to uv using the width/height
+                x /= width;
+                y /= height;
+                w /= width;
+                h /= height;
+            }
+            
+            // optional
+            // optional uv padding - need two values for non-square
+            // could be inherited by all elements to avoid redundancy
+            // optional horizontal and vertical orient
+            // optional slice for 2d arrays
+            
+            const char* verticalProp = "f"; // [regionProps[@"o"] UTF8String];
+            bool isVertical = verticalProp && verticalProp[0] == 't';
+            
+            Atlas atlas = {name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
+            _showSettings->atlas.emplace_back(std::move(atlas));
+        }
     }
     
     // TODO: also need to be able to bring in vector shapes
@@ -3339,7 +3393,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 {
     NSDirectoryEnumerationOptions options = NSDirectoryEnumerationSkipsHiddenFiles;
     if (skipSubdirs)
-        options = NSDirectoryEnumerationSkipsSubdirectoryDescendants;
+        options |= NSDirectoryEnumerationSkipsSubdirectoryDescendants;
     
     NSDirectoryEnumerator* directoryEnumerator =
     [[NSFileManager defaultManager]
@@ -3371,13 +3425,13 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 {
     NSDirectoryEnumerationOptions options = NSDirectoryEnumerationSkipsHiddenFiles;
     if (skipSubdirs)
-        options = NSDirectoryEnumerationSkipsSubdirectoryDescendants;
+        options |= NSDirectoryEnumerationSkipsSubdirectoryDescendants;
     
     NSDirectoryEnumerator* directoryEnumerator =
     [[NSFileManager defaultManager]
      enumeratorAtURL:url
      includingPropertiesForKeys:[NSArray array]
-     options:0
+     options:options
      errorHandler:  // nil
      ^BOOL(NSURL *urlArg, NSError *error) {
         macroUnusedVar(urlArg);
@@ -3418,7 +3472,10 @@ bool isSupportedJsonFilename(const char* filename)
 -(void)loadFilesFromUrls:(NSArray<NSURL*>*)urls
 {
     // don't recurse down subdirs, if cmd key held during drop or recent menu item selection
-    BOOL skipSubdirs = _modifierFlags & NSEventModifierFlagCommand;
+    bool skipSubdirs = ( _modifierFlags & NSEventModifierFlagCommand ) != 0;
+    
+    // reverse logic, so have to hold cmd to see subfolders
+    skipSubdirs = !skipSubdirs;
     
     // Using a member for archives, so limited to one archive in a drop
     // but that's probably okay for now.  Add a separate array of open
