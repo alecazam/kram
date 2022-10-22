@@ -2961,7 +2961,7 @@ public:
    *
    * Overridden by each implementation.
    *
-   * @param str pointer to the beginning of a valid UTF-8 JSON string, must end with an unescaped quote.
+   * @param src pointer to the beginning of a valid UTF-8 JSON string, must end with an unescaped quote.
    * @param dst pointer to a destination buffer, it must point a region in memory of sufficient size.
    * @return end of the of the written region (exclusive) or nullptr in case of error.
    */
@@ -2976,7 +2976,6 @@ public:
    * Generally used for reallocation.
    *
    * @param capacity The new capacity.
-   * @param max_depth The new max_depth.
    * @return The error code, or SUCCESS if there was no error.
    */
   virtual error_code set_capacity(size_t capacity) noexcept = 0;
@@ -2986,7 +2985,6 @@ public:
    *
    * Generally used for reallocation.
    *
-   * @param capacity The new capacity.
    * @param max_depth The new max_depth.
    * @return The error code, or SUCCESS if there was no error.
    */
@@ -3342,7 +3340,7 @@ simdjson_inline simdjson_warn_unused bool validate_utf8(const std::string_view s
 /**
  * Validate the UTF-8 string.
  *
- * @param p the string to validate.
+ * @param s the string to validate.
  * @return true if the string is valid UTF-8.
  */
 simdjson_inline simdjson_warn_unused bool validate_utf8(const std::string& s) noexcept {
@@ -26279,11 +26277,11 @@ public:
    *         - UNESCAPED_CHARS if a string contains control characters that must be escaped
    *         - UNCLOSED_STRING if there is an unclosed string in the document.
    */
-  simdjson_warn_unused simdjson_result<document> iterate(padded_string_view json) & noexcept;
-  /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
   simdjson_warn_unused simdjson_result<document> iterate(const char *json, size_t len, size_t capacity) & noexcept;
   /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
-  simdjson_warn_unused simdjson_result<document> iterate(const uint8_t *json, size_t len, size_t capacity) & noexcept;
+simdjson_warn_unused simdjson_result<document> iterate(padded_string_view json) & noexcept;
+/** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
+simdjson_warn_unused simdjson_result<document> iterate(const uint8_t *json, size_t len, size_t capacity) & noexcept;
   /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
   simdjson_warn_unused simdjson_result<document> iterate(std::string_view json, size_t capacity) & noexcept;
   /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
@@ -26461,7 +26459,7 @@ public:
    *
    * The string_view is only valid as long as the bytes in dst.
    *
-   * @param raw_json_string input
+   * @param in input
    * @param dst A pointer to a buffer at least large enough to write this string as well as
    *            an additional SIMDJSON_PADDING bytes.
    * @return A string_view pointing at the unescaped string in dst
@@ -26878,7 +26876,7 @@ namespace simdjson { namespace SIMDJSON_BUILTIN_IMPLEMENTATION { namespace ondem
  * validate the content.
  *
  * @param out The output stream.
- * @param value The element.
+ * @param x The element.
  * @throw if there is an error with the underlying output stream. simdjson itself will not throw.
  */
 inline std::ostream& operator<<(std::ostream& out, simdjson::SIMDJSON_BUILTIN_IMPLEMENTATION::ondemand::value x);
