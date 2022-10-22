@@ -29,6 +29,8 @@
 //#include "KramImage.h"
 #include "KramViewerBase.h"
 
+#include "simdjson/simdjson.h"
+
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;
 #else
@@ -93,7 +95,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
         normalFilename += suffix;
         normalFilename += ext;
         
-        normalFilenames.push_back( normalFilename );
+        normalFilenames.push_back(normalFilename);
     }
 }
 
@@ -121,12 +123,28 @@ static const vector<const char*> supportedModelExt = {
 };
 
 struct File {
-    string name;
-    int32_t urlIndex;
+public:
+    File(const char* name_, int32_t urlIndex_)
+        : name(name_), urlIndex(urlIndex_), nameShort(toFilenameShort(name_))
+    {
+    }
     
     // Note: not sorting by urlIndex currently
     bool operator <(const File& rhs) const
-        { return strcasecmp(toFilenameShort(name.c_str()), toFilenameShort(rhs.name.c_str())) < 0; }
+    {
+        // sort by shortname
+        int compare = strcasecmp(nameShort.c_str(), rhs.nameShort.c_str());
+        if ( compare != 0 )
+            return compare < 0;
+        
+        // if equal, then sort by longname
+        return strcasecmp(name.c_str(), rhs.name.c_str()) < 0;
+    }
+    
+public:
+    string name;
+    int32_t urlIndex;
+    string nameShort; // would alias name, but too risky
 };
 
 bool isSupportedModelFilename(const char* filename) {
@@ -320,7 +338,7 @@ public:
 
 // https://medium.com/@kevingutowski/how-to-setup-a-tableview-in-2019-obj-c-c7dece203333
 @interface TableViewController : NSObject <NSTableViewDataSource, NSTableViewDelegate>
-@property (nonatomic, strong) NSMutableArray<NSString*>* items;
+@property (nonatomic, strong) NSMutableArray<NSAttributedString*>* items;
 @end
 
 @implementation TableViewController
@@ -343,7 +361,7 @@ public:
 {
     NSString* identifier = tableColumn.identifier;
     NSTableCellView* cell = [tableView makeViewWithIdentifier:identifier owner:self];
-    cell.textField.stringValue = [self.items objectAtIndex:row];
+    cell.textField.attributedStringValue = [self.items objectAtIndex:row];
     return cell;
 }
 
@@ -2790,6 +2808,119 @@ enum TextSlot
     return NO;
 }
 
+// Want to avoid Apple libs for things that have C++ equivalents.
+// simdjson without exceptions isn't super readable or safe looking.
+#define USE_SIMDJSON 1
+#if USE_SIMDJSON
+
+- (BOOL)loadAtlasFile:(const char*)filename
+{
+    using namespace simdjson;
+    
+    ondemand::parser parser;
+    
+    // TODO: can just mmap the json to provide
+    auto json = padded_string::load(filename);
+    auto atlasProps = parser.iterate(json);
+       
+    // Can use hover or a show all on these entries and names.
+    // Draw names on screen using system text in the upper left corner if 1
+    // if showing all, then show names across each mip level.  May want to
+    // snap to pixels on each mip level so can see overlap.
+    
+    _showSettings->atlas.clear();
+    
+    {
+        std::vector<double> values;
+        string_view atlasName = atlasProps["name"].get_string().value_unsafe();
+        
+        uint64_t width = atlasProps["width"].get_uint64().value_unsafe();
+        uint64_t height = atlasProps["height"].get_uint64().value_unsafe();
+    
+        uint64_t slice = atlasProps["slice"].get_uint64().value_unsafe();
+        
+        float uPad = 0.0f;
+        float vPad = 0.0f;
+        
+        if (atlasProps["paduv"].get_array().error() != NO_SUCH_FIELD) {
+            values.clear();
+            for (auto value : atlasProps["paduv"])
+                values.push_back(value.get_double().value_unsafe());
+            
+            uPad = values[0];
+            vPad = values[1];
+        }
+        else if (atlasProps["padpx"].get_array().error() != NO_SUCH_FIELD) {
+            values.clear();
+            for (auto value : atlasProps["padpx"])
+                values.push_back(value.get_double().value_unsafe());
+            
+            uPad = values[0];
+            vPad = values[1];
+            
+            uPad /= width;
+            vPad /= height;
+        }
+        
+        for (auto regionProps: atlasProps["regions"])
+        {
+            string_view name = regionProps["name"].get_string().value_unsafe();
+            
+            float x = 0.0f;
+            float y = 0.0f;
+            float w = 0.0f;
+            float h = 0.0f;
+            
+            if (regionProps["ruv"].get_array().error() != NO_SUCH_FIELD)
+            {
+                values.clear();
+                for (auto value : regionProps["ruv"])
+                    values.push_back(value.get_double().value_unsafe());
+            
+                // Note: could convert pixel and mip0 size to uv.
+                // normalized uv make these easier to draw across all mips
+                x = values[0];
+                y = values[1];
+                w = values[2];
+                h = values[3];
+            }
+            else if (regionProps["rpx"].get_array().error() != NO_SUCH_FIELD)
+            {
+                values.clear();
+                for (auto value : regionProps["rpx"])
+                    values.push_back(value.get_double().value_unsafe());
+            
+                x = values[0];
+                y = values[1];
+                w = values[2];
+                h = values[3];
+                
+                // normalize to uv using the width/height
+                x /= width;
+                y /= height;
+                w /= width;
+                h /= height;
+            }
+                
+            const char* verticalProp = "f"; // regionProps["rot"];
+            bool isVertical = verticalProp && verticalProp[0] == 't';
+            
+            Atlas atlas = {(string)name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
+            _showSettings->atlas.emplace_back(std::move(atlas));
+        }
+    }
+    
+    // TODO: also need to be able to bring in vector shapes
+    // maybe from svg or files written out from figma or photoshop.
+    // Can triangulate those, and use xatlas to pack those.
+    // Also xatlas can flatten out a 3d model into a chart.
+    
+    return YES;
+}
+
+#else
+
+/*
 // TODO: convert to using a C++ json lib like yyJson or simdJson
 // Then can move into libkram, and embed in the ktx/ktx2 metadata.
 - (BOOL)loadAtlasFile:(const char*)filename
@@ -2908,6 +3039,9 @@ enum TextSlot
     
     return YES;
 }
+*/
+
+#endif
 
 // opens archive
 - (BOOL)openArchive:(const char *)zipFilename urlIndex:(int32_t)urlIndex
@@ -2964,7 +3098,7 @@ enum TextSlot
     }
     
     for (const auto& entry: zip.zipEntrys()) {
-        _files.push_back({string(entry.filename), urlIndex});
+        _files.emplace_back(File(entry.filename, urlIndex));
     }
     
     return YES;
@@ -2977,7 +3111,7 @@ enum TextSlot
     }
     
     const File& file = _files[_fileIndex];
-    string currentFilename = filenameNoExtension(toFilenameShort(file.name.c_str()));
+    string currentFilename = filenameNoExtension(file.nameShort.c_str());
    
     uint32_t nextFileIndex = _fileIndex;
     
@@ -2990,7 +3124,7 @@ enum TextSlot
     nextFileIndex = nextFileIndex % numEntries;
     
     const File& nextFile = _files[nextFileIndex];
-    string nextFilename = filenameNoExtension(toFilenameShort(nextFile.name.c_str()));
+    string nextFilename = filenameNoExtension(nextFile.nameShort.c_str());
     
     // if short name matches (no ext) then it's a counterpart
     if (currentFilename != nextFilename)
@@ -3007,7 +3141,7 @@ enum TextSlot
     
     // see if file has counterparts
     const File& file = _files[_fileIndex];
-    string currentFilename = filenameNoExtension(toFilenameShort(file.name.c_str()));
+    string currentFilename = filenameNoExtension(file.nameShort.c_str());
     
     // TODO: this should cycle through only the counterparts
     uint32_t nextFileIndex = _fileIndex;
@@ -3021,7 +3155,7 @@ enum TextSlot
     nextFileIndex = nextFileIndex % numEntries;
     
     const File& nextFile = _files[nextFileIndex];
-    string nextFilename = filenameNoExtension(toFilenameShort(nextFile.name.c_str()));
+    string nextFilename = filenameNoExtension(nextFile.nameShort.c_str());
     
     if (currentFilename != nextFilename)
         return NO;
@@ -3187,10 +3321,11 @@ enum TextSlot
         atlasFilename.clear();
     }
     
-    // if it's a compressed file, then set a diff target if a corresponding png
+    // If it's a compressed file, then set a diff target if a corresponding png
     // is found.  Eventually see if a src dds/ktx/ktx2 exists.  Want to stop
     // using png as source images.  Note png don't have custom mips, unless
-    // flattened to one image.  So have to fabricate mips here.
+    // flattened to one image.  So have to fabricate mips here.  KTXImage
+    // can already load up striped png into slices, etc.
     
     string diffFilename = filenameNoExtension(filename);
     bool hasDiff = false;
@@ -3409,7 +3544,7 @@ enum TextSlot
         bool isArchive = isSupportedArchiveFilename(name);
         if (isArchive)
         {
-            archiveFiles.push_back({string(name),0});
+            archiveFiles.emplace_back(File(name,0));
         }
     }
 }
@@ -3451,7 +3586,7 @@ enum TextSlot
             isValid = isSupportedJsonFilename(name);
         }
         if (isValid) {
-            _files.push_back({name,urlIndex});
+            _files.emplace_back(File(name,urlIndex));
         }
     }
 }
@@ -3533,13 +3668,13 @@ bool isSupportedJsonFilename(const char* filename)
                  || isSupportedModelFilename(filename)
 #endif
             ) {
-            _files.push_back({filename, urlIndex});
+            _files.emplace_back(File(filename, urlIndex));
             
             [urlsExtracted addObject:url];
             urlIndex++;
         }
         else if (isSupportedJsonFilename(filename)) {
-            _files.push_back({filename, urlIndex});
+            _files.emplace_back(File(filename, urlIndex));
             
             [urlsExtracted addObject:url];
             urlIndex++;
@@ -3570,11 +3705,22 @@ bool isSupportedJsonFilename(const char* filename)
         }
     }
     
+    NSMutableDictionary* attribsOff = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+        //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
+        [NSColor whiteColor],NSForegroundColorAttributeName,
+        [NSNumber numberWithFloat:-2.0],NSStrokeWidthAttributeName,
+        [NSColor blackColor],NSStrokeColorAttributeName,
+        nil];
+    
     // add the files into the file list
     [_tableViewController.items removeAllObjects];
     for (const auto& file: _files) {
-        const char* filenameShort = toFilenameShort(file.name.c_str());
-        [_tableViewController.items addObject: [NSString stringWithUTF8String: filenameShort]];
+        const char* filenameShort = file.nameShort.c_str();
+        
+        NSString* fileMenuText = [NSString stringWithUTF8String: filenameShort];
+        NSMutableAttributedString* fileMenuStr = [[NSMutableAttributedString alloc] initWithString:fileMenuText attributes:attribsOff];
+        
+        [_tableViewController.items addObject:fileMenuStr];
     }
     
     uint32_t savedFileIndex = _fileIndex;
@@ -3706,70 +3852,6 @@ bool isSupportedJsonFilename(const char* filename)
     return NO;
 #endif
 }
-
-/* Don't need this anymore
- 
--(BOOL)loadImageFile:(NSURL*)url
-{
-    Renderer* renderer = (Renderer *)self.delegate;
-    setErrorLogCapture(true);
-
-    // set title to filename, chop this to just file+ext, not directory
-    const char* filename = url.fileSystemRepresentation;
-    const char* filenameShort = toFilenameShort(filename);
-    
-    BOOL success = [renderer loadTexture:url];
-
-    if (!success) {
-        // get back error text from the failed load
-        string errorText;
-        getErrorLogCaptureText(errorText);
-        setErrorLogCapture(false);
-
-        // prepend filename
-        string finalErrorText;
-        append_sprintf(finalErrorText, "Could not load from file\n %s\n", filename);
-        finalErrorText += errorText;
-
-        [self setHudText:finalErrorText.c_str()];
-        return NO;
-    }
-    setErrorLogCapture(false);
-
-    // was using subtitle, but that's macOS 11.0 feature.
-    string title = "kramv - ";
-    title += formatTypeName(_showSettings->originalFormat);
-    title += " - ";
-    title += filenameShort;
-
-    self.window.title = [NSString stringWithUTF8String:title.c_str()];
-
-    // topmost entry will be the recently opened document
-    // some entries may go stale if directories change, not sure who validates the
-    // list
-
-    // this is already handled by drop
-    // add to recent document menu
-    //NSDocumentController* dc = [NSDocumentController sharedDocumentController];
-    //[dc noteNewRecentDocumentURL:url];
-
-    //self.imageURL = url;
-
-    // show the controls
-    if (_noImageLoaded) {
-        _buttonStack.hidden = NO;  // show controls
-        _noImageLoaded = NO;
-    }
-
-    // show/hide button
-    [self updateUIAfterLoad];
-    // no need for file table on single files
-    [self hideFileTable];
-    
-    self.needsDisplay = YES;
-    return YES;
-}
-*/
 
 - (void)setupUI
 {
