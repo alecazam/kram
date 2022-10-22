@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		70424D31290127BB00CEF9AC /* simdjson.h in Headers */ = {isa = PBXBuildFile; fileRef = 70424D2F290127BB00CEF9AC /* simdjson.h */; };
+		70424D32290127BB00CEF9AC /* simdjson.h in Headers */ = {isa = PBXBuildFile; fileRef = 70424D2F290127BB00CEF9AC /* simdjson.h */; };
+		70424D33290127BB00CEF9AC /* simdjson.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70424D30290127BB00CEF9AC /* simdjson.cpp */; };
+		70424D34290127BB00CEF9AC /* simdjson.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70424D30290127BB00CEF9AC /* simdjson.cpp */; };
 		704738BC289F6AEE00C77A9F /* unordered_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B1289F6AEE00C77A9F /* unordered_map.h */; };
 		704738BD289F6AEE00C77A9F /* unordered_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B1289F6AEE00C77A9F /* unordered_map.h */; };
 		704738BE289F6AEE00C77A9F /* falgorithm.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B2289F6AEE00C77A9F /* falgorithm.h */; };
@@ -401,6 +405,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		70424D2F290127BB00CEF9AC /* simdjson.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = simdjson.h; sourceTree = "<group>"; };
+		70424D30290127BB00CEF9AC /* simdjson.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = simdjson.cpp; sourceTree = "<group>"; };
 		704738B1289F6AEE00C77A9F /* unordered_map.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unordered_map.h; sourceTree = "<group>"; };
 		704738B2289F6AEE00C77A9F /* falgorithm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = falgorithm.h; sourceTree = "<group>"; };
 		704738B3289F6AEE00C77A9F /* map.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = map.h; sourceTree = "<group>"; };
@@ -765,6 +771,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		70424D2E290127BB00CEF9AC /* simdjson */ = {
+			isa = PBXGroup;
+			children = (
+				70424D2F290127BB00CEF9AC /* simdjson.h */,
+				70424D30290127BB00CEF9AC /* simdjson.cpp */,
+			);
+			path = simdjson;
+			sourceTree = "<group>";
+		};
 		704738AF289F6AEE00C77A9F /* fastl */ = {
 			isa = PBXGroup;
 			children = (
@@ -812,6 +827,7 @@
 				706EEDFB26D1583E001C950E /* transcoder */,
 				706EEE1026D1583F001C950E /* miniz */,
 				706EEE1326D1583F001C950E /* heman */,
+				70424D2E290127BB00CEF9AC /* simdjson */,
 				706EEE1626D1583F001C950E /* stb */,
 				706EEE1826D1583F001C950E /* kram */,
 				706EEE3926D1583F001C950E /* squish */,
@@ -1370,6 +1386,7 @@
 				709B8D4328D7BCAD0081BD1F /* args.h in Headers */,
 				708A6A9C2708CE4700BA5410 /* bc6h_encode.h in Headers */,
 				706EEFDF26D15984001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
+				70424D31290127BB00CEF9AC /* simdjson.h in Headers */,
 				706EEFE026D15984001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
 				706EEFE126D15984001C950E /* EtcColorFloatRGBA.h in Headers */,
 				706EEFE226D15984001C950E /* EtcBlock4x4Encoding.h in Headers */,
@@ -1485,6 +1502,7 @@
 				709B8D4428D7BCAD0081BD1F /* args.h in Headers */,
 				708A6A9D2708CE4700BA5410 /* bc6h_encode.h in Headers */,
 				706EF15926D166C5001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
+				70424D32290127BB00CEF9AC /* simdjson.h in Headers */,
 				706EF15A26D166C5001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
 				706EF15B26D166C5001C950E /* EtcColorFloatRGBA.h in Headers */,
 				706EF15C26D166C5001C950E /* EtcBlock4x4Encoding.h in Headers */,
@@ -1681,6 +1699,7 @@
 				706EFF7526D34740001C950E /* assert.cpp in Sources */,
 				706EFF8526D34740001C950E /* fixed_pool.cpp in Sources */,
 				706EEFA726D1595D001C950E /* basisu_transcoder.cpp in Sources */,
+				70424D33290127BB00CEF9AC /* simdjson.cpp in Sources */,
 				706EFF8326D34740001C950E /* red_black_tree.cpp in Sources */,
 				70871DE327DDDBCD00D0B9E1 /* astcenc_decompress_symbolic.cpp in Sources */,
 				70871E0727DDDBCD00D0B9E1 /* astcenc_diagnostic_trace.cpp in Sources */,
@@ -1792,6 +1811,7 @@
 				706EF1C526D166C5001C950E /* KramZipHelper.cpp in Sources */,
 				706EF1C626D166C5001C950E /* TaskSystem.cpp in Sources */,
 				706EF1C726D166C5001C950E /* KramFileHelper.cpp in Sources */,
+				70424D34290127BB00CEF9AC /* simdjson.cpp in Sources */,
 				706EFF7C26D34740001C950E /* numeric_limits.cpp in Sources */,
 				706EF1C826D166C5001C950E /* KramImageInfo.cpp in Sources */,
 				70871DEA27DDDBCD00D0B9E1 /* astcenc_integer_sequence.cpp in Sources */,
