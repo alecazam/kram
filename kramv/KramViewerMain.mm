@@ -2504,10 +2504,8 @@ enum TextSlot
         static int grid = 0;
         static const int kNumGrids = 7;
 
-#define advanceGrid(g, dec) \
-grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
-
-        // TODO: display how many blocks there are
+        #define advanceGrid(g, dec) \
+            grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
         // if block size is 1, then this shouldn't toggle
         _showSettings->isBlockGridShown = false;
@@ -2516,13 +2514,8 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
         advanceGrid(grid, isShiftKeyDown);
 
-        if (grid == 2 && _showSettings->blockX == 1) {
-            // skip it
-            advanceGrid(grid, isShiftKeyDown);
-        }
-
         static const uint32_t gridSizes[kNumGrids] = {
-            0, 1, 2, 32, 64, 128, 256  // atlas sizes
+            0, 1, 4, 32, 64, 128, 256  // grid sizes
         };
 
         if (grid == 0) {
@@ -2533,7 +2526,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
 
             sprintf(text, "Pixel Grid 1x1");
         }
-        else if (grid == 2) {
+        else if (grid == 2 && _showSettings->blockX > 1) {
             _showSettings->isBlockGridShown = true;
 
             sprintf(text, "Block Grid %dx%d", _showSettings->blockX,
@@ -3583,7 +3576,11 @@ bool isSupportedJsonFilename(const char* filename)
         const char* filenameShort = toFilenameShort(file.name.c_str());
         [_tableViewController.items addObject: [NSString stringWithUTF8String: filenameShort]];
     }
+    
+    uint32_t savedFileIndex = _fileIndex;
+    // This calls selectionDidChange which then sets _fileIndex = 0;
     [_tableView reloadData];
+    _fileIndex = savedFileIndex;
     
     // Set the active file
     [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileIndex] byExtendingSelection:NO];
@@ -3591,7 +3588,7 @@ bool isSupportedJsonFilename(const char* filename)
     
     [self hideFileTable];
     
-    // add it to recent docs (only 10 slots))
+    // add it to recent docs (only 10 slots)
     if (urls.count == 1) {
         NSDocumentController* dc =
         [NSDocumentController sharedDocumentController];
