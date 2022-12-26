@@ -66,7 +66,7 @@ class KTXImage;
 - (void)releaseAllPendingTextures;
 
 // load a gltf model
-- (BOOL)loadModel:(nonnull NSURL*)url;
+- (BOOL)loadModel:(nonnull const char*)url;
 
 // unload gltf model
 - (void)unloadModel;

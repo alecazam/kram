@@ -18,6 +18,9 @@
 #include <os/signpost.h>
 #include <mutex> // for recursive_mutex
 
+using mymutex = std::recursive_mutex;
+using mylock = std::unique_lock<mymutex>;
+
 os_log_t gLogKramv = os_log_create("com.ba.kramv", "");
 
 class Signpost
@@ -52,9 +55,6 @@ private:
 
 
 #if USE_GLTF
-
-using mymutex = std::recursive_mutex;
-using mylock = std::unique_lock<mymutex>;
 
 // TODO: make part of renderer
 static mymutex gModelLock;
@@ -759,27 +759,32 @@ struct packed_float3 {
     [self resetSomeImageSettings:isNewFile];
 }
 
-- (BOOL)loadModel:(nonnull NSURL*)url
+- (BOOL)loadModel:(nonnull const char*)filename
 {
+    NSURL* fileURL =
+        [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
+
 #if USE_GLTF
 
+        
+    
         // TODO: move to async version of this, many of these load slow
         // but is there a way to cancel the load.  Or else move to cgltf which is faster.
         // see GLTFKit2.
 
 #define DO_ASYNC 0
 #if DO_ASYNC
-        [GLTFAsset loadAssetWithURL:url bufferAllocator:_bufferAllocator delegate:self];
+        // [GLTFAsset loadAssetWithURL:url bufferAllocator:_bufferAllocator delegate:self];
 #else
     @autoreleasepool {
-        GLTFAsset* newAsset = [[GLTFAsset alloc] initWithURL:url bufferAllocator:_bufferAllocator];
+        GLTFAsset* newAsset = [[GLTFAsset alloc] initWithURL:fileURL bufferAllocator:_bufferAllocator];
 
         if (!newAsset) {
             return NO;
         }
 
         // tie into delegate callback
-        [self assetWithURL:url didFinishLoading:newAsset];
+        [self assetWithURL:fileURL didFinishLoading:newAsset];
     }
 #endif
 
@@ -2311,7 +2316,7 @@ private:
     // this reads directly from compressed texture via a compute shader
     int32_t textureLookupX = _showSettings->textureLookupX;
     int32_t textureLookupY = _showSettings->textureLookupY;
-
+    
     bool isDrawableBlit = _showSettings->isEyedropperFromDrawable();
 
     // TODO: only don't blit for plane + no debug or shape
@@ -2394,7 +2399,10 @@ private:
         self->_showSettings->textureResult = data;
         self->_showSettings->textureResultX = textureLookupX;
         self->_showSettings->textureResultY = textureLookupY;
-
+        
+        // TODO: This completed handler runs long after the hud has updated
+        // so need to invalidate the hud.  So the pixel location is out of date.
+        
         // printf("Color %f %f %f %f\n", data.x, data.y, data.z, data.w);
     }];
 

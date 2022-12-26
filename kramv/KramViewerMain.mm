@@ -6,6 +6,7 @@
 //@import Cocoa;
 //@import Metal;
 //@import MetalKit;
+//@import CoreText;
 
 #import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
@@ -30,6 +31,11 @@
 #include "KramViewerBase.h"
 
 #include "simdjson/simdjson.h"
+
+#include <mutex> // for recursive_mutex
+
+using mymutex = std::recursive_mutex;
+using mylock = std::unique_lock<mymutex>;
 
 #ifdef NDEBUG
 static bool doPrintPanZoom = false;
@@ -157,6 +163,10 @@ bool isSupportedModelFilename(const char* filename) {
 }
 bool isSupportedArchiveFilename(const char* filename) {
     return endsWithExtension(filename, ".zip");
+}
+
+bool isSupportedJsonFilename(const char* filename) {
+    return endsWith(filename, "-atlas.json");
 }
 
 struct MouseData
@@ -302,10 +312,7 @@ public:
 //-------------
 
 @interface MyMTKView : MTKView
-// for now only have a single imageURL
-//@property(retain, nonatomic, readwrite, nullable) NSURL *imageURL;
 
-//@property (nonatomic, readwrite, nullable) NSPanGestureRecognizer* panGesture;
 @property(retain, nonatomic, readwrite, nullable)
     NSMagnificationGestureRecognizer *zoomGesture;
 
@@ -347,6 +354,7 @@ public:
     self = [super init];
     
     _items = [[NSMutableArray alloc] init];
+    
     return self;
 }
 
@@ -624,29 +632,97 @@ struct FileContainer {
     MmapHelper zipMmap;
 };
 
-@implementation MyMTKView {
-    NSMenu* _viewMenu;  // really the items
-    NSStackView* _buttonStack;
-    NSMutableArray<NSButton *>* _buttonArray;
-    NSTextField* _hudLabel;
-    NSTextField* _hudLabel2;
-    
-    // Offer list of files in archives
-    // TODO: move to NSOutlineView since that can show archive folders with content inside
-    IBOutlet NSTableView* _tableView;
-    IBOutlet TableViewController* _tableViewController;
-    
-    vector<string> _textSlots;
-    ShowSettings* _showSettings;
+struct ActionState
+{
+    string hudText;
+    bool isChanged;
+    bool isStateChanged;
+};
 
-    BOOL _noImageLoaded;
+enum TextSlot
+{
+    kTextSlotHud,
+    kTextSlotEyedropper
+};
+
+// This allows wrapping all the ObjC stuff
+struct DataDelegate
+{
+    bool loadFile(bool clear = false);
+    
+    bool loadModelFile(const char* filename);
+   
+    bool loadTextureFromImage(const char* fullFilename, double timestamp, KTXImage& image, KTXImage* imageNormal, bool isArchive);
+    
+public:
+    id view; // MyMTKView*
+    id _urls; // NSArray<NSURL*>*
+};
+
+struct Data {
+    Data()
+    {
+        _showSettings = new ShowSettings();
+        
+        _textSlots.resize(2);
+    }
+    ~Data()
+    {
+        delete _showSettings;
+    }
+    
+    bool loadAtlasFile(const char* filename);
+    bool listFilesInArchive(int32_t urlIndex);
+    bool openArchive(const char * zipFilename, int32_t urlIndex);
+
+    bool hasCounterpart(bool increment);
+    bool advanceCounterpart(bool increment);
+    bool advanceFile(bool increment);
+
+    bool findFilename(const string& filename);
+    bool findFilenameShort(const string& filename);
+    const Atlas* findAtlasAtCursor(float2 pt);
+    bool isArchive() const;
+    bool loadFile();
+    
+    bool handleEventAction(const Action* action, bool isShiftKeyDown, ActionState& actionState);
+    void updateUIAfterLoad();
+    void updateUIControlState();
+
+    const Action* actionFromMenu(id menuItem) const;
+    const Action* actionFromButton(id button) const;
+    const Action* actionFromKey(uint32_t keyCodes) const;
+
+    void setLoadedText(string& text);
+
+    void initActions();
+    vector<Action>& actions() { return _actions; }
+    void initDisabledButtons();
+
+    string textFromSlots() const;
+    void setTextSlot(TextSlot slot, const char* text);
+
+    void loadFilesFromUrls(NSArray<NSURL*>* urls, bool skipSubdirs);
+    void listArchivesInFolder(NSURL* url, vector<File>& archiveFiles, bool skipSubdirs);
+    void listFilesInFolder(NSURL* url, int32_t urlIndex, bool skipSubdirs);
+
+    // See these to split off ObjC code
+    DataDelegate _delegate;
+    
+private:
+    bool loadFileFromArchive();
+
+public:
+    vector<string> _textSlots;
+    ShowSettings* _showSettings = nullptr;
+
+    bool _noImageLoaded = true;
     string _archiveName; // archive or blank
     
     // folders and archives and multi-drop files are filled into this
     vector<File> _files;
-    int32_t _fileIndex;
+    int32_t _fileIndex = 0;
    
-    NSArray<NSURL*>* _urls;
     // One of these per url in _urlss
     vector<FileContainer*> _containers;
     
@@ -689,11 +765,55 @@ struct FileContainer {
     Action* _actionB;
     Action* _actionA;
     
+    vector<Action> _actions;
+};
+
+
+
+string Data::textFromSlots() const
+{
+    // combine textSlots
+    string text = _textSlots[kTextSlotHud];
+    if (!text.empty() && text.back() != '\n')
+        text += "\n";
+        
+    // don't show eyedropper text with table up, it's many lines and overlaps
+    // TODO: fix
+    // if (!_tableView.hidden)
+        text += _textSlots[kTextSlotEyedropper];
+    
+    return text;
+}
+
+void Data::setTextSlot(TextSlot slot, const char* text)
+{
+    _textSlots[slot] = text;
+}
+
+
+//----------------------------------------------------
+
+
+@implementation MyMTKView {
+    NSMenu* _viewMenu;  // really the items
+    NSStackView* _buttonStack;
+    NSMutableArray<NSButton *>* _buttonArray;
+    NSTextField* _hudLabel;
+    NSTextField* _hudLabel2;
+    
+    // Offer list of files in archives
+    // TODO: move to NSOutlineView since that can show archive folders with content inside
+    IBOutlet NSTableView* _tableView;
+    IBOutlet TableViewController* _tableViewController;
+    
     // copy of modifier flags, can tie drop actions to this
     NSEventModifierFlags _modifierFlags;
     
-    vector<Action> _actions;
+    ShowSettings* _showSettings;
+    Data _data;
 }
+
+
 
 - (void)awakeFromNib
 {
@@ -705,6 +825,8 @@ struct FileContainer {
     rect.origin.y += 50;
     scrollView.frame = rect;
     
+    // C++ delegate
+    _data._delegate.view = self;
 
     // TODO: see if can only open this
     // NSLog(@"AwakeFromNIB");
@@ -731,7 +853,7 @@ struct FileContainer {
 {
     self = [super initWithCoder:coder];
 
-    _showSettings = new ShowSettings;
+    _showSettings = _data._showSettings;
 
     self.clearColor = MTLClearColorMake(0.005f, 0.005f, 0.005f, 0.0f);
 
@@ -740,13 +862,13 @@ struct FileContainer {
     // only re-render when changes are made
     // Note: this breaks ability to gpu capture, since display link not running.
     // so disable this if want to do captures.  Or just move the cursor to capture.
-#ifndef NDEBUG  // KRAM_RELEASE
+//#ifndef NDEBUG  // KRAM_RELEASE
     self.enableSetNeedsDisplay = YES;
-#endif
+//#endif
     // openFile in appDelegate handles "Open in..."
 
-    _textSlots.resize(2);
-    
+   
+
     // added for drag-drop support
     [self registerForDraggedTypes:pasteboardTypes];
     
@@ -763,9 +885,9 @@ struct FileContainer {
     _buttonStack = [self _addButtons];
 
     // hide until image loaded
+    _showSettings->isHideUI = true;
     _buttonStack.hidden = YES;
-    _noImageLoaded = YES;
-
+    
     _hudLabel2 = [self _addHud:YES];
     _hudLabel = [self _addHud:NO];
     [self setHudText:""];
@@ -801,7 +923,7 @@ struct FileContainer {
     }
 }
 
-- (NSStackView *)_addButtons
+void Data::initActions()
 {
     // Don't reorder without also matching actionPtrs below
     Action actions[] = {
@@ -899,10 +1021,36 @@ struct FileContainer {
         &_actionB,
         &_actionA,
     };
+
+    uint32_t numActions = ArrayCount(actions);
+    
+    // copy all of them to a vector, and then assign the action ptrs
+    for (int32_t i = 0; i < numActions; ++i) {
+        Action& action = actions[i];
+        const char* icon = action.icon;  // single char
+        
+        // skip separators
+        bool isSeparator = icon[0] == 0;
+        if (isSeparator) continue;
+        
+        _actions.push_back(action);
+    }
+
+    // now alias Actions to the vector above
+    //assert(_actions.size() == ArrayCount(actionPtrs));
+    for (int32_t i = 0; i < _actions.size(); ++i) {
+        *(actionPtrs[i]) = &_actions[i];
+    }
+}
+
+- (NSStackView *)_addButtons
+{
+    _data.initActions();
     
     NSRect rect = NSMakeRect(0, 10, 30, 30);
 
-   int32_t numActions = ArrayCount(actions);
+    vector<Action>& actions = _data.actions();
+    int32_t numActions = actions.size();
     
     NSMutableArray* buttons = [[NSMutableArray alloc] init];
 
@@ -945,24 +1093,6 @@ struct FileContainer {
         
         // Have to set this too, or button doesn't go blue
         button.attributedAlternateTitle = [[NSMutableAttributedString alloc] initWithString:name attributes:attribsOn];
-        
-#if 0 // this isn't appearing
-        button.wantsLayer = YES;
-        if (button.layer) {
-//            CGFloat glowColor[] = {1.0, 0.0, 0.0, 1.0};
-//            button.layer.masksToBounds = false;
-//            button.layer.shadowColor = CGColorCreate(CGColorSpaceCreateDeviceRGB(), glowColor);
-//            button.layer.shadowRadius = 10.0;
-//            button.layer.shadowOpacity = 1.0;
-//            //button.layer.shadowOffset = .zero;
-            
-            NSShadow* dropShadow = [[NSShadow alloc] init];
-            [dropShadow setShadowColor:[NSColor redColor]];
-            [dropShadow setShadowOffset:NSMakeSize(0, 0)];
-            [dropShadow setShadowBlurRadius:10.0];
-            [button setShadow: dropShadow];
-        }
-#endif
         
         // stackView seems to disperse the items evenly across the area, so this
         // doesn't work
@@ -1050,36 +1180,25 @@ struct FileContainer {
 
     //----------------------
     
-    // copy all of them to a vector, and then assign the action ptrs
-    for (int32_t i = 0; i < numActions; ++i) {
-        Action& action = actions[i];
-        const char* icon = action.icon;  // single char
-        
-        // skip separators
-        bool isSeparator = icon[0] == 0;
-        if (isSeparator) continue;
-        
-        _actions.push_back(action);
-    }
+    // don't want some buttons showing up, menu only
+    _data.initDisabledButtons();
     
-    // now alias Actions to the vector above
-    //assert(_actions.size() == ArrayCount(actionPtrs));
-    for (int32_t i = 0; i < _actions.size(); ++i) {
-        *(actionPtrs[i]) = &_actions[i];
-    }
-    
+    return stackView;
+}
+
+
+void Data::initDisabledButtons()
+{
     // don't want these buttons showing up, menu only
     _actionPrevItem->disableButton();
     _actionItem->disableButton();
     _actionPrevCounterpart->disableButton();
     _actionCounterpart->disableButton();
-    
+
     _actionHud->disableButton();
     _actionHelp->disableButton();
     _actionHideUI->disableButton();
     _actionVertical->disableButton();
-    
-    return stackView;
 }
 
 - (NSTextField *)_addHud:(BOOL)isShadow
@@ -1430,14 +1549,17 @@ struct FileContainer {
     // I think magnofication of zoom gesture is affecting coordinates reported by
     // this
 
-    NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+    NSPoint point = [event locationInWindow];
+    
+    // This flips so upper left corner is 0,0, vs. bottom left
+    point = [self convertPoint:point fromView:nil];
 
     // this needs to change if view is resized, but will likely receive mouseMoved
     // events
     _showSettings->cursorX = (int32_t)point.x;
     _showSettings->cursorY = (int32_t)point.y;
 
-    // should really do this in draw call, since moved messeage come in so quickly
+    // should really do this in draw call, since moved message come in so quickly
     [self updateEyedropper];
 }
 
@@ -1500,6 +1622,13 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
         return;
     }
 
+    // getting a lot of repeat cursor locations
+    // could have panning underneath cursor to deal with
+    if (_showSettings->cursorX == _showSettings->lastCursorX &&
+        _showSettings->cursorY == _showSettings->lastCursorY) {
+        return;
+    }
+    
     float4x4 projectionViewModelMatrix =
         [renderer computeImageTransform:_showSettings->panX
                                    panY:_showSettings->panY
@@ -1541,9 +1670,12 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     float ar = _showSettings->imageAspectRatio();
     
     // that's in model space (+/0.5f * ar, +/0.5f), so convert to texture space
-    pixel.x = 0.999f * (pixel.x / ar + 0.5f);
-    pixel.y = 0.999f * (-pixel.y + 0.5f);
+    pixel.x = (pixel.x / ar + 0.5f);
+    pixel.y = (-pixel.y + 0.5f);
 
+    //pixel.x *= 0.999f;
+    //pixel.y *= 0.999f;
+    
     float2 uv = pixel.xy;
 
     // pixels are 0 based
@@ -1566,6 +1698,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     if (pixel.x < 0.0f || pixel.x >= (float)_showSettings->imageBoundsX) {
         sprintf(text, "canvas: %d %d\n", (int32_t)pixel.x, (int32_t)pixel.y);
         [self setEyedropperText:text.c_str()];  // ick
+        _showSettings->outsideImageBounds = true;
         return;
     }
     if (pixel.y < 0.0f || pixel.y >= (float)_showSettings->imageBoundsY) {
@@ -1573,6 +1706,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
         // image maybe not enough precision with float.
         sprintf(text, "canvas: %d %d\n", (int32_t)pixel.x, (int32_t)pixel.y);
         [self setEyedropperText:text.c_str()];
+        _showSettings->outsideImageBounds = true;
         return;
     }
 
@@ -1582,11 +1716,15 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     int32_t newX = (int32_t)pixel.x;
     int32_t newY = (int32_t)pixel.y;
 
-    if (_showSettings->textureLookupX != newX ||
-        _showSettings->textureLookupY != newY) {
+    
+    if (_showSettings->outsideImageBounds ||
+        (_showSettings->textureLookupX != newX ||
+         _showSettings->textureLookupY != newY)) {
         // Note: this only samples from the original texture via compute shaders
         // so preview mode pixel colors are not conveyed.  But can see underlying
         // data driving preview.
+
+        _showSettings->outsideImageBounds = false;
 
         // %.0f rounds the value, but want truncation
         _showSettings->textureLookupX = newX;
@@ -1606,7 +1744,9 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     string tmp;
 
     float4 c = _showSettings->textureResult;
-
+    int32_t x = _showSettings->textureResultX;
+    int32_t y = _showSettings->textureResultY;
+    
     // DONE: use these to format the text
     MyMTLPixelFormat format = _showSettings->originalFormat;
     bool isSrgb = isSrgbFormat(format);
@@ -1677,9 +1817,7 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
         // this will be out of sync with gpu eval, so may want to only display px
         // from returned lookup this will always be a linear color
 
-        int32_t x = _showSettings->textureResultX;
-        int32_t y = _showSettings->textureResultY;
-
+        
         // show uv, so can relate to gpu coordinates stored in geometry and find
         // atlas areas
         append_sprintf(text, "uv:%0.3f %0.3f\n",
@@ -1823,36 +1961,22 @@ float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
     // TODO: Stuff these on clipboard with a click, or use cmd+C?
 }
 
-enum TextSlot
-{
-    kTextSlotHud,
-    kTextSlotEyedropper
-};
-
 - (void)setEyedropperText:(const char *)text
 {
-    _textSlots[kTextSlotEyedropper] = text;
-
+    _data.setTextSlot(kTextSlotEyedropper, text);
     [self updateHudText];
 }
 
 - (void)setHudText:(const char *)text
 {
-    _textSlots[kTextSlotHud] = text;
-
+    _data.setTextSlot(kTextSlotHud, text);
     [self updateHudText];
 }
 
 - (void)updateHudText
 {
     // combine textSlots
-    string text = _textSlots[kTextSlotHud];
-    if (!text.empty() && text.back() != '\n')
-        text += "\n";
-        
-    // don't show eyedropper text with table up, it's many lines and overlaps
-    if (!_tableView.hidden)
-        text += _textSlots[kTextSlotEyedropper];
+    string text = _data.textFromSlots();
 
     NSString *textNS = [NSString stringWithUTF8String:text.c_str()];
     _hudLabel2.stringValue = textNS;
@@ -1984,7 +2108,9 @@ enum TextSlot
     return YES;
 }
 
-- (void)updateUIAfterLoad
+
+
+void Data::updateUIAfterLoad()
 {
     // TODO: move these to actions, and test their state instead of looking up
     // buttons here and in HandleKey.
@@ -2004,8 +2130,8 @@ enum TextSlot
     bool isJumpToPrevCounterpartHidden = true;
     
     if ( _files.size() > 1) {
-        isJumpToCounterpartHidden = ![self hasCounterpart:YES];
-        isJumpToPrevCounterpartHidden  = ![self hasCounterpart:NO];
+        isJumpToCounterpartHidden = !hasCounterpart(true);
+        isJumpToPrevCounterpartHidden  = !hasCounterpart(false);
     }
     
     bool isRedHidden = _showSettings->numChannels == 0; // models don't show rgba
@@ -2054,10 +2180,10 @@ enum TextSlot
     _actionChecker->setHidden(isCheckerboardHidden);
     
     // also need to call after each toggle
-    [self updateUIControlState];
+    updateUIControlState();
 }
 
-- (void)updateUIControlState
+void Data::updateUIControlState()
 {
     // there is also mixed state, but not using that
     auto On = true;
@@ -2065,7 +2191,6 @@ enum TextSlot
     
 #define toState(x) (x) ? On : Off
 
-    Renderer* renderer = (Renderer*)self.delegate;
     auto showAllState = toState(_showSettings->isShowingAllLevelsAndMips);
     auto premulState = toState(_showSettings->doShaderPremul);
     auto signedState = toState(_showSettings->isSigned);
@@ -2074,7 +2199,6 @@ enum TextSlot
     auto gridState = toState(_showSettings->isAnyGridShown());
     auto wrapState = toState(_showSettings->isWrap);
     auto debugState = toState(_showSettings->debugMode != DebugModeNone);
-    auto playState = toState(_showSettings->isModel && renderer.playAnimations);
     auto hudState = toState(_showSettings->isHudShown);
     
     TextureChannels &channels = _showSettings->channels;
@@ -2094,8 +2218,11 @@ enum TextSlot
         toState(_showSettings->lightingMode != LightingModeNone);
     auto tangentState = toState(_showSettings->useTangent);
 
-    auto verticalState = toState(_buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical);
-    auto uiState = toState(_buttonStack.hidden);
+    // TODO: shadow the state on these, so don't have to to go ObjC
+    //Renderer* renderer = (Renderer*)self.delegate;
+    auto playState = toState(_showSettings->isModel && _showSettings->isPlayAnimations);
+    auto verticalState = toState(_showSettings->isVerticalUI);
+    auto uiState = toState(_showSettings->isHideUI);
     auto diffState = toState(_showSettings->isDiff);
     
     _actionVertical->setHighlight(verticalState);
@@ -2143,6 +2270,48 @@ enum TextSlot
 // TODO: convert to C++ actions, and then call into Base holding all this
 // move pan/zoom logic too.  Then use that as start of Win32 kramv.
 
+const Action* Data::actionFromMenu(id menuItem) const
+{
+    const Action* action = nullptr;
+    
+    for (const auto& search: _actions) {
+        if (search.menuItem == menuItem) {
+            action = &search;
+            break;
+        }
+    }
+    
+    return action;
+}
+
+const Action* Data::actionFromButton(id button) const
+{
+    const Action* action = nullptr;
+    
+    for (const auto& search: _actions) {
+        if (search.button == button) {
+            action = &search;
+            break;
+        }
+    }
+    
+    return action;
+}
+
+const Action* Data::actionFromKey(uint32_t keyCode) const
+{
+    const Action* action = nullptr;
+    
+    for (const auto& search: _actions) {
+        if (search.keyCode == keyCode) {
+            action = &search;
+            break;
+        }
+    }
+    
+    return action;
+}
+
 - (IBAction)handleAction:(id)sender
 {
     NSEvent* theEvent = [NSApp currentEvent];
@@ -2150,22 +2319,10 @@ enum TextSlot
 
     const Action* action = nullptr;
     if ([sender isKindOfClass:[NSButton class]]) {
-        NSButton* button = (NSButton *)sender;
-        for (const auto& search: _actions) {
-            if (search.button == button) {
-                action = &search;
-                break;
-            }
-        }
+        action = _data.actionFromButton(sender);
     }
     else if ([sender isKindOfClass:[NSMenuItem class]]) {
-        NSMenuItem* menuItem = (NSMenuItem *)sender;
-        for (const auto& search: _actions) {
-            if (search.menuItem == menuItem) {
-                action = &search;
-                break;
-            }
-        }
+        action = _data.actionFromMenu(sender);
     }
     
     if (!action) {
@@ -2195,14 +2352,7 @@ enum TextSlot
         return;
     }
     
-    const Action* action = nullptr;
-    for (const auto& search: _actions) {
-        if (search.keyCode == keyCode) {
-            action = &search;
-            break;
-        }
-    }
-    
+    const Action* action = _data.actionFromKey(keyCode);
     if (!action) {
         [super keyDown:theEvent];
         //KLOGE("kram", "unknown UI element");
@@ -2238,7 +2388,7 @@ enum TextSlot
     _hudLabel2.hidden = _hudHidden || !_showSettings->isHudShown;
 }
 
-- (void)setLoadedText:(string&)text
+void Data::setLoadedText(string& text)
 {
     text = "Loaded ";
 
@@ -2265,26 +2415,64 @@ enum TextSlot
 
 - (bool)handleEventAction:(const Action*)action isShiftKeyDown:(bool)isShiftKeyDown
 {
+    ActionState actionState;
+    if (!_data.handleEventAction(action, isShiftKeyDown, actionState))
+        return false;
+        
+    // Do the leftover action work to call ObjC
+    if (action == _data._actionVertical) {
+        _buttonStack.orientation = _showSettings->isVerticalUI
+            ? NSUserInterfaceLayoutOrientationVertical
+            : NSUserInterfaceLayoutOrientationHorizontal;
+    }
+    else if (action == _data._actionHideUI) {
+        _buttonStack.hidden = _showSettings->isHideUI;
+    }
+    else if (action == _data._actionHud) {
+        [self updateHudVisibility];
+    }
+    else if (action == _data._actionInfo) {
+        if (_showSettings->isHudShown) {
+            
+            // also hide the file table, since this can be long
+            [self hideFileTable];
+        }
+    }
+    else if (action == _data._actionPlay) {
+        if (!action->isHidden) {
+            Renderer* renderer = (Renderer*)self.delegate;
+            renderer.playAnimations = _showSettings->isPlayAnimations;
+        }
+    }
+            
+    if (!actionState.hudText.empty()) {
+        [self setHudText:actionState.hudText.c_str()];
+    }
+
+    if (actionState.isChanged || actionState.isStateChanged) {
+        _data.updateUIControlState();
+    }
+
+    if (actionState.isChanged) {
+        self.needsDisplay = YES;
+    }
+    return true;
+}
+
+bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionState& actionState)
+{
     // Some data depends on the texture data (isSigned, isNormal, ..)
     bool isChanged = false;
     bool isStateChanged = false;
-
+    
     // TODO: fix isChanged to only be set when value changes
     // f.e. clamped values don't need to re-render
     string text;
-
-    Renderer* renderer = (Renderer*)self.delegate;
     
     if (action == _actionVertical) {
-        bool isVertical =
-            _buttonStack.orientation == NSUserInterfaceLayoutOrientationVertical;
-        isVertical = !isVertical;
-
-        _buttonStack.orientation = isVertical
-                                       ? NSUserInterfaceLayoutOrientationVertical
-                                       : NSUserInterfaceLayoutOrientationHorizontal;
-        text = isVertical ? "Vert UI" : "Horiz UI";
-
+        _showSettings->isVerticalUI = !_showSettings->isVerticalUI;
+        text = _showSettings->isVerticalUI ? "Vert UI" : "Horiz UI";
+        
         // just to update toggle state to Off
         isStateChanged = true;
     }
@@ -2293,18 +2481,18 @@ enum TextSlot
         if (_noImageLoaded) {
             return true;
         }
-
-        _buttonStack.hidden = !_buttonStack.hidden;
-        text = _buttonStack.hidden ? "Hide UI" : "Show UI";
-
+        
+        _showSettings->isHideUI = !_showSettings->isHideUI;
+        text = _showSettings->isHideUI ? "Hide UI" : "Show UI";
+        
         // just to update toggle state to Off
         isStateChanged = true;
     }
-
+    
     else if (action == _actionR) {
         if (!action->isHidden) {
             TextureChannels& channels = _showSettings->channels;
-
+            
             if (channels == TextureChannels::ModeR001) {
                 channels = TextureChannels::ModeRGBA;
                 text = "Mask RGBA";
@@ -2315,12 +2503,12 @@ enum TextSlot
             }
             isChanged = true;
         }
-
+        
     }
     else if (action == _actionG) {
         if (!action->isHidden) {
             TextureChannels& channels = _showSettings->channels;
-
+            
             if (channels == TextureChannels::Mode0G01) {
                 channels = TextureChannels::ModeRGBA;
                 text = "Mask RGBA";
@@ -2335,7 +2523,7 @@ enum TextSlot
     else if (action == _actionB) {
         if (!action->isHidden) {
             TextureChannels& channels = _showSettings->channels;
-
+            
             if (channels == TextureChannels::Mode00B1) {
                 channels = TextureChannels::ModeRGBA;
                 text = "Mask RGBA";
@@ -2344,14 +2532,14 @@ enum TextSlot
                 channels = TextureChannels::Mode00B1;
                 text = "Mask 00B1";
             }
-
+            
             isChanged = true;
         }
     }
     else if (action == _actionA) {
         if (!action->isHidden) {
             TextureChannels& channels = _showSettings->channels;
-
+            
             if (channels == TextureChannels::ModeAAA1) {
                 channels = TextureChannels::ModeRGBA;
                 text = "Mask RGBA";
@@ -2360,23 +2548,21 @@ enum TextSlot
                 channels = TextureChannels::ModeAAA1;
                 text = "Mask AAA1";
             }
-
+            
             isChanged = true;
         }
         
     }
     else if (action == _actionPlay) {
         if (!action->isHidden) {
-           
-            renderer.playAnimations = !renderer.playAnimations;
             
-            text = renderer.playAnimations ? "Play" : "Pause";
+            _showSettings->isPlayAnimations = ! _showSettings->isPlayAnimations;
+            
+            //Renderer* renderer = (Renderer*)self.delegate;
+            //renderer.playAnimations = !renderer.playAnimations;
+            
+            text = _showSettings->isPlayAnimations ? "Play" : "Pause";
             isChanged = true;
-            
-            //[renderer updateAnimationState:self];
-        }
-        else {
-            //[renderer updateAnimationState:self];
         }
     }
     else if (action == _actionShapeUVPreview) {
@@ -2387,9 +2573,6 @@ enum TextSlot
         isChanged = true;
         
         _showSettings->uvPreviewFrames = 10;
-        
-        // also need to call this in display link, for when it reaches end
-        //[renderer updateAnimationState:self];
     }
     
     else if (action == _actionShapeChannel) {
@@ -2419,18 +2602,18 @@ enum TextSlot
     else if (action == _actionHelp) {
         // display the chars for now
         text =
-            "1234-rgba, Preview, Debug, A-show all\n"
-            "Info, Hud, Reload, 0-fit\n"
-            "Checker, Grid\n"
-            "Wrap, 8-signed, 9-premul\n"
-            "Mip, Face, Y-array\n"
-            "↓-next item, →-next counterpart\n"
-            "Lighting, S-shape, C-shape channel\n";
+        "1234-rgba, Preview, Debug, A-show all\n"
+        "Info, Hud, Reload, 0-fit\n"
+        "Checker, Grid\n"
+        "Wrap, 8-signed, 9-premul\n"
+        "Mip, Face, Y-array\n"
+        "↓-next item, →-next counterpart\n"
+        "Lighting, S-shape, C-shape channel\n";
         
         // just to update toggle state to Off
         isStateChanged = true;
     }
-
+    
     else if (action == _actionFit) {
         float zoom;
         // fit image or mip
@@ -2441,18 +2624,18 @@ enum TextSlot
             // fit to topmost image
             zoom = _showSettings->zoomFit;
         }
-
+        
         // This zoom needs to be checked against zoom limits
         // there's a cap on the zoom multiplier.
         // This is reducing zoom which expands the image.
         zoom *= 1.0f / (1 << _showSettings->mipNumber);
-
+        
         // even if zoom same, still do this since it resets the pan
         _showSettings->zoom = zoom;
-
+        
         _showSettings->panX = 0.0f;
         _showSettings->panY = 0.0f;
-
+        
         text = "Scale Image\n";
         if (doPrintPanZoom) {
             string tmp;
@@ -2462,19 +2645,19 @@ enum TextSlot
                     _showSettings->panX, _showSettings->panY, _showSettings->zoom);
             text += tmp;
         }
-
+        
         isChanged = true;
     }
     // reload key (also a quick way to reset the settings)
     else if (action == _actionReload) {
         //bool success =
-            [self loadFile];
-
+        _delegate.loadFile();
+        
         // reload at actual size
         if (isShiftKeyDown) {
             _showSettings->zoom = 1.0f;
         }
-
+        
         // Name change if image
         if (_showSettings->isModel)
             text = "Reload Model\n";
@@ -2488,7 +2671,7 @@ enum TextSlot
                     _showSettings->panX, _showSettings->panY, _showSettings->zoom);
             text += tmp;
         }
-
+        
         isChanged = true;
     }
     else if (action == _actionPreview) {
@@ -2505,7 +2688,7 @@ enum TextSlot
     }
     // TODO: might switch c to channel cycle, so could just hit that
     // and depending on the content, it cycles through reasonable channel masks
-
+    
     // toggle checkerboard for transparency
     else if (action == _actionChecker) {
         if (action->isHidden) {
@@ -2515,92 +2698,92 @@ enum TextSlot
             text += _showSettings->isCheckerboardShown ? "On" : "Off";
         }
     }
-
+    
     // toggle pixel grid when magnified above 1 pixel, can happen from mipmap
     // changes too
     else if (action == _actionGrid) {
         static int grid = 0;
         static const int kNumGrids = 7;
-
-        #define advanceGrid(g, dec) \
-            grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
-
+        
+#define advanceGrid(g, dec) \
+grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
+        
         // if block size is 1, then this shouldn't toggle
         _showSettings->isBlockGridShown = false;
         _showSettings->isAtlasGridShown = false;
         _showSettings->isPixelGridShown = false;
-
+        
         advanceGrid(grid, isShiftKeyDown);
-
+        
         static const uint32_t gridSizes[kNumGrids] = {
             0, 1, 4, 32, 64, 128, 256  // grid sizes
         };
-
+        
         if (grid == 0) {
             sprintf(text, "Grid Off");
         }
         else if (grid == 1) {
             _showSettings->isPixelGridShown = true;
-
+            
             sprintf(text, "Pixel Grid 1x1");
         }
         else if (grid == 2 && _showSettings->blockX > 1) {
             _showSettings->isBlockGridShown = true;
-
+            
             sprintf(text, "Block Grid %dx%d", _showSettings->blockX,
                     _showSettings->blockY);
         }
         else {
             _showSettings->isAtlasGridShown = true;
-
+            
             // want to be able to show altases tht have long entries derived from
             // props but right now just a square grid atlas
             _showSettings->gridSizeX = _showSettings->gridSizeY = gridSizes[grid];
-
+            
             sprintf(text, "Atlas Grid %dx%d", _showSettings->gridSizeX,
                     _showSettings->gridSizeY);
         }
-
+        
         isChanged = true;
     }
     else if (action == _actionShowAll) {
         if (!action->isHidden) {
             // TODO: have drawAllMips, drawAllLevels, drawAllLevelsAndMips
             _showSettings->isShowingAllLevelsAndMips =
-                !_showSettings->isShowingAllLevelsAndMips;
+            !_showSettings->isShowingAllLevelsAndMips;
             isChanged = true;
             text = "Show All ";
             text += _showSettings->isShowingAllLevelsAndMips ? "On" : "Off";
         }
     }
-
+    
     // toggle hud that shows name and pixel value under the cursor
     // this may require calling setNeedsDisplay on the UILabel as cursor moves
     else if (action == _actionHud) {
         _showSettings->isHudShown = !_showSettings->isHudShown;
-        [self updateHudVisibility];
+        //[self updateHudVisibility];
         // isChanged = true;
         text = "Hud ";
         text += _showSettings->isHudShown ? "On" : "Off";
         isStateChanged = true;
     }
-
+    
     // info on the texture, could request info from lib, but would want to cache
     // that info
     else if (action == _actionInfo) {
         if (_showSettings->isHudShown) {
             
             // also hide the file table, since this can be long
-            [self hideFileTable];
+            //[self hideFileTable];
             
             sprintf(text, "%s",
                     isShiftKeyDown ? _showSettings->imageInfoVerbose.c_str()
-                                   : _showSettings->imageInfo.c_str());
+                    : _showSettings->imageInfo.c_str());
         }
         // just to update toggle state to Off
         isStateChanged = true;
     }
-
+    
     // toggle wrap/clamp
     else if (action == _actionWrap) {
         // TODO: cycle through all possible modes (clamp, repeat, mirror-once,
@@ -2610,7 +2793,7 @@ enum TextSlot
         text = "Wrap ";
         text += _showSettings->isWrap ? "On" : "Off";
     }
-
+    
     // toggle signed vs. unsigned
     else if (action == _actionSigned) {
         if (!action->isHidden) {
@@ -2620,7 +2803,7 @@ enum TextSlot
             text += _showSettings->isSigned ? "On" : "Off";
         }
     }
-
+    
     // toggle premul alpha vs. unmul
     else if (action == _actionPremul) {
         if (!action->isHidden) {
@@ -2630,42 +2813,40 @@ enum TextSlot
             text += _showSettings->doShaderPremul ? "On" : "Off";
         }
     }
-
+    
     else if (action == _actionItem || action == _actionPrevItem) {
         if (!action->isHidden) {
-            // invert shift key for prev, since it's reversese
+            // invert shift key for prev, since it's reverse
             if (action == _actionPrevItem) {
                 isShiftKeyDown = !isShiftKeyDown;
             }
             
-            if ([self advanceFile:!isShiftKeyDown]) {
+            if (advanceFile(!isShiftKeyDown)) {
                 //_hudHidden = true;
                 //[self updateHudVisibility];
-                [self setEyedropperText:""];
+                //[self setEyedropperText:""];
                 
                 isChanged = true;
-                
-                [self setLoadedText:text];
+            
+                setLoadedText(text);
             }
         }
     }
-
+    
     else if (action == _actionCounterpart || action == _actionPrevCounterpart) {
         if (!action->isHidden) {
-            // invert shift key for prev, since it's reversese
+            // invert shift key for prev, since it's reverse
             if (action == _actionPrevCounterpart) {
                 isShiftKeyDown = !isShiftKeyDown;
             }
-            if (_files.size() > 1) {
-                if ([self advanceCounterpart:!isShiftKeyDown]) {
-                    _hudHidden = true;
-                    [self updateHudVisibility];
-                    [self setEyedropperText:""];
-                    
-                    isChanged = true;
-                    
-                    [self setLoadedText:text];
-                }
+            if (advanceCounterpart(!isShiftKeyDown)) {
+                //_hudHidden = true;
+                //[self updateHudVisibility];
+                //[self setEyedropperText:""];
+                
+                isChanged = true;
+                
+                setLoadedText(text);
             }
         }
     }
@@ -2678,9 +2859,9 @@ enum TextSlot
             isChanged = true;
         }
     }
-
+    
     // TODO: should probably have these wrap and not clamp to count limits
-
+    
     // mip up/down
     else if (action == _actionMip) {
         if (_showSettings->mipCount > 1) {
@@ -2689,14 +2870,14 @@ enum TextSlot
             }
             else {
                 _showSettings->mipNumber =
-                    MIN(_showSettings->mipNumber + 1, _showSettings->mipCount - 1);
+                MIN(_showSettings->mipNumber + 1, _showSettings->mipCount - 1);
             }
             sprintf(text, "Mip %d/%d", _showSettings->mipNumber,
                     _showSettings->mipCount);
             isChanged = true;
         }
     }
-
+    
     else if (action == _actionFace) {
         // cube or cube array, but hit s to pick cubearray
         if (_showSettings->faceCount > 1) {
@@ -2705,14 +2886,14 @@ enum TextSlot
             }
             else {
                 _showSettings->faceNumber =
-                    MIN(_showSettings->faceNumber + 1, _showSettings->faceCount - 1);
+                MIN(_showSettings->faceNumber + 1, _showSettings->faceCount - 1);
             }
             sprintf(text, "Face %d/%d", _showSettings->faceNumber,
                     _showSettings->faceCount);
             isChanged = true;
         }
     }
-
+    
     else if (action == _actionArray) {
         // slice
         if (_showSettings->sliceCount > 1) {
@@ -2721,7 +2902,7 @@ enum TextSlot
             }
             else {
                 _showSettings->sliceNumber =
-                    MIN(_showSettings->sliceNumber + 1, _showSettings->sliceCount - 1);
+                MIN(_showSettings->sliceNumber + 1, _showSettings->sliceCount - 1);
             }
             sprintf(text, "Slice %d/%d", _showSettings->sliceNumber,
                     _showSettings->sliceCount);
@@ -2734,7 +2915,7 @@ enum TextSlot
             }
             else {
                 _showSettings->arrayNumber =
-                    MIN(_showSettings->arrayNumber + 1, _showSettings->arrayCount - 1);
+                MIN(_showSettings->arrayNumber + 1, _showSettings->arrayCount - 1);
             }
             sprintf(text, "Array %d/%d", _showSettings->arrayNumber,
                     _showSettings->arrayCount);
@@ -2745,20 +2926,15 @@ enum TextSlot
         // non-handled action
         return false;
     }
-
-    if (!text.empty()) {
-        [self setHudText:text.c_str()];
-    }
-
-    if (isChanged || isStateChanged) {
-        [self updateUIControlState];
-    }
-
-    if (isChanged) {
-        self.needsDisplay = YES;
-    }
+    
+    actionState.hudText = text;
+    actionState.isChanged = isChanged;
+    actionState.isStateChanged = isStateChanged;
+    
     return true;
 }
+
+
 
 // Note: docs state that drag&drop should be handled automatically by UTI setup
 // via openURLs but I find these calls are needed, or it doesn't work.  Maybe
@@ -2808,12 +2984,13 @@ enum TextSlot
     return NO;
 }
 
+
+
 // Want to avoid Apple libs for things that have C++ equivalents.
 // simdjson without exceptions isn't super readable or safe looking.
-#define USE_SIMDJSON 1
-#if USE_SIMDJSON
+// TODO: see if simdjson is stable enough, using unsafe calls
 
-- (BOOL)loadAtlasFile:(const char*)filename
+bool Data::loadAtlasFile(const char* filename)
 {
     using namespace simdjson;
     
@@ -2915,136 +3092,11 @@ enum TextSlot
     // Can triangulate those, and use xatlas to pack those.
     // Also xatlas can flatten out a 3d model into a chart.
     
-    return YES;
+    return true;
 }
-
-#else
-
-/*
-// TODO: convert to using a C++ json lib like yyJson or simdJson
-// Then can move into libkram, and embed in the ktx/ktx2 metadata.
-- (BOOL)loadAtlasFile:(const char*)filename
-{
-    NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
-    NSData* assetData = [NSData dataWithContentsOfURL:url];
-    
-    NSError* error = nil;
-    NSDictionary* rootObject = [NSJSONSerialization JSONObjectWithData:assetData options:NSJSONReadingFragmentsAllowed error:&error];
-    
-    if (error != nil) {
-        // TODO: avoid NSLog
-        NSLog(@"%@", error);
-        return NO;
-    }
-    
-    // Can use hover or a show all on these entries and names.
-    // Draw names on screen using system text in the upper left corner if 1
-    // if showing all, then show names across each mip level.  May want to
-    // snap to pixels on each mip level so can see overlap.
-    
-    _showSettings->atlas.clear();
-    
-    // TODO: this ObjC parser is insanely slow, dump it
-    // look into yyJson (dom) or sax parsers.
-    
-    
-    // TODO: support multiple atlases in one file, but need to then
-    // parse an store and apply to differently named textures.
-    
-    NSDictionary* atlasProps = rootObject;
-    
-    {
-        const char* atlasName = [atlasProps[@"name"] UTF8String];
-        
-        NSNumber* widthProp = atlasProps[@"width"];
-        NSNumber* heightProp = atlasProps[@"height"];
-        if (!heightProp) heightProp = widthProp;
-        
-        int width = [widthProp intValue];
-        int height = [heightProp intValue];
-        
-        int slice = [atlasProps[@"slice"] intValue];
-        
-        float uPad = 0.0f;
-        float vPad = 0.0f;
-        NSArray<NSNumber*>* pauvProp = atlasProps[@"paduv"];
-        if (pauvProp)
-        {
-            uPad = [pauvProp[0] floatValue];
-            vPad = [pauvProp[1] floatValue];
-        }
-        
-        NSArray<NSNumber*>* padpxProp = atlasProps[@"padpx"];
-        if (padpxProp)
-        {
-            uPad = [padpxProp[0] intValue];
-            vPad = [padpxProp[1] intValue];
-            
-            uPad /= width;
-            vPad /= height;
-        }
-        
-        NSDictionary* regions = atlasProps[@"regions"];
-        
-        for (NSDictionary* regionProps in regions)
-        {
-            const char* name = [regionProps[@"name"] UTF8String];
-            
-            float x = 0.0f;
-            float y = 0.0f;
-            float w = 0.0f;
-            float h = 0.0f;
-            
-            NSArray<NSNumber*>* rectuv = regionProps[@"ruv"];
-            if (rectuv) {
-                // Note: could convert pixel and mip0 size to uv.
-                // normalized uv make these easier to draw across all mips
-                x = [rectuv[0] floatValue];
-                y = [rectuv[1] floatValue];
-                w = [rectuv[2] floatValue];
-                h = [rectuv[3] floatValue];
-            }
-            
-            NSArray<NSNumber*>* rectpx = regionProps[@"rpx"];
-            if (rectpx) {
-                x = [rectpx[0] intValue];
-                y = [rectpx[1] intValue];
-                w = [rectpx[2] intValue];
-                h = [rectpx[3] intValue];
-                
-                // normalize to uv using the width/height
-                x /= width;
-                y /= height;
-                w /= width;
-                h /= height;
-            }
-            
-            // optional
-            // optional uv padding - need two values for non-square
-            // could be inherited by all elements to avoid redundancy
-            // optional horizontal and vertical orient
-            // optional slice for 2d arrays
-            
-            const char* verticalProp = "f"; // [regionProps[@"o"] UTF8String];
-            bool isVertical = verticalProp && verticalProp[0] == 't';
-            
-            Atlas atlas = {name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
-            _showSettings->atlas.emplace_back(std::move(atlas));
-        }
-    }
-    
-    // TODO: also need to be able to bring in vector shapes
-    // maybe from svg or files written out from figma or photoshop.
-    // Can triangulate those, and use xatlas to pack those.
-    
-    return YES;
-}
-*/
-
-#endif
 
 // opens archive
-- (BOOL)openArchive:(const char *)zipFilename urlIndex:(int32_t)urlIndex
+bool Data::openArchive(const char * zipFilename, int32_t urlIndex)
 {
     // grow the array, ptrs so that existing mmaps aren't destroyed
     if (urlIndex >= _containers.size()) {
@@ -3072,7 +3124,7 @@ enum TextSlot
 }
 
 // lists archive into _files
-- (BOOL)listFilesInArchive:(int32_t)urlIndex
+bool Data::listFilesInArchive(int32_t urlIndex)
 {
     FileContainer& container = *_containers[urlIndex];
     ZipHelper& zip = container.zip;
@@ -3105,7 +3157,7 @@ enum TextSlot
 }
 
 // TODO: can simplify by storing counterpart id when file list is created
-- (BOOL)hasCounterpart:(BOOL)increment {
+bool Data::hasCounterpart(bool increment) {
     if (_files.size() <= 1) {
         return NO;
     }
@@ -3133,10 +3185,10 @@ enum TextSlot
     return YES;
 }
 
-- (BOOL)advanceCounterpart:(BOOL)increment
-{
+bool Data::advanceCounterpart(bool increment) {
+    
     if (_files.size() <= 1) {
-        return NO;
+        return false;
     }
     
     // see if file has counterparts
@@ -3158,28 +3210,16 @@ enum TextSlot
     string nextFilename = filenameNoExtension(nextFile.nameShort.c_str());
     
     if (currentFilename != nextFilename)
-        return NO;
+        return false;
     
     _fileIndex = nextFileIndex;
     
-    // set selection
-    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileIndex] byExtendingSelection:NO];
-    [_tableView scrollRowToVisible:_fileIndex];
-    
-    // want it to respond to arrow keys
-    //[self.window makeFirstResponder: _tableView];
-    
-    // show the files table
-    [self showFileTable];
-    [self setEyedropperText:""];
-    
-    return [self loadFile];
+    return _delegate.loadFile(true);
 }
 
-- (BOOL)advanceFile:(BOOL)increment
-{
+bool Data::advanceFile(bool increment) {
     if (_files.empty()) {
-        return NO;
+        return false;
     }
     
     size_t numEntries = _files.size();
@@ -3189,25 +3229,22 @@ enum TextSlot
         _fileIndex += numEntries - 1;  // back 1
 
     _fileIndex = _fileIndex % numEntries;
+    
+    return _delegate.loadFile(true);
+}
 
+- (void)updateFileSelection
+{
     // set selection
-    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileIndex] byExtendingSelection:NO];
-    [_tableView scrollRowToVisible:_fileIndex];
-    
-    // want it to respond to arrow keys
-    //[self.window makeFirstResponder: _tableView];
-    
-    // show the files table
-    [self showFileTable];
-    [self setEyedropperText:""];
-    
-    return [self loadFile];
+    uint32_t fileIndex = _data._fileIndex;
+    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:fileIndex] byExtendingSelection:NO];
+    [_tableView scrollRowToVisible:fileIndex];
 }
 
 - (BOOL)setImageFromSelection:(NSInteger)index {
-    if (!_files.empty()) {
-        if (_fileIndex != index) {
-            _fileIndex = index;
+    if (!_data._files.empty()) {
+        if (_data._fileIndex != index) {
+            _data._fileIndex = index;
             return [self loadFile];
         }
     }
@@ -3224,7 +3261,9 @@ enum TextSlot
     return NO;
 }
 
-- (BOOL)findFilename:(const string&)filename
+
+
+bool Data::findFilename(const string& filename)
 {
     bool isFound = false;
     
@@ -3238,23 +3277,77 @@ enum TextSlot
     return isFound;
 }
 
-- (BOOL)isArchive
+bool Data::findFilenameShort(const string& filename)
 {
-    NSURL* url = _urls[_files[_fileIndex].urlIndex];
+    bool isFound = false;
+    
+    // linear search
+    for (const auto& search : _files) {
+        if (search.nameShort == filename) {
+            isFound = true;
+            break;
+        }
+    }
+    return isFound;
+}
+
+// rect here is expect xy, wh
+bool isPtInRect(float2 pt, float4 r)
+{
+    return all((pt >= r.xy) & (pt <= r.xy + r.zw));
+}
+
+const Atlas* Data::findAtlasAtCursor(float2 pt)
+{
+    const Atlas* atlas = nullptr;
+    
+    // TODO: rects are in uv, so need to convert pt
+    
+    // This might need to become an atlas array index instead of ptr
+    const Atlas* lastAtlas = _showSettings->lastAtlas;
+    
+    if (lastAtlas) {
+        if (isPtInRect(pt, lastAtlas->rect())) {
+            atlas = lastAtlas;
+        }
+    }
+    
+    if (!atlas) {
+        // linear search
+        for (const auto& search : _showSettings->atlas) {
+            if (isPtInRect(pt, search.rect())) {
+                atlas = &search;
+                break;
+            }
+        }
+        
+        _showSettings->lastAtlas = atlas;
+    }
+    
+    return atlas;
+}
+
+
+bool Data::isArchive() const
+{
+    NSArray<NSURL*>* urls_ = (NSArray<NSURL*>*)_delegate._urls;
+    NSURL* url = urls_[_files[_fileIndex].urlIndex];
     const char* filename = url.fileSystemRepresentation;
     return isSupportedArchiveFilename(filename);
 }
 
-- (BOOL)loadFile
-{
-    if ([self isArchive]) {
-        return [self loadFileFromArchive];
-    }
 
+
+bool Data::loadFile()
+{
+    if (isArchive()) {
+        return loadFileFromArchive();
+    }
+    
     // now lookup the filename and data at that entry
     const File& file = _files[_fileIndex];
     const char* filename = file.name.c_str();
-   
+    
     string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
     
@@ -3266,7 +3359,15 @@ enum TextSlot
 #if USE_GLTF || USE_USD
     bool isModel = isSupportedModelFilename(filename);
     if (isModel) {
-        return [self loadModelFile:filename];
+        bool success = _delegate.loadModelFile(filename);
+        
+        if (success) {
+            // store the filename
+            _showSettings->lastFilename = filename;
+            _showSettings->lastTimestamp = timestamp;
+        }
+        
+        return success;
     }
 #endif
     
@@ -3274,7 +3375,7 @@ enum TextSlot
     if (!isSupportedFilename(filename)) {
         return NO;
     }
-
+    
     // Note: better to extract from filename instead of root of folder dropped
     // or just keep displaying full path of filename.
     
@@ -3283,13 +3384,13 @@ enum TextSlot
     vector<string> possibleNormalFilenames;
     string normalFilename;
     bool hasNormal = false;
-
+    
     TexContentType texContentType = findContentTypeFromFilename(filename);
     if (texContentType == TexContentTypeAlbedo) {
         findPossibleNormalMapFromAlbedoFilename(filename, possibleNormalFilenames);
-     
-       for (const auto& name: possibleNormalFilenames) {
-            hasNormal = [self findFilename:name];
+        
+        for (const auto& name: possibleNormalFilenames) {
+            hasNormal = findFilename(name);
             
             if (hasNormal) {
                 normalFilename = name;
@@ -3312,8 +3413,8 @@ enum TextSlot
         atlasFilename = atlasFilename.substr(0, dashPosStr - atlasFilename.c_str());
     }
     atlasFilename += "-atlas.json";
-    if ( [self findFilename:atlasFilename.c_str()]) {
-        if ([self loadAtlasFile:atlasFilename.c_str()]) {
+    if ( findFilename(atlasFilename.c_str())) {
+        if (loadAtlasFile(atlasFilename.c_str())) {
             hasAtlas = true;
         }
     }
@@ -3331,10 +3432,10 @@ enum TextSlot
     bool hasDiff = false;
     
     diffFilename += ".png";
-    if ( diffFilename != filename && [self findFilename:diffFilename.c_str()]) {
+    if ( diffFilename != filename && findFilename(diffFilename.c_str())) {
         // TODO: defer load until diff enabled
         //if ([self loadDiffFile:diffFilename.c_str()]) {
-            hasDiff = true;
+        hasDiff = true;
         //}
     }
     if (!hasDiff) {
@@ -3342,18 +3443,18 @@ enum TextSlot
     }
     
     //-------------------------------
-
+    
     KTXImage image;
     KTXImageData imageDataKTX;
-
+    
     KTXImage imageNormal;
     KTXImageData imageNormalDataKTX;
-
+    
     // this requires decode and conversion to RGBA8u
     if (!imageDataKTX.open(fullFilename.c_str(), image)) {
         return NO;
     }
-
+    
     if (hasNormal &&
         imageNormalDataKTX.open(normalFilename.c_str(), imageNormal)) {
         // shaders only pull from albedo + normal on these texture types
@@ -3367,39 +3468,76 @@ enum TextSlot
         }
     }
     
-    // Release any loading model textures
-    Renderer* renderer = (Renderer *)self.delegate;
-    [renderer releaseAllPendingTextures];
+    //---------------------------------
     
-    if (![renderer loadTextureFromImage:fullFilename.c_str()
-                              timestamp:timestamp
-                                  image:image
-                            imageNormal:hasNormal ? &imageNormal : nullptr
-                              isArchive:NO]) {
+    // Release any loading model textures
+//    Renderer* renderer = (Renderer *)self.delegate;
+//    [renderer releaseAllPendingTextures];
+//
+//    if (![renderer loadTextureFromImage:fullFilename.c_str()
+//                              timestamp:timestamp
+//                                  image:image
+//                            imageNormal:hasNormal ? &imageNormal : nullptr
+//                              isArchive:NO]) {
+//        return false;
+//    }
+    
+    if (!_delegate.loadTextureFromImage(fullFilename.c_str(), (double)timestamp, image, hasNormal ? &imageNormal : nullptr, false)) {
         return NO;
     }
+    
+    // store the filename
+    _showSettings->lastFilename = filename;
+    _showSettings->lastTimestamp = timestamp;
+    
+    return true;
+}
 
-    //-------------------------------
-
+-(BOOL)loadFile
+{
+    // lookup the filename and data at that entry
+    const File& file = _data._files[_data._fileIndex];
+    const char* filename = file.nameShort.c_str();
+    
+    setErrorLogCapture( true );
+    
+    bool success = _data.loadFile();
+    if (!success) {
+        string errorText;
+        getErrorLogCaptureText(errorText);
+        setErrorLogCapture(false);
+        
+        string finalErrorText;
+        append_sprintf(finalErrorText, "Could not load from file:\n %s\n",
+                       filename);
+        finalErrorText += errorText;
+        
+        [self setHudText:finalErrorText.c_str()];
+        return NO;
+    }
+    setErrorLogCapture( false );
+    
+    // -------------
     string title = _showSettings->windowTitleString(filename);
     self.window.title = [NSString stringWithUTF8String:title.c_str()];
-
+    
     // doesn't set imageURL or update the recent document menu
-
+    
     // show the controls
-    if (_noImageLoaded) {
+    if (!_data._noImageLoaded) {
+        _showSettings->isHideUI = false;
         _buttonStack.hidden = NO;  // show controls
-        _noImageLoaded = NO;
+        _data._noImageLoaded = false;
     }
-
+    
     // show/hide button
-    [self updateUIAfterLoad];
+    _data.updateUIAfterLoad();
     
     self.needsDisplay = YES;
     return YES;
 }
 
-- (BOOL)loadFileFromArchive
+bool Data::loadFileFromArchive()
 {
     // now lookup the filename and data at that entry
     const File& file = _files[_fileIndex];
@@ -3483,41 +3621,33 @@ enum TextSlot
         }
     }
 
-    Renderer* renderer = (Renderer *)self.delegate;
-    [renderer releaseAllPendingTextures];
+    //---------------------------------
     
-    if (![renderer loadTextureFromImage:fullFilename.c_str()
-                              timestamp:(double)timestamp
-                                  image:image
-                            imageNormal:hasNormal ? &imageNormal : nullptr
-                              isArchive:YES]) {
+    if (!_delegate.loadTextureFromImage(fullFilename.c_str(), (double)timestamp, image, hasNormal ? &imageNormal : nullptr, true)) {
         return NO;
     }
+//    Renderer* renderer = (Renderer *)self.delegate;
+//    [renderer releaseAllPendingTextures];
+//
+//    if (![renderer loadTextureFromImage:fullFilename.c_str()
+//                              timestamp:(double)timestamp
+//                                  image:image
+//                            imageNormal:hasNormal ? &imageNormal : nullptr
+//                              isArchive:YES]) {
+//        return NO;
+//    }
 
     //---------------------------------
     
-    NSURL* archiveURL = _urls[file.urlIndex];
+    NSArray<NSURL*>* urls_ = (NSArray<NSURL*>*)_delegate._urls;
+    NSURL* archiveURL = urls_[file.urlIndex];
     _archiveName = toFilenameShort(archiveURL.fileSystemRepresentation);
     
-    string title = _showSettings->windowTitleString(filename);
-    self.window.title = [NSString stringWithUTF8String:title.c_str()];
-
-    // doesn't set imageURL or update the recent document menu
-
-    // show the controls
-    if (_noImageLoaded) {
-        _buttonStack.hidden = NO;  // show controls
-        _noImageLoaded = NO;
-    }
-
-    // show/hide button
-    [self updateUIAfterLoad];
-    
-    self.needsDisplay = YES;
     return YES;
 }
 
--(void)listArchivesInFolder:(NSURL*)url archiveFiles:(vector<File>&)archiveFiles skipSubdirs:(BOOL)skipSubdirs
+
+void Data::listArchivesInFolder(NSURL* url, vector<File>& archiveFiles, bool skipSubdirs)
 {
     NSDirectoryEnumerationOptions options = NSDirectoryEnumerationSkipsHiddenFiles;
     if (skipSubdirs)
@@ -3549,7 +3679,7 @@ enum TextSlot
     }
 }
 
--(void)listFilesInFolder:(NSURL*)url urlIndex:(int32_t)urlIndex skipSubdirs:(BOOL)skipSubdirs
+void Data::listFilesInFolder(NSURL* url, int32_t urlIndex, bool skipSubdirs)
 {
     NSDirectoryEnumerationOptions options = NSDirectoryEnumerationSkipsHiddenFiles;
     if (skipSubdirs)
@@ -3591,24 +3721,13 @@ enum TextSlot
     }
 }
 
-bool isSupportedJsonFilename(const char* filename)
-{
-    return endsWith(filename, "-atlas.json");
-}
 
-    
--(void)loadFilesFromUrls:(NSArray<NSURL*>*)urls
+void Data::loadFilesFromUrls(NSArray<NSURL*>* urls, bool skipSubdirs)
 {
-    // don't recurse down subdirs, if cmd key held during drop or recent menu item selection
-    bool skipSubdirs = ( _modifierFlags & NSEventModifierFlagCommand ) != 0;
-    
-    // reverse logic, so have to hold cmd to see subfolders
-    skipSubdirs = !skipSubdirs;
-    
     // Using a member for archives, so limited to one archive in a drop
     // but that's probably okay for now.  Add a separate array of open
     // archives if want > 1.
-
+    
     // copy the existing files list
     string existingFilename;
     if (_fileIndex < (int32_t)_files.size())
@@ -3632,8 +3751,8 @@ bool isSupportedJsonFilename(const char* filename)
         const char* filename = url.fileSystemRepresentation;
         
         if (isSupportedArchiveFilename(filename) &&
-            [self openArchive:filename urlIndex:urlIndex] &&
-            [self listFilesInArchive:urlIndex])
+            openArchive(filename, urlIndex) &&
+            listFilesInArchive(urlIndex))
         {
             [urlsExtracted addObject:url];
             urlIndex++;
@@ -3641,7 +3760,7 @@ bool isSupportedJsonFilename(const char* filename)
         else if (url.hasDirectoryPath) {
             
             // this first loads only models, then textures if only those
-            [self listFilesInFolder:url urlIndex:urlIndex skipSubdirs:skipSubdirs];
+            listFilesInFolder(url, urlIndex, skipSubdirs);
             
             // could skip if nothing added
             [urlsExtracted addObject:url];
@@ -3649,25 +3768,25 @@ bool isSupportedJsonFilename(const char* filename)
             
             // handle archives within folder
             vector<File> archiveFiles;
-            [self listArchivesInFolder:url archiveFiles:archiveFiles skipSubdirs:skipSubdirs];
-        
+            listArchivesInFolder(url, archiveFiles, skipSubdirs);
+            
             for (const File& archiveFile: archiveFiles) {
                 const char* archiveFilename = archiveFile.name.c_str();
-                if ([self openArchive:archiveFilename urlIndex:urlIndex] &&
-                    [self listFilesInArchive:urlIndex]) {
+                if (openArchive(archiveFilename, urlIndex) &&
+                    listFilesInArchive(urlIndex)) {
                     
                     NSURL* urlArchive = [NSURL fileURLWithPath:[NSString stringWithUTF8String:archiveFilename]];
                     [urlsExtracted addObject:urlArchive];
                     urlIndex++;
                 }
-
+                
             }
         }
         else if (isSupportedFilename(filename)
 #if USE_GLTF
                  || isSupportedModelFilename(filename)
 #endif
-            ) {
+                 ) {
             _files.emplace_back(File(filename, urlIndex));
             
             [urlsExtracted addObject:url];
@@ -3679,20 +3798,16 @@ bool isSupportedJsonFilename(const char* filename)
             [urlsExtracted addObject:url];
             urlIndex++;
         }
-    
+        
     }
     
-    // TODO: sort by urlIndex
+    // sort them by short filename
 #if USE_EASTL
     NAMESPACE_STL::quick_sort(_files.begin(), _files.end());
 #else
     std::sort(_files.begin(), _files.end());
 #endif
     
-    // preserve old file selection
-
-    _urls = urlsExtracted;
-   
     // preserve filename before load, and restore that index, by finding
     // that name in refreshed folder list
     _fileIndex = 0;
@@ -3705,6 +3820,17 @@ bool isSupportedJsonFilename(const char* filename)
         }
     }
     
+    // preserve old file selection
+    _delegate._urls = urlsExtracted;
+}
+
+-(void)loadFilesFromUrls:(NSArray<NSURL*>*)urls skipSubdirs:(BOOL)skipSubdirs
+{
+    // C++ to build list
+    _data.loadFilesFromUrls(urls, skipSubdirs);
+    
+    //-------------------
+    
     NSMutableDictionary* attribsOff = [NSMutableDictionary dictionaryWithObjectsAndKeys:
         //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
         [NSColor whiteColor],NSForegroundColorAttributeName,
@@ -3714,7 +3840,7 @@ bool isSupportedJsonFilename(const char* filename)
     
     // add the files into the file list
     [_tableViewController.items removeAllObjects];
-    for (const auto& file: _files) {
+    for (const auto& file: _data._files) {
         const char* filenameShort = file.nameShort.c_str();
         
         NSString* fileMenuText = [NSString stringWithUTF8String: filenameShort];
@@ -3723,15 +3849,12 @@ bool isSupportedJsonFilename(const char* filename)
         [_tableViewController.items addObject:fileMenuStr];
     }
     
-    uint32_t savedFileIndex = _fileIndex;
-    // This calls selectionDidChange which then sets _fileIndex = 0;
+    // reloadData calls selectionDidChange which then sets _fileIndex = 0;
+    uint32_t fileIndex = _data._fileIndex;
     [_tableView reloadData];
-    _fileIndex = savedFileIndex;
+    _data._fileIndex = fileIndex;
     
-    // Set the active file
-    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:_fileIndex] byExtendingSelection:NO];
-    [_tableView scrollRowToVisible:_fileIndex];
-    
+    [self updateFileSelection];
     [self hideFileTable];
     
     // add it to recent docs (only 10 slots)
@@ -3775,7 +3898,10 @@ bool isSupportedJsonFilename(const char* filename)
     if (isSingleFile)
         [self hideFileTable];
 
-    [self loadFilesFromUrls:urls];
+    // only recurse down subdirs if cmd key held during drop or recent menu item selection
+    bool skipSubdirs = ( _modifierFlags & NSEventModifierFlagCommand ) == 0;
+    
+    [self loadFilesFromUrls:urls skipSubdirs:skipSubdirs];
     
     BOOL success = [self loadFile];
     return success;
@@ -3795,58 +3921,26 @@ bool isSupportedJsonFilename(const char* filename)
     // save out a scene with all of them in a single scene.  But that should
     // probably reference original content in case it's updated.
     
-    Renderer* renderer = (Renderer *)self.delegate;
-    [renderer releaseAllPendingTextures];
+    // const char* filenameShort = toFilenameShort(filename);
+    //double timestamp = FileHelper::modificationTimestamp(filename);
     
-    setErrorLogCapture(true);
-    
-    const char* filenameShort = toFilenameShort(filename);
-    double timestamp = FileHelper::modificationTimestamp(filename);
+    // TODO: this used to compare filename timestamp?
     
     // This code only takes url, so construct one
-    NSURL* fileURL =
-        [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
-    BOOL success = [renderer loadModel:fileURL];
+    Renderer* renderer = (Renderer *)self.delegate;
+    [renderer releaseAllPendingTextures];
+    BOOL success = [renderer loadModel:filename];
     
     // TODO: split this off to a completion handler, since loadModel is async
     // and should probably also have a cancellation (or counter)
     
     // show/hide button
-    [self updateUIAfterLoad];
+    _data.updateUIAfterLoad();
     
     if (!success) {
-        string errorText;
-        getErrorLogCaptureText(errorText);
-        setErrorLogCapture(false);
-        
-        string finalErrorText;
-        append_sprintf(finalErrorText, "Could not load model from file:\n %s\n",
-                       filename);
-        finalErrorText += errorText;
-
-        [self setHudText:finalErrorText.c_str()];
-        
         return NO;
     }
-    setErrorLogCapture(false);
-
-    // was using subtitle, but that's macOS 11.0 feature.
-    string title = "kramv - ";
-    title += filenameShort;
-    self.window.title = [NSString stringWithUTF8String:title.c_str()];
     
-    // show the controls
-    if (_noImageLoaded) {
-        _buttonStack.hidden = NO;  // show controls
-        _noImageLoaded = NO;
-    }
-
-    // store the filename
-    _showSettings->lastFilename = filename;
-    _showSettings->lastTimestamp = timestamp;
-    
-    self.needsDisplay = YES;
-
     return success;
 #else
     return NO;
@@ -3862,38 +3956,6 @@ bool isSupportedJsonFilename(const char* filename)
 {
     // did setNeedsDisplay, but already doing that in loadTextureFromURL
 }
-
-// this doesn't seem to enable New.  Was able to get "Open" to highlight by
-// setting NSDocument as class for doc types.
-// https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/EventArchitecture/EventArchitecture.html
-#if 0
-/*
-// "New"" calls this
-- (__kindof NSDocument *)openUntitledDocumentAndDisplay:(BOOL)displayDocument
-                                                  error:(NSError * _Nullable *)outError
-{
-    // TODO: this should add an empty MyMTKView and can drag/drop to that.
-    // Need to track images and data dropped per view then.
-    return nil;
-}
-
-// "Open File" calls this
-- (void)openDocumentWithContentsOfURL:(NSURL *)url
-                              display:(BOOL)displayDocument
-                    completionHandler:(void (^)(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error))completionHandler
-{
-    [self loadTextureFromURL:url];
-}
-
-- (IBAction)openDocument {
-    // calls openDocumentWithContentsOfURL above
-}
-
-- (IBAction)newDocument {
-    // calls openUntitledDocumentAndDisplay above
-}
-*/
-#endif
 
 - (void)tableViewSelectionDidChange:(NSNotification *)notification
 {
@@ -3990,12 +4052,56 @@ bool isSupportedJsonFilename(const char* filename)
     // drawableSize this was causing all sorts of inconsistencies
     [_renderer mtkView:_view drawableSizeWillChange:_view.drawableSize];
 
+    // ObjC++ delegate
     _view.delegate = _renderer;
 }
 
 
 
 @end
+
+bool DataDelegate::loadFile(bool clear)
+{
+    MyMTKView* view_ = (MyMTKView*)view;
+    
+    if (clear) {
+        // set selection
+        [view_ updateFileSelection];
+        
+        // want it to respond to arrow keys
+        //[self.window makeFirstResponder: _tableView];
+        
+        // show the files table
+        [view_ showFileTable];
+        [view_ setEyedropperText:""];
+    }
+    
+    return [view_ loadFile];
+}
+
+bool DataDelegate::loadModelFile(const char* filename)
+{
+    MyMTKView* view_ = (MyMTKView*)view;
+    return [view_ loadModelFile:filename];
+}
+
+bool DataDelegate::loadTextureFromImage(const char* fullFilename, double timestamp, KTXImage& image, KTXImage* imageNormal, bool isArchive)
+{
+    MyMTKView* view_ = (MyMTKView*)view;
+    Renderer* renderer = (Renderer *)view_.delegate;
+    [renderer releaseAllPendingTextures];
+    
+    if (![renderer loadTextureFromImage:fullFilename
+                              timestamp:timestamp
+                                  image:image
+                            imageNormal:imageNormal
+                              isArchive:isArchive]) {
+        return false;
+    }
+    
+    return true;
+}
+
 
 //-------------
 

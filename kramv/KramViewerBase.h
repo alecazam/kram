@@ -82,6 +82,8 @@ struct Atlas
     float u,v; // padding - to both or just left or right?
     bool isVertical;
     uint32_t level;
+    
+    float4 rect() const { return float4m(x,y,w,h); }
 };
 
 class ShowSettings {
@@ -110,7 +112,12 @@ public:
 
     // DONE: hook all these up to shader and view
     bool isHudShown = true;
-
+    
+    bool isHideUI = false;
+    bool isVerticalUI = true;
+    
+    bool isPlayAnimations = false;
+    
     // transparency checkboard under the image
     bool isCheckerboardShown = false;
 
@@ -184,6 +191,8 @@ public:
     int32_t imageBoundsX = 0;  // px
     int32_t imageBoundsY = 0;  // px
 
+    bool outsideImageBounds = false;
+    
     // size of the block, used in block grid drawing
     int32_t blockX = 1;
     int32_t blockY = 1;
@@ -276,6 +285,7 @@ public:
     int32_t meshNumber = 0;
     int32_t meshCount = 5;
     
+    const Atlas* lastAtlas = nullptr; // Might move to index
     vector<Atlas> atlas;
 };
 
