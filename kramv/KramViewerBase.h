@@ -302,4 +302,291 @@ float4x4 matrix4x4_rotation(float radians, vector_float3 axis);
 void printChannels(string &tmp, const string &label, float4 c,
                    int32_t numChannels, bool isFloat, bool isSigned);
 
+
+enum Key {
+    A = 0x00,
+    S = 0x01,
+    D = 0x02,
+    F = 0x03,
+    H = 0x04,
+    G = 0x05,
+    Z = 0x06,
+    X = 0x07,
+    C = 0x08,
+    V = 0x09,
+    B = 0x0B,
+    Q = 0x0C,
+    W = 0x0D,
+    E = 0x0E,
+    R = 0x0F,
+    Y = 0x10,
+    T = 0x11,
+    O = 0x1F,
+    U = 0x20,
+    I = 0x22,
+    P = 0x23,
+    L = 0x25,
+    J = 0x26,
+    K = 0x28,
+    N = 0x2D,
+    M = 0x2E,
+
+    // https://eastmanreference.com/complete-list-of-applescript-key-codes
+    Num1 = 0x12,
+    Num2 = 0x13,
+    Num3 = 0x14,
+    Num4 = 0x15,
+    Num5 = 0x17,
+    Num6 = 0x16,
+    Num7 = 0x1A,
+    Num8 = 0x1C,
+    Num9 = 0x19,
+    Num0 = 0x1D,
+
+    LeftBrace = 0x21,
+    RightBrace = 0x1E,
+
+    LeftBracket = 0x21,
+    RightBracket = 0x1E,
+
+    Quote = 0x27,
+    Semicolon = 0x29,
+    Backslash = 0x2A,
+    Comma = 0x2B,
+    Slash = 0x2C,
+
+    LeftArrow = 0x7B,
+    RightArrow = 0x7C,
+    DownArrow = 0x7D,
+    UpArrow = 0x7E,
+    
+    Space = 0x31,
+    Escape = 0x35,
+};
+
+using kram_id = void*;
+
+// This makes dealing with ui much simpler
+class Action {
+public:
+    Action(const char* icon_, const char* tip_, Key keyCode_)
+        : icon(icon_), tip(tip_), keyCode(keyCode_) {}
+    
+    const char* icon;
+    const char* tip;
+
+    // Note these are not ref-counted, but AppKit already does
+    kram_id button; // NSButton*
+    kram_id menuItem; // NSMenuItem*
+    Key keyCode;
+    
+    bool isHighlighted = false;
+    bool isHidden = false;
+    bool isButtonDisabled = false;
+    
+    // This have platform impl
+    void setHighlight(bool enable);
+    void setHidden(bool enable);
+    void disableButton();
+};
+
+// This is an open archive
+struct FileContainer {
+    // allow zip files to be dropped and opened, and can advance through bundle
+    // content.
+    
+    // TODO: Add FileHelper if acrhive file is networked, but would require
+    // full load to memory.
+    
+    ZipHelper zip;
+    MmapHelper zipMmap;
+};
+
+struct ActionState
+{
+    string hudText;
+    bool isChanged;
+    bool isStateChanged;
+};
+
+enum TextSlot
+{
+    kTextSlotHud,
+    kTextSlotEyedropper
+};
+
+struct File {
+public:
+    File(const char* name_, int32_t urlIndex_);
+    
+    // Note: not sorting by urlIndex currently
+    bool operator <(const File& rhs) const
+    {
+        // sort by shortname
+        int compare = strcasecmp(nameShort.c_str(), rhs.nameShort.c_str());
+        if ( compare != 0 )
+            return compare < 0;
+        
+        // if equal, then sort by longname
+        return strcasecmp(name.c_str(), rhs.name.c_str()) < 0;
+    }
+    
+public:
+    string name;
+    int32_t urlIndex;
+    string nameShort; // would alias name, but too risky
+};
+
+// This allows wrapping all the ObjC stuff
+struct DataDelegate
+{
+    bool loadFile(bool clear = false);
+    
+    bool loadModelFile(const char* filename);
+   
+    bool loadTextureFromImage(const char* fullFilename, double timestamp, KTXImage& image, KTXImage* imageNormal, bool isArchive);
+    
+public:
+    kram_id view; // MyMTKView*
+};
+
+struct Data {
+    Data();
+    ~Data();
+    
+    bool loadAtlasFile(const char* filename);
+    bool listFilesInArchive(int32_t urlIndex);
+    bool openArchive(const char * zipFilename, int32_t urlIndex);
+
+    bool hasCounterpart(bool increment);
+    bool advanceCounterpart(bool increment);
+    bool advanceFile(bool increment);
+
+    bool findFilename(const string& filename);
+    bool findFilenameShort(const string& filename);
+    const Atlas* findAtlasAtCursor(float2 pt);
+    bool isArchive() const;
+    bool loadFile();
+    
+    bool handleEventAction(const Action* action, bool isShiftKeyDown, ActionState& actionState);
+    void updateUIAfterLoad();
+    void updateUIControlState();
+
+    const Action* actionFromMenu(kram_id menuItem) const;
+    const Action* actionFromButton(kram_id button) const;
+    const Action* actionFromKey(uint32_t keyCodes) const;
+
+    void setLoadedText(string& text);
+
+    void initActions();
+    vector<Action>& actions() { return _actions; }
+    void initDisabledButtons();
+
+    string textFromSlots() const;
+    void setTextSlot(TextSlot slot, const char* text);
+
+    void loadFilesFromUrls(vector<string>& urls, bool skipSubdirs);
+    void listArchivesInFolder(const string& archiveFilename, vector<File>& archiveFiles, bool skipSubdirs);
+    void listFilesInFolder(const string& folderFilename, int32_t urlIndex, bool skipSubdirs);
+
+    // See these to split off ObjC code
+    DataDelegate _delegate;
+    
+    void updateEyedropper();
+    
+    float4x4 computeImageTransform(float panX, float panY, float zoom);
+    void updateProjTransform();
+    void resetSomeImageSettings(bool isNewFile);
+    void updateImageSettings(const string& fullFilename, KTXImage& image, MyMTLPixelFormat format);
+
+    void doZoomMath(float newZoom, float2& newPan);
+
+private:
+    bool loadFileFromArchive();
+
+public:
+    void showEyedropperData(const float2& uv);
+    void setEyedropperText(const char * text);
+    void updateTransforms();
+
+    //----------------
+    float4x4 _projectionMatrix;
+    
+    float4x4 _projectionViewMatrix;
+    float3 _cameraPosition;
+    
+    float4x4 _viewMatrix;
+    float4x4 _viewMatrix2D;
+    float4x4 _viewMatrix3D;
+
+    // object specific
+    float4x4 _modelMatrix;
+    float4 _modelMatrixInvScale2;
+    float4x4 _modelMatrix2D;
+    float4x4 _modelMatrix3D;
+
+    //----------------
+    
+    vector<string> _textSlots;
+    ShowSettings* _showSettings = nullptr;
+
+    bool _noImageLoaded = true;
+    string _archiveName; // archive or blank
+    
+    // folders and archives and multi-drop files are filled into this
+    vector<File> _files;
+    int32_t _fileIndex = 0;
+   
+    // One of these per url in _urlss
+    vector<FileContainer*> _containers;
+    vector<string> _urls;
+    
+    Action* _actionPlay;
+    Action* _actionShapeUVPreview;
+    Action* _actionHelp;
+    Action* _actionInfo;
+    Action* _actionHud;
+    Action* _actionShowAll;
+    
+    Action* _actionPreview;
+    Action* _actionWrap;
+    Action* _actionPremul;
+    Action* _actionSigned;
+    
+    Action* _actionDiff;
+    Action* _actionDebug;
+    Action* _actionGrid;
+    Action* _actionChecker;
+    Action* _actionHideUI;
+    Action* _actionVertical;
+    
+    Action* _actionMip;
+    Action* _actionFace;
+    Action* _actionArray;
+    Action* _actionItem;
+    Action* _actionPrevItem;
+    Action* _actionCounterpart;
+    Action* _actionPrevCounterpart;
+    Action* _actionReload;
+    Action* _actionFit;
+    
+    Action* _actionShapeMesh;
+    Action* _actionShapeChannel;
+    Action* _actionLighting;
+    Action* _actionTangent;
+    
+    Action* _actionR;
+    Action* _actionG;
+    Action* _actionB;
+    Action* _actionA;
+    
+    vector<Action> _actions;
+};
+
+bool isSupportedModelFilename(const char* filename);
+bool isSupportedArchiveFilename(const char* filename);
+bool isSupportedJsonFilename(const char* filename);
+
+extern bool doPrintPanZoom;
+
 }  // namespace kram

@@ -252,6 +252,17 @@ bool FileHelper::exists(const char* filename) const
     return true;
 }
 
+bool FileHelper::isDirectory(const char* filename) const
+{
+    struct stat stats;
+    if( stat(filename,&stats) == 0 )
+    {
+        if( stats.st_mode & S_IFDIR )
+            return true;
+    }
+    return false;
+}
+
 uint64_t FileHelper::modificationTimestamp(const char* filename)
 {
 // Win has to rename all this, so make it happy using wrappers from miniz

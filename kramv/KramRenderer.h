@@ -31,6 +31,7 @@
 
 namespace kram {
 class ShowSettings;
+class Data;
 class KTXImage;
 }
 
@@ -45,7 +46,8 @@ class KTXImage;
 
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view
                                     settings:
-                                        (nonnull kram::ShowSettings *)settings;
+                                        (nonnull kram::ShowSettings *)settings
+                                    data:(nonnull kram::Data *)data;
 
 - (BOOL)loadTextureFromImage:(nonnull const char *)fullFilenameString
                    timestamp:(double)timestamp
@@ -54,10 +56,6 @@ class KTXImage;
                    isArchive:(BOOL)isArchive;
 
 - (BOOL)loadTexture:(nonnull NSURL *)url;
-
-- (simd::float4x4)computeImageTransform:(float)panX
-                                   panY:(float)panY
-                                   zoom:(float)zoom;
 
 - (BOOL)hotloadShaders:(nonnull const char *)filename;
 

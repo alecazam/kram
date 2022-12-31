@@ -165,16 +165,7 @@ struct ViewFramebufferData {
 
     uint8_t _uniformBufferIndex;
 
-    float4x4 _projectionMatrix;
-
-    // 2d versions
-    float4x4 _viewMatrix;
-    float4x4 _modelMatrix;
-
-    // 3d versions
-    float4x4 _viewMatrix3D;
-    float4x4 _modelMatrix3D;
-
+   
     // float _rotation;
     KramLoader* _loader;
     MTKMesh* _mesh;
@@ -195,6 +186,7 @@ struct ViewFramebufferData {
     ViewFramebufferData _viewFramebuffer;
 
     ShowSettings* _showSettings;
+    Data* _data;
     
 #if USE_GLTF
     KramGLTFTextureLoader* _textureLoader;
@@ -215,11 +207,12 @@ struct ViewFramebufferData {
 
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view
                                     settings:(nonnull ShowSettings *)settings
+                                    data:(nonnull Data*)data
 {
     self = [super init];
     if (self) {
         _showSettings = settings;
-
+        _data = data;
         _device = view.device;
 
         _loader = [KramLoader new];
@@ -280,7 +273,7 @@ struct ViewFramebufferData {
     samplerDescriptor.sAddressMode = MTLSamplerAddressModeClampToEdge;
     samplerDescriptor.tAddressMode = MTLSamplerAddressModeClampToEdge;
     samplerDescriptor.rAddressMode = MTLSamplerAddressModeClampToEdge;
-    samplerDescriptor.label = @"colorMapSamplerNearsetEdge";
+    samplerDescriptor.label = @"colorMapSamplerNearestEdge";
 
     _colorMapSamplerNearestEdge =
         [_device newSamplerStateWithDescriptor:samplerDescriptor];
@@ -804,75 +797,7 @@ struct packed_float3 {
 #endif
 }
 
-// TODO: remove this
-//- (void)updateProjTransform
-//{
-//    // float aspect = size.width / (float)size.height;
-//    //_projectionMatrix = perspective_rhs(45.0f * (M_PI / 180.0f), aspect, 0.1f,
-//    //100.0f);
-//    _projectionMatrix =
-//        orthographic_rhs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f,
-//                         100000.0f, _showSettings->isReverseZ);
-//
-//    // DONE: adjust zoom to fit the entire image to the window
-//    _showSettings->zoomFit =
-//        MIN((float)_showSettings->viewSizeX, (float)_showSettings->viewSizeY) /
-//        MAX(1, MAX((float)_showSettings->imageBoundsX,
-//                   (float)_showSettings->imageBoundsY));
-//
-//    // already using drawableSize which includes scale
-//    // TODO: remove contentScaleFactor of view, this can be 1.0 to 2.0f
-//    // why does this always report 2x even when I change monitor res.
-//    //_showSettings->zoomFit /= _showSettings->viewContentScaleFactor;
-//}
 
-- (void)updateProjTransform
-{
-    // Want to move to always using perspective even for 2d images, but still more math
-    // to work out to keep zoom to cursor working.
-#if USE_PERSPECTIVE
-    float aspect = _showSettings->viewSizeX /  (float)_showSettings->viewSizeY;
-    _projectionMatrix = perspective_rhs(90.0f * (M_PI / 180.0f), aspect, 0.1f, 100000.0f, _showSettings->isReverseZ);
-
-    // This was used to reset zoom to a baseline that had a nice zoom.  But little connected to it now.
-    // Remember with rotation, the bounds can hit the nearClip.  Note all shapes are 0.5 radius,
-    // so at 1 this is 2x to leave gap around the shape for now.
-    float shapeHeightInY = 1;
-    _showSettings->zoomFit = shapeHeightInY; // / (float)_showSettings->viewSizeY;
-
-#else
-
-    if (_showSettings->isModel) {
-        float aspect = _showSettings->viewSizeX /  (float)_showSettings->viewSizeY;
-        _projectionMatrix = perspective_rhs(90.0f * (M_PI / 180.0f), aspect, 0.1f, 100000.0f, _showSettings->isReverseZ);
-
-        _showSettings->zoomFit = 1;
-    }
-    else {
-        _projectionMatrix =
-            orthographic_rhs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f,
-                             100000.0f, _showSettings->isReverseZ);
-
-        // DONE: adjust zoom to fit the entire image to the window
-        _showSettings->zoomFit =
-            MIN((float)_showSettings->viewSizeX, (float)_showSettings->viewSizeY) /
-            MAX(1, MAX((float)_showSettings->imageBoundsX,
-                       (float)_showSettings->imageBoundsY));
-        
-        static bool useImageAndViewBounds = true;
-        if (useImageAndViewBounds) {
-            float invWidth = 1.0f / MAX(1.0f, (float)_showSettings->imageBoundsX);
-            float invHeight = 1.0f / MAX(1.0f, (float)_showSettings->imageBoundsY);
-
-            // DONE: adjust zoom to fit the entire image to the window
-            // the best fit depends on dimension of image and window
-            _showSettings->zoomFit =
-                MIN( (float)_showSettings->viewSizeX * invWidth,
-                     (float)_showSettings->viewSizeY * invHeight);
-        }
-    }
-#endif
-}
     
 - (void)_createMeshRect:(float)aspectRatioXToY
 {
@@ -1181,8 +1106,9 @@ inline const char* toFilenameShort(const char* filename) {
             _normalMap = normalTexture;
         }
 
-        [self updateImageSettings:fullFilename
-                            image:image];
+        // this is the actual format, may have been decoded
+        MyMTLPixelFormat format = (MyMTLPixelFormat)_colorMap.pixelFormat;
+       _data->updateImageSettings(fullFilename, image, format);
     }
 
     [self resetSomeImageSettings:isTextureNew];
@@ -1256,8 +1182,8 @@ inline const char* toFilenameShort(const char* filename) {
             _normalMap = nil;
         }
 
-        [self updateImageSettings:fullFilename
-                            image:image];
+        MyMTLPixelFormat format = (MyMTLPixelFormat)_colorMap.pixelFormat;
+        _data->updateImageSettings(fullFilename, image, format);
     }
 
     [self resetSomeImageSettings:isTextureNew];
@@ -1265,199 +1191,17 @@ inline const char* toFilenameShort(const char* filename) {
     return YES;
 }
 
-// only called on new or modstamp-changed image
-- (void)updateImageSettings:(const string &)fullFilename
-                      image:(KTXImage &)image
-{
-    _showSettings->isModel = false;
-
-    // this is the actual format, may have been decoded
-    id<MTLTexture> texture = _colorMap;
-    MyMTLPixelFormat format = (MyMTLPixelFormat)texture.pixelFormat;
-
-    // format may be trancoded to gpu-friendly format
-    MyMTLPixelFormat originalFormat = image.pixelFormat;
-
-    _showSettings->blockX = image.blockDims().x;
-    _showSettings->blockY = image.blockDims().y;
-
-    _showSettings->isSigned = isSignedFormat(format);
-    
-    TexContentType texContentType = findContentTypeFromFilename(fullFilename.c_str());
-    _showSettings->texContentType = texContentType;
-    //_showSettings->isSDF = isSDF;
-
-    // textures are already premul, so don't need to premul in shader
-    // should really have 3 modes, unmul, default, premul
-    bool isPNG = isPNGFilename(fullFilename.c_str());
-
-    _showSettings->isPremul = image.isPremul();
-    _showSettings->doShaderPremul = false;
-    if (texContentType == TexContentTypeAlbedo && isPNG) {
-        _showSettings->doShaderPremul =
-            true;  // convert to premul in shader, so can see other channels
-    }
-
-    int32_t numChannels = numChannelsOfFormat(originalFormat);
-    _showSettings->numChannels = numChannels;
-
-    // TODO: identify if texture holds normal data from the props
-    // have too many 4 channel normals that shouldn't swizzle like this
-    // kramTextures.py is using etc2rg on iOS for now, and not astc.
-
-    _showSettings->isSwizzleAGToRG = false;
-
-    // For best sdf and normal reconstruct from ASTC or BC3, must use RRR1 and
-    // GGGR or RRRG BC1nm multiply r*a in the shader, but just use BC5 anymore.
-    //    if (isASTCFormat(originalFormat) && isNormal) {
-    //        // channels after = "ag01"
-    //        _showSettings->isSwizzleAGToRG = true;
-    //    }
-
-    // can derive these from texture queries
-    _showSettings->mipCount = (int32_t)image.mipLevels.size();
-    _showSettings->faceCount = (image.textureType == MyMTLTextureTypeCube ||
-                                image.textureType == MyMTLTextureTypeCubeArray)
-                                   ? 6
-                                   : 0;
-    _showSettings->arrayCount = (int32_t)image.header.numberOfArrayElements;
-    _showSettings->sliceCount = (int32_t)image.depth;
-
-    _showSettings->imageBoundsX = (int32_t)image.width;
-    _showSettings->imageBoundsY = (int32_t)image.height;
-}
-
-float zoom3D = 1.0f;
 
 - (void)resetSomeImageSettings:(BOOL)isNewFile
 {
-    // only reset these on new texture, but have to revalidate
-    if (isNewFile) {
-        // then can manipulate this after loading
-        _showSettings->mipNumber = 0;
-        _showSettings->faceNumber = 0;
-        _showSettings->arrayNumber = 0;
-        _showSettings->sliceNumber = 0;
-
-        _showSettings->channels = TextureChannels::ModeRGBA;
-
-        // wish could keep existing setting, but new texture might not
-        // be supported debugMode for new texture
-        _showSettings->debugMode = DebugMode::DebugModeNone;
-
-        _showSettings->shapeChannel = ShapeChannel::ShapeChannelNone;
-    }
-    else {
-        // reloaded file may have different limits
-        _showSettings->mipNumber =
-            std::min(_showSettings->mipNumber, _showSettings->mipCount);
-        _showSettings->faceNumber =
-            std::min(_showSettings->faceNumber, _showSettings->faceCount);
-        _showSettings->arrayNumber =
-            std::min(_showSettings->arrayNumber, _showSettings->arrayCount);
-        _showSettings->sliceNumber =
-            std::min(_showSettings->sliceNumber, _showSettings->sliceCount);
-    }
-
-    [self updateProjTransform];
-
+    _data->resetSomeImageSettings(isNewFile);
+    
     // the rect is ar:1 for images
     float aspectRatioXtoY = _showSettings->imageAspectRatio();
     [self _createMeshRect:aspectRatioXtoY];
-
-    // this controls viewMatrix (global to all visible textures)
-    _showSettings->panX = 0.0f;
-    _showSettings->panY = 0.0f;
-
-    _showSettings->zoom = _showSettings->zoomFit;
-
-    // Y is always 1.0 on the plane, so scale to imageBoundsY
-    // plane is already a non-uniform size, so can keep uniform scale
-    
-    // have one of these for each texture added to the viewer
-    //float scaleX = MAX(1, _showSettings->imageBoundsX);
-    float scaleY = MAX(1, _showSettings->imageBoundsY);
-    float scaleX = scaleY;
-    float scaleZ = scaleY;
-
-    _modelMatrix =
-        float4x4(float4m(scaleX, scaleY, scaleZ, 1.0f)); // uniform scale
-    _modelMatrix = _modelMatrix *
-                   matrix4x4_translation(0.0f, 0.0f, -1.0);  // set z=-1 unit back
-
-    // uniform scaled 3d primitive
-    float scale = scaleY; // MAX(scaleX, scaleY);
-
-    // store the zoom into thew view matrix
-    // fragment tangents seem to break down at high model scale due to precision
-    // differences between worldPos and uv
-//    static bool useZoom3D = false;
-//    if (useZoom3D) {
-//        zoom3D = scale;  // * _showSettings->viewSizeX / 2.0f;
-//        scale = 1.0;
-//    }
-
-    _modelMatrix3D = float4x4(float4m(scale, scale, scale, 1.0f));  // uniform scale
-    _modelMatrix3D =
-        _modelMatrix3D *
-        matrix4x4_translation(0.0f, 0.0f, -1.0f);  // set z=-1 unit back
 }
 
-- (float4x4)computeImageTransform:(float)panX
-                             panY:(float)panY
-                             zoom:(float)zoom
-{
-    // translate
-    float4x4 panTransform = matrix4x4_translation(-panX, panY, 0.0);
 
-    // non-uniform scale is okay here, only affects ortho volume
-    // setting this to uniform zoom and object is not visible, zoom can be 20x in
-    // x and y
-    if (_showSettings->is3DView) {
-        zoom *= zoom3D;
-    }
-
-    float4x4 viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));
-    viewMatrix = panTransform * viewMatrix;
-
-    // scale
-    if (_showSettings->is3DView) {
-        return _projectionMatrix * viewMatrix * _modelMatrix3D;
-    }
-    else {
-        return _projectionMatrix * viewMatrix * _modelMatrix;
-    }
-}
-
-inline bool almost_equal_elements(float3 v, float tol)
-{
-    return (fabs(v.x - v.y) < tol) && (fabs(v.x - v.z) < tol);
-}
-
-inline const float3x3& toFloat3x3(const float4x4 &m) { return (const float3x3 &)m; }
-
-float4 inverseScaleSquared(const float4x4 &m)
-{
-    float3 scaleSquared = float3m(length_squared(m.columns[0].xyz),
-                                  length_squared(m.columns[1].xyz),
-                                  length_squared(m.columns[2].xyz));
-
-    // if uniform, then set scaleSquared all to 1
-    if (almost_equal_elements(scaleSquared, 1e-5f)) {
-        scaleSquared = float3m(1.0f);
-    }
-
-    // don't divide by 0
-    float3 invScaleSquared =
-        recip(simd::max(float3m(0.0001 * 0.0001), scaleSquared));
-
-    // identify determinant here for flipping orientation
-    // all shapes with negative determinant need orientation flipped for
-    // backfacing and need to be grouned together if rendering with instancing
-    float det = determinant(toFloat3x3(m));
-
-    return float4m(invScaleSquared, det);
-}
 
 - (void)_updateGameState
 {
@@ -1568,59 +1312,18 @@ float4 inverseScaleSquared(const float4x4 &m)
         uniforms.isInsetByHalfPixel = true;
     }
 
-    // translate
-    float4x4 panTransform =
-        matrix4x4_translation(-_showSettings->panX, _showSettings->panY, 0.0);
-
+    _data->updateTransforms();
+    
     // this is an animated effect, that overlays the shape uv wires over the image
     uniforms.isUVPreview = _showSettings->uvPreview > 0.0;
     uniforms.uvPreview = _showSettings->uvPreview;
-    
-    // scale
-    float zoom = _showSettings->zoom;
-
-    if (_showSettings->is3DView) {
-        _viewMatrix3D = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));  // non-uniform
-        _viewMatrix3D = panTransform * _viewMatrix3D;
-
-        // viewMatrix should typically be the inverse
-        //_viewMatrix = simd_inverse(_viewMatrix3D);
-
-        float4x4 projectionViewMatrix = _projectionMatrix * _viewMatrix3D;
-        uniforms.projectionViewMatrix = projectionViewMatrix;
-
-        // works when only one texture, but switch to projectViewMatrix
-        uniforms.modelMatrix = _modelMatrix3D;
-
-        uniforms.modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix3D);
-
-        _showSettings->isInverted = uniforms.modelMatrixInvScale2.w < 0.0f;
-
-        // cache the camera position
-        uniforms.cameraPosition =
-            inverse(_viewMatrix3D).columns[3].xyz;  // this is all ortho
-    }
-    else {
-        _viewMatrix = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));
-        _viewMatrix = panTransform * _viewMatrix;
-
-        // viewMatrix should typically be the inverse
-        //_viewMatrix = simd_inverse(_viewMatrix3D);
-
-        float4x4 projectionViewMatrix = _projectionMatrix * _viewMatrix;
-        uniforms.projectionViewMatrix = projectionViewMatrix;
-
-        // works when only one texture, but switch to projectViewMatrix
-        uniforms.modelMatrix = _modelMatrix;
-
-        uniforms.modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix);
-
-        _showSettings->isInverted = uniforms.modelMatrixInvScale2.w < 0.0f;
-
-        // cache the camera position
-        uniforms.cameraPosition =
-            inverse(_viewMatrix).columns[3].xyz;  // this is all ortho
-    }
+   
+    uniforms.projectionViewMatrix = _data->_projectionViewMatrix;
+    uniforms.cameraPosition = _data->_cameraPosition;
+   
+    // This is per object
+    uniforms.modelMatrix = _data->_modelMatrix;
+    uniforms.modelMatrixInvScale2 = _data->_modelMatrixInvScale2;
 
     //_rotation += .01;
 }
@@ -1881,8 +1584,8 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
             // do not modify viewMatrix here since that messes with world space.
     
             // set the view and projection matrix
-            _gltfRenderer.viewMatrix = _viewMatrix * regularizationMatrix;
-            _gltfRenderer.projectionMatrix = _projectionMatrix;
+            _gltfRenderer.viewMatrix = _data->_viewMatrix * regularizationMatrix;
+            _gltfRenderer.projectionMatrix = _data->_projectionMatrix;
     
             RenderScope drawModelScope( renderEncoder, "DrawModel" );
             [_gltfRenderer renderScene:_asset.defaultScene commandBuffer:commandBuffer commandEncoder:renderEncoder];
@@ -2496,7 +2199,7 @@ private:
 
     _showSettings->viewContentScaleFactor = framebufferScale;
 
-    [self updateProjTransform];
+    _data->updateProjTransform();
     
 #if USE_GLTF
     _gltfRenderer.drawableSize = size;
@@ -2504,7 +2207,7 @@ private:
     _gltfRenderer.depthStencilPixelFormat = view.depthStencilPixelFormat;
 #endif
     
-    [self updateProjTransform];
+    _data->updateProjTransform();
 }
 
 #if USE_GLTF

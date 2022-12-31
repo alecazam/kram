@@ -101,8 +101,8 @@ typedef struct {
         
         //_commandQueue = [_device newCommandQueue];
         
-        _viewMatrix = matrix_identity_float4x4;
-        _projectionMatrix = matrix_identity_float4x4;
+        //_viewMatrix = matrix_identity_float4x4;
+        //_projectionMatrix = matrix_identity_float4x4;
 
         _drawableSize = CGSizeMake(1, 1);
         _colorPixelFormat = MTLPixelFormatBGRA8Unorm;

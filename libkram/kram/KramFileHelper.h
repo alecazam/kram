@@ -21,6 +21,8 @@ class FileHelper {
 public:
     ~FileHelper();
 
+    bool isDirectory(const char* filename) const;
+    
     bool exists(const char* filename) const;
 
     bool open(const char* filename, const char* access);
