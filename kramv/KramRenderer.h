@@ -35,6 +35,12 @@ class Data;
 class KTXImage;
 }
 
+// Need renderer to be able to call back up to view to update hud.
+@protocol MyMTKViewUpdates <NSObject>
+- (void)updateEyedropperText;
+@end
+
+
 // Our platform independent renderer class.   Implements the MTKViewDelegate
 // protocol which
 //   allows it to accept per-frame update and drawable resize callbacks.
@@ -71,6 +77,9 @@ class KTXImage;
 
 // called from view and renderer in render loop
 - (void)updateAnimationState:(nonnull MTKView*)view;
+
+// So caller can respond to completed callback
+- (void)setEyedropperDelegate:(nullable id)delegate;
 
 // can play animations in gltf models
 @property (nonatomic) BOOL playAnimations;

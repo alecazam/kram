@@ -1480,8 +1480,9 @@ void Data::showEyedropperData(const float2& uv)
         mipX = (int32_t)(uv.x * mipX);
         mipY = (int32_t)(uv.y * mipY);
 
-        _showSettings->textureLookupMipX = mipX;
-        _showSettings->textureLookupMipY = mipY;
+        // Has to be set in other call, not here
+        //_showSettings->textureLookupMipX = mipX;
+        //_showSettings->textureLookupMipY = mipY;
 
         // TODO: may want to return mip in pixel readback
         // don't have it right now, so don't display if preview is enabled
@@ -2004,28 +2005,11 @@ void Data::updateEyedropper()
     }
     
     if (_showSettings->isEyedropperFromDrawable()) {
-        // this only needs the cursor location, but can't supply uv to
-        // displayPixelData
+        _showSettings->lastCursorX = _showSettings->cursorX;
+        _showSettings->lastCursorY = _showSettings->cursorY;
 
-        //if (_showSettings->lastCursorX != _showSettings->cursorX ||
-        //    _showSettings->lastCursorY != _showSettings->cursorY) {
-            // TODO: this means pan/zoom doesn't update data, may want to track some
-            // absolute location in virtal canvas.
-
-            _showSettings->lastCursorX = _showSettings->cursorX;
-            _showSettings->lastCursorY = _showSettings->cursorY;
-
-            // This just samples from drawable, so no re-render is needed
-            showEyedropperData(float2m(0, 0));
-
-            // TODO: remove this, but only way to get drawSamples to execute right
-            // now, but then entire texture re-renders and that's not power efficient.
-            // Really just want to sample from the already rendered texture since
-            // content isn't animated.
-
-            //self.needsDisplay = YES;
-        //}
-
+        // This just samples from drawable, so no re-render is needed
+        // showEyedropperData(float2m(0, 0));
         return;
     }
 
@@ -2125,7 +2109,26 @@ void Data::updateEyedropper()
             _showSettings->textureLookupX = newX;
             _showSettings->textureLookupY = newY;
             
-            showEyedropperData(uv);
+            // show block num
+            int mipLOD = _showSettings->mipNumber;
+
+            int mipX = _showSettings->imageBoundsX;
+            int mipY = _showSettings->imageBoundsY;
+
+            mipX = mipX >> mipLOD;
+            mipY = mipY >> mipLOD;
+
+            mipX = std::max(1, mipX);
+            mipY = std::max(1, mipY);
+
+            mipX = (int32_t)(uv.x * mipX);
+            mipY = (int32_t)(uv.y * mipY);
+
+            // Has to be set in other call, not here
+            _showSettings->textureLookupMipX = mipX;
+            _showSettings->textureLookupMipY = mipY;
+            
+            // showEyedropperData(uv);
         }
     }
 }

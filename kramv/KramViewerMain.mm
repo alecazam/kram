@@ -988,8 +988,9 @@ NSDictionary* pasteboardOptions = @{
             [self setHudText:text.c_str()];
         }
 
-        [self updateEyedropper];
-        //self.needsDisplay = YES;
+        // Cause a new sample for eyedropper
+        _data.updateEyedropper();
+        self.needsDisplay = YES;
     }
 }
 
@@ -1053,7 +1054,7 @@ NSDictionary* pasteboardOptions = @{
         return;
     }
     
-    // pixel in non-square window coords, run thorugh inverse to get texel space
+    // pixel in non-square window coords, run through inverse to get texel space
     // I think magnofication of zoom gesture is affecting coordinates reported by
     // this
 
@@ -1067,24 +1068,28 @@ NSDictionary* pasteboardOptions = @{
     _showSettings->cursorX = (int32_t)point.x;
     _showSettings->cursorY = (int32_t)point.y;
 
-    // should really do this in draw call, since moved message come in so quickly
-    // TODO: can this mark hud as needsDisplay, and then handle in update
-    [self updateEyedropper];
+    _data.updateEyedropper();
+    
+    // Cause a new sample for eyedropper (will run in Metal CompletedHandler)
+    self.needsDisplay = YES;
 }
 
 
 
 
--(void)updateEyedropper
+-(void)updateEyedropperText
 {
-    _data.updateEyedropper();
+    if (_showSettings->imageBoundsX == 0) return;
+    
+    float2 uv;
+    uv.x = _showSettings->textureLookupX / _showSettings->imageBoundsX;
+    uv.y = _showSettings->textureLookupY / _showSettings->imageBoundsY;
+    
+    // convert data to text
+    _data.showEyedropperData(uv);
     
     // This calls setNeedsDisplay on the hud section that displays the eyeDropper
     [self updateHudText];
-    
-    // TODO: remove this, but only way to get drawSamples to execute right now,
-    // but then entire texture re-renders and that's not power efficient.
-   self.needsDisplay = YES;
 }
 
 - (void)setEyedropperText:(const char *)text
@@ -1105,6 +1110,8 @@ NSDictionary* pasteboardOptions = @{
     string text = _data.textFromSlots();
 
     NSString *textNS = [NSString stringWithUTF8String:text.c_str()];
+    
+    // This is drop shadowed by drawing same text twice
     _hudLabel2.stringValue = textNS;
     _hudLabel2.needsDisplay = YES;
     
@@ -1161,7 +1168,7 @@ NSDictionary* pasteboardOptions = @{
     }
 }
 
-// TODO: movef to data, but eliminate CGRect usage
+// TODO: move to data, but eliminate CGRect usage
 - (void)updatePan:(float)panX panY:(float)panY
 {
     //Renderer* renderer = (Renderer *)self.delegate;
@@ -1217,8 +1224,9 @@ NSDictionary* pasteboardOptions = @{
             [self setHudText:text.c_str()];
         }
 
-        [self updateEyedropper];
-        //self.needsDisplay = YES;
+        // Cause a new sample from Metal to eyeDropper
+        _data.updateEyedropper();
+        self.needsDisplay = YES;
     }
 }
 
@@ -1732,6 +1740,8 @@ NSDictionary* pasteboardOptions = @{
 
     // ObjC++ delegate
     _view.delegate = _renderer;
+    
+    [_renderer setEyedropperDelegate:_view];
 }
 
 

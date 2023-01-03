@@ -201,6 +201,7 @@ struct ViewFramebufferData {
     NSURLSession* _urlSession;
 #endif
 
+    __weak id _delegateHud;
 }
 
 @synthesize playAnimations;
@@ -726,7 +727,7 @@ struct packed_float3 {
 {
     bool animateDisplay = self.playAnimations;
     
-    // animate the uvPreviw until it reaches endPoint, no scrubber yet
+    // animate the uvPreview until it reaches endPoint, no scrubber yet
     _showSettings->updateUVPreviewState();
     
     if (_showSettings->uvPreviewFrames > 0) {
@@ -738,6 +739,11 @@ struct packed_float3 {
     view.paused = !animateDisplay;
 }
 
+// So caller can respond to completed callback
+- (void)setEyedropperDelegate:(nullable id)delegate
+{
+    _delegateHud = delegate;
+}
 
 - (void)updateModelSettings:(const string &)fullFilename
 {
@@ -2098,10 +2104,16 @@ private:
             [texture getBytes:&data bytesPerRow:16 fromRegion:region mipmapLevel:0];
         }
 
-        // return the value at the sample
-        self->_showSettings->textureResult = data;
-        self->_showSettings->textureResultX = textureLookupX;
-        self->_showSettings->textureResultY = textureLookupY;
+        // Call this to update the hud text.
+        // This makes sure the frame delay is accounted for.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // return the value at the sample
+            self->_showSettings->textureResult = data;
+            self->_showSettings->textureResultX = textureLookupX;
+            self->_showSettings->textureResultY = textureLookupY;
+            
+            [self->_delegateHud updateEyedropperText];
+        });
         
         // TODO: This completed handler runs long after the hud has updated
         // so need to invalidate the hud.  So the pixel location is out of date.
