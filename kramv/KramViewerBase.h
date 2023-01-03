@@ -412,7 +412,8 @@ struct ActionState
 enum TextSlot
 {
     kTextSlotHud,
-    kTextSlotEyedropper
+    kTextSlotEyedropper,
+    kTextSlotAtlas
 };
 
 struct File {
@@ -464,7 +465,7 @@ struct Data {
 
     bool findFilename(const string& filename);
     bool findFilenameShort(const string& filename);
-    const Atlas* findAtlasAtCursor(float2 pt);
+    const Atlas* findAtlasAtUV(float2 uv);
     bool isArchive() const;
     bool loadFile();
     
@@ -482,7 +483,7 @@ struct Data {
     vector<Action>& actions() { return _actions; }
     void initDisabledButtons();
 
-    string textFromSlots() const;
+    string textFromSlots(bool isFileListHidden) const;
     void setTextSlot(TextSlot slot, const char* text);
 
     void loadFilesFromUrls(vector<string>& urls, bool skipSubdirs);
@@ -507,8 +508,9 @@ private:
 public:
     void showEyedropperData(const float2& uv);
     void setEyedropperText(const char * text);
+    void setAtlasText(const char * text);
     void updateTransforms();
-
+   
     //----------------
     float4x4 _projectionMatrix;
     

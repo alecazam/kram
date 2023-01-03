@@ -961,11 +961,14 @@ bool isPtInRect(float2 pt, float4 r)
     return all((pt >= r.xy) & (pt <= r.xy + r.zw));
 }
 
-const Atlas* Data::findAtlasAtCursor(float2 pt)
+const Atlas* Data::findAtlasAtUV(float2 pt)
 {
+    if (_showSettings->atlas.empty()) return nullptr;
+    if (_showSettings->imageBoundsX == 0) return nullptr;
+   
     const Atlas* atlas = nullptr;
     
-    // TODO: rects are in uv, so need to convert pt
+    // Note: rects are in uv
     
     // This might need to become an atlas array index instead of ptr
     const Atlas* lastAtlas = _showSettings->lastAtlas;
@@ -1447,6 +1450,8 @@ void Data::showEyedropperData(const float2& uv)
                 break;
         }
 
+        // TODO: indicate px, mip, etc (f.e. showAll)
+        
         // debug mode
 
         // preview vs. not
@@ -1479,10 +1484,6 @@ void Data::showEyedropperData(const float2& uv)
 
         mipX = (int32_t)(uv.x * mipX);
         mipY = (int32_t)(uv.y * mipY);
-
-        // Has to be set in other call, not here
-        //_showSettings->textureLookupMipX = mipX;
-        //_showSettings->textureLookupMipY = mipY;
 
         // TODO: may want to return mip in pixel readback
         // don't have it right now, so don't display if preview is enabled
@@ -1605,7 +1606,12 @@ void Data::setEyedropperText(const char * text)
     setTextSlot(kTextSlotEyedropper, text);
 }
 
-string Data::textFromSlots() const
+void Data::setAtlasText(const char * text)
+{
+    setTextSlot(kTextSlotAtlas, text);
+}
+
+string Data::textFromSlots(bool isFileListHidden) const
 {
     // combine textSlots
     string text = _textSlots[kTextSlotHud];
@@ -1613,9 +1619,15 @@ string Data::textFromSlots() const
         text += "\n";
         
     // don't show eyedropper text with table up, it's many lines and overlaps
-    // TODO: fix
-    // if (!_tableView.hidden)
+    if (!isFileListHidden)
+    {
         text += _textSlots[kTextSlotEyedropper];
+        if (!text.empty() && text.back() != '\n')
+            text += "\n";
+        
+        text += _textSlots[kTextSlotAtlas];
+    }
+    
     
     return text;
 }

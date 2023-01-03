@@ -1082,12 +1082,32 @@ NSDictionary* pasteboardOptions = @{
     if (_showSettings->imageBoundsX == 0) return;
     
     float2 uv;
-    uv.x = _showSettings->textureLookupX / _showSettings->imageBoundsX;
-    uv.y = _showSettings->textureLookupY / _showSettings->imageBoundsY;
+    uv.x = _showSettings->textureLookupX / (float)_showSettings->imageBoundsX;
+    uv.y = _showSettings->textureLookupY / (float)_showSettings->imageBoundsY;
     
     // convert data to text
     _data.showEyedropperData(uv);
     
+    const Atlas* atlas = _data.findAtlasAtUV(uv);
+    if (atlas) {
+        // convert back to pixels in the current mip
+        float mipBoundsX = std::max(1, _showSettings->imageBoundsX >> _showSettings->mipNumber);
+        float mipBoundsY = std::max(1, _showSettings->imageBoundsY >> _showSettings->mipNumber);
+        
+        float4 rect = atlas->rect();
+        rect.xz *= mipBoundsX;
+        rect.yw *= mipBoundsY;
+        
+        string atlasText;
+        sprintf(atlasText, "%d,%d %dx%d %s",
+                (int32_t)rect.x, (int32_t)rect.y,
+                (int32_t)rect.z, (int32_t)rect.w,
+                atlas->name.c_str());
+        _data.setAtlasText(atlasText.c_str());
+    }
+    else {
+        _data.setAtlasText("");
+    }
     // This calls setNeedsDisplay on the hud section that displays the eyeDropper
     [self updateHudText];
 }
@@ -1107,7 +1127,7 @@ NSDictionary* pasteboardOptions = @{
 - (void)updateHudText
 {
     // combine textSlots
-    string text = _data.textFromSlots();
+    string text = _data.textFromSlots(_tableView.hidden);
 
     NSString *textNS = [NSString stringWithUTF8String:text.c_str()];
     
