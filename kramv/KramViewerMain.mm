@@ -1188,6 +1188,19 @@ NSDictionary* pasteboardOptions = @{
     }
 }
 
+bool rectIntersectsRect(float4 lhs, float4 rhs)
+{
+    // convert rect from (origin, size) to (min, max)
+    float4 lRect = lhs.xyxy;
+    lRect.zw += lhs.zw;
+    
+    float4 rRect = rhs.xyxy;
+    rRect.zw += rhs.zw;
+    
+    return all(lRect.xy <= rRect.zw) && // min <= max
+           all(lRect.zw >= rRect.xy);   // max >= min
+}
+
 // TODO: move to data, but eliminate CGRect usage
 - (void)updatePan:(float)panX panY:(float)panY
 {
@@ -1214,20 +1227,20 @@ NSDictionary* pasteboardOptions = @{
     float2 ptSize = abs(pt0.xy - pt1.xy);
 
     // see that rectangle intersects the view, view is -1 to 1
-    CGRect imageRect = CGRectMake(ptOrigin.x, ptOrigin.y, ptSize.x, ptSize.y);
-    CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
+    float4 imageRect = float4m(ptOrigin.x, ptOrigin.y, ptSize.x, ptSize.y);
+    float4 viewRect = float4m(-1.0f, -1.0f, 2.0f, 2.0f);
 
     int32_t numTexturesX = _showSettings->totalChunks();
     int32_t numTexturesY = _showSettings->mipCount;
 
     if (_showSettings->isShowingAllLevelsAndMips) {
-        imageRect.origin.y -= (numTexturesY - 1) * imageRect.size.height;
+        imageRect.y -= (numTexturesY - 1) * imageRect.w;
 
-        imageRect.size.width *= numTexturesX;
-        imageRect.size.height *= numTexturesY;
+        imageRect.z *= numTexturesX; // w
+        imageRect.w *= numTexturesY; // h
     }
 
-    if (!NSIntersectsRect(imageRect, viewRect)) {
+    if (!rectIntersectsRect(imageRect, viewRect)) {
         return;
     }
 

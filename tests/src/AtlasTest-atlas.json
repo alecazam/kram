@@ -9,7 +9,7 @@
 "regions":
 [
     {"name":"red", "rpx":[0,0,32,32]},
-    {"name":"green", "rpx":[0,64,32,32]},
-    {"name": "blue", "rpx": [64,32,32,32]},
+    {"name":"green", "rpx": [64,32,32,32]},
+    {"name":"blue", "rpx":[0,64,32,32]},
 ]
 }
