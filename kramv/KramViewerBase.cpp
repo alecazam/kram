@@ -2378,7 +2378,7 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
     
     // toggle checkerboard for transparency
     else if (action == _actionChecker) {
-        if (action->isHidden) {
+        if (!action->isHidden) {
             _showSettings->isCheckerboardShown = !_showSettings->isCheckerboardShown;
             isChanged = true;
             text = "Checker ";
