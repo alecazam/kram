@@ -903,22 +903,22 @@ NSDictionary* pasteboardOptions = @{
     float2 ptOrigin = simd::min(pt0.xy, pt1.xy);
     float2 ptSize = abs(pt0.xy - pt1.xy);
 
-    CGRect imageRect = CGRectMake(ptOrigin.x, ptOrigin.y, ptSize.x, ptSize.y);
-    CGRect viewRect = CGRectMake(-1.0f, -1.0f, 2.0f, 2.0f);
+    float4 imageRect = float4m(ptOrigin.x, ptOrigin.y, ptSize.x, ptSize.y);
+    float4 viewRect = float4m(-1.0f, -1.0f, 2.0f, 2.0f);
 
     int32_t numTexturesX = _showSettings->totalChunks();
     int32_t numTexturesY = _showSettings->mipCount;
 
     if (_showSettings->isShowingAllLevelsAndMips) {
-        imageRect.origin.y -= (numTexturesY - 1) * imageRect.size.height;
+        imageRect.y -= (numTexturesY - 1) * imageRect.w;
 
-        imageRect.size.width *= numTexturesX;
-        imageRect.size.height *= numTexturesY;
+        imageRect.z *= numTexturesX; // w
+        imageRect.w *= numTexturesY; // h
     }
 
-    float visibleWidth = imageRect.size.width * _showSettings->viewSizeX /
+    float visibleWidth = imageRect.z * _showSettings->viewSizeX /
                          _showSettings->viewContentScaleFactor;
-    float visibleHeight = imageRect.size.height * _showSettings->viewSizeY /
+    float visibleHeight = imageRect.w * _showSettings->viewSizeY /
                           _showSettings->viewContentScaleFactor;
 
     // don't allow image to get too big
@@ -955,12 +955,12 @@ NSDictionary* pasteboardOptions = @{
     }
 
     // or completely off-screen
-    if (!NSIntersectsRect(imageRect, viewRect)) {
+    if (!rectIntersectsRect(imageRect, viewRect)) {
         isZoomChanged = false;
     }
     
     if (!isZoomChanged) {
-        _zoomGesture.magnification = _validMagnification;
+        _zoomGesture.magnification = _validMagnification; // objC
         return;
     }
 
@@ -972,25 +972,26 @@ NSDictionary* pasteboardOptions = @{
         _data.doZoomMath(zoom, newPan);
 
         // store this
-        _validMagnification = _zoomGesture.magnification;
+        _validMagnification = _zoomGesture.magnification; // objC
 
         _showSettings->zoom = zoom;
 
         _showSettings->panX = newPan.x;
         _showSettings->panY = newPan.y;
 
-        if (doPrintPanZoom) {
-            string text;
-            sprintf(text,
-                    "Pan %.3f,%.3f\n"
-                    "Zoom %.2fx\n",
-                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-            [self setHudText:text.c_str()];
-        }
+//        if (doPrintPanZoom) {
+//            string text;
+//            sprintf(text,
+//                    "Pan %.3f,%.3f\n"
+//                    "Zoom %.2fx\n",
+//                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+//            [self setHudText:text.c_str()];
+//        }
 
         // Cause a new sample for eyedropper
         _data.updateEyedropper();
-        self.needsDisplay = YES;
+        
+        self.needsDisplay = YES; // objC
     }
 }
 
@@ -1248,14 +1249,14 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
         _showSettings->panX = panX;
         _showSettings->panY = panY;
 
-        if (doPrintPanZoom) {
-            string text;
-            sprintf(text,
-                    "Pan %.3f,%.3f\n"
-                    "Zoom %.2fx\n",
-                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-            [self setHudText:text.c_str()];
-        }
+//        if (doPrintPanZoom) {
+//            string text;
+//            sprintf(text,
+//                    "Pan %.3f,%.3f\n"
+//                    "Zoom %.2fx\n",
+//                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+//            [self setHudText:text.c_str()];
+//        }
 
         // Cause a new sample from Metal to eyeDropper
         _data.updateEyedropper();

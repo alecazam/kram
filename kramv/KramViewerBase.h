@@ -413,7 +413,9 @@ enum TextSlot
 {
     kTextSlotHud,
     kTextSlotEyedropper,
-    kTextSlotAtlas
+    kTextSlotAtlas,
+    
+    kTextSlotCount // not a slot
 };
 
 struct File {
@@ -589,6 +591,6 @@ bool isSupportedModelFilename(const char* filename);
 bool isSupportedArchiveFilename(const char* filename);
 bool isSupportedJsonFilename(const char* filename);
 
-extern bool doPrintPanZoom;
+//extern bool doPrintPanZoom;
 
 }  // namespace kram

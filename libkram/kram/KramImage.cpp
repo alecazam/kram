@@ -1464,7 +1464,7 @@ void KramEncoder::addBaseProps(const ImageInfo& info, KTXImage& dstImage) const
     }
     else if (info.isSRGBDst) {
         // !hasAlpha doesn't change the channel designation
-        if (info.isPremultiplied) {
+        if (info.isPremultiplied || info.isSourcePremultiplied) {
             dstImage.addChannelProps("Alb.ra,Alb.ga,Alb.ba,Alb.a");
         }
         else {

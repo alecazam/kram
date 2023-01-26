@@ -2896,6 +2896,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
         // this means premul the data at read from srgb, this it to match photoshop
         else if (isStringEqual(word, "-premulrgb")) {
             isPremulRgb = true;
+            infoArgs.isSourcePremultiplied = true;
         }
 
         else if (isStringEqual(word, "-v") ||

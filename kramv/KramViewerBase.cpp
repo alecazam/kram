@@ -8,11 +8,11 @@ using namespace NAMESPACE_STL;
 
 #define ArrayCount(x) (sizeof(x) / sizeof(x[0]))
 
-#ifdef NDEBUG
-bool doPrintPanZoom = false;
-#else
-bool doPrintPanZoom = false;
-#endif
+//#ifdef NDEBUG
+//bool doPrintPanZoom = false;
+//#else
+//bool doPrintPanZoom = false;
+//#endif
 
 // Writing out to rgba32 for sampling, but unorm formats like ASTC and RGBA8
 // are still off and need to use the following.
@@ -677,7 +677,7 @@ Data::Data()
 {
     _showSettings = new ShowSettings();
     
-    _textSlots.resize(2);
+    _textSlots.resize(kTextSlotCount);
 }
 Data::~Data()
 {
@@ -2324,14 +2324,14 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
         _showSettings->panY = 0.0f;
         
         text = "Scale Image\n";
-        if (doPrintPanZoom) {
-            string tmp;
-            sprintf(tmp,
-                    "Pan %.3f,%.3f\n"
-                    "Zoom %.2fx\n",
-                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-            text += tmp;
-        }
+//        if (doPrintPanZoom) {
+//            string tmp;
+//            sprintf(tmp,
+//                    "Pan %.3f,%.3f\n"
+//                    "Zoom %.2fx\n",
+//                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+//            text += tmp;
+//        }
         
         isChanged = true;
     }
@@ -2350,14 +2350,14 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
             text = "Reload Model\n";
         else
             text = "Reload Image\n";
-        if (doPrintPanZoom) {
-            string tmp;
-            sprintf(tmp,
-                    "Pan %.3f,%.3f\n"
-                    "Zoom %.2fx\n",
-                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-            text += tmp;
-        }
+//        if (doPrintPanZoom) {
+//            string tmp;
+//            sprintf(tmp,
+//                    "Pan %.3f,%.3f\n"
+//                    "Zoom %.2fx\n",
+//                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+//            text += tmp;
+//        }
         
         isChanged = true;
     }

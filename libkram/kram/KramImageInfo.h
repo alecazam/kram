@@ -56,6 +56,7 @@ public:
     bool doMipmaps = true;  // default to mips on
     bool isVerbose = false;
     bool doSDF = false;
+    bool isSourcePremultiplied = false;
     bool isPremultiplied = false;
     bool isPrezero = false;
     bool isNormal = false;  // signed, but may be stored unorm and swizzled (f.e. astc/bc3nm gggr or rrrg)
@@ -138,6 +139,7 @@ public:
     bool isSigned = false;
     bool isNormal = false;
     bool isColorWeighted = false;
+    bool isSourcePremultiplied = false;
     bool isPremultiplied = false;  // don't premul
     bool isPrezero = false;
     bool isHDR = false;

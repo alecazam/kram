@@ -1008,11 +1008,17 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     isKTX2 = args.isKTX2;
     compressor = args.compressor;
 
-    isPrezero = args.isPrezero;
-    isPremultiplied = args.isPremultiplied;
-    if (isPremultiplied)
-        isPrezero = false;
-
+    isPrezero = false;
+    isPremultiplied = false;
+    isSourcePremultiplied = false;
+    
+    if (args.isSourcePremultiplied)
+        isSourcePremultiplied = true;
+    else if (args.isPremultiplied)
+        isPremultiplied = true;
+    else if (args.isPrezero)
+        isPrezero = true;
+    
     isNormal = args.isNormal;
 
     doSDF = args.doSDF;
