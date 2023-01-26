@@ -1163,8 +1163,12 @@ float4 DrawPixels(
         // fix that.  Also make this scale with zoom.
         
         // https://www.geeks3d.com/hacklab/20190225/demo-checkerboard-in-glsl/
+        
+        float2 coord = in.texCoord;
+        coord.x *= uniforms.uvToShapeRatio;
+        
         float repeats = 20.0;
-        float2 checker = floor(repeats * in.texCoord);
+        float2 checker = floor(repeats * coord);
         float selector = sign(fmod(checker.x + checker.y, 2.0));
         float cb = mix(float(1), float(222.0/255.0), selector);
         

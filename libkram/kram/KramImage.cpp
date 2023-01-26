@@ -1462,7 +1462,7 @@ void KramEncoder::addBaseProps(const ImageInfo& info, KTXImage& dstImage) const
     if (info.isNormal) {
         dstImage.addChannelProps("Nrm.x,Nrm.y,X,X");
     }
-    else if (info.isSRGBDst || info.isSourcePremultiplied) {
+    else if (info.isSRGBDst) {
         // !hasAlpha doesn't change the channel designation
         if (info.isPremultiplied || info.isSourcePremultiplied) {
             dstImage.addChannelProps("Alb.ra,Alb.ga,Alb.ba,Alb.a");
@@ -1471,7 +1471,11 @@ void KramEncoder::addBaseProps(const ImageInfo& info, KTXImage& dstImage) const
             dstImage.addChannelProps("Alb.r,Alb.g,Alb.b,Alb.a");
         }
     }
-
+    else if (info.isSourcePremultiplied)
+    {
+        dstImage.addChannelProps("Alb.ra,Alb.ga,Alb.ba,Alb.a");
+    }
+    
     // TODO: texture encode can depend on wrap vs. clamp state (f.e. normal map gen, sdf)
     // and formsts like PVRTC must know wrap/clamp before encode
     // address: Wrap, Clamp, MirrorWrap, MirrorClamp, BorderClamp, BorderClamp0

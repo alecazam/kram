@@ -372,9 +372,15 @@ struct ViewFramebufferData {
     // Important to set color space, or colors are wrong.  Why doesn't one of these work (or the default)
     // false is good for srgb -> rgba16f
     // true is good for non-srgb -> rgba16f
-    CGColorSpaceRef viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
-    //bool pickOne = false;
-    // pickOne ? kCGColorSpaceSRGB : kCGColorSpaceLinearSRGB);
+    CGColorSpaceRef viewColorSpace;
+    
+    // This doesn't look like Figma or Photoshop for a rgb,a = 255,0 to 255,1 gradient across a 256px wide rect.   The shader is saturating
+    // the color to 0,1.  So can get away with SRGB color space for now.
+    // This also lines up with Preview.
+    // viewColorSpace  = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
+    
+    viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    
     view.colorspace = viewColorSpace;
     
     view.colorPixelFormat = MTLPixelFormatRGBA16Float;
@@ -1212,28 +1218,28 @@ inline const char* toFilenameShort(const char* filename) {
 - (void)_updateGameState
 {
     /// Update any game state before encoding rendering commands to our drawable
-
+    
     Uniforms &uniforms =
-        *(Uniforms *)_dynamicUniformBuffer[_uniformBufferIndex].contents;
-
+    *(Uniforms *)_dynamicUniformBuffer[_uniformBufferIndex].contents;
+    
     uniforms.isNormal = _showSettings->texContentType == TexContentTypeNormal;
     uniforms.doShaderPremul = _showSettings->doShaderPremul;
     uniforms.isSigned = _showSettings->isSigned;
     uniforms.isSwizzleAGToRG = _showSettings->isSwizzleAGToRG;
-
+    
     uniforms.isSDF = _showSettings->texContentType == TexContentTypeSDF;
     uniforms.numChannels = _showSettings->numChannels;
     uniforms.lightingMode = (ShaderLightingMode)_showSettings->lightingMode;
-
+    
     MyMTLTextureType textureType = MyMTLTextureType2D;
     MyMTLPixelFormat textureFormat = MyMTLPixelFormatInvalid;
     if (_colorMap) {
         textureType = (MyMTLTextureType)_colorMap.textureType;
         textureFormat = (MyMTLPixelFormat)_colorMap.pixelFormat;
     }
-
+    
     uniforms.isCheckerboardShown = _showSettings->isCheckerboardShown;
-
+    
     // addressing mode
     bool isCube = (textureType == MyMTLTextureTypeCube ||
                    textureType == MyMTLTextureTypeCubeArray);
@@ -1241,26 +1247,26 @@ inline const char* toFilenameShort(const char* filename) {
     bool doEdge = !doWrap;
     bool doZero = !doEdge;
     uniforms.isWrap = doWrap ? _showSettings->isWrap : false;
-
+    
     uniforms.isPreview = _showSettings->isPreview;
-
+    
     uniforms.isNormalMapPreview = false;
     if (uniforms.isPreview) {
         uniforms.isNormalMapPreview = uniforms.isNormal || (_normalMap != nil);
-
+        
         if (_normalMap != nil) {
             uniforms.isNormalMapSigned =
-                isSignedFormat((MyMTLPixelFormat)_normalMap.pixelFormat);
+            isSignedFormat((MyMTLPixelFormat)_normalMap.pixelFormat);
             uniforms.isNormalMapSwizzleAGToRG = false;  // TODO: need a prop for this
         }
     }
-
+    
     // a few things to fix before enabling this
     uniforms.useTangent = _showSettings->useTangent;
-
+    
     uniforms.gridX = 0;
     uniforms.gridY = 0;
-
+    
     if (_showSettings->isPixelGridShown) {
         uniforms.gridX = 1;
         uniforms.gridY = 1;
@@ -1275,19 +1281,19 @@ inline const char* toFilenameShort(const char* filename) {
         uniforms.gridX = _showSettings->gridSizeX;
         uniforms.gridY = _showSettings->gridSizeY;
     }
-
+    
     // no debug mode when preview kicks on, make it possible to toggle back and
     // forth more easily
     uniforms.debugMode = (ShaderDebugMode)_showSettings->debugMode;
     uniforms.shapeChannel = (ShaderShapeChannel)_showSettings->shapeChannel;
     uniforms.channels = (ShaderTextureChannels)_showSettings->channels;
-
+    
     // turn these off in preview mode, but they may be useful?
     if (_showSettings->isPreview) {
         uniforms.debugMode = ShaderDebugMode::ShDebugModeNone;
         uniforms.shapeChannel = ShaderShapeChannel::ShShapeChannelNone;
     }
-
+    
     // crude shape experiment
     _showSettings->is3DView = true;
     switch (_showSettings->meshNumber) {
@@ -1304,26 +1310,39 @@ inline const char* toFilenameShort(const char* filename) {
         case 3:
             _mesh = _meshSphereMirrored;
             break;
-        // case 3: _mesh = _meshCylinder; break;
+            // case 3: _mesh = _meshCylinder; break;
         case 4:
             _mesh = _meshCapsule;
             break;
     }
     uniforms.is3DView = _showSettings->is3DView;
-
+    
     // on small textures can really see missing pixel (3 instead of 4 pixels)
     // so only do this on the sphere/capsule which wrap-around uv space
     uniforms.isInsetByHalfPixel = false;
     if (_showSettings->meshNumber >= 2 && doZero) {
         uniforms.isInsetByHalfPixel = true;
     }
-
+    
     _data->updateTransforms();
     
     // this is an animated effect, that overlays the shape uv wires over the image
     uniforms.isUVPreview = _showSettings->uvPreview > 0.0;
     uniforms.uvPreview = _showSettings->uvPreview;
-   
+    
+    uniforms.uvToShapeRatio = 1.0f;
+    switch(_showSettings->meshNumber) {
+        case 0:
+            if (_showSettings->imageBoundsY)
+                uniforms.uvToShapeRatio = _showSettings->imageBoundsX / (float)_showSettings->imageBoundsY;
+            break;
+        case 2:
+            uniforms.uvToShapeRatio = 2.0f;
+            break;
+        case 4:
+            uniforms.uvToShapeRatio = 2.0f * M_PI * 0.3333f;
+            break;
+    }
     uniforms.projectionViewMatrix = _data->_projectionViewMatrix;
     uniforms.cameraPosition = _data->_cameraPosition;
    

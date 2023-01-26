@@ -115,6 +115,7 @@ struct Uniforms {
     simd::float4 modelMatrixInvScale2;  // to supply inverse, w is determinant
     simd::float3 cameraPosition;        // world-space
     float uvPreview;
+    float uvToShapeRatio;
     
     bool isSigned;
     bool isNormal;

@@ -703,7 +703,7 @@ bool Data::loadAtlasFile(const char* filename)
     
     {
         std::vector<double> values;
-        string_view atlasName = atlasProps["name"].get_string().value_unsafe();
+        // string_view atlasName = atlasProps["name"].get_string().value_unsafe();
         
         uint64_t width = atlasProps["width"].get_uint64().value_unsafe();
         uint64_t height = atlasProps["height"].get_uint64().value_unsafe();
