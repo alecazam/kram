@@ -1522,7 +1522,7 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     // doesn't set imageURL or update the recent document menu
     
     // show the controls
-    if (!_data._noImageLoaded) {
+    if (_data._noImageLoaded) {
         _showSettings->isHideUI = false;
         _buttonStack.hidden = NO;  // show controls
         _data._noImageLoaded = false;
