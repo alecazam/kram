@@ -1,5 +1,5 @@
 # Make all line endings match macOS/linux, even on Windows.  This allows bash to run.
-text eol=lf
+* text eol=lf
 
 # commit various binary file types to git-lfs
 *.png filter=lfs diff=lfs merge=lfs -text
