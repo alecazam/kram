@@ -325,6 +325,13 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
 
     textureDescriptor.arrayLength = MAX(1, image.arrayCount());
 
+    // This is inefficient to set, but needed for viewwer.
+    // Only set if texture type is toggleable.
+    // only need this if changing components, type, etc.
+//    {
+//        textureDescriptor.usage |= MTLTextureUsagePixelFormatView;
+//    }
+    
     // ignoring 0 (auto mip), but might need to support for explicit formats
     // must have hw filtering support for format, and 32f filtering only first
     // appeared on A14/M1 and only get box filtering in API-level filters.  But

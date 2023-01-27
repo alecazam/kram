@@ -84,5 +84,11 @@ class KTXImage;
 // can play animations in gltf models
 @property (nonatomic) BOOL playAnimations;
 
+// can toggle on/off srgb if that is psosible
+@property (nonatomic) BOOL isToggleView;
+
+// true if a toggle is present
+@property (nonatomic) BOOL hasToggleView;
+
 @end
 

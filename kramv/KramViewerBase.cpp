@@ -1706,6 +1706,11 @@ void Data::updateUIAfterLoad()
     _actionSigned->setHidden(isSignedHidden);
     _actionChecker->setHidden(isCheckerboardHidden);
     
+    // only allow srgb to be disabled, not toggle on if off at load
+    MyMTLPixelFormat format = _showSettings->originalFormat;
+    bool isSrgb = isSrgbFormat(format);
+   _actionSrgb->setHidden(!isSrgb);
+    
     // also need to call after each toggle
     updateUIControlState();
 }
@@ -1792,6 +1797,9 @@ void Data::updateUIControlState()
     _actionPremul->setHighlight(premulState);
     _actionSigned->setHighlight(signedState);
     _actionChecker->setHighlight(checkerboardState);
+    
+    auto srgbState = toState(_showSettings->isSRGBShown);
+    _actionSrgb->setHighlight(srgbState);
 }
 
 // TODO: convert to C++ actions, and then call into Base holding all this
@@ -1892,6 +1900,7 @@ void Data::initActions()
         Action("M", "Mip", Key::M),
         Action("F", "Face", Key::F),
         Action("Y", "Array", Key::Y),
+        Action("9", "Srgb", Key::Num9),
         
         Action("↑", "Prev Item", Key::UpArrow),
         Action("↓", "Next Item", Key::DownArrow),
@@ -1941,7 +1950,8 @@ void Data::initActions()
         &_actionMip,
         &_actionFace,
         &_actionArray,
-        
+        &_actionSrgb,
+       
         &_actionPrevItem,
         &_actionItem,
         &_actionPrevCounterpart,
@@ -2383,6 +2393,16 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
             isChanged = true;
             text = "Checker ";
             text += _showSettings->isCheckerboardShown ? "On" : "Off";
+        }
+    }
+    
+    else if (action == _actionSrgb) {
+        if (!action->isHidden) {
+            _showSettings->isSRGBShown = !_showSettings->isSRGBShown;
+            
+            sprintf(text, "Format %s", _showSettings->isSRGBShown ? "srgb on" : "srgb off");
+            
+            isChanged = true;
         }
     }
     

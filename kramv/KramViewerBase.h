@@ -166,7 +166,7 @@ public:
     // TODO: Might eliminate this, since mips are either built with or without
     // srgb and disabling with a MTLView caused many flags to have to be set on
     // MTLTexture
-    // bool isSRGBShown = true;
+    bool isSRGBShown = false;
 
     // whether to use normal to tangent (false), or vertex tangents (true)
     bool useTangent = true;
@@ -556,6 +556,7 @@ public:
     Action* _actionWrap;
     Action* _actionPremul;
     Action* _actionSigned;
+    Action* _actionSrgb;
     
     Action* _actionDiff;
     Action* _actionDebug;

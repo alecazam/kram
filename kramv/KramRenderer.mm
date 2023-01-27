@@ -142,9 +142,10 @@ struct ViewFramebufferData {
 
     // TODO: Array< id<MTLTexture> > _textures;
     id<MTLTexture> _colorMap;
+    id<MTLTexture> _colorMapView;
     id<MTLTexture> _normalMap;
     id<MTLTexture> _lastDrawableTexture;
-
+    
     // border is a better edge sample, but at edges it filters in the transparent
     // color around the border which is undesirable.  It would be better if the hw
     // did clamp to edge until uv outside 0 to 1.  This results in having to inset
@@ -205,6 +206,8 @@ struct ViewFramebufferData {
 }
 
 @synthesize playAnimations;
+@synthesize isToggleView;
+@synthesize hasToggleView;
 
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view
                                     settings:(nonnull ShowSettings *)settings
@@ -373,17 +376,28 @@ struct ViewFramebufferData {
     // false is good for srgb -> rgba16f
     // true is good for non-srgb -> rgba16f
     CGColorSpaceRef viewColorSpace;
+    MTLPixelFormat format;
     
     // This doesn't look like Figma or Photoshop for a rgb,a = 255,0 to 255,1 gradient across a 256px wide rect.   The shader is saturating
     // the color to 0,1.  So can get away with SRGB color space for now.
     // This also lines up with Preview.
-    // viewColorSpace  = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
+    //viewColorSpace  = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
     
+    
+    
+    // was using 16f so could sample hdr images from it
+    //  and also so hdr data went out to the display
+    format = MTLPixelFormatRGBA16Float;
     viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    //viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceLinearSRGB);
     
+    // This doesn't work with or without srgb color space
+    //format = MTLPixelFormatRGBA8Unorm_sRGB;
+   
+    view.colorPixelFormat = format;
     view.colorspace = viewColorSpace;
+   
     
-    view.colorPixelFormat = MTLPixelFormatRGBA16Float;
     view.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
     view.sampleCount = 1;
 
@@ -1077,6 +1091,26 @@ inline const char* toFilenameShort(const char* filename) {
         if (!texture) {
             return NO;
         }
+        
+        bool isPNG = isPNGFilename(fullFilename.c_str());
+        
+        // to be able to turn on/off srgb, need to set a view
+        id<MTLTexture> textureView;
+        MyMTLPixelFormat textureFormat = (MyMTLPixelFormat)image.pixelFormat;
+        
+        // TODO: may only want to offer on png files, where format is
+        MyMTLPixelFormat viewFormat = textureFormat;
+        if (isPNG) // && isSrgbFormat(textureFormat))
+            viewFormat = toggleSrgbFormat(textureFormat);
+        if (viewFormat == textureFormat) {
+            viewFormat = MyMTLPixelFormatInvalid;
+        }
+        else {
+            // This may fail.
+            textureView = [texture newTextureViewWithPixelFormat:(MTLPixelFormat)viewFormat];
+            
+            textureView.label = [texture.label stringByAppendingString:@"View"];
+        }
 
         // hacking in the normal texture here, so can display them together during
         // preview
@@ -1095,7 +1129,6 @@ inline const char* toFilenameShort(const char* filename) {
         // Would need original png data to look at header
         // This is only info on image, not on imageNormal
 
-        bool isPNG = isPNGFilename(fullFilename.c_str());
         if (!isArchive && isPNG) {
             _showSettings->imageInfo = kramInfoToString(fullFilename, false);
             _showSettings->imageInfoVerbose = kramInfoToString(fullFilename, true);
@@ -1115,7 +1148,10 @@ inline const char* toFilenameShort(const char* filename) {
 
         @autoreleasepool {
             _colorMap = texture;
+            _colorMapView = textureView;
             _normalMap = normalTexture;
+            
+            self.hasToggleView = _colorMapView != nil;
         }
 
         // this is the actual format, may have been decoded
@@ -1166,12 +1202,31 @@ inline const char* toFilenameShort(const char* filename) {
             return NO;
         }
 
+        bool isPNG = isPNGFilename(fullFilename.c_str());
+        
+        // to be able to turn on/off srgb, need to set a view
+        id<MTLTexture> textureView;
+        MyMTLPixelFormat textureFormat = (MyMTLPixelFormat)image.pixelFormat;
+        
+        // DONE: may only want to offer on png files, where format is
+        MyMTLPixelFormat viewFormat = textureFormat;
+        if (isPNG) // && isSrgbFormat(textureFormat))
+            viewFormat = toggleSrgbFormat(textureFormat);
+        if (viewFormat == textureFormat) {
+            viewFormat = MyMTLPixelFormatInvalid;
+        }
+        else {
+            // This may fail.
+            textureView = [texture newTextureViewWithPixelFormat:(MTLPixelFormat)viewFormat];
+            
+            textureView.label = [texture.label stringByAppendingString:@"View"];
+        }
+        
         // This doesn't look for or load corresponding normal map, but should
 
         // this is not the png data, but info on converted png to ktx level
         // But this avoids loading the image 2 more times
         // Size of png is very different than decompressed or recompressed ktx
-        bool isPNG = isPNGFilename(fullFilename.c_str());
         if (isPNG) {
             _showSettings->imageInfo = kramInfoToString(fullFilename, false);
             _showSettings->imageInfoVerbose = kramInfoToString(fullFilename, true);
@@ -1191,7 +1246,10 @@ inline const char* toFilenameShort(const char* filename) {
 
         @autoreleasepool {
             _colorMap = texture;
+            _colorMapView = textureView;
             _normalMap = nil;
+            
+            self.hasToggleView = _colorMapView != nil;
         }
 
         MyMTLPixelFormat format = (MyMTLPixelFormat)_colorMap.pixelFormat;
@@ -1696,8 +1754,12 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                                       offset:0
                                      atIndex:BufferIndexUniforms];
 
+            id<MTLTexture> tex = _colorMap;
+            if (self.isToggleView && _colorMap && _colorMapView)
+                tex = _colorMapView;
+            
             // set the texture up
-            [renderEncoder setFragmentTexture:_colorMap atIndex:TextureIndexColor];
+            [renderEncoder setFragmentTexture:tex atIndex:TextureIndexColor];
 
             // setup normal map
             if (_normalMap && _showSettings->isPreview) {
@@ -2196,8 +2258,12 @@ private:
             break;
     }
 
+    id<MTLTexture> tex = _colorMap;
+    if (self.isToggleView && _colorMap && _colorMapView)
+        tex = _colorMapView;
+    
     // input and output texture
-    [renderEncoder setTexture:_colorMap
+    [renderEncoder setTexture:tex
                       atIndex:TextureIndexColor];
 
     [renderEncoder setTexture:_sampleComputeTex atIndex:TextureIndexSamples];

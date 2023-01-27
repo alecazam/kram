@@ -1360,6 +1360,8 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
 
 - (bool)handleEventAction:(const Action*)action isShiftKeyDown:(bool)isShiftKeyDown
 {
+    Renderer* renderer = (Renderer*)self.delegate;
+   
     ActionState actionState;
     if (!_data.handleEventAction(action, isShiftKeyDown, actionState))
         return false;
@@ -1385,11 +1387,16 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     }
     else if (action == _data._actionPlay) {
         if (!action->isHidden) {
-            Renderer* renderer = (Renderer*)self.delegate;
             renderer.playAnimations = _showSettings->isPlayAnimations;
         }
     }
-            
+    else if (action == _data._actionSrgb) {
+        // tell the renderer to show one or other view
+        renderer.isToggleView = !_showSettings->isSRGBShown;
+    }
+    
+    //-------------
+    // Update everything
     if (!actionState.hudText.empty()) {
         [self setHudText:actionState.hudText.c_str()];
     }
@@ -1514,6 +1521,13 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
         return NO;
     }
     setErrorLogCapture( false );
+    
+    //-------
+    Renderer* renderer = (Renderer*)self.delegate;
+    _showSettings->isSRGBShown = false;
+    if (success && renderer.hasToggleView) {
+        _showSettings->isSRGBShown = isSrgbFormat(_showSettings->originalFormat);
+    }
     
     // -------------
     string title = _showSettings->windowTitleString(filename);
