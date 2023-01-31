@@ -1182,8 +1182,15 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
 
     // formats that aren't srgb, assume the -srgb flag implies isSRGBSrc
     // image will undergo srgb to linear conversion and then get written out
-    isSRGBDst = isSrgbFormat(pixelFormat);
-    isSRGBSrc = sourceImage.isSrgb();
+    // Note: this are unreliable since most tools use linear RGBA8 blends
+    // and just write out the pixel as is (f.e. Photoshop, figma, etc).
+    // So for now, don't want isSRGBSrc set since sgrb -> lin conversion
+    // will occur.  Note that could use this for dds/ktx/ktx2 files, it's
+    // usually the tools and png that are problematic.  But there are many
+    // invalid dds files out there.
+    
+    // isSRGBDst = isSrgbFormat(pixelFormat);
+    // isSRGBSrc = sourceImage.isSrgb();
     
     // this implies color is stored in rgb
     if (isSRGBDst) {
