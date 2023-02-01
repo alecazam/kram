@@ -56,20 +56,27 @@ public:
     bool doMipmaps = true;  // default to mips on
     bool isVerbose = false;
     bool doSDF = false;
-    bool isSourcePremultiplied = false;
+    
+    bool isSourcePremultiplied = false; // skip further premul of src
     bool isPremultiplied = false;
     bool isPrezero = false;
+    
     bool isNormal = false;  // signed, but may be stored unorm and swizzled (f.e. astc/bc3nm gggr or rrrg)
 
     // can pick a smaller format if alpha = 1 (only for bc and etc)
     bool optimizeFormatForOpaque = false;
 
-    // these and formatString set the pixelFormat
-    // if pixelFormat set directly, then these are updated off that format
-    // This means src is srgb on s/unorm formats, or dst is srgb if pixel format supports.
-    bool isSRGB = false;
+    // Two conversions occur - srgb -> lin to premul and build mip
+    //                         lin -> srgb to encode
+    // isSRGBDst and formatString set the pixelFormat
+    bool isSRGBSrc = false;
+    bool isSRGBSrcFlag = false;
+    bool isSRGBDst = false;
     
+    // For dst. TODO: could have signed source passed in
     bool isSigned = false;
+    
+    // Applies to src.  But also have hdr specific output formats.
     bool isHDR = false;
 
     // for now these are only usable with normal to height
@@ -133,6 +140,7 @@ public:
     bool hasColor = false;
     bool hasAlpha = false;
     bool isSRGBSrc = false;
+    bool isSRGBSrcFlag = false;
     
     // output image state
     bool isSRGBDst = false;

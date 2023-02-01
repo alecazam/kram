@@ -78,7 +78,7 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
     MyMTLPixelFormat format = MyMTLPixelFormatInvalid;
     const char* formatString = infoArgs.formatString.c_str();
     
-    bool isSRGBDst = infoArgs.isSRGB;
+    bool isSRGBDst = infoArgs.isSRGBDst;
     
     // bc
     if (isStringEqual(formatString, "bc1")) {
@@ -1069,11 +1069,11 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
 
     isSigned = isSignedFormat(pixelFormat);
 
-    // formats that aren't srgb, assume the -srgb flag implies isSRGBSrc
+    // formats that aren't srgb
     // image will undergo srgb to linear conversion and then get written out
+    isSRGBSrc = args.isSRGBSrc;
+    isSRGBSrcFlag = args.isSRGBSrcFlag;
     isSRGBDst = isSrgbFormat(pixelFormat);
-    if (!isSRGBDst)
-        isSRGBSrc = args.isSRGB;
     
     hasAlpha = true;
     hasColor = true;
@@ -1180,17 +1180,11 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
     // But BC1 565 and 2-bit endpoints are no match for BC7, and bc7enc's BC1 is introducing artifacts into Toof-a.
     optimizeFormat();
 
-    // formats that aren't srgb, assume the -srgb flag implies isSRGBSrc
-    // image will undergo srgb to linear conversion and then get written out
-    // Note: this are unreliable since most tools use linear RGBA8 blends
-    // and just write out the pixel as is (f.e. Photoshop, figma, etc).
-    // So for now, don't want isSRGBSrc set since sgrb -> lin conversion
-    // will occur.  Note that could use this for dds/ktx/ktx2 files, it's
-    // usually the tools and png that are problematic.  But there are many
-    // invalid dds files out there.
-    
-    // isSRGBDst = isSrgbFormat(pixelFormat);
-    // isSRGBSrc = sourceImage.isSrgb();
+    // Note: srgb flags are unreliable in png since most tools use linear
+    // RGBA8 blends and just write out the pixel as is (f.e. Photoshop, figma, etc).
+    // TODO: offer mode to use srg image srgb state if author has fixed up
+     if (isSRGBSrcFlag)
+        isSRGBSrc = sourceImage.isSrgb();
     
     // this implies color is stored in rgb
     if (isSRGBDst) {

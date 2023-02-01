@@ -1663,7 +1663,8 @@ void kramEncodeUsage(bool showVersion = true)
           "Usage: kram encode\n"
           "\t -f/ormat (bc1 | astc4x4 | etc2rgba | rgba16f) [-quality 0-100]\n"
           "\t [-zstd 0] or [-zlib 0] (for .ktx2 output)\n"
-          "\t [-srgb] [-signed] [-normal]\n"
+          "\t [-srgb] [-srcsrgb] [-srclin] [-srcsrgbflag]\n"
+          "\t [-signed] [-normal]\n"
           "\t -i/nput <source.png | .ktx | .ktx2 | .dds>\n"
           "\t -o/utput <target.ktx | .ktx | .ktx2 | .dds>\n"
           "\n"
@@ -1750,12 +1751,23 @@ void kramEncodeUsage(bool showVersion = true)
           "\tWrap texture at edges (height only for now)\n"
           "\n"
 
+          // srgb
           "\t-srgb"
-          "\tsRGB for rgb/rgba formats\n"
+          "\tsRGB for rgb/rgba formats - applied to src/dst\n"
+          "\t-srcsrgb"
+          "\tsrc set to sRGB\n"
+          "\t-srclin"
+          "\tsrc set to linear\n"
+          "\t-srcsrgbimage"
+          "\tsrc set to png flag (unreliable) or container format\n"
+          
+          // normals and snorm data
           "\t-signed"
           "\tSigned r or rg for etc/bc formats, astc doesn't have signed format.\n"
           "\t-normal"
           "\tNormal map rg storage signed for etc/bc (rg01), only unsigned astc L+A (gggr).\n"
+          
+          // sdf
           "\t-sdf"
           "\tGenerate single-channel SDF from a bitmap, can mip and drop large mips. Encode to r8, bc4, etc2r, astc4x4 (Unorm LLL1) to encode\n"
           "\t-sdfThreshold 120"
@@ -2858,16 +2870,34 @@ static int32_t kramAppEncode(vector<const char*>& args)
 
         // these affect the format
         else if (isStringEqual(word, "-hdr")) {
-            // not validating format for whether it's srgb or not
+            // not validating format for whether it's hdr or not
             infoArgs.isHDR = true;
-        }
-        else if (isStringEqual(word, "-srgb")) {
-            // not validating format for whether it's srgb or not
-            infoArgs.isSRGB = true;
         }
         else if (isStringEqual(word, "-signed")) {
             // not validating format for whether it's signed or not
             infoArgs.isSigned = true;
+        }
+        else if (isStringEqual(word, "-srgb")) {
+            // not validating format for whether it's srgb or not
+            infoArgs.isSRGBSrc = true;
+            
+            // The format may override this setting.  Not all formats
+            // have an srgb varient.
+            infoArgs.isSRGBDst = true;
+        }
+        
+        // This means ignore the srgb state on the src image
+        // This has to be specified after -srgb
+        else if (isStringEqual(word, "-srclin")) {
+            infoArgs.isSRGBSrc = false;
+        }
+        else if (isStringEqual(word, "-srcsrgb")) {
+            infoArgs.isSRGBSrc = true;
+        }
+        // This pulls from the format on dds/ktx/ktx2, or png srgb/chrm/iccp flag
+        // Make sure image isn't set to isSRGBSrc.
+        else if (isStringEqual(word, "-srcsrgbimage")) {
+            infoArgs.isSRGBSrcFlag = false;
         }
 
         else if (isStringEqual(word, "-normal")) {
