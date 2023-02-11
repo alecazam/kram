@@ -915,6 +915,41 @@ float3 calculateViewDir(float3 worldPos, float3 cameraPosition) {
 // This is writing out to 16F and could write snorm data, but then that couldn't be displayed.
 // So code first converts to Unorm.
 
+float srgbToLinear(float s) {
+    s = saturate(s);
+    //return (s < 0.04044823) ? (s / 12.92)
+    //                                 : pow((s + 0.055) / 1.055, 2.4);
+    
+    return (s < 0.04044823) ? (s * ( 1.0 / 12.92 ))
+                                     : pow((s + 0.055) * ( 1.0 / 1.055 ), 2.4);
+    
+}
+
+void shaderPremul(thread float4& c, bool isSrgbInput) {
+    float alpha = c.a;
+    
+    // This is because Figma/PS do all filering/blends in premul srgb.
+    // So srgbToLinear( srgb * a ) = srgbToLinear( srgb ) * srgbToLinear( a ).
+    // Emulating srgb blends also takes two alpha or access to dst.
+    // Shader would need to export srgbToLinear( 1 - a ) for dstColor,
+    // but that's not correct to blend alpha.  Alpha still needs linear 1-a.
+    
+    // TODO: make this one of the premul options (default for png)
+    if (isSrgbInput)
+    {
+        // can tell difference in last 20% of TestAlphaGradient.png
+        //c.a = pow(c.a, 2.2); // approx
+        
+        c.a = srgbToLinear(c.a);
+    }
+    
+    c = toPremul(c);
+    
+    // Note: be careful fromPremul would need to do similar math
+    // have an alpha that is much smaller in rgb, than the blend alpha.
+    c.a = alpha;
+}
+
 float4 DrawPixels(
     ColorInOut in [[stage_in]],
     bool facing,
@@ -1000,7 +1035,7 @@ float4 DrawPixels(
             
             // to premul, but also need to see without premul
             if (uniforms.doShaderPremul) {
-                c = toPremul(c);
+                shaderPremul(c, uniforms.isSrgbInput);
             }
         }
         
@@ -1050,7 +1085,7 @@ float4 DrawPixels(
                 // Note: premul on signed should occur while still signed, since it's a pull to zoer
                 // to premul, but also need to see without premul
                 if (uniforms.doShaderPremul) {
-                    c = toPremul(c);
+                    shaderPremul(c, uniforms.isSrgbInput);
                 }
                 
                 sc = c;
@@ -1058,7 +1093,7 @@ float4 DrawPixels(
             }
             else {
                 if (uniforms.doShaderPremul) {
-                    c = toPremul(c);
+                    shaderPremul(c, uniforms.isSrgbInput);
                 }
             }
             

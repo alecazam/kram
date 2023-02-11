@@ -127,6 +127,7 @@ struct Uniforms {
     bool isSDF;
     bool isPreview; // render w/lighting, normals, etc
     bool isUVPreview; // show uv overlay
+    bool isSrgbInput;
     
     bool is3DView;
     bool isNormalMapPreview;  // for isNormal or combined

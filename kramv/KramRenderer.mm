@@ -376,7 +376,7 @@ struct ViewFramebufferData {
     // false is good for srgb -> rgba16f
     // true is good for non-srgb -> rgba16f
     CGColorSpaceRef viewColorSpace;
-    MTLPixelFormat format;
+    MTLPixelFormat format = MTLPixelFormatRGBA16Float;
     
     // This doesn't look like Figma or Photoshop for a rgb,a = 255,0 to 255,1 gradient across a 256px wide rect.   The shader is saturating
     // the color to 0,1.  So can get away with SRGB color space for now.
@@ -384,19 +384,100 @@ struct ViewFramebufferData {
     //viewColorSpace  = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
     
     
+    CAMetalLayer* metalLayer = (CAMetalLayer*)[view layer];
     
     // was using 16f so could sample hdr images from it
     //  and also so hdr data went out to the display
-    format = MTLPixelFormatRGBA16Float;
-    viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-    //viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceLinearSRGB);
+    uint32_t colorSpaceChoice = 1;
+    switch(colorSpaceChoice) {
+        default:
+        case 0:
+            // This is best so far
+            format = MTLPixelFormatRGBA16Float;
+            viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+            //viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceLinearSRGB);
+            break;
+            
+        case 1: {
+            // Display P3 is a standard made by Apple that covers the same colour space as DCI-P3, but uses the more neutral D65 as a white point instead of the green white of the DCI standard.
+            // Ideally feed 16-bit color to P3.
+            
+            // This also works
+            // 25% larger than srgb
+            format = MTLPixelFormatRGBA16Float;
+           
+            // This is industry format
+            // viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceDCIP3);
+            
+            // This isn't edr
+            // viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceDisplayP3);
+            
+            // Use this because it exists from 10.14.3+
+            viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearDisplayP3);
+           
+            // don't set this yet.
+            // metalLayer.wantsExtendedDynamicRangeContent = YES;
+            
+            // https://developer.apple.com/videos/play/wwdc2021/10161/
+            
+            /* Can detect if on HDR display or not
+                user can mod the brightness, or move to another monitor,
+                need to listen for notification when this changes.
+             
+            NSScreen* screen = NSScreen.mainScreen;
+            
+            // This reports 1
+            CGFloat val1 = screen.maximumExtendedDynamicRangeColorComponentValue;
+            
+            // This is 16
+            CGFloat maxPot =  screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
+            
+            // This is 0
+            CGFloat maxRef = screen.maximumReferenceExtendedDynamicRangeColorComponentValue;
+            */
+            
+            // M1 monitor
+            
+            
+            break;
+        }
+        case 2:
+            // This doesn't match wnen srgb is turned off on TestColorGradient
+            format = MTLPixelFormatRGBA8Unorm_sRGB;
+            viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+            
+            // this looks totally wrong
+            //viewColorSpace = CGColorSpaceCreateWithName(kCGColorLinearSpaceSRGB);
+            break;
+            
+        /*
+        case 3: {
+            // There is an exrMetadata field on NSView to set as well.
+            // https://developer.apple.com/documentation/metal/hdr_content/using_color_spaces_to_display_hdr_content?language=objc
+            
+            // Rec2020 color primaries, with PQ Transfer function.
+            // Would have to get into Rec2020 colors to set this, also go from 10bit
+            format = MTLPixelFormatBGR10A2Unorm;
+            viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceITUR_2100_PQ);
+            
+            metalLayer.wantsExtendedDynamicRangeContent = YES;
+            
+            // https://developer.apple.com/documentation/metal/hdr_content/using_system_tone_mapping_on_video_content?language=objc
+            // must do os version check on this
+            // 1.0 is 100 nits of output
+            CAEDRMetadata* edrMetaData = [CAEDRMetadata HDR10MetadataWithMinLuminance: 0.005 maxLuminance: 1000 opticalOutputScale: 100];
+            metalLayer.EDRMetadata = edrMetaData;
+            
+            break;
+        }
+        */
+    }
     
-    // This doesn't work with or without srgb color space
-    //format = MTLPixelFormatRGBA8Unorm_sRGB;
-   
+    
     view.colorPixelFormat = format;
     view.colorspace = viewColorSpace;
    
+    CGColorSpaceRelease(viewColorSpace);
     
     view.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
     view.sampleCount = 1;
@@ -1282,6 +1363,7 @@ inline const char* toFilenameShort(const char* filename) {
     
     uniforms.isNormal = _showSettings->texContentType == TexContentTypeNormal;
     uniforms.doShaderPremul = _showSettings->doShaderPremul;
+    uniforms.isSrgbInput = _showSettings->isSRGBShown && isSrgbFormat(_showSettings->originalFormat);
     uniforms.isSigned = _showSettings->isSigned;
     uniforms.isSwizzleAGToRG = _showSettings->isSwizzleAGToRG;
     
