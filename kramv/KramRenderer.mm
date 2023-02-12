@@ -144,6 +144,8 @@ struct ViewFramebufferData {
     id<MTLTexture> _colorMap;
     id<MTLTexture> _colorMapView;
     id<MTLTexture> _normalMap;
+    id<MTLTexture> _diffMap;
+    
     id<MTLTexture> _lastDrawableTexture;
     
     // border is a better edge sample, but at edges it filters in the transparent
@@ -384,7 +386,7 @@ struct ViewFramebufferData {
     //viewColorSpace  = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
     
     
-    CAMetalLayer* metalLayer = (CAMetalLayer*)[view layer];
+    //CAMetalLayer* metalLayer = (CAMetalLayer*)[view layer];
     
     // was using 16f so could sample hdr images from it
     //  and also so hdr data went out to the display
@@ -1148,7 +1150,8 @@ inline const char* toFilenameShort(const char* filename) {
 - (BOOL)loadTextureFromImage:(nonnull const char *)fullFilenameString
                    timestamp:(double)timestamp
                        image:(kram::KTXImage &)image
-                 imageNormal:(kram::KTXImage *)imageNormal
+                 imageNormal:(nullable kram::KTXImage *)imageNormal
+                   imageDiff:(nullable kram::KTXImage *)imageDiff
                    isArchive:(BOOL)isArchive
 {
     // image can be decoded to rgba8u if platform can't display format natively
@@ -1205,6 +1208,17 @@ inline const char* toFilenameShort(const char* filename) {
             }
         }
 
+        id<MTLTexture> diffTexture;
+        if (imageDiff) {
+            // Note: this name may not be the same name
+            diffTexture = [_loader loadTextureFromImage:*imageDiff
+                                           originalFormat:nil
+                                                     name:filenameShort];
+            if (!diffTexture) {
+                return NO;
+            }
+        }
+        
         // if archive contained png, then it's been converted to ktx
         // so the info below may not reflect original data
         // Would need original png data to look at header
@@ -1231,6 +1245,7 @@ inline const char* toFilenameShort(const char* filename) {
             _colorMap = texture;
             _colorMapView = textureView;
             _normalMap = normalTexture;
+            _diffMap = diffTexture;
             
             self.hasToggleView = _colorMapView != nil;
         }
@@ -1329,6 +1344,7 @@ inline const char* toFilenameShort(const char* filename) {
             _colorMap = texture;
             _colorMapView = textureView;
             _normalMap = nil;
+            _diffMap = nil;
             
             self.hasToggleView = _colorMapView != nil;
         }
@@ -1389,6 +1405,7 @@ inline const char* toFilenameShort(const char* filename) {
     uniforms.isWrap = doWrap ? _showSettings->isWrap : false;
     
     uniforms.isPreview = _showSettings->isPreview;
+    uniforms.isDiff = _showSettings->isDiff;
     
     uniforms.isNormalMapPreview = false;
     if (uniforms.isPreview) {
@@ -1846,6 +1863,10 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
             // setup normal map
             if (_normalMap && _showSettings->isPreview) {
                 [renderEncoder setFragmentTexture:_normalMap atIndex:TextureIndexNormal];
+            }
+            
+            if (_diffMap && _showSettings->isDiff) {
+                [renderEncoder setFragmentTexture:_diffMap atIndex:TextureIndexDiff];
             }
 
             UniformsLevel uniformsLevel;

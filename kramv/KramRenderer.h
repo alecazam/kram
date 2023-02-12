@@ -59,6 +59,7 @@ class KTXImage;
                    timestamp:(double)timestamp
                        image:(kram::KTXImage &)image
                  imageNormal:(nullable kram::KTXImage *)imageNormal
+                   imageDiff:(nullable kram::KTXImage *)imageDiff
                    isArchive:(BOOL)isArchive;
 
 - (BOOL)loadTexture:(nonnull NSURL *)url;

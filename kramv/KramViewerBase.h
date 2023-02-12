@@ -447,7 +447,7 @@ struct DataDelegate
     
     bool loadModelFile(const char* filename);
    
-    bool loadTextureFromImage(const char* fullFilename, double timestamp, KTXImage& image, KTXImage* imageNormal, bool isArchive);
+    bool loadTextureFromImage(const char* fullFilename, double timestamp, KTXImage& image, KTXImage* imageNormal, KTXImage* imageDiff, bool isArchive);
     
 public:
     kram_id view; // MyMTKView*
@@ -467,6 +467,7 @@ struct Data {
 
     bool findFilename(const string& filename);
     bool findFilenameShort(const string& filename);
+    const File* findFileShort(const string& filename);
     const Atlas* findAtlasAtUV(float2 uv);
     bool isArchive() const;
     bool loadFile();

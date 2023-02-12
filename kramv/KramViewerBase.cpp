@@ -955,6 +955,17 @@ bool Data::findFilenameShort(const string& filename)
     return isFound;
 }
 
+const File* Data::findFileShort(const string& filename)
+{
+    // linear search
+    for (const auto& search : _files) {
+        if (search.nameShort == filename) {
+            return &search;
+        }
+    }
+    return nullptr;
+}
+
 // rect here is expect xy, wh
 bool isPtInRect(float2 pt, float4 r)
 {
@@ -1097,18 +1108,24 @@ bool Data::loadFile()
     // flattened to one image.  So have to fabricate mips here.  KTXImage
     // can already load up striped png into slices, etc.
     
-    string diffFilename = filenameNoExtension(filename);
     bool hasDiff = false;
+    string diffFilename;
     
-    diffFilename += ".png";
-    if ( diffFilename != filename && findFilename(diffFilename.c_str())) {
-        // TODO: defer load until diff enabled
-        //if ([self loadDiffFile:diffFilename.c_str()]) {
-        hasDiff = true;
-        //}
-    }
-    if (!hasDiff) {
-        diffFilename.clear();
+    if (!isPNGFilename(filename)) {
+        diffFilename = filenameNoExtension(filename);
+        diffFilename += ".png";
+        
+        diffFilename = toFilenameShort(diffFilename.c_str());
+        if (diffFilename != filename) {
+            const File* diffFile = findFileShort(diffFilename.c_str());
+            if (diffFile) {
+                diffFilename = diffFile->name;
+                hasDiff = true;
+            }
+        }
+        
+        if (!hasDiff)
+            diffFilename.clear();
     }
     
     //-------------------------------
@@ -1119,9 +1136,29 @@ bool Data::loadFile()
     KTXImage imageNormal;
     KTXImageData imageNormalDataKTX;
     
+    KTXImage imageDiff;
+    KTXImageData imageDiffDataKTX;
+    
     // this requires decode and conversion to RGBA8u
     if (!imageDataKTX.open(fullFilename.c_str(), image)) {
         return false;
+    }
+    
+    // load up the diff, but would prefer to defer this
+    if (hasDiff && !imageDiffDataKTX.open(diffFilename.c_str(), imageDiff)) {
+        hasDiff = false;
+        
+        // TODO: could also compare dimensions to see if same
+        
+        if (imageDiff.textureType == image.textureType &&
+            (imageDiff.textureType == MyMTLTextureType2D) )
+        {
+            
+        }
+        else
+        {
+            hasDiff = false;
+        }
     }
     
     if (hasNormal &&
@@ -1139,19 +1176,12 @@ bool Data::loadFile()
     
     //---------------------------------
     
-    // Release any loading model textures
-//    Renderer* renderer = (Renderer *)self.delegate;
-//    [renderer releaseAllPendingTextures];
-//
-//    if (![renderer loadTextureFromImage:fullFilename.c_str()
-//                              timestamp:timestamp
-//                                  image:image
-//                            imageNormal:hasNormal ? &imageNormal : nullptr
-//                              isArchive:NO]) {
-//        return false;
-//    }
-    
-    if (!_delegate.loadTextureFromImage(fullFilename.c_str(), (double)timestamp, image, hasNormal ? &imageNormal : nullptr, false)) {
+    if (!_delegate.loadTextureFromImage(fullFilename.c_str(), (double)timestamp,
+        image,
+        hasNormal ? &imageNormal : nullptr,
+        hasDiff ? &imageDiff : nullptr,
+        false))
+    {
         return false;
     }
     
@@ -1229,6 +1259,8 @@ bool Data::loadFileFromArchive()
     KTXImage imageNormal;
     KTXImageData imageNormalDataKTX;
 
+    // TODO: do imageDiff here?
+    
     if (!imageDataKTX.open(imageData, imageDataLength, image)) {
         return false;
     }
@@ -1248,19 +1280,9 @@ bool Data::loadFileFromArchive()
 
     //---------------------------------
     
-    if (!_delegate.loadTextureFromImage(fullFilename.c_str(), (double)timestamp, image, hasNormal ? &imageNormal : nullptr, true)) {
+    if (!_delegate.loadTextureFromImage(fullFilename.c_str(), (double)timestamp, image, hasNormal ? &imageNormal : nullptr, nullptr, true)) {
         return false;
     }
-//    Renderer* renderer = (Renderer *)self.delegate;
-//    [renderer releaseAllPendingTextures];
-//
-//    if (![renderer loadTextureFromImage:fullFilename.c_str()
-//                              timestamp:(double)timestamp
-//                                  image:image
-//                            imageNormal:hasNormal ? &imageNormal : nullptr
-//                              isArchive:YES]) {
-//        return false;
-//    }
 
     //---------------------------------
     
@@ -1682,6 +1704,8 @@ void Data::updateUIAfterLoad()
 
     bool isSignedHidden = !isSignedFormat(_showSettings->originalFormat);
     bool isPlayHidden = !_showSettings->isModel; // only for models
+    
+    // TODO: tie to whether diffMap is loaded
     bool isDiffHidden = _showSettings->isModel; // only for images
     
     _actionPlay->setHidden(isPlayHidden);
@@ -2381,7 +2405,7 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
         _showSettings->isDiff = !_showSettings->isDiff;
         isChanged = true;
         text = "Diff ";
-        text += _showSettings->isPreview ? "On" : "Off";
+        text += _showSettings->isDiff ? "On" : "Off";
     }
     // TODO: might switch c to channel cycle, so could just hit that
     // and depending on the content, it cycles through reasonable channel masks

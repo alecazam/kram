@@ -43,8 +43,9 @@ typedef NS_ENUM(int32_t, VertexAttribute) {
 typedef NS_ENUM(int32_t, TextureIndex) {
     TextureIndexColor = 0,
     TextureIndexNormal = 1,
+    TextureIndexDiff = 2,
 
-    TextureIndexSamples = 2,  // used for compute
+    TextureIndexSamples = 3,  // used for compute
 };
 
 typedef NS_ENUM(int32_t, SamplerIndex) {
@@ -128,6 +129,7 @@ struct Uniforms {
     bool isPreview; // render w/lighting, normals, etc
     bool isUVPreview; // show uv overlay
     bool isSrgbInput;
+    bool isDiff;
     
     bool is3DView;
     bool isNormalMapPreview;  // for isNormal or combined

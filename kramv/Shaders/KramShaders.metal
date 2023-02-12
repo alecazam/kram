@@ -956,6 +956,7 @@ float4 DrawPixels(
     constant Uniforms& uniforms,
     float4 c,
     float4 nmap,
+    float4 cDiff,
     float2 textureSize,
     uint passNumber
 )
@@ -985,13 +986,13 @@ float4 DrawPixels(
             // adapted for signed field above,
             // sdf distance from edge (scalar)
             float dist = c.r;
-
+            
             // size of one pixel line
             float onePixel = recip(max(0.0001, length(float2(dfdx(dist), dfdy(dist)))));
-
+            
             // distance to edge in pixels (scalar)
             float pixelDist = dist * onePixel;
-
+            
             // typically source recommends smoothstep, so that get a soft instead of hard ramp of alpha at edges
             
             // store as preml alpha
@@ -1002,13 +1003,13 @@ float4 DrawPixels(
             half4 nmapH = toHalf(c);
             
             half3 n = transformNormal(nmapH, in.normal, in.tangent,
-                                       in.worldPos, in.texCoord, uniforms.useTangent, // to build TBN
-                                       uniforms.isSwizzleAGToRG, uniforms.isSigned, facing);
+                                      in.worldPos, in.texCoord, uniforms.useTangent, // to build TBN
+                                      uniforms.isSwizzleAGToRG, uniforms.isSigned, facing);
             
             
             float3 viewDir = calculateViewDir(in.worldPos, uniforms.cameraPosition);
             c = doLighting(float4(1.0), viewDir, toFloat(n), toFloat(in.normal), uniforms.lightingMode);
-
+            
             c.a = 1;
         }
         else {
@@ -1021,10 +1022,10 @@ float4 DrawPixels(
                 
                 if (uniforms.isNormalMapPreview) {
                     half4 nmapH = toHalf(nmap);
-                   
+                    
                     half3 n = transformNormal(nmapH, in.normal, in.tangent,
-                                               in.worldPos, in.texCoord, uniforms.useTangent, // to build TBN
-                                               uniforms.isNormalMapSwizzleAGToRG, uniforms.isNormalMapSigned, facing);
+                                              in.worldPos, in.texCoord, uniforms.useTangent, // to build TBN
+                                              uniforms.isNormalMapSwizzleAGToRG, uniforms.isNormalMapSigned, facing);
                     
                     c = doLighting(c, viewDir, toFloat(n), toFloat(in.normal), uniforms.lightingMode);
                 }
@@ -1043,6 +1044,31 @@ float4 DrawPixels(
         bool doShowUV = false;
         if (doShowUV) {
             c = float4(fract(in.texCoord), 0.0, 1.0);
+        }
+    }
+    else if (uniforms.isDiff) {
+        // This is only for 2d textures right now
+        // Could run the color reconstruct logic below.
+        
+        float4 cDelta = abs(c - cDiff);
+        
+        switch(uniforms.channels)
+        {
+            case ShModeRGBA: break;
+                
+                // with premul formats, already have ra,ga,ba
+            case ShModeR001: cDelta = float4(cDelta.r,0,0,0); break;
+            case ShMode0G01: cDelta = float4(0,cDelta.g,0,0); break;
+            case ShMode00B1: cDelta = float4(0,0,cDelta.b,0); break;
+            case ShModeAAA1: cDelta = float4(0,0,0,cDelta.a); break;
+        }
+        
+        const float delta = 1.0/255.0;
+        bool isDiffDetected = any( cDelta > delta );
+        
+        if (isDiffDetected) {
+            float3 highlightColor = float3(1, 0, 1);
+            c.rgb = highlightColor;
         }
     }
     else {
@@ -1082,7 +1108,7 @@ float4 DrawPixels(
             // signed 1/2 channel formats return sr,0,0, and sr,sg,0 for rgb?
             // May want to display those as 0 not 0.5.
             if (uniforms.isSigned) {
-                // Note: premul on signed should occur while still signed, since it's a pull to zoer
+                // Note: premul on signed should occur while still signed, since it's a pull to zero
                 // to premul, but also need to see without premul
                 if (uniforms.doShaderPremul) {
                     shaderPremul(c, uniforms.isSrgbInput);
@@ -1159,9 +1185,9 @@ float4 DrawPixels(
         else if (uniforms.shapeChannel == ShShapeChannelMipLevel) {
             c = toMipLevelColor(in.texCoord * textureSize.xy); // only for 2d textures
         }
-//        else if (uniforms.shapeChannel == ShShapeChannelBumpNormal) {
-//            c.rgb = saturate(bumpNormal);
-//        }
+        //        else if (uniforms.shapeChannel == ShShapeChannelBumpNormal) {
+        //            c.rgb = saturate(bumpNormal);
+        //        }
         
         if (uniforms.shapeChannel != ShShapeChannelMipLevel) {
             c.a = 1.0;
@@ -1170,20 +1196,23 @@ float4 DrawPixels(
     
     // mask to see one channel in isolation, this is really 0'ing out other channels
     // would be nice to be able to keep this set on each channel independently.
-    switch(uniforms.channels)
+    if (!uniforms.isDiff)
     {
-        case ShModeRGBA: break;
-            
-        // with premul formats, already have ra,ga,ba
-        case ShModeR001: c = float4(c.r,0,0,1); break;
-        case ShMode0G01: c = float4(0,c.g,0,1); break;
-        case ShMode00B1: c = float4(0,0,c.b,1); break;
-            
-//        case ShModeRRR1: c = float4(c.rrr,1); break;
-//        case ShModeGGG1: c = float4(c.ggg,1); break;
-//        case ShModeBBB1: c = float4(c.bbb,1); break;
-//
-        case ShModeAAA1: c = float4(c.aaa,1); break;
+        switch(uniforms.channels)
+        {
+            case ShModeRGBA: break;
+                
+            // with premul formats, already have ra,ga,ba
+            case ShModeR001: c = float4(c.r,0,0,1); break;
+            case ShMode0G01: c = float4(0,c.g,0,1); break;
+            case ShMode00B1: c = float4(0,0,c.b,1); break;
+                
+            //        case ShModeRRR1: c = float4(c.rrr,1); break;
+            //        case ShModeGGG1: c = float4(c.ggg,1); break;
+            //        case ShModeBBB1: c = float4(c.bbb,1); break;
+            //
+            case ShModeAAA1: c = float4(c.aaa,1); break;
+        }
     }
     
     // be able to pinch-zoom into/back from the image
@@ -1358,7 +1387,7 @@ fragment float4 Draw1DArrayPS(
     // colorMap.get_num_mip_levels();
 
     float4 n = float4(0,0,1,1);
-    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
+    return DrawPixels(in, facing, uniforms, c, n, c, textureSize, uniformsLevel.passNumber);
 }
 
 fragment float4 DrawImagePS(
@@ -1368,18 +1397,20 @@ fragment float4 DrawImagePS(
     constant UniformsLevel& uniformsLevel [[ buffer(BufferIndexUniformsLevel) ]],
     sampler colorSampler [[ sampler(SamplerIndexColor) ]],
     texture2d<float> colorMap [[ texture(TextureIndexColor) ]],
-    texture2d<float> normalMap [[ texture(TextureIndexNormal) ]]
+    texture2d<float> normalMap [[ texture(TextureIndexNormal) ]],
+    texture2d<float> diffMap [[ texture(TextureIndexDiff) ]]
 )
 {
     float4 c = colorMap.sample(colorSampler, in.texCoordXYZ.xy);
     float4 n = normalMap.sample(colorSampler, in.texCoordXYZ.xy);
-   
+    float4 d = diffMap.sample(colorSampler, in.texCoordXYZ.xy);
+    
     // here are the pixel dimensions of the lod
     uint lod = uniformsLevel.mipLOD;
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
+    return DrawPixels(in, facing, uniforms, c, n, d, textureSize, uniformsLevel.passNumber);
 }
 
 fragment float4 DrawImageArrayPS(
@@ -1400,7 +1431,7 @@ fragment float4 DrawImageArrayPS(
     float2 textureSize = float2(colorMap.get_width(lod), colorMap.get_height(lod));
     // colorMap.get_num_mip_levels();
 
-    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
+    return DrawPixels(in, facing, uniforms, c, n, c, textureSize, uniformsLevel.passNumber);
 }
 
 
@@ -1422,7 +1453,7 @@ fragment float4 DrawCubePS(
     // colorMap.get_num_mip_levels();
 
     float4 n = float4(0,0,1,1);
-    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
+    return DrawPixels(in, facing, uniforms, c, n, c, textureSize, uniformsLevel.passNumber);
 }
 
 fragment float4 DrawCubeArrayPS(
@@ -1443,7 +1474,7 @@ fragment float4 DrawCubeArrayPS(
     // colorMap.get_num_mip_levels();
 
     float4 n = float4(0,0,1,1);
-    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
+    return DrawPixels(in, facing, uniforms, c, n, c, textureSize, uniformsLevel.passNumber);
 }
 
 
@@ -1475,7 +1506,7 @@ fragment float4 DrawVolumePS(
     // colorMap.get_num_mip_levels();
 
     float4 n = float4(0,0,1,1);
-    return DrawPixels(in, facing, uniforms, c, n, textureSize, uniformsLevel.passNumber);
+    return DrawPixels(in, facing, uniforms, c, n, c, textureSize, uniformsLevel.passNumber);
 }
 
 //--------------------------------------------------

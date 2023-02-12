@@ -1821,7 +1821,7 @@ bool DataDelegate::loadModelFile(const char* filename)
     return [view_ loadModelFile:filename];
 }
 
-bool DataDelegate::loadTextureFromImage(const char* fullFilename, double timestamp, KTXImage& image, KTXImage* imageNormal, bool isArchive)
+bool DataDelegate::loadTextureFromImage(const char* fullFilename, double timestamp, KTXImage& image, KTXImage* imageNormal, KTXImage* imageDiff, bool isArchive)
 {
     MyMTKView* view_ = (__bridge MyMTKView*)view;
     Renderer* renderer = (Renderer *)view_.delegate;
@@ -1831,6 +1831,7 @@ bool DataDelegate::loadTextureFromImage(const char* fullFilename, double timesta
                               timestamp:timestamp
                                   image:image
                             imageNormal:imageNormal
+                              imageDiff:imageDiff
                               isArchive:isArchive]) {
         return false;
     }
