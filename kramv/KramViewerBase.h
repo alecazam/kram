@@ -180,6 +180,9 @@ public:
     // if diff texture available, can show diff against source
     bool isDiff = false;
     
+    // currently loading the diff texture if found, this slows loads
+    bool hasDiffTexture = false;
+    
     // can sample from drawable or from single source texture
     bool isEyedropperFromDrawable();
 
@@ -238,7 +241,7 @@ public:
 
     LightingMode lightingMode = LightingModeDiffuse;
 
-    bool isInverted;
+    bool isInverted = false;
 
     // cached on load, raw info about the texture from libkram
     string imageInfo;

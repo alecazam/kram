@@ -1705,9 +1705,10 @@ void Data::updateUIAfterLoad()
     bool isSignedHidden = !isSignedFormat(_showSettings->originalFormat);
     bool isPlayHidden = !_showSettings->isModel; // only for models
     
-    // TODO: tie to whether diffMap is loaded
-    bool isDiffHidden = _showSettings->isModel; // only for images
-    
+    bool isDiffHidden = false; // only for images
+    if (!_showSettings->isModel && _showSettings->hasDiffTexture) {
+        isDiffHidden = false;
+    }
     _actionPlay->setHidden(isPlayHidden);
     _actionArray->setHidden(isArrayHidden);
     _actionFace->setHidden(isFaceSliceHidden);
@@ -1779,7 +1780,9 @@ void Data::updateUIControlState()
     auto playState = toState(_showSettings->isModel && _showSettings->isPlayAnimations);
     auto verticalState = toState(_showSettings->isVerticalUI);
     auto uiState = toState(_showSettings->isHideUI);
-    auto diffState = toState(_showSettings->isDiff);
+    auto diffState = toState(_showSettings->isDiff && _showSettings->hasDiffTexture);
+    
+    auto srgbState = toState(_showSettings->isSRGBShown);
     
     _actionVertical->setHighlight(verticalState);
     
@@ -1822,7 +1825,6 @@ void Data::updateUIControlState()
     _actionSigned->setHighlight(signedState);
     _actionChecker->setHighlight(checkerboardState);
     
-    auto srgbState = toState(_showSettings->isSRGBShown);
     _actionSrgb->setHighlight(srgbState);
 }
 
@@ -2424,7 +2426,7 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
         if (!action->isHidden) {
             _showSettings->isSRGBShown = !_showSettings->isSRGBShown;
             
-            sprintf(text, "Format %s", _showSettings->isSRGBShown ? "srgb on" : "srgb off");
+            sprintf(text, "Format srgb %s", _showSettings->isSRGBShown ? "On" : "Off");
             
             isChanged = true;
         }

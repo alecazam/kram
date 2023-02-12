@@ -1507,6 +1507,9 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     setErrorLogCapture( true );
     
     bool success = _data.loadFile();
+    
+    // Update these settings
+    
     if (!success) {
         string errorText;
         getErrorLogCaptureText(errorText);
@@ -1524,10 +1527,14 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     
     //-------
     Renderer* renderer = (Renderer*)self.delegate;
+    
     _showSettings->isSRGBShown = false;
     if (success && renderer.hasToggleView) {
         _showSettings->isSRGBShown = isSrgbFormat(_showSettings->originalFormat);
     }
+    
+    renderer.playAnimations = _showSettings->isPlayAnimations;
+    renderer.isToggleView = !_showSettings->isSRGBShown;
     
     // -------------
     string title = _showSettings->windowTitleString(filename);

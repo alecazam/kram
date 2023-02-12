@@ -1240,6 +1240,7 @@ inline const char* toFilenameShort(const char* filename) {
 
         _showSettings->lastFilename = fullFilename;
         _showSettings->lastTimestamp = timestamp;
+        _showSettings->hasDiffTexture = diffTexture != nil;
 
         @autoreleasepool {
             _colorMap = texture;
@@ -1340,6 +1341,10 @@ inline const char* toFilenameShort(const char* filename) {
         _showSettings->lastFilename = fullFilename;
         _showSettings->lastTimestamp = timestamp;
 
+        // TODO: should archive work with diff?
+        id<MTLTexture> diffTexture = nil;
+        _showSettings->hasDiffTexture = diffTexture != nil;
+        
         @autoreleasepool {
             _colorMap = texture;
             _colorMapView = textureView;
