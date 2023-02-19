@@ -25,13 +25,19 @@
 #define PROT_WRITE    0x2
 #define PROT_EXEC     0x4
 
-//#define MAP_SHARED    0x01
+#define MAP_SHARED    0x01
 #define MAP_PRIVATE   0x02
 #define MAP_ANON      0x20
 #define MAP_FAILED    ((void *) -1)
 
-# define DWORD_HI(x) (x >> 32)
-# define DWORD_LO(x) ((x) & 0xffffffff)
+// TODO: find out which path this takes, want 64-bit mmsp
+#ifdef __USE_FILE_OFFSET64
+# define DWORD_HI(x) ((x) >> (uint64_t)32)
+# define DWORD_LO(x) ((x) & (uint64_t)0xffffffff)
+#else
+# define DWORD_HI(x) (0)
+# define DWORD_LO(x) (x)
+#endif
 
 static void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset)
 {
