@@ -91,26 +91,33 @@ private:
 public:
     Mipper();
 
+    // start here, then can mipmap or mipFlood
+    void initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, bool doPrezero,
+                                vector<half4>& halfImage) const;
+
     // drop by 1 mip level by box filter
-    void mipmap(const ImageData &srcImage, ImageData &dstImage) const;
+    void mipmap(const ImageData& srcImage, ImageData& dstImage) const;
 
-    void initPixelsHalfIfNeeded(ImageData &srcImage, bool doPremultiply, bool doPrezero,
-                                vector<half4> &halfImage) const;
-
+    // Build all the mips, and then copy from small to big
+    // wherever the alpha is 0.  This is a form of cheap
+    // dilation, but will result in invalid premul colors r > a.
+    void mipflood(vector<ImageData>& srcImage) const;
+    
     // these use table lookups, so need to be class members
     float toLinear(uint8_t srgb) const { return srgbToLinear[srgb]; }
     float toAlphaFloat(uint8_t alpha) const { return alphaToFloat[alpha]; }
 
-    float4 toLinear(const Color &c) const { return float4m(toLinear(c.r), toLinear(c.g), toLinear(c.b), toAlphaFloat(c.a)); }
+    float4 toLinear(const Color& c) const { return float4m(toLinear(c.r), toLinear(c.g), toLinear(c.b), toAlphaFloat(c.a)); }
 
     uint8_t toPremul(uint8_t channelIntensity, uint8_t alpha) const { return ((uint32_t)channelIntensity * (uint32_t)alpha) / 255; }
 
+    
 private:
     void initTables();
 
-    void mipmapLevel(const ImageData &srcImage, ImageData &dstImage) const;
+    void mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const;
 
-    void mipmapLevelOdd(const ImageData &srcImage, ImageData &dstImage) const;
+    void mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) const;
 };
 
 }  // namespace kram

@@ -1028,6 +1028,7 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
 
     // mips
     doMipmaps = args.doMipmaps;
+    doMipflood = args.doMipflood;
     mipMinSize = args.mipMinSize;
     mipMaxSize = args.mipMaxSize;
     mipSkip = args.mipSkip;

@@ -171,8 +171,7 @@ private:
 
     // can pass in which channels to average
     void averageChannelsInBlock(const char* averageChannels,
-                                const KTXImage& image, ImageData& srcImage,
-                                vector<Color>& tmpImage) const;
+                                const KTXImage& image, ImageData& srcImage) const;
 
     bool createMipsFromChunks(ImageInfo& info,
                               Image& singleImage,

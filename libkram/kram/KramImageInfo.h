@@ -54,6 +54,7 @@ public:
     bool isKTX2 = false;
 
     bool doMipmaps = true;  // default to mips on
+    bool doMipflood = false;
     bool isVerbose = false;
     bool doSDF = false;
     
@@ -154,8 +155,9 @@ public:
 
     bool doSDF = false;
     bool doMipmaps = false;
+    bool doMipflood = false;
     bool optimizeFormatForOpaque = false;
-
+    
     bool isVerbose = false;
 
     // compression format

@@ -1672,7 +1672,7 @@ void kramEncodeUsage(bool showVersion = true)
           "\t [-e/ncoder (squish | ate | etcenc | bcenc | astcenc | explicit | ..)]\n"
           "\t [-resize (16x32 | pow2)]\n"
           "\n"
-          "\t [-mipnone]\n"
+          "\t [-mipnone] [-mipflood]\n"
           "\t [-mipmin size] [-mipmax size] [-mipskip count]\n"
           "\n"
           "\t [-chunks 4x4]\n"
@@ -1731,6 +1731,9 @@ void kramEncodeUsage(bool showVersion = true)
           // Mips
           "\t-mipnone"
           "\tDon't build mips even if pow2 dimensions\n"
+
+          "\t-mipflood"
+          "\tDilate color by upscaling smaller mips to higher\n"
 
           "\t-mipmin size"
           "\tOnly output mips >= size px\n"
@@ -2731,6 +2734,9 @@ static int32_t kramAppEncode(vector<const char*>& args)
         else if (isStringEqual(word, "-mipnone")) {
             // disable mips even if pow2
             infoArgs.doMipmaps = false;
+        }
+        else if (isStringEqual(word, "-mipflood")) {
+            infoArgs.doMipflood = true;
         }
 
         else if (isStringEqual(word, "-heightScale")) {

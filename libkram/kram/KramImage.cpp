@@ -477,8 +477,8 @@ void Image::setSrgbState(bool isSrgb, bool hasSrgbBlock, bool hasNonSrgbBlocks)
 // being set ot 0.  This runs counter to ASTC L+A mode though which eliminates
 // the endpoint storage.
 void KramEncoder::averageChannelsInBlock(
-    const char* averageChannels, const KTXImage& image, ImageData& srcImage,
-    vector<Color>& tmpImageData8) const  // otherwise, it's BlueAlpha averaging
+    const char* averageChannels, const KTXImage& image, ImageData& srcImage
+) const  // otherwise, it's BlueAlpha averaging
 {
     int32_t w = srcImage.width;
     int32_t h = srcImage.height;
@@ -494,12 +494,9 @@ void KramEncoder::averageChannelsInBlock(
     // these then don't affect the fitting, but do affect endpoint storage (f.e.
     // RGB instead of L+A) must be done before the encode due to complexity of
     // BC6/7 and ASTC
-
-    // copy the level into a temp buffer and average all values for the block
-    // dims
+    
     Int2 blockDims = image.blockDims();
-    tmpImageData8.resize(w * h);
-
+  
     for (int32_t yy = 0; yy < h; yy += blockDims.y) {
         for (int32_t xx = 0; xx < w; xx += blockDims.x) {
             // compute clamped blockDims
@@ -541,7 +538,7 @@ void KramEncoder::averageChannelsInBlock(
                      ++x) {
                     // replace red/blue with average of block
                     Color c = srcImage.pixels[y0 + x];
-                    Color& cDst = tmpImageData8[y0 + x];
+                    Color& cDst = c;
                     if (isRed) c.r = red;
                     if (isGreen) c.g = green;
                     if (isBlue) c.b = blue;
@@ -1157,8 +1154,6 @@ bool KramEncoder::encode(ImageInfo& info, Image& singleImage, FILE* dstFile) con
 
 // Use this for in-place construction of mips
 struct MipConstructData {
-    vector<Color> tmpImageData8;  // for average channels per block
-
     // use this for complex texture types, copy data from vertical/horizotnal
     // strip image into here to then gen mips
     vector<Color> copyImage;
@@ -2092,13 +2087,7 @@ bool KramEncoder::createMipsFromChunks(
             // so large mips even if clamped with -mipmax allocate to largest mip size (2k x 2k @16 = 64MB)
             // have to build the mips off that.  srgb and premul is why fp32 is
             // needed, and need to downsample in linear space.
-
-            //            int32_t size = w * h * sizeof(float4);
-            //            if (size > 16*1024*1024) {
-            //                int32_t bp = 0;
-            //                bp = bp;
-            //            }
-
+            
             srcImage.pixelsHalf = halfImage.data();
         }
     }
@@ -2112,6 +2101,8 @@ bool KramEncoder::createMipsFromChunks(
     int32_t srcTopMipHeight = srcImage.height;
 
     for (int32_t chunk = 0; chunk < numChunks; ++chunk) {
+        Timer timerBuildMips;
+        
         // this needs to append before chunkOffset copy below
         w = srcTopMipWidth;
         h = srcTopMipHeight;
@@ -2124,6 +2115,8 @@ bool KramEncoder::createMipsFromChunks(
         srcImage.height = h;
 
         if (info.isHDR) {
+            // TODO: should this support halfImage too?
+            
             if (isMultichunk) {
                 const float4* srcPixels = (const float4*)singleImage.pixelsFloat().data();
                 for (int32_t y = 0; y < h; ++y) {
@@ -2171,90 +2164,164 @@ bool KramEncoder::createMipsFromChunks(
             }
         }
 
-        // doing in-place mips
-        // could be reading in srgb gray, and writing out bc4 unorm
-        ImageData dstImageData = srcImage;
-        dstImageData.isSRGB = isSrgbFormat(info.pixelFormat);
+        // Build mips for the chunk, dropping mips as needed, but downsampling
+        // from available srcImage.   This is no longer done in-place so that
+        // mipgen and encoding are separated.  This simplifies mipFlood and
+        // channel averaging.
+        const int32_t numMipLevels = (int32_t)dstMipLevels.size();
+       
+        vector<ImageData> dstMipImages;
+        dstMipImages.resize(numMipLevels);
         
-        //----------------------------------------------
-
-        // build mips for the chunk, dropping mips as needed, but downsampling
-        // from available image
-
-        int32_t numSkippedMips = data.numSkippedMips;
-
-        for (int32_t mipLevel = 0; mipLevel < (int32_t)dstMipLevels.size(); ++mipLevel) {
-            const auto& dstMipLevel = dstMipLevels[mipLevel];
-
-            if (mipLevel == 0 && !info.doSDF) {
+        // mip1...n are held here
+        vector<Color> mipPixels;
+        vector<half4> mipPixelsHalf;
+        vector<float4> mipPixelsFloat;
+        
+        {
+            ImageData dstImageData = srcImage;
+            dstImageData.isSRGB = isSrgbFormat(info.pixelFormat);
+            
+            int32_t numSkippedMips = data.numSkippedMips;
+            
+            if (info.doSDF) {
+                // count up pixels needed for all mips of this chunk
+                uint32_t numPixels = 0;
+                for (int32_t mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
+                    w = srcImage.width;
+                    h = srcImage.height;
+                    int32_t d = 1;
+                    mipDown(w, h, d, mipLevel + numSkippedMips);
+                    numPixels += w * h;
+                }
+                
+                // now allocate enough memory to hold all the mips
+                mipPixels.resize(numPixels);
+                
+                size_t pixelOffset = 0;
+                for (int32_t mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
+                    //const auto& dstMipLevel = dstMipLevels[mipLevel];
+                    ImageData& dstMipImage = dstMipImages[mipLevel];
+                    
+                    dstMipImage = dstImageData; // settings replaced in mipmap call
+                    dstMipImage.pixels = mipPixels.data() + pixelOffset;
+                    
+                    // sdf mipper has to build from largest sourceImage
+                    // but it can in-place write to the same dstImage
+                    // But not doing in-place mips anymore.
+                    sdfMipper.mipmap(dstMipImage, mipLevel + numSkippedMips);
+                    
+                    // assumes depth = 1
+                    pixelOffset += dstMipImage.width * dstMipImage.height;
+                }
+            }
+            else {
                 if (numSkippedMips > 0) {
                     // this does in-place mipmap to dstImage (also updates floatPixels if used)
                     for (int32_t i = 0; i < numSkippedMips; ++i) {
                         // have to build the submips even with skipMip
                         mipper.mipmap(srcImage, dstImageData);
-
+                        
                         // dst becomes src for next in-place mipmap
                         srcImage = dstImageData;
-
-                        w = dstImageData.width;
-                        h = dstImageData.height;
+                    }
+                }
+                
+                // allocate memory for mips
+                dstMipImages[0] = dstImageData;
+                
+                // count up pixels needed for all sub mips of this chunk
+                uint32_t numPixels = 0;
+                for (int32_t mipLevel = 1; mipLevel < numMipLevels; ++mipLevel) {
+                    w = srcImage.width;
+                    h = srcImage.height;
+                    int32_t d = 1;
+                    mipDown(w, h, d, mipLevel + numSkippedMips);
+                    numPixels += w * h;
+                }
+                
+                // This is more memory than in-place, but the submips
+                // are only 1/3rd the memory of the main mip
+                mipPixels.resize(numPixels);
+                if (srcImage.pixelsFloat)
+                    mipPixelsFloat.resize(numPixels);
+                else if (srcImage.pixelsHalf)
+                    mipPixelsHalf.resize(numPixels);
+                
+                size_t pixelOffset = 0;
+                for (int32_t mipLevel = 1; mipLevel < numMipLevels; ++mipLevel) {
+                    ImageData& dstMipImage = dstMipImages[mipLevel];
+                    dstMipImage.isSRGB = dstImageData.isSRGB;
+                    
+                    dstMipImage.pixels = mipPixels.data() + pixelOffset;
+                    if (srcImage.pixelsFloat)
+                        dstMipImage.pixelsFloat = mipPixelsFloat.data() + pixelOffset;
+                    else if (srcImage.pixelsHalf)
+                        dstMipImage.pixelsHalf = mipPixelsHalf.data() + pixelOffset;
+                      
+                    mipper.mipmap(srcImage, dstMipImage);
+                    
+                    // dst becomes src for next mipmap
+                    // preserve the isSRGB state
+                    bool isSRGBSrc = srcImage.isSRGB;
+                    srcImage = dstMipImage;
+                    srcImage.isSRGB = isSRGBSrc;
+                    
+                    pixelOffset += dstMipImage.width * dstMipImage.height;
+                }
+                
+                // Now can run mip flooding on image
+                if (info.doMipflood) {
+                    mipper.mipflood(dstMipImages);
+                }
+                
+                // apply average channels, now that unique mips
+                bool isFloat = srcImage.pixelsHalf || srcImage.pixelsFloat;
+                if (!info.averageChannels.empty() && !isFloat) {
+                    for (int32_t mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
+                        ImageData& dstMipImage = dstMipImages[mipLevel];
+                        
+                        // this isn't applied to srgb data (what about premul?)
+                        averageChannelsInBlock(info.averageChannels.c_str(), dstImage,
+                                               dstMipImage);
                     }
                 }
             }
-            else {
-                if (info.doSDF) {
-                    // sdf mipper has to build from origin sourceImage
-                    // but it can in-place write to the same dstImage
-                    sdfMipper.mipmap(dstImageData, mipLevel + numSkippedMips);
+        }
+        
+        timerBuildMips.stop();
+        
+        if (info.isVerbose) {
+            KLOGI("Image", "Chunk %d source %d miplevels in %0.3fs\n",
+                  chunk, numMipLevels,
+                  timerBuildMips.timeElapsed() );
+        }
+        
+        //----------------------------------------------
 
-                    w = dstImageData.width;
-                    h = dstImageData.height;
-                }
-                else {
-                    // have to build the submips even with skipMip
-                    mipper.mipmap(srcImage, dstImageData);
+        for (int32_t mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
+            const auto& dstMipLevel = dstMipLevels[mipLevel];
+            ImageData& dstImageData = dstMipImages[mipLevel]; // TODO: fix const
 
-                    // dst becomes src for next in-place mipmap
-                    // preserve the isSRGB state
-                    bool isSRGBSrc = srcImage.isSRGB;
-                    srcImage = dstImageData;
-                    srcImage.isSRGB = isSRGBSrc;
-                    
-                    w = dstImageData.width;
-                    h = dstImageData.height;
-                }
-            }
-
+            w = dstImageData.width;
+            h = dstImageData.height;
+            
             // size of one mip, not levelSize = numChunks * mipStorageSize
             size_t mipStorageSize = dstMipLevel.length;
 
             // offset only valid for KTX and KTX2 w/o isCompressed
             size_t mipChunkOffset = dstMipLevel.offset + chunk * mipStorageSize;
 
-            // just to check that each mip has a unique offset
-            //KLOGI("Image", "chunk:%d %d\n", chunk, mipOffset);
-
-            // average channels per block if requested (mods 8-bit data on a per block basis)
-            ImageData mipImage = dstImageData;
-
-            if (!info.averageChannels.empty()) {
-                // this isn't applied to srgb data (what about premul?)
-                averageChannelsInBlock(info.averageChannels.c_str(), dstImage,
-                                       mipImage, data.tmpImageData8);
-
-                mipImage.pixels = data.tmpImageData8.data();
-                mipImage.pixelsFloat = nullptr;
-            }
-
-            Timer timer;
+            Timer timerEncodeMips;
             bool success =
                 compressMipLevel(info, dstImage,
-                                 mipImage, outputTexture, mipStorageSize);
+                                 dstImageData, outputTexture, mipStorageSize);
             assert(success);
 
             if (success) {
                 if (info.isVerbose) {
-                    KLOGI("Image", "Compressed mipLevel %dx%d in %0.3fs\n", w, h, timer.timeElapsed());
+                    KLOGI("Image", "Compressed mipLevel %dx%d in %0.3fs\n", w, h,
+                          timerEncodeMips.timeElapsed());
                 }
             }
 

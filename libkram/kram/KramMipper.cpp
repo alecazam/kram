@@ -240,7 +240,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
             for (int32_t x = 0; x < w; x++) {
                 Color& c0 = srcImage.pixels[y0 + x];
 
-                // TODO: assumes 16, need 32f path too
+                // TODO: 32f path
                 if (c0.a == 0) {
                     c0 = zeroColor;
                     halfImage[y0 + x] = zeroColorh;
@@ -345,6 +345,69 @@ void remapFromSignedBCEndpoint88(uint16_t& endpoint)
 
     endpoint = (*(const uint8_t*)&e0) | ((*(const uint8_t*)&e1) << 8);
 }
+
+void mipfloodBigMip(const ImageData& smallMip, ImageData& bigMip)
+{
+    // DONE: convert that to pixel in lower mip, might have odd count
+    // horizontal or vertically, so lower mip mapping not so easy
+    // if we assume pow2, then simpler.  Could still have non-square
+    // pow2, which don't want to read off end of buffer.
+    
+    uint32_t w = bigMip.width;
+    uint32_t h = bigMip.height;
+    
+    uint32_t wDst = smallMip.width;
+    uint32_t hDst = smallMip.height;
+    
+    const uint8_t kAlphaThreshold = 0;
+    
+    // now run through the pixels with 0 alpha, and flood them with pixel from below
+    for (uint32_t y = 0; y < h; ++y) {
+       Color* srcRow = &bigMip.pixels[y * w];
+        uint32_t yDst = y/2;
+        if (yDst >= hDst)
+            yDst = hDst - 1;
+        
+        const Color* dstRow = &smallMip.pixels[yDst * wDst];
+        
+        for (uint32_t x = 0; x < w; ++x) {
+            // skip any pixels above threshold
+            Color& srcPixel = srcRow[x];
+            if (srcPixel.a > kAlphaThreshold) continue;
+            
+            // replace the rest
+            uint32_t xDst = x/2;
+            if (xDst == wDst)
+                xDst = wDst - 1;
+            
+            Color dstPixel = dstRow[xDst];
+            dstPixel.a = srcPixel.a;
+            
+            // an invalid premul color with rgb > a, may want valid non-premul
+            srcPixel = dstPixel;
+        }
+    }
+}
+         
+// Propogate up from bottom so that every 0 pixel gets a non-zero value.
+void Mipper::mipflood(vector<ImageData>& mips) const
+{
+    // God of War uses this weighted by coverage on unpremul textures
+    // instead of doing expensive and biased dilation.  It compresses
+    // better since it is blocky.
+    // Unclear why they didn't use premul instead, but maybe compression
+    // quality was better.  So this masks the filtering errors of black halos.
+    // https://www.youtube.com/watch?v=MKX45_riWQA?t=2991
+    
+    int32_t numMipLevels = mips.size();
+        
+    // this overwrites the existing mips
+    for (int32_t i = numMipLevels-1; i >= 1; --i)
+    {
+        mipfloodBigMip(mips[i], mips[i-1]);
+    }
+}
+
 
 void Mipper::mipmap(const ImageData& srcImage, ImageData& dstImage) const
 {
@@ -614,7 +677,7 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
                 // assumes alpha premultiplied already
                 float4 cFloat = (c0 + c1 + c2 + c3) * 0.25;
 
-                // overwrite float4 image
+                // overwrite half4 image
                 cDstHalf[dstIndex] = toHalf4(cFloat);
 
                 // assume hdr pulls from half/float data
@@ -624,7 +687,7 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
                         cFloat = linearToSRGB(cFloat);
                     }
 
-                    // override rgba8u version, since this is what is encoded
+                    // Overwrite rgba8u version, since this is what is encoded
                     Color c = Unormfloat4ToColor(cFloat);
 
                     // can only skip this if cSrc = cDst
