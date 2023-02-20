@@ -2292,9 +2292,9 @@ bool KramEncoder::createMipsFromChunks(
         timerBuildMips.stop();
         
         if (info.isVerbose) {
-            KLOGI("Image", "Chunk %d source %d miplevels in %0.3fs\n",
+            KLOGI("Image", "Chunk %d source %d miplevels in %0.3fms\n",
                   chunk, numMipLevels,
-                  timerBuildMips.timeElapsed() );
+                  timerBuildMips.timeElapsedMillis() );
         }
         
         //----------------------------------------------
@@ -2320,8 +2320,8 @@ bool KramEncoder::createMipsFromChunks(
 
             if (success) {
                 if (info.isVerbose) {
-                    KLOGI("Image", "Compressed mipLevel %dx%d in %0.3fs\n", w, h,
-                          timerEncodeMips.timeElapsed());
+                    KLOGI("Image", "Compressed mipLevel %dx%d in %0.3fms\n", w, h,
+                          timerEncodeMips.timeElapsedMillis());
                 }
             }
 

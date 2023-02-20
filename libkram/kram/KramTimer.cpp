@@ -4,6 +4,7 @@
 
 #include "KramTimer.h"
 
+#if 1
 #if KRAM_WIN
 #include <windows.h>
 #elif KRAM_MAC || KRAM_IOS
@@ -16,11 +17,13 @@ using namespace NAMESPACE_STL;
 
 #if KRAM_WIN
 
-static double queryFrequency()
+static double queryPeriod()
 {
     LARGE_INTEGER frequency;
     QueryPerformanceFrequency(&frequency);
-    return double(1000000000.0L / frequency.QuadPart);  // nanoseconds per tick
+    
+    // convert from nanos to seconds
+    return 1.0 / double(frequency.QuadPart);
 };
 
 static uint64_t queryCounter()
@@ -30,26 +33,63 @@ static uint64_t queryCounter()
     return counter.QuadPart;
 };
 
-static uint64_t gStartTime = queryCounter();
-static double gQueryFrequency = queryFrequency();
+static const uint64_t gStartTime = queryCounter();
+static const double gQueryPeriod = queryPeriod();
 
 double currentTimestamp()
 {
-    return (double)(queryCounter() - gStartTime) * gQueryFrequency;
+    return (double)(queryCounter() - gStartTime) * gQueryPeriod;
 }
 
-#else
+#elif KRAM_IOS || KRAM_MAC
 
-static uint64_t gStartTime = mach_absolute_time();
+static uint64_t queryCounter()
+{
+    // increments when app sleeps
+    //return mach_continuous_time();
+    
+    // does not increment when app sleeps
+    return mach_absolute_time();
+}
+
+static double queryPeriod()
+{
+    mach_timebase_info_data_t timebase;
+    mach_timebase_info(&timebase);
+    
+    // https://eclecticlight.co/2020/11/27/inside-m1-macs-time-and-logs/
+    // On macOS Intel, ticks are 1ns (1/1)
+    // On macOS M1, ticks are 41.67ns (num/denom = 125/3)
+    double period = 1e-9 * (double)timebase.denom / timebase.numer;
+    return period;
+}
+static const uint64_t gStartTime = queryCounter();
+static const double gQueryPeriod = queryPeriod();
+
 double currentTimestamp()
 {
-    return (double)(mach_absolute_time() - gStartTime) * 1e-9;
+    return (double)(queryCounter() - gStartTime) * gQueryPeriod;
+}
+
 }
 
 #endif
 
-/* This is the worse timing system ever, with min times of 0.032s even
-   using the high_resolution_clock on macOS.
+#else
+
+/*
+// This is the worst timing system.  On macOS, resolution of 32ms even
+//   using the high_resolution_clock.
+ 
+// see sources here
+// https://codebrowser.dev/llvm/libcxx/src/chrono.cpp.html
+// can't find high_resolution_clock source,
+// but steady on macOS uses clock_gettime(CLOCK_MONOTONIC_RAW, &tp)
+//   which should be mach_continuous_time()
+//
+// also see sources here for timers
+// https://opensource.apple.com/source/Libc/Libc-1158.1.2/gen/clock_gettime.c.auto.html
+// mach_continuous_time() vs. mach_absolute_time()
  
 #if USE_EASTL
 #include "EASTL/chrono.h"
@@ -57,24 +97,29 @@ double currentTimestamp()
 #include <chrono>
 #endif
  
+namespace kram {
+
+using namespace NAMESPACE_STL;
+
 #if USE_EASTL
 using namespace eastl::chrono;
 #else
 using namespace std::chrono;
 #endif
 
-// high-res sucks
-using clock = high_resolution_clock;
-//using clock = system_clock;
-//using clock = steady_clock;
+// high-res sucks  (defaults to steady or system in libcxx)
+// doesn't matter whether system/stead used, they both have 32ms resolution
+//using myclock = high_resolution_clock;
+//using myclock = system_clock;
+using myclock = steady_clock;
 
-static clock::time_point startTime = clock::now();
+static const myclock::time_point gStartTime = myclock::now();
 
 double currentTimestamp()
 {
-    auto t = clock::now();
-    auto timeSpan = duration_cast<duration<double> >(t - startTime);
-    double count = (double)timeSpan.count();
+    auto t = myclock::now();
+    duration<double, std::milli> timeSpan = t - gStartTime;
+    double count = (double)timeSpan.count() * 1e-3;
     
     // this happens the first time function is called if static
     // is inside the runction call.  Will return 0
@@ -82,6 +127,8 @@ double currentTimestamp()
     
     return count;
 }
-*/
 
 }  // namespace kram
+*/
+#endif
+

@@ -41,6 +41,12 @@ public:
         }
         return time;
     }
+    
+    double timeElapsedMillis() const
+    {
+        return timeElapsed() * 1e3;
+    }
+    
     bool isStopped() const { return _timeElapsed < 0.0; }
 
 private:
