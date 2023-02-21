@@ -1993,6 +1993,8 @@ bool KramEncoder::createMipsFromChunks(
     FILE* dstFile,
     KTXImage& dstImage) const
 {
+    Timer totalTimer;
+    
     // ----------------------------------------------------
 
     // set the structure fields and allocate it, only need enough to hold single
@@ -2358,6 +2360,18 @@ bool KramEncoder::createMipsFromChunks(
             }
         }
     }
+    
+    if (info.isVerbose) {
+        KLOGI("Image", "Total time in %0.3fms\n",
+              totalTimer.timeElapsedMillis() );
+    }
+    
+//    Timer test;
+//    test.stop();
+//
+//    KLOGI("Image", "Test time in %0.3fms\n",
+//          test.timeElapsedMillis() );
+    
     return true;
 }
 

@@ -45,10 +45,10 @@ double currentTimestamp()
 
 static uint64_t queryCounter()
 {
-    // increments when app sleeps
-    //return mach_continuous_time();
+    // increment when app sleeps
+    // return mach_continuous_time();
     
-    // does not increment when app sleeps
+    // no increment when app sleeps
     return mach_absolute_time();
 }
 
@@ -58,9 +58,11 @@ static double queryPeriod()
     mach_timebase_info(&timebase);
     
     // https://eclecticlight.co/2020/11/27/inside-m1-macs-time-and-logs/
-    // On macOS Intel, ticks are 1ns (1/1)
-    // On macOS M1, ticks are 41.67ns (num/denom = 125/3)
-    double period = 1e-9 * (double)timebase.denom / timebase.numer;
+    // On macOS Intel, nanosecondsPerTick are 1ns (1/1)
+    // On macOS M1, nanosecondsPerTick are 41.67ns (num/denom = 125/3)
+    double period = (double)timebase.numer / timebase.denom;
+    period *= 1e-9; // convert to seconds
+    
     return period;
 }
 static const uint64_t gStartTime = queryCounter();
