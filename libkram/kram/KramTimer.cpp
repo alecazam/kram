@@ -5,6 +5,7 @@
 #include "KramTimer.h"
 
 #if 1
+
 #if KRAM_WIN
 #include <windows.h>
 #elif KRAM_MAC || KRAM_IOS
@@ -33,14 +34,6 @@ static uint64_t queryCounter()
     return counter.QuadPart;
 };
 
-static const uint64_t gStartTime = queryCounter();
-static const double gQueryPeriod = queryPeriod();
-
-double currentTimestamp()
-{
-    return (double)(queryCounter() - gStartTime) * gQueryPeriod;
-}
-
 #elif KRAM_IOS || KRAM_MAC
 
 static uint64_t queryCounter()
@@ -65,6 +58,9 @@ static double queryPeriod()
     
     return period;
 }
+
+#endif
+
 static const uint64_t gStartTime = queryCounter();
 static const double gQueryPeriod = queryPeriod();
 
@@ -73,19 +69,13 @@ double currentTimestamp()
     return (double)(queryCounter() - gStartTime) * gQueryPeriod;
 }
 
-}
-
-#endif
+} // namespace kram
 
 #else
 
 /*
-// This is the worst timing system.  On macOS, resolution of 32ms even
-//   using the high_resolution_clock.
- 
 // see sources here
 // https://codebrowser.dev/llvm/libcxx/src/chrono.cpp.html
-// can't find high_resolution_clock source,
 // but steady on macOS uses clock_gettime(CLOCK_MONOTONIC_RAW, &tp)
 //   which should be mach_continuous_time()
 //
@@ -109,8 +99,7 @@ using namespace eastl::chrono;
 using namespace std::chrono;
 #endif
 
-// high-res sucks  (defaults to steady or system in libcxx)
-// doesn't matter whether system/stead used, they both have 32ms resolution
+// high-res  (defaults to steady or system in libcxx)
 //using myclock = high_resolution_clock;
 //using myclock = system_clock;
 using myclock = steady_clock;
@@ -122,15 +111,11 @@ double currentTimestamp()
     auto t = myclock::now();
     duration<double, std::milli> timeSpan = t - gStartTime;
     double count = (double)timeSpan.count() * 1e-3;
-    
-    // this happens the first time function is called if static
-    // is inside the runction call.  Will return 0
-    // assert( count != 0.0 );
-    
     return count;
 }
 
 }  // namespace kram
 */
+
 #endif
 
