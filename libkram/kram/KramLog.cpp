@@ -189,6 +189,49 @@ bool endsWithExtension(const char* str, const string& substring)
     return strcmp(search, substring.c_str()) == 0;
 }
 
+#if KRAM_WIN
+// Adapted from Emil Persson's post.
+// https://twitter.com/_Humus_/status/1629165133359460352
+// ODS that supports UTF8 characters
+inline void OutputDebugStringU(LPCSTR lpOutputString, uint32_t len8)
+{
+    // empty string
+    if (len8 == 0) return;
+    
+    // Run the conversion twice, first to get length, then to do the conversion
+    int len16 = MultiByteToWideChar(CP_UTF8, 0, lpOutputString, (int)len8, nullptr, 0);
+    
+    // watch out for large len16
+    if (len16 == 0 || len16 > 128*1024) return;
+    
+    whcar_t* strWide = (wchar_t*)_malloca(len16 * sizeof(wchar_t));
+    
+    // ran out of stack
+    if (!strWide) return;
+    
+    MultiByteToWideChar(CP_UTF8, 0, lpOutputString, (int)len8, strWide, len16);
+    
+    ULONG_PTR args[4] = {
+        (ULONG_PTR)len16 + 1, (ULONG_PTR)strWide,
+        (ULONG_PTR)len8 + 1, (ULONG_PTR)lpOutputString
+    };
+    
+    // TODO: note that there is a limit to the length of this string
+    // so may want to split up the string in a loop.
+    
+    RaiseException(0x4001000A, 0, 4, args); // DBG_PRINTEXCEPTION_WIDE_C
+    
+    _freea(strWiide);
+    
+    // Can't use OutputDebugStringW.
+    // OutputDebugStringW converts the specified string based on the current system
+    // locale information and passes it to OutputDebugStringA to be displayed. As a
+    // result, some Unicode characters may not be displayed correctly.  So above is
+    // what ODSA calls internally but with the action wide string.
+}
+
+#endif
+
 //----------------------------------
 
 static int32_t logMessageImpl(const char* group, int32_t logLevel,
@@ -283,7 +326,10 @@ static int32_t logMessageImpl(const char* group, int32_t logLevel,
     if (::IsDebuggerPresent()) {
         // TODO: split string up into multiple logs
         // this is limited to 32K
-        OutputDebugString(buffer.c_str());
+        // OutputDebugString(buffer.c_str());
+        
+        // This supports UTF8 strings by converting them to wide
+        OutputDebugStringU(buffer.c_str(), buffer.size());
     }
     else {
         // avoid double print to debugger
