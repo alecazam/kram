@@ -221,7 +221,7 @@ inline void OutputDebugStringU(LPCSTR lpOutputString, uint32_t len8)
     
     RaiseException(0x4001000A, 0, 4, args); // DBG_PRINTEXCEPTION_WIDE_C
     
-    _freea(strWiide);
+    _freea(strWide);
     
     // Can't use OutputDebugStringW.
     // OutputDebugStringW converts the specified string based on the current system
