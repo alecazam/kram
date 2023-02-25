@@ -204,7 +204,7 @@ inline void OutputDebugStringU(LPCSTR lpOutputString, uint32_t len8)
     // watch out for large len16
     if (len16 == 0 || len16 > 128*1024) return;
     
-    whcar_t* strWide = (wchar_t*)_malloca(len16 * sizeof(wchar_t));
+    wchar_t* strWide = (wchar_t*)_malloca(len16 * sizeof(wchar_t));
     
     // ran out of stack
     if (!strWide) return;
