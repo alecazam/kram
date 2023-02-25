@@ -36,15 +36,6 @@ static uint64_t queryCounter()
 
 #elif KRAM_IOS || KRAM_MAC
 
-static uint64_t queryCounter()
-{
-    // increment when app sleeps
-    // return mach_continuous_time();
-    
-    // no increment when app sleeps
-    return mach_absolute_time();
-}
-
 static double queryPeriod()
 {
     mach_timebase_info_data_t timebase;
@@ -59,14 +50,24 @@ static double queryPeriod()
     return period;
 }
 
+static uint64_t queryCounter()
+{
+    // increment when app sleeps
+    // return mach_continuous_time();
+    
+    // no increment when app sleeps
+    return mach_absolute_time();
+}
+
 #endif
 
-static const uint64_t gStartTime = queryCounter();
 static const double gQueryPeriod = queryPeriod();
+static const uint64_t gStartTime = queryCounter();
 
 double currentTimestamp()
 {
-    return (double)(queryCounter() - gStartTime) * gQueryPeriod;
+    uint64_t delta = queryCounter() - gStartTime;
+    return (double)delta * gQueryPeriod;
 }
 
 } // namespace kram
@@ -82,6 +83,7 @@ double currentTimestamp()
 // also see sources here for timers
 // https://opensource.apple.com/source/Libc/Libc-1158.1.2/gen/clock_gettime.c.auto.html
 // mach_continuous_time() vs. mach_absolute_time()
+// https://developer.apple.com/library/archive/qa/qa1398/_index.html
  
 #if USE_EASTL
 #include "EASTL/chrono.h"
