@@ -1,4 +1,8 @@
-#pragma once
+#ifndef ShaderHLSL_h
+#define ShaderHLSL_h
+
+// glslc doesn't support #pragma once
+//#pragma once
 
 #define USE_HALF 1
 
@@ -206,4 +210,5 @@ float4 texCUBEbias(TextureCubeSampler ts, float4 texCoord) {
 //    return ts.t.Sample(ts.s, texCoord.xy, texCoord.z + 0.5); // 0.5 offset needed on nvidia gpus
 //}
 
+#endif // ShaderHLSL_h
     

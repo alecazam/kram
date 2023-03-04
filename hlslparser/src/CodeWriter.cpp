@@ -7,8 +7,6 @@
 //
 //=============================================================================
 
-//#include "Engine/Assert.h"
-//#include "Engine/String.h"
 #include "Engine.h"
 
 #include "CodeWriter.h"
@@ -50,6 +48,8 @@ void CodeWriter::BeginLine(int indent, const char* fileName, int lineNumber)
         }
 
         /* TODO: Alec, removed this for now
+            This writes in #line directives back to orignal source files
+         
         if (outputLine || outputFile)
         {
             char buffer[256];

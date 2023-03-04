@@ -1,4 +1,8 @@
-#pragma once
+#ifndef ShaderMSL_h
+#define ShaderMSL_h
+
+// glslc doesn't support #pragma once
+//#pragma once
 
 // TODO: support function_constants in MSL, is there HLSL equivalent yet
 // [[function_constant(index)]]
@@ -273,3 +277,5 @@ float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
     return ts.t.sample(ts.s, texCoord.xy, texCoord.z + 0.5); // 0.5 offset needed on nvidia gpus
 }
         
+#endif // ShaderMSL_h
+

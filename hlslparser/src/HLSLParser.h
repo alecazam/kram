@@ -7,11 +7,8 @@
 //
 //=============================================================================
 
-#ifndef HLSL_PARSER_H
-#define HLSL_PARSER_H
+#pragma once
 
-//#include "Engine/StringPool.h"
-//#include "Engine/Array.h"
 #include "Engine.h"
 
 #include "HLSLTokenizer.h"
@@ -141,6 +138,37 @@ private:
     bool                    m_disableSemanticValidation = false;
 };
 
-}
+enum NumericType
+{
+    NumericType_Float,
+    NumericType_Half,
+    NumericType_Bool,
+    NumericType_Int,
+    NumericType_Uint,
+    // TODO: Double, Short, Ushort
+    NumericType_Count,
+    
+    NumericType_NaN, // not in count?
+};
 
-#endif
+bool IsHalf(HLSLBaseType type);
+bool IsFloat(HLSLBaseType type);
+
+extern bool IsSamplerType(HLSLBaseType baseType);
+extern bool IsMatrixType(HLSLBaseType baseType);
+extern bool IsVectorType(HLSLBaseType baseType);
+extern bool IsScalarType(HLSLBaseType baseType);
+extern bool IsTextureType(HLSLBaseType baseType);
+
+extern bool IsCoreTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
+extern bool IsNumericTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
+
+extern bool IsSamplerType(const HLSLType& type);
+extern bool IsMatrixType(const HLSLType& type);
+extern bool IsVectorType(const HLSLType& type);
+extern bool IsScalarType(const HLSLType& type);
+extern bool IsTextureType(const HLSLType& type);
+
+extern HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type);
+
+}

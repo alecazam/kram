@@ -7,10 +7,10 @@
 //
 //=============================================================================
 
-//#include "Engine/String.h"
+#include "HLSLParser.h"
+
 #include "Engine.h"
 
-#include "HLSLParser.h"
 #include "HLSLTree.h"
 
 #include <algorithm>
@@ -27,7 +27,156 @@ enum CompareFunctionsResult
     Function2Better
 };
 
+enum CoreType
+{
+    CoreType_None,
     
+    CoreType_Scalar,
+    CoreType_Vector,
+    CoreType_Matrix,
+    
+    CoreType_Sampler,
+    CoreType_Texture,
+    CoreType_Struct,
+    CoreType_Void,
+    CoreType_Expression,
+    
+    CoreType_Count // must be last
+};
+
+enum DimensionType
+{
+    DimensionType_None,
+
+    DimensionType_Scalar,
+
+    DimensionType_Vector2,
+    DimensionType_Vector3,
+    DimensionType_Vector4,
+
+    DimensionType_Matrix2x2,
+    DimensionType_Matrix3x3,
+    DimensionType_Matrix4x4,
+    
+    DimensionType_Matrix4x3, // TODO: no 3x4
+    DimensionType_Matrix4x2
+};
+
+// Can use this to break apart type to useful constructs
+struct BaseTypeDescription
+{
+    const char*     typeName;
+    CoreType        coreType;
+    DimensionType   dimensionType;
+    NumericType     numericType;
+    int             numComponents;
+    
+    // TODO: is this useful ?
+    int             numDimensions; // scalar = 0, vector = 1, matrix = 2
+    
+    int             height;
+    int             binaryOpRank;
+};
+
+extern const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count];
+
+bool IsSamplerType(HLSLBaseType baseType)
+{
+    return baseTypeDescriptions[baseType].coreType == CoreType_Sampler;
+}
+
+bool IsMatrixType(HLSLBaseType baseType)
+{
+    return baseTypeDescriptions[baseType].coreType == CoreType_Matrix;
+}
+
+bool IsVectorType(HLSLBaseType baseType)
+{
+    return baseTypeDescriptions[baseType].coreType == CoreType_Vector;
+}
+
+bool IsScalarType(HLSLBaseType baseType)
+{
+    return baseTypeDescriptions[baseType].coreType == CoreType_Scalar;
+}
+
+bool IsTextureType(HLSLBaseType baseType)
+{
+    return baseTypeDescriptions[baseType].coreType == CoreType_Texture;
+}
+
+bool IsCoreTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType)
+{
+    return baseTypeDescriptions[lhsType].coreType ==
+           baseTypeDescriptions[rhsType].coreType;
+}
+
+bool IsNumericTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType)
+{
+    return baseTypeDescriptions[lhsType].numericType ==
+           baseTypeDescriptions[rhsType].numericType;
+}
+
+bool IsHalf(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Half;
+}
+
+bool IsFloat(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Float;
+}
+
+bool IsSamplerType(const HLSLType & type)
+{
+    return IsSamplerType(type.baseType);
+}
+
+bool IsScalarType(const HLSLType & type)
+{
+    return IsScalarType(type.baseType);
+}
+
+bool IsVectorType(const HLSLType & type)
+{
+    return IsVectorType(type.baseType);
+}
+
+bool IsMatrixType(const HLSLType & type)
+{
+    return IsMatrixType(type.baseType);
+}
+
+bool IsTextureType(const HLSLType & type)
+{
+    return IsTextureType(type.baseType);
+}
+
+HLSLBaseType NumericToBaseType(NumericType numericType)
+{
+    HLSLBaseType baseType = HLSLBaseType_Unknown;
+    switch(numericType)
+    {
+        case NumericType_Float: baseType = HLSLBaseType_Float; break;
+        case NumericType_Half: baseType = HLSLBaseType_Half; break;
+        case NumericType_Int: baseType = HLSLBaseType_Int; break;
+        case NumericType_Uint: baseType = HLSLBaseType_Uint; break;
+        case NumericType_Bool: baseType = HLSLBaseType_Bool; break;
+        // TODO: short,ushort,double
+        default:
+            break;
+    }
+    return baseType;
+}
+
+HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type)
+{
+    return HLSLBaseType(NumericToBaseType(baseTypeDescriptions[type].numericType) +
+                        baseTypeDescriptions[type].dimensionType - DimensionType_Scalar);
+}
+
+
+
 /** This structure stores a HLSLFunction-like declaration for an intrinsic function */
 struct Intrinsic
 {
@@ -101,18 +250,6 @@ Intrinsic SamplerIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseTy
     i.argument[0].type.samplerType = samplerType;
     return i;
 }
-
-
-enum NumericType
-{
-    NumericType_Float,
-    NumericType_Half,
-    NumericType_Bool,
-    NumericType_Int,
-    NumericType_Uint,
-    NumericType_Count,
-    NumericType_NaN,
-};
 
 static const int _numberTypeRank[NumericType_Count][NumericType_Count] = 
 {
@@ -387,19 +524,6 @@ static const EffectState pipelineStates[] = {
     {"AlphaTest", 0, booleanValues},       // This is really alpha to coverage.
 };
 
-
-
-struct BaseTypeDescription
-{
-    const char*     typeName;
-    NumericType     numericType;
-    int             numComponents;
-    int             numDimensions;
-    int             height;
-    int             binaryOpRank;
-};
-
-
 #define INTRINSIC_FLOAT1_FUNCTION(name) \
         Intrinsic( name, HLSLBaseType_Float,   HLSLBaseType_Float  ),   \
         Intrinsic( name, HLSLBaseType_Float2,  HLSLBaseType_Float2 ),   \
@@ -430,7 +554,7 @@ struct BaseTypeDescription
         Intrinsic( name, HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3,  HLSLBaseType_Half3 ),    \
         Intrinsic( name, HLSLBaseType_Half4,   HLSLBaseType_Half4,   HLSLBaseType_Half4,  HLSLBaseType_Half4 )
 
-#if 1
+//#if 1
 // @@ IC: For some reason this is not working with the Visual Studio compiler:
 // This broke using half, so don't just comment this out.
 #define SAMPLER_INTRINSIC_FUNCTION(name, nameH, sampler, arg1) \
@@ -439,7 +563,7 @@ struct BaseTypeDescription
 //#else
 //#define SAMPLER_INTRINSIC_FUNCTION(name, sampler, arg1) \
 //        Intrinsic( name, HLSLBaseType_Float4, sampler, arg1)
-#endif
+//#endif
     
 const Intrinsic _intrinsic[] =
     {
@@ -453,8 +577,8 @@ const Intrinsic _intrinsic[] =
 		Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float2x2 ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float3x3 ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float4x4 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float4x3 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float4x2 ),
+        //Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float4x3 ),
+        //Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float4x2 ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half2 ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half3 ),
@@ -462,8 +586,8 @@ const Intrinsic _intrinsic[] =
 		Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half2x2 ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half3x3 ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half4x4 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half4x3 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half4x2 ),
+        //Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half4x3 ),
+        //Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half4x2 ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Bool ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Int ),
         Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Int2 ),
@@ -564,8 +688,8 @@ const Intrinsic _intrinsic[] =
         Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2x2, HLSLBaseType_Float2 ),
         Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3x3, HLSLBaseType_Float3 ),
         Intrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4x4, HLSLBaseType_Float4 ),
-        Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float4x3 ),
-        Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float4, HLSLBaseType_Float4x2 ),
+        //Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float4x3 ),
+        //Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float4, HLSLBaseType_Float4x2 ),
 
         // matrix transpose
 		Intrinsic( "transpose", HLSLBaseType_Float2x2, HLSLBaseType_Float2x2 ),
@@ -672,55 +796,62 @@ const int _binaryOpPriority[] =
         5, 3, 4, // &, |, ^
     };
 
-const BaseTypeDescription _baseTypeDescriptions[HLSLBaseType_Count] = 
+const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] = 
     {
-        { "unknown type",       NumericType_NaN,        0, 0, 0, -1 },      // HLSLBaseType_Unknown
-        { "void",               NumericType_NaN,        0, 0, 0, -1 },      // HLSLBaseType_Void
-        { "float",              NumericType_Float,      1, 0, 1,  0 },      // HLSLBaseType_Float
-        { "float2",             NumericType_Float,      2, 1, 1,  0 },      // HLSLBaseType_Float2
-        { "float3",             NumericType_Float,      3, 1, 1,  0 },      // HLSLBaseType_Float3
-        { "float4",             NumericType_Float,      4, 1, 1,  0 },      // HLSLBaseType_Float4
-		{ "float2x2",			NumericType_Float,		2, 2, 2,  0 },		// HLSLBaseType_Float2x2
-        { "float3x3",           NumericType_Float,      3, 2, 3,  0 },      // HLSLBaseType_Float3x3
-        { "float4x4",           NumericType_Float,      4, 2, 4,  0 },      // HLSLBaseType_Float4x4
-        { "float4x3",           NumericType_Float,      4, 2, 3,  0 },      // HLSLBaseType_Float4x3
-        { "float4x2",           NumericType_Float,      4, 2, 2,  0 },      // HLSLBaseType_Float4x2
+        { "unknown type",       CoreType_None, DimensionType_None, NumericType_NaN,        0, 0, 0, -1 },      // HLSLBaseType_Unknown
+        { "void",               CoreType_Void, DimensionType_None, NumericType_NaN,        0, 0, 0, -1 },      // HLSLBaseType_Void
+        
+        { "float",              CoreType_Scalar, DimensionType_Scalar, NumericType_Float,       1, 0, 1,  0 },      // HLSLBaseType_Float
+        { "float2",             CoreType_Vector, DimensionType_Vector2, NumericType_Float,      2, 1, 1,  0 },      // HLSLBaseType_Float2
+        { "float3",             CoreType_Vector, DimensionType_Vector3, NumericType_Float,      3, 1, 1,  0 },      // HLSLBaseType_Float3
+        { "float4",             CoreType_Vector, DimensionType_Vector4, NumericType_Float,      4, 1, 1,  0 },      // HLSLBaseType_Float4
+        
+		{ "float2x2",			CoreType_Matrix, DimensionType_Matrix2x2, NumericType_Float,     2, 2, 2,  0 },		// HLSLBaseType_Float2x2
+        { "float3x3",           CoreType_Matrix, DimensionType_Matrix3x3, NumericType_Float,     3, 2, 3,  0 },      // HLSLBaseType_Float3x3
+        { "float4x4",           CoreType_Matrix, DimensionType_Matrix4x4, NumericType_Float,     4, 2, 4,  0 },      // HLSLBaseType_Float4x4
+        { "float4x3",           CoreType_Matrix, DimensionType_Matrix4x3, NumericType_Float,     4, 2, 3,  0 },      // HLSLBaseType_Float4x3
+        { "float4x2",           CoreType_Matrix, DimensionType_Matrix4x2, NumericType_Float,     4, 2, 2,  0 },      // HLSLBaseType_Float4x2
 
-        { "half",               NumericType_Half,       1, 0, 1,  1 },      // HLSLBaseType_Half
-        { "half2",              NumericType_Half,       2, 1, 1,  1 },      // HLSLBaseType_Half2
-        { "half3",              NumericType_Half,       3, 1, 1,  1 },      // HLSLBaseType_Half3
-        { "half4",              NumericType_Half,       4, 1, 1,  1 },      // HLSLBaseType_Half4
-		{ "half2x2",            NumericType_Float,		2, 2, 2,  0 },		// HLSLBaseType_Half2x2
-        { "half3x3",            NumericType_Half,       3, 2, 3,  1 },      // HLSLBaseType_Half3x3
-        { "half4x4",            NumericType_Half,       4, 2, 4,  1 },      // HLSLBaseType_Half4x4
-        { "half4x3",            NumericType_Half,       4, 2, 3,  1 },      // HLSLBaseType_Half4x3
-        { "half4x2",            NumericType_Half,       4, 2, 2,  1 },      // HLSLBaseType_Half4x2
+        { "half",               CoreType_Scalar, DimensionType_Scalar, NumericType_Half,        1, 0, 1,  1 },      // HLSLBaseType_Half
+        { "half2",              CoreType_Vector, DimensionType_Vector2, NumericType_Half,       2, 1, 1,  1 },      // HLSLBaseType_Half2
+        { "half3",              CoreType_Vector, DimensionType_Vector3, NumericType_Half,       3, 1, 1,  1 },      // HLSLBaseType_Half3
+        { "half4",              CoreType_Vector, DimensionType_Vector4, NumericType_Half,       4, 1, 1,  1 },      // HLSLBaseType_Half4
+        
+		{ "half2x2",            CoreType_Matrix, DimensionType_Matrix2x2, NumericType_Half,		2, 2, 2,  0 },		// HLSLBaseType_Half2x2
+        { "half3x3",            CoreType_Matrix, DimensionType_Matrix3x3, NumericType_Half,     3, 2, 3,  1 },      // HLSLBaseType_Half3x3
+        { "half4x4",            CoreType_Matrix, DimensionType_Matrix4x4, NumericType_Half,     4, 2, 4,  1 },      // HLSLBaseType_Half4x4
+        { "half4x3",            CoreType_Matrix, DimensionType_Matrix4x3, NumericType_Half,     4, 2, 3,  1 },      // HLSLBaseType_Half4x3
+        { "half4x2",            CoreType_Matrix, DimensionType_Matrix4x2, NumericType_Half,     4, 2, 2,  1 },      // HLSLBaseType_Half4x2
 
-        { "bool",               NumericType_Bool,       1, 0, 1,  4 },      // HLSLBaseType_Bool
-		{ "bool2",				NumericType_Bool,		2, 1, 1,  4 },      // HLSLBaseType_Bool2
-		{ "bool3",				NumericType_Bool,		3, 1, 1,  4 },      // HLSLBaseType_Bool3
-		{ "bool4",				NumericType_Bool,		4, 1, 1,  4 },      // HLSLBaseType_Bool4
+        { "bool",               CoreType_Scalar, DimensionType_Scalar, NumericType_Bool,       1, 0, 1,  4 },      // HLSLBaseType_Bool
+		{ "bool2",				CoreType_Vector, DimensionType_Vector2, NumericType_Bool,	   2, 1, 1,  4 },      // HLSLBaseType_Bool2
+		{ "bool3",				CoreType_Vector, DimensionType_Vector3, NumericType_Bool,	   3, 1, 1,  4 },      // HLSLBaseType_Bool3
+		{ "bool4",				CoreType_Vector, DimensionType_Vector4, NumericType_Bool,	   4, 1, 1,  4 },      // HLSLBaseType_Bool4
 
-        { "int",                NumericType_Int,        1, 0, 1,  3 },      // HLSLBaseType_Int
-        { "int2",               NumericType_Int,        2, 1, 1,  3 },      // HLSLBaseType_Int2
-        { "int3",               NumericType_Int,        3, 1, 1,  3 },      // HLSLBaseType_Int3
-        { "int4",               NumericType_Int,        4, 1, 1,  3 },      // HLSLBaseType_Int4
+        { "int",                CoreType_Scalar, DimensionType_Scalar, NumericType_Int,        1, 0, 1,  3 },      // HLSLBaseType_Int
+        { "int2",               CoreType_Vector, DimensionType_Vector2, NumericType_Int,       2, 1, 1,  3 },      // HLSLBaseType_Int2
+        { "int3",               CoreType_Vector, DimensionType_Vector3, NumericType_Int,       3, 1, 1,  3 },      // HLSLBaseType_Int3
+        { "int4",               CoreType_Vector, DimensionType_Vector4, NumericType_Int,       4, 1, 1,  3 },      // HLSLBaseType_Int4
 
-        { "uint",               NumericType_Uint,       1, 0, 1,  2 },      // HLSLBaseType_Uint
-        { "uint2",              NumericType_Uint,       2, 1, 1,  2 },      // HLSLBaseType_Uint2
-        { "uint3",              NumericType_Uint,       3, 1, 1,  2 },      // HLSLBaseType_Uint3
-        { "uint4",              NumericType_Uint,       4, 1, 1,  2 },      // HLSLBaseType_Uint4
+        { "uint",               CoreType_Scalar, DimensionType_Scalar, NumericType_Uint,       1, 0, 1,  2 },      // HLSLBaseType_Uint
+        { "uint2",              CoreType_Vector, DimensionType_Vector2, NumericType_Uint,      2, 1, 1,  2 },      // HLSLBaseType_Uint2
+        { "uint3",              CoreType_Vector, DimensionType_Vector3, NumericType_Uint,      3, 1, 1,  2 },      // HLSLBaseType_Uint3
+        { "uint4",              CoreType_Vector, DimensionType_Vector4, NumericType_Uint,      4, 1, 1,  2 },      // HLSLBaseType_Uint4
 
-        { "texture",            NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture
-        { "sampler",            NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler
-        { "sampler2D",          NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2D
-        { "sampler3D",          NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler3D
-        { "samplerCUBE",        NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_SamplerCube
-        { "sampler2DShadow",    NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DShadow
-        { "sampler2DMS",        NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DMS
-        { "sampler2DArray",     NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DArray
-        { "user defined",       NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_UserDefined
-        { "expression",         NumericType_NaN,        1, 0, 0, -1 }       // HLSLBaseType_Expression
+        // TODO: add ushort/short
+        
+        { "texture",            CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture
+        
+        { "sampler",            CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler
+        { "sampler2D",          CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2D
+        { "sampler3D",          CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler3D
+        { "samplerCUBE",        CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_SamplerCube
+        { "sampler2DShadow",    CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DShadow
+        { "sampler2DMS",        CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DMS
+        { "sampler2DArray",     CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DArray
+        
+        { "user defined",       CoreType_Struct, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_UserDefined
+        { "expression",         CoreType_Expression, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 }       // HLSLBaseType_Expression
     };
 
 // IC: I'm not sure this table is right, but any errors should be caught by the backend compiler.
@@ -951,7 +1082,7 @@ static const char* GetTypeName(const HLSLType& type)
     }
     else
     {
-        return _baseTypeDescriptions[type.baseType].typeName;
+        return baseTypeDescriptions[type.baseType].typeName;
     }
 }
 
@@ -1035,8 +1166,8 @@ static int GetTypeCastRank(HLSLTree * tree, const HLSLType& srcType, const HLSLT
         return 0;
     }
 
-    const BaseTypeDescription& srcDesc = _baseTypeDescriptions[srcType.baseType];
-    const BaseTypeDescription& dstDesc = _baseTypeDescriptions[dstType.baseType];
+    const BaseTypeDescription& srcDesc = baseTypeDescriptions[srcType.baseType];
+    const BaseTypeDescription& dstDesc = baseTypeDescriptions[dstType.baseType];
     if (srcDesc.numericType == NumericType_NaN || dstDesc.numericType == NumericType_NaN)
     {
         return -1;
@@ -1185,7 +1316,7 @@ static bool GetBinaryOpResultType(HLSLBinaryOp binaryOp, const HLSLType& type1, 
     case HLSLBinaryOp_Equal:
 	case HLSLBinaryOp_NotEqual:
 		{
-			int numComponents = std::max( _baseTypeDescriptions[ type1.baseType ].numComponents, _baseTypeDescriptions[ type2.baseType ].numComponents );
+			int numComponents = std::max( baseTypeDescriptions[ type1.baseType ].numComponents, baseTypeDescriptions[ type2.baseType ].numComponents );
 			result.baseType = HLSLBaseType( HLSLBaseType_Bool + numComponents - 1 );
 			break;
 		}
@@ -3827,7 +3958,7 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
         return false;
     }
 
-    if (_baseTypeDescriptions[objectType.baseType].numericType == NumericType_NaN)
+    if (baseTypeDescriptions[objectType.baseType].numericType == NumericType_NaN)
     {
         // Currently we don't have an non-numeric types that allow member access.
         return false;
@@ -3835,7 +3966,7 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
 
     int swizzleLength = 0;
 
-    if (_baseTypeDescriptions[objectType.baseType].numDimensions <= 1)
+    if (baseTypeDescriptions[objectType.baseType].numDimensions <= 1)
     {
         // Check for a swizzle on the scalar/vector types.
         for (int i = 0; fieldName[i] != 0; ++i)
@@ -3872,8 +4003,8 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
 
             int r = (n[0] - '0') - base;
             int c = (n[1] - '0') - base;
-            if (r >= _baseTypeDescriptions[objectType.baseType].height ||
-                c >= _baseTypeDescriptions[objectType.baseType].numComponents)
+            if (r >= baseTypeDescriptions[objectType.baseType].height ||
+                c >= baseTypeDescriptions[objectType.baseType].numComponents)
             {
                 return false;
             }
@@ -3901,7 +4032,7 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
     static const HLSLBaseType uintType[]  = { HLSLBaseType_Uint,  HLSLBaseType_Uint2,  HLSLBaseType_Uint3,  HLSLBaseType_Uint4  };
     static const HLSLBaseType boolType[]  = { HLSLBaseType_Bool,  HLSLBaseType_Bool2,  HLSLBaseType_Bool3,  HLSLBaseType_Bool4  };
     
-    switch (_baseTypeDescriptions[objectType.baseType].numericType)
+    switch (baseTypeDescriptions[objectType.baseType].numericType)
     {
     case NumericType_Float:
         memberAccess->expressionType.baseType = floatType[swizzleLength - 1];

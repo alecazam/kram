@@ -7,11 +7,9 @@
 //
 //=============================================================================
 
-//#include "Engine/String.h"
-//#include "Engine/Log.h"
-#include "Engine.h"
-
 #include "HLSLGenerator.h"
+
+#include "Engine.h"
 #include "HLSLParser.h"
 #include "HLSLTree.h"
 
@@ -30,8 +28,8 @@ static const char* GetTypeName(const HLSLType& type)
 	case HLSLBaseType_Float2x2:     return "float2x2";
     case HLSLBaseType_Float3x3:     return "float3x3";
     case HLSLBaseType_Float4x4:     return "float4x4";
-    case HLSLBaseType_Float4x3:     return "float4x3";
-    case HLSLBaseType_Float4x2:     return "float4x2";
+    //case HLSLBaseType_Float4x3:     return "float4x3";
+    //case HLSLBaseType_Float4x2:     return "float4x2";
             
     // Half support, these were all returning float
     case HLSLBaseType_Half:        return "half";
@@ -41,8 +39,8 @@ static const char* GetTypeName(const HLSLType& type)
     case HLSLBaseType_Half2x2:     return "halfx2";
     case HLSLBaseType_Half3x3:     return "half3x3";
     case HLSLBaseType_Half4x4:     return "half4x4";
-    case HLSLBaseType_Half4x3:     return "half4x3";
-    case HLSLBaseType_Half4x2:     return "half4x2";
+    //case HLSLBaseType_Half4x3:     return "half4x3";
+    //case HLSLBaseType_Half4x2:     return "half4x2";
             
     case HLSLBaseType_Bool:         return "bool";
 	case HLSLBaseType_Bool2:        return "bool2";
@@ -115,35 +113,9 @@ HLSLGenerator::HLSLGenerator()
 {
     m_tree                          = NULL;
     m_entryName                     = NULL;
-    //m_legacy                        = false;
     m_target                        = Target_VertexShader;
     m_isInsideBuffer                = false;
     m_error                         = false;
-    
-    /*
-    m_textureSampler2DStruct[0]     = 0;
-    m_textureSampler2DCtor[0]       = 0;
-    m_textureSampler3DStruct[0]     = 0;
-    m_textureSampler3DCtor[0]       = 0;
-    m_textureSamplerCubeStruct[0]   = 0;
-    m_textureSamplerCubeCtor[0]     = 0;
-    m_tex2DFunction[0]              = 0;
-    m_tex2DProjFunction[0]          = 0;
-    m_tex2DLodFunction[0]           = 0;
-    m_tex2DBiasFunction[0]          = 0;
-    m_tex2DGradFunction[0]          = 0;
-    m_tex2DGatherFunction[0]        = 0;
-    m_tex2DSizeFunction[0]          = 0;
-    m_tex2DFetchFunction[0]         = 0;
-    m_tex2DCmpFunction[0]           = 0;
-    m_tex2DMSFetchFunction[0]       = 0;
-    m_tex3DFunction[0]              = 0;
-    m_tex3DLodFunction[0]           = 0;
-    m_tex3DBiasFunction[0]          = 0;
-    m_texCubeFunction[0]            = 0;
-    m_texCubeLodFunction[0]         = 0;
-    m_texCubeBiasFunction[0]        = 0;
-    */
 }
 
 
@@ -206,7 +178,6 @@ bool HLSLGenerator::Generate(HLSLTree* tree, Target target, const char* entryNam
     m_tree      = tree;
     m_entryName = entryName;
     m_target    = target;
-    //m_legacy    = legacy;
     m_isInsideBuffer = false;
 
     m_writer.Reset();
@@ -234,7 +205,6 @@ bool HLSLGenerator::Generate(HLSLTree* tree, Target target, const char* entryNam
     //EmulateAlphaTest(tree, entryName, 0.5f);
     FlattenExpressions(tree);
     
-    // TODO: see if can unify to Shader.h, and have it sub-include
     m_writer.WriteLine(0, "#include \"ShaderHLSL.h\"");
     
     // @@ Should we generate an entirely new copy of the tree so that we can modify it in place?
@@ -321,210 +291,6 @@ bool HLSLGenerator::Generate(HLSLTree* tree, Target target, const char* entryNam
             argument = argument->nextArgument;
         }
     }
-
-#if 0 // Removing all this for include
-/*
-    // TODO: don't do this, can just write these once
-    // as helpers.  And then reference them from the header.
-    // See MSLGenerator, for how it wraps only the user
-    // code in a struct to avoid renaming.
-    
-    ChooseUniqueName("TextureSampler2D",            m_textureSampler2DStruct,   sizeof(m_textureSampler2DStruct));
-    ChooseUniqueName("CreateTextureSampler2D",      m_textureSampler2DCtor,     sizeof(m_textureSampler2DCtor));
-    ChooseUniqueName("TextureSampler2DShadow",      m_textureSampler2DShadowStruct, sizeof(m_textureSampler2DShadowStruct));
-    ChooseUniqueName("CreateTextureSampler2DShadow",m_textureSampler2DShadowCtor,   sizeof(m_textureSampler2DShadowCtor));
-    ChooseUniqueName("TextureSampler3D",            m_textureSampler3DStruct,   sizeof(m_textureSampler3DStruct));
-    ChooseUniqueName("CreateTextureSampler3D",      m_textureSampler3DCtor,     sizeof(m_textureSampler3DCtor));
-    ChooseUniqueName("TextureSamplerCube",          m_textureSamplerCubeStruct, sizeof(m_textureSamplerCubeStruct));
-    ChooseUniqueName("CreateTextureSamplerCube",    m_textureSamplerCubeCtor,   sizeof(m_textureSamplerCubeCtor));
-    ChooseUniqueName("tex2D",                       m_tex2DFunction,            sizeof(m_tex2DFunction));
-    ChooseUniqueName("tex2Dproj",                   m_tex2DProjFunction,        sizeof(m_tex2DProjFunction));
-    ChooseUniqueName("tex2Dlod",                    m_tex2DLodFunction,         sizeof(m_tex2DLodFunction));
-    ChooseUniqueName("tex2Dbias",                   m_tex2DBiasFunction,        sizeof(m_tex2DBiasFunction));
-    ChooseUniqueName("tex2Dgrad",                   m_tex2DGradFunction,        sizeof(m_tex2DGradFunction));
-    ChooseUniqueName("tex2Dgather",                 m_tex2DGatherFunction,      sizeof(m_tex2DGatherFunction));
-    ChooseUniqueName("tex2Dsize",                   m_tex2DSizeFunction,        sizeof(m_tex2DSizeFunction));
-    ChooseUniqueName("tex2Dfetch",                  m_tex2DFetchFunction,       sizeof(m_tex2DFetchFunction));
-    ChooseUniqueName("tex2Dcmp",                    m_tex2DCmpFunction,         sizeof(m_tex2DCmpFunction));
-    ChooseUniqueName("tex2DMSfetch",                m_tex2DMSFetchFunction,     sizeof(m_tex2DMSFetchFunction));
-    ChooseUniqueName("tex2DMSsize",                 m_tex2DMSSizeFunction,      sizeof(m_tex2DMSSizeFunction));
-    ChooseUniqueName("tex3D",                       m_tex3DFunction,            sizeof(m_tex3DFunction));
-    ChooseUniqueName("tex3Dlod",                    m_tex3DLodFunction,         sizeof(m_tex3DLodFunction));
-    ChooseUniqueName("tex3Dbias",                   m_tex3DBiasFunction,        sizeof(m_tex3DBiasFunction));
-    ChooseUniqueName("tex3Dsize",                   m_tex3DSizeFunction,        sizeof(m_tex3DSizeFunction));
-    ChooseUniqueName("texCUBE",                     m_texCubeFunction,          sizeof(m_texCubeFunction));
-    ChooseUniqueName("texCUBElod",                  m_texCubeLodFunction,       sizeof(m_texCubeLodFunction));
-    ChooseUniqueName("texCUBEbias",                 m_texCubeBiasFunction,      sizeof(m_texCubeBiasFunction));
-    ChooseUniqueName("texCUBEsize",                 m_texCubeSizeFunction,      sizeof(m_texCubeSizeFunction));
-
-    //if (!m_legacy)
-    {
-        // @@ Only emit code for sampler types that are actually used?
-
-        m_writer.WriteLine(0, "struct %s {", m_textureSampler2DStruct);
-        m_writer.WriteLine(1, "Texture2D    t;");
-        m_writer.WriteLine(1, "SamplerState s;");
-        m_writer.WriteLine(0, "};");
-
-        m_writer.WriteLine(0, "struct %s {", m_textureSampler2DShadowStruct);
-        m_writer.WriteLine(1, "Texture2D                t;");
-        m_writer.WriteLine(1, "SamplerComparisonState   s;");
-        m_writer.WriteLine(0, "};");
-
-        m_writer.WriteLine(0, "struct %s {", m_textureSampler3DStruct);
-        m_writer.WriteLine(1, "Texture3D    t;");
-        m_writer.WriteLine(1, "SamplerState s;");
-        m_writer.WriteLine(0, "};");
-
-        m_writer.WriteLine(0, "struct %s {", m_textureSamplerCubeStruct);
-        m_writer.WriteLine(1, "TextureCube  t;");
-        m_writer.WriteLine(1, "SamplerState s;");
-        m_writer.WriteLine(0, "};");
-
-        m_writer.WriteLine(0, "%s %s(Texture2D t, SamplerState s) {", m_textureSampler2DStruct, m_textureSampler2DCtor);
-        m_writer.WriteLine(1, "%s ts;", m_textureSampler2DStruct);
-        m_writer.WriteLine(1, "ts.t = t; ts.s = s;");
-        m_writer.WriteLine(1, "return ts;");
-        m_writer.WriteLine(0, "}");
-
-        m_writer.WriteLine(0, "%s %s(Texture2D t, SamplerComparisonState s) {", m_textureSampler2DShadowStruct, m_textureSampler2DShadowCtor);
-        m_writer.WriteLine(1, "%s ts;", m_textureSampler2DShadowStruct);
-        m_writer.WriteLine(1, "ts.t = t; ts.s = s;");
-        m_writer.WriteLine(1, "return ts;");
-        m_writer.WriteLine(0, "}");
-
-        m_writer.WriteLine(0, "%s %s(Texture3D t, SamplerState s) {", m_textureSampler3DStruct, m_textureSampler3DCtor);
-        m_writer.WriteLine(1, "%s ts;", m_textureSampler3DStruct);
-        m_writer.WriteLine(1, "ts.t = t; ts.s = s;");
-        m_writer.WriteLine(1, "return ts;");
-        m_writer.WriteLine(0, "}");
-
-        m_writer.WriteLine(0, "%s %s(TextureCube t, SamplerState s) {", m_textureSamplerCubeStruct, m_textureSamplerCubeCtor);
-        m_writer.WriteLine(1, "%s ts;", m_textureSamplerCubeStruct);
-        m_writer.WriteLine(1, "ts.t = t; ts.s = s;");
-        m_writer.WriteLine(1, "return ts;");
-        m_writer.WriteLine(0, "}");
-        
-        if (m_tree->GetContainsString("tex2D")) 
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float2 texCoord) {", m_tex2DFunction, m_textureSampler2DStruct);
-            m_writer.WriteLine(1, "return ts.t.Sample(ts.s, texCoord);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2Dproj"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float4 texCoord) {", m_tex2DProjFunction, m_textureSampler2DStruct);
-            m_writer.WriteLine(1, "return ts.t.Sample(ts.s, texCoord.xy / texCoord.w);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2Dlod"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float4 texCoord, int2 offset=0) {", m_tex2DLodFunction, m_textureSampler2DStruct);
-            m_writer.WriteLine(1, "return ts.t.SampleLevel(ts.s, texCoord.xy, texCoord.w, offset);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2Dbias"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float4 texCoord) {", m_tex2DBiasFunction, m_textureSampler2DStruct);
-            m_writer.WriteLine(1, "return ts.t.SampleBias(ts.s, texCoord.xy, texCoord.w);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2Dgrad"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float2 texCoord, float2 ddx, float2 ddy) {", m_tex2DGradFunction, m_textureSampler2DStruct);
-            m_writer.WriteLine(1, "return ts.t.SampleGrad(ts.s, texCoord.xy, ddx, ddy);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2Dgather"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float2 texCoord, int component, int2 offset=0) {", m_tex2DGatherFunction, m_textureSampler2DStruct);
-            m_writer.WriteLine(1, "if(component == 0) return ts.t.GatherRed(ts.s, texCoord, offset);");
-            m_writer.WriteLine(1, "if(component == 1) return ts.t.GatherGreen(ts.s, texCoord, offset);");
-            m_writer.WriteLine(1, "if(component == 2) return ts.t.GatherBlue(ts.s, texCoord, offset);");
-            m_writer.WriteLine(1, "return ts.t.GatherAlpha(ts.s, texCoord, offset);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2Dsize"))
-        {
-            m_writer.WriteLine(0, "int2 %s(%s ts) {", m_tex2DSizeFunction, m_textureSampler2DStruct);
-            m_writer.WriteLine(1, "int2 size; ts.t.GetDimensions(size.x, size.y); return size;");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2Dfetch"))
-        {
-            m_writer.WriteLine(0, "int2 %s(%s ts, int3 texCoord) {", m_tex2DFetchFunction, m_textureSampler2DStruct);
-            m_writer.WriteLine(1, "return ts.t.Load(texCoord.xyz);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2Dcmp"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float4 texCoord) {", m_tex2DCmpFunction, m_textureSampler2DShadowStruct);
-            m_writer.WriteLine(1, "return ts.t.SampleCmpLevelZero(ts.s, texCoord.xy, texCoord.z);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2DMSfetch"))
-        {
-            m_writer.WriteLine(0, "float4 %s(Texture2DMS<float4> t, int2 texCoord, int sample) {", m_tex2DMSFetchFunction);
-            m_writer.WriteLine(1, "return t.Load(texCoord, sample);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex2DMSsize"))
-        {
-            m_writer.WriteLine(0, "int3 %s(Texture2DMS<float4> t) {", m_tex2DMSSizeFunction);
-            m_writer.WriteLine(1, "int3 size; t.GetDimensions(size.x, size.y, size.z); return size;");   // @@ Not tested, does this return the number of samples in the third argument?
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex3D"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float3 texCoord) {", m_tex3DFunction, m_textureSampler3DStruct);
-            m_writer.WriteLine(1, "return ts.t.Sample(ts.s, texCoord);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex3Dlod"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float4 texCoord) {", m_tex3DLodFunction, m_textureSampler3DStruct);
-            m_writer.WriteLine(1, "return ts.t.SampleLevel(ts.s, texCoord.xyz, texCoord.w);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex3Dbias"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float4 texCoord) {", m_tex3DBiasFunction, m_textureSampler3DStruct);
-            m_writer.WriteLine(1, "return ts.t.SampleBias(ts.s, texCoord.xyz, texCoord.w);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("tex3Dsize"))
-        {
-            m_writer.WriteLine(0, "int3 %s(%s ts) {", m_tex3DSizeFunction, m_textureSampler3DStruct);
-            m_writer.WriteLine(1, "int3 size; ts.t.GetDimensions(size.x, size.y, size.z); return size;");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("texCUBE"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float3 texCoord) {", m_texCubeFunction, m_textureSamplerCubeStruct);
-            m_writer.WriteLine(1, "return ts.t.Sample(ts.s, texCoord);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("texCUBElod"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float4 texCoord) {", m_texCubeLodFunction, m_textureSamplerCubeStruct);
-            m_writer.WriteLine(1, "return ts.t.SampleLevel(ts.s, texCoord.xyz, texCoord.w);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("texCUBEbias"))
-        {
-            m_writer.WriteLine(0, "float4 %s(%s ts, float4 texCoord) {", m_texCubeBiasFunction, m_textureSamplerCubeStruct);
-            m_writer.WriteLine(1, "return ts.t.SampleBias(ts.s, texCoord.xyz, texCoord.w);");
-            m_writer.WriteLine(0, "}");
-        }
-        if (m_tree->GetContainsString("texCUBEsize"))
-        {
-            m_writer.WriteLine(0, "int %s(%s ts) {", m_texCubeSizeFunction, m_textureSamplerCubeStruct);
-            m_writer.WriteLine(1, "int size; ts.t.GetDimensions(size); return size;");   // @@ Not tested, does this return a single value?
-            m_writer.WriteLine(0, "}");
-        }
-    }
-*/
-#endif
     
     HLSLRoot* root = m_tree->GetRoot();
     OutputStatements(0, root->statement);
@@ -561,8 +327,7 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
     {
         HLSLIdentifierExpression* identifierExpression = static_cast<HLSLIdentifierExpression*>(expression);
         const char* name = identifierExpression->name;
-        if (//!m_legacy &&
-            IsSamplerType(identifierExpression->expressionType) && identifierExpression->global)
+        if (IsSamplerType(identifierExpression->expressionType) && identifierExpression->global)
         {
             // @@ Handle generic sampler type.
 
@@ -757,89 +522,6 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
     {
         HLSLFunctionCall* functionCall = static_cast<HLSLFunctionCall*>(expression);
         const char* name = functionCall->function->name;
-#if 0
-/* Don't need thie remapping, it will just call the function as is
-        //if (!m_legacy)
-        {
-            if (String_Equal(name, "tex2D"))
-            {
-                name = m_tex2DFunction;
-            }
-            else if (String_Equal(name, "tex2Dproj"))
-            {
-                name = m_tex2DProjFunction;
-            }
-            else if (String_Equal(name, "tex2Dlod"))
-            {
-                name = m_tex2DLodFunction;
-            }
-            else if (String_Equal(name, "tex2Dbias"))
-            {
-                name = m_tex2DBiasFunction;
-            }
-            else if (String_Equal(name, "tex2Dgrad"))
-            {
-                name = m_tex2DGradFunction;
-            }
-            else if (String_Equal(name, "tex2Dgather"))
-            {
-                name = m_tex2DGatherFunction;
-            }
-            else if (String_Equal(name, "tex2Dsize"))
-            {
-                name = m_tex2DSizeFunction;
-            }
-            else if (String_Equal(name, "tex2Dfetch"))
-            {
-                name = m_tex2DFetchFunction;
-            }
-            else if (String_Equal(name, "tex2Dcmp"))
-            {
-                name = m_tex2DCmpFunction;
-            }
-            else if (String_Equal(name, "tex2DMSfetch"))
-            {
-                name = m_tex2DMSFetchFunction;
-            }
-            else if (String_Equal(name, "tex2DMSsize"))
-            {
-                name = m_tex2DMSSizeFunction;
-            }
-            else if (String_Equal(name, "tex3D"))
-            {
-                name = m_tex3DFunction;
-            }
-            else if (String_Equal(name, "tex3Dlod"))
-            {
-                name = m_tex3DLodFunction;
-            }
-            else if (String_Equal(name, "tex3Dbias"))
-            {
-                name = m_tex3DBiasFunction;
-            }
-            else if (String_Equal(name, "tex3Dsize"))
-            {
-                name = m_tex3DSizeFunction;
-            }
-            else if (String_Equal(name, "texCUBE"))
-            {
-                name = m_texCubeFunction;
-            }
-            else if (String_Equal(name, "texCUBElod"))
-            {
-                name = m_texCubeLodFunction;
-            }
-            else if (String_Equal(name, "texCUBEbias"))
-            {
-                name = m_texCubeBiasFunction;
-            }
-            else if (String_Equal(name, "texCUBEsize"))
-            {
-                name = m_texCubeSizeFunction;
-            }
-        }
- */
-#endif
         m_writer.Write("%s(", name);
         OutputExpressionList(functionCall->argument);
         m_writer.Write(")");
@@ -952,16 +634,14 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
             HLSLBuffer* buffer = static_cast<HLSLBuffer*>(statement);
             HLSLDeclaration* field = buffer->field;
 
-            //if (!m_legacy)
+            m_writer.BeginLine(indent, buffer->fileName, buffer->line);
+            m_writer.Write("cbuffer %s", buffer->name);
+            if (buffer->registerName != NULL)
             {
-                m_writer.BeginLine(indent, buffer->fileName, buffer->line);
-                m_writer.Write("cbuffer %s", buffer->name);
-                if (buffer->registerName != NULL)
-                {
-                    m_writer.Write(" : register(%s)", buffer->registerName);
-                }
-                m_writer.EndLine(" {");
+                m_writer.Write(" : register(%s)", buffer->registerName);
             }
+            m_writer.EndLine(" {");
+            
 
             m_isInsideBuffer = true;
 
@@ -979,10 +659,7 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
 
             m_isInsideBuffer = false;
 
-            //if (!m_legacy)
-            {
-                m_writer.WriteLine(indent, "};");
-            }
+            m_writer.WriteLine(indent, "};");
         }
         else if (statement->nodeType == HLSLNodeType_Function)
         {
@@ -1111,7 +788,6 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
 {
     bool isSamplerType = IsSamplerType(declaration->type);
 
-    //if (!m_legacy && isSamplerType)
     if (isSamplerType)
     {
         int reg = -1;
@@ -1186,36 +862,35 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
 void HLSLGenerator::OutputDeclarationType(const HLSLType& type)
 {
     const char* typeName = GetTypeName(type);
-    //if (!m_legacy)
+    
+    if (type.baseType == HLSLBaseType_Sampler2D)
     {
-        if (type.baseType == HLSLBaseType_Sampler2D)
-        {
-            if (type.samplerType == HLSLBaseType_Half
-                // TODO: && !m_options.treatHalfAsFloat
-                ) {
-                typeName = "Texture2DHalfSampler";
-            }
-            else {
-                typeName = "Texture2DSampler";
-            }
+        if (type.samplerType == HLSLBaseType_Half
+            // TODO: && !m_options.treatHalfAsFloat
+            ) {
+            typeName = "Texture2DHalfSampler";
         }
-        else if (type.baseType == HLSLBaseType_Sampler3D)
-        {
-            typeName = "Texture3DSampler";
-        }
-        else if (type.baseType == HLSLBaseType_SamplerCube)
-        {
-            typeName =  "TextureCubeSampler";
-        }
-        else if (type.baseType == HLSLBaseType_Sampler2DShadow)
-        {
-            typeName = "Texture2DShadowSampler";
-        }
-        else if (type.baseType == HLSLBaseType_Sampler2DMS)
-        {
-            typeName = "Texture2DMS<float4>";
+        else {
+            typeName = "Texture2DSampler";
         }
     }
+    else if (type.baseType == HLSLBaseType_Sampler3D)
+    {
+        typeName = "Texture3DSampler";
+    }
+    else if (type.baseType == HLSLBaseType_SamplerCube)
+    {
+        typeName =  "TextureCubeSampler";
+    }
+    else if (type.baseType == HLSLBaseType_Sampler2DShadow)
+    {
+        typeName = "Texture2DShadowSampler";
+    }
+    else if (type.baseType == HLSLBaseType_Sampler2DMS)
+    {
+        typeName = "Texture2DMS<float4>";
+    }
+    
 
     if (type.flags & HLSLTypeFlag_Const)
     {

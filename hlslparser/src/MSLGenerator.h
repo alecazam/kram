@@ -1,5 +1,4 @@
-#ifndef MSL_GENERATOR_H
-#define MSL_GENERATOR_H
+#pragma once
 
 #include "CodeWriter.h"
 #include "HLSLTree.h"
@@ -134,4 +133,3 @@ private:
 
 } // M4
 
-#endif

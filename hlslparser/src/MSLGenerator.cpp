@@ -7,11 +7,9 @@
 //
 //=============================================================================
 
-//#include "Engine/String.h"
-//#include "Engine/Log.h"
-#include "Engine.h"
-
 #include "MSLGenerator.h"
+
+#include "Engine.h"
 #include "HLSLParser.h"
 #include "HLSLTree.h"
 
@@ -29,59 +27,6 @@
 
 namespace M4
 {
-    /* unused
-    static const char* GetTypeName(const HLSLType& type)
-    {
-        switch (type.baseType)
-        {
-        case HLSLBaseType_Void:             return "void";
-        case HLSLBaseType_Float:            return "float";
-        case HLSLBaseType_Float2:           return "float2";
-        case HLSLBaseType_Float3:           return "float3";
-        case HLSLBaseType_Float4:           return "float4";
-        case HLSLBaseType_Float2x2:         return "float2x2";
-        case HLSLBaseType_Float3x3:         return "float3x3";
-        case HLSLBaseType_Float4x4:         return "float4x4";
-        case HLSLBaseType_Float4x3:         return "float3x4";
-        case HLSLBaseType_Float4x2:         return "float2x4";
-        case HLSLBaseType_Half:             return "half";
-        case HLSLBaseType_Half2:            return "half2";
-        case HLSLBaseType_Half3:            return "half3";
-        case HLSLBaseType_Half4:            return "half4";
-        case HLSLBaseType_Half2x2:          return "half2x2";
-        case HLSLBaseType_Half3x3:          return "half3x3";
-        case HLSLBaseType_Half4x4:          return "half4x4";
-        case HLSLBaseType_Half4x3:          return "half3x4";
-        case HLSLBaseType_Half4x2:          return "half2x4";
-        case HLSLBaseType_Bool:             return "bool";
-        case HLSLBaseType_Bool2:            return "bool2";
-        case HLSLBaseType_Bool3:            return "bool3";
-        case HLSLBaseType_Bool4:            return "bool4";
-        case HLSLBaseType_Int:              return "int";
-        case HLSLBaseType_Int2:             return "int2";
-        case HLSLBaseType_Int3:             return "int3";
-        case HLSLBaseType_Int4:             return "int4";
-        case HLSLBaseType_Uint:             return "uint";
-        case HLSLBaseType_Uint2:            return "uint2";
-        case HLSLBaseType_Uint3:            return "uint3";
-        case HLSLBaseType_Uint4:            return "uint4";
-        case HLSLBaseType_Texture:          return "texture";
-        case HLSLBaseType_Sampler:          return "sampler";
-            // ACoget-TODO: How to detect non-float textures, if relevant?
-        case HLSLBaseType_Sampler2D:        return "texture2d<float>";
-        case HLSLBaseType_Sampler3D:        return "texture3d<float>";
-        case HLSLBaseType_SamplerCube:      return "texturecube<float>";
-        case HLSLBaseType_Sampler2DShadow:  return "depth2d<float>";
-        case HLSLBaseType_Sampler2DMS:      return "texture2d_ms<float>";
-        case HLSLBaseType_Sampler2DArray:   return "texture2d_array<float>";
-        case HLSLBaseType_UserDefined:      return type.typeName;
-        default:
-            ASSERT(0);
-            return "<unknown type>";
-        }
-    }
-    */
-
     static void ParseSemantic(const char* semantic, unsigned int* outputLength, unsigned int* outputIndex)
     {
         const char* semanticIndex = semantic;
@@ -123,15 +68,7 @@ namespace M4
         return result;
     }
 
-    inline bool IsHalf(HLSLBaseType type)
-    {
-        return type >= HLSLBaseType_Half && type <= HLSLBaseType_Half4x2;
-    }
-
-    inline bool IsFloat(HLSLBaseType type)
-    {
-        return type >= HLSLBaseType_Float && type <= HLSLBaseType_Float4x2;
-    }
+    
 
 
     MSLGenerator::MSLGenerator()
@@ -394,427 +331,8 @@ namespace M4
         // Any special function stubs we need go here
         // That includes special constructors to emulate HLSL not being strict
         
-#if 1
         //Branch internally to HLSL vs. MSL verision
         m_writer.WriteLine(0, "#include \"ShaderMSL.h\"");
-#else
-/*
-        m_writer.WriteLine(0, "#include <metal_stdlib>");
-        m_writer.WriteLine(0, "using namespace metal;");
-        m_writer.WriteLine(0, "");
-
-        if (m_tree->NeedsFunction("mad"))
-        {
-            if (m_options.usePreciseFma) {
-                m_writer.WriteLine(0, "#define mad precise::fma");
-            }
-            else {
-                //if (!m_options.forceHalfPrecision)
-                {
-                    m_writer.WriteLine(0,
-R"(
-float mad(float a, float b, float c) {
-    return a * b + c;
-}
-float2 mad(float2 a, float2 b, float2 c) {
-    return a * b + c;
-}
-float3 mad(float3 a, float3 b, float3 c) {
-    return a * b + c;
-}
-float4 mad(float4 a, float4 b, float4 c) {
-    return a * b + c;
-}
-)");
-                }
-
-                if (!m_options.treatHalfAsFloat)
-                {
-                    m_writer.WriteLine(0,
-R"(
-half mad(half a, half b, half c) {
-    return a * b + c;
-}
-half2 mad(half2 a, half2 b, half2 c) {
-    return a * b + c;
-}
-half3 mad(half3 a, half3 b, half3 c) {
-    return a * b + c;
-}
-half4 mad(half4 a, half4 b, half4 c) {
-    return a * b + c;
-}
-)"
-                        );
-                }
-            }
-        }
-
-        // @@ These should not be needed anymore.
-//        if (m_tree->NeedsFunction("max"))
-//        {
-//        m_writer.WriteLine(0, "inline float max(int a, float b) {");
-//        m_writer.WriteLine(1, "return max((float)a, b);");
-//        m_writer.WriteLine(0, "}");
-//        m_writer.WriteLine(0, "inline float max(float a, int b) {");
-//        m_writer.WriteLine(1, "return max(a, (float)b);");
-//        m_writer.WriteLine(0, "}");
-//        }
-//        if (m_tree->NeedsFunction("min"))
-//        {
-//        m_writer.WriteLine(0, "inline float min(int a, float b) {");
-//        m_writer.WriteLine(1, "return min((float)a, b);");
-//        m_writer.WriteLine(0, "}");
-//        m_writer.WriteLine(0, "inline float min(float a, int b) {");
-//        m_writer.WriteLine(1, "return min(a, (float)b);");
-//        m_writer.WriteLine(0, "}");
-//        }
-
-        if (m_tree->NeedsFunction("lerp"))
-        {
-            //m_writer.WriteLine(0, "template<typename T, typename X> inline T mix(T a, T b, X x) {");
-            //m_writer.WriteLine(1, "return mix(a, b, (float)x);");
-            //m_writer.WriteLine(0, "}");
-            m_writer.WriteLine(0, "#define lerp mix");
-        }
-
-        if (m_tree->NeedsFunction("mul"))
-        {
-            const char* am = (m_options.flags & Flag_PackMatrixRowMajor) ? "m * a" : "a * m";
-            const char* ma = (m_options.flags & Flag_PackMatrixRowMajor) ? "a * m" : "m * a";
-
-            //if (!m_options.forceHalfPrecision)
-            {
-                // TODO: Support PackMatrixRowMajor for float3x4/float4x3
-               
-                m_writer.WriteLine(0,
-R"(
-inline float2 mul(float2 a, float2x2 m) { return %s; }
-inline float3 mul(float3 a, float3x3 m) { return %s; }
-inline float4 mul(float4 a, float4x4 m) { return %s; }
-
-inline float2 mul(float2x2 m, float2 a) { return %s; }
-inline float3 mul(float3x3 m, float3 a) { return %s; }
-inline float4 mul(float4x4 m, float4 a) { return %s; }
-
-inline float3 mul(float4 a, float3x4 m) { return a * m; }
-inline float2 mul(float4 a, float2x4 m) { return a * m; }
-)",
-                 am, am, am,
-                 ma, ma, ma );
-            }
-
-            if (!m_options.treatHalfAsFloat)
-            {
-                // TODO: Support PackMatrixRowMajor for half3x4/half4x3
-                
-                m_writer.WriteLine(0, R"(
-inline half2 mul(half2 a, half2x2 m) { return %s; }
-inline half3 mul(half3 a, half3x3 m) { return %s; }
-inline half4 mul(half4 a, half4x4 m) { return %s; }
-
-inline half2 mul(half2x2 m, half2 a) { return %s; }
-inline half3 mul(half3x3 m, half3 a) { return %s; }
-inline half4 mul(half4x4 m, half4 a) { return %s; }
-
-inline half3 mul(half4 a, half3x4 m) { return a * m; }
-inline half2 mul(half4 a, half2x4 m) { return a * m; }
-                 )",
-                am, am, am,
-                ma, ma, ma );
-            }
-
-        }
-
-        // @@ How do we know if these will be needed? We could write these after parsing the whole file and prepend them.
-// Alec, I've never needed these
-//        m_writer.WriteLine(0, "inline float4 column(float4x4 m, int i) {");
-//        m_writer.WriteLine(1, "return float4(m[0][i], m[1][i], m[2][i], m[3][i]);");
-//        m_writer.WriteLine(0, "}");
-//
-//        m_writer.WriteLine(0, "inline float3 column(float3x4 m, int i) {");
-//        m_writer.WriteLine(1, "return float3(m[0][i], m[1][i], m[2][i]);");
-//        m_writer.WriteLine(0, "}");
-//
-//        m_writer.WriteLine(0, "inline float2 column(float2x4 m, int i) {");
-//        m_writer.WriteLine(1, "return float2(m[0][i], m[1][i]);");
-//        m_writer.WriteLine(0, "}");
-//
-//        m_writer.WriteLine(0, "inline float4 set_column(thread float4x4& m, int i, float4 v) {");
-//        m_writer.WriteLine(1, "    m[0][i] = v.x; m[1][i] = v.y; m[2][i] = v.z; m[3][i] = v.w; return v;");
-//        m_writer.WriteLine(0, "}");
-//
-//        m_writer.WriteLine(0, "inline float3 set_column(thread float3x4& m, int i, float3 v) {");
-//        m_writer.WriteLine(1, "    m[0][i] = v.x; m[1][i] = v.y; m[2][i] = v.z; return v;");
-//        m_writer.WriteLine(0, "}");
-//
-//        m_writer.WriteLine(0, "inline float2 set_column(thread float2x4& m, int i, float2 v) {");
-//        m_writer.WriteLine(1, "    m[0][i] = v.x; m[1][i] = v.y; return v;");
-//        m_writer.WriteLine(0, "}");
-//
-//        m_writer.WriteLine(0, "inline float3x3 matrix_ctor(float4x4 m) {");
-//        m_writer.WriteLine(1, "    return float3x3(m[0].xyz, m[1].xyz, m[2].xyz);");
-//        m_writer.WriteLine(0, "}");
-
-
-        if (m_tree->NeedsFunction("clip"))
-        {
-            m_writer.WriteLine(0, R"(
-void clip(float x) {
-   if (x < 0.0) discard_fragment();
-}
-            )");
-            
-        }
-        
-        // TODO: this then needs preprocessor to splice the macro
-        if (m_tree->NeedsFunction("rcp"))
-        {
-            m_writer.WriteLine(0, "#define rcp recip");
-        }
-
-        if (m_tree->NeedsFunction("ddx")) m_writer.WriteLine(0, "#define ddx dfdx");
-        if (m_tree->NeedsFunction("ddy")) m_writer.WriteLine(0, "#define ddy dfdy");
-        if (m_tree->NeedsFunction("frac")) m_writer.WriteLine(0, "#define frac fract");
-
-        //m_writer.WriteLine(0, "#define mad fma");     // @@ This doesn't seem to work.
-
-        // This would be nice
-        //const char * samplerType = "float";
-        //if (m_options.halfTextureSamplers)
-        //{
-        //samplerType = "half";
-        //}
-        
-        //const char * intType = "int";
-        //const char * uintType = "uint";
-        
-//        if (m_options.use16BitIntegers) {
-//            intType = "short";
-//            uintType = "ushort";
-//        }
-
-        if (m_tree->NeedsFunction("tex2D") ||
-            m_tree->NeedsFunction("tex2Dlod") ||
-            m_tree->NeedsFunction("tex2Dgrad") ||
-            m_tree->NeedsFunction("tex2Dbias") ||
-            m_tree->NeedsFunction("tex2Dfetch"))
-        {
-            m_writer.WriteLine(0, R"(
-struct Texture2DSampler {
-    Texture2DSampler(thread const texture2d<float>& t, thread const sampler& s) : t(t), s(s) {};
-    const thread texture2d<float>& t;
-    const thread sampler& s;
-};
-                 )");
-
-            if (!m_options.treatHalfAsFloat) {
-                m_writer.WriteLine(0, R"(
-struct Texture2DHalfSampler {
-    Texture2DHalfSampler(thread const texture2d<half>& t, thread const sampler& s) : t(t), s(s) {};
-    const thread texture2d<half>& t;
-    const thread sampler& s;
-};
-                )");
-            }
-        }
-
-        if (m_tree->NeedsFunction("tex2D"))
-        {
-            m_writer.WriteLine(0, R"(
-inline float4 tex2D(Texture2DSampler ts, float2 texCoord) {
-   return ts.t.sample(ts.s, texCoord);
-}
-            )");
-
-            if (!m_options.treatHalfAsFloat)
-            {
-                m_writer.WriteLine(0, R"(
-inline half4 tex2D(Texture2DHalfSampler ts, float2 texCoord) {
-    return ts.t.sample(ts.s, texCoord);
-}
-)");
-            }
-        }
-        if (m_tree->NeedsFunction("tex2Dlod"))
-        {
-            m_writer.WriteLine(0, R"(
-float4 tex2Dlod(Texture2DSampler ts, float4 texCoordMip) {
-    return ts.t.sample(ts.s, texCoordMip.xy, level(texCoordMip.w));
-}
-                 )");
-
-            if (!m_options.treatHalfAsFloat)
-            {
-                m_writer.WriteLine(0, R"(
-half4 tex2Dlod(Texture2DHalfSampler ts, float4 texCoordMip) {
-    return ts.t.sample(ts.s, texCoordMip.xy, level(texCoordMip.w));
- }
-                 )");
-            }
-        }
-        if (m_tree->NeedsFunction("tex2Dgrad"))
-        {
-            m_writer.WriteLine(0, R"(
-float4 tex2Dgrad(Texture2DSampler ts, float2 texCoord, float2 gradx, float2 grady) {
-m_writer.WriteLine(1, "return ts.t.sample(ts.s, texCoord.xy, gradient2d(gradx, grady));
-}
-           )");
-        }
-        if (m_tree->NeedsFunction("tex2Dbias"))
-        {
-            m_writer.WriteLine(0, R"(
-float4 tex2Dbias(Texture2DSampler ts, float4 texCoordBias) {
-   return ts.t.sample(ts.s, texCoordBias.xy, bias(texCoordBias.w));
-}
-            )");
-
-            if (!m_options.treatHalfAsFloat)
-            {
-                m_writer.WriteLine(0, R"(
-half4 tex2Dbias(Texture2DHalfSampler ts, float4 texCoordBias) {
-    m_writer.WriteLine(1, "return ts.t.sample(ts.s, texCoordBias.xy, bias(texCoordBias.w));
-}
-                )");
-            }
-        }
-        if (m_tree->NeedsFunction("tex2Dfetch"))
-        {
-            // @@ not used? not tested?
-            m_writer.WriteLine(0, R"(
-float4 tex2Dfetch(Texture2DSampler ts, int2 texCoord) {
-    return ts.t.read((uint2)texCoord);
-}
-                )");
-        }
-
-        if (m_tree->NeedsFunction("tex3D") ||
-            m_tree->NeedsFunction("tex3Dlod"))
-        {
-            m_writer.WriteLine(0, R"(
-struct Texture3DSampler {
-Texture3DSampler(thread const texture3d<float>& t, thread const sampler& s) : t(t), s(s) {};
-const thread texture3d<float>& t;
-const thread sampler& s;
-};
-            )");
-        }
-
-        if (m_tree->NeedsFunction("tex3D"))
-        {
-            m_writer.WriteLine(0, R"(
-float4 tex3D(Texture3DSampler ts, float3 texCoord) {
-return ts.t.sample(ts.s, texCoord);
-}
-            )");
-        }
-        if (m_tree->NeedsFunction("tex3Dlod"))
-        {
-            m_writer.WriteLine(0, R"(
-float4 tex3Dlod(Texture3DSampler ts, float4 texCoordMip) {
-    return ts.t.sample(ts.s, texCoordMip.xyz, level(texCoordMip.w));
-}
-            )");
-        }
-
-        if (m_tree->NeedsFunction("texCUBE") ||
-            m_tree->NeedsFunction("texCUBElod") ||
-            m_tree->NeedsFunction("texCUBEbias"))
-        {
-            m_writer.WriteLine(0, R"(
-struct TextureCubeSampler {
-TextureCubeSampler(thread const texturecube<float>& t, thread const sampler& s) : t(t), s(s) {};
-const thread texturecube<float>& t;
-const thread sampler& s;
-};
-            
-            )");
-        }
-
-        if (m_tree->NeedsFunction("texCUBE"))
-        {
-            m_writer.WriteLine(0, R"(
-float4 texCUBE(TextureCubeSampler ts, float3 texCoord) {");
-    return ts.t.sample(ts.s, texCoord);");
-}
-             )");
-        }
-
-        if (m_tree->NeedsFunction("texCUBElod"))
-        {
-            m_writer.WriteLine(0, R"(
-float4 texCUBElod(TextureCubeSampler ts, float4 texCoordMip) {");
-    return ts.t.sample(ts.s, texCoordMip.xyz, level(texCoordMip.w));");
-}
-             )");
-        }
-
-        if (m_tree->NeedsFunction("texCUBEbias"))
-        {
-            m_writer.WriteLine(0, R"(
-float4 texCUBEbias(TextureCubeSampler ts, float4 texCoordBias) {
-    return ts.t.sample(ts.s, texCoordBias.xyz, bias(texCoordBias.w));
-}
-             )");
-        }
-
-        if (m_tree->NeedsFunction("tex2Dcmp"))
-        {
-            m_writer.WriteLine(0, R"(
-struct Texture2DShadowSampler {
-Texture2DShadowSampler(thread const depth2d<float>& t, thread const sampler& s) : t(t), s(s) {};
-const thread depth2d<float>& t;
-const thread sampler& s;
-};
-            )");
-
-            // iOS Metal requires that the sampler in sample_compare is a compile-time constant
-            if (m_options.flags & Flag_ConstShadowSampler)
-            {
-                m_writer.WriteLine(0, R"(
-float4 tex2Dcmp(Texture2DShadowSampler ts, float4 texCoordCompare) {
-constexpr sampler shadow_constant_sampler(mip_filter::none, min_filter::linear, mag_filter::linear, address::clamp_to_edge, compare_func::less);"
-return ts.t.sample_compare(shadow_constant_sampler, texCoordCompare.xy, texCoordCompare.z);
-}
-                )");
-            
-            }
-            else
-            {
-                m_writer.WriteLine(0, R"(
-float4 tex2Dcmp(Texture2DShadowSampler ts, float4 texCoordCompare) {
- return ts.t.sample_compare(ts.s, texCoordCompare.xy, texCoordCompare.z);
-}
-                )");
-            }
-        }
-
-        if (m_tree->NeedsFunction("tex2DMSfetch"))
-        {
-            m_writer.WriteLine(0, R"(
-float4 tex2DMSfetch(texture2d_ms<float> t, int2 texCoord, int sample) {
-  return t.read((uint2)texCoord, (uint)sample);
- }
-             )");
-        }
-
-        if (m_tree->NeedsFunction("tex2DArray"))
-        {
-            m_writer.WriteLine(0, R"(
-struct Texture2DArraySampler {
-const thread texture2d_array<float>& t;
-const thread sampler& s;
-Texture2DArraySampler(thread const texture2d_array<float>& t, thread const sampler& s) : t(t), s(s) {};
-}
-
-float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
- return ts.t.sample(ts.s, texCoord.xy, texCoord.z + 0.5); // 0.5 offset needed on nvidia gpus
-}
-            )");
-        }
- */
-#endif
-    
     }
 
     bool MSLGenerator::Generate(HLSLTree* tree, Target target, const char* entryName, const Options& options)
@@ -1570,11 +1088,12 @@ float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
 
         if (m_options.treatHalfAsFloat)
         {
-            if (IsHalf(targetType)) targetType = HLSLBaseType(targetType + HLSLBaseType_Float - HLSLBaseType_Half);
-            if (IsHalf(sourceType)) sourceType = HLSLBaseType(sourceType + HLSLBaseType_Float - HLSLBaseType_Half);
+            // TODO: use call to convert half back to float type
+            if (IsHalf(targetType)) targetType = HalfToFloatBaseType(targetType);
+            if (IsHalf(sourceType)) sourceType = HalfToFloatBaseType(sourceType );
         }
 
-        return targetType != sourceType && (BaseTypeDimension[targetType] == BaseTypeDimension[sourceType] || BaseTypeDimension[sourceType] == HLSLTypeDimension_Scalar);
+        return targetType != sourceType && (IsCoreTypeEqual(targetType, sourceType) || IsScalarType(sourceType));
     }
 
 
@@ -1758,6 +1277,7 @@ float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
             bool addParenthesis = NeedsParenthesis(expression, parentExpression);
             if (addParenthesis) m_writer.Write("(");
 
+            /* forcing use of column matrices, this column work isn't needed
             bool rewrite_assign = false;
             if (binaryExpression->binaryOp == HLSLBinaryOp_Assign && binaryExpression->expression1->nodeType == HLSLNodeType_ArrayAccess)
             {
@@ -1779,15 +1299,21 @@ float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
             }
 
             if (!rewrite_assign)
+            */
             {
                 if (IsArithmeticOp(binaryExpression->binaryOp) || IsLogicOp(binaryExpression->binaryOp))
                 {
                     // Do intermediate type promotion, without changing dimension:
                     HLSLType promotedType = binaryExpression->expression1->expressionType;
 
-                    if (ScalarBaseType[binaryExpression->expressionType.baseType] != ScalarBaseType[promotedType.baseType])
+                    // TODO: remove
+                    //if (ScalarBaseType[binaryExpression->expressionType.baseType] != ScalarBaseType[promotedType.baseType])
+                    if (!IsNumericTypeEqual(binaryExpression->expressionType.baseType, promotedType.baseType))
                     {
-                        promotedType.baseType = HLSLBaseType(ScalarBaseType[binaryExpression->expressionType.baseType] + BaseTypeDimension[promotedType.baseType] - 1);
+                        promotedType.baseType = PromoteType(binaryExpression->expressionType.baseType, promotedType.baseType);
+                        
+                        // TODO: remove
+                        //promotedType.baseType = HLSLBaseType(ScalarBaseType[binaryExpression->expressionType.baseType] + BaseTypeDimension[promotedType.baseType] - 1);
                     }
 
                     OutputTypedExpression(promotedType, binaryExpression->expression1, binaryExpression);
@@ -1833,9 +1359,15 @@ float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
                     // Do intermediate type promotion, without changing dimension:
                     HLSLType promotedType = binaryExpression->expression2->expressionType;
 
-                    if (ScalarBaseType[binaryExpression->expressionType.baseType] != ScalarBaseType[promotedType.baseType])
+                    // TODO: remove
+                    //if (ScalarBaseType[binaryExpression->expressionType.baseType] != ScalarBaseType[promotedType.baseType])
+                    if (!IsNumericTypeEqual(binaryExpression->expressionType.baseType, promotedType.baseType))
                     {
-                        promotedType.baseType = HLSLBaseType(ScalarBaseType[binaryExpression->expressionType.baseType] + BaseTypeDimension[promotedType.baseType] - 1);
+                        // This should only promote up (half->float, etc)
+                        promotedType.baseType = PromoteType(binaryExpression->expressionType.baseType, promotedType.baseType);
+                        
+                        // TODO: remove
+                        //promotedType.baseType = HLSLBaseType(ScalarBaseType[binaryExpression->expressionType.baseType] + BaseTypeDimension[promotedType.baseType] - 1);
                     }
 
                     OutputTypedExpression(promotedType, binaryExpression->expression2, binaryExpression);
@@ -2521,6 +2053,10 @@ float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
             // case HLSLBaseType_Half4x2: return HLSLBaseType_Float4x2;
             // case HLSLBaseType_Half4x3: return HLSLBaseType_Float4x3;
             case HLSLBaseType_Half4x4: return HLSLBaseType_Float4x4;
+                
+            default:
+               // do nothing;
+                break;
         }
         
         return type;

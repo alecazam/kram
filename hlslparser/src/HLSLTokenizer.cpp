@@ -1,17 +1,12 @@
-//#include "Engine/Log.h"
-//#include "Engine/String.h"
-#include "Engine.h"
-
 #include "HLSLTokenizer.h"
+
+#include "Engine.h"
 
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-
-// mac only
-#include <syslog.h>
 
 namespace M4
 {
@@ -588,9 +583,6 @@ void HLSLTokenizer::Error(const char* format, ...)
     
     //Log_Error("%s(%d): error %s\n", m_fileName, m_lineNumber, buffer);
     Log_Error("%s(%d): %s\n", m_fileName, m_lineNumber, buffer);
-    
-    // try syslog and os_log
-    // syslog(LOG_ERR, "%s(%d): %s\n", m_fileName, m_lineNumber, buffer);
 } 
 
 void HLSLTokenizer::GetTokenName(char buffer[s_maxIdentifier]) const

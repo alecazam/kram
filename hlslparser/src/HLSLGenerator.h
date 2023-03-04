@@ -1,14 +1,13 @@
 //=============================================================================
 //
-// Render/HLSLGenerator.h
+// HLSLGenerator.h
 //
 // Created by Max McGuire (max@unknownworlds.com)
 // Copyright (c) 2013, Unknown Worlds Entertainment, Inc.
 //
 //=============================================================================
 
-#ifndef HLSL_GENERATOR_H
-#define HLSL_GENERATOR_H
+#pragma once
 
 #include "CodeWriter.h"
 #include "HLSLTree.h"
@@ -65,46 +64,8 @@ private:
     const HLSLTree* m_tree;
     const char*     m_entryName;
     Target          m_target;
-    //bool            m_legacy;
     bool            m_isInsideBuffer;
     bool            m_error;
-   
-#if 0
-/*
-    // TODO: remove
-    // defining these once in include file, can HLSL compile inside a struct like MSL
-    char            m_textureSampler2DStruct[64];
-    char            m_textureSampler2DCtor[64];
-    char            m_textureSampler2DShadowStruct[64];
-    char            m_textureSampler2DShadowCtor[64];
-    char            m_textureSampler3DStruct[64];
-    char            m_textureSampler3DCtor[64];
-    char            m_textureSamplerCubeStruct[64];
-    char            m_textureSamplerCubeCtor[64];
-    char            m_tex2DFunction[64];
-    char            m_tex2DProjFunction[64];
-    char            m_tex2DLodFunction[64];
-    char            m_tex2DBiasFunction[64];
-    char            m_tex2DGradFunction[64];
-    char            m_tex2DGatherFunction[64];
-    char            m_tex2DSizeFunction[64];
-    char            m_tex2DFetchFunction[64];
-    char            m_tex2DCmpFunction[64];
-    char            m_tex2DMSFetchFunction[64];
-    char            m_tex2DMSSizeFunction[64];
-    char            m_tex3DFunction[64];
-    char            m_tex3DLodFunction[64];
-    char            m_tex3DBiasFunction[64];
-    char            m_tex3DSizeFunction[64];
-    char            m_texCubeFunction[64];
-    char            m_texCubeLodFunction[64];
-    char            m_texCubeBiasFunction[64];
-    char            m_texCubeSizeFunction[64];
-*/
-#endif
-    
 };
 
 } // M4
-
-#endif

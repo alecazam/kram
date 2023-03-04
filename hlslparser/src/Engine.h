@@ -1,5 +1,4 @@
-#ifndef ENGINE_H
-#define ENGINE_H
+#pragma once
 
 #if _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS 1
@@ -191,5 +190,3 @@ struct StringPool {
 
 
 } // M4 namespace
-
-#endif // ENGINE_H

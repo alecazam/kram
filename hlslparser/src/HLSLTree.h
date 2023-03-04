@@ -1,7 +1,5 @@
-#ifndef HLSL_TREE_H
-#define HLSL_TREE_H
+#pragma once
 
-//#include "Engine/StringPool.h"
 #include "Engine.h"
 
 #include <new>
@@ -48,20 +46,25 @@ enum HLSLNodeType
     HLSLNodeType_Comment
 };
 
+/*
 enum HLSLTypeDimension
 {
     HLSLTypeDimension_None,
+    
     HLSLTypeDimension_Scalar,
+    
     HLSLTypeDimension_Vector2,
     HLSLTypeDimension_Vector3,
     HLSLTypeDimension_Vector4,
+    
     HLSLTypeDimension_Matrix2x2,
     HLSLTypeDimension_Matrix3x3,
     HLSLTypeDimension_Matrix4x4,
-    HLSLTypeDimension_Matrix4x3, // TODO: no 3x4
-    HLSLTypeDimension_Matrix4x2
+    //HLSLTypeDimension_Matrix4x3, // TODO: no 3x4
+    //HLSLTypeDimension_Matrix4x2
 };
-    
+*/
+
 enum HLSLBaseType
 {
     HLSLBaseType_Unknown,
@@ -75,8 +78,11 @@ enum HLSLBaseType
 	HLSLBaseType_Float2x2,
     HLSLBaseType_Float3x3,
     HLSLBaseType_Float4x4,
+    
+    // TODO: remove
     HLSLBaseType_Float4x3, // TODO: missing Float3x4
     HLSLBaseType_Float4x2,
+    
     HLSLBaseType_Half,
     HLSLBaseType_Half2,
     HLSLBaseType_Half3,
@@ -84,6 +90,8 @@ enum HLSLBaseType
 	HLSLBaseType_Half2x2,
     HLSLBaseType_Half3x3,
     HLSLBaseType_Half4x4,
+    
+    // TODO: remove
     HLSLBaseType_Half4x3, // TODO: missing Half3x4
     HLSLBaseType_Half4x2,
     
@@ -100,10 +108,14 @@ enum HLSLBaseType
     HLSLBaseType_Uint2,
     HLSLBaseType_Uint3,
     HLSLBaseType_Uint4,
-    /*HLSLBaseType_Short,   // @@ Separate dimension from Base type, this is getting out of control.
+    
+    // @@ Separate dimension from Base type, this is getting out of control.
+    /*
+    HLSLBaseType_Short,
     HLSLBaseType_Short2,
     HLSLBaseType_Short3,
     HLSLBaseType_Short4,
+     
     HLSLBaseType_Ushort,
     HLSLBaseType_Ushort2,
     HLSLBaseType_Ushort3,
@@ -135,79 +147,31 @@ enum HLSLBaseType
    
     HLSLBaseType_NumericCount = HLSLBaseType_LastNumeric - HLSLBaseType_FirstNumeric + 1
 };
-    
-extern const HLSLTypeDimension BaseTypeDimension[HLSLBaseType_Count];
-extern const HLSLBaseType ScalarBaseType[HLSLBaseType_Count];
-
-inline bool IsSamplerType(HLSLBaseType baseType)
-{
-    return baseType == HLSLBaseType_Sampler ||
-           baseType == HLSLBaseType_Sampler2D ||
-           baseType == HLSLBaseType_Sampler3D ||
-           baseType == HLSLBaseType_SamplerCube ||
-           baseType == HLSLBaseType_Sampler2DShadow ||
-           baseType == HLSLBaseType_Sampler2DMS ||
-           baseType == HLSLBaseType_Sampler2DArray;
-}
-
-inline bool IsMatrixType(HLSLBaseType baseType)
-{
-    return  baseType == HLSLBaseType_Float3x3 ||
-            baseType == HLSLBaseType_Float4x4 ||
-            baseType == HLSLBaseType_Float4x3 ||
-            baseType == HLSLBaseType_Float4x2 ||
-            baseType == HLSLBaseType_Half3x3 ||
-            baseType == HLSLBaseType_Half4x4 ||
-            baseType == HLSLBaseType_Half4x3 ||
-            baseType == HLSLBaseType_Half4x2;
-}
-
-inline bool IsScalarType( HLSLBaseType baseType )
-{
-	return  baseType == HLSLBaseType_Float ||
-			baseType == HLSLBaseType_Half ||
-			baseType == HLSLBaseType_Bool ||
-			baseType == HLSLBaseType_Int ||
-			baseType == HLSLBaseType_Uint;
-}
-
-inline bool IsVectorType( HLSLBaseType baseType )
-{
-	return  baseType == HLSLBaseType_Float2 ||
-		baseType == HLSLBaseType_Float3 ||
-		baseType == HLSLBaseType_Float4 ||
-		baseType == HLSLBaseType_Half2 ||
-		baseType == HLSLBaseType_Half3 ||
-		baseType == HLSLBaseType_Half4 ||
-		baseType == HLSLBaseType_Bool2 ||
-		baseType == HLSLBaseType_Bool3 ||
-		baseType == HLSLBaseType_Bool4 ||
-		baseType == HLSLBaseType_Int2  ||
-		baseType == HLSLBaseType_Int3  ||
-		baseType == HLSLBaseType_Int4  ||
-		baseType == HLSLBaseType_Uint2 ||
-		baseType == HLSLBaseType_Uint3 ||
-		baseType == HLSLBaseType_Uint4;
-}
-
-
+  
 enum HLSLBinaryOp
 {
+    // math ops
     HLSLBinaryOp_And,
     HLSLBinaryOp_Or,
     HLSLBinaryOp_Add,
     HLSLBinaryOp_Sub,
     HLSLBinaryOp_Mul,
     HLSLBinaryOp_Div,
+    
+    // comparison ops
     HLSLBinaryOp_Less,
     HLSLBinaryOp_Greater,
     HLSLBinaryOp_LessEqual,
     HLSLBinaryOp_GreaterEqual,
     HLSLBinaryOp_Equal,
     HLSLBinaryOp_NotEqual,
+    
+    // bit ops
     HLSLBinaryOp_BitAnd,
     HLSLBinaryOp_BitOr,
     HLSLBinaryOp_BitXor,
+    
+    // assign ops
     HLSLBinaryOp_Assign,
     HLSLBinaryOp_AddAssign,
     HLSLBinaryOp_SubAssign,
@@ -355,22 +319,6 @@ struct HLSLType
     int                 flags;
     HLSLAddressSpace    addressSpace;
 };
-
-inline bool IsSamplerType(const HLSLType & type)
-{
-    return IsSamplerType(type.baseType);
-}
-
-inline bool IsScalarType(const HLSLType & type)
-{
-	return IsScalarType(type.baseType);
-}
-
-inline bool IsVectorType(const HLSLType & type)
-{
-	return IsVectorType(type.baseType);
-}
-
 
 /** Base class for all nodes in the HLSL AST */
 struct HLSLNode
@@ -994,5 +942,3 @@ extern bool EmulateAlphaTest(HLSLTree* tree, const char* entryName, float alphaR
 extern void FlattenExpressions(HLSLTree* tree);
     
 } // M4
-
-#endif

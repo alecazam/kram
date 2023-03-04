@@ -1,111 +1,12 @@
-//#include "Engine/Assert.h"
-#include "Engine.h"
-
 #include "HLSLTree.h"
+
+#include "Engine.h"
 
 namespace M4
 {
 
-const HLSLTypeDimension BaseTypeDimension[HLSLBaseType_Count] =
-{
-    HLSLTypeDimension_None,     // HLSLBaseType_Unknown,
-    HLSLTypeDimension_None,     // HLSLBaseType_Void,
-    
-    HLSLTypeDimension_Scalar,   // HLSLBaseType_Float,
-    HLSLTypeDimension_Vector2,  // HLSLBaseType_Float2,
-    HLSLTypeDimension_Vector3,  // HLSLBaseType_Float3,
-    HLSLTypeDimension_Vector4,  // HLSLBaseType_Float4,
-    HLSLTypeDimension_Matrix2x2,// HLSLBaseType_Float2x2,
-    HLSLTypeDimension_Matrix3x3,// HLSLBaseType_Float3x3,
-    HLSLTypeDimension_Matrix4x4,// HLSLBaseType_Float4x4,
-    HLSLTypeDimension_Matrix4x3,// HLSLBaseType_Float4x3,
-    HLSLTypeDimension_Matrix4x2,// HLSLBaseType_Float4x2,
-    HLSLTypeDimension_Scalar,   // HLSLBaseType_Half,
-    HLSLTypeDimension_Vector2,  // HLSLBaseType_Half2,
-    HLSLTypeDimension_Vector3,  // HLSLBaseType_Half3,
-    HLSLTypeDimension_Vector4,  // HLSLBaseType_Half4,
-    HLSLTypeDimension_Matrix2x2,// HLSLBaseType_Half2x2,
-    HLSLTypeDimension_Matrix3x3,// HLSLBaseType_Half3x3,
-    HLSLTypeDimension_Matrix4x4,// HLSLBaseType_Half4x4,
-    HLSLTypeDimension_Matrix4x3,// HLSLBaseType_Half4x3,
-    HLSLTypeDimension_Matrix4x2,// HLSLBaseType_Half4x2,
-    HLSLTypeDimension_Scalar,   // HLSLBaseType_Bool,
-    HLSLTypeDimension_Vector2,  // HLSLBaseType_Bool2,
-    HLSLTypeDimension_Vector3,  // HLSLBaseType_Bool3,
-    HLSLTypeDimension_Vector4,  // HLSLBaseType_Bool4,
-    HLSLTypeDimension_Scalar,   // HLSLBaseType_Int,
-    HLSLTypeDimension_Vector2,  // HLSLBaseType_Int2,
-    HLSLTypeDimension_Vector3,  // HLSLBaseType_Int3,
-    HLSLTypeDimension_Vector4,  // HLSLBaseType_Int4,
-    HLSLTypeDimension_Scalar,   // HLSLBaseType_Uint,
-    HLSLTypeDimension_Vector2,  // HLSLBaseType_Uint2,
-    HLSLTypeDimension_Vector3,  // HLSLBaseType_Uint3,
-    HLSLTypeDimension_Vector4,  // HLSLBaseType_Uint4,
-    
-    HLSLTypeDimension_None,     // HLSLBaseType_Texture,
-    
-    HLSLTypeDimension_None,     // HLSLBaseType_Sampler,           // @@ use type inference to determine sampler type.
-    HLSLTypeDimension_None,     // HLSLBaseType_Sampler2D,
-    HLSLTypeDimension_None,     // HLSLBaseType_Sampler3D,
-    HLSLTypeDimension_None,     // HLSLBaseType_SamplerCube,
-    HLSLTypeDimension_None,     // HLSLBaseType_Sampler2DShadow,
-    HLSLTypeDimension_None,     // HLSLBaseType_Sampler2DMS,
-    HLSLTypeDimension_None,     // HLSLBaseType_Sampler2DArray,
-    
-    HLSLTypeDimension_None,     // HLSLBaseType_UserDefined,       // struct
-    HLSLTypeDimension_None,     // HLSLBaseType_Expression,        // type argument for defined() sizeof() and typeof().
-    HLSLTypeDimension_None,     // HLSLBaseType_Auto,
-};
-
-const HLSLBaseType ScalarBaseType[HLSLBaseType_Count] = {
-    HLSLBaseType_Unknown,       // HLSLBaseType_Unknown,
-    HLSLBaseType_Void,          // HLSLBaseType_Void,
-    
-    HLSLBaseType_Float,         // HLSLBaseType_Float,
-    HLSLBaseType_Float,         // HLSLBaseType_Float2,
-    HLSLBaseType_Float,         // HLSLBaseType_Float3,
-    HLSLBaseType_Float,         // HLSLBaseType_Float4,
-    HLSLBaseType_Float,         // HLSLBaseType_Float2x2,
-    HLSLBaseType_Float,         // HLSLBaseType_Float3x3,
-    HLSLBaseType_Float,         // HLSLBaseType_Float4x4,
-    HLSLBaseType_Float,         // HLSLBaseType_Float4x3,
-    HLSLBaseType_Float,         // HLSLBaseType_Float4x2,
-    HLSLBaseType_Half,          // HLSLBaseType_Half,
-    HLSLBaseType_Half,          // HLSLBaseType_Half2,
-    HLSLBaseType_Half,          // HLSLBaseType_Half3,
-    HLSLBaseType_Half,          // HLSLBaseType_Half4,
-    HLSLBaseType_Half,          // HLSLBaseType_Half2x2,
-    HLSLBaseType_Half,          // HLSLBaseType_Half3x3,
-    HLSLBaseType_Half,          // HLSLBaseType_Half4x4,
-    HLSLBaseType_Half,          // HLSLBaseType_Half4x3,
-    HLSLBaseType_Half,          // HLSLBaseType_Half4x2,
-    HLSLBaseType_Bool,          // HLSLBaseType_Bool,
-    HLSLBaseType_Bool,          // HLSLBaseType_Bool2,
-    HLSLBaseType_Bool,          // HLSLBaseType_Bool3,
-    HLSLBaseType_Bool,          // HLSLBaseType_Bool4,
-    HLSLBaseType_Int,           // HLSLBaseType_Int,
-    HLSLBaseType_Int,           // HLSLBaseType_Int2,
-    HLSLBaseType_Int,           // HLSLBaseType_Int3,
-    HLSLBaseType_Int,           // HLSLBaseType_Int4,
-    HLSLBaseType_Uint,          // HLSLBaseType_Uint,
-    HLSLBaseType_Uint,          // HLSLBaseType_Uint2,
-    HLSLBaseType_Uint,          // HLSLBaseType_Uint3,
-    HLSLBaseType_Uint,          // HLSLBaseType_Uint4,
-    
-    HLSLBaseType_Unknown,       // HLSLBaseType_Texture,
-    
-    HLSLBaseType_Unknown,       // HLSLBaseType_Sampler,           // @@ use type inference to determine sampler type.
-    HLSLBaseType_Unknown,       // HLSLBaseType_Sampler2D,
-    HLSLBaseType_Unknown,       // HLSLBaseType_Sampler3D,
-    HLSLBaseType_Unknown,       // HLSLBaseType_SamplerCube,
-    HLSLBaseType_Unknown,       // HLSLBaseType_Sampler2DShadow,
-    HLSLBaseType_Unknown,       // HLSLBaseType_Sampler2DMS,
-    HLSLBaseType_Unknown,       // HLSLBaseType_Sampler2DArray,
-    HLSLBaseType_Unknown,       // HLSLBaseType_UserDefined,       // struct
-    
-    HLSLBaseType_Unknown,       // HLSLBaseType_Expression,        // type argument for defined() sizeof() and typeof().
-    HLSLBaseType_Unknown,       // HLSLBaseType_Auto,
-};
+// over to HLSLParser.cpp
+extern bool IsSamplerType(const HLSLType & type);
 
 
 HLSLTree::HLSLTree(Allocator* allocator) :

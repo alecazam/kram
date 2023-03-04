@@ -7,8 +7,7 @@
 //
 //=============================================================================
 
-#ifndef CODE_WRITER_H
-#define CODE_WRITER_H
+#pragma once
 
 #include "Engine.h"
 #include <string>
@@ -58,4 +57,3 @@ private:
 
 }
 
-#endif

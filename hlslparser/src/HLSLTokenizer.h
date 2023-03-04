@@ -1,5 +1,6 @@
-#ifndef HLSL_TOKENIZER_H
-#define HLSL_TOKENIZER_H
+#pragma once
+
+#include "Engine.h"
 
 namespace M4
 {
@@ -170,4 +171,3 @@ private:
 
 }
 
-#endif
