@@ -7,14 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		702A2B7229A49DDE007D9A99 /* Main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A2B6329A49DDE007D9A99 /* Main.cpp */; };
-		702A2B7329A49DDE007D9A99 /* MSLGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A2B6629A49DDE007D9A99 /* MSLGenerator.cpp */; };
-		702A2B7429A49DDE007D9A99 /* HLSLTokenizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A2B6829A49DDE007D9A99 /* HLSLTokenizer.cpp */; };
-		702A2B7529A49DDE007D9A99 /* HLSLTree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A2B6B29A49DDE007D9A99 /* HLSLTree.cpp */; };
-		702A2B7629A49DDE007D9A99 /* CodeWriter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A2B6C29A49DDE007D9A99 /* CodeWriter.cpp */; };
-		702A2B7729A49DDE007D9A99 /* HLSLGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A2B6E29A49DDE007D9A99 /* HLSLGenerator.cpp */; };
-		702A2B7829A49DDE007D9A99 /* HLSLParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A2B6F29A49DDE007D9A99 /* HLSLParser.cpp */; };
-		702A2B7929A49DDE007D9A99 /* Engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A2B7129A49DDE007D9A99 /* Engine.cpp */; };
+		70235C4B29B3145200909C95 /* HLSLParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70235C3B29B3145200909C95 /* HLSLParser.cpp */; };
+		70235C4C29B3145200909C95 /* CodeWriter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70235C3C29B3145200909C95 /* CodeWriter.cpp */; };
+		70235C4D29B3145200909C95 /* HLSLGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70235C3F29B3145200909C95 /* HLSLGenerator.cpp */; };
+		70235C4E29B3145200909C95 /* HLSLTree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70235C4029B3145200909C95 /* HLSLTree.cpp */; };
+		70235C4F29B3145200909C95 /* GLSLGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70235C4129B3145200909C95 /* GLSLGenerator.cpp */; };
+		70235C5029B3145200909C95 /* Engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70235C4329B3145200909C95 /* Engine.cpp */; };
+		70235C5129B3145200909C95 /* Main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70235C4529B3145200909C95 /* Main.cpp */; };
+		70235C5229B3145200909C95 /* MSLGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70235C4629B3145200909C95 /* MSLGenerator.cpp */; };
+		70235C5329B3145200909C95 /* HLSLTokenizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70235C4829B3145200909C95 /* HLSLTokenizer.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,22 +33,24 @@
 /* Begin PBXFileReference section */
 		70235C3729B303AA00909C95 /* buildShaders.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = buildShaders.sh; sourceTree = "<group>"; };
 		70235C3829B3041E00909C95 /* out */ = {isa = PBXFileReference; lastKnownFileType = folder; path = out; sourceTree = "<group>"; };
+		70235C3A29B3145200909C95 /* Engine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Engine.h; sourceTree = "<group>"; };
+		70235C3B29B3145200909C95 /* HLSLParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HLSLParser.cpp; sourceTree = "<group>"; };
+		70235C3C29B3145200909C95 /* CodeWriter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CodeWriter.cpp; sourceTree = "<group>"; };
+		70235C3D29B3145200909C95 /* GLSLGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLSLGenerator.h; sourceTree = "<group>"; };
+		70235C3E29B3145200909C95 /* HLSLTokenizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HLSLTokenizer.h; sourceTree = "<group>"; };
+		70235C3F29B3145200909C95 /* HLSLGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HLSLGenerator.cpp; sourceTree = "<group>"; };
+		70235C4029B3145200909C95 /* HLSLTree.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HLSLTree.cpp; sourceTree = "<group>"; };
+		70235C4129B3145200909C95 /* GLSLGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GLSLGenerator.cpp; sourceTree = "<group>"; };
+		70235C4229B3145200909C95 /* HLSLParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HLSLParser.h; sourceTree = "<group>"; };
+		70235C4329B3145200909C95 /* Engine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Engine.cpp; sourceTree = "<group>"; };
+		70235C4429B3145200909C95 /* CodeWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CodeWriter.h; sourceTree = "<group>"; };
+		70235C4529B3145200909C95 /* Main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Main.cpp; sourceTree = "<group>"; };
+		70235C4629B3145200909C95 /* MSLGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MSLGenerator.cpp; sourceTree = "<group>"; };
+		70235C4729B3145200909C95 /* MSLGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MSLGenerator.h; sourceTree = "<group>"; };
+		70235C4829B3145200909C95 /* HLSLTokenizer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HLSLTokenizer.cpp; sourceTree = "<group>"; };
+		70235C4929B3145200909C95 /* HLSLGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HLSLGenerator.h; sourceTree = "<group>"; };
+		70235C4A29B3145200909C95 /* HLSLTree.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HLSLTree.h; sourceTree = "<group>"; };
 		702A2B5929A49DC8007D9A99 /* hlslparser */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hlslparser; sourceTree = BUILT_PRODUCTS_DIR; };
-		702A2B6329A49DDE007D9A99 /* Main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Main.cpp; path = ../src/Main.cpp; sourceTree = "<group>"; };
-		702A2B6429A49DDE007D9A99 /* HLSLTokenizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HLSLTokenizer.h; path = ../src/HLSLTokenizer.h; sourceTree = "<group>"; };
-		702A2B6529A49DDE007D9A99 /* HLSLTree.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HLSLTree.h; path = ../src/HLSLTree.h; sourceTree = "<group>"; };
-		702A2B6629A49DDE007D9A99 /* MSLGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MSLGenerator.cpp; path = ../src/MSLGenerator.cpp; sourceTree = "<group>"; };
-		702A2B6729A49DDE007D9A99 /* CodeWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CodeWriter.h; path = ../src/CodeWriter.h; sourceTree = "<group>"; };
-		702A2B6829A49DDE007D9A99 /* HLSLTokenizer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HLSLTokenizer.cpp; path = ../src/HLSLTokenizer.cpp; sourceTree = "<group>"; };
-		702A2B6929A49DDE007D9A99 /* Engine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Engine.h; path = ../src/Engine.h; sourceTree = "<group>"; };
-		702A2B6A29A49DDE007D9A99 /* HLSLGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HLSLGenerator.h; path = ../src/HLSLGenerator.h; sourceTree = "<group>"; };
-		702A2B6B29A49DDE007D9A99 /* HLSLTree.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HLSLTree.cpp; path = ../src/HLSLTree.cpp; sourceTree = "<group>"; };
-		702A2B6C29A49DDE007D9A99 /* CodeWriter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CodeWriter.cpp; path = ../src/CodeWriter.cpp; sourceTree = "<group>"; };
-		702A2B6D29A49DDE007D9A99 /* MSLGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MSLGenerator.h; path = ../src/MSLGenerator.h; sourceTree = "<group>"; };
-		702A2B6E29A49DDE007D9A99 /* HLSLGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HLSLGenerator.cpp; path = ../src/HLSLGenerator.cpp; sourceTree = "<group>"; };
-		702A2B6F29A49DDE007D9A99 /* HLSLParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HLSLParser.cpp; path = ../src/HLSLParser.cpp; sourceTree = "<group>"; };
-		702A2B7029A49DDE007D9A99 /* HLSLParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HLSLParser.h; path = ../src/HLSLParser.h; sourceTree = "<group>"; };
-		702A2B7129A49DDE007D9A99 /* Engine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Engine.cpp; path = ../src/Engine.cpp; sourceTree = "<group>"; };
 		702A2B7E29AA942D007D9A99 /* Skinning.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = Skinning.hlsl; sourceTree = "<group>"; };
 		702A2B8329AC25BA007D9A99 /* ShaderMSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderMSL.h; sourceTree = "<group>"; };
 		702A2B8429AC4B23007D9A99 /* ShaderHLSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderHLSL.h; sourceTree = "<group>"; };
@@ -64,13 +67,37 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		70235C3929B3145200909C95 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				70235C3A29B3145200909C95 /* Engine.h */,
+				70235C3B29B3145200909C95 /* HLSLParser.cpp */,
+				70235C3C29B3145200909C95 /* CodeWriter.cpp */,
+				70235C3D29B3145200909C95 /* GLSLGenerator.h */,
+				70235C3E29B3145200909C95 /* HLSLTokenizer.h */,
+				70235C3F29B3145200909C95 /* HLSLGenerator.cpp */,
+				70235C4029B3145200909C95 /* HLSLTree.cpp */,
+				70235C4129B3145200909C95 /* GLSLGenerator.cpp */,
+				70235C4229B3145200909C95 /* HLSLParser.h */,
+				70235C4329B3145200909C95 /* Engine.cpp */,
+				70235C4429B3145200909C95 /* CodeWriter.h */,
+				70235C4529B3145200909C95 /* Main.cpp */,
+				70235C4629B3145200909C95 /* MSLGenerator.cpp */,
+				70235C4729B3145200909C95 /* MSLGenerator.h */,
+				70235C4829B3145200909C95 /* HLSLTokenizer.cpp */,
+				70235C4929B3145200909C95 /* HLSLGenerator.h */,
+				70235C4A29B3145200909C95 /* HLSLTree.h */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
 		702A2B5029A49DC8007D9A99 = {
 			isa = PBXGroup;
 			children = (
 				70235C3729B303AA00909C95 /* buildShaders.sh */,
 				70235C3829B3041E00909C95 /* out */,
+				70235C3929B3145200909C95 /* src */,
 				702A2B7B29AA942D007D9A99 /* shaders */,
-				702A2B5B29A49DC8007D9A99 /* hlslparser */,
 				702A2B5A29A49DC8007D9A99 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -81,28 +108,6 @@
 				702A2B5929A49DC8007D9A99 /* hlslparser */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		702A2B5B29A49DC8007D9A99 /* hlslparser */ = {
-			isa = PBXGroup;
-			children = (
-				702A2B6C29A49DDE007D9A99 /* CodeWriter.cpp */,
-				702A2B6729A49DDE007D9A99 /* CodeWriter.h */,
-				702A2B7129A49DDE007D9A99 /* Engine.cpp */,
-				702A2B6929A49DDE007D9A99 /* Engine.h */,
-				702A2B6E29A49DDE007D9A99 /* HLSLGenerator.cpp */,
-				702A2B6A29A49DDE007D9A99 /* HLSLGenerator.h */,
-				702A2B6F29A49DDE007D9A99 /* HLSLParser.cpp */,
-				702A2B7029A49DDE007D9A99 /* HLSLParser.h */,
-				702A2B6829A49DDE007D9A99 /* HLSLTokenizer.cpp */,
-				702A2B6429A49DDE007D9A99 /* HLSLTokenizer.h */,
-				702A2B6B29A49DDE007D9A99 /* HLSLTree.cpp */,
-				702A2B6529A49DDE007D9A99 /* HLSLTree.h */,
-				702A2B6329A49DDE007D9A99 /* Main.cpp */,
-				702A2B6629A49DDE007D9A99 /* MSLGenerator.cpp */,
-				702A2B6D29A49DDE007D9A99 /* MSLGenerator.h */,
-			);
-			path = hlslparser;
 			sourceTree = "<group>";
 		};
 		702A2B7B29AA942D007D9A99 /* shaders */ = {
@@ -172,14 +177,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				702A2B7429A49DDE007D9A99 /* HLSLTokenizer.cpp in Sources */,
-				702A2B7629A49DDE007D9A99 /* CodeWriter.cpp in Sources */,
-				702A2B7229A49DDE007D9A99 /* Main.cpp in Sources */,
-				702A2B7529A49DDE007D9A99 /* HLSLTree.cpp in Sources */,
-				702A2B7729A49DDE007D9A99 /* HLSLGenerator.cpp in Sources */,
-				702A2B7329A49DDE007D9A99 /* MSLGenerator.cpp in Sources */,
-				702A2B7929A49DDE007D9A99 /* Engine.cpp in Sources */,
-				702A2B7829A49DDE007D9A99 /* HLSLParser.cpp in Sources */,
+				70235C4E29B3145200909C95 /* HLSLTree.cpp in Sources */,
+				70235C5129B3145200909C95 /* Main.cpp in Sources */,
+				70235C5329B3145200909C95 /* HLSLTokenizer.cpp in Sources */,
+				70235C5029B3145200909C95 /* Engine.cpp in Sources */,
+				70235C4B29B3145200909C95 /* HLSLParser.cpp in Sources */,
+				70235C5229B3145200909C95 /* MSLGenerator.cpp in Sources */,
+				70235C4C29B3145200909C95 /* CodeWriter.cpp in Sources */,
+				70235C4F29B3145200909C95 /* GLSLGenerator.cpp in Sources */,
+				70235C4D29B3145200909C95 /* HLSLGenerator.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

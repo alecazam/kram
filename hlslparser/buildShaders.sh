@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir -p out
 
 pushd out
 
@@ -15,11 +16,11 @@ cp ../shaders/ShaderHLSL.h .
 
 # build the metal shaders
 echo gen MSL
-${app} -metal ../shaders/Skinning.hlsl
+${app} -i ../shaders/Skinning.hlsl -o Skinning.metal
 
 # build the hlsl shaders
 echo gen HLSL
-${app} -hlsl ../shaders/Skinning.hlsl
+${app} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
 
 # see if HLSL compiles (requires macOS Vulkan install)
 # this will pull /usr/bin/local/dxc
