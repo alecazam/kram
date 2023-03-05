@@ -2,7 +2,7 @@
 
 mkdir -p out
 
-mkdir -p out/macos
+mkdir -p out/mac
 mkdir -p out/win
 mkdir -p out/android
 
@@ -28,6 +28,8 @@ appDxc+="dxc"
 appGlslc+="glslc"
 appSprivReflect+="spirv-reflect"
 
+#-------------------------------
+
 # copy over the headers that translate to MSL/HLSL
 cp ../shaders/ShaderMSL.h .
 cp ../shaders/ShaderHLSL.h .
@@ -40,18 +42,34 @@ ${appHlslparser} -i ../shaders/Skinning.hlsl -o Skinning.metal
 echo gen HLSL
 ${appHlslparser} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
 
-# see if HLSL compiles (requires macOS Vulkan install)
-# this will pull /usr/bin/local/dxc
-# looks like DXC wants a ps/vs/cs profile, so is expecting one shader per file
+#-------------------------------
 
+# Metal is C++14
+
+# see if HLSL compiles to MSL (requires macOS Vulkan install)
+
+# record sources into code for gpu capture (don't ship this), debug mode
+macOptions="-frecord-sources -g "
+
+# O2 + size opt
+# macOptions+="-Os"
+
+# TODO: metal3.0 on M1 macOS13/iOS16
+macOptions+="-std=macos-metal2.3 "
 
 # see if MSL compile
 echo compile MSL for macOS
-xcrun -sdk macosx metal Skinning.metal -o macos/Skinning.metallib
+xcrun -sdk macosx metal Skinning.metal ${macOptions} -o mac/Skinning.metallib
+
+# iosOptions="-frecord-sources -g "
+# iosOptions+="-std=ios-metal2.3 "
 
 #echo compile MSL for iOS
-#xcrun -sdk macosx metal Skinning.metal -o ios/Skinning.metallib
+#xcrun -sdk macosx metal Skinning.metal ${iosOptions} -o ios/Skinning.metallib
 
+#-------------------------------
+
+# looks like DXC wants a ps/vs/cs profile, so is expecting one shader per output
 
 args="-nologo "
 
