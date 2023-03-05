@@ -399,15 +399,17 @@ bool HLSLTokenizer::ScanNumber()
 
     // If the character after the number is an f then the f is treated as part
     // of the number (to handle 1.0f syntax).
+    bool isHalf = false;
 	if( ( fEnd[ 0 ] == 'f' || fEnd[ 0 ] == 'h' ) && fEnd < m_bufferEnd )
 	{
-		++fEnd;
+        isHalf = fEnd[ 0 ] == 'h';
+        ++fEnd;
 	}
 
 	if( fEnd > iEnd && GetIsNumberSeparator( fEnd[ 0 ] ) )
 	{
 		m_buffer = fEnd;
-		m_token = fEnd[ 0 ] == 'h' ? HLSLToken_HalfLiteral : HLSLToken_FloatLiteral;
+        m_token = ( isHalf || fEnd[ 0 ] == 'h' ) ? HLSLToken_HalfLiteral : HLSLToken_FloatLiteral;
         m_fValue = static_cast<float>(fValue);
         return true;
     }

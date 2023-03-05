@@ -5,7 +5,7 @@ mkdir -p out
 pushd out
 
 # display commands
-set -x
+# set -x
 
 # TODO: consider putting in path
 # note bash can't expand tilda, so using HOME instead
@@ -96,6 +96,7 @@ psargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
 #   Skinning.hlsl:24: error: '' : could not create assignment
 #   Skinning.hlsl:24: error: 'declaration' : Expected
 #   Skinning.hlsl: Skinning.hlsl(24): error at column 43, HLSL parsing failed.
+# seems that dot, min, max and other calls don't have half3 versions needed
 # vsargs+="-fhlsl-16bit-types "
 # psargs+="-fhlsl-16bit-types "
 
@@ -125,6 +126,15 @@ ${appGlslc} -S ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag
 
 # here are flags to use
 
+# dxc can output reflection directly
+# -Fre <file>             Output reflection to the given file
+  
+# may not need this if doing dxil output, then -Fo might gen dxil asm listing
+# -Cc  color-coded assmebly listing
+  
+# -remove-unused-functions Remove unused functions and types
+# -remove-unused-globals  Remove unused static globals and functions
+  
 # add reflect data
 # -fspv-reflect
 

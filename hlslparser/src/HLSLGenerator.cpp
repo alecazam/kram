@@ -368,12 +368,14 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
                 char buffer[64];
                 String_FormatFloat(buffer, sizeof(buffer), literalExpression->fValue);
                 String_StripTrailingFloatZeroes(buffer);
-                m_writer.Write("%s", buffer);
+                m_writer.Write("%s%s", buffer, literalExpression->type == HLSLBaseType_Half ? "h" : "" );
             }
             break;        
         case HLSLBaseType_Int:
             m_writer.Write("%d", literalExpression->iValue);
             break;
+        // TODO: missing uint?
+                
         case HLSLBaseType_Bool:
             m_writer.Write("%s", literalExpression->bValue ? "true" : "false");
             break;

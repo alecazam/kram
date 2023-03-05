@@ -92,9 +92,9 @@
 			children = (
 				70235C3729B303AA00909C95 /* buildShaders.sh */,
 				70235C5429B3260100909C95 /* README.md */,
+				702A2B7B29AA942D007D9A99 /* shaders */,
 				70235C3829B3041E00909C95 /* out */,
 				70235C3929B3145200909C95 /* src */,
-				702A2B7B29AA942D007D9A99 /* shaders */,
 				702A2B5A29A49DC8007D9A99 /* Products */,
 			);
 			sourceTree = "<group>";
