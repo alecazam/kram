@@ -8,11 +8,14 @@ pushd out
 set -x
 
 # TODO: consider putting in path
-vulkanSDK="~/devref/vulkansdk/1.3.239.0/macOS/bin/"
+# note bash can't expand tilda, so using HOME instead
+vulkanSDK="${HOME}/devref/vulkansdk/1.3.239.0/macOS/bin/"
 
 appHlslparser=../build/hlslparser/Build/Products/Release/hlslparser
-appDxc=${vulkanSDK}dxc
-appGlslc=${vulkanSDK}glslc
+appDxc=${vulkanSDK}
+appGlslc=${vulkanSDK}
+appDxc+="dxc"
+appGlslc+="glslc"
 
 # copy over the headers that translate to MSL/HLSL
 cp ../shaders/ShaderMSL.h .
