@@ -68,78 +68,97 @@ Mobile HW
 
 Mali
 * TBDR
-* Cannot write SSBO in the vertex shader, but can in the fragment shader.  Vulkan only.
+* Vulkan gpu - Midgard, Bifrost, Valhall, Immortalis
+* Vulkan can read but not write SSBO in VS.
 * Sparse index buffer limits 
-  https://community.arm.com/support-forums/f/graphics-gaming-and-vr-forum/53672/vulkan-what-should-i-do-about-this-warning-bestpractices-vkcmddrawindexed-sparse-index-buffer
 * 180MB parameter buffer limit - device lost after exceeded
-* Missing fillAsLines - affects debug visuals
-* Missing firstInstance to use MDI and SBO
-* ARM also makes the cpu reference designs
-* ARM bought from Falanx Microsystems
-* ETC2/ASTC, created ASTC format and encoders
+* Missing VK_POLYGON_MODE_LINE (feature.fillModeNonSolid) - affects debug visuals
+* Missing firstInstance to use MDI and SBO (G52 adds this)
+* ARM licenses mobile cpu reference designs
+* ARM bought Mali gpu from Falanx Microsystems
+* ETC2/ASTC, created ASTC format and encoders, no BC
+* https://en.wikipedia.org/wiki/Mali_(processor)
+* https://community.arm.com/support-forums/f/graphics-gaming-and-vr-forum/53672/vulkan-what-should-i-do-about-this-warning-bestpractices-vkcmddrawindexed-sparse-index-buffer
 
 Adreno
 * TBDR
 * Occlusion queries can cause a switch from TBDR to IMR
 * Half shader limits
-* Formerly ATI Radeon mobile parts - division sold to Qualcomm
+* Qualcomm bought ATI Radeon mobile gpu
 * 8K constant cache for UBO
 * SSBO bypass cache
 * lacks baseInstance (firstInstance) support
-* ETC2/ASTC
+* ETC2/ASTC, no BC
 
 PowerVR
 * TBDR
 * Very little US adoption
 * Imagination absorbed into Chinese state tech conglomerate
 * Origin of Apple Silicon
-* PVRTC/ETC2/ASTC
+* PVRTC/ETC2/ASTC, no BC
 
 iOS 
 * TBDR
-*  A7 - ETC2 support, 1gb device, Metal introduced and ES3
-*  A8 - ASTC support
-*  A9 - limited MDI, cpu ICB, baseVertex, baseInstance, 2gb devices
-* A10 - 
-* A11 - gpu ICB, tile shaders, Raster Order Groups, MSAA improvements,
-* A12 - 
+* locked at GL/ES 3.0 - no compute, use Metal/MSL instead
+*  A7 - 2/0 cpu, ETC2, 1gb device, Metal introduced and ES3
+*  A8 - 2/0, ASTC
+*  A9 - 2/0 2gb, limited MDI, cpu ICB, baseVertex, baseInstance
+* A10 - 2/0, 
+* A11 - 2/2, gpu ICB, tile shaders, Raster Order Groups, MSAA improvements, more gpus, async compute/raster
+* A12 - 2/4,
 * A13 - Argument Buffer indirection for material indexing, sparse texturing
-* A14/M1 - 
-* A15/M2 - little new gpu hw over A14
-* A16 - rumored ray tracing?
+* A14/M1 - lossy FBO compression, mesh shaders,
+* A15/M2 - no new gpu hw
+* A16/M3? - rumored RT hw
 * No SamplerMinMax support
 
 * https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
 
 macOS
 * IMR (Intel), TBDR(M1/A14), TBDR(A15/M2)
-* locked at GL4.1 - no compute, clipControl, BC6/7 support, SSBO
+* locked at GL4.1 - no compute, clipControl, BC6/7, SSBO, dsa, error callbacks
 * M1 has BC texture support, iPad/iPhone still do not
 * Intel only has BC support, but architecture is being phased out
-* Can use iOS tile shading on M1/M2, may work on last gen Intel?
+* Can use iOS tile shading on M1/M2, may work on last gen Intel?, last Intel RDNA and not RDNA2
 * M1 can only run Windows ARM in Parallels VM
 * Parallels Intel can't run DX12/Vulkan, only DX11
 * Bootcamp can't run eGPU, but macOS can
+* M1 can run iOS applications natively (but not ARKit)
 
 Intel
 * Skylake - improved fp16 support, sparse texturing
-* Alderlake - removes AVX512, 8HT, 8Little = 24 threads (really 16 cores)
+* Alderlake - removes AVX512, 8 HT big, 8 Little = 24 threads (really 16 cores)
 
 AMD
-* GCN2 - Puma, PS4/Xbox, sparse texturing, 2 async compute + 1 raster/compute pipe
-* GCN3 - lossless DCC, high quality video scalar, video encoder/decoder
-* GCN4 - Polaris, PS4 Pro, Xbox One, checkerboarding, degen tri removal
-* RDNA - 
-* RDNA2 - PS5/Xbox SeriesX, ray tracing hw, FSR
-* RDNA3 - 
-
-*  https://gpuopen.com/wp-content/uploads/2017/03/GDC2017-Advanced-Shader-Programming-On-GCN.pdf
+* scalar execution instead of vector based, compute, unified ALUs for rasterization
+# create Mantle API which lead to Vulkan
+* GCN1  - wave64, 1 instr/4 cycles, 1 cu = 4 simd16 units
+* GCN2  - Puma, PS4(Liverpool)/Xbone(Durango), sparse texturing, 2 async compute + 1 raster/compute pipe
+* GCN3  - lossless DCC, high quality video scalar, video encoder/decoder
+* GCN4  - Polaris, PS4 Pro(Neo)/XboneX(Scorpio), checkerboarding, degen tri removal, fp16 added back,
+* GCN5  - Vega, fp16 2x perf of fp32, fp64 is 1/16 typically, mesh shaders, 
+*
+* RDNA  - RX5300, wave32 (or 64), 1 instr/cycle, 2cpu = 1 wgp, mesh shaders, wave32 = 1 simd32 unit, display compression, 
+* RDNA2 - PS5/XboxX/SteamDeck, RX6000, RT hw, FSR
+* RDNA3 - RX7000, better compute/RT hw, multichip module design,
+*
+* https://en.wikipedia.org/wiki/Graphics_Core_Next
+* https://gpuopen.com/wp-content/uploads/2017/03/GDC2017-Advanced-Shader-Programming-On-GCN.pdf
+* https://en.wikipedia.org/wiki/RDNA_(microarchitecture)
+* https://en.wikipedia.org/wiki/List_of_AMD_graphics_processing_units
 
 Nvidia
+* scalar execution instead of vector based, compute, unified ALUs for rasterization
+* tile-based raster/binning in Maxwell (Tegra X1), not on same level as TBDR
+#
+* Tegra X1+ - Mariko, Nintendo Switch, ended chip production in 2021
 * 10x0 - no tensor core
 * 20x0 - tensor cores, RT accel for triangle and bvh intersection
 * 30x0 - 
 * 40x0 - 
+
+* https://en.wikipedia.org/wiki/List_of_Nvidia_graphics_processing_units
+* https://www.pcmag.com/news/report-nvidia-to-end-production-of-nintendo-switch-tegra-chip
 
 Shading Languages
 ---
@@ -179,27 +198,38 @@ GLSL
 * bolted on extensions with Apple, AMD, Nvidia, Intel extending language
 * has extension mechanism
 * replaced with spirv
+* horrible glGetError() requires sync of cpu/gpu
+* locked at GL4.1 on macOS - no compute
 
 GLSL/ES
 * even more limited GLSL
+* 3.0 on iOS, now emulated by Metal,
+* Khronos support ends at 3.1, moved to Vulkan/spirv
 * precision modifiers in ES for lowp (no support), mediump (might be fp16, fp24, fp32), highp (fp24 or fp32)
 * replaced with spriv
 * no defaults for variables
 * line directives needlessly changed from GLSL
 
-WebGL/ES
-* versions ES2 (WebGL1), ES3 (WebGL2), ES3.1 (WebGL2.1), 
-* Khronos support ends at 3.1, moved to Vulkan/spirv
-* even more limited form GLSL/ES
+GLSL/ES (WebGL)
+* imposed mobile limits on desktop - browers mostly running gpu on desktop parts, despite Apple adding ES2/3 extensions
+* versions ES2 (WebGL1), ES3 (WebGL2), ES3.1 (WebGL2.1)
+* lowest common denominator
+* wrote Figma using WebGL1, shaders rendering 2d vectors with Photoshop-style blend modes/masks, images
+* WebGL1 limited ES2 even more - npot 2d texture limits, no 3d textures, srgb missing for compresed texture, extension not on Safari, no fp64, no dynamic loops in shaders
+* WebGL2/2.1 - limited ES3/3.1, added srgb, 
 * fixed count loops, can break out of loop with uniform
 * WebGL2.1/ES3.1 can do compute, but not on Apple platforms
 
 WebGPU/WGSL
 * WebGPU shading language orignally meant as text form of spriv
 * full compute support
-* Now using Dart like syntax completely unlike CG origin of other languages
-* Avoids pointers/references
-* Can transpile spirv to WGSL via tint, WGSL still not in spirv-cross
+* now using Dart like syntax completely unlike CG origin of other languages
+* avoids pointers/references
+* can transpile spirv to WGSL via tint, WGSL still not in spirv-cross
+* now emualted by Metal.  Angle emulates atop DX11 instead of GL for driver stability, might also have Vulkan backend.
+* runs all gpu code in separate process, so has to marshall all data over
+* can't map/unmap, have to upload changes to buffer/texture
+* munges up shader names and code internally into unreadable mess.
 
 WebGPU/WHLSL
 * WebGPU dropped language that would have been an offshoot of HLSL syntax.
