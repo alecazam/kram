@@ -64,21 +64,21 @@ psargs+="-T ps_6_2 "
 # dxc only loads DXIL.dll on Windows
 #  https://www.wihlidal.com/blog/pipeline/2018-09-16-dxil-signing-post-compile/
 echo gen DXIL with dxc
-dxc ${vsargs} -E SkinningVS -Fo SkinningVS.dxil Skinning.hlsl
-dxc ${psargs} -E SkinningPS -Fo SkinningPS.dxil Skinning.hlsl
+dxc ${vsargs} -E SkinningVS -Fo Skinning.vert.dxil Skinning.hlsl
+dxc ${psargs} -E SkinningPS -Fo Skinning.vert.dxil Skinning.hlsl
 
 # 1.0,1.1,1.2 is spv1.1,1.3,1.5
 #echo gen SPIRV 1.0
-#dxc ${vsargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningVS -Fo SkinningVS.vert.spv Skinning.hlsl
-#dxc ${psargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningPS -Fo SkinningPS.frag.spv Skinning.hlsl
+#dxc ${vsargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningVS -Fo Skinning.vert.spv Skinning.hlsl
+#dxc ${psargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningPS -Fo Skinning.frag.spv Skinning.hlsl
 
 #echo gen SPIRV 1.1
-#dxc ${vsargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningVS -Fo SkinningVS.vert.spv1 Skinning.hlsl
-#dxc ${psargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningPS -Fo SkinningPS.frag.spv1 Skinning.hlsl
+#dxc ${vsargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningVS -Fo Skinning.vert.spv1 Skinning.hlsl
+#dxc ${psargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningPS -Fo Skinning.frag.spv1 Skinning.hlsl
 
 echo gen SPIRV 1.2 with dxc
-dxc ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo SkinningVS.vert.spv2 Skinning.hlsl
-dxc ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo SkinningPS.frag.spv2 Skinning.hlsl
+dxc ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo Skinning.vert.spv2 -Fc Skinning.vert.spv2.txt Skinning.hlsl
+dxc ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo Skinning.frag.spv2 -Fc Skinning.frag.spv2.txt Skinning.hlsl
 
 vsargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
 psargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
@@ -90,15 +90,15 @@ psargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
 
 # note: glsl has a preprocesor
 echo gen SPRIV 1.2 with glslc
-glslc ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o SkinningVS.vert.gspv2
-glslc ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o SkinningPS.frag.gspv2
+glslc ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2
+glslc ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2
 
 # TODO: need to enable half (float16_t) usage in spriv generated shaders
 # how to identify compliation is targeting Vulkan?
 
 # barely human readable spv assembly listing
-glslc -S ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o SkinningVS.vert.gspv2.txt
-glslc -S ${vsargs} -fentry-point=SkinningPS Skinning.hlsl -o SkinningPS.frag.gspv2.txt
+glslc -S ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2.txt
+glslc -S ${vsargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2.txt
 
 
 # TODO: need to group files into library/module
