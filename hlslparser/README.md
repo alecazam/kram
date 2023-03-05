@@ -38,6 +38,7 @@ Dealing with Half
 HLSL 6.2 includes full half and int support.   So that is the compilation target.  Note table below before adopting half in shaders.  Nvidia/AMD tried to phase out half support on DX10, but iOS re-popularized half usage.  Android has many dragons using half (see below)
 
 Platforms - iOS/PowerVR, Adreno,  Mali, Nvida, AMD
+
 | Feature        | I | A | M | N | A |
 |----------------|---|---|---|---|---|
 | Half Interp    | y | n | y | n | y |
@@ -58,61 +59,123 @@ Terms
 ---
 
 * Shader Variants - it's good to define which variants of shaders to generate.  Can use static and dynamic branching to reduce variant count.  Can lead to requiring shader source if can't predefine variant count.
-
 * Specialization Constants - allow variants to be generated within a single shader.  Spriv is marked and compiled based on these settings.  Metal has equivalent function constants
+* Tile shaders - kernels/fragment shaders that run at the tile level.  Subpasses in Vulkan.  tilegroup memory to and tile data passed from stage to stage without writing back to targets.
 
 
-Mobile Gotchas
+Mobile HW
 ---
 
-
 Mali
+* TBDR
 * Cannot write SSBO in the vertex shader, but can in the fragment shader.  Vulkan only.
 * Sparse index buffer limits 
   https://community.arm.com/support-forums/f/graphics-gaming-and-vr-forum/53672/vulkan-what-should-i-do-about-this-warning-bestpractices-vkcmddrawindexed-sparse-index-buffer
 * 180MB parameter buffer limit - device lost after exceeded
 * Missing fillAsLines - affects debug visuals
 * Missing firstInstance to use MDI and SBO
+* ARM also makes the cpu reference designs
+* ARM bought from Falanx Microsystems
 
 Adreno
+* TBDR
 * Occlusion queries can cause a switch from TBDR to IMR
+* Half shader limits
+* Formerly ATI Radeon mobile parts - division sold to Qualcomm
 
 PowerVR
+* TBDR
 * Very little US adoption
-* Imagination now part of Chinese state tech conglomerate
+* Imagination absorbed into Chinese state tech conglomerate
+* Origin of Apple Silicon
+* Only had PVRTC support, but now has ASTC
 
 iOS 
-* - No SamplerMinmax 
-*  A9 - limited MultiDrawInidirect that can only draw 1 element per draw
-*       cpu ICB
-* A11 - gpu ICB
+* TBDR
+* introduced Metal on iPhone 5S (A7)
+* No SamplerMinmax 
+*  A7 - ETC2 support
+*  A8 - ASTC support
+*  A9 - MDI api limited, cpu ICB
+* A11 - gpu ICB, tile shaders (no HLSL), Raster Order Groups, MSAA controls
 * A13 - Argument Buffers indirection
+* A14/M1 -  
+* A15/M2 -
+
+macOS
+* IMR (Intel), TBDR(M1/A14), TBDR(A15/M2)
+* locked at GL4.1 - no compute, clipControl, BC6/7 support, SSBO
+* M1 has BC texture support, iPad/iPhone still do not
+* Intel only has BC support, but is being phased out
+* Can use iOS tile shading on M1/M2, may work on last gen Intel?
+
+* https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
+
+Shading Languages
+---
+
+CG
+* Where it all started.  HLSL is an offshoot of this.  MSL closely resembles HLSL.
+
+MSL
+* https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf
+
+HLSL
+* Added back int/half support
+* Vulkan extensions for specialization constants and subpasses
+* SSBO - StructuredBuffers, ByteAddressBuffer
+* DX9 and DX10 style syntax changes
+* HLSL being added to clang
+
+* https://github.com/Microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst#subpass-inputs
+* https://clang.llvm.org/docs/HLSL/HLSLSupport.html#:~:text=HLSL%20uses%20templates%20to%20define,case%20and%20issues%20a%20diagnostic.
+
+These languages not supported directly by hlslparser, but can transpile via spirv-cross.
 
 GLSL 
-* - dead shader language, Vulkan will pursue HLSL
-* + has extension mechanism
-* - precision modifiers in ES for lowp (no support), mediump (might be fp16, fp24, fp32), highp (fp24 or fp32)
- 
+* dead shader language, Vulkan/Microsoft will pursue HLSL
+* bolted on extensions with Apple, AMD, Nvidia, Intel extending language
+* has extension mechanism
+* replaced with spirv
+
+GLSL/ES
+* even more limited 
+* precision modifiers in ES for lowp (no support), mediump (might be fp16, fp24, fp32), highp (fp24 or fp32)
+* replaced with spriv
+
+WGSL
+* WebGPU shading language orignally meant as text form of spriv
+* Now using Dart like syntax completely unlike CG origin of other languages
+* Avoids pointers/references
+* Can transpile spirv to WGSL via tint, WGSL still not in spirv-cross
+
+WHLSL
+* WebGPU dropped language that would have been an offshoot of HLSL syntax.
+
+---------------------------------
+
+Shading Language Versions
+
 HLSL
-* - missing specialization constants - Vulkan adds these in for Spirv, but it's not valid HLSL for DX12
-* - no tile shader support, limiting iOS/Android tile development, Vulkan has this
-* + SM 6.2 adds back half and short support
+* SM 6.2, target, added back int/half support
+* SM 6.6, latest,
 
 MSL
 * metal2.2, iOS13/macOS10.15,
 * metal2.3, iOS14/macOS11, target, function pointers,
 * metal2.4, iOS15/macOS12,
-* metal3.0, iOS16/macOS13, unified shader model
-Vulkan
-* SM spv1.1, v1.0
-* SM spv1.3, v1.1
-* SM spv1.5, v1.2, target,
+* metal3.0, iOS16/macOS13, unified shader model, latest,
 
-HLSL 
-* SM 6.2, target, added back int/half support
-  
+Spirv
+* 1.1, vulkan1.0
+* 1.3, vulkan1.1
+* 1.5, vulkan1.2, target,
+
+---------------------------------
+
 TODO:
 * compute shader support
+* handle HLSL vulkan extensions, convert these to MSL kernels too
 * preprocessed variants
 * fix shader input names
 * handle reflection (spirv-reflect?)

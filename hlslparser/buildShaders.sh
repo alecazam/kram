@@ -157,17 +157,18 @@ fi
 
 # here are flags to use w/DXC
 
-# dxc can output reflection directly
+# dxc can output reflection directly (only for DXIL)
 # -Fre <file>             Output reflection to the given file
   
+# add reflect data to aid in generating reflection data
+# -fspv-reflect
+
 # may not need this if doing dxil output, then -Fo might gen dxil asm listing
 # -Cc  color-coded assembly listing
   
 # -remove-unused-functions Remove unused functions and types
 # -remove-unused-globals  Remove unused static globals and functions
   
-# add reflect data
-# -fspv-reflect
 
 # Negate SV_Position.y before writing to stage output in VS/DS/GS to accommodate Vulkan's coordinate system
 # -fvk-invert-y
