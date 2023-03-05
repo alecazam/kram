@@ -33,6 +33,8 @@ static const char* GetTypeName(const HLSLType& type)
     case HLSLBaseType_Sampler2DShadow:  return "sampler2DShadow";
     case HLSLBaseType_Sampler2DMS:  return "sampler2DMS";
     case HLSLBaseType_Sampler2DArray:    return "sampler2DArray";
+            
+    // struct
     case HLSLBaseType_UserDefined:  return type.typeName;
     default: return "<unknown type>";
     }

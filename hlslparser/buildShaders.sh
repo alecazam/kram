@@ -2,6 +2,15 @@
 
 mkdir -p out
 
+mkdir -p out/macos
+mkdir -p out/win
+mkdir -p out/android
+
+# mkdir -p out/ios
+
+# for glslc testing
+#mkdir -p out/android2
+
 pushd out
 
 # display commands
@@ -14,13 +23,14 @@ vulkanSDK="${HOME}/devref/vulkansdk/1.3.239.0/macOS/bin/"
 appHlslparser=../build/hlslparser/Build/Products/Release/hlslparser
 appDxc=${vulkanSDK}
 appGlslc=${vulkanSDK}
+appSprivReflect=${vulkanSDK}
 appDxc+="dxc"
 appGlslc+="glslc"
+appSprivReflect+="spirv-reflect"
 
 # copy over the headers that translate to MSL/HLSL
 cp ../shaders/ShaderMSL.h .
 cp ../shaders/ShaderHLSL.h .
-
 
 # build the metal shaders
 echo gen MSL
@@ -36,8 +46,12 @@ ${appHlslparser} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
 
 
 # see if MSL compile
-echo compile MSL
-xcrun -sdk macosx metal Skinning.metal -o Skinning.metallib
+echo compile MSL for macOS
+xcrun -sdk macosx metal Skinning.metal -o macos/Skinning.metallib
+
+#echo compile MSL for iOS
+#xcrun -sdk macosx metal Skinning.metal -o ios/Skinning.metallib
+
 
 args="-nologo "
 
@@ -71,22 +85,20 @@ psargs+="-T ps_6_2 "
 # see this garbage here.  Can only sign dxil on Windows.
 # dxc only loads DXIL.dll on Windows
 #  https://www.wihlidal.com/blog/pipeline/2018-09-16-dxil-signing-post-compile/
+# no idea what format the refl file from dxil is?
 echo gen DXIL with dxc
-${appDxc} ${vsargs} -E SkinningVS -Fo Skinning.vert.dxil -Fc Skinning.vert.dxil.txt Skinning.hlsl
-${appDxc} ${psargs} -E SkinningPS -Fo Skinning.vert.dxil -Fc Skinning.frag.dxil.txt Skinning.hlsl
+${appDxc} ${vsargs} -E SkinningVS -Fo win/Skinning.vert.dxil -Fc win/Skinning.vert.dxil.txt -Fre win/Skinning.vert.refl Skinning.hlsl
+${appDxc} ${psargs} -E SkinningPS -Fo win/Skinning.frag.dxil -Fc win/Skinning.frag.dxil.txt -Fre win/Skinning.frag.refl Skinning.hlsl
 
-# 1.0,1.1,1.2 is spv1.1,1.3,1.5
-#echo gen SPIRV 1.0
-#${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningVS -Fo Skinning.vert.spv Skinning.hlsl
-#${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningPS -Fo Skinning.frag.spv Skinning.hlsl
-
-#echo gen SPIRV 1.1
-#${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningVS -Fo Skinning.vert.spv1 Skinning.hlsl
-#${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningPS -Fo Skinning.frag.spv1 Skinning.hlsl
-
+# 1.0,1.1,1.2 default to spv1.1,1.3,1.5
 echo gen SPIRV 1.2 with dxc
-${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo Skinning.vert.spv2 -Fc Skinning.vert.spv2.txt Skinning.hlsl
-${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo Skinning.frag.spv2 -Fc Skinning.frag.spv2.txt Skinning.hlsl
+${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo android/Skinning.vert.spv -Fc android/Skinning.vert.spv.txt Skinning.hlsl
+${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo android/Skinning.frag.spv -Fc android/Skinning.frag.spv.txt Skinning.hlsl
+
+# -Fre not supported with spriv, so just use spirv-reflect
+# either yaml or random format, why can't this just output json?
+${appSprivReflect} -y android/Skinning.vert.spv > android/Skinning.vert.refl
+${appSprivReflect} -y android/Skinning.frag.spv > android/Skinning.frag.refl
 
 # skip this path, have to mod hlsl just to get valid code to compile with glslc
 testGlslc=0
@@ -109,15 +121,15 @@ if [[ $testGlslc -eq 1 ]]; then
     # note: glsl has a preprocesor
     
     echo gen SPRIV 1.2 with glslc
-    ${appGlslc} ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2
-    ${appGlslc} ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2
+    ${appGlslc} ${vsargs} -fentry-point=SkinningVS -o android2/Skinning.vert.spv Skinning.hlsl
+    ${appGlslc} ${psargs} -fentry-point=SkinningPS -o android2/Skinning.frag.spv Skinning.hlsl
 
     # TODO: need to enable half (float16_t) usage in spriv generated shaders
     # how to identify compliation is targeting Vulkan?
 
     # barely human readable spv assembly listing
-    ${appGlslc} -S ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2.txt
-    ${appGlslc} -S ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2.txt
+    ${appGlslc} -S ${vsargs} -fentry-point=SkinningVS -o android2/Skinning.vert.spv.txt Skinning.hlsl
+    ${appGlslc} -S ${psargs} -fentry-point=SkinningPS -o android2/Skinning.frag.spv.txt Skinning.hlsl
 fi
 
 # TODO: need to group files into library/module
