@@ -159,6 +159,7 @@ extern bool IsMatrixType(HLSLBaseType baseType);
 extern bool IsVectorType(HLSLBaseType baseType);
 extern bool IsScalarType(HLSLBaseType baseType);
 extern bool IsTextureType(HLSLBaseType baseType);
+extern bool IsNumericType(HLSLBaseType baseType);
 
 extern bool IsCoreTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
 extern bool IsNumericTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
@@ -170,5 +171,7 @@ extern bool IsScalarType(const HLSLType& type);
 extern bool IsTextureType(const HLSLType& type);
 
 extern HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type);
+
+const char* GetNumericTypeName(HLSLBaseType type);
 
 }

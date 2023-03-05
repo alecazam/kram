@@ -152,6 +152,11 @@ bool IsTextureType(const HLSLType & type)
     return IsTextureType(type.baseType);
 }
 
+bool IsNumericType(HLSLBaseType baseType)
+{
+    return IsVectorType(baseType) || IsScalarType(baseType) || IsMatrixType(baseType);
+}
+
 HLSLBaseType NumericToBaseType(NumericType numericType)
 {
     HLSLBaseType baseType = HLSLBaseType_Unknown;
@@ -167,6 +172,16 @@ HLSLBaseType NumericToBaseType(NumericType numericType)
             break;
     }
     return baseType;
+}
+
+const char* GetNumericTypeName(HLSLBaseType type)
+{
+    if (!IsNumericType(type))
+        return nullptr;
+    
+    // MSL/HLSL share the same type names
+    const auto& b = baseTypeDescriptions[type];
+    return b.typeName;
 }
 
 HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type)
@@ -798,7 +813,7 @@ const int _binaryOpPriority[] =
 
 const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] = 
     {
-        { "unknown type",       CoreType_None, DimensionType_None, NumericType_NaN,        0, 0, 0, -1 },      // HLSLBaseType_Unknown
+        { "unknown",       CoreType_None, DimensionType_None, NumericType_NaN,        0, 0, 0, -1 },      // HLSLBaseType_Unknown
         { "void",               CoreType_Void, DimensionType_None, NumericType_NaN,        0, 0, 0, -1 },      // HLSLBaseType_Void
         
         { "float",              CoreType_Scalar, DimensionType_Scalar, NumericType_Float,       1, 0, 1,  0 },      // HLSLBaseType_Float
@@ -850,8 +865,8 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
         { "sampler2DMS",        CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DMS
         { "sampler2DArray",     CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DArray
         
-        { "user defined",       CoreType_Struct, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_UserDefined
-        { "expression",         CoreType_Expression, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 }       // HLSLBaseType_Expression
+        { "struct",             CoreType_Struct, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },      // HLSLBaseType_UserDefined
+        { "expression",         CoreType_Expression, DimensionType_None, NumericType_NaN,     1, 0, 0, -1 }       // HLSLBaseType_Expression
     };
 
 // IC: I'm not sure this table is right, but any errors should be caught by the backend compiler.
