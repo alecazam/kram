@@ -131,7 +131,7 @@ Intel
 
 AMD
 * scalar execution instead of vector based, compute, unified ALUs for rasterization
-# create Mantle API which lead to Vulkan
+* create Mantle API which lead to Vulkan
 * GCN1  - wave64, 1 instr/4 cycles, 1 cu = 4 simd16 units
 * GCN2  - Puma, PS4(Liverpool)/Xbone(Durango), sparse texturing, 2 async compute + 1 raster/compute pipe
 * GCN3  - lossless DCC, high quality video scalar, video encoder/decoder
