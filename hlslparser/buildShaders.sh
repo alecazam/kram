@@ -72,8 +72,8 @@ psargs+="-T ps_6_2 "
 # dxc only loads DXIL.dll on Windows
 #  https://www.wihlidal.com/blog/pipeline/2018-09-16-dxil-signing-post-compile/
 echo gen DXIL with dxc
-${appDxc} ${vsargs} -E SkinningVS -Fo Skinning.vert.dxil Skinning.hlsl
-${appDxc} ${psargs} -E SkinningPS -Fo Skinning.vert.dxil Skinning.hlsl
+${appDxc} ${vsargs} -E SkinningVS -Fo Skinning.vert.dxil -Fc Skinning.vert.dxil.txt Skinning.hlsl
+${appDxc} ${psargs} -E SkinningPS -Fo Skinning.vert.dxil -Fc Skinning.frag.dxil.txt Skinning.hlsl
 
 # 1.0,1.1,1.2 is spv1.1,1.3,1.5
 #echo gen SPIRV 1.0
@@ -88,49 +88,50 @@ echo gen SPIRV 1.2 with dxc
 ${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo Skinning.vert.spv2 -Fc Skinning.vert.spv2.txt Skinning.hlsl
 ${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo Skinning.frag.spv2 -Fc Skinning.frag.spv2.txt Skinning.hlsl
 
-vsargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
-psargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
+# skip this path, have to mod hlsl just to get valid code to compile with glslc
+testGlslc=0
 
-# turn on half/short/ushort support
-# glslc fails when I set this even on latest build.
-#   Skinning.hlsl:24: error: '' : could not create assignment
-#   Skinning.hlsl:24: error: 'declaration' : Expected
-#   Skinning.hlsl: Skinning.hlsl(24): error at column 43, HLSL parsing failed.
-# seems that dot, min, max and other calls don't have half3 versions needed
-vsargs+="-fhlsl-16bit-types "
-psargs+="-fhlsl-16bit-types "
+if [[ $testGlslc -eq 1 ]]; then
+    vsargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
+    psargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
 
-# see SPV_GOOGLE_hlsl_functionality1
-# -fhlsl_functionality1
-# -g source level debugging info
-# -I include search path
+    # turn on half/short/ushort support
+    # TODO: seems that dot, min, max and other calls don't have half3 versions needed, casts required
+    # and even half3(half) isn't valid.
+    # https://github.com/google/shaderc/issues/1309
+    vsargs+="-fhlsl-16bit-types "
+    psargs+="-fhlsl-16bit-types "
 
-# note: glsl has a preprocesor
-echo gen SPRIV 1.2 with glslc
-${appGlslc} ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2
-${appGlslc} ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2
+    # see SPV_GOOGLE_hlsl_functionality1
+    # -fhlsl_functionality1
+    # -g source level debugging info
+    # -I include search path
+    # note: glsl has a preprocesor
+    
+    echo gen SPRIV 1.2 with glslc
+    ${appGlslc} ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2
+    ${appGlslc} ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2
 
-# TODO: need to enable half (float16_t) usage in spriv generated shaders
-# how to identify compliation is targeting Vulkan?
+    # TODO: need to enable half (float16_t) usage in spriv generated shaders
+    # how to identify compliation is targeting Vulkan?
 
-# barely human readable spv assembly listing
-${appGlslc} -S ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2.txt
-${appGlslc} -S ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2.txt
-
+    # barely human readable spv assembly listing
+    ${appGlslc} -S ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2.txt
+    ${appGlslc} -S ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2.txt
+fi
 
 # TODO: need to group files into library/module
 # also create a readable spv file, so can look through that
 
-
 # TODO: create reflect data w/o needing spriv
 
-# here are flags to use
+# here are flags to use w/DXC
 
 # dxc can output reflection directly
 # -Fre <file>             Output reflection to the given file
   
 # may not need this if doing dxil output, then -Fo might gen dxil asm listing
-# -Cc  color-coded assmebly listing
+# -Cc  color-coded assembly listing
   
 # -remove-unused-functions Remove unused functions and types
 # -remove-unused-globals  Remove unused static globals and functions

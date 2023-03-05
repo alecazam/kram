@@ -865,16 +865,18 @@ namespace M4
             }
             else if (declaration->type.baseType == HLSLBaseType_Sampler2DShadow)
             {
-                m_writer.Write("thread depth2d<float>& %s_texture;", declaration->name);
+                // Note: ios has 16f depth now, so don't assume float
+                m_writer.Write("thread depth2d<%s>& %s_texture;", typeName,declaration->name);
                 m_writer.Write("thread sampler& %s_sampler", declaration->name);
             }
             else if (declaration->type.baseType == HLSLBaseType_Sampler2DMS)
             {
+                // no sampler, just Load samples
                 m_writer.Write("thread texture2d_ms<%s>& %s_texture;", typeName, declaration->name);
             }
             else if (declaration->type.baseType == HLSLBaseType_Sampler2DArray)
             {
-                m_writer.Write("thread texture2d_array<float>& %s_texture;", declaration->name);
+                m_writer.Write("thread texture2d_array<%s>& %s_texture;", typeName, declaration->name);
                 m_writer.Write("thread sampler& %s_sampler", declaration->name);
             }
             else

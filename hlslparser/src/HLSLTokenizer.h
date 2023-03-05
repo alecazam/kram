@@ -98,6 +98,7 @@ enum HLSLToken
     HLSLToken_FloatLiteral,
 	HLSLToken_HalfLiteral,
     HLSLToken_IntLiteral,
+    
     HLSLToken_Identifier,
     HLSLToken_Comment,          //
     

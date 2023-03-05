@@ -642,6 +642,8 @@ void HLSLTokenizer::GetTokenName(int token, char buffer[s_maxIdentifier])
         case HLSLToken_DivideEqual:
             strcpy(buffer, "/=");
             break;
+        
+        // literals (need uint?)
 		case HLSLToken_HalfLiteral:
 			strcpy( buffer, "half" );
 			break;
@@ -651,6 +653,7 @@ void HLSLTokenizer::GetTokenName(int token, char buffer[s_maxIdentifier])
         case HLSLToken_IntLiteral:
             strcpy(buffer, "int");
             break;
+                
         case HLSLToken_Identifier:
             strcpy(buffer, "identifier");
             break;
