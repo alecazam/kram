@@ -136,6 +136,8 @@ enum HLSLBaseType
     HLSLBaseType_UserDefined,       // struct
     HLSLBaseType_Expression,        // type argument for defined() sizeof() and typeof().
     HLSLBaseType_Auto,
+    HLSLBaseType_Comment,           // single line comments optionally transferred to outptu
+    
     HLSLBaseType_Count,
     
     // counts

@@ -48,6 +48,12 @@ sampler2D<half> tex;
 // texture2d<half> tex;
 // sampler pointSampler;
 
+// ugh spriv unable to represent Texture2D<half>, spv generation fails
+// https://github.com/microsoft/DirectXShaderCompiler/issues/2711
+// fatal error: generated SPIR-V is invalid: Expected Sampled Type to be a
+// 32-bit int or float scalar type for Vulkan environment
+// type_2d_image = OpTypeImage %half 2D 2 0 0 1 Unknown
+
 // TODO: using column matrices for MSL/PSSL/GLSL constency
 // so switch from premul to postmul in shader.  And used float3x4
 // but need to add support to parsers/generators.

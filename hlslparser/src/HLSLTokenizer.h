@@ -100,7 +100,7 @@ enum HLSLToken
     HLSLToken_IntLiteral,
     
     HLSLToken_Identifier,
-    HLSLToken_Comment,          //
+    HLSLToken_Comment,          // Alec added this
     
     HLSLToken_EndOfStream,
 };

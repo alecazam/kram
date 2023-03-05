@@ -6,43 +6,44 @@
 
 #define USE_HALF 1
 
+// TODO: this only supports half on Texture2D
+
 // Don't know why HLSL doesn't support these
 #define min3(x,y,z) min(x, min(y, z))
 #define max3(x,y,z) max(x, max(y, z))
 #define length_squared(x) ((x)*(x))
 
 struct Texture2DSampler {
-    Texture2D t;
+    Texture2D<float4> t;
     SamplerState s;
 };
 
-// TODO: this only supports half on Texture2D
 #if USE_HALF
 // unique type, even though same data
 struct Texture2DHalfSampler {
-    Texture2D t;
+    Texture2D<float4> t; // TOOD: should be Texture2D<half4> but spirv limit
     SamplerState s;
 };
 
 #endif
 
 struct Texture3DSampler {
-    Texture3D t;
+    Texture3D<float4> t;
     SamplerState s;
 };
 
 struct TextureCubeSampler {
-    TextureCube t;
+    TextureCube<float4> t;
     SamplerState s;
 };
 
 struct Texture2DShadowSampler {
-    Texture2D t;
+    Texture2D<float4> t;
     SamplerComparisonState s;
 };
 
 struct Texture2DArraySampler {
-    Texture2DArray t;
+    Texture2DArray<float4> t;
     SamplerState s;
 };
 
@@ -52,7 +53,7 @@ struct Texture2DArraySampler {
 // Stupid HLSL lacks ctors.  Ugh!
 // Can't simplify to "return { t, a };" either.
 
-Texture2DSampler Texture2DSamplerCtor(Texture2D t, SamplerState s)
+Texture2DSampler Texture2DSamplerCtor(Texture2D<float4> t, SamplerState s)
 {
     Texture2DSampler a = { t, s };
     return a;
@@ -60,32 +61,34 @@ Texture2DSampler Texture2DSamplerCtor(Texture2D t, SamplerState s)
 
 #if USE_HALF
 
-Texture2DHalfSampler Texture2DHalfSamplerCtor(Texture2D t, SamplerState s)
+// This should take Texture2D<half4> but see
+// https://github.com/microsoft/DirectXShaderCompiler/issues/2711
+Texture2DHalfSampler Texture2DHalfSamplerCtor(Texture2D<float4> t, SamplerState s)
 {
     Texture2DHalfSampler a = { t, s };
     return a;
 }
 #endif
 
-Texture3DSampler Texture3DSamplerCtor(Texture3D t, SamplerState s)
+Texture3DSampler Texture3DSamplerCtor(Texture3D<float4> t, SamplerState s)
 {
     Texture3DSampler a = { t, s };
     return a;
 }
 
-TextureCubeSampler TextureCubeSamplerCtor(TextureCube t, SamplerState s)
+TextureCubeSampler TextureCubeSamplerCtor(TextureCube<float4> t, SamplerState s)
 {
     TextureCubeSampler a = { t, s };
     return a;
 }
 
-Texture2DShadowSampler Texture2DShadowSamplerCtor(Texture2D t, SamplerComparisonState s)
+Texture2DShadowSampler Texture2DShadowSamplerCtor(Texture2D<float4> t, SamplerComparisonState s)
 {
     Texture2DShadowSampler a = { t, s };
     return a;
 }
 
-Texture2DArraySampler Texture2DArraySamplerCtor(Texture2DArray t, SamplerState s)
+Texture2DArraySampler Texture2DArraySamplerCtor(Texture2DArray<float4> t, SamplerState s)
 {
     Texture2DArraySampler a = { t, s };
     return a;

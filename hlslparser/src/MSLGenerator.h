@@ -112,8 +112,6 @@ private:
     
     void Error(const char* format, ...);
 
-    HLSLBaseType HalfToFloatBaseType(HLSLBaseType type);
-    
 private:
 
     CodeWriter      m_writer;

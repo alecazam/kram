@@ -934,7 +934,7 @@ namespace M4
             if (!field->hidden)
             {
                 m_writer.BeginLine(indent + 1, field->fileName, field->line);
-                OutputDeclaration(field->type, field->name, field->assignment, false, false, /*alignment=*/16);
+                OutputDeclaration(field->type, field->name, field->assignment, false, false, 0); // /*alignment=*/16);
                 m_writer.EndLine(";");
             }
             field = (HLSLDeclaration*)field->nextStatement;
@@ -1418,22 +1418,24 @@ namespace M4
         else if (expression->nodeType == HLSLNodeType_ArrayAccess)
         {
             HLSLArrayAccess* arrayAccess = static_cast<HLSLArrayAccess*>(expression);
-            if (arrayAccess->array->expressionType.array || !IsMatrixType(arrayAccess->array->expressionType.baseType))
+            
+            // Just use the matrix notation, using column_order instead of row_order
+            if (arrayAccess->array->expressionType.array) // || !IsMatrixType(arrayAccess->array->expressionType.baseType))
             {
                 OutputExpression(arrayAccess->array, expression);
                 m_writer.Write("[");
                 OutputExpression(arrayAccess->index, NULL);
                 m_writer.Write("]");
             }
-            else
-            {
-                // @@ This doesn't work for l-values!
-                m_writer.Write("column(");
-                OutputExpression(arrayAccess->array, NULL);
-                m_writer.Write(", ");
-                OutputExpression(arrayAccess->index, NULL);
-                m_writer.Write(")");
-            }
+//            else
+//            {
+//                // @@ This doesn't work for l-values!
+//                m_writer.Write("column(");
+//                OutputExpression(arrayAccess->array, NULL);
+//                m_writer.Write(", ");
+//                OutputExpression(arrayAccess->index, NULL);
+//                m_writer.Write(")");
+//            }
         }
         else if (expression->nodeType == HLSLNodeType_FunctionCall)
         {
@@ -1544,6 +1546,7 @@ namespace M4
         }
         else if (alignment != 0 && !isTypeCast)
         {
+            // TODO: are these alignas needed?
             m_writer.Write("alignas(%d) ", alignment);
         }
 
@@ -2042,27 +2045,7 @@ namespace M4
         return NULL;
     }
 
-    HLSLBaseType MSLGenerator::HalfToFloatBaseType(HLSLBaseType type)
-    {
-        switch(type)
-        {
-            case HLSLBaseType_Half: return HLSLBaseType_Float;
-            case HLSLBaseType_Half2: return HLSLBaseType_Float2;
-            case HLSLBaseType_Half3: return HLSLBaseType_Float3;
-            case HLSLBaseType_Half4: return HLSLBaseType_Float4;
-            case HLSLBaseType_Half2x2: return HLSLBaseType_Float2x2;
-            case HLSLBaseType_Half3x3: return HLSLBaseType_Float3x3;
-            // case HLSLBaseType_Half4x2: return HLSLBaseType_Float4x2;
-            // case HLSLBaseType_Half4x3: return HLSLBaseType_Float4x3;
-            case HLSLBaseType_Half4x4: return HLSLBaseType_Float4x4;
-                
-            default:
-               // do nothing;
-                break;
-        }
-        
-        return type;
-    }
+    
         
     const char* MSLGenerator::GetTypeName(const HLSLType& type, bool exactType)
     {
@@ -2070,7 +2053,7 @@ namespace M4
 
         bool half_to_float = promote && m_options.treatHalfAsFloat;// && !exactType;
         
-        // TODO: move half/float to texture
+        // TODO: move carting around half/float to texture
         bool half_samplers = promote && type.samplerType == HLSLBaseType_Half && !m_options.treatHalfAsFloat;
 
         auto baseType = type.baseType;

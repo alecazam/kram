@@ -775,6 +775,18 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
         const char* samplerType = "SamplerState";
         // @@ Handle generic sampler type.
 
+        // TODO: have a way to disable use of half (like on MSLGenerator)
+        bool isHalf = declaration->type.samplerType == HLSLBaseType_Half;
+        
+        // Can't use half4 textures with spriv
+        // Can tell Vulkan was written by and for desktop IHVs.
+        // https://github.com/microsoft/DirectXShaderCompiler/issues/2711
+        bool isSpirvTarget = true;
+        if (isSpirvTarget)
+            isHalf = false;
+        
+        const char* formatType = isHalf ? "half4" : "float4";
+        
         if (declaration->type.baseType == HLSLBaseType_Sampler2D)
         {
             textureType = "Texture2D";
@@ -794,7 +806,7 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
         }
         else if (declaration->type.baseType == HLSLBaseType_Sampler2DMS)
         {
-            textureType = "Texture2DMS<float4>";  // @@ Is template argument required?
+            textureType = "Texture2DMS";
             samplerType = NULL;
         }
 
@@ -802,22 +814,22 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
         {
             if (reg != -1)
             {
-                m_writer.Write("%s %s_texture : register(t%d); %s %s_sampler : register(s%d)", textureType, declaration->name, reg, samplerType, declaration->name, reg);
+                m_writer.Write("%s<%s> %s_texture : register(t%d); %s %s_sampler : register(s%d)", textureType, formatType, declaration->name, reg, samplerType, declaration->name, reg);
             }
             else
             {
-                m_writer.Write("%s %s_texture; %s %s_sampler", textureType, declaration->name, samplerType, declaration->name);
+                m_writer.Write("%s<%s> %s_texture; %s %s_sampler", textureType, formatType, declaration->name, samplerType, declaration->name);
             }
         }
         else
         {
             if (reg != -1)
             {
-                m_writer.Write("%s %s : register(t%d)", textureType, declaration->name, reg);
+                m_writer.Write("%s<%s> %s : register(t%d)", textureType, formatType, declaration->name, reg);
             }
             else
             {
-                m_writer.Write("%s %s", textureType, declaration->name);
+                m_writer.Write("%s<%s> %s", textureType, formatType, declaration->name);
             }
         }
         return;

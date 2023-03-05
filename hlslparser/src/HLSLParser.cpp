@@ -40,6 +40,7 @@ enum CoreType
     CoreType_Struct,
     CoreType_Void,
     CoreType_Expression,
+    CoreType_Comment,
     
     CoreType_Count // must be last
 };
@@ -172,6 +173,28 @@ HLSLBaseType NumericToBaseType(NumericType numericType)
             break;
     }
     return baseType;
+}
+
+HLSLBaseType HalfToFloatBaseType(HLSLBaseType type)
+{
+    switch(type)
+    {
+        case HLSLBaseType_Half: return HLSLBaseType_Float;
+        case HLSLBaseType_Half2: return HLSLBaseType_Float2;
+        case HLSLBaseType_Half3: return HLSLBaseType_Float3;
+        case HLSLBaseType_Half4: return HLSLBaseType_Float4;
+        case HLSLBaseType_Half2x2: return HLSLBaseType_Float2x2;
+        case HLSLBaseType_Half3x3: return HLSLBaseType_Float3x3;
+        // case HLSLBaseType_Half4x2: return HLSLBaseType_Float4x2;
+        // case HLSLBaseType_Half4x3: return HLSLBaseType_Float4x3;
+        case HLSLBaseType_Half4x4: return HLSLBaseType_Float4x4;
+            
+        default:
+           // do nothing;
+            break;
+    }
+    
+    return type;
 }
 
 const char* GetNumericTypeName(HLSLBaseType type)
@@ -866,7 +889,8 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
         { "sampler2DArray",     CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DArray
         
         { "struct",             CoreType_Struct, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },      // HLSLBaseType_UserDefined
-        { "expression",         CoreType_Expression, DimensionType_None, NumericType_NaN,     1, 0, 0, -1 }       // HLSLBaseType_Expression
+        { "expression",         CoreType_Expression, DimensionType_None, NumericType_NaN,     1, 0, 0, -1 },       // HLSLBaseType_Expression
+        { "comment",           CoreType_Comment, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },       // HLSLBaseType_Comment
     };
 
 // IC: I'm not sure this table is right, but any errors should be caught by the backend compiler.
@@ -1422,7 +1446,7 @@ bool HLSLParser::ExpectIdentifier(const char*& identifier)
 {
     if (!AcceptIdentifier(identifier))
     {
-        char near[HLSLTokenizer::s_maxIdentifier];
+        char near[HLSLTokenizer::s_maxIdentifier] = {};
         m_tokenizer.GetTokenName(near);
         m_tokenizer.Error("Syntax error: expected identifier near '%s'", near);
         identifier = "";
@@ -1479,7 +1503,16 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
 
     bool doesNotExpectSemicolon = false;
 
-    if (Accept(HLSLToken_Struct))
+    // Alec add comment
+    if (Accept(HLSLToken_Comment))
+    {
+        // TODO: add comment node to HLSLTree
+        // HLSLComment* comment = m_tree->AddNode<HLSLComment>(fileName, line);
+        // comment.text = ...;
+        
+        return true;
+    }
+    else if (Accept(HLSLToken_Struct))
     {
         // Struct declaration.
 
@@ -3497,6 +3530,12 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
 
     int token = m_tokenizer.GetToken();
 
+    if (token == HLSLToken_Comment)
+    {
+        type.baseType = HLSLBaseType_Comment;
+        return true;
+    }
+    
     // Check built-in types.
     type.baseType = HLSLBaseType_Void;
     switch (token)
@@ -3631,8 +3670,11 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
             {
                 // Hack.
                 // Sampler2D<half> or Sampler2D<float>
-                // but this doesn't line up with DX10
+                
+                // TODO: this doesn't line up with DX10
                 // which is Texture2D<half4> or Texture2D<float4>
+                // Samplers are just state blocks, but texture holds the type.
+                // Also have more texture slots than samplers, so samplers are reused.
                 
                 int token = m_tokenizer.GetToken();
                 if (token == HLSLToken_Float)

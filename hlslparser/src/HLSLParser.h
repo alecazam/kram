@@ -171,6 +171,7 @@ extern bool IsScalarType(const HLSLType& type);
 extern bool IsTextureType(const HLSLType& type);
 
 extern HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type);
+HLSLBaseType HalfToFloatBaseType(HLSLBaseType type);
 
 const char* GetNumericTypeName(HLSLBaseType type);
 
