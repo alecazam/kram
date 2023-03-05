@@ -80,8 +80,13 @@ OutputVS SkinningVS(InputVS input)
         
     // Output stuff
     output.position = mul(float4(position, 1.0), worldToClipTfm);
-    output.diffuse  = dot(lightDir, normal);
-    output.uv = input.uv;
+  
+    // glslc fix
+    output.diffuse = half( dot(lightDir, normal) );
+    // DXC
+    // output.diffuse = dot(lightDir, normal);
+
+   output.uv = input.uv;
 
     return output;
 }
@@ -117,8 +122,12 @@ OutputPS SkinningPS(InputPS input)
     // half4 color = tex.Sample(pointSampler, input.uv);
     
     // just to test min3 support
-    color.rgb = min3(color.r, color.g, color.b);
-    
+    // glslc fix
+    half c = half( min3(color.r, color.g, color.b) );
+    color.rgb = half3(c,c,c); // can't use half3(c)!
+    // DXC
+    // color.rgb = min3(color.r, color.g, color.b)
+
     color.rgb *= input.diffuse;
     output.color = color;
 

@@ -97,8 +97,8 @@ psargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
 #   Skinning.hlsl:24: error: 'declaration' : Expected
 #   Skinning.hlsl: Skinning.hlsl(24): error at column 43, HLSL parsing failed.
 # seems that dot, min, max and other calls don't have half3 versions needed
-# vsargs+="-fhlsl-16bit-types "
-# psargs+="-fhlsl-16bit-types "
+vsargs+="-fhlsl-16bit-types "
+psargs+="-fhlsl-16bit-types "
 
 # see SPV_GOOGLE_hlsl_functionality1
 # -fhlsl_functionality1
