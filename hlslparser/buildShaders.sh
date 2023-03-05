@@ -5,9 +5,14 @@ mkdir -p out
 pushd out
 
 # display commands
-# set -x
+set -x
 
-app=../build/hlslparser/Build/Products/Release/hlslparser
+# TODO: consider putting in path
+vulkanSDK="~/devref/vulkansdk/1.3.239.0/macOS/bin/"
+
+appHlslparser=../build/hlslparser/Build/Products/Release/hlslparser
+appDxc=${vulkanSDK}dxc
+appGlslc=${vulkanSDK}glslc
 
 # copy over the headers that translate to MSL/HLSL
 cp ../shaders/ShaderMSL.h .
@@ -16,11 +21,11 @@ cp ../shaders/ShaderHLSL.h .
 
 # build the metal shaders
 echo gen MSL
-${app} -i ../shaders/Skinning.hlsl -o Skinning.metal
+${appHlslparser} -i ../shaders/Skinning.hlsl -o Skinning.metal
 
 # build the hlsl shaders
 echo gen HLSL
-${app} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
+${appHlslparser} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
 
 # see if HLSL compiles (requires macOS Vulkan install)
 # this will pull /usr/bin/local/dxc
@@ -64,24 +69,32 @@ psargs+="-T ps_6_2 "
 # dxc only loads DXIL.dll on Windows
 #  https://www.wihlidal.com/blog/pipeline/2018-09-16-dxil-signing-post-compile/
 echo gen DXIL with dxc
-dxc ${vsargs} -E SkinningVS -Fo Skinning.vert.dxil Skinning.hlsl
-dxc ${psargs} -E SkinningPS -Fo Skinning.vert.dxil Skinning.hlsl
+${appDxc} ${vsargs} -E SkinningVS -Fo Skinning.vert.dxil Skinning.hlsl
+${appDxc} ${psargs} -E SkinningPS -Fo Skinning.vert.dxil Skinning.hlsl
 
 # 1.0,1.1,1.2 is spv1.1,1.3,1.5
 #echo gen SPIRV 1.0
-#dxc ${vsargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningVS -Fo Skinning.vert.spv Skinning.hlsl
-#dxc ${psargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningPS -Fo Skinning.frag.spv Skinning.hlsl
+#${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningVS -Fo Skinning.vert.spv Skinning.hlsl
+#${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.0 -E SkinningPS -Fo Skinning.frag.spv Skinning.hlsl
 
 #echo gen SPIRV 1.1
-#dxc ${vsargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningVS -Fo Skinning.vert.spv1 Skinning.hlsl
-#dxc ${psargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningPS -Fo Skinning.frag.spv1 Skinning.hlsl
+#${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningVS -Fo Skinning.vert.spv1 Skinning.hlsl
+#${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.1 -E SkinningPS -Fo Skinning.frag.spv1 Skinning.hlsl
 
 echo gen SPIRV 1.2 with dxc
-dxc ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo Skinning.vert.spv2 -Fc Skinning.vert.spv2.txt Skinning.hlsl
-dxc ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo Skinning.frag.spv2 -Fc Skinning.frag.spv2.txt Skinning.hlsl
+${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo Skinning.vert.spv2 -Fc Skinning.vert.spv2.txt Skinning.hlsl
+${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo Skinning.frag.spv2 -Fc Skinning.frag.spv2.txt Skinning.hlsl
 
 vsargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
 psargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
+
+# turn on half/short/ushort support
+# glslc fails when I set this even on latest build.
+#   Skinning.hlsl:24: error: '' : could not create assignment
+#   Skinning.hlsl:24: error: 'declaration' : Expected
+#   Skinning.hlsl: Skinning.hlsl(24): error at column 43, HLSL parsing failed.
+# vsargs+="-fhlsl-16bit-types "
+# psargs+="-fhlsl-16bit-types "
 
 # see SPV_GOOGLE_hlsl_functionality1
 # -fhlsl_functionality1
@@ -90,15 +103,15 @@ psargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
 
 # note: glsl has a preprocesor
 echo gen SPRIV 1.2 with glslc
-glslc ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2
-glslc ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2
+${appGlslc} ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2
+${appGlslc} ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2
 
 # TODO: need to enable half (float16_t) usage in spriv generated shaders
 # how to identify compliation is targeting Vulkan?
 
 # barely human readable spv assembly listing
-glslc -S ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2.txt
-glslc -S ${vsargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2.txt
+${appGlslc} -S ${vsargs} -fentry-point=SkinningVS Skinning.hlsl -o Skinning.vert.gspv2.txt
+${appGlslc} -S ${psargs} -fentry-point=SkinningPS Skinning.hlsl -o Skinning.frag.gspv2.txt
 
 
 # TODO: need to group files into library/module
