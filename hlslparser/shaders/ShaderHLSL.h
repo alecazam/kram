@@ -1,8 +1,9 @@
 #ifndef ShaderHLSL_h
 #define ShaderHLSL_h
 
+// glslc doesn't support but DXC does
+// so had to add header guard
 #ifdef __spriv__
-// glslc doesn't support #pragma once
 #pragma once
 #endif
 
@@ -23,7 +24,7 @@ struct Texture2DSampler {
 #if USE_HALF
 // unique type, even though same data
 struct Texture2DHalfSampler {
-    Texture2D<float4> t; // TOOD: should be Texture2D<half4> but spirv limit
+    Texture2D<float4> t; // TODO: should be Texture2D<half4> but spirv limit
     SamplerState s;
 };
 
@@ -210,10 +211,10 @@ float4 texCUBEbias(TextureCubeSampler ts, float4 texCoord) {
     return ts.t.SampleBias(ts.s, texCoord.xyz, texCoord.w);
 }
 
-// TODO: fix this
-//float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
-//    return ts.t.Sample(ts.s, texCoord.xy, texCoord.z + 0.5); // 0.5 offset needed on nvidia gpus
-//}
+float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
+    // return ts.t.Sample(ts.s, texCoord.xy, texCoord.z + 0.5); // 0.5 offset needed on nvidia gpus
+    return ts.t.Sample(ts.s, texCoord); // 0.5 offset
+}
 
 #endif // ShaderHLSL_h
     
