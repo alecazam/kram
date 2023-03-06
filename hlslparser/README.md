@@ -76,16 +76,16 @@ Overview
 
 Dealing with Half
 ---
-HLSL 6.2 includes full half and int support.   So that is the compilation target.  Note table below before adopting half in shaders.  Nvidia/AMD tried to phase out half support on DX10, but iOS re-popularized half usage.  Android has many dragons using half (see below)
+HLSL 6.2 includes full half and int support.   So that is the compilation target.  Note table below before adopting half in shaders.  Nvidia/AMD tried to phase out half support on DX10, but iOS re-popularized half usage.  Android and Nvidia have many dragons using half (see below).  Half is only 10-bit mantissa with 5-bit exponent.  
 
-Platforms - iOS/PowerVR, Adreno,  Mali, Nvida, AMD
+Platforms - iOS/PowerVR, Adreno, Mali,   Nvida, AMD, Intel
 
-| Feature        | I | A | M | N | A |
-|----------------|---|---|---|---|---|
-| Half Interp    | y | n | y | n | y |
-| Half UBO       | y | n | y | n | y | 
-| Half Push      | y | y | y | y | n |
-| Half ALU       | y | y | y | y | y |
+| Feature        | I | A | M | | N | A | I |
+|----------------|---|---|---|-|---|---|---|
+| Half Interp    | y | n | y | | n | y | ? |
+| Half UBO       | y | n | y | | n | y | ? | 
+| Half Push      | y | y | y | | y | n | ? |
+| Half ALU       | y | y | y | | y | y | ? |
 
 https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_16bit_storage.html
 
@@ -95,6 +95,13 @@ https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_16bit_s
 * StorageInputOutput16
 
 There is also the limitation of half interpolation creating banding, and likely why Adreno/Nvidia do not support StorageInputOutput16.  Mali recommends using half to minimize parameter buffer storage out of the vertex shader, but then declaring float for the same variables in the fragment shader.  This limits sharing input/output structs.
+
+macOS on M1 - Rosetta2 lacks f16c cpu support, so translated x64 apps crash.
+  build Apple Silicon
+
+Android missing cpu arm64+f16 support from Redmi Note 8 and other chips.
+  vcvt_f32_f16 is still present without this.
+  
 
 Terms
 ---
