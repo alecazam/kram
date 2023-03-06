@@ -3,6 +3,47 @@ HLSLParser
 
 This version of uknown worlds and thekla/hlslparser takes a HLSL-like syntax and then converts that into modern HLSL and MSL.  Special thanks to Max McGuire (@Unknown Worlds) and Ignacio Castano and Johnathan Blow (@Thekla) for releasing this as open-source.  I've left out GLSL compilation, and legacy DX9 HLSL codegen to simplify maintaining the codebase.
 
+There are still growing pains to using hlslparser.  It can't do all the manipulation that glsc and spriv-cross does to ensure that a valid shader model shader is created.  But compiling with DXC/metal should help avoid issues.  I still don't know how to resolve reflection, since each compiler generates it's own unique data formats.  Reflection is simpler on the spirv path.
+
+The point of using hlslparser is to preserve comments and generate MSL/HLSL code close to the original sources.  MSL and HLSL are nearly the same shader language at the core.  Transpiling is converting spirv assembly back to MSL source code.  But spriv-opt introduces 100's of temp registers into the code, gens 24 character floats, strips comments, and the resulting code isn't so pretty to step through in Metal gpu capture.  At the same time, Apple ignores generating Spirv from MSL, so here we are.  Spriv should stay an end 
+
+---------------------------------
+
+Paths to generate MSL from HLSL 
+
+* Spirv   HLSL9 > hlslparser > HLSL10 > DXC > spv  
+*  reflection                                 spv > spv-reflect -> ref
+* MSL     HLSL9 > hlslparser > MSL    > metal > air/metallib
+*
+* Transpiling MSL: HLSL10 > DXC   > spv > spirv-cross > MSL
+* Transpiling MSL: HLSL10 > glslc > spv > spirv-cross > MSL
+*
+*  assumes DXC/glslc do optimizations similar to spirv-opt
+*
+* Variant generation 
+* HLSL9 > preprocess + defines > HLSL9
+*  or
+* HLSL9 + specialization > hlslparser
+
+---------------------------------
+
+TODO:
+* compute shader support
+* generate reflection data from parse of HLSL
+* handle HLSL vulkan extension constructs, convert these to MSL kernels too
+* variants from preprocess or vulkan specialization constants
+* get tile shader kernels to work
+* get SSBO to work
+* fix shaders to not structify metal and mod the source names
+* handle reflection (spirv-reflect?)
+* poor syntax highlighting of output .metal file, does Xcode have to compile?
+* no syntax highlighting of .hlsl files in Xcode, but VSCode has HLSL but not MSL
+
+* May want to swtich to VSCode for shader development
+* https://marketplace.visualstudio.com/items?itemName=doublebuffer.metal-shader&utm_source=VSCode.pro&utm_campaign=AhmadAwais
+
+---------------------------------
+
 Overview
 ---
 
@@ -326,15 +367,6 @@ Spirv
 * 1.1, vulkan1.0
 * 1.3, vulkan1.1
 * 1.5, vulkan1.2, target,
-
----------------------------------
-
-TODO:
-* compute shader support
-* handle HLSL vulkan extensions, convert these to MSL kernels too
-* preprocessed variants
-* fix shader input names
-* handle reflection (spirv-reflect?)
 
 ---------------------------------
 

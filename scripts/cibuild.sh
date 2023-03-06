@@ -76,6 +76,11 @@ if [[ $buildType == macos ]]; then
 
 	popd
 
+	# build hlslparser to bin directory
+	pushd hlslparser
+	xcodebuild install -sdk macosx -project hlslparser.xcodeproj -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+	popd
+
 elif [[ $buildType == windows ]]; then
 	mkdir -p build
 
@@ -91,6 +96,12 @@ elif [[ $buildType == windows ]]; then
 	cmake --install . --config Release
 
 	popd
+
+	# build hlslparser to bin directory
+	#pushd hlslparser
+	# TODO: run the sln file to build Win version of hlslparser
+	#msbuild hlslparser.sln -target:NotInSlnfolder:Rebuild;NewFolder\InSolutionFolder:Clean
+	#popd
 
 elif [[ $buildType == linux ]]; then
 	mkdir -p build
