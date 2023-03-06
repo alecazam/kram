@@ -1,11 +1,11 @@
 HLSLParser
 ==========
 
-This version of uknown worlds and thekla/hlslparser takes a HLSL-like syntax and then converts that into modern HLSL and MSL.  Special thanks to Max McGuire (@Unknown Worlds) and Ignacio Castano and Johnathan Blow (@Thekla) for releasing this as open-source.  I've left out GLSL compilation, and legacy DX9 HLSL codegen to simplify maintaining the codebase.
+This version of thekla/hlslparser takes a HLSL-like syntax and then converts that into modern HLSL and MSL.  Special thanks to Max McGuire (@Unknown Worlds) and Ignacio Castano and Johnathan Blow (@Thekla) for releasing this as open-source.  I've left out GLSL and DX9 legacy codegen to simplify maintaining the codebase.  This is a small amount of code compared with the Krhonos shader tools.
 
 There are still growing pains to using hlslparser.  It can't do all the manipulation that glsc and spriv-cross does to ensure that a valid shader model shader is created.  But compiling with DXC/metal should help avoid issues.  I still don't know how to resolve reflection, since each compiler generates it's own unique data formats.  Reflection is simpler on the spirv path.
 
-The point of using hlslparser is to preserve comments and generate MSL/HLSL code close to the original sources.  MSL and HLSL are nearly the same shader language at the core.  Transpiling is converting spirv assembly back to MSL source code.  But spriv-opt introduces 100's of temp registers into the code, gens 24 character floats, strips comments, and the resulting code isn't so pretty to step through in Metal gpu capture.  At the same time, Apple ignores generating Spirv from MSL, so here we are.  Spriv should stay an end 
+The point of this hlslparser is to preserve comments, generate MSL/HLSL code close to the original sources, and be easy to extend.  MSL and HLSL are nearly the same shader language at the core.  Typical spriv to MSL transpiles look  assembly-like in code flow.  Spriv-opt introduces 100's of temp registers into the code, gens 24 character floats, strips comments, and the resulting code isn't simple to step through in Metal GPU capture.  At the same time, Apple ignores generating Spirv from MSL, so here we are.  Spriv should remain a final assembly format to feed to Vulkan drivers.
 
 ---------------------------------
 
@@ -279,6 +279,7 @@ SPIRV
 * linked into module
 * cannot represent Texture2D<half4>, so can't tranpsile to MSL texture2d<half>
 * https://github.com/microsoft/DirectXShaderCompiler/issues/2711
+* https://www.khronos.org/spir/
 
 AIR
 * Apple IR format
@@ -362,7 +363,7 @@ HLSL
 * SM 6.2, target, added back int/half support
 * SM 6.6,
 * SM 6.7, SampleCmpLevel, RWTexture2DMS, RWTexture2DMSArray, signed texture offsets
-# https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_7_Advanced_Texture_Ops.html
+* https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_7_Advanced_Texture_Ops.html
 
 MSL
 * metal2.2, iOS13/macOS10.15,
