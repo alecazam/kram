@@ -10,10 +10,6 @@
 
 namespace M4
 {
-
-bool skipSingleLineComments = false;
-
-
 // The order here must match the order in the Token enum.
 static const char* _reservedWords[] =
     {
@@ -146,7 +142,7 @@ void HLSLTokenizer::Next()
     const char* start = m_buffer;
 
     // single line comments
-    if (!skipSingleLineComments && (m_buffer[0] == '/' && m_buffer[1] == '/'))
+    if (m_keepComments && (m_buffer[0] == '/' && m_buffer[1] == '/'))
     {
         m_token = HLSLToken_Comment;
         m_buffer += 2;
@@ -312,7 +308,7 @@ bool HLSLTokenizer::SkipComment()
     bool result = false;
     if (m_buffer[0] == '/')
     {
-        if (skipSingleLineComments && m_buffer[1] == '/')
+        if ((!m_keepComments) && m_buffer[1] == '/')
         {
             // Single line comment.
             result = true;

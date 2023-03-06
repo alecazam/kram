@@ -43,17 +43,15 @@ bool ReadFile( const char* fileName, string& str )
 
 void PrintUsage()
 {
-	fprintf(stderr, "usage: hlslparser [-h] -i shader.hlsl -o [shader.hlsl | shader.metal]\n"
-		 "\n"
+	fprintf(stderr,
+        "usage: hlslparser [-h|-g] -i shader.hlsl -o [shader.hlsl | shader.metal]\n"
 		 "Translate DX9-style HLSL shader to HLSL/MSL shader.\n"
-		 "\n"
-		 //" ENTRYNAME   entry point of the shader\n"
-		 "\n"
+         " -i          input HLSL\n"
+         " -o          output HLSL or MSL\n"
 		 "optional arguments:\n"
-        // " -vs, -fs    vertex or fragment shader\n"
+         " -g          debug mode, preserve comments\n"
          " -h, --help  show this help message and exit\n"
-		 " -hlsl       generate HLSL\n"
-		 " -metal      generate MSL\n");
+		);
 }
 
 // Taken from KrmaLog.cpp
@@ -106,6 +104,7 @@ int main( int argc, char* argv[] )
 	Language language = Language_MSL;
 	Target target = Target_FragmentShader;
     string outputFileName;
+    bool isDebug = false;
     
 	for( int argn = 1; argn < argc; ++argn )
 	{
@@ -127,6 +126,11 @@ int main( int argc, char* argv[] )
             if ( ++argn < argc )
                 fileName = argv[ argn ];
 		}
+        else if ( String_Equal( arg, "-g" ))
+        {
+            // will preserve double-slash comments where possible
+            isDebug = true;
+        }
         
 // This is derived from end characters of entry point
 //        else if( String_Equal( arg, "-vs" ) )
@@ -221,6 +225,10 @@ int main( int argc, char* argv[] )
 	// Parse input file
 	Allocator allocator;
 	HLSLParser parser( &allocator, fileName, source.data(), source.size() );
+    if (isDebug)
+    {
+        parser.SetKeepComments(true);
+    }
 	HLSLTree tree( &allocator );
 	if( !parser.Parse( &tree ) )
 	{

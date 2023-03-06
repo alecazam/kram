@@ -34,13 +34,18 @@ appSprivReflect+="spirv-reflect"
 cp ../shaders/ShaderMSL.h .
 cp ../shaders/ShaderHLSL.h .
 
+parserOptions=""
+
+# preserve comments
+parserOptions+="-g "
+
 # build the metal shaders
 echo gen MSL
-${appHlslparser} -i ../shaders/Skinning.hlsl -o Skinning.metal
+${appHlslparser} ${parserOptions} -i ../shaders/Skinning.hlsl -o Skinning.metal
 
 # build the hlsl shaders
 echo gen HLSL
-${appHlslparser} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
+${appHlslparser} ${parserOptions} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
 
 #-------------------------------
 
@@ -49,23 +54,23 @@ ${appHlslparser} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
 # see if HLSL compiles to MSL (requires macOS Vulkan install)
 
 # record sources into code for gpu capture (don't ship this), debug mode
-macOptions="-frecord-sources -g "
+metalMacOptions="-frecord-sources -g "
 
 # O2 + size opt
-# macOptions+="-Os"
+# metalMacOptions+="-Os"
 
 # TODO: metal3.0 on M1 macOS13/iOS16
-macOptions+="-std=macos-metal2.3 "
+metalMacOptions+="-std=macos-metal2.3 "
 
 # see if MSL compile
 echo compile MSL for macOS
-xcrun -sdk macosx metal Skinning.metal ${macOptions} -o mac/Skinning.metallib
+xcrun -sdk macosx metal Skinning.metal ${metalMacOptions} -o mac/Skinning.metallib
 
-# iosOptions="-frecord-sources -g "
-# iosOptions+="-std=ios-metal2.3 "
+# metaliosOptions="-frecord-sources -g "
+# metaliosOptions+="-std=ios-metal2.3 "
 
 #echo compile MSL for iOS
-#xcrun -sdk macosx metal Skinning.metal ${iosOptions} -o ios/Skinning.metallib
+#xcrun -sdk macosx metal Skinning.metal ${metaliosOptions} -o ios/Skinning.metallib
 
 #-------------------------------
 

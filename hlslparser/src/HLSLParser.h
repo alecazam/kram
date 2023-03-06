@@ -25,7 +25,8 @@ class HLSLParser
 public:
 
     HLSLParser(Allocator* allocator, const char* fileName, const char* buffer, size_t length);
-
+    void SetKeepComments(bool enable) { m_tokenizer.SetKeepComments(enable); }
+    
     bool Parse(HLSLTree* tree);
 
 private:

@@ -133,22 +133,25 @@ public:
     /// Returns the comment text for the current token.
     const char* GetComment() const;
 
-    /** Returns the line number where the current token began. */
+    /// Returns the line number where the current token began.
     int GetLineNumber() const;
 
-    /** Returns the file name where the current token began. */
+    /// Returns the file name where the current token began.
     const char* GetFileName() const;
 
-    /** Gets a human readable text description of the current token. */
+    /// Gets a human readable text description of the current token.
     void GetTokenName(char buffer[s_maxIdentifier]) const;
 
-    /** Reports an error using printf style formatting. The current line number
-    is included. Only the first error reported will be output. */
+    /// Reports an error using printf style formatting. The current line number
+    /// is included. Only the first error reported will be output.
     void Error(const char* format, ...);
 
-    /** Gets a human readable text description of the specified token. */
+    /// Gets a human readable text description of the specified token.
     static void GetTokenName(int token, char buffer[s_maxIdentifier]);
 
+    /// Tokenizer will default to strip double-slash comments, but this tries to preserve them if true
+    void SetKeepComments(bool enable) { m_keepComments = enable; }
+    
 private:
 
     bool SkipWhitespace();
@@ -159,19 +162,20 @@ private:
 
 private:
 
-    const char*         m_fileName;
-    const char*         m_buffer;
-    const char*         m_bufferEnd;
-    int                 m_lineNumber;
-    bool                m_error;
+    const char*         m_fileName = nullptr;
+    const char*         m_buffer = nullptr;
+    const char*         m_bufferEnd = nullptr;
+    int                 m_lineNumber = 0;
+    bool                m_error = false;
 
-    int                 m_token;
-    float               m_fValue;
-    int                 m_iValue;
-    char                m_identifier[s_maxIdentifier];
-    char                m_comment[s_maxComment];
-    char                m_lineDirectiveFileName[s_maxIdentifier];
-    int                 m_tokenLineNumber;
+    int                 m_token = 0;
+    float               m_fValue = 0.0f;
+    int                 m_iValue = 0;
+    char                m_identifier[s_maxIdentifier] = {};
+    char                m_comment[s_maxComment] = {};
+    char                m_lineDirectiveFileName[s_maxIdentifier] = {};
+    int                 m_tokenLineNumber = 0;
+    bool                m_keepComments = false;
 
 };
 
