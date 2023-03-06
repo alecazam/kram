@@ -176,6 +176,8 @@ bool HLSLGenerator::Generate(HLSLTree* tree, Target target, const char* entryNam
     // Note sure if/where to add these calls.  Just wanted to point
     // out that nothing is calling them, but could be useful.
     //EmulateAlphaTest(tree, entryName, 0.5f);
+    
+    // Alec commented out to see if COmments survive
     FlattenExpressions(tree);
     
     m_writer.WriteLine(0, "#include \"ShaderHLSL.h\"");
@@ -578,7 +580,12 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
 
         OutputAttributes(indent, statement->attributes);
 
-        if (statement->nodeType == HLSLNodeType_Declaration)
+        if (statement->nodeType == HLSLNodeType_Comment)
+        {
+            HLSLComment* comment = static_cast<HLSLComment*>(statement);
+            m_writer.WriteLine(indent, "//%s", comment->text);
+        }
+        else if (statement->nodeType == HLSLNodeType_Declaration)
         {
             HLSLDeclaration* declaration = static_cast<HLSLDeclaration*>(statement);
             m_writer.BeginLine(indent, declaration->fileName, declaration->line);
@@ -771,15 +778,13 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
             sscanf(declaration->registerName, "s%d", &reg);
         }
 
-        const char* textureType = NULL;
-        const char* samplerType = "SamplerState";
         // @@ Handle generic sampler type.
 
         // TODO: have a way to disable use of half (like on MSLGenerator)
         bool isHalf = declaration->type.samplerType == HLSLBaseType_Half;
         
         // Can't use half4 textures with spriv
-        // Can tell Vulkan was written by and for desktop IHVs.
+        // Can tell Vulkan was written by/for desktop IHVs.
         // https://github.com/microsoft/DirectXShaderCompiler/issues/2711
         bool isSpirvTarget = true;
         if (isSpirvTarget)
@@ -787,6 +792,12 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
         
         const char* formatType = isHalf ? "half4" : "float4";
         
+        // Unlike Metal, that just uses half/float, the type
+        // seems to be dimension specific on HLSL.  So may need
+        // caller to specify more types.
+        
+        // texture carts the dimension and format
+        const char* textureType = NULL;
         if (declaration->type.baseType == HLSLBaseType_Sampler2D)
         {
             textureType = "Texture2D";
@@ -802,14 +813,23 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
         else if (declaration->type.baseType == HLSLBaseType_Sampler2DShadow)
         {
             textureType = "Texture2D";
-            samplerType = "SamplerComparisonState";
         }
         else if (declaration->type.baseType == HLSLBaseType_Sampler2DMS)
         {
             textureType = "Texture2DMS";
-            samplerType = NULL;
         }
 
+        // sampler
+        const char* samplerType = "SamplerState";
+        if (declaration->type.baseType == HLSLBaseType_Sampler2DShadow)
+        {
+           samplerType = "SamplerComparisonState";
+        }
+        else if (declaration->type.baseType == HLSLBaseType_Sampler2DMS)
+        {
+            samplerType = NULL;
+        }
+        
         if (samplerType != NULL)
         {
             if (reg != -1)

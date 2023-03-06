@@ -640,6 +640,9 @@ void HLSLTreeVisitor::VisitTopLevelStatement(HLSLStatement * node)
     else if (node->nodeType == HLSLNodeType_Pipeline) {
         VisitPipeline((HLSLPipeline *)node);
     }
+    else if (node->nodeType == HLSLNodeType_Comment) {
+        VisitComment((HLSLComment*)node);
+    }
     else {
         ASSERT(0);
     }
@@ -682,6 +685,9 @@ void HLSLTreeVisitor::VisitStatement(HLSLStatement * node)
     }
     else if (node->nodeType == HLSLNodeType_BlockStatement) {
         VisitBlockStatement((HLSLBlockStatement *)node);
+    }
+    else if (node->nodeType == HLSLNodeType_Comment) {
+        VisitComment((HLSLComment *)node);
     }
     else {
         ASSERT(0);
@@ -924,9 +930,14 @@ void HLSLTreeVisitor::VisitTechnique(HLSLTechnique * node)
     }
 }
 
+void HLSLTreeVisitor::VisitComment(HLSLComment * node)
+{
+    
+}
+
 void HLSLTreeVisitor::VisitPipeline(HLSLPipeline * node)
 {
-    // @@ ?
+    // This is for FX files
 }
 
 void HLSLTreeVisitor::VisitFunctions(HLSLRoot * root)
@@ -957,7 +968,7 @@ void HLSLTreeVisitor::VisitParameters(HLSLRoot * root)
 class ResetHiddenFlagVisitor : public HLSLTreeVisitor
 {
 public:
-    virtual void VisitTopLevelStatement(HLSLStatement * statement)
+    virtual void VisitTopLevelStatement(HLSLStatement * statement) override
     {
         statement->hidden = true;
 
@@ -968,12 +979,17 @@ public:
     }
 
     // Hide buffer fields.
-    virtual void VisitDeclaration(HLSLDeclaration * node)
+    virtual void VisitDeclaration(HLSLDeclaration * node) override
     {
         node->hidden = true;
     }
 
-    virtual void VisitArgument(HLSLArgument * node)
+    virtual void VisitComment(HLSLComment * node) override
+    {
+        node->hidden = true;
+    }
+    
+    virtual void VisitArgument(HLSLArgument * node) override
     {
         node->hidden = false;   // Arguments are visible by default.
     }
@@ -985,7 +1001,12 @@ public:
     HLSLTree * tree;
     MarkVisibleStatementsVisitor(HLSLTree * tree) : tree(tree) {}
 
-    virtual void VisitFunction(HLSLFunction * node)
+    virtual void VisitComment(HLSLComment * node) override
+    {
+        node->hidden = false;
+    }
+
+    virtual void VisitFunction(HLSLFunction * node) override
     {
         node->hidden = false;
         HLSLTreeVisitor::VisitFunction(node);
@@ -994,7 +1015,7 @@ public:
             VisitFunction(node->forward);
     }
 
-    virtual void VisitFunctionCall(HLSLFunctionCall * node)
+    virtual void VisitFunctionCall(HLSLFunctionCall * node) override
     {
         HLSLTreeVisitor::VisitFunctionCall(node);
 
@@ -1004,7 +1025,7 @@ public:
         }
     }
 
-    virtual void VisitIdentifierExpression(HLSLIdentifierExpression * node)
+    virtual void VisitIdentifierExpression(HLSLIdentifierExpression * node) override
     {
         HLSLTreeVisitor::VisitIdentifierExpression(node);
 
@@ -1019,7 +1040,7 @@ public:
         }
     }
 
-    virtual void VisitType(HLSLType & type)
+    virtual void VisitType(HLSLType & type) override
     {
         if (type.baseType == HLSLBaseType_UserDefined)
         {
@@ -1622,6 +1643,11 @@ struct StatementList {
             current_function = NULL;
         }
 
+        virtual void VisitComment(HLSLComment * node) override
+        {
+            // TODO: do nothing?
+        }
+        
         virtual void VisitIfStatement(HLSLIfStatement * node) override
         {
             if (NeedsFlattening(node->condition, 1)) {

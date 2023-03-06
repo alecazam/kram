@@ -431,16 +431,19 @@ static const EffectState samplerStates[] = {
     {"AddressU", 1, textureAddressingValues},
     {"AddressV", 2, textureAddressingValues},
     {"AddressW", 3, textureAddressingValues},
+    // limited choices for bordercolor on mobile, so assume transparent
     // "BorderColor", 4, D3DCOLOR
     {"MagFilter", 5, textureFilteringValues},
     {"MinFilter", 6, textureFilteringValues},
     {"MipFilter", 7, textureFilteringValues},
     {"MipMapLodBias", 8, floatValues},
+    // TODO: also MinMipLevel
     {"MaxMipLevel", 9, integerValues},
     {"MaxAnisotropy", 10, integerValues},
-    {"sRGBTexture", 11, booleanValues},    
+    // Format conveys this now {"sRGBTexture", 11, booleanValues},
 };
 
+// can set these states in an Effect block from FX files
 static const EffectState effectStates[] = {
     {"VertexShader", 0, NULL},
     {"PixelShader", 0, NULL},
@@ -520,24 +523,6 @@ static const EffectStateValue witnessStencilModeValues[] = {
     {"Test", 2},
     {NULL, 0}
 };
-
-/* why aren't these used
-static const EffectStateValue witnessFilterModeValues[] = {
-    {"Point", 0},
-    {"Linear", 1},
-    {"Mipmap_Nearest", 2},
-    {"Mipmap_Best", 3},     // Quality of mipmap filtering depends on render settings.
-    {"Anisotropic", 4},     // Aniso without mipmaps for reflection maps.
-    {NULL, 0}
-};
-
-static const EffectStateValue witnessWrapModeValues[] = {
-    {"Repeat", 0},
-    {"Clamp", 1},
-    {"ClampToBorder", 2},
-    {NULL, 0}
-};
-*/
 
 static const EffectState pipelineStates[] = {
     {"VertexShader", 0, NULL},
@@ -1504,15 +1489,12 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
     bool doesNotExpectSemicolon = false;
 
     // Alec add comment
-    if (Accept(HLSLToken_Comment))
+    if (ParseComment(statement))
     {
-        // TODO: add comment node to HLSLTree
-        // HLSLComment* comment = m_tree->AddNode<HLSLComment>(fileName, line);
-        // comment.text = ...;
-        
-        return true;
+        doesNotExpectSemicolon = true;
     }
-    else if (Accept(HLSLToken_Struct))
+    else
+    if (Accept(HLSLToken_Struct))
     {
         // Struct declaration.
 
@@ -1546,6 +1528,8 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
             {
                 return false;
             }
+            
+            // chain fields onto struct
             HLSLStructField* field = NULL;
             if (!ParseFieldDeclaration(field))
             {
@@ -1594,6 +1578,13 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
             {
                 return false;
             }
+            
+            // TODO: can't convert statement to fields
+            if (ParseComment(statement))
+            {
+                continue;
+            }
+           
             HLSLDeclaration* field = NULL;
             if (!ParseDeclaration(field))
             {
@@ -1601,6 +1592,8 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
                 return false;
             }
             DeclareVariable( field->name, field->type );
+            
+            // chain fields onto buffer
             field->buffer = buffer;
             if (buffer->field == NULL)
             {
@@ -1611,10 +1604,11 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
                 lastField->nextStatement = field;
             }
             lastField = field;
-
+            
             if (!Expect(';')) {
                 return false;
             }
+
         }
 
         statement = buffer;
@@ -1738,6 +1732,8 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
             statement = declaration;
         }
     }
+    
+    // These three are from .fx file syntax
     else if (ParseTechnique(statement)) {
         doesNotExpectSemicolon = true;
     }
@@ -1745,9 +1741,6 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
         doesNotExpectSemicolon = true;
     }
     else if (ParseStage(statement)) {
-        doesNotExpectSemicolon = true;
-    }
-    else if (ParseComment(statement)) {
         doesNotExpectSemicolon = true;
     }
 
@@ -1785,6 +1778,30 @@ bool HLSLParser::ParseStatementOrBlock(HLSLStatement*& firstStatement, const HLS
     return true;
 }
 
+bool HLSLParser::ParseComment(HLSLStatement*& statement)
+{
+    if (m_tokenizer.GetToken() != HLSLToken_Comment)
+        return false;
+    
+    const char* textName = m_tree->AddString(m_tokenizer.GetComment());
+    
+    // This has already parsed the next comment before have had a chance to
+    // grab the string from the previous comment, if they were sequenential comments.
+    // So grabbing a copy of comment before this parses the next comment.
+    if (!Accept(HLSLToken_Comment))
+        return false;
+    
+    const char* fileName = GetFileName();
+    int         line     = GetLineNumber();
+
+    HLSLComment* comment = m_tree->AddNode<HLSLComment>(fileName, line);
+    comment->text = textName;
+    
+    // pass it back
+    statement = comment;
+    return true;
+}
+
 bool HLSLParser::ParseBlock(HLSLStatement*& firstStatement, const HLSLType& returnType)
 {
     HLSLStatement* lastStatement = NULL;
@@ -1794,11 +1811,15 @@ bool HLSLParser::ParseBlock(HLSLStatement*& firstStatement, const HLSLType& retu
         {
             return false;
         }
+        
         HLSLStatement* statement = NULL;
+        
         if (!ParseStatement(statement, returnType))
         {
             return false;
         }
+        
+        // chain statements onto the list
         if (statement != NULL)
         {
             if (firstStatement == NULL)
@@ -1810,7 +1831,10 @@ bool HLSLParser::ParseBlock(HLSLStatement*& firstStatement, const HLSLType& retu
                 lastStatement->nextStatement = statement;
             }
             lastStatement = statement;
-            while (lastStatement->nextStatement) lastStatement = lastStatement->nextStatement;
+            
+            // some statement parsing can gen more than one statement, so find end
+            while (lastStatement->nextStatement)
+                lastStatement = lastStatement->nextStatement;
         }
     }
     return true;
@@ -1897,6 +1921,12 @@ bool HLSLParser::ParseStatement(HLSLStatement*& statement, const HLSLType& retur
         }
     }
 #endif
+    
+    // Getting 2 copies of some comments, why is that
+    if (ParseComment(statement))
+    {
+        return true;
+    }
     
     // If statement.
     if (Accept(HLSLToken_If))
@@ -2047,8 +2077,8 @@ bool HLSLParser::ParseDeclaration(HLSLDeclaration*& declaration)
         return false;
     }
 
-    bool allowUnsizedArray = true;  // @@ Really?
-
+    bool allowUnsizedArray = true;  // This is needed for SSBO
+    
     HLSLDeclaration * firstDeclaration = NULL;
     HLSLDeclaration * lastDeclaration = NULL;
 
@@ -2909,18 +2939,6 @@ bool HLSLParser::ParseSamplerState(HLSLExpression*& expression)
     return true;
 }
 
-bool HLSLParser::ParseComment(HLSLStatement*& statement)
-{
-    if (!Accept(HLSLToken_Comment)) {
-        return false;
-    }
-    
-    HLSLComment* comment = m_tree->AddNode<HLSLComment>(GetFileName(), GetLineNumber());
-    comment->text = "hello";  // TODO: process text of comment
-    
-    return true;
-}
-
 bool HLSLParser::ParseTechnique(HLSLStatement*& statement)
 {
     if (!Accept(HLSLToken_Technique)) {
@@ -3677,6 +3695,8 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
                 // Also have more texture slots than samplers, so samplers are reused.
                 
                 int token = m_tokenizer.GetToken();
+                
+                // TODO: need more types
                 if (token == HLSLToken_Float)
                 {
                     type.samplerType = HLSLBaseType_Float;

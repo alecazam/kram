@@ -619,6 +619,7 @@ namespace M4
         }
     }
 
+    // recursive
     void MSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
     {
         // Main generator loop: called recursively
@@ -631,8 +632,13 @@ namespace M4
             }
 
             OutputAttributes(indent, statement->attributes);
-
-            if (statement->nodeType == HLSLNodeType_Declaration)
+            
+            if (statement->nodeType == HLSLNodeType_Comment)
+            {
+                HLSLComment* comment = static_cast<HLSLComment*>(statement);
+                m_writer.WriteLine(indent, "//%s", comment->text);
+            }
+            else if (statement->nodeType == HLSLNodeType_Declaration)
             {
                 HLSLDeclaration* declaration = static_cast<HLSLDeclaration*>(statement);
 
@@ -811,7 +817,6 @@ namespace M4
     }
 
     // Called by OutputStatements
-
     void MSLGenerator::OutputAttributes(int indent, HLSLAttribute* attribute)
     {
         // IC: These do not appear to exist in MSL.
@@ -828,7 +833,7 @@ namespace M4
             }
             else if (attribute->attributeType == HLSLAttributeType_Branch)
             {
-                // @@
+                // @@, [[likely]]?
             }
 
             attribute = attribute->nextAttribute;
@@ -842,41 +847,41 @@ namespace M4
             // Declare a texture and a sampler instead
             // We do not handle multiple textures on the same line
             ASSERT(declaration->nextDeclaration == NULL);
-            const char * typeName = "float";
+            const char * formatName = "float";
             if (declaration->type.samplerType == HLSLBaseType_Half && !m_options.treatHalfAsFloat)
             {
-                typeName = "half";
+                formatName = "half";
             }
 
             if (declaration->type.baseType == HLSLBaseType_Sampler2D)
             {
-                m_writer.Write("thread texture2d<%s>& %s_texture;", typeName, declaration->name);
+                m_writer.Write("thread texture2d<%s>& %s_texture;", formatName, declaration->name);
                 m_writer.Write("thread sampler& %s_sampler", declaration->name);
             }
             else if (declaration->type.baseType == HLSLBaseType_Sampler3D)
             {
-                m_writer.Write("thread texture3d<%s>& %s_texture;", typeName, declaration->name);
+                m_writer.Write("thread texture3d<%s>& %s_texture;", formatName, declaration->name);
                 m_writer.Write("thread sampler& %s_sampler", declaration->name);
             }
             else if (declaration->type.baseType == HLSLBaseType_SamplerCube)
             {
-                m_writer.Write("thread texturecube<%s>& %s_texture;", typeName, declaration->name);
+                m_writer.Write("thread texturecube<%s>& %s_texture;", formatName, declaration->name);
                 m_writer.Write("thread sampler& %s_sampler", declaration->name);
             }
             else if (declaration->type.baseType == HLSLBaseType_Sampler2DShadow)
             {
                 // Note: ios has 16f depth now, so don't assume float
-                m_writer.Write("thread depth2d<%s>& %s_texture;", typeName,declaration->name);
+                m_writer.Write("thread depth2d<%s>& %s_texture;", formatName,declaration->name);
                 m_writer.Write("thread sampler& %s_sampler", declaration->name);
             }
             else if (declaration->type.baseType == HLSLBaseType_Sampler2DMS)
             {
                 // no sampler, just Load samples
-                m_writer.Write("thread texture2d_ms<%s>& %s_texture;", typeName, declaration->name);
+                m_writer.Write("thread texture2d_ms<%s>& %s_texture;", formatName, declaration->name);
             }
             else if (declaration->type.baseType == HLSLBaseType_Sampler2DArray)
             {
-                m_writer.Write("thread texture2d_array<%s>& %s_texture;", typeName, declaration->name);
+                m_writer.Write("thread texture2d_array<%s>& %s_texture;", formatName, declaration->name);
                 m_writer.Write("thread sampler& %s_sampler", declaration->name);
             }
             else
@@ -1090,7 +1095,7 @@ namespace M4
 
         if (m_options.treatHalfAsFloat)
         {
-            // TODO: use call to convert half back to float type
+            // use call to convert half back to float type
             if (IsHalf(targetType)) targetType = HalfToFloatBaseType(targetType);
             if (IsHalf(sourceType)) sourceType = HalfToFloatBaseType(sourceType );
         }
@@ -1127,6 +1132,9 @@ namespace M4
             // For texture declaration, generate a struct instead
             if (identifierExpression->global && IsSamplerType(identifierExpression->expressionType))
             {
+                // TODO: this code doesn't preserve user name for reflection
+                // Appends_texture/_sampler appended to name and forces combined tex/sampler.
+                
                 if (identifierExpression->expressionType.baseType == HLSLBaseType_Sampler2D)
                 {
                     if (identifierExpression->expressionType.samplerType == HLSLBaseType_Half && !m_options.treatHalfAsFloat)

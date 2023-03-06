@@ -7,17 +7,6 @@ struct InputVS
     uint4  blendIndices : BLENDINDICES;
 };
 
-// On half:
-// HLSL only added back half support in 6.2
-// GLSL has a float16_t type that is barely supported on mobile.
-// Half inputOuput not support on Nvidia/Adreno
-// Also interpolating half leads to banding
-// On TBDR, half inputOutput only way to save parameter buffer
-// space.  Can output half from VS, but define as float
-// input to PS to avoid banding.
-// Note Adreno doesn't suport half stored in blocks either.
-// What a mess!
-
 struct OutputVS
 {
     float4  position : POSITION;
@@ -25,7 +14,7 @@ struct OutputVS
     float2  uv : TEXCOORD0;
 };
 
-cbuffer Uniforms 
+cbuffer Uniforms
 {
     // should these be float3x4?
     float4x4 skinTfms[256];
@@ -33,30 +22,8 @@ cbuffer Uniforms
     float4x4 worldToClipTfm;
 };
 
-// old DX9 style
-// sampler2D tex;
-
-// mod from HLSLParser for half
-// can specify half, float, or none (float)
+// defines combined tex_texture/tex_sampler
 sampler2D<half> tex;
-
-// new style in DX10 to move to non-paired sampler/texture
-// Texture2D<half4> tex;
-// SamplerState pointSampler;
-
-// and in MSL
-// texture2d<half> tex;
-// sampler pointSampler;
-
-// ugh spriv unable to represent Texture2D<half>, spv generation fails
-// https://github.com/microsoft/DirectXShaderCompiler/issues/2711
-// fatal error: generated SPIR-V is invalid: Expected Sampled Type to be a
-// 32-bit int or float scalar type for Vulkan environment
-// type_2d_image = OpTypeImage %half 2D 2 0 0 1 Unknown
-
-// TODO: using column matrices for MSL/PSSL/GLSL constency
-// so switch from premul to postmul in shader.  And used float3x4
-// but need to add support to parsers/generators.
 
 float4x4 DoSkinTfm(float4x4 skinTfms[256], float4 blendWeights, uint4 blendIndices)
 {
@@ -92,16 +59,16 @@ OutputVS SkinningVS(InputVS input)
     // DXC
     output.diffuse = dot(lightDir, normal);
 
-   output.uv = input.uv;
+    output.uv = input.uv;
 
     return output;
 }
 
 // Want to pass OutputVS as input, but DXC can't handle the redefinition
 // in the same file.  So have to keep OutputVS and InputPS in sync.
+// this can include position on MSL, but not on HLSL
 struct InputPS
 {
-    // this can include position on MSL, but not on HLSL
     half    diffuse : COLOR;
     float2  uv : TEXCOORD0;
 };

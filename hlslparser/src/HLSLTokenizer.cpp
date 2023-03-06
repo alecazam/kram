@@ -11,7 +11,7 @@
 namespace M4
 {
 
-bool skipSingleLineComments = true;
+bool skipSingleLineComments = false;
 
 
 // The order here must match the order in the Token enum.
@@ -151,15 +151,30 @@ void HLSLTokenizer::Next()
         m_token = HLSLToken_Comment;
         m_buffer += 2;
         
+        m_comment[0] = 0;
+        
+        // How to count the remaining string as tokens of the comment
+        // typically expecting a single string, not a sequence of strings.
+        
         // skip the newline too, but would need to increment lineNumber
+        uint32_t commentLen = 0;
         while (m_buffer < m_bufferEnd)
         {
-            if (*(m_buffer++) == '\n')
+            if (*(m_buffer) == '\n')
             {
-                ++m_lineNumber;
+                m_buffer++;
+                m_lineNumber++;
                 break;
             }
+            
+            // store comment to temporary string
+            if (commentLen < (s_maxComment - 1))
+                m_comment[commentLen++] = *m_buffer;
+            
+            m_buffer++;
         }
+    
+        m_comment[commentLen] = 0;
         
         return;
     }
@@ -550,6 +565,11 @@ int HLSLTokenizer::GetInt() const
 const char* HLSLTokenizer::GetIdentifier() const
 {
     return m_identifier;
+}
+
+const char* HLSLTokenizer::GetComment() const
+{
+    return m_comment;
 }
 
 int HLSLTokenizer::GetLineNumber() const

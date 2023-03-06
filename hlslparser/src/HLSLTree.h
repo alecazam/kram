@@ -808,7 +808,7 @@ struct HLSLComment : public HLSLStatement
         text = NULL;
     }
 
-    const char*         text;
+    const char*             text;
 };
 
 /**
@@ -924,7 +924,7 @@ public:
     virtual void VisitPass(HLSLPass * node);
     virtual void VisitTechnique(HLSLTechnique * node);
     virtual void VisitPipeline(HLSLPipeline * node);
-
+    virtual void VisitComment(HLSLComment * node);
 
     virtual void VisitFunctions(HLSLRoot * root);
     virtual void VisitParameters(HLSLRoot * root);

@@ -312,7 +312,9 @@ Shading Language Versions
 
 HLSL
 * SM 6.2, target, added back int/half support
-* SM 6.6, latest,
+* SM 6.6,
+* SM 6.7, SampleCmpLevel, RWTexture2DMS, RWTexture2DMSArray, signed texture offsets
+# https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_7_Advanced_Texture_Ops.html
 
 MSL
 * metal2.2, iOS13/macOS10.15,

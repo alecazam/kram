@@ -1,8 +1,10 @@
 #ifndef ShaderHLSL_h
 #define ShaderHLSL_h
 
+#ifdef __spriv__
 // glslc doesn't support #pragma once
-//#pragma once
+#pragma once
+#endif
 
 #define USE_HALF 1
 

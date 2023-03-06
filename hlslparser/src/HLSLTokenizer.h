@@ -111,23 +111,27 @@ class HLSLTokenizer
 public:
 
     /// Maximum string length of an identifier.
-    static const int s_maxIdentifier = 255 + 1;
-
-    /** The file name is only used for error reporting. */
+    constexpr static int s_maxIdentifier = 255 + 1;
+    constexpr static int s_maxComment = 4096;
+    
+    /// The file name is only used for error reporting.
     HLSLTokenizer(const char* fileName, const char* buffer, size_t length);
 
-    /** Advances to the next token in the stream. */
+    /// Advances to the next token in the stream.
     void Next();
 
-    /** Returns the current token in the stream. */
+    /// Returns the current token in the stream.
     int GetToken() const;
 
-    /** Returns the number of the current token. */
+    /// Returns the number of the current token.
     float GetFloat() const;
     int   GetInt() const;
 
-    /** Returns the identifier for the current token. */
+    /// Returns the identifier for the current token.
     const char* GetIdentifier() const;
+
+    /// Returns the comment text for the current token.
+    const char* GetComment() const;
 
     /** Returns the line number where the current token began. */
     int GetLineNumber() const;
@@ -165,6 +169,7 @@ private:
     float               m_fValue;
     int                 m_iValue;
     char                m_identifier[s_maxIdentifier];
+    char                m_comment[s_maxComment];
     char                m_lineDirectiveFileName[s_maxIdentifier];
     int                 m_tokenLineNumber;
 
