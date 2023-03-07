@@ -171,15 +171,15 @@ float4 tex2DMSfetch(Texture2DMS<float4> t, int2 texCoord, int sample) {
 
 #if USE_HALF
 
-half4 tex2DH(Texture2DHalfSampler ts, float2 texCoord) {
+half4 tex2D(Texture2DHalfSampler ts, float2 texCoord) {
     return (half4)ts.t.Sample(ts.s, texCoord);
 }
 
-half4 tex2DHlod(Texture2DHalfSampler ts, float4 texCoordMip) {
+half4 tex2Dlod(Texture2DHalfSampler ts, float4 texCoordMip) {
     return (half4)ts.t.Sample(ts.s, texCoordMip.xy, texCoordMip.w);
 }
 
-half4 tex2DHbias(Texture2DHalfSampler ts, float4 texCoordBias) {
+half4 tex2Dbias(Texture2DHalfSampler ts, float4 texCoordBias) {
     return (half4)ts.t.SampleBias(ts.s, texCoordBias.xy, texCoordBias.w);
 }
 

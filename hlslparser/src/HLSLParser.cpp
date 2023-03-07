@@ -750,9 +750,9 @@ const Intrinsic _intrinsic[] =
 		Intrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Float),
 
         // This macro defines float/half versions
-        SAMPLER_INTRINSIC_FUNCTION("tex2D", "tex2DH", HLSLBaseType_Sampler2D, HLSLBaseType_Float2),
-        SAMPLER_INTRINSIC_FUNCTION("tex2Dlod", "tex2DHlod", HLSLBaseType_Sampler2D, HLSLBaseType_Float4),
-        SAMPLER_INTRINSIC_FUNCTION("tex2Dbias", "tex2DHbias", HLSLBaseType_Sampler2D, HLSLBaseType_Float4),
+        SAMPLER_INTRINSIC_FUNCTION("tex2D", "tex2D", HLSLBaseType_Sampler2D, HLSLBaseType_Float2),
+        SAMPLER_INTRINSIC_FUNCTION("tex2Dlod", "tex2Dlod", HLSLBaseType_Sampler2D, HLSLBaseType_Float4),
+        SAMPLER_INTRINSIC_FUNCTION("tex2Dbias", "tex2Dbias", HLSLBaseType_Sampler2D, HLSLBaseType_Float4),
         
     
         // Not sure this tex2Dproj is worth adding, have tex2DCmp

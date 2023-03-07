@@ -215,15 +215,15 @@ float4 tex2Dfetch(Texture2DSampler ts, int2 texCoord) {
 
 // use samper2D<half> to specify these
 
-half4 tex2DH(Texture2DHalfSampler ts, float2 texCoord) {
+half4 tex2D(Texture2DHalfSampler ts, float2 texCoord) {
     return ts.t.sample(ts.s, texCoord);
 }
 
-half4 tex2DHlod(Texture2DHalfSampler ts, float4 texCoordMip) {
+half4 tex2Dlod(Texture2DHalfSampler ts, float4 texCoordMip) {
     return ts.t.sample(ts.s, texCoordMip.xy, level(texCoordMip.w));
 }
 
-half4 tex2DHbias(Texture2DHalfSampler ts, float4 texCoordBias) {
+half4 tex2Dbias(Texture2DHalfSampler ts, float4 texCoordBias) {
     return ts.t.sample(ts.s, texCoordBias.xy, bias(texCoordBias.w));
 }
 

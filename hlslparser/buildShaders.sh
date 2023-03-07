@@ -90,6 +90,10 @@ args+="-Zpc "
 # also watch interpolation if using for input/output
 args+="-enable-16bit-types "
 
+# default is 2018, but 2021 fixes casting rules of structs with same args
+# https://devblogs.microsoft.com/directx/announcing-hlsl-2021/
+args+="-HV 2021 "
+ 
 # have to also compile to 6.2
 vsargs=${args}
 vsargs+="-T vs_6_2 "
@@ -128,8 +132,12 @@ testGlslc=0
 
 if [[ $testGlslc -eq 1 ]]; then
     vsargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
-    psargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
+    psargs="-Os -fshader-stage=frag --target-env=vulkan1.2 "
 
+    # TODO: probably no equivlent to this?
+    # vsargs+="-HV 2021 "
+    # psargs+="-HV 2021 "
+    
     # turn on half/short/ushort support
     # TODO: seems that dot, min, max and other calls don't have half3 versions needed, casts required
     # and even half3(half) isn't valid.

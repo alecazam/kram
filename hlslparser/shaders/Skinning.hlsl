@@ -1,3 +1,8 @@
+
+// TODO: syntax highlighting as Metal doesn't work
+// This isn't including header, but that doesn't seem to fix either.
+// Need HLSL plugin for Xcode
+
 struct InputVS
 {
     float4 position : POSITION;
@@ -88,7 +93,7 @@ OutputPS SkinningPS(InputPS input)
     // This is hard to reflect with combined tex/sampler
     // have way more textures than samplers on mobile.
     //float4 color = tex2D(tex, input.uv);
-    half4 color = tex2DH(tex, input.uv);
+    half4 color = tex2D(tex, input.uv);
     
     // TODO: move to DX10 style, but MSL codegen is trickier then
     // since it wraps the vars
