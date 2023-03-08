@@ -174,9 +174,9 @@ float4 tex2D(Texture2DSampler ts, float2 texCoord) {
 }
 
 // don't use for PCF
-float4 tex2Dproj(Texture2DSampler ts, float4 texCoord) {
-    return ts.t.sample(ts.s, texCoord.xy / texCoord.w);
-}
+//float4 tex2Dproj(Texture2DSampler ts, float4 texCoord) {
+//    return ts.t.sample(ts.s, texCoord.xy / texCoord.w);
+//}
 
 // gather only works on mip0
 float4 tex2DgatherRed(Texture2DSampler ts, float2 texCoord, int2 offset=0) {

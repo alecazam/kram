@@ -102,28 +102,66 @@ static const char * TranslateSemantic(const char* semantic, bool output, HLSLGen
     {
         if (output) 
         {
-            if (String_Equal("POSITION", semantic))     return "SV_Position";
+            if (String_Equal("SV_Position", semantic))
+                return "SV_Position";
+            
+            // This is the syntax, I guess DX12 still honors PSIZE?
+            // "[[vk::builtin(\"PointSize\")]] float name : PSIZE;
+            
+            // Vulkan/MSL only
+            if (String_Equal("PSIZE", semantic))
+                return "PSIZE";
         }
         else {
-            if (String_Equal("INSTANCE_ID", semantic))  return "SV_InstanceID";
+            if (String_Equal("SV_InstanceID", semantic))
+                return "SV_InstanceID";
+            if (String_Equal("SV_VertexID", semantic))
+                return "SV_VertexID";
+            
+            // see here for sample of builtin notation
+            // https://github.com/microsoft/DirectXShaderCompiler/commit/b6fe9886ad
+            
+            // Vulkan/MSL only, requires ext DrawParameters
+            // [[vk::builtin(\"BaseVertex\")]] uint baseVertex :
+            // [[vk::builtin(\"BaseInstance\")]] uint instance : SV_BaseInstance
+            
+            if (String_Equal(semantic, "BASE_VERTEX"))
+                return "BaseVertex";  // vulkan only
+            if (String_Equal(semantic, "BASE_INSTANCE"))
+                return "BaseInstance";  // vulkan only
         }
     }
     else if (target == HLSLGenerator::Target_PixelShader)
     {
         if (output)
         {
-            if (String_Equal("DEPTH", semantic))      return "SV_Depth";
-            if (String_Equal("COLOR", semantic))      return "SV_Target";
-            if (String_Equal("COLOR0", semantic))     return "SV_Target0";
-            if (String_Equal("COLOR0_1", semantic))   return "SV_Target1";
-            if (String_Equal("COLOR1", semantic))     return "SV_Target1";
-            if (String_Equal("COLOR2", semantic))     return "SV_Target2";
-            if (String_Equal("COLOR3", semantic))     return "SV_Target3";
+            if (String_Equal("SV_Depth", semantic))
+                return "SV_Depth";
+            if (String_Equal("SV_DepthGreaterEqual", semantic))
+                return "SV_DepthGreaterEqual";
+            if (String_Equal("SV_DepthLessEqual", semantic))
+                return "SV_DepthLessEqual";
+            
+            
+            if (String_Equal("SV_Target", semantic))
+                return "SV_Target";
+            if (String_Equal("SV_Target0", semantic))
+                return "SV_Target0";
+            // dual source blending ?
+            //if (String_Equal("COLOR0_1", semantic))       return "SV_Target1";
+            if (String_Equal("SV_Target1", semantic))
+                return "SV_Target1";
+            if (String_Equal("SV_Target2", semantic))
+                return "SV_Target2";
+            if (String_Equal("SV_Target3", semantic))
+                return "SV_Target3";
         }
         else
         {
-            if (String_Equal("VPOS", semantic))       return "SV_Position";
-            if (String_Equal("VFACE", semantic))      return "SV_IsFrontFace";    // bool   @@ Should we do type replacement too?
+            if (String_Equal("SV_Position", semantic))
+                return "SV_Position";
+            if (String_Equal("SV_IsFrontFace", semantic))
+                return "SV_IsFrontFace";    // bool   @@ Should we do type replacement too?
         }
     }
     return NULL;
@@ -249,13 +287,6 @@ bool HLSLGenerator::Generate(HLSLTree* tree, Target target, const char* entryNam
                 while (field) {
                     if (field->semantic) {
 						field->hidden = false;
-
-						if (target == Target_PixelShader && !output && String_EqualNoCase(field->semantic, "POSITION")) {
-                            // this is firing on NULL
-							//ASSERT(String_EqualNoCase(field->sv_semantic, "SV_Position"));
-							field->hidden = true;
-						}
-
                         field->sv_semantic = TranslateSemantic(field->semantic, output, target);
                     }
 
@@ -983,6 +1014,17 @@ void HLSLGenerator::OutputDeclarationBody(const HLSLType& type, const char* name
 
 void HLSLGenerator::OutputDeclaration(const HLSLType& type, const char* name, const char* semantic/*=NULL*/, const char* registerName/*=NULL*/, HLSLExpression * assignment/*=NULL*/)
 {
+    // Have to inject vulkan
+    if (semantic)
+    {
+        if (strcmp(semantic, "PSIZE") == 0)
+            m_writer.Write("%s ", "[[vk::builtin(\"PointSize\")]]");
+        else if (strcmp(semantic, "BaseVertex") == 0)
+            m_writer.Write("%s ", "[[vk::builtin(\"BaseVertex\")]]");
+        else if (strcmp(semantic, "BaseInstance") == 0)
+            m_writer.Write("%s ", "[[vk::builtin(\"BaseInstance\")]]");
+    }
+    
     OutputDeclarationType(type);
     OutputDeclarationBody(type, name, semantic, registerName, assignment);
 }

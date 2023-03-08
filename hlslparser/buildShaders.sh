@@ -94,6 +94,8 @@ args+="-enable-16bit-types "
 # https://devblogs.microsoft.com/directx/announcing-hlsl-2021/
 args+="-HV 2021 "
  
+args+="-fspv-extension=SPV_KHR_shader_draw_parameters "
+
 # have to also compile to 6.2
 vsargs=${args}
 vsargs+="-T vs_6_2 "
@@ -113,9 +115,16 @@ psargs+="-T ps_6_2 "
 # dxc only loads DXIL.dll on Windows
 #  https://www.wihlidal.com/blog/pipeline/2018-09-16-dxil-signing-post-compile/
 # no idea what format the refl file from dxil is?
-echo gen DXIL with dxc
-${appDxc} ${vsargs} -E SkinningVS -Fo win/Skinning.vert.dxil -Fc win/Skinning.vert.dxil.txt -Fre win/Skinning.vert.refl Skinning.hlsl
-${appDxc} ${psargs} -E SkinningPS -Fo win/Skinning.frag.dxil -Fc win/Skinning.frag.dxil.txt -Fre win/Skinning.frag.refl Skinning.hlsl
+#echo gen DXIL with dxc
+#${appDxc} ${vsargs} -E SkinningVS -Fo win/Skinning.vert.dxil -Fc win/Skinning.vert.dxil.txt -Fre win/Skinning.vert.refl Skinning.hlsl
+#${appDxc} ${psargs} -E SkinningPS -Fo win/Skinning.frag.dxil -Fc win/Skinning.frag.dxil.txt -Fre win/Skinning.frag.refl Skinning.hlsl
+
+
+# Optimization is also delegated to SPIRV-Tools.
+# Right now there are no difference between optimization levels greater than zero;
+# they will all invoke the same optimization recipe. That is, the recipe behind spirv-opt -O.
+# -Os is a special set of options.  Can run custom spriv optimizations via
+# -Oconfig=--loop-unroll,--scalar-replacement=300,--eliminate-dead-code-aggressive
 
 # 1.0,1.1,1.2 default to spv1.1,1.3,1.5
 echo gen SPIRV 1.2 with dxc

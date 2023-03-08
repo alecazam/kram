@@ -242,12 +242,6 @@ namespace M4
                     HLSLStructField* field = structure->field;
                     while (field != NULL)
                     {
-                        // Hide vertex shader output position from fragment shader. @@ This is messing up the runtime compiler...
-                        /*if (target == Target_FragmentShader && is_semantic(field->semantic, "POSITION"))
-                        {
-                        field->hidden = true;
-                        }*/
-
                         if (!field->hidden)
                         {
                             field->sv_semantic = TranslateInputSemantic(field->semantic);
@@ -1554,7 +1548,7 @@ namespace M4
         }
         else if (alignment != 0 && !isTypeCast)
         {
-            // TODO: are these alignas needed?
+            // caller can request alignment, but default is 0
             m_writer.Write("alignas(%d) ", alignment);
         }
 
@@ -1913,14 +1907,6 @@ namespace M4
 
         if (m_target == MSLGenerator::Target_VertexShader)
         {
-            // TODO: eliminate old DX9 legacy constructs like this
-            if (String_Equal(semantic, "INSTANCE_ID"))
-                return "instance_id";
-            if (String_Equal(semantic, "VERTEX_ID"))
-                return "vertex_id";
-            if (String_Equal(semantic, "POSITION"))
-                return "attribute(VAPosition)";
-            
             // These are DX10 convention
             if (String_Equal(semantic, "SV_InstanceID"))
                 return "instance_id";
@@ -1930,11 +1916,28 @@ namespace M4
             if (String_Equal(semantic, "SV_Position"))
                 return "attribute(VAPosition)";
             
-            // TODO: offer numbers on all of these
+            if (String_Equal(semantic, "BASE_VERTEX"))
+                return "base_vertex";
+            if (String_Equal(semantic, "BASE_INSTANCE"))
+                return "base_instance";
+            
+            /* TODO: add to HLSL too
+            // TODO: baseVertex, baseInstance (Vulkan and Metal suport)
+            // SPV_KHR_shader_draw_parameters is Vulkan ext. DX12 no support.
+            //
+            
+             
+            // no equivlement drawIndex in MSL
+            //if (String_Equal(semantic, "SV_DrawIndex"))
+            //    return "draw_index";
+            */
+            
+            // TODO: offer index support on all of these
             if (String_Equal(semantic, "NORMAL"))
                 return "attribute(VANormal)";
             if (String_Equal(semantic, "TANGENT"))
                 return "attribute(VATangent)";
+            
             if (String_Equal(semantic, "BLENDINDICES"))
                 return "attribute(VABlendIndices)";
             if (String_Equal(semantic, "BLENDWEIGHT"))
@@ -1952,6 +1955,7 @@ namespace M4
             if (String_Equal(semantic, "TEXCOORD3"))
                 return "attribute(VATexcoord3)";
             
+            // Can set custom attributes via a callback
             if (m_options.attributeCallback)
             {
                 char name[64];
@@ -1975,23 +1979,24 @@ namespace M4
             if (String_Equal(semantic, "SV_Position"))
                 return "position";
             
-            if (String_Equal(semantic, "POSITION"))
-                return "position";
-            if (String_Equal(semantic, "VFACE"))
+            //  if (String_Equal(semantic, "POSITION"))
+            //    return "position";
+            if (String_Equal(semantic, "SV_IsFrontFace"))
                 return "front_facing";
             
             // VS sets what layer to render into, ps can look at it.
             // Gpu Family 5.
-            if (String_Equal(semantic, "TARGET_INDEX"))
+            if (String_Equal(semantic, "SV_RenderTargetArrayIndex"))
                 return "render_target_array_index";
             
+            // dual source? passes in underlying color
             if (String_Equal(semantic, "DST_COLOR"))
                 return "color(0)";
             
-            if (String_Equal(semantic, "SAMPLE_ID"))
+            if (String_Equal(semantic, "SV_SampleIndex"))
                 return "sample_id";
-            //if (String_Equal(semantic, "SAMPLE_MASK")) return "sample_mask";
-            //if (String_Equal(semantic, "SAMPLE_MASK")) return "sample_mask,post_depth_coverage";
+            //if (String_Equal(semantic, "SV_Coverage")) return "sample_mask";
+            //if (String_Equal(semantic, "SV_Coverage")) return "sample_mask,post_depth_coverage";
         }
 
         return NULL;
@@ -2007,15 +2012,21 @@ namespace M4
 
         if (m_target == MSLGenerator::Target_VertexShader)
         {
-            if (String_Equal(semantic, "POSITION")) return "position";
-            if (String_Equal(semantic, "SV_Position")) return "position";
+            if (String_Equal(semantic, "SV_Position"))
+                return "position";
             
             // PSIZE is non-square in DX9, and square in DX10 (and MSL)
-            if (String_Equal(semantic, "PSIZE")) return "point_size";
-            if (String_Equal(semantic, "POINT_SIZE")) return "point_size";
-            
+            // https://github.com/KhronosGroup/glslang/issues/1154
+            if (String_Equal(semantic, "PSIZE"))
+                return "point_size";
+
             // control layer in Gpu Family 5
-            if (String_Equal(semantic, "TARGET_INDEX")) return "render_target_array_index";
+            if (String_Equal(semantic, "SV_RenderTargetArrayIndex"))
+                return "render_target_array_index";
+            
+            // TODO: add
+            // SV_ViewportArrayIndex
+            // SV_ClipDistance0..n, SV_CullDistance0..n
         }
         else if (m_target == MSLGenerator::Target_FragmentShader)
         {
@@ -2030,24 +2041,33 @@ namespace M4
                 // MTLBlendFactorSource1Color, OneMinusSource1Color, Source1Alpha, OneMinuSource1Alpha.
                 
                 // @@ IC: Hardcoded for this specific case, extend ParseSemantic?
-                if (String_Equal(semantic, "COLOR0_1")) return "color(0), index(1)";
+                if (String_Equal(semantic, "COLOR0_1"))
+                    return "color(0), index(1)";
             }
 
             if (strncmp(semantic, "SV_Target", length) == 0)
             {
                 return m_tree->AddStringFormat("color(%d)", index);
             }
-            if (strncmp(semantic, "COLOR", length) == 0)
-            {
-                return m_tree->AddStringFormat("color(%d)", index);
-            }
+//            if (strncmp(semantic, "COLOR", length) == 0)
+//            {
+//                return m_tree->AddStringFormat("color(%d)", index);
+//            }
 
             // depth variants to preserve earlyz, use greater on reverseZ
-            if (String_Equal(semantic, "DEPTH")) return "depth(any)";
-            if (String_Equal(semantic, "DEPTH_GT")) return "depth(greater)";
-            if (String_Equal(semantic, "DEPTH_LT")) return "depth(less)";
+            if (String_Equal(semantic, "SV_Depth"))
+                return "depth(any)";
             
-            if (String_Equal(semantic, "SAMPLE_MASK")) return "sample_mask";
+            // These don't quite line up, since comparison is not ==
+            // Metal can only use any/less/greater.  Preserve early z when outputting depth.
+            // reverseZ would use greater.
+            if (String_Equal(semantic, "SV_DepthGreaterEqual"))
+                return "depth(greater)";
+            if (String_Equal(semantic, "SV_DepthLessEqual"))
+                return "depth(less)";
+            
+            if (String_Equal(semantic, "SV_Coverage"))
+                return "sample_mask";
         }
 
         return NULL;

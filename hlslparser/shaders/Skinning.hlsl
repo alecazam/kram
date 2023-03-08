@@ -1,11 +1,81 @@
 
+
 // TODO: syntax highlighting as Metal doesn't work
 // This isn't including header, but that doesn't seem to fix either.
 // Need HLSL plugin for Xcode
 
+// https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst
+
+// setup specialzation, convert these to function_constants
+// [[vk::constant_id(0)]] const bool  specConstInt  = 1;
+// [[vk::constant_id(1)]] const bool  specConstBool  = true;
+
+// subpass input, and SubpassLoad() calls
+// [[vk::input_attachment_index(i)]] SubpassInput input;
+// class SubpassInput<T> { T SubpassLoad(); };
+// class SubpassInputMS<T> { T SubpassLoad(int sampleIndex); };
+
+// push constants
+// [[vk::push_constant]]
+
+// descriptors and arg buffers
+// [[vk::binding(X[, Y])]] and [[vk::counter_binding(X)]]
+
+// [[vk::image_format("rgba8")]]
+// RWBuffer<float4> Buf;
+
+
+// [[vk::image_format("rg16f")]]
+// RWTexture2D<float2> Tex;
+
+// structure buffer only supports 2/4B access, ByteAddressBuffer only 4B increments
+// #ifdef __spirv__
+// [[vk::binding(X, Y), vk::counter_binding(Z)]]
+// #endif
+// StructuredBuffer<Struct> ssbo;
+
+// Are there no uint8 in HLSL?
+// D3DCOLORtoUBYTE4: Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
+// This is achieved by performing int4(input.zyxw * 255.002) using SPIR-V OpVectorShuffle, OpVectorTimesScalar, and OpConvertFToS, respectively.
+// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_6_Pack_Unpack_Intrinsics.html
+// int16_t4 unpack_s8s16(int8_t4_packed packedVal);        // Sign Extended
+// uint16_t4 unpack_u8u16(uint8_t4_packed packedVal);      // Non-Sign Extended
+// int32_t4 unpack_s8s32(int8_t4_packed packedVal);        // Sign Extended
+// uint32_t4 unpack_u8u32(uint8_t4_packed packedVal);      // Non-Sign Extended
+// uint8_t4_packed pack_u8(uint32_t4 unpackedVal);         // Pack lower 8 bits, drop unused bits
+// int8_t4_packed pack_s8(int32_t4  unpackedVal);          // Pack lower 8 bits, drop unused bits
+//
+// uint8_t4_packed pack_u8(uint16_t4 unpackedVal);         // Pack lower 8 bits, drop unused bits
+// int8_t4_packed pack_s8(int16_t4  unpackedVal);          // Pack lower 8 bits, drop unused bits
+//
+// uint8_t4_packed pack_clamp_u8(int32_t4  unpackedVal);   // Pack and Clamp [0, 255]
+// int8_t4_packed pack_clamp_s8(int32_t4  unpackedVal);    // Pack and Clamp [-128, 127]
+//
+// uint8_t4_packed pack_clamp_u8(int16_t4  unpackedVal);   // Pack and Clamp [0, 255]
+// int8_t4_packed pack_clamp_s8(int16_t4  unpackedVal);    // Pack and Clamp [-128, 127]
+//
+// have uint16_t/int16_t support in 6.2.
+//
+// cbuffer are std140, and ssbo are std430 arrangment.  Affects arrays.
+// or -fvk-use-dx-layout vs. -fvk-use-gl-layout vs. -fvk-use-scalar-layout.
+// Scalar layout rules introduced via VK_EXT_scalar_block_layout, which basically aligns
+// all aggregrate types according to their elements' natural alignment.
+// They can be enabled by -fvk-use-scalar-layout.
+// see table.  Vulkan can't use DX layout yet.
+//
+// cbuffer vs. ConstantBuffer<T> myCBuffer;
+
+// struct VSInput {
+//   [[vk::location(0)]] float4 pos  : POSITION;
+//   [[vk::location(1)]] float3 norm : NORMAL;
+// };
+
+
+
+
 struct InputVS
 {
-    float4 position : POSITION;
+    float4 position : SV_Position;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD0;
     float4 blendWeights : BLENDWEIGHT;
@@ -14,11 +84,16 @@ struct InputVS
 
 struct OutputVS
 {
-    float4  position : POSITION;
+    float4  position : SV_Position;
     half    diffuse : COLOR;
     float2  uv : TEXCOORD0;
+    float   pointSize : PSIZE;
 };
 
+// This isn't working in HLSL
+
+    
+    
 cbuffer Uniforms
 {
     // should these be float3x4?
@@ -42,15 +117,37 @@ float4x4 DoSkinTfm(float4x4 skinTfms[256], float4 blendWeights, uint4 blendIndic
     return skinTfm;
 }
 
-OutputVS SkinningVS(InputVS input)
+// These don't compile for spv despite setting extension
+   
+// TODO: fix ability to comment these into SkinningVS inputs
+// uint vertexBase : BASE_VERTEX,
+// uint instanceBase : BASE_INSTANCE,
+    
+// TODO: can't yet have commented out inputs or tokenizer fails
+OutputVS SkinningVS(InputVS input,
+    uint instanceID : SV_InstanceID,
+    uint vertexID : SV_VertexID
+)
 {
     OutputVS output;
 
     // TODO: this needs to declare array param as constant for
     // MSL function call.  Pointers can't be missing working space.
     
-    float4x4 skinTfm = 0;
+    //float4x4 skinTfm = 0;
        // DoSkinTfm(skinTfms, input.blendWeights, input.blendIndices);
+
+    // this is just to use these
+    uint vertexNum = vertexID;
+    uint instanceNum = instanceID;
+
+    // uint vertexNum = vertexBase + vertexID;
+    // uint instanceNum = instanceBase + instanceID;
+
+    instanceNum += vertexNum;
+    
+    float4x4 skinTfm = skinTfms[ instanceNum ];
+    
 
     // Skin to world space
     float3 position = mul(input.position, skinTfm).xyz;
@@ -65,7 +162,10 @@ OutputVS SkinningVS(InputVS input)
     output.diffuse = dot(lightDir, normal);
 
     output.uv = input.uv;
-
+    
+    // only for Vulkan/MSL, DX12 can't control per vertex shader
+    output.pointSize = 1;
+    
     return output;
 }
 
@@ -80,16 +180,22 @@ struct InputPS
 
 struct OutputPS
 {
-    half4 color : COLOR0;
+    half4 color : SV_Target0;
 };
 
 // Note: don't write as void SkinningPS(VS_OUTPUT input, out PS_OUTPUT output)
 // this is worse MSL codegen.
 
-OutputPS SkinningPS(InputPS input)
+// TODO: SV_Position differs from Vulkan/MSL in that pos.w = w and not 1/w like gl_FragCoord.
+// DXC has a setting to invert w.
+
+OutputPS SkinningPS(InputPS input,
+     float4  position : SV_Position,
+     bool isFrontFace: SV_IsFrontFace
+    )
 {
     OutputPS output;
-   
+
     // This is hard to reflect with combined tex/sampler
     // have way more textures than samplers on mobile.
     //float4 color = tex2D(tex, input.uv);

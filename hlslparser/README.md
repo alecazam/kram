@@ -114,6 +114,14 @@ Terms
 Mobile HW
 ---
 
+Android were running 2-3w, now up to 6w from better heat spreaders.
+
+Tesselation differs on mobile vs. desktop.  Mali does tesselation after VS (Android Extension Pack for ES).   Metal does it before VS.
+* https://developer.arm.com/documentation/100587/0100/tessellation/about-tessellation
+* https://android.googlesource.com/platform/external/deqp/+/refs/heads/master/external/vulkancts/modules/vulkan/tessellation/vktTessellationGeometryPointSizeTests.cpp
+* https://metalbyexample.com/tessellation/
+
+
 Mali
 * TBDR
 * Vulkan gpu - Midgard, Bifrost, Valhall, Immortalis
@@ -127,6 +135,7 @@ Mali
 * ETC2/ASTC, created ASTC format and encoders, no BC
 * https://en.wikipedia.org/wiki/Mali_(processor)
 * https://community.arm.com/support-forums/f/graphics-gaming-and-vr-forum/53672/vulkan-what-should-i-do-about-this-warning-bestpractices-vkcmddrawindexed-sparse-index-buffer
+* https://developer.samsung.com/galaxy-gamedev/gamedev-blog/infinitejet.html
 
 Adreno
 * TBDR
@@ -265,9 +274,12 @@ HLSL
 * Vulkan extensions for specialization constants and subpasses
 * SSBO - StructuredBuffers, ByteAddressBuffer
 * DX9 and DX10 style syntax differs
+* HLSL 2021 (latest) can distinguish structs with same types as unique
+* HLSL 2018 (default for DXC) can't tell structs apart if contain same types
 * HLSL added to clang
 * https://github.com/Microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst#subpass-inputs
 * https://clang.llvm.org/docs/HLSL/HLSLSupport.html#:~:text=HLSL%20uses%20templates%20to%20define,case%20and%20issues%20a%20diagnostic.
+* https://devblogs.microsoft.com/directx/announcing-hlsl-2021/
 
 Shader Assembly Formats
 
