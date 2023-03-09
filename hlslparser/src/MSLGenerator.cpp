@@ -1937,6 +1937,8 @@ namespace M4
                 return "attribute(VANormal)";
             if (String_Equal(semantic, "TANGENT"))
                 return "attribute(VATangent)";
+            if (String_Equal(semantic, "BITANGENT"))
+                return "attribute(VABitangent)";
             
             if (String_Equal(semantic, "BLENDINDICES"))
                 return "attribute(VABlendIndices)";

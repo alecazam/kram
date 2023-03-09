@@ -11,7 +11,7 @@ mkdir -p out/android
 # for glslc testing
 #mkdir -p out/android2
 
-pushd out
+pushd outshaders
 
 # display commands
 # set -x
@@ -49,6 +49,12 @@ ${appHlslparser} ${parserOptions} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
 
 #-------------------------------
 
+popd > /dev/null
+
+pushd out
+
+#-------------------------------
+
 # Metal is C++14
 
 # see if HLSL compiles to MSL (requires macOS Vulkan install)
@@ -64,15 +70,16 @@ metalMacOptions+="-std=macos-metal2.3 "
 
 # see if MSL compile
 echo compile MSL for macOS
-xcrun -sdk macosx metal Skinning.metal ${metalMacOptions} -o mac/Skinning.metallib
+xcrun -sdk macosx metal ../outshaders/Skinning.metal ${metalMacOptions} -o mac/Skinning.metallib
 
 # metaliosOptions="-frecord-sources -g "
 # metaliosOptions+="-std=ios-metal2.3 "
 
 #echo compile MSL for iOS
-#xcrun -sdk macosx metal Skinning.metal ${metaliosOptions} -o ios/Skinning.metallib
+#xcrun -sdk macosx metal ../outshaders/Skinning.metal ${metaliosOptions} -o ios/Skinning.metallib
 
 #-------------------------------
+
 
 # looks like DXC wants a ps/vs/cs profile, so is expecting one shader per output
 
@@ -128,8 +135,8 @@ psargs+="-T ps_6_2 "
 
 # 1.0,1.1,1.2 default to spv1.1,1.3,1.5
 echo gen SPIRV 1.2 with dxc
-${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo android/Skinning.vert.spv -Fc android/Skinning.vert.spv.txt Skinning.hlsl
-${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo android/Skinning.frag.spv -Fc android/Skinning.frag.spv.txt Skinning.hlsl
+${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo android/Skinning.vert.spv -Fc android/Skinning.vert.spv.txt ../outshaders/Skinning.hlsl
+${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo android/Skinning.frag.spv -Fc android/Skinning.frag.spv.txt ../outshaders/Skinning.hlsl
 
 # -Fre not supported with spriv, so just use spirv-reflect
 # either yaml or random format, why can't this just output json?

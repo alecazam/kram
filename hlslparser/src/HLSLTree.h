@@ -80,8 +80,8 @@ enum HLSLBaseType
     HLSLBaseType_Float4x4,
     
     // TODO: remove
-    HLSLBaseType_Float4x3, // TODO: missing Float3x4
-    HLSLBaseType_Float4x2,
+    //HLSLBaseType_Float4x3, // TODO: missing Float3x4
+    //HLSLBaseType_Float4x2,
     
     HLSLBaseType_Half,
     HLSLBaseType_Half2,
@@ -92,8 +92,8 @@ enum HLSLBaseType
     HLSLBaseType_Half4x4,
     
     // TODO: remove
-    HLSLBaseType_Half4x3, // TODO: missing Half3x4
-    HLSLBaseType_Half4x2,
+    //HLSLBaseType_Half4x3, // TODO: missing Half3x4
+    //HLSLBaseType_Half4x2,
     
     // integer
     HLSLBaseType_Bool,
@@ -109,8 +109,6 @@ enum HLSLBaseType
     HLSLBaseType_Uint3,
     HLSLBaseType_Uint4,
     
-    // @@ Separate dimension from Base type, this is getting out of control.
-    /*
     HLSLBaseType_Short,
     HLSLBaseType_Short2,
     HLSLBaseType_Short3,
@@ -119,7 +117,7 @@ enum HLSLBaseType
     HLSLBaseType_Ushort,
     HLSLBaseType_Ushort2,
     HLSLBaseType_Ushort3,
-    HLSLBaseType_Ushort4,*/
+    HLSLBaseType_Ushort4,
     
     // texture
     HLSLBaseType_Texture,
@@ -152,9 +150,11 @@ enum HLSLBaseType
   
 enum HLSLBinaryOp
 {
-    // math ops
+    // bit ops
     HLSLBinaryOp_And,
     HLSLBinaryOp_Or,
+    
+    // math ops
     HLSLBinaryOp_Add,
     HLSLBinaryOp_Sub,
     HLSLBinaryOp_Mul,
@@ -214,6 +214,12 @@ inline bool IsAssignOp( HLSLBinaryOp op )
         op == HLSLBinaryOp_DivAssign;
 }
 
+inline bool IsBitOp( HLSLBinaryOp op )
+{
+    return op == HLSLBinaryOp_BitAnd ||
+        op == HLSLBinaryOp_BitOr ||
+        op == HLSLBinaryOp_BitXor;
+}
     
 enum HLSLUnaryOp
 {

@@ -2,13 +2,19 @@
 
 // TODO: syntax highlighting as Metal doesn't work
 // This isn't including header, but that doesn't seem to fix either.
-// Need HLSL plugin for Xcode
-
+// Need HLSL plugin for Xcode.  files have to be a part of project
+// to get syntax highlight but even that doesn't work.  And ref folders
+// also don't work since the files aren't part of the project.
+//
 // https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst
 
-// setup specialzation, convert these to function_constants
+// setup specialization
+// HLSL:
 // [[vk::constant_id(0)]] const bool  specConstInt  = 1;
 // [[vk::constant_id(1)]] const bool  specConstBool  = true;
+// MSL:
+// constant bool a [[function_constant(0)]];
+// constant int a [[function_constant(1)]]; // 0.. 64K
 
 // subpass input, and SubpassLoad() calls
 // [[vk::input_attachment_index(i)]] SubpassInput input;
@@ -34,10 +40,15 @@
 // #endif
 // StructuredBuffer<Struct> ssbo;
 
-// Are there no uint8 in HLSL?
-// D3DCOLORtoUBYTE4: Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
+// No u/int8_t or u/char in HLSL.
+// D3DCOLORtoUBYTE4: Decodes a D3DCOLOR packed DWORD to a float4.
+// Note the swizzle, and I don't want an int4.  I need to encode.
 // This is achieved by performing int4(input.zyxw * 255.002) using SPIR-V OpVectorShuffle, OpVectorTimesScalar, and OpConvertFToS, respectively.
 // https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_6_Pack_Unpack_Intrinsics.html
+
+// These all pack to too large of data structores.
+// also they don't handle gamma.
+//
 // int16_t4 unpack_s8s16(int8_t4_packed packedVal);        // Sign Extended
 // uint16_t4 unpack_u8u16(uint8_t4_packed packedVal);      // Non-Sign Extended
 // int32_t4 unpack_s8s32(int8_t4_packed packedVal);        // Sign Extended
@@ -54,7 +65,7 @@
 // uint8_t4_packed pack_clamp_u8(int16_t4  unpackedVal);   // Pack and Clamp [0, 255]
 // int8_t4_packed pack_clamp_s8(int16_t4  unpackedVal);    // Pack and Clamp [-128, 127]
 //
-// have uint16_t/int16_t support in 6.2.
+// have uint16_t/int16_t support in 6.2.  Need to add as type into parser.
 //
 // cbuffer are std140, and ssbo are std430 arrangment.  Affects arrays.
 // or -fvk-use-dx-layout vs. -fvk-use-gl-layout vs. -fvk-use-scalar-layout.
@@ -70,8 +81,15 @@
 //   [[vk::location(1)]] float3 norm : NORMAL;
 // };
 
+// 6.2 adds templated load, so can
+//ByteAddressBuffer buffer;
+//
+//float f1 = buffer.Load<float>(idx);
+//half2 h2 = buffer.Load<half2>(idx);
+//uint16_t4 i4 = buffer.Load<uint16_t4>(idx);
 
-
+// MSL rule;
+// If a vertex function writes to one or more buffers or textures, its return type must be void.
 
 struct InputVS
 {
@@ -80,6 +98,9 @@ struct InputVS
     float2 uv : TEXCOORD0;
     float4 blendWeights : BLENDWEIGHT;
     uint4  blendIndices : BLENDINDICES;
+    
+    short4 testShort : TANGENT;
+    ushort4 testUShort : BITANGENT;
 };
 
 struct OutputVS
@@ -90,10 +111,6 @@ struct OutputVS
     float   pointSize : PSIZE;
 };
 
-// This isn't working in HLSL
-
-    
-    
 cbuffer Uniforms
 {
     // should these be float3x4?
@@ -102,6 +119,7 @@ cbuffer Uniforms
     float4x4 worldToClipTfm;
 };
 
+// TODO: split up tex/sampler, update texture calls to DX10
 // defines combined tex_texture/tex_sampler
 sampler2D<half> tex;
 
@@ -117,11 +135,12 @@ float4x4 DoSkinTfm(float4x4 skinTfms[256], float4 blendWeights, uint4 blendIndic
     return skinTfm;
 }
 
-// These don't compile for spv despite setting extension
-   
-// TODO: fix ability to comment these into SkinningVS inputs
+// TODO: These don't compile for spv despite setting extension
+//  don't know what semantic to set?
 // uint vertexBase : BASE_VERTEX,
 // uint instanceBase : BASE_INSTANCE,
+
+// TODO: fix ability to comment these out inside SkinningVS inputs
     
 // TODO: can't yet have commented out inputs or tokenizer fails
 OutputVS SkinningVS(InputVS input,
@@ -161,6 +180,12 @@ OutputVS SkinningVS(InputVS input,
     // DXC
     output.diffuse = dot(lightDir, normal);
 
+    // test the operators
+    output.diffuse *= output.diffuse;
+    output.diffuse += output.diffuse;
+    output.diffuse -= output.diffuse;
+    output.diffuse /= output.diffuse;
+    
     output.uv = input.uv;
     
     // only for Vulkan/MSL, DX12 can't control per vertex shader
@@ -171,7 +196,9 @@ OutputVS SkinningVS(InputVS input,
 
 // Want to pass OutputVS as input, but DXC can't handle the redefinition
 // in the same file.  So have to keep OutputVS and InputPS in sync.
-// this can include position on MSL, but not on HLSL
+// this can include position on MSL, but not on HLSL.
+// Also for mobile the type should be higher precision to avoid banding.
+// So half from VS, but float in PS.
 struct InputPS
 {
     half    diffuse : COLOR;
@@ -186,7 +213,7 @@ struct OutputPS
 // Note: don't write as void SkinningPS(VS_OUTPUT input, out PS_OUTPUT output)
 // this is worse MSL codegen.
 
-// TODO: SV_Position differs from Vulkan/MSL in that pos.w = w and not 1/w like gl_FragCoord.
+// TODO: SV_Position differs from Vulkan/MSL in that pos.w = w and not 1/w like gl_FragCoord and [[position]].
 // DXC has a setting to invert w.
 
 OutputPS SkinningPS(InputPS input,

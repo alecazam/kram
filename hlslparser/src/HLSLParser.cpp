@@ -59,8 +59,8 @@ enum DimensionType
     DimensionType_Matrix3x3,
     DimensionType_Matrix4x4,
     
-    DimensionType_Matrix4x3, // TODO: no 3x4
-    DimensionType_Matrix4x2
+    //DimensionType_Matrix4x3, // TODO: no 3x4
+    //DimensionType_Matrix4x2
 };
 
 // Can use this to break apart type to useful constructs
@@ -111,6 +111,21 @@ bool IsCoreTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType)
     return baseTypeDescriptions[lhsType].coreType ==
            baseTypeDescriptions[rhsType].coreType;
 }
+
+bool IsDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType)
+{
+    return baseTypeDescriptions[lhsType].numComponents ==
+           baseTypeDescriptions[rhsType].numComponents &&
+           baseTypeDescriptions[lhsType].height ==
+           baseTypeDescriptions[rhsType].height;
+}
+
+bool IsCrossDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType)
+{
+    return baseTypeDescriptions[lhsType].height ==
+           baseTypeDescriptions[rhsType].numComponents;
+}
+
 
 bool IsNumericTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType)
 {
@@ -168,7 +183,17 @@ HLSLBaseType NumericToBaseType(NumericType numericType)
         case NumericType_Int: baseType = HLSLBaseType_Int; break;
         case NumericType_Uint: baseType = HLSLBaseType_Uint; break;
         case NumericType_Bool: baseType = HLSLBaseType_Bool; break;
-        // TODO: short,ushort,double
+            
+        case NumericType_Ushort: baseType = HLSLBaseType_Ushort; break;
+        case NumericType_Short: baseType = HLSLBaseType_Short; break;
+            
+        // TODO: requires vec/matrix additions for double
+        // case NumericType_Double: baseType = HLSLBaseType_Bool; break;
+            
+        // TODO:
+        //case NumericType_Uint8: baseType = HLSLBaseType_Uint8; break;
+        //case NumericType_Int8: baseType = HLSLBaseType_Int8; break;
+        
         default:
             break;
     }
@@ -196,6 +221,8 @@ HLSLBaseType HalfToFloatBaseType(HLSLBaseType type)
     
     return type;
 }
+
+static HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSLBaseType t2);
 
 const char* GetNumericTypeName(HLSLBaseType type)
 {
@@ -296,7 +323,9 @@ static const int _numberTypeRank[NumericType_Count][NumericType_Count] =
     { 1, 0, 4, 4, 4 },  // NumericType_Half
     { 5, 5, 0, 5, 5 },  // NumericType_Bool
     { 5, 5, 4, 0, 3 },  // NumericType_Int
-    { 5, 5, 4, 2, 0 }   // NumericType_Uint
+    { 5, 5, 4, 2, 0 },  // NumericType_Uint
+    { 5, 5, 4, 0, 3 },  // NumericType_Short
+    { 5, 5, 4, 2, 0 },  // NumericType_Ushort
 };
 
 
@@ -577,17 +606,14 @@ static const EffectState pipelineStates[] = {
         Intrinsic( name, HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3,  HLSLBaseType_Half3 ),    \
         Intrinsic( name, HLSLBaseType_Half4,   HLSLBaseType_Half4,   HLSLBaseType_Half4,  HLSLBaseType_Half4 )
 
-//#if 1
-// @@ IC: For some reason this is not working with the Visual Studio compiler:
-// This broke using half, so don't just comment this out.
 #define SAMPLER_INTRINSIC_FUNCTION(name, nameH, sampler, arg1) \
         SamplerIntrinsic( name, HLSLBaseType_Float4, sampler, HLSLBaseType_Float, arg1),   \
         SamplerIntrinsic( nameH, HLSLBaseType_Half4,  sampler, HLSLBaseType_Half,  arg1  )
-//#else
-//#define SAMPLER_INTRINSIC_FUNCTION(name, sampler, arg1) \
-//        Intrinsic( name, HLSLBaseType_Float4, sampler, arg1)
-//#endif
     
+// TODO: change this to a mutlimap or something
+// would make it easier to specify, can write functions to set all vec, all matrix, etc.  This is a nightmare to add things too below.  MSL and HLSL
+// have a lot more operations now.
+
 const Intrinsic _intrinsic[] =
     {
         INTRINSIC_FLOAT1_FUNCTION( "abs" ),
@@ -749,6 +775,29 @@ const Intrinsic _intrinsic[] =
 
 		Intrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Float),
 
+        // only for vec, void return type
+        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float,   HLSLBaseType_Float,  HLSLBaseType_Float ),
+        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float2,  HLSLBaseType_Float,  HLSLBaseType_Float2 ),
+        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float3,  HLSLBaseType_Float,  HLSLBaseType_Float3 ),
+        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float4,  HLSLBaseType_Float,  HLSLBaseType_Float4 ),
+        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half,    HLSLBaseType_Half,   HLSLBaseType_Half ),
+        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half2,   HLSLBaseType_Half2,  HLSLBaseType_Half2 ),
+        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half3,   HLSLBaseType_Half3,  HLSLBaseType_Half3 ),
+        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half4,   HLSLBaseType_Half4,  HLSLBaseType_Half4 ),
+        
+        // why is this only defined for vec
+        Intrinsic( "mad", HLSLBaseType_Float, HLSLBaseType_Float, HLSLBaseType_Float, HLSLBaseType_Float ),
+        Intrinsic( "mad", HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2 ),
+        Intrinsic( "mad", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3 ),
+        Intrinsic( "mad", HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4 ),
+        Intrinsic( "mad", HLSLBaseType_Half, HLSLBaseType_Half, HLSLBaseType_Half, HLSLBaseType_Half ),
+        Intrinsic( "mad", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2 ),
+        Intrinsic( "mad", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3 ),
+        Intrinsic( "mad", HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4 ),
+        
+        // TODO: split off sampler intrinsics from math above
+        //------------------------
+        
         // This macro defines float/half versions
         SAMPLER_INTRINSIC_FUNCTION("tex2D", "tex2D", HLSLBaseType_Sampler2D, HLSLBaseType_Float2),
         SAMPLER_INTRINSIC_FUNCTION("tex2Dlod", "tex2Dlod", HLSLBaseType_Sampler2D, HLSLBaseType_Float4),
@@ -784,25 +833,7 @@ const Intrinsic _intrinsic[] =
         Intrinsic("texCUBEbias", HLSLBaseType_Float4, HLSLBaseType_SamplerCube, HLSLBaseType_Float4),
         Intrinsic("texCUBEsize", HLSLBaseType_Int, HLSLBaseType_SamplerCube),
 
-        // only for vec, void return type
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float,   HLSLBaseType_Float,  HLSLBaseType_Float ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float2,  HLSLBaseType_Float,  HLSLBaseType_Float2 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float3,  HLSLBaseType_Float,  HLSLBaseType_Float3 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float4,  HLSLBaseType_Float,  HLSLBaseType_Float4 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half,    HLSLBaseType_Half,   HLSLBaseType_Half ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half2,   HLSLBaseType_Half2,  HLSLBaseType_Half2 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half3,   HLSLBaseType_Half3,  HLSLBaseType_Half3 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half4,   HLSLBaseType_Half4,  HLSLBaseType_Half4 ),
         
-        // why is this only defined for vec
-        Intrinsic( "mad", HLSLBaseType_Float, HLSLBaseType_Float, HLSLBaseType_Float, HLSLBaseType_Float ),
-        Intrinsic( "mad", HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2 ),
-        Intrinsic( "mad", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3 ),
-        Intrinsic( "mad", HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4 ),
-        Intrinsic( "mad", HLSLBaseType_Half, HLSLBaseType_Half, HLSLBaseType_Half, HLSLBaseType_Half ),
-        Intrinsic( "mad", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2 ),
-        Intrinsic( "mad", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3 ),
-        Intrinsic( "mad", HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4 ),
     };
 
 const int _numIntrinsics = sizeof(_intrinsic) / sizeof(Intrinsic);
@@ -832,8 +863,8 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
 		{ "float2x2",			CoreType_Matrix, DimensionType_Matrix2x2, NumericType_Float,     2, 2, 2,  0 },		// HLSLBaseType_Float2x2
         { "float3x3",           CoreType_Matrix, DimensionType_Matrix3x3, NumericType_Float,     3, 2, 3,  0 },      // HLSLBaseType_Float3x3
         { "float4x4",           CoreType_Matrix, DimensionType_Matrix4x4, NumericType_Float,     4, 2, 4,  0 },      // HLSLBaseType_Float4x4
-        { "float4x3",           CoreType_Matrix, DimensionType_Matrix4x3, NumericType_Float,     4, 2, 3,  0 },      // HLSLBaseType_Float4x3
-        { "float4x2",           CoreType_Matrix, DimensionType_Matrix4x2, NumericType_Float,     4, 2, 2,  0 },      // HLSLBaseType_Float4x2
+        //{ "float4x3",           CoreType_Matrix, DimensionType_Matrix4x3, NumericType_Float,     4, 2, 3,  0 },      // HLSLBaseType_Float4x3
+        //{ "float4x2",           CoreType_Matrix, DimensionType_Matrix4x2, NumericType_Float,     4, 2, 2,  0 },      // HLSLBaseType_Float4x2
 
         { "half",               CoreType_Scalar, DimensionType_Scalar, NumericType_Half,        1, 0, 1,  1 },      // HLSLBaseType_Half
         { "half2",              CoreType_Vector, DimensionType_Vector2, NumericType_Half,       2, 1, 1,  1 },      // HLSLBaseType_Half2
@@ -843,9 +874,19 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
 		{ "half2x2",            CoreType_Matrix, DimensionType_Matrix2x2, NumericType_Half,		2, 2, 2,  0 },		// HLSLBaseType_Half2x2
         { "half3x3",            CoreType_Matrix, DimensionType_Matrix3x3, NumericType_Half,     3, 2, 3,  1 },      // HLSLBaseType_Half3x3
         { "half4x4",            CoreType_Matrix, DimensionType_Matrix4x4, NumericType_Half,     4, 2, 4,  1 },      // HLSLBaseType_Half4x4
-        { "half4x3",            CoreType_Matrix, DimensionType_Matrix4x3, NumericType_Half,     4, 2, 3,  1 },      // HLSLBaseType_Half4x3
-        { "half4x2",            CoreType_Matrix, DimensionType_Matrix4x2, NumericType_Half,     4, 2, 2,  1 },      // HLSLBaseType_Half4x2
+        //{ "half4x3",            CoreType_Matrix, DimensionType_Matrix4x3, NumericType_Half,     4, 2, 3,  1 },      // HLSLBaseType_Half4x3
+        //{ "half4x2",            CoreType_Matrix, DimensionType_Matrix4x2, NumericType_Half,     4, 2, 2,  1 },      // HLSLBaseType_Half4x2
 
+        // TODO: add double
+//        { "double",              CoreType_Scalar, DimensionType_Scalar, NumericType_Double,       1, 0, 1,  0 },      // HLSLBaseType_Double
+//        { "double2",             CoreType_Vector, DimensionType_Vector2, NumericType_Double,      2, 1, 1,  0 },      // HLSLBaseType_Double2
+//        { "double3",             CoreType_Vector, DimensionType_Vector3, NumericType_Double,      3, 1, 1,  0 },      // HLSLBaseType_Double3
+//        { "double4",             CoreType_Vector, DimensionType_Vector4, NumericType_Double,      4, 1, 1,  0 },      // HLSLBaseType_Double4
+//
+//        { "double2x2",            CoreType_Matrix, DimensionType_Matrix2x2, NumericType_Double,     2, 2, 2,  0 },        // HLSLBaseType_Doublet2x2
+//        { "double3x3",           CoreType_Matrix, DimensionType_Matrix3x3, NumericType_Double,     3, 2, 3,  0 },      // HLSLBaseType_Double3x3
+//        { "double4x4",           CoreType_Matrix, DimensionType_Matrix4x4, NumericType_Double,     4, 2, 4,  0 },      // HLSLBaseType_Double4x4
+        
         { "bool",               CoreType_Scalar, DimensionType_Scalar, NumericType_Bool,       1, 0, 1,  4 },      // HLSLBaseType_Bool
 		{ "bool2",				CoreType_Vector, DimensionType_Vector2, NumericType_Bool,	   2, 1, 1,  4 },      // HLSLBaseType_Bool2
 		{ "bool3",				CoreType_Vector, DimensionType_Vector3, NumericType_Bool,	   3, 1, 1,  4 },      // HLSLBaseType_Bool3
@@ -861,7 +902,17 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
         { "uint3",              CoreType_Vector, DimensionType_Vector3, NumericType_Uint,      3, 1, 1,  2 },      // HLSLBaseType_Uint3
         { "uint4",              CoreType_Vector, DimensionType_Vector4, NumericType_Uint,      4, 1, 1,  2 },      // HLSLBaseType_Uint4
 
-        // TODO: add ushort/short
+        { "short",              CoreType_Scalar, DimensionType_Scalar, NumericType_Short,      1, 0, 1,  3 },      // HLSLBaseType_Short
+        { "short2",             CoreType_Vector, DimensionType_Vector2, NumericType_Short,     2, 1, 1,  3 },      // HLSLBaseType_Short2
+        { "short3",             CoreType_Vector, DimensionType_Vector3, NumericType_Short,     3, 1, 1,  3 },      // HLSLBaseType_Short3
+        { "short4",             CoreType_Vector, DimensionType_Vector4, NumericType_Short,     4, 1, 1,  3 },      // HLSLBaseType_Short4
+
+        { "ushort",             CoreType_Scalar, DimensionType_Scalar, NumericType_Ushort,     1, 0, 1,  2 },      // HLSLBaseType_Ushort
+        { "ushort2",            CoreType_Vector, DimensionType_Vector2, NumericType_Ushort,    2, 1, 1,  2 },      // HLSLBaseType_Ushort2
+        { "ushort3",            CoreType_Vector, DimensionType_Vector3, NumericType_Ushort,    3, 1, 1,  2 },      // HLSLBaseType_Ushort3
+        { "ushort4",            CoreType_Vector, DimensionType_Vector4, NumericType_Ushort,    4, 1, 1,  2 },      // HLSLBaseType_Ushort4
+
+        // TODO: add u/char, but HLSL2021 doesn't have support
         
         { "texture",            CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture
         
@@ -875,226 +926,67 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
         
         { "struct",             CoreType_Struct, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },      // HLSLBaseType_UserDefined
         { "expression",         CoreType_Expression, DimensionType_None, NumericType_NaN,     1, 0, 0, -1 },       // HLSLBaseType_Expression
-        { "comment",           CoreType_Comment, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },       // HLSLBaseType_Comment
+        { "comment",            CoreType_Comment, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },       // HLSLBaseType_Comment
     };
 
 // IC: I'm not sure this table is right, but any errors should be caught by the backend compiler.
 // Also, this is operator dependent. The type resulting from (float4 * float4x4) is not the same as (float4 + float4x4).
 // We should probably distinguish between component-wise operator and only allow same dimensions
-HLSLBaseType _binaryOpTypeLookup[HLSLBaseType_NumericCount][HLSLBaseType_NumericCount] = 
-    {
-        {   // float
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float2x2, HLSLBaseType_Float3x3, HLSLBaseType_Float4x4, HLSLBaseType_Float4x3, HLSLBaseType_Float4x2,
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float2x2, HLSLBaseType_Float3x3, HLSLBaseType_Float4x4, HLSLBaseType_Float4x3, HLSLBaseType_Float4x2,
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4,
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4,
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4
-        },
-        {   // float2
-            HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2,
-            HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2,
-            HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2
-        },
-        {   // float3
-            HLSLBaseType_Float3, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float3, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float3, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float3,
-            HLSLBaseType_Float3, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float3,
-            HLSLBaseType_Float3, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float3
-        },
-        {   // float4
-            HLSLBaseType_Float4, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4,
-            HLSLBaseType_Float4, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4,
-            HLSLBaseType_Float4, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4
-        },
-        {   // float2x2
-            HLSLBaseType_Float2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // float3x3
-            HLSLBaseType_Float3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // float4x4
-            HLSLBaseType_Float4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // float4x3
-            HLSLBaseType_Float4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float4x3, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float4x3, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // float4x2
-            HLSLBaseType_Float4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float4x2,
-            HLSLBaseType_Float4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float4x2,
-            HLSLBaseType_Float4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Float4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // half
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float2x2, HLSLBaseType_Float3x3, HLSLBaseType_Float4x4, HLSLBaseType_Float4x3, HLSLBaseType_Float4x2, 
-            HLSLBaseType_Half, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Half2x2, HLSLBaseType_Half3x3, HLSLBaseType_Half4x4, HLSLBaseType_Half4x3, HLSLBaseType_Half4x2, 
-            HLSLBaseType_Half, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4,
-            HLSLBaseType_Half, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4,
-            HLSLBaseType_Half, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4
-        },
-        {   // half2
-            HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2,
-            HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2,
-            HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2
-        },
-        {   // half3
-            HLSLBaseType_Float3, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half3, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half3, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half3,
-            HLSLBaseType_Half3, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half3,
-            HLSLBaseType_Half3, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half3
-        },
-        {   // half4
-            HLSLBaseType_Float4, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4,
-            HLSLBaseType_Half4, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4,
-            HLSLBaseType_Half4, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4
-        },
-        {   // half2x2
-            HLSLBaseType_Float2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Half2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half2x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // half3x3
-            HLSLBaseType_Float3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Half3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half3x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // half4x4
-            HLSLBaseType_Float4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Half4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // float4x3
-            HLSLBaseType_Float4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float4x3, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Half4x3, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // float4x2
-            HLSLBaseType_Float4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Float4x2,
-            HLSLBaseType_Half4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Half4x2,
-            HLSLBaseType_Half4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4x2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown
-        },
-        {   // bool
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float2x2, HLSLBaseType_Float3x3, HLSLBaseType_Float4x4, HLSLBaseType_Float4x3, HLSLBaseType_Float4x2,
-            HLSLBaseType_Half, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Half2x2, HLSLBaseType_Half3x3, HLSLBaseType_Half4x4, HLSLBaseType_Half4x3, HLSLBaseType_Half4x2,
-            HLSLBaseType_Int, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Int, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Uint, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4
-        },
-        {   // bool2
-            HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float2x2, HLSLBaseType_Float3x3, HLSLBaseType_Float4x4, HLSLBaseType_Float4x3, HLSLBaseType_Float4x2,
-            HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Half2x2, HLSLBaseType_Half3x3, HLSLBaseType_Half4x4, HLSLBaseType_Half4x3, HLSLBaseType_Half4x2,
-            HLSLBaseType_Int2, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Int2, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Uint2, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4
-        },
-        {   // bool3
-            HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float2x2, HLSLBaseType_Float3x3, HLSLBaseType_Float4x4, HLSLBaseType_Float4x3, HLSLBaseType_Float4x2,
-            HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Half2x2, HLSLBaseType_Half3x3, HLSLBaseType_Half4x4, HLSLBaseType_Half4x3, HLSLBaseType_Half4x2,
-            HLSLBaseType_Int3, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Int3, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Uint3, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4
-        },
-        {   // bool4
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float2x2, HLSLBaseType_Float3x3, HLSLBaseType_Float4x4, HLSLBaseType_Float4x3, HLSLBaseType_Float4x2,
-            HLSLBaseType_Half, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Half2x2, HLSLBaseType_Half3x3, HLSLBaseType_Half4x4, HLSLBaseType_Half4x3, HLSLBaseType_Half4x2,
-            HLSLBaseType_Int, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Int, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Uint, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4
-        },
-        {   // int
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float2x2, HLSLBaseType_Float3x3, HLSLBaseType_Float4x4, HLSLBaseType_Float4x3, HLSLBaseType_Float4x2,
-            HLSLBaseType_Half, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Half2x2, HLSLBaseType_Half3x3, HLSLBaseType_Half4x4, HLSLBaseType_Half4x3, HLSLBaseType_Half4x2,
-            HLSLBaseType_Int, HLSLBaseType_Int2, HLSLBaseType_Int2, HLSLBaseType_Int2,
-            HLSLBaseType_Int, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Uint, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4
-        },
-        {   // int2
-            HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Int2, HLSLBaseType_Int2, HLSLBaseType_Int2, HLSLBaseType_Int2,
-            HLSLBaseType_Int2, HLSLBaseType_Int2, HLSLBaseType_Int2, HLSLBaseType_Int2,
-            HLSLBaseType_Uint2, HLSLBaseType_Uint2, HLSLBaseType_Uint2, HLSLBaseType_Uint2
-        },
-        {   // int3
-            HLSLBaseType_Float3, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half3, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Int3, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int3,
-            HLSLBaseType_Int3, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int3,
-            HLSLBaseType_Uint3, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint3
-        },
-        {   // int4
-            HLSLBaseType_Float4, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Int4, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Int4, HLSLBaseType_Int2, HLSLBaseType_Int3, HLSLBaseType_Int4,
-            HLSLBaseType_Uint4, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4
-        },
-        {   // uint
-            HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float2x2, HLSLBaseType_Float3x3, HLSLBaseType_Float4x4, HLSLBaseType_Float4x3, HLSLBaseType_Float4x2,
-            HLSLBaseType_Half, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Half2x2, HLSLBaseType_Half3x3, HLSLBaseType_Half4x4, HLSLBaseType_Half4x3, HLSLBaseType_Half4x2,
-            HLSLBaseType_Uint, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4,
-            HLSLBaseType_Uint, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4,
-            HLSLBaseType_Uint, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4
-        },
-        {   // uint2
-            HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Uint2, HLSLBaseType_Uint2, HLSLBaseType_Uint2, HLSLBaseType_Uint2,
-            HLSLBaseType_Uint2, HLSLBaseType_Uint2, HLSLBaseType_Uint2, HLSLBaseType_Uint2,
-            HLSLBaseType_Uint2, HLSLBaseType_Uint2, HLSLBaseType_Uint2, HLSLBaseType_Uint2
-        },
-        {   // uint3
-            HLSLBaseType_Float3, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half3, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Uint3, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint3,
-            HLSLBaseType_Uint3, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint3,
-            HLSLBaseType_Uint3, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint3
-        },
-        {   // uint4
-            HLSLBaseType_Float4, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Half4, HLSLBaseType_Half2, HLSLBaseType_Half3, HLSLBaseType_Half4, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown, HLSLBaseType_Unknown,
-            HLSLBaseType_Uint4, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4,
-            HLSLBaseType_Uint4, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4,
-            HLSLBaseType_Uint4, HLSLBaseType_Uint2, HLSLBaseType_Uint3, HLSLBaseType_Uint4
-        },
-    };
 
+
+HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSLBaseType t2)
+{
+    // check that both are same numeric types
+    
+    // add, sub, div are similar
+    // mul is it's own test
+
+    // most mixing of types is invalid here
+    
+    if (IsNumericTypeEqual(t1, t2))
+    {
+        bool isSameDimensions = IsDimensionEqual(t1, t2);
+        
+        if (IsScalarType(t1) && IsScalarType(t2))
+        {
+            if (isSameDimensions) return t1;
+        }
+        else if (IsVectorType(t1) && IsVectorType(t2))
+        {
+            if (isSameDimensions) return t1;
+        }
+        else if (IsMatrixType(t1) && IsMatrixType(t2))
+        {
+            if (isSameDimensions) return t1;
+        }
+        
+        // TODO: handle div of 1.0 / m or 1.0 / v. 
+        
+        else if ((binaryOp == HLSLBinaryOp_Mul || binaryOp == HLSLBinaryOp_Div) &&
+                 (IsScalarType(t1) || IsScalarType(t2)))
+        {
+            return (IsVectorType(t1) || IsMatrixType(t1)) ? t1 : t2;
+        }
+        
+        // this has to check dimension across the mul
+        else if (binaryOp == HLSLBinaryOp_Mul)
+        {
+            bool isSameCrossDimension = IsCrossDimensionEqual(t1, t2);
+            
+            if (IsMatrixType(t1) && IsVectorType(t2))
+            {
+                if (isSameCrossDimension) return t2;
+            }
+            else if (IsVectorType(t1) && IsMatrixType(t2))
+            {
+                if (isSameCrossDimension) return t1;
+            }
+        }
+    }
+    
+    return HLSLBaseType_Unknown;
+}
+    
 // Priority of the ? : operator.
 const int _conditionalOpPriority = 1;
 
@@ -1116,19 +1008,23 @@ static const char* GetBinaryOpName(HLSLBinaryOp binaryOp)
     {
     case HLSLBinaryOp_And:          return "&&";
     case HLSLBinaryOp_Or:           return "||";
+            
     case HLSLBinaryOp_Add:          return "+";
     case HLSLBinaryOp_Sub:          return "-";
     case HLSLBinaryOp_Mul:          return "*";
     case HLSLBinaryOp_Div:          return "/";
+            
     case HLSLBinaryOp_Less:         return "<";
     case HLSLBinaryOp_Greater:      return ">";
     case HLSLBinaryOp_LessEqual:    return "<=";
     case HLSLBinaryOp_GreaterEqual: return ">=";
     case HLSLBinaryOp_Equal:        return "==";
     case HLSLBinaryOp_NotEqual:     return "!=";
+            
     case HLSLBinaryOp_BitAnd:       return "&";
     case HLSLBinaryOp_BitOr:        return "|";
     case HLSLBinaryOp_BitXor:       return "^";
+            
     case HLSLBinaryOp_Assign:       return "=";
     case HLSLBinaryOp_AddAssign:    return "+=";
     case HLSLBinaryOp_SubAssign:    return "-=";
@@ -1314,39 +1210,30 @@ static CompareFunctionsResult CompareFunctions(HLSLTree* tree, const HLSLFunctio
 
 static bool GetBinaryOpResultType(HLSLBinaryOp binaryOp, const HLSLType& type1, const HLSLType& type2, HLSLType& result)
 {
-
+    // only allow numeric types for binary operators
     if (type1.baseType < HLSLBaseType_FirstNumeric || type1.baseType > HLSLBaseType_LastNumeric || type1.array ||
         type2.baseType < HLSLBaseType_FirstNumeric || type2.baseType > HLSLBaseType_LastNumeric || type2.array)
     {
          return false;
     }
 
-    if (binaryOp == HLSLBinaryOp_BitAnd || binaryOp == HLSLBinaryOp_BitOr || binaryOp == HLSLBinaryOp_BitXor)
+    if (IsBitOp(binaryOp))
     {
-        if (type1.baseType < HLSLBaseType_FirstInteger || type1.baseType > HLSLBaseType_LastInteger)
+        if (type1.baseType < HLSLBaseType_FirstInteger ||
+            type1.baseType > HLSLBaseType_LastInteger)
         {
             return false;
         }
     }
 
-    switch (binaryOp)
+    if (IsLogicOp(binaryOp) || IsCompareOp(binaryOp))
     {
-    case HLSLBinaryOp_And:
-    case HLSLBinaryOp_Or:
-    case HLSLBinaryOp_Less:
-    case HLSLBinaryOp_Greater:
-    case HLSLBinaryOp_LessEqual:
-    case HLSLBinaryOp_GreaterEqual:
-    case HLSLBinaryOp_Equal:
-	case HLSLBinaryOp_NotEqual:
-		{
-			int numComponents = std::max( baseTypeDescriptions[ type1.baseType ].numComponents, baseTypeDescriptions[ type2.baseType ].numComponents );
-			result.baseType = HLSLBaseType( HLSLBaseType_Bool + numComponents - 1 );
-			break;
-		}
-    default:
-        result.baseType = _binaryOpTypeLookup[type1.baseType - HLSLBaseType_FirstNumeric][type2.baseType - HLSLBaseType_FirstNumeric];
-        break;
+        int numComponents = std::max( baseTypeDescriptions[ type1.baseType ].numComponents, baseTypeDescriptions[ type2.baseType ].numComponents );
+        result.baseType = HLSLBaseType( HLSLBaseType_Bool + numComponents - 1 );
+    }
+    else
+    {
+        result.baseType = ArithmeticOpResultType(binaryOp, type1.baseType, type2.baseType);
     }
 
     result.typeName     = NULL;
@@ -2704,12 +2591,12 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 case HLSLBaseType_Float4x4:
                     arrayAccess->expressionType.baseType = HLSLBaseType_Float4;
                     break;
-                case HLSLBaseType_Float4x3:
-                    arrayAccess->expressionType.baseType = HLSLBaseType_Float3;
-                    break;
-                case HLSLBaseType_Float4x2:
-                    arrayAccess->expressionType.baseType = HLSLBaseType_Float2;
-                    break;
+//                case HLSLBaseType_Float4x3:
+//                    arrayAccess->expressionType.baseType = HLSLBaseType_Float3;
+//                    break;
+//                case HLSLBaseType_Float4x2:
+//                    arrayAccess->expressionType.baseType = HLSLBaseType_Float2;
+//                    break;
                 case HLSLBaseType_Half2:
                 case HLSLBaseType_Half3:
                 case HLSLBaseType_Half4:
@@ -2724,12 +2611,12 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 case HLSLBaseType_Half4x4:
                     arrayAccess->expressionType.baseType = HLSLBaseType_Half4;
                     break;
-                case HLSLBaseType_Half4x3:
-                    arrayAccess->expressionType.baseType = HLSLBaseType_Half3;
-                    break;
-                case HLSLBaseType_Half4x2:
-                    arrayAccess->expressionType.baseType = HLSLBaseType_Half2;
-                    break;
+//                case HLSLBaseType_Half4x3:
+//                    arrayAccess->expressionType.baseType = HLSLBaseType_Half3;
+//                    break;
+//                case HLSLBaseType_Half4x2:
+//                    arrayAccess->expressionType.baseType = HLSLBaseType_Half2;
+//                    break;
                 case HLSLBaseType_Int2:
                 case HLSLBaseType_Int3:
                 case HLSLBaseType_Int4:
@@ -2740,6 +2627,23 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 case HLSLBaseType_Uint4:
                     arrayAccess->expressionType.baseType = HLSLBaseType_Uint;
                     break;
+                case HLSLBaseType_Bool2:
+                case HLSLBaseType_Bool3:
+                case HLSLBaseType_Bool4:
+                    arrayAccess->expressionType.baseType = HLSLBaseType_Bool;
+                    break;
+                case HLSLBaseType_Ushort2:
+                case HLSLBaseType_Ushort3:
+                case HLSLBaseType_Ushort4:
+                    arrayAccess->expressionType.baseType = HLSLBaseType_Ushort;
+                    break;
+                case HLSLBaseType_Short2:
+                case HLSLBaseType_Short3:
+                case HLSLBaseType_Short4:
+                    arrayAccess->expressionType.baseType = HLSLBaseType_Short;
+                    break;
+                        
+                // TODO: double, u/char
                 default:
                     m_tokenizer.Error("array, matrix, vector, or indexable object type expected in index expression");
                     return false;
@@ -3570,6 +3474,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
     case HLSLToken_Float4:
         type.baseType = HLSLBaseType_Float4;
         break;
+            
 	case HLSLToken_Float2x2:
 		type.baseType = HLSLBaseType_Float2x2;
 		break;
@@ -3579,12 +3484,13 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
     case HLSLToken_Float4x4:
         type.baseType = HLSLBaseType_Float4x4;
         break;
-    case HLSLToken_Float4x3:
-        type.baseType = HLSLBaseType_Float4x3;
-        break;
-    case HLSLToken_Float4x2:
-        type.baseType = HLSLBaseType_Float4x2;
-        break;
+//    case HLSLToken_Float4x3:
+//        type.baseType = HLSLBaseType_Float4x3;
+//        break;
+//    case HLSLToken_Float4x2:
+//        type.baseType = HLSLBaseType_Float4x2;
+//        break;
+            
     case HLSLToken_Half:
         type.baseType = HLSLBaseType_Half;
         break;
@@ -3597,6 +3503,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
     case HLSLToken_Half4:
         type.baseType = HLSLBaseType_Half4;
         break;
+            
 	case HLSLToken_Half2x2:
 		type.baseType = HLSLBaseType_Half2x2;
 		break;
@@ -3606,12 +3513,12 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
     case HLSLToken_Half4x4:
         type.baseType = HLSLBaseType_Half4x4;
         break;
-    case HLSLToken_Half4x3:
-        type.baseType = HLSLBaseType_Half4x3;
-        break;
-    case HLSLToken_Half4x2:
-        type.baseType = HLSLBaseType_Half4x2;
-        break;
+//    case HLSLToken_Half4x3:
+//        type.baseType = HLSLBaseType_Half4x3;
+//        break;
+//    case HLSLToken_Half4x2:
+//        type.baseType = HLSLBaseType_Half4x2;
+//        break;
     case HLSLToken_Bool:
         type.baseType = HLSLBaseType_Bool;
         break;
@@ -3624,6 +3531,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
 	case HLSLToken_Bool4:
 		type.baseType = HLSLBaseType_Bool4;
 		break;
+            
     case HLSLToken_Int:
         type.baseType = HLSLBaseType_Int;
         break;
@@ -3636,6 +3544,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
     case HLSLToken_Int4:
         type.baseType = HLSLBaseType_Int4;
         break;
+            
     case HLSLToken_Uint:
         type.baseType = HLSLBaseType_Uint;
         break;
@@ -3647,6 +3556,32 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         break;
     case HLSLToken_Uint4:
         type.baseType = HLSLBaseType_Uint4;
+        break;
+         
+    case HLSLToken_Ushort:
+        type.baseType = HLSLBaseType_Ushort;
+        break;
+    case HLSLToken_Ushort2:
+        type.baseType = HLSLBaseType_Ushort2;
+        break;
+    case HLSLToken_Ushort3:
+        type.baseType = HLSLBaseType_Ushort3;
+        break;
+    case HLSLToken_Ushort4:
+        type.baseType = HLSLBaseType_Ushort4;
+        break;
+        
+    case HLSLToken_Short:
+        type.baseType = HLSLBaseType_Short;
+        break;
+    case HLSLToken_Short2:
+        type.baseType = HLSLBaseType_Short2;
+        break;
+    case HLSLToken_Short3:
+        type.baseType = HLSLBaseType_Short3;
+        break;
+    case HLSLToken_Short4:
+        type.baseType = HLSLBaseType_Short4;
         break;
             
     // Textures
@@ -4102,30 +4037,31 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
         m_tokenizer.Error("Invalid swizzle '%s'", fieldName);
         return false;
     }
-
-    static const HLSLBaseType floatType[] = { HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float3, HLSLBaseType_Float4 };
-    static const HLSLBaseType halfType[]  = { HLSLBaseType_Half,  HLSLBaseType_Half2,  HLSLBaseType_Half3,  HLSLBaseType_Half4  };
-    static const HLSLBaseType intType[]   = { HLSLBaseType_Int,   HLSLBaseType_Int2,   HLSLBaseType_Int3,   HLSLBaseType_Int4   };
-    static const HLSLBaseType uintType[]  = { HLSLBaseType_Uint,  HLSLBaseType_Uint2,  HLSLBaseType_Uint3,  HLSLBaseType_Uint4  };
-    static const HLSLBaseType boolType[]  = { HLSLBaseType_Bool,  HLSLBaseType_Bool2,  HLSLBaseType_Bool3,  HLSLBaseType_Bool4  };
-    
+ 
     switch (baseTypeDescriptions[objectType.baseType].numericType)
     {
     case NumericType_Float:
-        memberAccess->expressionType.baseType = floatType[swizzleLength - 1];
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Float + swizzleLength - 1);
         break;
     case NumericType_Half:
-        memberAccess->expressionType.baseType = halfType[swizzleLength - 1];
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Half + swizzleLength - 1);
         break;
     case NumericType_Int:
-        memberAccess->expressionType.baseType = intType[swizzleLength - 1];
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Int + swizzleLength - 1);
         break;
     case NumericType_Uint:
-        memberAccess->expressionType.baseType = uintType[swizzleLength - 1];
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Uint + swizzleLength - 1);
             break;
     case NumericType_Bool:
-        memberAccess->expressionType.baseType = boolType[swizzleLength - 1];
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Bool + swizzleLength - 1);
             break;
+    case NumericType_Short:
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Short + swizzleLength - 1);
+            break;
+    case NumericType_Ushort:
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Ushort + swizzleLength - 1);
+            break;
+    // TODO: double, u/char
     default:
         ASSERT(0);
     }

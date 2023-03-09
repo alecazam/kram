@@ -7,6 +7,34 @@
 #pragma once
 #endif
 
+// For float16 operations, denormal numbers must be preserved.
+// No atomic operations for float16 are supported.
+
+// no using, so do typedef
+// this is ugly syntax
+typedef int16_t2 short2;
+typedef int16_t3 short3;
+typedef int16_t4 short4;
+
+typedef uint16_t2 ushort2;
+typedef uint16_t3 ushort3;
+typedef uint16_t4 ushort4;
+
+// TODO: double, u/char
+// TODO: add double, but won't work on mobile.
+//  also Intel removed fp64 GPU support.  Often runs 1/64th speed.
+//  But may be needed for ray-tracing large worlds.  Metal doesn't have double.
+//
+//typedef int64_t2 long2;
+//typedef int64_t3 long3;
+//typedef int64_t4 long4;
+//typedef uint64_t2 ulong2;
+//typedef uint64_t3 ulong3;
+//typedef uint64_t4 ulong4;
+//typedef float64_t2 double2;
+//typedef float64_t3 double3;
+//typedef float64_t4 double4;
+
 #define USE_HALF 1
 
 // TODO: this only supports half on Texture2D

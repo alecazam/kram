@@ -146,7 +146,15 @@ enum NumericType
     NumericType_Bool,
     NumericType_Int,
     NumericType_Uint,
-    // TODO: Double, Short, Ushort
+    NumericType_Short,
+    NumericType_Ushort,
+    
+    // TODO: add double
+    // NumericType_Double,
+    // TODO: HLSL doesn't have byte/ubyte, MSL does
+    // NumericType_UByte,
+    // NumericType_Byte,
+    
     NumericType_Count,
     
     NumericType_NaN, // not in count?
@@ -164,6 +172,8 @@ extern bool IsNumericType(HLSLBaseType baseType);
 
 extern bool IsCoreTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
 extern bool IsNumericTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
+extern bool IsDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
+extern bool IsCrossDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
 
 extern bool IsSamplerType(const HLSLType& type);
 extern bool IsMatrixType(const HLSLType& type);

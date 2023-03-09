@@ -9,37 +9,58 @@ namespace M4
 valid tokens. */
 enum HLSLToken
 {
+    // The order here must match the order in the _reservedWords
+    
     // Built-in types.
     HLSLToken_Float         = 256,
     HLSLToken_Float2,
     HLSLToken_Float3,
     HLSLToken_Float4,
+    
 	HLSLToken_Float2x2,
     HLSLToken_Float3x3,
     HLSLToken_Float4x4,
-    HLSLToken_Float4x3,
-    HLSLToken_Float4x2,
+    //HLSLToken_Float4x3,
+   // HLSLToken_Float4x2,
+    
     HLSLToken_Half,
     HLSLToken_Half2,
     HLSLToken_Half3,
     HLSLToken_Half4,
+    
 	HLSLToken_Half2x2,
     HLSLToken_Half3x3,
     HLSLToken_Half4x4,
-    HLSLToken_Half4x3,
-    HLSLToken_Half4x2,
+    //HLSLToken_Half4x3,
+    //HLSLToken_Half4x2,
+    
     HLSLToken_Bool,
 	HLSLToken_Bool2,
 	HLSLToken_Bool3,
 	HLSLToken_Bool4,
+    
     HLSLToken_Int,
     HLSLToken_Int2,
     HLSLToken_Int3,
     HLSLToken_Int4,
+    
     HLSLToken_Uint,
     HLSLToken_Uint2,
     HLSLToken_Uint3,
     HLSLToken_Uint4,
+
+    HLSLToken_Short,
+    HLSLToken_Short2,
+    HLSLToken_Short3,
+    HLSLToken_Short4,
+    
+    HLSLToken_Ushort,
+    HLSLToken_Ushort2,
+    HLSLToken_Ushort3,
+    HLSLToken_Ushort4,
+    
+    // TODO: double, u/char
+    
     HLSLToken_Texture,
     HLSLToken_Sampler,
     HLSLToken_Sampler2D,

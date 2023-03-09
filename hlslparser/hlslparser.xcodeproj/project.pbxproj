@@ -30,8 +30,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		70235C3729B303AA00909C95 /* buildShaders.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = buildShaders.sh; sourceTree = "<group>"; };
-		70235C3829B3041E00909C95 /* out */ = {isa = PBXFileReference; lastKnownFileType = folder; path = out; sourceTree = "<group>"; };
 		70235C3A29B3145200909C95 /* Engine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Engine.h; sourceTree = "<group>"; };
 		70235C3B29B3145200909C95 /* HLSLParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HLSLParser.cpp; sourceTree = "<group>"; };
 		70235C3C29B3145200909C95 /* CodeWriter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CodeWriter.cpp; sourceTree = "<group>"; };
@@ -47,11 +45,8 @@
 		70235C4829B3145200909C95 /* HLSLTokenizer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HLSLTokenizer.cpp; sourceTree = "<group>"; };
 		70235C4929B3145200909C95 /* HLSLGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HLSLGenerator.h; sourceTree = "<group>"; };
 		70235C4A29B3145200909C95 /* HLSLTree.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HLSLTree.h; sourceTree = "<group>"; };
-		70235C5429B3260100909C95 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		702A2B5929A49DC8007D9A99 /* hlslparser */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hlslparser; sourceTree = BUILT_PRODUCTS_DIR; };
-		702A2B7E29AA942D007D9A99 /* Skinning.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = Skinning.hlsl; sourceTree = "<group>"; };
-		702A2B8329AC25BA007D9A99 /* ShaderMSL.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = ShaderMSL.h; sourceTree = "<group>"; };
-		702A2B8429AC4B23007D9A99 /* ShaderHLSL.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = ShaderHLSL.h; sourceTree = "<group>"; };
+		707D37DC29B97A3000B08D22 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,10 +85,7 @@
 		702A2B5029A49DC8007D9A99 = {
 			isa = PBXGroup;
 			children = (
-				70235C3729B303AA00909C95 /* buildShaders.sh */,
-				70235C5429B3260100909C95 /* README.md */,
-				702A2B7B29AA942D007D9A99 /* shaders */,
-				70235C3829B3041E00909C95 /* out */,
+				707D37DC29B97A3000B08D22 /* README.md */,
 				70235C3929B3145200909C95 /* src */,
 				702A2B5A29A49DC8007D9A99 /* Products */,
 			);
@@ -105,16 +97,6 @@
 				702A2B5929A49DC8007D9A99 /* hlslparser */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		702A2B7B29AA942D007D9A99 /* shaders */ = {
-			isa = PBXGroup;
-			children = (
-				702A2B8329AC25BA007D9A99 /* ShaderMSL.h */,
-				702A2B8429AC4B23007D9A99 /* ShaderHLSL.h */,
-				702A2B7E29AA942D007D9A99 /* Skinning.hlsl */,
-			);
-			path = shaders;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

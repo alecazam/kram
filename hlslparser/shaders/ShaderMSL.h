@@ -32,11 +32,12 @@ typedef NS_ENUM(int32_t, VA) {
     
     VANormal = 2,
     VATangent = 3,
+    VABitangent = 4,
     
-    VABlendIndices = 4,
-    VABlendWeight = 5,
+    VABlendIndices = 5,
+    VABlendWeight = 6,
     
-    VAColor0 = 6,
+    VAColor0 = 7,
     
     VATexcoord0 = 8,
     VATexcoord1 = 9,

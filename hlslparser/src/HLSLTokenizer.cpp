@@ -17,33 +17,53 @@ static const char* _reservedWords[] =
         "float2",
         "float3",
         "float4",
+        
 		"float2x2",
         "float3x3",
         "float4x4",
-        "float4x3",
-        "float4x2",
+        //"float4x3",
+        //"float4x2",
+        
         "half",
         "half2",
         "half3",
         "half4",
+        
 		"half2x2",
         "half3x3",
         "half4x4",
-        "half4x3",
-        "half4x2",
+        //"half4x3",
+        //"half4x2",
+        
         "bool",
 		"bool2",
 		"bool3",
 		"bool4",
+        
         "int",
         "int2",
         "int3",
         "int4",
+        
         "uint",
         "uint2",
         "uint3",
         "uint4",
+        
+        "short", // HLSLToken_Short
+        "short2",
+        "short3",
+        "short4",
+        
+        "ushort", // HLSLToken_Uhort
+        "ushort2",
+        "ushort3",
+        "ushort4",
+        
+        // TODO: double, u/char
+        
         "texture",
+        
         "sampler",
         "sampler2D",
         "sampler3D",
@@ -51,6 +71,7 @@ static const char* _reservedWords[] =
         "sampler2DShadow",
         "sampler2DMS",
         "sampler2DArray",
+        
         "if",
         "else",
         "for",
@@ -73,6 +94,8 @@ static const char* _reservedWords[] =
         "in",
         "out",
         "inout",
+        
+        // these are from fx file
         "sampler_state",
         "technique",
         "pass",
@@ -427,7 +450,7 @@ bool HLSLTokenizer::ScanNumber()
     else if (iEnd > m_buffer && GetIsNumberSeparator(iEnd[0]))
     {
         m_buffer = iEnd;
-        m_token  = HLSLToken_IntLiteral;
+        m_token  = HLSLToken_IntLiteral; // TODO: uint/short/ushort
         m_iValue = iValue;
         return true;
     }
@@ -615,6 +638,7 @@ void HLSLTokenizer::GetTokenName(char buffer[s_maxIdentifier]) const
     {
         snprintf(buffer, s_maxIdentifier, "%d", m_iValue);
     }
+    // TODO: short/ushort/uint
     else if (m_token == HLSLToken_Identifier)
     {
         strlcpy(buffer, m_identifier, s_maxIdentifier); // TODO: Alec, put in alt for Win
@@ -659,7 +683,7 @@ void HLSLTokenizer::GetTokenName(int token, char buffer[s_maxIdentifier])
             strcpy(buffer, "/=");
             break;
         
-        // literals (need uint?)
+        // literals
 		case HLSLToken_HalfLiteral:
 			strcpy( buffer, "half" );
 			break;
@@ -669,6 +693,7 @@ void HLSLTokenizer::GetTokenName(int token, char buffer[s_maxIdentifier])
         case HLSLToken_IntLiteral:
             strcpy(buffer, "int");
             break;
+        // TODO: need uint, short, ushort
                 
         case HLSLToken_Identifier:
             strcpy(buffer, "identifier");
