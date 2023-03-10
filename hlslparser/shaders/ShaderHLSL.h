@@ -28,220 +28,271 @@ typedef uint16_t4 ushort4;
 //typedef int64_t2 long2;
 //typedef int64_t3 long3;
 //typedef int64_t4 long4;
+//
 //typedef uint64_t2 ulong2;
 //typedef uint64_t3 ulong3;
 //typedef uint64_t4 ulong4;
+//
 //typedef float64_t2 double2;
 //typedef float64_t3 double3;
 //typedef float64_t4 double4;
 
-#define USE_HALF 1
+// compile to SM6.6 for these
+typedef uint8_t4_packed uchar4_packed;
+typedef int8_t4_packed char4_packed;
 
-// TODO: this only supports half on Texture2D
+// signed do sign extend
+ushort4 toUshort4(uchar4_packed packed)
+{
+    return unpack_u8u16(packed);
+}
+short4 toShort4(char4_packed packed)
+{
+    return unpack_s8s16(packed);
+}
+uint4 toUint4(uchar4_packed packed)
+{
+    return unpack_u8u32(packed);
+}
+int4 toInt4(char4_packed packed)
+{
+    return unpack_s8s32(packed);
+}
+
+// Are SM6.6 calls for pack_clamp_u8 using the wrong input type?
+// https://github.com/microsoft/DirectXShaderCompiler/issues/5091
+// pack lower 8
+uchar4_packed fromUshort4(ushort4 v)
+{
+    return pack_u8(v);
+}
+uchar4_packed fromShort4ClampU(short4 v) 
+{
+    return pack_clamp_u8(v);
+}
+char4_packed fromShort4(short4 v, bool clamp = true)
+{
+    return  clamp ? pack_clamp_s8(v) : pack_s8(v);
+}
+uchar4_packed fromUint4(uint4 v)
+{
+    return pack_u8(v);
+}
+uchar4_packed fromInt4ClampU(int4 v)
+{
+    return pack_clamp_u8(v);
+}
+char4_packed fromInt4(int4 v, bool clamp = true)
+{
+    return clamp ? pack_clamp_s8(v) : pack_s8(v);
+}
+
+
+#define USE_HALF 1
 
 // Don't know why HLSL doesn't support these
 #define min3(x,y,z) min(x, min(y, z))
 #define max3(x,y,z) max(x, max(y, z))
 #define length_squared(x) ((x)*(x))
 
-struct Texture2DSampler {
-    Texture2D<float4> t;
-    SamplerState s;
-};
+// TODO: fix parsing, so don't have to provide these overrides
+// The parser also has to know about all these
 
-#if USE_HALF
-// unique type, even though same data
-struct Texture2DHalfSampler {
-    Texture2D<float4> t; // TODO: should be Texture2D<half4> but spirv limit
-    SamplerState s;
-};
+//----------
 
-#endif
-
-struct Texture3DSampler {
-    Texture3D<float4> t;
-    SamplerState s;
-};
-
-struct TextureCubeSampler {
-    TextureCube<float4> t;
-    SamplerState s;
-};
-
-struct Texture2DShadowSampler {
-    Texture2D<float4> t;
-    SamplerComparisonState s;
-};
-
-struct Texture2DArraySampler {
-    Texture2DArray<float4> t;
-    SamplerState s;
-};
-
-//------------------------------
-
-// https://colinbarrebrisebois.com/2021/11/01/working-around-constructors-in-hlsl-or-lack-thereof/
-// Stupid HLSL lacks ctors.  Ugh!
-// Can't simplify to "return { t, a };" either.
-
-Texture2DSampler Texture2DSamplerCtor(Texture2D<float4> t, SamplerState s)
+float4 Sample(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 offset = 0)
 {
-    Texture2DSampler a = { t, s };
-    return a;
+    return t.Sample(s, texCoord, offset);
 }
 
-#if USE_HALF
-
-// This should take Texture2D<half4> but see
-// https://github.com/microsoft/DirectXShaderCompiler/issues/2711
-Texture2DHalfSampler Texture2DHalfSamplerCtor(Texture2D<float4> t, SamplerState s)
+float4 Sample(Texture2DArray<float4> t, SamplerState s, float3 texCoord, int2 offset = 0)
 {
-    Texture2DHalfSampler a = { t, s };
-    return a;
+    return t.Sample(s, texCoord, offset);
 }
-#endif
 
-Texture3DSampler Texture3DSamplerCtor(Texture3D<float4> t, SamplerState s)
+float4 Sample(Texture3D<float4> t, SamplerState s, float3 texCoord, int3 offset = 0)
 {
-    Texture3DSampler a = { t, s };
-    return a;
+    return t.Sample(s, texCoord, offset);
 }
 
-TextureCubeSampler TextureCubeSamplerCtor(TextureCube<float4> t, SamplerState s)
+// no offset
+float4 Sample(TextureCube<float4> t, SamplerState s, float3 texCoord)
 {
-    TextureCubeSampler a = { t, s };
-    return a;
+    return t.Sample(s, texCoord);
 }
 
-Texture2DShadowSampler Texture2DShadowSamplerCtor(Texture2D<float4> t, SamplerComparisonState s)
+float4 Sample(TextureCubeArray<float4> t, SamplerState s, float4 texCoord)
 {
-    Texture2DShadowSampler a = { t, s };
-    return a;
+    return t.Sample(s, texCoord);
 }
 
-Texture2DArraySampler Texture2DArraySamplerCtor(Texture2DArray<float4> t, SamplerState s)
+
+//----------
+
+float4 SampleLevel(Texture2D<float4> t, SamplerState s, float4 texCoord, int2 offset = 0)
 {
-    Texture2DArraySampler a = { t, s };
-    return a;
+    return t.SampleLevel(s, texCoord.xy, texCoord.w, offset);
+}
+float4 SampleLevel(Texture2DArray t, SamplerState s, float4 texCoord, int2 offset = 0)
+{
+    return t.SampleLevel(s, texCoord.xyz, texCoord.w, offset);
 }
 
-//------------------------------
-
-float4 tex2D(Texture2DSampler ts, float2 texCoord) {
-    return ts.t.Sample(ts.s, texCoord);
+float4 SampleLevel(Texture3D t, SamplerState s, float4 texCoord, int3 offset = 0)
+{
+    return t.SampleLevel(s, texCoord.xyz, texCoord.w, offset);
 }
 
-// gather only works on mip0
-float4 tex2DgatherRed(Texture2DSampler ts, float2 texCoord, int2 offset=0) {
-    return ts.t.GatherRed(ts.s, texCoord, offset);
+// no offset support
+float4 SampleLevel(TextureCube t, SamplerState s, float4 texCoord)
+{
+    return t.SampleLevel(s, texCoord.xyz, texCoord.w);
 }
 
-float4 tex2DgatherGreen(Texture2DSampler ts, float2 texCoord, int2 offset=0) {
-    return ts.t.GatherGreen(ts.s, texCoord, offset);
-}
-
-float4 tex2DgatherBlue(Texture2DSampler ts, float2 texCoord, int2 offset=0) {
-    return ts.t.GatherBlue(ts.s, texCoord, offset);
-}
-
-float4 tex2DgatherAlpha(Texture2DSampler ts, float2 texCoord, int2 offset=0) {
-    return ts.t.GatherAlpha(ts.s, texCoord, offset);
-}
-
-int2 tex2Dsize(Texture2DSampler ts) {
-    int2 size;
-    ts.t.GetDimensions(size.x, size.y);
-    return size;
-}
-
-int3 tex3Dsize(Texture3DSampler ts) {
-    int3 size;
-    ts.t.GetDimensions(size.x, size.y, size.z);
-    return size;
-}
-
-int texCUBEsize(TextureCubeSampler ts) {
-    int size;
-    ts.t.GetDimensions(size, size); // sizexsize
-    return size;
-}
-
-// don't use for PCF
-float4 tex2Dproj(Texture2DSampler ts, float4 texCoord) {
-    return ts.t.Sample(ts.s, texCoord.xy / texCoord.w);
-}
-
-float4 tex2Dlod(Texture2DSampler ts, float4 texCoord, int2 offset = 0) {
-    return ts.t.SampleLevel(ts.s, texCoord.xy, texCoord.w, offset);
-}
-
-float4 tex2Dbias(Texture2DSampler ts, float4 texCoord) {
-    return ts.t.SampleBias(ts.s, texCoord.xy, texCoord.w);
-}
-
-float4 tex2Dgrad(Texture2DSampler ts, float2 texCoord, float2 gradx, float2 grady) {
-   return ts.t.SampleGrad(ts.s, texCoord.xy, gradx, grady);
-}
-
-// This only applies to mip0
-float4 tex2Dcmp(Texture2DShadowSampler ts, float4 texCoord) {
-    return ts.t.SampleCmpLevelZero(ts.s, texCoord.xy, texCoord.z);
-}
-
-// This is int3 returning int2 in HLSL
-//float4 tex2Dfetch(Texture2DSampler ts, int2 texCoord) {
-//    return ts.t.Load(texCoord);
+// this would need more args for level
+//float4 SampleLevel(TextureCubeArray t, SamplerState s, float4 texCoord)
+//{
+//    return t.SampleLevel(s, texCoord.xyz, texCoord.w);
 //}
 
-float4 tex2DMSfetch(Texture2DMS<float4> t, int2 texCoord, int sample) {
+
+//----------
+
+float4 SampleBias(Texture2D<float4> t, SamplerState s, float4 texCoord)
+{
+    return t.SampleBias(s, texCoord.xy, texCoord.w);
+}
+
+float4 SampleBias(TextureCube<float4> t, SamplerState s, float4 texCoord)
+{
+    return t.SampleBias(s, texCoord.xyz, texCoord.w);
+}
+
+//----------
+
+float4 SampleGrad(Texture2D<float4> t, SamplerState s, float2 texCoord, float2 gradx, float2 grady)
+{
+   return t.SampleGrad(s, texCoord.xy, gradx, grady);
+}
+
+//----------
+
+// For persp shadows, remember to divide z = z/w before calling, or w = z/w on cube
+float4 SampleCmp(Texture2D t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
+{
+    return t.SampleCmp(s, texCoord.xy, texCoord.z, offset);
+}
+
+float4 SampleCmp(Texture2DArray t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
+{
+    return t.SampleCmp(s, texCoord.xy, texCoord.z, offset);
+}
+
+// no offset
+float4 SampleCmp(TextureCube t, SamplerComparisonState s, float4 texCoord)
+{
+    return t.SampleCmp(s, texCoord.xyz, texCoord.w);
+}
+
+float4 SampleCmp(TextureCubeArray t, SamplerComparisonState s, float4 texCoord)
+{
+    return t.SampleCmp(s, texCoord.xyz, texCoord.w);
+}
+
+//----------
+
+// this doesn't use SamplerState, raw load
+float4 Load(Texture2DMS<float4> t, int2 texCoord, int sample)
+{
     return t.Load(texCoord, sample);
 }
 
+//----------
+
+// gather only works on mip0
+float4 GatherRed(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 offset=0)
+{
+    return t.GatherRed(s, texCoord, offset);
+}
+
+float4 GatherGreen(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 offset=0)
+{
+    return t.GatherGreen(s, texCoord, offset);
+}
+
+float4 GatherBlue(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 offset=0)
+{
+    return t.GatherBlue(s, texCoord, offset);
+}
+
+float4 GatherAlpha(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 offset=0)
+{
+    return t.GatherAlpha(s, texCoord, offset);
+}
+
+
 #if USE_HALF
 
-half4 tex2D(Texture2DHalfSampler ts, float2 texCoord) {
-    return (half4)ts.t.Sample(ts.s, texCoord);
+// Note: HLSL to SPIRV doesn't support half Texture types, so must cast from float4
+// but MSL and HLSL to DXIL can use half Texture type.
+half4 SampleH(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 offset = 0)
+{
+    return (half4)t.Sample(s, texCoord, offset);
 }
 
-half4 tex2Dlod(Texture2DHalfSampler ts, float4 texCoordMip) {
-    return (half4)ts.t.Sample(ts.s, texCoordMip.xy, texCoordMip.w);
+half4 SampleLevelH(Texture2D<float4> t, SamplerState s, float4 texCoordMip, int2 offset = 0)
+{
+    return (half4)t.SampleLevel(s, texCoordMip.xy, texCoordMip.w, offset);
 }
 
-half4 tex2Dbias(Texture2DHalfSampler ts, float4 texCoordBias) {
-    return (half4)ts.t.SampleBias(ts.s, texCoordBias.xy, texCoordBias.w);
+// offset?
+half4 SampleBiasH(Texture2D<half> t, SamplerState s, float4 texCoordBias)
+{
+    return (half4)t.SampleBias(s, texCoordBias.xy, texCoordBias.w);
 }
 
 #else
 
-#define tex2DH tex2D
-#define tex2DHlod tex2Dlod
-#define tex2DHbias tex2Dbias
+// use all float4
+#define SampleH Sample
+#define SampleLevelH SampleLevel
+#define SampleBiasH SampleBias
 
 #endif
 
-float4 tex3D(Texture3DSampler ts, float3 texCoord) {
-    return ts.t.Sample(ts.s, texCoord);
+int2 GetDimensions(Texture2D t)
+{
+    int2 size;
+    t.GetDimensions(size.x, size.y);
+    return size;
 }
 
-float4 tex3Dlod(Texture3DSampler ts, float4 texCoord) {
-    return ts.t.SampleLevel(ts.s, texCoord.xyz, texCoord.w);
+int3 GetDimensions(Texture3D t)
+{
+    int3 size;
+    t.GetDimensions(size.x, size.y, size.z);
+    return size;
 }
 
-float4 texCUBE(TextureCubeSampler ts, float3 texCoord) {
-    return ts.t.Sample(ts.s, texCoord);
+int2 GetDimensions(TextureCube t)
+{
+    int2 size;
+    t.GetDimensions(size.x, size.y); // sizexsize
+    return size;
 }
 
-float4 texCUBElod(TextureCubeSampler ts, float4 texCoord) {
-    return ts.t.SampleLevel(ts.s, texCoord.xyz, texCoord.w);
+int3 GetDimensions(TextureCubeArray t)
+{
+    int3 size;
+    t.GetDimensions(size.x, size.y, size.z); // sizexsize
+    return size;
 }
 
-float4 texCUBEbias(TextureCubeSampler ts, float4 texCoord) {
-    return ts.t.SampleBias(ts.s, texCoord.xyz, texCoord.w);
-}
-
-float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
-    // return ts.t.Sample(ts.s, texCoord.xy, texCoord.z + 0.5); // 0.5 offset needed on nvidia gpus
-    return ts.t.Sample(ts.s, texCoord); // 0.5 offset
+int3 GetDimensions(Texture2DArray t)
+{
+    int3 size;
+    t.GetDimensions(size.x, size.y, size.z);
+    return size;
 }
 
 #endif // ShaderHLSL_h

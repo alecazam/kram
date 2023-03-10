@@ -277,6 +277,8 @@ HLSL
 * HLSL 2021 (latest) can distinguish structs with same types as unique
 * HLSL 2018 (default for DXC) can't tell structs apart if contain same types
 * HLSL added to clang
+* After 30 years, HLSL still does not have u/char support, and only 
+* added u/short support in 6.2.  So pack/unpack needed for SSBO.
 * https://github.com/Microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst#subpass-inputs
 * https://clang.llvm.org/docs/HLSL/HLSLSupport.html#:~:text=HLSL%20uses%20templates%20to%20define,case%20and%20issues%20a%20diagnostic.
 * https://devblogs.microsoft.com/directx/announcing-hlsl-2021/
@@ -373,7 +375,7 @@ Shading Language Versions
 
 HLSL
 * SM 6.2, target, added back int/half support
-* SM 6.6,
+* SM 6.6, added 8-bit pack ops
 * SM 6.7, SampleCmpLevel, RWTexture2DMS, RWTexture2DMSArray, signed texture offsets
 * https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_7_Advanced_Texture_Ops.html
 

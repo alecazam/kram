@@ -115,117 +115,47 @@ void clip(float x) {
     if (x < 0.0) discard_fragment();
 }
 
-struct Texture2DSampler {
-    Texture2DSampler(thread const texture2d<float>& t, thread const sampler& s) : t(t), s(s) {};
-    const thread texture2d<float>& t;
-    const thread sampler& s;
-};
 
-#if USE_HALF
-struct Texture2DHalfSampler {
-    Texture2DHalfSampler(thread const texture2d<half>& t, thread const sampler& s) : t(t), s(s) {};
-    const thread texture2d<half>& t;
-    const thread sampler& s;
-};
-#endif
-
-struct Texture3DSampler {
-    Texture3DSampler(thread const texture3d<float>& t, thread const sampler& s) : t(t), s(s) {};
-    const thread texture3d<float>& t;
-    const thread sampler& s;
-};
-
-struct TextureCubeSampler {
-    TextureCubeSampler(thread const texturecube<float>& t, thread const sampler& s) : t(t), s(s) {};
-    const thread texturecube<float>& t;
-    const thread sampler& s;
-};
-
-struct Texture2DShadowSampler {
-    Texture2DShadowSampler(thread const depth2d<float>& t, thread const sampler& s) : t(t), s(s) {};
-    const thread depth2d<float>& t;
-    const thread sampler& s;
-};
-
-struct Texture2DArraySampler {
-    const thread texture2d_array<float>& t;
-    const thread sampler& s;
-    Texture2DArraySampler(thread const texture2d_array<float>& t, thread const sampler& s) : t(t), s(s) {};
-};
     
-int2 tex2Dsize(Texture2DSampler ts) {
-    int2 size(ts.t.get_width(), ts.t.get_height());
-    return size;
-}
-
-
-int3 tex3Dsize(Texture3DSampler ts) {
-    int3 size(ts.t.get_width(), ts.t.get_height(), ts.t.get_depth());
-    return size;
-}
-
-int texCUBEsize(TextureCubeSampler ts) {
-    int size(ts.t.get_width());
-    return size;
-}
-    
-    
-float4 tex2D(Texture2DSampler ts, float2 texCoord) {
-    return ts.t.sample(ts.s, texCoord);
-}
-
-// don't use for PCF
-//float4 tex2Dproj(Texture2DSampler ts, float4 texCoord) {
-//    return ts.t.sample(ts.s, texCoord.xy / texCoord.w);
-//}
+//---------
 
 // gather only works on mip0
-float4 tex2DgatherRed(Texture2DSampler ts, float2 texCoord, int2 offset=0) {
-    return ts.t.gather(ts.s, texCoord, offset, component::x); // TODO: int to component
+float4 GatherRed(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
+    return t.gather(s, texCoord, offset, component::x);
 }
   
-float4 tex2DgatherGreen(Texture2DSampler ts, float2 texCoord,  int2 offset=0) {
-    return ts.t.gather(ts.s, texCoord, offset, component::y); // TODO: int to component
+float4 GatherGreen(texture2d<float> t, sampler s, float2 texCoord,  int2 offset=0) {
+    return t.gather(s, texCoord, offset, component::y);
 }
 
-float4 tex2DgatherBlue(Texture2DSampler ts, float2 texCoord,  int2 offset=0) {
-    return ts.t.gather(ts.s, texCoord, offset, component::z); // TODO: int to component
+float4 GatherBlue(texture2d<float> t, sampler s, float2 texCoord,  int2 offset=0) {
+    return t.gather(s, texCoord, offset, component::z);
 }
 
-float4 tex2DgatherAlpha(Texture2DSampler ts, float2 texCoord, int2 offset=0) {
-    return ts.t.gather(ts.s, texCoord, offset, component::w); // TODO: int to component
+float4 GatherAlpha(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
+    return t.gather(s, texCoord, offset, component::w);
 }
 
-float4 tex2Dlod(Texture2DSampler ts, float4 texCoordMip) {
-    return ts.t.sample(ts.s, texCoordMip.xy, level(texCoordMip.w));
+//---------
+
+float4 SampleGrad(texture2d<float> t, sampler s, float2 texCoord, float2 gradx, float2 grady) {
+   return t.sample(s, texCoord.xy, gradient2d(gradx, grady));
 }
 
-float4 tex2Dgrad(Texture2DSampler ts, float2 texCoord, float2 gradx, float2 grady) {
-   return ts.t.sample(ts.s, texCoord.xy, gradient2d(gradx, grady));
-}
-
-float4 tex2Dbias(Texture2DSampler ts, float4 texCoordBias) {
-    return ts.t.sample(ts.s, texCoordBias.xy, bias(texCoordBias.w));
-}
-
-float4 tex2Dfetch(Texture2DSampler ts, int2 texCoord) {
-    return ts.t.read((uint2)texCoord);
-}
+//---------
 
 #if USE_HALF
 
-// use samper2D<half> to specify these
-
-half4 tex2D(Texture2DHalfSampler ts, float2 texCoord) {
-    return ts.t.sample(ts.s, texCoord);
+half4 SampleH(Texture2DHalfSampler t, sampler s, float2 texCoord) {
+    return t.sample(s, texCoord);
 }
 
-half4 tex2Dlod(Texture2DHalfSampler ts, float4 texCoordMip) {
-    return ts.t.sample(ts.s, texCoordMip.xy, level(texCoordMip.w));
+half4 SampleLevelH(Texture2DHalfSampler t, sampler s, float4 texCoordMip) {
+    return t.sample(s, texCoordMip.xy, level(texCoordMip.w));
 }
 
-half4 tex2Dbias(Texture2DHalfSampler ts, float4 texCoordBias) {
-    return ts.t.sample(ts.s, texCoordBias.xy, bias(texCoordBias.w));
+half4 SampleBiasH(Texture2DHalfSampler t, sampler s, float4 texCoordBias) {
+    return t.sample(s, texCoordBias.xy, bias(texCoordBias.w));
 }
 
 #else
@@ -236,43 +166,107 @@ half4 tex2Dbias(Texture2DHalfSampler ts, float4 texCoordBias) {
 
 #endif
 
-float4 tex3D(Texture3DSampler ts, float3 texCoord) {
-    return ts.t.sample(ts.s, texCoord);
+
+
+float4 SampleLevel(texture2d<float> t, sampler s, float4 texCoordMip) {
+    return t.sample(s, texCoordMip.xy, level(texCoordMip.w));
 }
 
-
-float4 tex3Dlod(Texture3DSampler ts, float4 texCoordMip) {
-    return ts.t.sample(ts.s, texCoordMip.xyz, level(texCoordMip.w));
+float4 SampleLevel(texturecube<float> t, sampler s, float4 texCoordMip) {
+    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 }
 
-float4 texCUBE(TextureCubeSampler ts, float3 texCoord) {
-    return ts.t.sample(ts.s, texCoord);
+float4 SampleLevel(texture2d_array<float> t, sampler s, float4 texCoordMip) {
+    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 }
 
-float4 texCUBElod(TextureCubeSampler ts, float4 texCoordMip) {
-    return ts.t.sample(ts.s, texCoordMip.xyz, level(texCoordMip.w));
+float4 SampleLevel(texture3d<float> t, sampler s, float4 texCoordMip) {
+    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 }
 
-float4 texCUBEbias(TextureCubeSampler ts, float4 texCoordBias) {
-    return ts.t.sample(ts.s, texCoordBias.xyz, bias(texCoordBias.w));
-}
-    
-// iOS may need shadow sampler inline
-//    float4 tex2Dcmp(Texture2DShadowSampler ts, float4 texCoordCompare) {
-//        constexpr sampler shadow_constant_sampler(mip_filter::none, min_filter::linear, mag_filter::linear, address::clamp_to_edge, compare_func::less);"
-//        return ts.t.sample_compare(shadow_constant_sampler, texCoordCompare.xy, texCoordCompare.z);
-//    }
-
-
-float4 tex2Dcmp(Texture2DShadowSampler ts, float4 texCoordCompare) {
-    return ts.t.sample_compare(ts.s, texCoordCompare.xy, texCoordCompare.z);
+float4 SampleLevel(texturecube_array<float> t, sampler s, float4 texCoordMip) {
+    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 }
 
-float4 tex2DMSfetch(texture2d_ms<float> t, int2 texCoord, int sample) {
+// ----
+
+float4 SampleBias(texturecube<float> t, sampler s, float4 texCoordBias) {
+    return t.sample(s, texCoordBias.xyz, bias(texCoordBias.w));
+}
+   
+float4 SampleBias(texture2d<float> t, sampler s, float4 texCoordBias) {
+    return t.sample(s, texCoordBias.xy, bias(texCoordBias.w));
+}
+
+// ios may need to hardcode sampler
+// constexpr sampler shadowSampler(mip_filter::none, min_filter::linear, mag_filter::linear, address::clamp_to_border, compare_func::greater);
+
+// May have to detect SamplerComparisonState, and mark texture as depth2d
+float4 SampleCmp(depth2d<float> t, sampler s, float4 texCoordCompare) {
+    // division for perspective shadows, but caller should handle this
+    return t.sample_compare(s, texCoordCompare.xy, texCoordCompare.z / texCoordCompare.w );
+}
+
+float4 Load(texture2d_ms<float> t, int2 texCoord, int sample) {
     return t.read((uint2)texCoord, (uint)sample);
 }
 
-float4 tex2DArray(Texture2DArraySampler ts, float3 texCoord) {
-    return ts.t.sample(ts.s, texCoord.xy, texCoord.z + 0.5); // 0.5 offset needed on nvidia gpus
+// ----
+
+float4 Sample(texture2d_array<float> t, sampler s, float3 texCoord) {
+    return t.sample(s, texCoord.xy, texCoord.z);
 }
         
+float4 Sample(texture2d<float> t, sampler s, float2 texCoord)
+{
+    return t.sample(s, texCoord);
+}
+half4 SampleH(texture2d<half> t, sampler s, float2 texCoord)
+{
+    return t.sample(s, texCoord);
+}
+
+float4 Sample(texture3d<float> t, sampler s, float3 texCoord) {
+    return t.sample(s, texCoord);
+}
+
+float4 Sample(texturecube<float> t, sampler s, float3 texCoord) {
+    return t.sample(s, texCoord);
+}
+
+// ----
+
+int2 GetDimensions(texture2d t)
+{
+    int2 size(t.get_width(), t.get_height());
+    return size;
+}
+
+int3 GetDimensions(texture3d t)
+{
+    int3 size(t.get_width(), t.get_height(), t.get_depth());
+    return size;
+}
+
+int2 GetDimensions(texturecube t)
+{
+    int2 size(t.get_width(), t.get_width());
+    return size;
+}
+
+int2 GetDimensions(texturecube_array t)
+{
+    // TODO: arrayCount?
+    int2 size(t.get_width(), t.get_width());
+    t.GetDimensions(size, size); // sizexsize
+    return size;
+}
+
+int2 GetDimensions(texture2d_array t)
+{
+    // TODO: arrayCount?
+    int2 size(t.get_width(), t.get_height());
+    t.GetDimensions(size, size);
+    return size;
+}
+

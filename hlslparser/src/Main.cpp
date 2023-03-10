@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
+#include <filesystem>
+
 using namespace std;
 
 enum Target
@@ -92,7 +94,7 @@ int main( int argc, char* argv[] )
 	using namespace M4;
 
 	// Parse arguments
-	const char* fileName = NULL;
+	string fileName;
 	const char* entryName = NULL;
 
 	// TODO: could we take modern DX12 HLSL and translate to MSL only
@@ -154,7 +156,7 @@ int main( int argc, char* argv[] )
 		}
 	}
 
-	if( fileName == NULL  )
+	if( fileName.empty() )
 	{
 		Log_Error( "Missing source filename\n" );
 		PrintUsage();
@@ -204,6 +206,14 @@ int main( int argc, char* argv[] )
         outputFileName += ".hlsl";
     }
     
+    // find  full pathname of the fileName, so that errors are logged
+    // in way that can be clicked to. absolute includes .. in it, canonical does not.
+    auto path = filesystem::path(fileName);
+    fileName = filesystem::canonical( path );
+    
+    path = filesystem::path(outputFileName);
+    outputFileName = filesystem::canonical( path );
+    
     if ( outputFileName == fileName )
     {
         Log_Error( "Src and Dst filenames match.  Exiting.\n" );
@@ -216,15 +226,17 @@ int main( int argc, char* argv[] )
     
 	// Read input file
     string source;
-    if (!ReadFile( fileName, source ))
+    if (!ReadFile( fileName.c_str(), source ))
     {
         Log_Error( "Input file not found\n" );
         return 1;
     }
 
+    
+    
 	// Parse input file
 	Allocator allocator;
-	HLSLParser parser( &allocator, fileName, source.data(), source.size() );
+	HLSLParser parser( &allocator, fileName.c_str(), source.data(), source.size() );
     if (isDebug)
     {
         parser.SetKeepComments(true);

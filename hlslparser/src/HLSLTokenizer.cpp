@@ -62,6 +62,17 @@ static const char* _reservedWords[] =
         
         // TODO: double, u/char
         
+        "Texture2D",
+        "Texture3D",
+        "TextureCube",
+        "Texture2DArray",
+        "TextureCubeArray",
+        "Texture2DMS",
+        
+        "SamplerState",
+        "SamplerComparisonState",
+/*
+        // TODO: eliminate DX9 types
         "texture",
         
         "sampler",
@@ -71,6 +82,7 @@ static const char* _reservedWords[] =
         "sampler2DShadow",
         "sampler2DMS",
         "sampler2DArray",
+*/
         
         "if",
         "else",
@@ -87,9 +99,11 @@ static const char* _reservedWords[] =
         "return",
         "continue",
         "discard",
+        
         "const",
         "static",
         "inline",
+        
         "uniform",
         "in",
         "out",
@@ -261,13 +275,13 @@ void HLSLTokenizer::Next()
     }
 
     // ++, --
-    if ((m_buffer[0] == '-' || m_buffer[1] == '-'))
+    if ((m_buffer[0] == '-' && m_buffer[1] == '-'))
     {
         m_token = HLSLToken_MinusMinus;
         m_buffer += 2;
         return;
     }
-    if ((m_buffer[0] == '+' || m_buffer[1] == '+'))
+    if ((m_buffer[0] == '+' && m_buffer[1] == '+'))
     {
         m_token = HLSLToken_PlusPlus;
         m_buffer += 2;

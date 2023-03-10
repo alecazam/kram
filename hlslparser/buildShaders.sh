@@ -20,7 +20,18 @@ pushd outshaders
 # note bash can't expand tilda, so using HOME instead
 vulkanSDK="${HOME}/devref/vulkansdk/1.3.239.0/macOS/bin/"
 
+projectDir="${HOME}/devref/kram/hlslparser/"
+
+srcDir=${projectDir}
+srcDir+="shaders/"
+
+dstDir=${projectDir}
+dstDir+="outshaders/"
+
+
+# this only pulls the release build, so testing debug won't update
 appHlslparser=../build/hlslparser/Build/Products/Release/hlslparser
+
 appDxc=${vulkanSDK}
 appGlslc=${vulkanSDK}
 appSprivReflect=${vulkanSDK}
@@ -28,11 +39,15 @@ appDxc+="dxc"
 appGlslc+="glslc"
 appSprivReflect+="spirv-reflect"
 
+# Xcode will only do clickthrough to warnings/errors if the filename
+# is a full path.  That's super annoying.
+
 #-------------------------------
 
 # copy over the headers that translate to MSL/HLSL
-cp ../shaders/ShaderMSL.h .
-cp ../shaders/ShaderHLSL.h .
+# TODO: move to outshaders, so when there are errors can clickthough to orignal files
+cp ${srcDir}/ShaderMSL.h .
+cp ${srcDir}/ShaderHLSL.h .
 
 parserOptions=""
 
@@ -41,11 +56,13 @@ parserOptions+="-g "
 
 # build the metal shaders
 echo gen MSL
-${appHlslparser} ${parserOptions} -i ../shaders/Skinning.hlsl -o Skinning.metal
+${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.metal
+${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.metal
 
 # build the hlsl shaders
 echo gen HLSL
-${appHlslparser} ${parserOptions} -i ../shaders/Skinning.hlsl -o Skinning.hlsl
+${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.hlsl
+${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.hlsl
 
 #-------------------------------
 
@@ -55,28 +72,35 @@ pushd out
 
 #-------------------------------
 
-# Metal is C++14
+testMetal=0
 
-# see if HLSL compiles to MSL (requires macOS Vulkan install)
+if [[ $testMetal -eq 1 ]]; then
+    # Metal is C++14
 
-# record sources into code for gpu capture (don't ship this), debug mode
-metalMacOptions="-frecord-sources -g "
+    # see if HLSL compiles to MSL (requires macOS Vulkan install)
 
-# O2 + size opt
-# metalMacOptions+="-Os"
+    # record sources into code for gpu capture (don't ship this), debug mode
+    metalMacOptions="-frecord-sources -g "
 
-# TODO: metal3.0 on M1 macOS13/iOS16
-metalMacOptions+="-std=macos-metal2.3 "
+    # O2 + size opt
+    # metalMacOptions+="-Os"
 
-# see if MSL compile
-echo compile MSL for macOS
-xcrun -sdk macosx metal ../outshaders/Skinning.metal ${metalMacOptions} -o mac/Skinning.metallib
+    # TODO: metal3.0 on M1 macOS13/iOS16
+    metalMacOptions+="-std=macos-metal2.3 "
 
-# metaliosOptions="-frecord-sources -g "
-# metaliosOptions+="-std=ios-metal2.3 "
+    # TODO: build to air, and then compile to single metallib and metallibdsym
+    # see if MSL compile
+    echo compile MSL for macOS
+    xcrun -sdk macosx metal ${dstDir}Skinning.metal ${metalMacOptions} -o mac/Skinning.metallib
 
-#echo compile MSL for iOS
-#xcrun -sdk macosx metal ../outshaders/Skinning.metal ${metaliosOptions} -o ios/Skinning.metallib
+    xcrun -sdk macosx metal ${dstDir}Sample.metal ${metalMacOptions} -o mac/Sample.metallib
+
+    # metaliosOptions="-frecord-sources -g "
+    # metaliosOptions+="-std=ios-metal2.3 "
+
+    #echo compile MSL for iOS
+    #xcrun -sdk macosx metal ${dstDir}Skinning.metal ${metaliosOptions} -o ios/Skinning.metallib
+fi
 
 #-------------------------------
 
@@ -103,12 +127,13 @@ args+="-HV 2021 "
  
 args+="-fspv-extension=SPV_KHR_shader_draw_parameters "
 
-# have to also compile to 6.2
+# have to also compile to 6.2 for u/short and half
+# then 6.6 adds u/char8 pack/unpack calls
 vsargs=${args}
-vsargs+="-T vs_6_2 "
+vsargs+="-T vs_6_6 "
 
 psargs=${args}
-psargs+="-T ps_6_2 "
+psargs+="-T ps_6_6 "
 
 #echo ${vsargs}
 #echo ${psargs}
@@ -135,8 +160,8 @@ psargs+="-T ps_6_2 "
 
 # 1.0,1.1,1.2 default to spv1.1,1.3,1.5
 echo gen SPIRV 1.2 with dxc
-${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo android/Skinning.vert.spv -Fc android/Skinning.vert.spv.txt ../outshaders/Skinning.hlsl
-${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo android/Skinning.frag.spv -Fc android/Skinning.frag.spv.txt ../outshaders/Skinning.hlsl
+${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo android/Skinning.vert.spv -Fc android/Skinning.vert.spv.txt ${dstDir}Skinning.hlsl
+${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo android/Skinning.frag.spv -Fc android/Skinning.frag.spv.txt ${dstDir}Skinning.hlsl
 
 # -Fre not supported with spriv, so just use spirv-reflect
 # either yaml or random format, why can't this just output json?

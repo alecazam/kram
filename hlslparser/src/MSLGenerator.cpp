@@ -139,49 +139,56 @@ namespace M4
         HLSLStatement* statement = root->statement;
         ASSERT(m_firstClassArgument == NULL);
 
-        HLSLType samplerType(HLSLBaseType_Sampler);
+        //HLSLType samplerType(HLSLBaseType_Sampler);
 
         int nextTextureRegister = 0;
+        int nextSamplerRegister = 0;
         int nextBufferRegister = 0;
 
         while (statement != NULL)
         {
+            if (statement->hidden)
+            {
+                statement = statement->nextStatement;
+                continue;
+            }
+            
             if (statement->nodeType == HLSLNodeType_Declaration)
             {
                 HLSLDeclaration* declaration = (HLSLDeclaration*)statement;
 
-                if (!declaration->hidden && IsSamplerType(declaration->type))
+                if (IsTextureType(declaration->type))
                 {
+                    const char * textureName = declaration->name;
+                    
                     int textureRegister = ParseRegister(declaration->registerName, nextTextureRegister);
+                     const char * textureRegisterName = m_tree->AddStringFormat("texture(%d)", textureRegister);
 
-                    const char * textureName = m_tree->AddStringFormat("%s_texture", declaration->name);
-                    const char * textureRegisterName = m_tree->AddStringFormat("texture(%d)", textureRegister);
                     AddClassArgument(new ClassArgument(textureName, declaration->type, textureRegisterName));
-
-                    if (declaration->type.baseType != HLSLBaseType_Sampler2DMS)
-                    {
-                        const char * samplerName = m_tree->AddStringFormat("%s_sampler", declaration->name);
-                        const char * samplerRegisterName = m_tree->AddStringFormat("sampler(%d)", textureRegister);
-                        AddClassArgument(new ClassArgument(samplerName, samplerType, samplerRegisterName));
-                    }
+                }
+                else if (IsSamplerType(declaration->type))
+                {
+                    const char * samplerName = declaration->name;
+                    
+                    int samplerRegister = ParseRegister(declaration->registerName, nextSamplerRegister);
+                    const char * samplerRegisterName = m_tree->AddStringFormat("sampler(%d)", samplerRegister);
+                    
+                    AddClassArgument(new ClassArgument(samplerName, declaration->type, samplerRegisterName));
                 }
             }
             else if (statement->nodeType == HLSLNodeType_Buffer)
             {
                 HLSLBuffer * buffer = (HLSLBuffer *)statement;
+                
+                HLSLType type(HLSLBaseType_UserDefined);
+                type.addressSpace = HLSLAddressSpace_Constant;
+                type.typeName = m_tree->AddStringFormat("%s_ubo", buffer->name);
 
-                if (!buffer->hidden)
-                {
-                    HLSLType type(HLSLBaseType_UserDefined);
-                    type.addressSpace = HLSLAddressSpace_Constant;
-                    type.typeName = m_tree->AddStringFormat("%s_ubo", buffer->name);
+                int bufferRegister = ParseRegister(buffer->registerName, nextBufferRegister) + m_options.bufferRegisterOffset;
 
-                    int bufferRegister = ParseRegister(buffer->registerName, nextBufferRegister) + m_options.bufferRegisterOffset;
+                const char * bufferRegisterName = m_tree->AddStringFormat("buffer(%d)", bufferRegister);
 
-                    const char * bufferRegisterName = m_tree->AddStringFormat("buffer(%d)", bufferRegister);
-
-                    AddClassArgument(new ClassArgument(buffer->name, type, bufferRegisterName));
-                }
+                AddClassArgument(new ClassArgument(buffer->name, type, bufferRegisterName));
             }
 
             statement = statement->nextStatement;
@@ -838,50 +845,57 @@ namespace M4
     {
         if (IsSamplerType(declaration->type))
         {
+            m_writer.Write("thread sampler& %s", declaration->name);
+        }
+        else if (IsTextureType(declaration->type))
+        {
             // Declare a texture and a sampler instead
             // We do not handle multiple textures on the same line
             ASSERT(declaration->nextDeclaration == NULL);
             const char * formatName = "float";
-            if (declaration->type.samplerType == HLSLBaseType_Half && !m_options.treatHalfAsFloat)
+            if (declaration->type.textureType == HLSLBaseType_Half && !m_options.treatHalfAsFloat)
             {
                 formatName = "half";
             }
 
-            if (declaration->type.baseType == HLSLBaseType_Sampler2D)
+            if (declaration->type.baseType == HLSLBaseType_Texture2D)
             {
-                m_writer.Write("thread texture2d<%s>& %s_texture;", formatName, declaration->name);
-                m_writer.Write("thread sampler& %s_sampler", declaration->name);
+                m_writer.Write("thread texture2d<%s>& %s", formatName, declaration->name);
             }
-            else if (declaration->type.baseType == HLSLBaseType_Sampler3D)
+            else if (declaration->type.baseType == HLSLBaseType_Texture2DArray)
             {
-                m_writer.Write("thread texture3d<%s>& %s_texture;", formatName, declaration->name);
-                m_writer.Write("thread sampler& %s_sampler", declaration->name);
+                m_writer.Write("thread texture2d_array<%s>& %s", formatName, declaration->name);
             }
-            else if (declaration->type.baseType == HLSLBaseType_SamplerCube)
+            else if (declaration->type.baseType == HLSLBaseType_TextureCubeArray)
             {
-                m_writer.Write("thread texturecube<%s>& %s_texture;", formatName, declaration->name);
-                m_writer.Write("thread sampler& %s_sampler", declaration->name);
+                m_writer.Write("thread texturecube_array<%s>& %s", formatName, declaration->name);
             }
-            else if (declaration->type.baseType == HLSLBaseType_Sampler2DShadow)
+            else if (declaration->type.baseType == HLSLBaseType_Texture3D)
             {
-                // Note: ios has 16f depth now, so don't assume float
-                m_writer.Write("thread depth2d<%s>& %s_texture;", formatName,declaration->name);
-                m_writer.Write("thread sampler& %s_sampler", declaration->name);
+                m_writer.Write("thread texture3d<%s>& %s", formatName, declaration->name);
             }
-            else if (declaration->type.baseType == HLSLBaseType_Sampler2DMS)
+            else if (declaration->type.baseType == HLSLBaseType_TextureCube)
+            {
+                m_writer.Write("thread texturecube<%s>& %s", formatName, declaration->name);
+            }
+// TODO: need equivalent of this
+//            else if (declaration->type.baseType == HLSLBaseType_Texture2DShadow)
+//            {
+//                // Note: ios has 16f depth now, so don't assume float
+//                m_writer.Write("thread depth2d<%s>& %s;", formatName,declaration->name);
+//            }
+            else if (declaration->type.baseType == HLSLBaseType_Texture2DMS)
             {
                 // no sampler, just Load samples
-                m_writer.Write("thread texture2d_ms<%s>& %s_texture;", formatName, declaration->name);
+                m_writer.Write("thread texture2d_ms<%s>& %s_texture", formatName, declaration->name);
             }
-            else if (declaration->type.baseType == HLSLBaseType_Sampler2DArray)
+            else if (declaration->type.baseType == HLSLBaseType_Texture2DArray)
             {
-                m_writer.Write("thread texture2d_array<%s>& %s_texture;", formatName, declaration->name);
-                m_writer.Write("thread sampler& %s_sampler", declaration->name);
+                m_writer.Write("thread texture2d_array<%s>& %s_texture", formatName, declaration->name);
             }
             else
             {
-                // TODO: this should be error, not stuff into file
-                m_writer.Write("<unhandled texture type>");
+               Error("<unhandled texture type>");
             }
         }
         else
@@ -1123,6 +1137,23 @@ namespace M4
         {
             HLSLIdentifierExpression* identifierExpression = static_cast<HLSLIdentifierExpression*>(expression);
             const char* name = identifierExpression->name;
+            
+            /* don't need this either, just pass the same name
+                calls now take tex and sampler if specified
+             
+            if (identifierExpression->global && IsSamplerType(identifierExpression->expressionType))
+            {
+                // TODO: just pass in
+                m_writer.Write("%s", name);
+            }
+            else if (identifierExpression->global && IsTextureType(identifierExpression->expressionType))
+            {
+                // TODO: just pass in
+                m_writer.Write("%s", name);
+            }
+            */
+            
+            /* Stop wrapping in structs
             // For texture declaration, generate a struct instead
             if (identifierExpression->global && IsSamplerType(identifierExpression->expressionType))
             {
@@ -1151,9 +1182,10 @@ namespace M4
                 else if (identifierExpression->expressionType.baseType == HLSLBaseType_Sampler2DArray)
                     m_writer.Write("Texture2DArraySampler(%s_texture, %s_sampler)", name, name);
                 else
-                    m_writer.Write("<unhandled texture type>");
+                    Error("<unhandled texture type>");
             }
-            else
+            
+            else */
             {
                 if (identifierExpression->global)
                 {
@@ -1525,6 +1557,7 @@ namespace M4
                 }
             }
         }
+        /*
         if (IsSamplerType(type))
         {
             if (type.baseType == HLSLBaseType_Sampler2D) {
@@ -1544,9 +1577,11 @@ namespace M4
             else if (type.baseType == HLSLBaseType_Sampler2DShadow)
                 typeName = "Texture2DMSSampler";
             else
-                typeName = "<unhandled texture type>";
+               Error( "<unhandled texture type>" );
         }
-        else if (alignment != 0 && !isTypeCast)
+        else
+        */
+        if (alignment != 0 && !isTypeCast)
         {
             // caller can request alignment, but default is 0
             m_writer.Write("alignas(%d) ", alignment);
@@ -2084,7 +2119,7 @@ namespace M4
         bool half_to_float = promote && m_options.treatHalfAsFloat;// && !exactType;
         
         // TODO: move carting around half/float to texture
-        bool half_samplers = promote && type.samplerType == HLSLBaseType_Half && !m_options.treatHalfAsFloat;
+        bool half_samplers = promote && type.textureType == HLSLBaseType_Half && !m_options.treatHalfAsFloat;
 
         auto baseType = type.baseType;
         if (half_to_float)
@@ -2099,16 +2134,17 @@ namespace M4
         switch (baseType)
         {
         // Texture should cart the half vs. float
-        case HLSLBaseType_Texture:          return "texture";
-                
-        case HLSLBaseType_Sampler:          return "sampler";
-            // ACoget-TODO: How to detect non-float textures, if relevant?
-        case HLSLBaseType_Sampler2D:        return half_samplers ? "texture2d<half>" : "texture2d<float>";
-        case HLSLBaseType_Sampler3D:        return half_samplers ? "texture3d<half>" : "texture3d<float>";
-        case HLSLBaseType_SamplerCube:      return half_samplers ? "texturecube<half>" : "texturecube<float>";
-        case HLSLBaseType_Sampler2DShadow:  return "depth2d<float>";
-        case HLSLBaseType_Sampler2DMS:      return half_samplers ? "texture2d_ms<half>" : "texture2d_ms<float>";
-                
+        case HLSLBaseType_SamplerState:            return "sampler";
+        case HLSLBaseType_SamplerComparisonState:  return "sampler"; // TODO:
+            
+        case HLSLBaseType_Texture2D:        return half_samplers ? "texture2d<half>" : "texture2d<float>";
+        case HLSLBaseType_Texture3D:        return half_samplers ? "texture3d<half>" : "texture3d<float>";
+        case HLSLBaseType_TextureCube:      return half_samplers ? "texturecube<half>" : "texturecube<float>";
+        //case HLSLBaseType_Texture2DShadow:  return "depth2d<float>";
+        case HLSLBaseType_Texture2DMS:      return half_samplers ? "texture2d_ms<half>" : "texture2d_ms<float>";
+        case HLSLBaseType_TextureCubeArray:      return half_samplers ? "texturecube_array<half>" : "texturecube_array<float>";
+        case HLSLBaseType_Texture2DArray:      return half_samplers ? "texture2d_array<half>" : "texture2d_array<float>";
+           
         case HLSLBaseType_UserDefined:      return type.typeName;
         default:
             ASSERT(0);

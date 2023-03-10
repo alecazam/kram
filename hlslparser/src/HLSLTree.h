@@ -46,25 +46,6 @@ enum HLSLNodeType
     HLSLNodeType_Comment
 };
 
-/*
-enum HLSLTypeDimension
-{
-    HLSLTypeDimension_None,
-    
-    HLSLTypeDimension_Scalar,
-    
-    HLSLTypeDimension_Vector2,
-    HLSLTypeDimension_Vector3,
-    HLSLTypeDimension_Vector4,
-    
-    HLSLTypeDimension_Matrix2x2,
-    HLSLTypeDimension_Matrix3x3,
-    HLSLTypeDimension_Matrix4x4,
-    //HLSLTypeDimension_Matrix4x3, // TODO: no 3x4
-    //HLSLTypeDimension_Matrix4x2
-};
-*/
-
 enum HLSLBaseType
 {
     HLSLBaseType_Unknown,
@@ -119,6 +100,17 @@ enum HLSLBaseType
     HLSLBaseType_Ushort3,
     HLSLBaseType_Ushort4,
     
+    HLSLBaseType_Texture2D,
+    HLSLBaseType_Texture3D,
+    HLSLBaseType_TextureCube,
+    HLSLBaseType_Texture2DArray,
+    HLSLBaseType_TextureCubeArray,
+    HLSLBaseType_Texture2DMS,
+    
+    HLSLBaseType_SamplerState,
+    HLSLBaseType_SamplerComparisonState,
+    
+/*
     // texture
     HLSLBaseType_Texture,
     
@@ -130,6 +122,7 @@ enum HLSLBaseType
     HLSLBaseType_Sampler2DShadow,
     HLSLBaseType_Sampler2DMS,
     HLSLBaseType_Sampler2DArray,
+*/
     
     HLSLBaseType_UserDefined,       // struct
     HLSLBaseType_Expression,        // type argument for defined() sizeof() and typeof().
@@ -140,10 +133,10 @@ enum HLSLBaseType
     
     // counts
     HLSLBaseType_FirstNumeric = HLSLBaseType_Float,
-    HLSLBaseType_LastNumeric = HLSLBaseType_Uint4,
+    HLSLBaseType_LastNumeric = HLSLBaseType_Ushort4,
     
     HLSLBaseType_FirstInteger = HLSLBaseType_Bool,
-    HLSLBaseType_LastInteger = HLSLBaseType_Uint4,
+    HLSLBaseType_LastInteger = HLSLBaseType_LastNumeric,
    
     HLSLBaseType_NumericCount = HLSLBaseType_LastNumeric - HLSLBaseType_FirstNumeric + 1
 };
@@ -312,7 +305,7 @@ struct HLSLType
     explicit HLSLType(HLSLBaseType _baseType = HLSLBaseType_Unknown)
     { 
         baseType    = _baseType;
-        samplerType = HLSLBaseType_Float;
+        textureType = HLSLBaseType_Float;
         typeName    = NULL;
         array       = false;
         arraySize   = NULL;
@@ -320,7 +313,7 @@ struct HLSLType
         addressSpace = HLSLAddressSpace_Undefined;
     }
     HLSLBaseType        baseType;
-    HLSLBaseType        samplerType;    // Half or Float
+    HLSLBaseType        textureType;    // Half or Float
     const char*         typeName;       // For user defined types.
     bool                array;
     HLSLExpression*     arraySize;

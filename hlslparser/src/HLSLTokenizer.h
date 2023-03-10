@@ -60,15 +60,40 @@ enum HLSLToken
     HLSLToken_Ushort4,
     
     // TODO: double, u/char
+    HLSLToken_Texture2D,
+    HLSLToken_Texture3D,
+    HLSLToken_TextureCube,
+    HLSLToken_Texture2DArray,
+    HLSLToken_TextureCubeArray,
+    HLSLToken_Texture2DMS,
     
-    HLSLToken_Texture,
-    HLSLToken_Sampler,
-    HLSLToken_Sampler2D,
-    HLSLToken_Sampler3D,
-    HLSLToken_SamplerCube,
-    HLSLToken_Sampler2DShadow,
-    HLSLToken_Sampler2DMS,
-    HLSLToken_Sampler2DArray,
+    HLSLToken_SamplerState,
+    HLSLToken_SamplerComparisonState,
+    
+    // these are all the texture ops
+    // do these need tokenized?
+    /*
+    HLSLToken_Sample,
+    HLSLToken_SampleLevel,
+    HLSLToken_SampleCmp,
+    HLSLToken_SampleCmpLevelZero,
+    HLSLToken_SampleCmpGrad,
+    HLSLToken_SampleBias,
+    HLSLToken_GatherRed,
+    HLSLToken_GatherGreen,
+    HLSLToken_GatherBlue,
+    HLSLToken_GatherAlpha, // + GatherCmdRed/Green/Blue/Alpha
+    HLSLToken_GetDimensions,
+    */
+    
+//    HLSLToken_Texture,
+//    HLSLToken_Sampler,
+//    HLSLToken_Sampler2D,
+//    HLSLToken_Sampler3D,
+//    HLSLToken_SamplerCube,
+//    HLSLToken_Sampler2DShadow,
+//    HLSLToken_Sampler2DMS,
+//    HLSLToken_Sampler2DArray,
 
     // Reserved words.
     HLSLToken_If,
@@ -86,6 +111,7 @@ enum HLSLToken
     HLSLToken_Return,
     HLSLToken_Continue,
     HLSLToken_Discard,
+    
     HLSLToken_Const,
     HLSLToken_Static,
     HLSLToken_Inline,
@@ -97,7 +123,7 @@ enum HLSLToken
     HLSLToken_InOut,
 
     // Effect keywords.
-    HLSLToken_SamplerState,
+    HLSLToken_SamplerStateBlock, 
     HLSLToken_Technique,
     HLSLToken_Pass,
 

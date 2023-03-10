@@ -422,6 +422,7 @@ bool HLSLTree::NeedsFunction(const char* name)
     return visitor.result;
 }
 
+// TODO: the descriptionTable instead of hardcoding this again
 int GetVectorDimension(HLSLType & type)
 {
     if (type.baseType >= HLSLBaseType_FirstNumeric &&
@@ -460,8 +461,8 @@ int HLSLTree::GetExpressionValue(HLSLExpression * expression, float values[4])
     }
     if (expression->expressionType.baseType >= HLSLBaseType_FirstInteger && expression->expressionType.baseType <= HLSLBaseType_LastInteger)
     {
-        // @@ Add support for uints?
-        // @@ Add support for int vectors?
+        // TODO: Add support for uints?
+        // TODO: Add support for int vectors?
         return 0;
     }
     if (expression->expressionType.baseType > HLSLBaseType_LastNumeric)
@@ -597,7 +598,8 @@ int HLSLTree::GetExpressionValue(HLSLExpression * expression, float values[4])
         else if (literal->expressionType.baseType == HLSLBaseType_Bool) values[0] = literal->bValue;
         else if (literal->expressionType.baseType == HLSLBaseType_Int) values[0] = (float)literal->iValue;  // @@ Warn if conversion is not exact.
         else return 0;
-
+        // TODO: add short/ushore/uint
+        
         return 1;
     }
 

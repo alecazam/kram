@@ -24,15 +24,17 @@ static const char* GetTypeName(const HLSLType& type)
     
     switch (type.baseType)
     {
-    case HLSLBaseType_Texture:      return "texture";
+    case HLSLBaseType_SamplerState:              return "SamplerState";
+    case HLSLBaseType_SamplerComparisonState:    return "SamplerComparisonState";
+        
+    //case HLSLBaseType_Texture:      return "texture";
             
-    case HLSLBaseType_Sampler:      return "sampler";
-    case HLSLBaseType_Sampler2D:    return "sampler2D";
-    case HLSLBaseType_Sampler3D:    return "sampler3D";
-    case HLSLBaseType_SamplerCube:  return "samplerCUBE";
-    case HLSLBaseType_Sampler2DShadow:  return "sampler2DShadow";
-    case HLSLBaseType_Sampler2DMS:  return "sampler2DMS";
-    case HLSLBaseType_Sampler2DArray:    return "sampler2DArray";
+    case HLSLBaseType_Texture2D:         return "Texture2D";
+    case HLSLBaseType_Texture2DArray:    return "Texture2DArray";
+    case HLSLBaseType_Texture3D:         return "Texture3D";
+    case HLSLBaseType_TextureCube:       return "TextureCube";
+    case HLSLBaseType_TextureCubeArray:  return "TextureCubeArray";
+    case HLSLBaseType_Texture2DMS:       return "Texture2DMS";
             
     // struct
     case HLSLBaseType_UserDefined:  return type.typeName;
@@ -333,14 +335,16 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
     {
         HLSLIdentifierExpression* identifierExpression = static_cast<HLSLIdentifierExpression*>(expression);
         const char* name = identifierExpression->name;
+        
+        /* I don't want to pass structs
         if (IsSamplerType(identifierExpression->expressionType) && identifierExpression->global)
         {
             // @@ Handle generic sampler type.
 
             // Stupid HLSL doesn't have ctors, so have ctor calls.
-            if (identifierExpression->expressionType.baseType == HLSLBaseType_Sampler2D)
+            if (identifierExpression->expressionType.baseType == HLSLBaseType_Texture2D)
             {
-                if (identifierExpression->expressionType.samplerType == HLSLBaseType_Half) // TODO: && !m_options.treatHalfAsFloat)
+                if (identifierExpression->expressionType.textureType == HLSLBaseType_Half) // TODO: && !m_options.treatHalfAsFloat)
                 {
                     m_writer.Write("Texture2DHalfSamplerCtor(%s_texture, %s_sampler)", name, name);
                 }
@@ -371,6 +375,7 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
             }
         }
         else
+        */
         {
             m_writer.Write("%s", name);
         }
@@ -799,25 +804,55 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
 
 void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
 {
-    bool isSamplerType = IsSamplerType(declaration->type);
-
-    if (isSamplerType)
+    if (IsSamplerType(declaration->type))
     {
         int reg = -1;
         if (declaration->registerName != NULL)
         {
             sscanf(declaration->registerName, "s%d", &reg);
         }
+        
+        // sampler
+        const char* samplerType = nullptr;
+        if (declaration->type.baseType == HLSLBaseType_SamplerState)
+        {
+            samplerType = "SamplerState";
+        }
+        else if (declaration->type.baseType == HLSLBaseType_SamplerComparisonState)
+        {
+            samplerType = "SamplerComparisonState";
+        }
+        
+        if (samplerType)
+        {
+            if (reg != -1)
+            {
+                m_writer.Write("%s %s : register(s%d)", samplerType, declaration->name, reg);
+            }
+            else
+            {
+                m_writer.Write("%s %s", samplerType, declaration->name);
+            }
+        }
+        return;
+    }
+    if (IsTextureType(declaration->type))
+    {
+        int reg = -1;
+        if (declaration->registerName != NULL)
+        {
+            sscanf(declaration->registerName, "t%d", &reg);
+        }
 
         // @@ Handle generic sampler type.
 
         // TODO: have a way to disable use of half (like on MSLGenerator)
-        bool isHalf = declaration->type.samplerType == HLSLBaseType_Half;
+        bool isHalf = declaration->type.textureType == HLSLBaseType_Half;
         
         // Can't use half4 textures with spriv
         // Can tell Vulkan was written by/for desktop IHVs.
         // https://github.com/microsoft/DirectXShaderCompiler/issues/2711
-        bool isSpirvTarget = true;
+        bool isSpirvTarget = true; // TODO: tie to CLI option
         if (isSpirvTarget)
             isHalf = false;
         
@@ -829,50 +864,32 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
         
         // texture carts the dimension and format
         const char* textureType = NULL;
-        if (declaration->type.baseType == HLSLBaseType_Sampler2D)
+        if (declaration->type.baseType == HLSLBaseType_Texture2D)
         {
             textureType = "Texture2D";
         }
-        else if (declaration->type.baseType == HLSLBaseType_Sampler3D)
+        else if (declaration->type.baseType == HLSLBaseType_Texture2DArray)
+        {
+            textureType = "Texture2DArray";
+        }
+        else if (declaration->type.baseType == HLSLBaseType_Texture3D)
         {
             textureType = "Texture3D";
         }
-        else if (declaration->type.baseType == HLSLBaseType_SamplerCube)
+        else if (declaration->type.baseType == HLSLBaseType_TextureCube)
         {
             textureType = "TextureCube";
         }
-        else if (declaration->type.baseType == HLSLBaseType_Sampler2DShadow)
+        else if (declaration->type.baseType == HLSLBaseType_TextureCubeArray)
         {
-            textureType = "Texture2D";
+            textureType = "TextureCubeArray";
         }
-        else if (declaration->type.baseType == HLSLBaseType_Sampler2DMS)
+        else if (declaration->type.baseType == HLSLBaseType_Texture2DMS)
         {
             textureType = "Texture2DMS";
         }
 
-        // sampler
-        const char* samplerType = "SamplerState";
-        if (declaration->type.baseType == HLSLBaseType_Sampler2DShadow)
-        {
-           samplerType = "SamplerComparisonState";
-        }
-        else if (declaration->type.baseType == HLSLBaseType_Sampler2DMS)
-        {
-            samplerType = NULL;
-        }
-        
-        if (samplerType != NULL)
-        {
-            if (reg != -1)
-            {
-                m_writer.Write("%s<%s> %s_texture : register(t%d); %s %s_sampler : register(s%d)", textureType, formatType, declaration->name, reg, samplerType, declaration->name, reg);
-            }
-            else
-            {
-                m_writer.Write("%s<%s> %s_texture; %s %s_sampler", textureType, formatType, declaration->name, samplerType, declaration->name);
-            }
-        }
-        else
+        if (textureType != NULL)
         {
             if (reg != -1)
             {
@@ -901,9 +918,10 @@ void HLSLGenerator::OutputDeclarationType(const HLSLType& type)
 {
     const char* typeName = GetTypeName(type);
     
+    /*
     if (type.baseType == HLSLBaseType_Sampler2D)
     {
-        if (type.samplerType == HLSLBaseType_Half
+        if (type.textureType == HLSLBaseType_Half
             // TODO: && !m_options.treatHalfAsFloat
             ) {
             typeName = "Texture2DHalfSampler";
@@ -928,7 +946,7 @@ void HLSLGenerator::OutputDeclarationType(const HLSLType& type)
     {
         typeName = "Texture2DMS<float4>";
     }
-    
+    */
 
     if (type.flags & HLSLTypeFlag_Const)
     {

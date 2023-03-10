@@ -309,10 +309,11 @@ struct Intrinsic
     HLSLArgument    argument[4];
 };
     
-Intrinsic SamplerIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType arg1, HLSLBaseType samplerType, HLSLBaseType arg2)
+Intrinsic TextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType arg1, HLSLBaseType textureType, HLSLBaseType arg2)
 {
-    Intrinsic i(name, returnType, arg1, arg2);
-    i.argument[0].type.samplerType = samplerType;
+    // Need to be able to pass SamplerComparisonState too
+    Intrinsic i(name, returnType, arg1, HLSLBaseType_SamplerState, arg2);
+    i.argument[0].type.textureType = textureType;
     return i;
 }
 
@@ -606,9 +607,9 @@ static const EffectState pipelineStates[] = {
         Intrinsic( name, HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3,  HLSLBaseType_Half3 ),    \
         Intrinsic( name, HLSLBaseType_Half4,   HLSLBaseType_Half4,   HLSLBaseType_Half4,  HLSLBaseType_Half4 )
 
-#define SAMPLER_INTRINSIC_FUNCTION(name, nameH, sampler, arg1) \
-        SamplerIntrinsic( name, HLSLBaseType_Float4, sampler, HLSLBaseType_Float, arg1),   \
-        SamplerIntrinsic( nameH, HLSLBaseType_Half4,  sampler, HLSLBaseType_Half,  arg1  )
+#define TEXTURE_INTRINSIC_FUNCTION(name, sampler, arg1) \
+        TextureIntrinsic( name, HLSLBaseType_Float4, sampler, HLSLBaseType_Float, arg1),   \
+        TextureIntrinsic( name "H", HLSLBaseType_Half4,  sampler, HLSLBaseType_Half,  arg1  )
     
 // TODO: change this to a mutlimap or something
 // would make it easier to specify, can write functions to set all vec, all matrix, etc.  This is a nightmare to add things too below.  MSL and HLSL
@@ -798,42 +799,38 @@ const Intrinsic _intrinsic[] =
         // TODO: split off sampler intrinsics from math above
         //------------------------
         
-        // This macro defines float/half versions
-        SAMPLER_INTRINSIC_FUNCTION("tex2D", "tex2D", HLSLBaseType_Sampler2D, HLSLBaseType_Float2),
-        SAMPLER_INTRINSIC_FUNCTION("tex2Dlod", "tex2Dlod", HLSLBaseType_Sampler2D, HLSLBaseType_Float4),
-        SAMPLER_INTRINSIC_FUNCTION("tex2Dbias", "tex2Dbias", HLSLBaseType_Sampler2D, HLSLBaseType_Float4),
+        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
+        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture3D, HLSLBaseType_Float3),
+        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture2DArray, HLSLBaseType_Float3),
+        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCube, HLSLBaseType_Float3),
+        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4),
         
-    
-        // Not sure this tex2Dproj is worth adding, have tex2DCmp
-        Intrinsic("tex2Dproj", HLSLBaseType_Float4, HLSLBaseType_Sampler2D, HLSLBaseType_Float4),
-
-//        Intrinsic("tex2Dlod",  HLSLBaseType_Float4, HLSLBaseType_Sampler2D, HLSLBaseType_Float4, HLSLBaseType_Int2),   // With offset.
-
+        // one more dimension than Sample
+        TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3),
+        TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture3D, HLSLBaseType_Float4),
+        TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4),
+        TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_TextureCube, HLSLBaseType_Float4),
+        // TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4, Float),
         
-        Intrinsic("tex2Dgrad", HLSLBaseType_Float4, HLSLBaseType_Sampler2D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2),
-        Intrinsic("tex2Dgather", HLSLBaseType_Float4, HLSLBaseType_Sampler2D, HLSLBaseType_Float2, HLSLBaseType_Int),
-        Intrinsic("tex2Dgather", HLSLBaseType_Float4, HLSLBaseType_Sampler2D, HLSLBaseType_Float2, HLSLBaseType_Int2, HLSLBaseType_Int),    // With offset.
-        Intrinsic("tex2Dsize", HLSLBaseType_Int2, HLSLBaseType_Sampler2D),
-        Intrinsic("tex2Dfetch", HLSLBaseType_Float4, HLSLBaseType_Sampler2D, HLSLBaseType_Int3),    // u,v,mipmap
-
-        Intrinsic("tex2Dcmp", HLSLBaseType_Float4, HLSLBaseType_Sampler2DShadow, HLSLBaseType_Float4),                // @@ IC: This really takes a float3 (uvz) and returns a float.
-
-        Intrinsic("tex2DMSfetch", HLSLBaseType_Float4, HLSLBaseType_Sampler2DMS, HLSLBaseType_Int2, HLSLBaseType_Int),
-        Intrinsic("tex2DMSsize", HLSLBaseType_Int3, HLSLBaseType_Sampler2DMS),
-
-        Intrinsic("tex2DArray", HLSLBaseType_Float4, HLSLBaseType_Sampler2DArray, HLSLBaseType_Float3),
-
-        Intrinsic("tex3D",     HLSLBaseType_Float4, HLSLBaseType_Sampler3D, HLSLBaseType_Float3),
-        Intrinsic("tex3Dlod",  HLSLBaseType_Float4, HLSLBaseType_Sampler3D, HLSLBaseType_Float4),
-        Intrinsic("tex3Dbias", HLSLBaseType_Float4, HLSLBaseType_Sampler3D, HLSLBaseType_Float4),
-        Intrinsic("tex3Dsize", HLSLBaseType_Int3, HLSLBaseType_Sampler3D),
-
-        Intrinsic("texCUBE",       HLSLBaseType_Float4, HLSLBaseType_SamplerCube, HLSLBaseType_Float3),
-        Intrinsic("texCUBElod", HLSLBaseType_Float4, HLSLBaseType_SamplerCube, HLSLBaseType_Float4),
-        Intrinsic("texCUBEbias", HLSLBaseType_Float4, HLSLBaseType_SamplerCube, HLSLBaseType_Float4),
-        Intrinsic("texCUBEsize", HLSLBaseType_Int, HLSLBaseType_SamplerCube),
-
+        // bias always in w
+        TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture2D, HLSLBaseType_Float4),
+        TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture3D, HLSLBaseType_Float4),
+        TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4),
+        TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_TextureCube, HLSLBaseType_Float4),
+        // TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4, Float),
         
+        //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2),
+        //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2),
+        //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2),
+        
+        // TODO: for 2D tex (int2 offset is optional, how to indicate that?)
+        TEXTURE_INTRINSIC_FUNCTION("GatherRed", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
+        TEXTURE_INTRINSIC_FUNCTION("GatherGreen", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
+        TEXTURE_INTRINSIC_FUNCTION("GatherBlue", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
+        TEXTURE_INTRINSIC_FUNCTION("GatherAlpha", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
+        
+        // TODO: GetDimensions
+       
     };
 
 const int _numIntrinsics = sizeof(_intrinsic) / sizeof(Intrinsic);
@@ -914,16 +911,19 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
 
         // TODO: add u/char, but HLSL2021 doesn't have support
         
-        { "texture",            CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture
+       
+        //{ "texture",            CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture
         
-        { "sampler",            CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler
-        { "sampler2D",          CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2D
-        { "sampler3D",          CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler3D
-        { "samplerCUBE",        CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_SamplerCube
-        { "sampler2DShadow",    CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DShadow
-        { "sampler2DMS",        CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DMS
-        { "sampler2DArray",     CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler2DArray
+        { "Texture2D",          CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture2D
+        { "Texture3D",          CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture3D
+        { "TextureCube",        CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_TextureCube
+        { "Texture2DArray",     CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture2DArray
+        { "TextureCubeArray",     CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_TextureCubeArray
+        { "Texture2DMS",        CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture2DMS
         
+        { "SamplerState",            CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler
+        { "SamplerComparisonState",  CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_SamplerComparisonState
+       
         { "struct",             CoreType_Struct, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },      // HLSLBaseType_UserDefined
         { "expression",         CoreType_Expression, DimensionType_None, NumericType_NaN,     1, 0, 0, -1 },       // HLSLBaseType_Expression
         { "comment",            CoreType_Comment, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },       // HLSLBaseType_Comment
@@ -947,6 +947,8 @@ HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSL
     {
         bool isSameDimensions = IsDimensionEqual(t1, t2);
         
+            
+        
         if (IsScalarType(t1) && IsScalarType(t2))
         {
             if (isSameDimensions) return t1;
@@ -960,11 +962,17 @@ HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSL
             if (isSameDimensions) return t1;
         }
         
-        // TODO: handle div of 1.0 / m or 1.0 / v. 
-        
+        else if ((binaryOp == HLSLBinaryOp_Add || binaryOp == HLSLBinaryOp_Sub) &&
+                 (IsScalarType(t1) || IsScalarType(t2)))
+        {
+            // allow v + 1, and 1 - v
+            return (IsVectorType(t1) || IsMatrixType(t1)) ? t1 : t2;
+        }
+         
         else if ((binaryOp == HLSLBinaryOp_Mul || binaryOp == HLSLBinaryOp_Div) &&
                  (IsScalarType(t1) || IsScalarType(t2)))
         {
+            // v * s
             return (IsVectorType(t1) || IsMatrixType(t1)) ? t1 : t2;
         }
         
@@ -1078,9 +1086,9 @@ static int GetTypeCastRank(HLSLTree * tree, const HLSLType& srcType, const HLSLT
 
     if (srcType.baseType == dstType.baseType)
     {
-        if (IsSamplerType(srcType.baseType))
+        if (IsTextureType(srcType.baseType))
         {
-            return srcType.samplerType == dstType.samplerType ? 0 : -1;
+            return srcType.textureType == dstType.textureType ? 0 : -1;
         }
         
         return 0;
@@ -1233,6 +1241,9 @@ static bool GetBinaryOpResultType(HLSLBinaryOp binaryOp, const HLSLType& type1, 
     }
     else
     {
+        // TODO: allso mulAssign, ...
+        assert(!IsAssignOp(binaryOp));
+        
         result.baseType = ArithmeticOpResultType(binaryOp, type1.baseType, type2.baseType);
     }
 
@@ -2026,7 +2037,7 @@ bool HLSLParser::ParseDeclarationAssignment(HLSLDeclaration* declaration)
                 return false;
             }
         }
-        else if (IsSamplerType(declaration->type.baseType))
+        else if (IsSamplerType(declaration->type.baseType)) // TODO: should be for SamplerStateBlock, not Sampler
         {
             if (!ParseSamplerState(declaration->assignment))
             {
@@ -3585,10 +3596,36 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         break;
             
     // Textures
-    case HLSLToken_Texture:
-        type.baseType = HLSLBaseType_Texture;
+    case HLSLToken_Texture2D:
+        type.baseType = HLSLBaseType_Texture2D;
+        break;
+    case HLSLToken_Texture2DArray:
+        type.baseType = HLSLBaseType_Texture2DArray;
+        break;
+    case HLSLToken_Texture3D:
+        type.baseType = HLSLBaseType_Texture3D;
+        break;
+    case HLSLToken_TextureCube:
+        type.baseType = HLSLBaseType_TextureCube;
+        break;
+    case HLSLToken_Texture2DMS:
+        type.baseType = HLSLBaseType_Texture2DMS;
+        break;
+    case HLSLToken_TextureCubeArray:
+        type.baseType = HLSLBaseType_TextureCubeArray;
         break;
             
+    //case HLSLToken_Texture:
+    //    type.baseType = HLSLBaseType_Texture;
+    //    break;
+      
+    case HLSLToken_SamplerState:
+        type.baseType = HLSLBaseType_SamplerState;
+        break;
+    case HLSLToken_SamplerComparisonState:
+        type.baseType = HLSLBaseType_SamplerComparisonState;
+        break;
+    /*
     // Samplers
     case HLSLToken_Sampler:
         type.baseType = HLSLBaseType_Sampler2D;  // @@ IC: For now we assume that generic samplers are always sampler2D
@@ -3611,34 +3648,27 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
     case HLSLToken_Sampler2DArray:
         type.baseType = HLSLBaseType_Sampler2DArray;
         break;
+    */
     }
     if (type.baseType != HLSLBaseType_Void)
     {
         m_tokenizer.Next();
         
-        if (IsSamplerType(type.baseType))
+        if (IsTextureType(type.baseType))
         {
             // Parse optional sampler type.
             if (Accept('<'))
             {
-                // Hack.
-                // Sampler2D<half> or Sampler2D<float>
-                
-                // TODO: this doesn't line up with DX10
-                // which is Texture2D<half4> or Texture2D<float4>
-                // Samplers are just state blocks, but texture holds the type.
-                // Also have more texture slots than samplers, so samplers are reused.
-                
                 int token = m_tokenizer.GetToken();
                 
                 // TODO: need more types
-                if (token == HLSLToken_Float)
+                if (token >= HLSLToken_Float && token <= HLSLToken_Float4)
                 {
-                    type.samplerType = HLSLBaseType_Float;
+                    type.textureType = HLSLBaseType_Float;
                 }
-                else if (token == HLSLToken_Half)
+                else if (token >= HLSLToken_Half && token <= HLSLToken_Half4)
                 {
-                    type.samplerType = HLSLBaseType_Half;
+                    type.textureType = HLSLBaseType_Half;
                 }
                 else
                 {

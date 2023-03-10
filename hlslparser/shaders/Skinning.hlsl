@@ -10,11 +10,11 @@
 
 // setup specialization
 // HLSL:
-// [[vk::constant_id(0)]] const bool  specConstInt  = 1;
+// [[vk::constant_id(0)]] const int   specConstInt  = 1;
 // [[vk::constant_id(1)]] const bool  specConstBool  = true;
 // MSL:
 // constant bool a [[function_constant(0)]];
-// constant int a [[function_constant(1)]]; // 0.. 64K
+// constant int  a [[function_constant(1)]]; // 0.. 64K-1
 
 // subpass input, and SubpassLoad() calls
 // [[vk::input_attachment_index(i)]] SubpassInput input;
@@ -44,27 +44,7 @@
 // D3DCOLORtoUBYTE4: Decodes a D3DCOLOR packed DWORD to a float4.
 // Note the swizzle, and I don't want an int4.  I need to encode.
 // This is achieved by performing int4(input.zyxw * 255.002) using SPIR-V OpVectorShuffle, OpVectorTimesScalar, and OpConvertFToS, respectively.
-// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_6_Pack_Unpack_Intrinsics.html
 
-// These all pack to too large of data structores.
-// also they don't handle gamma.
-//
-// int16_t4 unpack_s8s16(int8_t4_packed packedVal);        // Sign Extended
-// uint16_t4 unpack_u8u16(uint8_t4_packed packedVal);      // Non-Sign Extended
-// int32_t4 unpack_s8s32(int8_t4_packed packedVal);        // Sign Extended
-// uint32_t4 unpack_u8u32(uint8_t4_packed packedVal);      // Non-Sign Extended
-// uint8_t4_packed pack_u8(uint32_t4 unpackedVal);         // Pack lower 8 bits, drop unused bits
-// int8_t4_packed pack_s8(int32_t4  unpackedVal);          // Pack lower 8 bits, drop unused bits
-//
-// uint8_t4_packed pack_u8(uint16_t4 unpackedVal);         // Pack lower 8 bits, drop unused bits
-// int8_t4_packed pack_s8(int16_t4  unpackedVal);          // Pack lower 8 bits, drop unused bits
-//
-// uint8_t4_packed pack_clamp_u8(int32_t4  unpackedVal);   // Pack and Clamp [0, 255]
-// int8_t4_packed pack_clamp_s8(int32_t4  unpackedVal);    // Pack and Clamp [-128, 127]
-//
-// uint8_t4_packed pack_clamp_u8(int16_t4  unpackedVal);   // Pack and Clamp [0, 255]
-// int8_t4_packed pack_clamp_s8(int16_t4  unpackedVal);    // Pack and Clamp [-128, 127]
-//
 // have uint16_t/int16_t support in 6.2.  Need to add as type into parser.
 //
 // cbuffer are std140, and ssbo are std430 arrangment.  Affects arrays.
@@ -119,9 +99,8 @@ cbuffer Uniforms
     float4x4 worldToClipTfm;
 };
 
-// TODO: split up tex/sampler, update texture calls to DX10
-// defines combined tex_texture/tex_sampler
-sampler2D<half> tex;
+Texture2D<half4> tex;
+SamplerState samplerClamp;
 
 float4x4 DoSkinTfm(float4x4 skinTfms[256], float4 blendWeights, uint4 blendIndices)
 {
@@ -201,6 +180,7 @@ OutputVS SkinningVS(InputVS input,
 // So half from VS, but float in PS.
 struct InputPS
 {
+    float4  position : SV_Position;
     half    diffuse : COLOR;
     float2  uv : TEXCOORD0;
 };
@@ -217,7 +197,6 @@ struct OutputPS
 // DXC has a setting to invert w.
 
 OutputPS SkinningPS(InputPS input,
-     float4  position : SV_Position,
      bool isFrontFace: SV_IsFrontFace
     )
 {
@@ -226,7 +205,8 @@ OutputPS SkinningPS(InputPS input,
     // This is hard to reflect with combined tex/sampler
     // have way more textures than samplers on mobile.
     //float4 color = tex2D(tex, input.uv);
-    half4 color = tex2D(tex, input.uv);
+    //half4 color = half4(1.0h);
+    half4 color = SampleH(tex, samplerClamp, input.uv);
     
     // TODO: move to DX10 style, but MSL codegen is trickier then
     // since it wraps the vars
