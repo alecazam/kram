@@ -46,8 +46,8 @@ appSprivReflect+="spirv-reflect"
 
 # copy over the headers that translate to MSL/HLSL
 # TODO: move to outshaders, so when there are errors can clickthough to orignal files
-cp ${srcDir}/ShaderMSL.h .
-cp ${srcDir}/ShaderHLSL.h .
+#cp ${srcDir}/ShaderMSL.h .
+#cp ${srcDir}/ShaderHLSL.h .
 
 parserOptions=""
 
@@ -72,7 +72,7 @@ pushd out
 
 #-------------------------------
 
-testMetal=0
+testMetal=1
 
 if [[ $testMetal -eq 1 ]]; then
     # Metal is C++14

@@ -146,15 +146,15 @@ float4 SampleGrad(texture2d<float> t, sampler s, float2 texCoord, float2 gradx, 
 
 #if USE_HALF
 
-half4 SampleH(Texture2DHalfSampler t, sampler s, float2 texCoord) {
+half4 SampleH(texture2d<half> t, sampler s, float2 texCoord) {
     return t.sample(s, texCoord);
 }
 
-half4 SampleLevelH(Texture2DHalfSampler t, sampler s, float4 texCoordMip) {
+half4 SampleLevelH(texture2d<half> t, sampler s, float4 texCoordMip) {
     return t.sample(s, texCoordMip.xy, level(texCoordMip.w));
 }
 
-half4 SampleBiasH(Texture2DHalfSampler t, sampler s, float4 texCoordBias) {
+half4 SampleBiasH(texture2d<half> t, sampler s, float4 texCoordBias) {
     return t.sample(s, texCoordBias.xy, bias(texCoordBias.w));
 }
 
@@ -176,17 +176,17 @@ float4 SampleLevel(texturecube<float> t, sampler s, float4 texCoordMip) {
     return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 }
 
-float4 SampleLevel(texture2d_array<float> t, sampler s, float4 texCoordMip) {
-    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
-}
-
 float4 SampleLevel(texture3d<float> t, sampler s, float4 texCoordMip) {
     return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 }
 
-float4 SampleLevel(texturecube_array<float> t, sampler s, float4 texCoordMip) {
-    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
-}
+// TODO: may need to add to intrinsics
+//float4 SampleLevel(texture2d_array<float> t, sampler s, float4 texCoordMip) {
+//    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
+//}
+//float4 SampleLevel(texturecube_array<float> t, sampler s, float4 texCoordMip) {
+//    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
+//}
 
 // ----
 
@@ -213,60 +213,56 @@ float4 Load(texture2d_ms<float> t, int2 texCoord, int sample) {
 
 // ----
 
-float4 Sample(texture2d_array<float> t, sampler s, float3 texCoord) {
-    return t.sample(s, texCoord.xy, texCoord.z);
+float4 Sample(texture2d_array<float> t, sampler s, float3 texCoord, int2 offset=0) {
+    return t.sample(s, texCoord.xy, uint(texCoord.z), offset);
 }
-        
-float4 Sample(texture2d<float> t, sampler s, float2 texCoord)
-{
-    return t.sample(s, texCoord);
+float4 Sample(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
+    return t.sample(s, texCoord, offset);
 }
-half4 SampleH(texture2d<half> t, sampler s, float2 texCoord)
-{
-    return t.sample(s, texCoord);
+float4 Sample(texture3d<float> t, sampler s, float3 texCoord, int3 offset=0) {
+    return t.sample(s, texCoord, offset);
 }
-
-float4 Sample(texture3d<float> t, sampler s, float3 texCoord) {
-    return t.sample(s, texCoord);
-}
-
 float4 Sample(texturecube<float> t, sampler s, float3 texCoord) {
     return t.sample(s, texCoord);
 }
+float4 Sample(texturecube_array<float> t, sampler s, float4 texCoord) {
+    return t.sample(s, texCoord.xyz, uint(texCoord.w));
+}
+
 
 // ----
 
-int2 GetDimensions(texture2d t)
+// get_num_mip_levels, get_array_size
+// TODO: need half versions
+int2 GetDimensions(texture2d<float> t)
 {
     int2 size(t.get_width(), t.get_height());
     return size;
 }
 
-int3 GetDimensions(texture3d t)
+int3 GetDimensions(texture3d<float> t)
 {
     int3 size(t.get_width(), t.get_height(), t.get_depth());
     return size;
 }
 
-int2 GetDimensions(texturecube t)
+int2 GetDimensions(texturecube<float> t)
 {
     int2 size(t.get_width(), t.get_width());
     return size;
 }
 
-int2 GetDimensions(texturecube_array t)
+int2 GetDimensions(texturecube_array<float> t)
 {
     // TODO: arrayCount?
     int2 size(t.get_width(), t.get_width());
-    t.GetDimensions(size, size); // sizexsize
     return size;
 }
 
-int2 GetDimensions(texture2d_array t)
+int2 GetDimensions(texture2d_array<float> t)
 {
     // TODO: arrayCount?
     int2 size(t.get_width(), t.get_height());
-    t.GetDimensions(size, size);
     return size;
 }
 

@@ -183,10 +183,6 @@ float4 SampleCmp(Texture2D t, SamplerComparisonState s, float4 texCoord, int2 of
     return t.SampleCmp(s, texCoord.xy, texCoord.z, offset);
 }
 
-float4 SampleCmp(Texture2DArray t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
-{
-    return t.SampleCmp(s, texCoord.xy, texCoord.z, offset);
-}
 
 // no offset
 float4 SampleCmp(TextureCube t, SamplerComparisonState s, float4 texCoord)
@@ -194,10 +190,16 @@ float4 SampleCmp(TextureCube t, SamplerComparisonState s, float4 texCoord)
     return t.SampleCmp(s, texCoord.xyz, texCoord.w);
 }
 
-float4 SampleCmp(TextureCubeArray t, SamplerComparisonState s, float4 texCoord)
-{
-    return t.SampleCmp(s, texCoord.xyz, texCoord.w);
-}
+// TODO: may need to add to HLSLParser intrinsics
+//float4 SampleCmp(Texture2DArray t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
+//{
+//    return t.SampleCmp(s, texCoord.xyz, offset);
+//}
+//
+//float4 SampleCmp(TextureCubeArray t, SamplerComparisonState s, float4 texCoord)
+//{
+//    return t.SampleCmp(s, texCoord.xyzw);
+//}
 
 //----------
 
