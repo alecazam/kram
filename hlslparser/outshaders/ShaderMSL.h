@@ -233,6 +233,7 @@ float4 Sample(texturecube_array<float> t, sampler s, float4 texCoord) {
 // ----
 
 // get_num_mip_levels, get_array_size
+// get_width/height/depth(lod)
 // TODO: need half versions
 int2 GetDimensions(texture2d<float> t)
 {
@@ -254,15 +255,38 @@ int2 GetDimensions(texturecube<float> t)
 
 int2 GetDimensions(texturecube_array<float> t)
 {
-    // TODO: arrayCount?
     int2 size(t.get_width(), t.get_width());
     return size;
 }
 
 int2 GetDimensions(texture2d_array<float> t)
 {
-    // TODO: arrayCount?
     int2 size(t.get_width(), t.get_height());
     return size;
 }
 
+// For textures, T can be half, float, short, ushort, int, or uint.
+// For depth texture types, T must be float.
+//
+// texture2d_ms, texture2d_msaa_array
+//
+// depth2d, _ms, _ms_array, _array,
+// depthcube, depthcube_array
+
+// TODO: add sparse_sample options
+// gradientcube, gradient3d, min_lod_clamp(float lod),
+// bias(float value), level(float lod)
+// uint get_num_samples() const
+//
+// can have textures in structs
+// struct Foo {
+// texture2d<float> a [[texture(0)]];
+// depth2d<float> b [[texture(1)]];
+// };
+//
+// can pass into top level, can even nest inside structs
+// part of the argument buffer notation
+//
+// [[kernel]] void
+// my_kernel(Foo f)
+// {…}

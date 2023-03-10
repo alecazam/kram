@@ -10,13 +10,13 @@
 		707D37CC29B9797A00B08D22 /* Skinning.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = Skinning.metal; sourceTree = "<group>"; };
 		707D37CD29B9797A00B08D22 /* Skinning.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; fileEncoding = 4; path = Skinning.hlsl; sourceTree = "<group>"; };
 		707D37D129B9798600B08D22 /* out */ = {isa = PBXFileReference; lastKnownFileType = folder; path = out; sourceTree = "<group>"; };
-		707D37D529B979EB00B08D22 /* ShaderMSL.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = ShaderMSL.h; sourceTree = "<group>"; };
-		707D37D629B979EB00B08D22 /* ShaderHLSL.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = ShaderHLSL.h; sourceTree = "<group>"; };
 		707D37D729B979EB00B08D22 /* Skinning.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = Skinning.hlsl; sourceTree = "<group>"; };
 		707D37DA29B97A0900B08D22 /* buildShaders.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = buildShaders.sh; sourceTree = "<group>"; };
 		70CAA47E29B9BB0E004B7E7B /* Sample.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; fileEncoding = 4; path = Sample.hlsl; sourceTree = "<group>"; };
 		70CAA48029BA7D28004B7E7B /* Sample.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = Sample.metal; sourceTree = "<group>"; };
 		70CAA48129BA7D28004B7E7B /* Sample.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; fileEncoding = 4; path = Sample.hlsl; sourceTree = "<group>"; };
+		70CAA48929BAF707004B7E7B /* ShaderHLSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderHLSL.h; sourceTree = "<group>"; };
+		70CAA48A29BAF707004B7E7B /* ShaderMSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderMSL.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -41,6 +41,8 @@
 		707D37CA29B9797A00B08D22 /* outshaders */ = {
 			isa = PBXGroup;
 			children = (
+				70CAA48929BAF707004B7E7B /* ShaderHLSL.h */,
+				70CAA48A29BAF707004B7E7B /* ShaderMSL.h */,
 				70CAA48129BA7D28004B7E7B /* Sample.hlsl */,
 				70CAA48029BA7D28004B7E7B /* Sample.metal */,
 				707D37CC29B9797A00B08D22 /* Skinning.metal */,
@@ -52,8 +54,6 @@
 		707D37D829B979EB00B08D22 /* shaders */ = {
 			isa = PBXGroup;
 			children = (
-				707D37D529B979EB00B08D22 /* ShaderMSL.h */,
-				707D37D629B979EB00B08D22 /* ShaderHLSL.h */,
 				70CAA47E29B9BB0E004B7E7B /* Sample.hlsl */,
 				707D37D729B979EB00B08D22 /* Skinning.hlsl */,
 			);
