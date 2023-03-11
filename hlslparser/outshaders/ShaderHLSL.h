@@ -7,6 +7,29 @@
 #pragma once
 #endif
 
+// no &* or ctors in HLSL limited C++
+// This means operators cannot overload [+-*/>><<]=.  Only builtins work.
+
+// HLSL2021 adds bitfields, so could define a color.
+// They say they are on bw compatible with DX12 releases, but spriv backed should warn.
+//struct ColorRGBA {
+//  uint R : 8;
+//  uint G : 8;
+//  uint B : 8;
+//  uint A : 8;
+//};
+
+// DX12 support SM6, DX11 support SM5 and prior.
+// But only latest VS2022 supports SM6.6
+// DXC should be translating calls back to Vulkan
+
+// in HLSL 2021 logical operators can only be used with scalar values.
+// new and/or constructs instead of using &&/||
+// bool3 Cond = and(X, Y);
+// bool3 Cond2 = or(X, Y);
+// int3 Z = select(X, 1, 0);
+
+
 // For float16 operations, denormal numbers must be preserved.
 // No atomic operations for float16 are supported.
 

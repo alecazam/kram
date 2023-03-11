@@ -16,7 +16,16 @@ enum Target
 {
     Target_VertexShader,
     Target_FragmentShader,
+    
     Target_ComputeShader,
+    
+    // none of these are portable to Metal/Android, they have own triangulation
+    //Target_GeometryShader,
+    //Target_HullShader,
+    //Target_ControlShader,
+    
+    // This is compute prior to frag (combined vertex + geo state)
+    // Target_MeshShader,
 };
 
 enum Language

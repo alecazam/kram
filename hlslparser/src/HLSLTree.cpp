@@ -114,18 +114,29 @@ HLSLDeclaration * HLSLTree::FindGlobalDeclaration(const char * name, HLSLBuffer 
         else if (statement->nodeType == HLSLNodeType_Buffer)
         {
             HLSLBuffer* buffer = (HLSLBuffer*)statement;
-
-            HLSLDeclaration* field = buffer->field;
-            while (field != NULL)
+            
+            // This searches the fields for the name
+            // since cbuffer/tbuffer represent globals.
+            if (buffer->IsGlobalFields())
             {
-                ASSERT(field->nodeType == HLSLNodeType_Declaration);
-                if (String_Equal(name, field->name))
+                HLSLDeclaration* field = buffer->field;
+                while (field != NULL)
                 {
-                    if (buffer_out) *buffer_out = buffer;
-                    return field;
+                    ASSERT(field->nodeType == HLSLNodeType_Declaration);
+                    if (String_Equal(name, field->name))
+                    {
+                        if (buffer_out) *buffer_out = buffer;
+                        return field;
+                    }
+                    field = (HLSLDeclaration*)field->nextStatement;
                 }
-                field = (HLSLDeclaration*)field->nextStatement;
             }
+            /* hack
+            else
+            {
+                int bp = 0;
+                bp = bp;
+            } */
         }
 
         statement = statement->nextStatement;
@@ -1092,16 +1103,38 @@ void PruneTree(HLSLTree* tree, const char* entryName0, const char* entryName1/*=
         {
             HLSLBuffer* buffer = (HLSLBuffer*)statement;
 
-            HLSLDeclaration* field = buffer->field;
-            while (field != NULL)
+            if (buffer->IsGlobalFields())
             {
-                ASSERT(field->nodeType == HLSLNodeType_Declaration);
-                if (!field->hidden)
+                // mark buffer visible if any of its fields are used
+                HLSLDeclaration* field = buffer->field;
+                while (field != NULL)
                 {
-                    buffer->hidden = false;
-                    break;
+                    ASSERT(field->nodeType == HLSLNodeType_Declaration);
+                    if (!field->hidden)
+                    {
+                        buffer->hidden = false;
+                        break;
+                    }
+                    field = (HLSLDeclaration*)field->nextStatement;
                 }
-                field = (HLSLDeclaration*)field->nextStatement;
+            }
+            else
+            {
+                // TODO: these load from a struct so may just need
+                // to somehow mark this if present.
+                
+                // mark buffer visible if any struct fields are used
+                HLSLStructField* field = buffer->bufferStruct->field;
+                while (field != NULL)
+                {
+                    ASSERT(field->nodeType == HLSLNodeType_StructField);
+                    if (!field->hidden)
+                    {
+                        buffer->hidden = false;
+                        break;
+                    }
+                    field = (HLSLStructField*)field->nextField;
+                }
             }
         }
 

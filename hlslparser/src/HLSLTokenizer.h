@@ -105,8 +105,21 @@ enum HLSLToken
     HLSLToken_False,
     HLSLToken_Void,
     HLSLToken_Struct,
+    
+    // dx9
     HLSLToken_CBuffer,
     HLSLToken_TBuffer,
+    
+    // dx10 templated types (TODO: hook to parser and generator)
+    HLSLToken_ConstantBuffer,
+    HLSLToken_StructuredBuffer,
+    HLSLToken_RWStructuredBuffer,
+    // HLSLToken_AppendStructuredBuffer,
+    // HLSLToken_ConsumeStructuredBuffer,
+    HLSLToken_ByteAddressBuffer,
+    HLSLToken_RWByteAddressBuffer,
+    // RWTexture, and other types
+    
     HLSLToken_Register,
     HLSLToken_Return,
     HLSLToken_Continue,

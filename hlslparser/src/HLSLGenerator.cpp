@@ -604,6 +604,23 @@ void HLSLGenerator::OutputAttributes(int indent, HLSLAttribute* attribute)
     }
 }
 
+static const char* BufferTypeToName(HLSLBufferType bufferType)
+{
+    const char* name = "";
+    switch(bufferType)
+    {
+        case HLSLBufferType_CBuffer: name = "cbuffer"; break;
+        case HLSLBufferType_TBuffer: name = "tbuffer"; break;
+            
+        case HLSLBufferType_ConstantBuffer: name = "ConstantBuffer"; break;
+        case HLSLBufferType_StructuredBuffer: name = "StructuredBuffer"; break;
+        case HLSLBufferType_RWStructuredBuffer: name = "RWStructuredBuffer"; break;
+        case HLSLBufferType_ByteAddressBuffer: name = "ByteAddressBuffer"; break;
+        case HLSLBufferType_RWByteAddressBuffer: name = "RWByteAddresssBuffer"; break;
+    }
+    
+    return name;
+}
 void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
 {
     while (statement != NULL)
@@ -653,31 +670,55 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
             HLSLDeclaration* field = buffer->field;
 
             m_writer.BeginLine(indent, buffer->fileName, buffer->line);
-            m_writer.Write("cbuffer %s", buffer->name);
+            
+            if (!buffer->IsGlobalFields())
+            {
+                // write out template
+                m_writer.Write("%s<%s> %s",
+                               BufferTypeToName(buffer->bufferType),
+                               buffer->bufferStruct->name,
+                               buffer->name);
+            }
+            else
+            {
+                // not templated
+                m_writer.Write("%s %s",
+                               BufferTypeToName(buffer->bufferType),
+                               buffer->name);
+            }
+            
+            // write out optinal register
             if (buffer->registerName != NULL)
             {
-                m_writer.Write(" : register(%s)", buffer->registerName);
+                 m_writer.Write(" : register(%s)", buffer->registerName);
             }
-            m_writer.EndLine(" {");
-            
-
-            m_isInsideBuffer = true;
-
-            while (field != NULL)
+                         
+            if (buffer->IsGlobalFields())
             {
-                if (!field->hidden)
+                m_writer.EndLine(" {");
+                m_isInsideBuffer = true;
+                
+                while (field != NULL)
                 {
-                    m_writer.BeginLine(indent + 1, field->fileName, field->line);
-                    OutputDeclaration(field->type, field->name, /*semantic=*/NULL, /*registerName*/field->registerName, field->assignment);
-                    m_writer.Write(";");
-                    m_writer.EndLine();
+                    if (!field->hidden)
+                    {
+                        m_writer.BeginLine(indent + 1, field->fileName, field->line);
+                        OutputDeclaration(field->type, field->name, /*semantic=*/NULL, /*registerName*/field->registerName, field->assignment);
+                        m_writer.Write(";");
+                        m_writer.EndLine();
+                    }
+                    field = (HLSLDeclaration*)field->nextStatement;
                 }
-                field = (HLSLDeclaration*)field->nextStatement;
+                
+                m_isInsideBuffer = false;
+                
+                m_writer.WriteLine(indent, "};");
             }
-
-            m_isInsideBuffer = false;
-
-            m_writer.WriteLine(indent, "};");
+            else
+            {
+                m_writer.Write(";");
+                m_writer.EndLine();
+            }
         }
         else if (statement->nodeType == HLSLNodeType_Function)
         {

@@ -100,6 +100,9 @@ enum HLSLBaseType
     HLSLBaseType_Ushort3,
     HLSLBaseType_Ushort4,
     
+    // Seems like these should be subtype of HLSLTexture, but
+    // many of the intrinsics require a specific type of texture.
+    // MSL has many more types, included depth vs. regular textures.
     HLSLBaseType_Texture2D,
     HLSLBaseType_Texture3D,
     HLSLBaseType_TextureCube,
@@ -107,22 +110,9 @@ enum HLSLBaseType
     HLSLBaseType_TextureCubeArray,
     HLSLBaseType_Texture2DMS,
     
+    // Only 2 sampler types.
     HLSLBaseType_SamplerState,
     HLSLBaseType_SamplerComparisonState,
-    
-/*
-    // texture
-    HLSLBaseType_Texture,
-    
-    // samplers
-    HLSLBaseType_Sampler,           // @@ use type inference to determine sampler type.
-    HLSLBaseType_Sampler2D,
-    HLSLBaseType_Sampler3D,
-    HLSLBaseType_SamplerCube,
-    HLSLBaseType_Sampler2DShadow,
-    HLSLBaseType_Sampler2DMS,
-    HLSLBaseType_Sampler2DArray,
-*/
     
     HLSLBaseType_UserDefined,       // struct
     HLSLBaseType_Expression,        // type argument for defined() sizeof() and typeof().
@@ -141,6 +131,20 @@ enum HLSLBaseType
     HLSLBaseType_NumericCount = HLSLBaseType_LastNumeric - HLSLBaseType_FirstNumeric + 1
 };
   
+enum HLSLBufferType
+{
+    // DX9
+    HLSLBufferType_CBuffer,
+    HLSLBufferType_TBuffer,
+    
+    // DX10 templated types
+    HLSLBufferType_ConstantBuffer, // indexable
+    HLSLBufferType_StructuredBuffer,
+    HLSLBufferType_RWStructuredBuffer,
+    HLSLBufferType_ByteAddressBuffer,
+    HLSLBufferType_RWByteAddressBuffer
+};
+
 enum HLSLBinaryOp
 {
     // bit ops
@@ -415,7 +419,7 @@ struct HLSLStructField : public HLSLNode
     bool                hidden;
 };
 
-/** A cbuffer or tbuffer declaration. */
+/** Buffer declaration. */
 struct HLSLBuffer : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_Buffer;
@@ -424,10 +428,21 @@ struct HLSLBuffer : public HLSLStatement
         name            = NULL;
         registerName    = NULL;
         field           = NULL;
+        
+        bufferType      = HLSLBufferType_CBuffer; // TODO: or add Unknown
+        bufferStruct    = NULL;
     }
     const char*         name;
     const char*         registerName;
     HLSLDeclaration*    field;
+    
+    bool IsGlobalFields() const
+    {
+        return  bufferType == HLSLBufferType_CBuffer ||
+                bufferType == HLSLBufferType_TBuffer;
+    }
+    HLSLBufferType      bufferType;
+    const HLSLStruct*   bufferStruct;
 };
 
 

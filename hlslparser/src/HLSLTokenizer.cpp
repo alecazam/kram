@@ -93,8 +93,18 @@ static const char* _reservedWords[] =
         "false",
         "void",
         "struct",
+        
+        // DX9
         "cbuffer",
         "tbuffer",
+        
+        // DX10 templated types
+        "ConstantBuffer", // indexable cbuffer
+        "StructuredBuffer",
+        "RWStructuredBuffer",
+        "ByteAddressBuffer",
+        "RWByteAddressBuffer",
+        
         "register",
         "return",
         "continue",
@@ -310,6 +320,14 @@ void HLSLTokenizer::Next()
     size_t length = m_buffer - start;
     memcpy(m_identifier, start, length);
     m_identifier[length] = 0;
+    
+#if 1 // hack
+    if (strcmp(m_identifier, "ConstantBuffer") == 0)
+    {
+        int bp = 0;
+        bp = bp;
+    }
+#endif
     
     const int numReservedWords = sizeof(_reservedWords) / sizeof(const char*);
     for (int i = 0; i < numReservedWords; ++i)

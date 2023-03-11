@@ -290,3 +290,14 @@ int2 GetDimensions(texture2d_array<float> t)
 // [[kernel]] void
 // my_kernel(Foo f)
 // {…}
+
+// handle access specifier RWTexture mods the template arg
+// texture2d<float, access::write> a;
+// on iOS, Writable textures aren’t supported within an argument buffer.
+// 31/96/50000 buffers+textures for A7, A11, A13/Tier2
+// 16/16/2048 samplers
+// 64/128/16 on Tier1 macOS, see above for Tier2 (discrete gpu)
+
+
+    
+

@@ -91,16 +91,45 @@ struct OutputVS
     float   pointSize : PSIZE;
 };
 
-cbuffer Uniforms
+// try to mondernize to ConstantBuffer
+/*
+struct UniformsStruct
 {
-    // should these be float3x4?
     float4x4 skinTfms[256];
     half3    lightDir;
     float4x4 worldToClipTfm;
 };
 
-Texture2D<half4> tex;
-SamplerState samplerClamp;
+ConstantBuffer<UniformsStruct> uniforms : register(b0);
+ 
+// Example
+// uniforms.skinTfms
+ 
+*/
+
+// can have 14x 64K limit to each cbuffer, 128 tbuffers,
+// This show up as globals.  Much pref ConstantBuffer form.
+cbuffer Uniforms : register(b0)
+{
+    float4x4 skinTfms[256];
+    half3    lightDir;
+    float4x4 worldToClipTfm;
+};
+
+
+struct StructuredStruct
+{
+    half3    lightDir;
+    float4x4 worldToClipTfm;
+};
+
+
+// Structured buffers
+// StructuredBuffer<StructuredStruct> bufferTest0 : register(t0);
+// RWStructuredBuffer<StructuredStruct> rwBufferTest0 : register(u0);
+
+Texture2D<half4> tex : register(t1);
+SamplerState samplerClamp : register(s0);
 
 float4x4 DoSkinTfm(float4x4 skinTfms[256], float4 blendWeights, uint4 blendIndices)
 {
@@ -144,9 +173,9 @@ OutputVS SkinningVS(InputVS input,
 
     instanceNum += vertexNum;
     
+    // float4x4 skinTfm = skinTfms[ instanceNum ];
     float4x4 skinTfm = skinTfms[ instanceNum ];
     
-
     // Skin to world space
     float3 position = mul(input.position, skinTfm).xyz;
     half3 normal = half3(mul(float4(input.normal,0.0), skinTfm).xyz);
@@ -159,6 +188,11 @@ OutputVS SkinningVS(InputVS input,
     // DXC
     output.diffuse = dot(lightDir, normal);
 
+    // TODO: test structured buffer
+    // StructuredStruct item = bufferTest0.Load(0);
+    // output.diffuse *= item.lightDir;
+   
+    
     // test the operators
     output.diffuse *= output.diffuse;
     output.diffuse += output.diffuse;

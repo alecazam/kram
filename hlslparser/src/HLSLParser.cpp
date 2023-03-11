@@ -173,6 +173,37 @@ bool IsNumericType(HLSLBaseType baseType)
     return IsVectorType(baseType) || IsScalarType(baseType) || IsMatrixType(baseType);
 }
 
+HLSLBufferType ConvertTokenToBufferType(HLSLToken token)
+{
+    HLSLBufferType type = HLSLBufferType_CBuffer;
+    
+    switch(token)
+    {
+        // DX9
+        case HLSLToken_CBuffer:
+            type = HLSLBufferType_CBuffer; break;
+        case HLSLToken_TBuffer:
+            type = HLSLBufferType_TBuffer; break;
+        
+        // DX10
+        case HLSLToken_ConstantBuffer:
+            type = HLSLBufferType_ConstantBuffer; break;
+        case HLSLToken_StructuredBuffer:
+            type = HLSLBufferType_StructuredBuffer; break;
+        case HLSLToken_RWStructuredBuffer:
+            type = HLSLBufferType_RWStructuredBuffer; break;
+        case HLSLToken_ByteAddressBuffer:
+            type = HLSLBufferType_ByteAddressBuffer; break;
+        case HLSLToken_RWByteAddressBuffer:
+            type = HLSLBufferType_RWByteAddressBuffer; break;
+            
+        default:
+            break;
+    }
+    
+    return type;
+}
+
 HLSLBaseType NumericToBaseType(NumericType numericType)
 {
     HLSLBaseType baseType = HLSLBaseType_Unknown;
@@ -1384,6 +1415,9 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
     //const char*  typeName = NULL;
     //int          typeFlags = false;
 
+    // TODO: this cast likely isn't safe
+    HLSLToken token = (HLSLToken)m_tokenizer.GetToken();
+    
     bool doesNotExpectSemicolon = false;
 
     // Alec add comment
@@ -1391,8 +1425,7 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
     {
         doesNotExpectSemicolon = true;
     }
-    else
-    if (Accept(HLSLToken_Struct))
+    else if (Accept(HLSLToken_Struct))
     {
         // Struct declaration.
 
@@ -1447,6 +1480,52 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
 
         statement = structure;
     }
+    else if (Accept(HLSLToken_ConstantBuffer) ||
+             Accept(HLSLToken_StructuredBuffer) ||
+             Accept(HLSLToken_RWStructuredBuffer) ||
+             Accept(HLSLToken_ByteAddressBuffer) ||
+             Accept(HLSLToken_RWByteAddressBuffer))
+    {
+        HLSLBuffer* buffer = m_tree->AddNode<HLSLBuffer>(fileName, line);
+        
+        // these can appear on t or u slots for read vs. read/write
+        // need to track what the user specified.  Load vs. Store calls.
+        buffer->bufferType = ConvertTokenToBufferType(token);
+    
+        // Is template struct type required?
+        if (Expect('<'))
+        {
+            const char* structName = nullptr;
+            
+            // Read the templated type, should reference a struct
+            // don't need to support fields on this.
+            if (!ExpectIdentifier(structName) || !Expect('>'))
+            {
+                return false;
+            }
+           
+            buffer->bufferStruct = FindUserDefinedType(structName);
+            if (!buffer->bufferStruct)
+            {
+                return false;
+            }
+        }
+        
+        // get name of buffer
+        AcceptIdentifier(buffer->name);
+    
+        // Parse ": register(t0/u0)"
+        if (Accept(':'))
+        {
+            if (!Expect(HLSLToken_Register) || !Expect('(') || !ExpectIdentifier(buffer->registerName) || !Expect(')'))
+            {
+                return false;
+            }
+            // TODO: Check that we aren't re-using a register.
+        }
+        
+        statement = buffer;
+    }
     else if (Accept(HLSLToken_CBuffer) || Accept(HLSLToken_TBuffer))
     {
         // cbuffer/tbuffer declaration.
@@ -1454,6 +1533,8 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
         HLSLBuffer* buffer = m_tree->AddNode<HLSLBuffer>(fileName, line);
         AcceptIdentifier(buffer->name);
 
+        buffer->bufferType = ConvertTokenToBufferType(token);
+        
         // Optional register assignment.
         if (Accept(':'))
         {
@@ -1752,7 +1833,10 @@ bool HLSLParser::ParseStatement(HLSLStatement*& statement, const HLSLType& retur
     HLSLAttribute * attributes = NULL;
     ParseAttributeBlock(attributes);    // @@ Leak if not assigned to node? 
 
-#if 0 // @@ Work in progress.
+#if 0
+    // @@ Work in progress.
+    // Alec? - @If, @Else blocks, are these like specialization constants?
+/*
     // Static statements: @if only for now.
     if (Accept('@'))
     {
@@ -1790,7 +1874,7 @@ bool HLSLParser::ParseStatement(HLSLStatement*& statement, const HLSLType& retur
             HLSLStatement * ifStatements = NULL;
             HLSLStatement * elseStatements = NULL;
             
-            if (!ParseStatementOrBlock(ifStatements, returnType, /*scoped=*/false))
+            if (!ParseStatementOrBlock(ifStatements, returnType, false))
             {
                 m_disableSemanticValidation = false;
                 return false;
@@ -1799,7 +1883,7 @@ bool HLSLParser::ParseStatement(HLSLStatement*& statement, const HLSLType& retur
             {
                 if (conditionValue) m_disableSemanticValidation = true;
                 
-                if (!ParseStatementOrBlock(elseStatements, returnType, /*scoped=*/false))
+                if (!ParseStatementOrBlock(elseStatements, returnType, false))
                 {
                     m_disableSemanticValidation = false;
                     return false;
@@ -1818,6 +1902,7 @@ bool HLSLParser::ParseStatement(HLSLStatement*& statement, const HLSLType& retur
             m_tokenizer.Error("Syntax error: unexpected token '@'");
         }
     }
+*/
 #endif
     
     // Getting 2 copies of some comments, why is that
@@ -2421,6 +2506,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
         float fValue = 0.0f;
         int   iValue = 0;
         
+        // literals
         if (AcceptFloat(fValue))
         {
             HLSLLiteralExpression* literalExpression = m_tree->AddNode<HLSLLiteralExpression>(fileName, line);
@@ -2441,7 +2527,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
 			expression = literalExpression;
 			return true;
 		}
-        else if (AcceptInt(iValue))
+        if (AcceptInt(iValue))
         {
             HLSLLiteralExpression* literalExpression = m_tree->AddNode<HLSLLiteralExpression>(fileName, line);
             literalExpression->type   = HLSLBaseType_Int;
@@ -2451,7 +2537,10 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
             expression = literalExpression;
             return true;
         }
-        else if (Accept(HLSLToken_True))
+        // TODO: need uint, u/short
+        
+        // boolean
+        if (Accept(HLSLToken_True))
         {
             HLSLLiteralExpression* literalExpression = m_tree->AddNode<HLSLLiteralExpression>(fileName, line);
             literalExpression->type   = HLSLBaseType_Bool;
@@ -2461,7 +2550,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
             expression = literalExpression;
             return true;
         }
-        else if (Accept(HLSLToken_False))
+        if (Accept(HLSLToken_False))
         {
             HLSLLiteralExpression* literalExpression = m_tree->AddNode<HLSLLiteralExpression>(fileName, line);
             literalExpression->type   = HLSLBaseType_Bool;

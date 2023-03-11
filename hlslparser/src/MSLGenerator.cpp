@@ -48,6 +48,7 @@ namespace M4
             return nextRegister++;
         }
 
+        // skip over the u/b/t register prefix
         while (*registerName && !isdigit(*registerName))
         {
             registerName++;
@@ -58,6 +59,7 @@ namespace M4
             return nextRegister++;
         }
 
+        // parse the number
         int result = atoi(registerName);
 
         if (nextRegister <= result)
@@ -182,6 +184,9 @@ namespace M4
                 
                 HLSLType type(HLSLBaseType_UserDefined);
                 type.addressSpace = HLSLAddressSpace_Constant;
+                
+                // TODO: on cbuffer is a ubo, not tbuffer, or others
+                // TODO: this is having to rename due to globals
                 type.typeName = m_tree->AddStringFormat("%s_ubo", buffer->name);
 
                 int bufferRegister = ParseRegister(buffer->registerName, nextBufferRegister) + m_options.bufferRegisterOffset;
@@ -383,27 +388,53 @@ namespace M4
         m_writer.BeginLine(1);
 
         m_writer.Write("%s(", shaderClassName);
+        
+        // mod
+        m_writer.EndLine();
+        m_writer.BeginLine(1);
+        
         const ClassArgument* currentArg = m_firstClassArgument;
         while (currentArg != NULL)
         {
-            if (currentArg->type.addressSpace == HLSLAddressSpace_Constant)                  m_writer.Write("constant ");
+            if (currentArg->type.addressSpace == HLSLAddressSpace_Constant)              m_writer.Write("constant ");
             else
                 m_writer.Write("thread ");
 
             m_writer.Write("%s & %s", GetTypeName(currentArg->type, /*exactType=*/true), currentArg->name);
 
             currentArg = currentArg->nextArg;
-            if (currentArg) m_writer.Write(", ");
+            if (currentArg)
+            {
+                m_writer.Write(", ");
+                
+                // mod
+                m_writer.EndLine();
+                m_writer.BeginLine(1);
+            }
         }
         m_writer.Write(")");
-
+        
+        // mod
+        m_writer.EndLine(); 
+        m_writer.BeginLine(1);
+        
         currentArg = m_firstClassArgument;
-        if (currentArg) m_writer.Write(" : ");
+        if (currentArg)
+        {
+            m_writer.Write(" : ");
+        }
         while (currentArg != NULL)
         {
             m_writer.Write("%s(%s)", currentArg->name, currentArg->name);
             currentArg = currentArg->nextArg;
-            if (currentArg) m_writer.Write(", ");
+            if (currentArg)
+            {
+                m_writer.Write(", ");
+                
+                // mod
+                m_writer.EndLine();
+                m_writer.BeginLine(1);
+            }
         }
         m_writer.EndLine(" {}");
 
@@ -455,6 +486,10 @@ namespace M4
 
         m_writer.Write(" %s(", entryName);
 
+        // Alec added for readability
+        m_writer.EndLine();
+        m_writer.BeginLine(1);
+        
         int argumentCount = 0;
         HLSLArgument* argument = entryFunction->argument;
         while (argument != NULL)
@@ -476,12 +511,17 @@ namespace M4
                 {
                     m_writer.Write(" [[%s]]", argument->sv_semantic);
                 }
+                
                 argumentCount++;
             }
             argument = argument->nextArgument;
             if (argument && !argument->hidden)
             {
                 m_writer.Write(", ");
+                
+                // Alec added for readability
+                m_writer.EndLine();
+                m_writer.BeginLine(1);
             }
         }
 
@@ -508,6 +548,10 @@ namespace M4
             if (currentArg)
             {
                 m_writer.Write(", ");
+                
+                // Alec added for readability
+                m_writer.EndLine();
+                m_writer.BeginLine(1);
             }
         }
         m_writer.EndLine(") {");
