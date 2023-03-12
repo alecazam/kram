@@ -27,8 +27,6 @@ static const char* GetTypeName(const HLSLType& type)
     case HLSLBaseType_SamplerState:              return "SamplerState";
     case HLSLBaseType_SamplerComparisonState:    return "SamplerComparisonState";
         
-    //case HLSLBaseType_Texture:      return "texture";
-            
     case HLSLBaseType_Texture2D:         return "Texture2D";
     case HLSLBaseType_Texture2DArray:    return "Texture2DArray";
     case HLSLBaseType_Texture3D:         return "Texture3D";
@@ -100,26 +98,16 @@ HLSLGenerator::HLSLGenerator()
 // - Semantics associated input arguments or fields of the input arguments -> input semantic replacement.
 static const char * TranslateSemantic(const char* semantic, bool output, HLSLGenerator::Target target)
 {
+    // Note: these are all just passthrough of the DX10 semantics
+    // except for BASEVERTEX/INSTANCE which doesn't seem to dxc compile.
+    
     if (target == HLSLGenerator::Target_VertexShader)
     {
         if (output) 
         {
-            if (String_Equal("SV_Position", semantic))
-                return "SV_Position";
-            
-            // This is the syntax, I guess DX12 still honors PSIZE?
-            // "[[vk::builtin(\"PointSize\")]] float name : PSIZE;
-            
-            // Vulkan/MSL only
-            if (String_Equal("PSIZE", semantic))
-                return "PSIZE";
+
         }
         else {
-            if (String_Equal("SV_InstanceID", semantic))
-                return "SV_InstanceID";
-            if (String_Equal("SV_VertexID", semantic))
-                return "SV_VertexID";
-            
             // see here for sample of builtin notation
             // https://github.com/microsoft/DirectXShaderCompiler/commit/b6fe9886ad
             
@@ -127,9 +115,9 @@ static const char * TranslateSemantic(const char* semantic, bool output, HLSLGen
             // [[vk::builtin(\"BaseVertex\")]] uint baseVertex :
             // [[vk::builtin(\"BaseInstance\")]] uint instance : SV_BaseInstance
             
-            if (String_Equal(semantic, "BASE_VERTEX"))
+            if (String_Equal(semantic, "BASEVERTEX"))
                 return "BaseVertex";  // vulkan only
-            if (String_Equal(semantic, "BASE_INSTANCE"))
+            if (String_Equal(semantic, "BASEINSTANCE"))
                 return "BaseInstance";  // vulkan only
         }
     }
@@ -137,33 +125,11 @@ static const char * TranslateSemantic(const char* semantic, bool output, HLSLGen
     {
         if (output)
         {
-            if (String_Equal("SV_Depth", semantic))
-                return "SV_Depth";
-            if (String_Equal("SV_DepthGreaterEqual", semantic))
-                return "SV_DepthGreaterEqual";
-            if (String_Equal("SV_DepthLessEqual", semantic))
-                return "SV_DepthLessEqual";
-            
-            
-            if (String_Equal("SV_Target", semantic))
-                return "SV_Target";
-            if (String_Equal("SV_Target0", semantic))
-                return "SV_Target0";
-            // dual source blending ?
-            //if (String_Equal("COLOR0_1", semantic))       return "SV_Target1";
-            if (String_Equal("SV_Target1", semantic))
-                return "SV_Target1";
-            if (String_Equal("SV_Target2", semantic))
-                return "SV_Target2";
-            if (String_Equal("SV_Target3", semantic))
-                return "SV_Target3";
+
         }
         else
         {
-            if (String_Equal("SV_Position", semantic))
-                return "SV_Position";
-            if (String_Equal("SV_IsFrontFace", semantic))
-                return "SV_IsFrontFace";    // bool   @@ Should we do type replacement too?
+
         }
     }
     return NULL;
@@ -414,13 +380,14 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
         case HLSLBaseType_Int:
             m_writer.Write("%d", literalExpression->iValue);
             break;
-        // TODO: missing uint?
+        // TODO: missing uint, u/short, double
                 
         case HLSLBaseType_Bool:
             m_writer.Write("%s", literalExpression->bValue ? "true" : "false");
             break;
         default:
-            ASSERT(0);
+            Error("Unhandled literal");
+            //ASSERT(false);
         }
     }
     else if (expression->nodeType == HLSLNodeType_UnaryExpression)
@@ -492,7 +459,8 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
         case HLSLBinaryOp_BitOr:        op = " | "; break;
         case HLSLBinaryOp_BitXor:       op = " ^ "; break;
         default:
-            ASSERT(0);
+            Error("Unhandled binary op");
+            //ASSERT(false);
         }
         m_writer.Write("%s", op);
         OutputExpression(binaryExpression->expression2);
@@ -836,7 +804,8 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
         else
         {
             // Unhanded statement type.
-            ASSERT(0);
+            Error("Unhandled statemement");
+            //ASSERT(false);
         }
 
         statement = statement->nextStatement;
@@ -959,7 +928,9 @@ void HLSLGenerator::OutputDeclarationType(const HLSLType& type)
 {
     const char* typeName = GetTypeName(type);
     
-    /*
+    /* TODO: remove, the textures now caart the type,
+       might need special flag for depth for MSL side, ignore in HLSL
+     
     if (type.baseType == HLSLBaseType_Sampler2D)
     {
         if (type.textureType == HLSLBaseType_Half

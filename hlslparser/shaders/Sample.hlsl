@@ -28,19 +28,33 @@ struct LightState
     float3 direction;
     float4 color;
     float4 falloff;
-    float4x4 view;
-    float4x4 projection;
+    float4x4 viewProj;
 };
 
+/*
 cbuffer SceneConstantBuffer : register(b0)
 {
     float4x4 model;
-    float4x4 view;
-    float4x4 projection;
+    float4x4 viewProj;
     float4 ambientColor;
     bool sampleShadowMap;
     LightState lights[NUM_LIGHTS];
 };
+*/
+
+struct SceneConstantBuffer
+{
+    float4x4 model;
+    float4x4 viewProj;
+    float4 ambientColor;
+    bool sampleShadowMap;
+    LightState lights[3];
+};
+// TODO: NUM_LIGHTS isn't unhidden when parsing structs
+// LightState lights[NUM_LIGHTS];
+
+// SM 6.1
+ConstantBuffer<SceneConstantBuffer> scene : register(b0);
 
 struct InputVS
 {
@@ -58,7 +72,6 @@ struct OutputVS
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
 };
-
 
 struct InputPS
 {
@@ -117,13 +130,12 @@ float4 CalcLightingColor(float3 vLightPos, float3 vLightDir, float4 vLightColor,
 //--------------------------------------------------------------------------------------
 // Test how much pixel is in shadow, using 2x2 percentage-closer filtering.
 //--------------------------------------------------------------------------------------
-float4 CalcUnshadowedAmountPCF2x2(int lightIndex, float4 vPosWorld)
+float4 CalcUnshadowedAmountPCF2x2(int lightIndex, float4 vPosWorld, float4x4 viewProj)
 {
     // Compute pixel position in light space.
     float4 vLightSpacePos = vPosWorld;
-    vLightSpacePos = mul(vLightSpacePos, lights[lightIndex].view);
-    vLightSpacePos = mul(vLightSpacePos, lights[lightIndex].projection);
-
+    vLightSpacePos = mul(vLightSpacePos, viewProj);
+    
     vLightSpacePos.xyz /= vLightSpacePos.w;
 
     // Translate from homogeneous coords to texture coords.
@@ -159,16 +171,17 @@ OutputVS SampleVS(InputVS input)
 
     float4 newPosition = float4(input.position, 1.0);
 
-    input.normal.z *= -1.0;
-    newPosition = mul(newPosition, model);
+    input.normal.z *= -1.0; // why negated?
+    newPosition = mul(newPosition, scene.model);
 
     output.worldpos = newPosition;
 
-    newPosition = mul(newPosition, view);
-    newPosition = mul(newPosition, projection);
-
+    newPosition = mul(newPosition, scene.viewProj);
+   
     output.position = newPosition;
     output.uv = input.uv;
+    
+    // TODO: need transformed to world space too?
     output.normal = input.normal;
     output.tangent = input.tangent;
 
@@ -179,14 +192,15 @@ float4 SamplePS(InputPS input) : SV_Target0
 {
     float4 diffuseColor = Sample(diffuseMap, sampleWrap, input.uv);
     float3 pixelNormal = CalcPerPixelNormal(input.uv, input.normal, input.tangent);
-    float4 totalLight = ambientColor;
+    float4 totalLight = scene.ambientColor;
 
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
-        float4 lightPass = CalcLightingColor(lights[i].position, lights[i].direction, lights[i].color, lights[i].falloff, input.worldpos.xyz, pixelNormal);
-        if (sampleShadowMap && i == 0)
+        LightState light = scene.lights[i];
+        float4 lightPass = CalcLightingColor(light.position, light.direction, light.color, light.falloff, input.worldpos.xyz, pixelNormal);
+        if (scene.sampleShadowMap && i == 0)
         {
-            lightPass *= CalcUnshadowedAmountPCF2x2(i, input.worldpos);
+            lightPass *= CalcUnshadowedAmountPCF2x2(i, input.worldpos, light.viewProj);
         }
         totalLight += lightPass;
     }

@@ -187,8 +187,11 @@ namespace M4
                 
                 // TODO: on cbuffer is a ubo, not tbuffer, or others
                 // TODO: this is having to rename due to globals
-                type.typeName = m_tree->AddStringFormat("%s_ubo", buffer->name);
-
+                if (buffer->IsGlobalFields())
+                    type.typeName = m_tree->AddStringFormat("%s_ubo", buffer->name);
+                else
+                    type.typeName = m_tree->AddStringFormat("%s", buffer->bufferStruct->name);
+                
                 int bufferRegister = ParseRegister(buffer->registerName, nextBufferRegister) + m_options.bufferRegisterOffset;
 
                 const char * bufferRegisterName = m_tree->AddStringFormat("buffer(%d)", bufferRegister);
@@ -854,7 +857,7 @@ namespace M4
             else
             {
                 // Unhandled statement type.
-                ASSERT(0);
+                Error("Unknown statement");
             }
 
             statement = statement->nextStatement;
@@ -895,52 +898,13 @@ namespace M4
         {
             // Declare a texture and a sampler instead
             // We do not handle multiple textures on the same line
-            ASSERT(declaration->nextDeclaration == NULL);
-            const char * formatName = "float";
-            if (declaration->type.textureType == HLSLBaseType_Half && !m_options.treatHalfAsFloat)
-            {
-                formatName = "half";
-            }
-
-            if (declaration->type.baseType == HLSLBaseType_Texture2D)
-            {
-                m_writer.Write("thread texture2d<%s>& %s", formatName, declaration->name);
-            }
-            else if (declaration->type.baseType == HLSLBaseType_Texture2DArray)
-            {
-                m_writer.Write("thread texture2d_array<%s>& %s", formatName, declaration->name);
-            }
-            else if (declaration->type.baseType == HLSLBaseType_TextureCubeArray)
-            {
-                m_writer.Write("thread texturecube_array<%s>& %s", formatName, declaration->name);
-            }
-            else if (declaration->type.baseType == HLSLBaseType_Texture3D)
-            {
-                m_writer.Write("thread texture3d<%s>& %s", formatName, declaration->name);
-            }
-            else if (declaration->type.baseType == HLSLBaseType_TextureCube)
-            {
-                m_writer.Write("thread texturecube<%s>& %s", formatName, declaration->name);
-            }
-// TODO: need equivalent of this
-//            else if (declaration->type.baseType == HLSLBaseType_Texture2DShadow)
-//            {
-//                // Note: ios has 16f depth now, so don't assume float
-//                m_writer.Write("thread depth2d<%s>& %s;", formatName,declaration->name);
-//            }
-            else if (declaration->type.baseType == HLSLBaseType_Texture2DMS)
-            {
-                // no sampler, just Load samples
-                m_writer.Write("thread texture2d_ms<%s>& %s_texture", formatName, declaration->name);
-            }
-            else if (declaration->type.baseType == HLSLBaseType_Texture2DArray)
-            {
-                m_writer.Write("thread texture2d_array<%s>& %s_texture", formatName, declaration->name);
-            }
+            // ASSERT(declaration->nextDeclaration == NULL);
+            
+            const char* textureName = GetTypeName(declaration->type, true);
+            if (textureName)
+                m_writer.Write("thread %s& %s", textureName, declaration->name);
             else
-            {
-               Error("<unhandled texture type>");
-            }
+                Error("Unknown texture");
         }
         else
         {
@@ -966,10 +930,20 @@ namespace M4
             {
                 m_writer.BeginLine(indent + 1, field->fileName, field->line);
                 OutputDeclaration(field->type, field->name, NULL);
+                
+                // DONE: would need a semantic remap for all possible semantics
+                // just use the name the caller specified if sv_semantic
+                // is not set.  The header can handle translating
                 if (field->sv_semantic)
                 {
                     m_writer.Write(" [[%s]]", field->sv_semantic);
                 }
+// Alec added this fallback, but then it tags too many fields
+//                else if (field->semantic)
+//                {
+//                    m_writer.Write(" [[%s]]", field->semantic);
+//                }
+                
 
                 m_writer.Write(";");
                 m_writer.EndLine();
@@ -981,24 +955,48 @@ namespace M4
 
     void MSLGenerator::OutputBuffer(int indent, HLSLBuffer* buffer)
     {
-        HLSLDeclaration* field = buffer->field;
-
-        m_writer.BeginLine(indent, buffer->fileName, buffer->line);
-        m_writer.Write("struct %s_ubo", buffer->name);
-        m_writer.EndLine(" {");
-        while (field != NULL)
+        if (!buffer->IsGlobalFields())
         {
-            if (!field->hidden)
+            m_writer.BeginLine(indent, buffer->fileName, buffer->line);
+            
+            // TODO: handle array case for indexing, also
+            if (buffer->bufferType == HLSLBufferType_ConstantBuffer ||
+               buffer->bufferType == HLSLBufferType_ByteAddressBuffer ||
+               buffer->bufferType == HLSLBufferType_StructuredBuffer)
             {
-                m_writer.BeginLine(indent + 1, field->fileName, field->line);
-                OutputDeclaration(field->type, field->name, field->assignment, false, false, 0); // /*alignment=*/16);
-                m_writer.EndLine(";");
+                m_writer.WriteLine(indent, "constant %s & %s", buffer->bufferStruct->name, buffer->name);
             }
-            field = (HLSLDeclaration*)field->nextStatement;
+            else
+            {
+                // is this thread space?
+                m_writer.WriteLine(indent, "thread %s & %s",  buffer->bufferStruct->name, buffer->name);
+            }
+            
+            m_writer.EndLine(";");
         }
-        m_writer.WriteLine(indent, "};");
-
-        m_writer.WriteLine(indent, "constant %s_ubo & %s;", buffer->name, buffer->name);
+        else
+        {
+            HLSLDeclaration* field = buffer->field;
+            
+            m_writer.BeginLine(indent, buffer->fileName, buffer->line);
+            
+            // TODO: these aren't all ubo, some are structured buffer
+            m_writer.Write("struct %s_ubo", buffer->name);
+            m_writer.EndLine(" {");
+            while (field != NULL)
+            {
+                if (!field->hidden)
+                {
+                    m_writer.BeginLine(indent + 1, field->fileName, field->line);
+                    OutputDeclaration(field->type, field->name, field->assignment, false, false, 0); // /*alignment=*/16);
+                    m_writer.EndLine(";");
+                }
+                field = (HLSLDeclaration*)field->nextStatement;
+            }
+            m_writer.WriteLine(indent, "};");
+            
+            m_writer.WriteLine(indent, "constant %s_ubo & %s;", buffer->name, buffer->name);
+        }
     }
 
     void MSLGenerator::OutputFunction(int indent, HLSLFunction* function)
@@ -1316,8 +1314,10 @@ namespace M4
             case HLSLBaseType_Bool:
                 m_writer.Write("%s", literalExpression->bValue ? "true" : "false");
                 break;
+            // TODO: missing uint, u/short, double
             default:
-                ASSERT(0);
+                Error("Unhandled literal");
+                //ASSERT(0);
             }
         }
         else if (expression->nodeType == HLSLNodeType_UnaryExpression)
@@ -1386,14 +1386,9 @@ namespace M4
                     // Do intermediate type promotion, without changing dimension:
                     HLSLType promotedType = binaryExpression->expression1->expressionType;
 
-                    // TODO: remove
-                    //if (ScalarBaseType[binaryExpression->expressionType.baseType] != ScalarBaseType[promotedType.baseType])
                     if (!IsNumericTypeEqual(binaryExpression->expressionType.baseType, promotedType.baseType))
                     {
                         promotedType.baseType = PromoteType(binaryExpression->expressionType.baseType, promotedType.baseType);
-                        
-                        // TODO: remove
-                        //promotedType.baseType = HLSLBaseType(ScalarBaseType[binaryExpression->expressionType.baseType] + BaseTypeDimension[promotedType.baseType] - 1);
                     }
 
                     OutputTypedExpression(promotedType, binaryExpression->expression1, binaryExpression);
@@ -1427,7 +1422,8 @@ namespace M4
                 case HLSLBinaryOp_BitOr:        op = " | "; break;
                 case HLSLBinaryOp_BitXor:       op = " ^ "; break;
                 default:
-                    ASSERT(0);
+                    Error("unhandled literal");
+                    //ASSERT(0);
                 }
                 m_writer.Write("%s", op);
 
@@ -1439,15 +1435,10 @@ namespace M4
                     // Do intermediate type promotion, without changing dimension:
                     HLSLType promotedType = binaryExpression->expression2->expressionType;
 
-                    // TODO: remove
-                    //if (ScalarBaseType[binaryExpression->expressionType.baseType] != ScalarBaseType[promotedType.baseType])
                     if (!IsNumericTypeEqual(binaryExpression->expressionType.baseType, promotedType.baseType))
                     {
                         // This should only promote up (half->float, etc)
                         promotedType.baseType = PromoteType(binaryExpression->expressionType.baseType, promotedType.baseType);
-                        
-                        // TODO: remove
-                        //promotedType.baseType = HLSLBaseType(ScalarBaseType[binaryExpression->expressionType.baseType] + BaseTypeDimension[promotedType.baseType] - 1);
                     }
 
                     OutputTypedExpression(promotedType, binaryExpression->expression2, binaryExpression);
@@ -1601,30 +1592,7 @@ namespace M4
                 }
             }
         }
-        /*
-        if (IsSamplerType(type))
-        {
-            if (type.baseType == HLSLBaseType_Sampler2D) {
-                if (type.samplerType == HLSLBaseType_Half && !m_options.treatHalfAsFloat) {
-                    typeName = "Texture2DHalfSampler";
-                }
-                else {
-                    typeName = "Texture2DSampler";
-                }
-            }
-            else if (type.baseType == HLSLBaseType_Sampler3D)
-                typeName = "Texture3DSampler";
-            else if (type.baseType == HLSLBaseType_SamplerCube)
-                typeName = "TextureCubeSampler";
-            else if (type.baseType == HLSLBaseType_Sampler2DShadow)
-                typeName = "Texture2DShadowSampler";
-            else if (type.baseType == HLSLBaseType_Sampler2DShadow)
-                typeName = "Texture2DMSSampler";
-            else
-               Error( "<unhandled texture type>" );
-        }
-        else
-        */
+        
         if (alignment != 0 && !isTypeCast)
         {
             // caller can request alignment, but default is 0
@@ -1992,49 +1960,18 @@ namespace M4
             if (String_Equal(semantic, "SV_VertexID"))
                 return "vertex_id";
 
-            if (String_Equal(semantic, "SV_Position"))
-                return "attribute(VAPosition)";
-            
-            if (String_Equal(semantic, "BASE_VERTEX"))
+            // requires SPV_KHR_shader_draw_parameters for Vulkan
+            // not a DX12 construct.
+            if (String_Equal(semantic, "BASEVERTEX"))
                 return "base_vertex";
-            if (String_Equal(semantic, "BASE_INSTANCE"))
+            if (String_Equal(semantic, "BASEINSTANCE"))
                 return "base_instance";
-            
-            /* TODO: add to HLSL too
-            // TODO: baseVertex, baseInstance (Vulkan and Metal suport)
-            // SPV_KHR_shader_draw_parameters is Vulkan ext. DX12 no support.
-            //
-            
-             
-            // no equivlement drawIndex in MSL
-            //if (String_Equal(semantic, "SV_DrawIndex"))
+            //if (String_Equal(semantic, "DRAW_INDEX"))
             //    return "draw_index";
-            */
             
-            // TODO: offer index support on all of these
-            if (String_Equal(semantic, "NORMAL"))
-                return "attribute(VANormal)";
-            if (String_Equal(semantic, "TANGENT"))
-                return "attribute(VATangent)";
-            if (String_Equal(semantic, "BITANGENT"))
-                return "attribute(VABitangent)";
+            // TODO: primitive_id, barycentric
             
-            if (String_Equal(semantic, "BLENDINDICES"))
-                return "attribute(VABlendIndices)";
-            if (String_Equal(semantic, "BLENDWEIGHT"))
-                return "attribute(VABlendWeight)";
-            
-            if (String_Equal(semantic, "COLOR"))
-                return "attribute(VAColor0)";
-            
-            if (String_Equal(semantic, "TEXCOORD0"))
-                return "attribute(VATexcoord0)";
-            if (String_Equal(semantic, "TEXCOORD1"))
-                return "attribute(VATexcoord1)";
-            if (String_Equal(semantic, "TEXCOORD2"))
-                return "attribute(VATexcoord2)";
-            if (String_Equal(semantic, "TEXCOORD3"))
-                return "attribute(VATexcoord3)";
+            // Handle attributes
             
             // Can set custom attributes via a callback
             if (m_options.attributeCallback)
@@ -2052,6 +1989,11 @@ namespace M4
                     return m_tree->AddStringFormat("attribute(%d)", attribute);
                 }
             }
+            
+            if (String_Equal(semantic, "SV_Position"))
+                return "attribute(POSITION)";
+
+            return m_tree->AddStringFormat("attribute(%s)", semantic);
         }
         else if (m_target == MSLGenerator::Target_FragmentShader)
         {
@@ -2154,46 +2096,83 @@ namespace M4
         return NULL;
     }
 
-    
-        
+
     const char* MSLGenerator::GetTypeName(const HLSLType& type, bool exactType)
     {
         bool promote = ((type.flags & HLSLTypeFlag_NoPromote) == 0);
 
-        bool half_to_float = promote && m_options.treatHalfAsFloat;// && !exactType;
-        
-        // TODO: move carting around half/float to texture
-        bool half_samplers = promote && type.textureType == HLSLBaseType_Half && !m_options.treatHalfAsFloat;
-
+        // number
+        bool isHalfNumerics = promote && !m_options.treatHalfAsFloat;
         auto baseType = type.baseType;
-        if (half_to_float)
-        {
+        if (!isHalfNumerics)
             baseType = HalfToFloatBaseType(baseType);
-        }
         
         const char* name = GetNumericTypeName(baseType);
         if (name)
             return name;
         
-        switch (baseType)
+        // struct
+        if (baseType == HLSLBaseType_UserDefined)
+            return type.typeName;
+        
+        // sampler
+        if (IsSamplerType(baseType))
+            return "sampler";
+        
+        // texture
+        if (IsTextureType(baseType))
         {
-        // Texture should cart the half vs. float
-        case HLSLBaseType_SamplerState:            return "sampler";
-        case HLSLBaseType_SamplerComparisonState:  return "sampler"; // TODO:
+            // TODO: hook isDepth up to texture flag
+            // unclear if depth supports half, may have to be float always
+            bool isDepth = false;
             
-        case HLSLBaseType_Texture2D:        return half_samplers ? "texture2d<half>" : "texture2d<float>";
-        case HLSLBaseType_Texture3D:        return half_samplers ? "texture3d<half>" : "texture3d<float>";
-        case HLSLBaseType_TextureCube:      return half_samplers ? "texturecube<half>" : "texturecube<float>";
-        //case HLSLBaseType_Texture2DShadow:  return "depth2d<float>";
-        case HLSLBaseType_Texture2DMS:      return half_samplers ? "texture2d_ms<half>" : "texture2d_ms<float>";
-        case HLSLBaseType_TextureCubeArray:      return half_samplers ? "texturecube_array<half>" : "texturecube_array<float>";
-        case HLSLBaseType_Texture2DArray:      return half_samplers ? "texture2d_array<half>" : "texture2d_array<float>";
-           
-        case HLSLBaseType_UserDefined:      return type.typeName;
-        default:
-            ASSERT(0);
-            return "<unknown type>";
+            bool isHalfTexture  = promote && type.textureType == HLSLBaseType_Half && !m_options.treatHalfAsFloat;
+            
+            switch (baseType)
+            {
+                case HLSLBaseType_Texture2D:
+                    if (isDepth)
+                        return isHalfTexture ? "depth2d<half>" : "depth2d<float>";
+                    
+                    return isHalfTexture ? "texture2d<half>" : "texture2d<float>";
+                case HLSLBaseType_Texture3D:
+                    // no depth equivalent for 3d
+                    //if (isDepth)
+                    //    return isHalfTexture ? "depth2d<half>" : "depth2d<float>";
+                    
+                    return isHalfTexture ? "texture3d<half>" : "texture3d<float>";
+                case HLSLBaseType_TextureCube:
+                    if (isDepth)
+                        return isHalfTexture ? "depthcube<half>" : "depthcube<float>";
+                    
+                    return isHalfTexture ? "texturecube<half>" : "texturecube<float>";
+                    
+                    // TODO: no equivalent of this yet
+                    // depth_ms_array
+                    
+                case HLSLBaseType_Texture2DMS:
+                    if (isDepth)
+                        return isHalfTexture ? "depth2d_ms<half>" : "depth2d_ms<float>";
+                    
+                    return isHalfTexture ? "texture2d_ms<half>" : "texture2d_ms<float>";
+                case HLSLBaseType_TextureCubeArray:
+                    if (isDepth)
+                        return isHalfTexture ? "depthcube_array<half>" : "depthcube_array<float>";
+                    
+                    return isHalfTexture ? "texturecube_array<half>" : "texturecube_array<float>";
+                case HLSLBaseType_Texture2DArray:
+                    if (isDepth)
+                        return isHalfTexture ? "depth2d_array<half>" : "depth2d_array<float>";
+                    
+                    return isHalfTexture ? "texture2d_array<half>" : "texture2d_array<float>";
+                    
+                default:
+                    break;
+            }
         }
+        
+        Error("Uknown Type");
+        return NULL;
     }
 
 

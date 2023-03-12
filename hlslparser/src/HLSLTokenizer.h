@@ -70,31 +70,6 @@ enum HLSLToken
     HLSLToken_SamplerState,
     HLSLToken_SamplerComparisonState,
     
-    // these are all the texture ops
-    // do these need tokenized?
-    /*
-    HLSLToken_Sample,
-    HLSLToken_SampleLevel,
-    HLSLToken_SampleCmp,
-    HLSLToken_SampleCmpLevelZero,
-    HLSLToken_SampleCmpGrad,
-    HLSLToken_SampleBias,
-    HLSLToken_GatherRed,
-    HLSLToken_GatherGreen,
-    HLSLToken_GatherBlue,
-    HLSLToken_GatherAlpha, // + GatherCmdRed/Green/Blue/Alpha
-    HLSLToken_GetDimensions,
-    */
-    
-//    HLSLToken_Texture,
-//    HLSLToken_Sampler,
-//    HLSLToken_Sampler2D,
-//    HLSLToken_Sampler3D,
-//    HLSLToken_SamplerCube,
-//    HLSLToken_Sampler2DShadow,
-//    HLSLToken_Sampler2DMS,
-//    HLSLToken_Sampler2DArray,
-
     // Reserved words.
     HLSLToken_If,
     HLSLToken_Else,

@@ -26,23 +26,28 @@
     enum _name : _type
 #endif
 
+// This isn't standard enum convention where enum starts with enum name
+// but this allows semantic passthrough of parser.
 typedef NS_ENUM(int32_t, VA) {
-    VAPosition = 0,
-    VATexcoord = 1,
+    POSITION = 0,
     
-    VANormal = 2,
-    VATangent = 3,
-    VABitangent = 4,
+    NORMAL = 2,
+    TANGENT = 3,
+    BITANGENT = 4,
     
-    VABlendIndices = 5,
-    VABlendWeight = 6,
+    BLENDINDICES = 5,
+    BLENDWEIGHT = 6,
     
-    VAColor0 = 7,
+    COLOR0 = 7,
     
-    VATexcoord0 = 8,
-    VATexcoord1 = 9,
-    VATexcoord2 = 10,
-    VATexcoord3 = 11,
+    TEXCOORD0 = 8,
+    TEXCOORD1 = 9,
+    TEXCOORD2 = 10,
+    TEXCOORD3 = 11,
+    TEXCOORD4 = 12,
+    TEXCOORD5 = 13,
+    TEXCOORD6 = 14,
+    TEXCOORD7 = 15,
 };
 
 // May want to only do using in the .metal files themselvs.

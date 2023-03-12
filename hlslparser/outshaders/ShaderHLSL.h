@@ -29,6 +29,10 @@
 // bool3 Cond2 = or(X, Y);
 // int3 Z = select(X, 1, 0);
 
+// RW/ByteAddressBuffer added SM 5.1
+// RW/StructuredBuffer added SM 5.1
+// ConstantBuffer<T> foo[4] : register(b0) template supportes indexing too.
+// added in SM 6.1.  So targeting DX12 6.2 seems ideal with half support.
 
 // For float16 operations, denormal numbers must be preserved.
 // No atomic operations for float16 are supported.

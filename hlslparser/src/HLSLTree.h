@@ -14,7 +14,7 @@ enum HLSLNodeType
     HLSLNodeType_Struct,
     HLSLNodeType_StructField,
     HLSLNodeType_Buffer,
-    HLSLNodeType_BufferField,
+    HLSLNodeType_BufferField, // TODO: or just ref structField
     HLSLNodeType_Function,
     HLSLNodeType_Argument,
     HLSLNodeType_ExpressionStatement,
@@ -117,7 +117,10 @@ enum HLSLBaseType
     HLSLBaseType_UserDefined,       // struct
     HLSLBaseType_Expression,        // type argument for defined() sizeof() and typeof().
     HLSLBaseType_Auto,
-    HLSLBaseType_Comment,           // single line comments optionally transferred to outptu
+    HLSLBaseType_Comment,           // single line comments optionally transferred to output
+    
+    // There are subtypes below
+    HLSLBaseType_Buffer,
     
     HLSLBaseType_Count,
     
@@ -131,6 +134,7 @@ enum HLSLBaseType
     HLSLBaseType_NumericCount = HLSLBaseType_LastNumeric - HLSLBaseType_FirstNumeric + 1
 };
   
+// This a subtype to HLSLBaseType_Buffer
 enum HLSLBufferType
 {
     // DX9
@@ -277,6 +281,8 @@ enum HLSLAttributeType
 enum HLSLAddressSpace
 {
     HLSLAddressSpace_Undefined,
+    
+    // These only apply to MSL
     HLSLAddressSpace_Constant,
     HLSLAddressSpace_Device,
     HLSLAddressSpace_Thread,
@@ -309,212 +315,147 @@ struct HLSLType
     explicit HLSLType(HLSLBaseType _baseType = HLSLBaseType_Unknown)
     { 
         baseType    = _baseType;
-        textureType = HLSLBaseType_Float;
-        typeName    = NULL;
-        array       = false;
-        arraySize   = NULL;
-        flags       = 0;
-        addressSpace = HLSLAddressSpace_Undefined;
     }
-    HLSLBaseType        baseType;
-    HLSLBaseType        textureType;    // Half or Float
-    const char*         typeName;       // For user defined types.
-    bool                array;
-    HLSLExpression*     arraySize;
-    int                 flags;
-    HLSLAddressSpace    addressSpace;
+    HLSLBaseType        baseType = HLSLBaseType_Unknown;
+    HLSLBaseType        textureType = HLSLBaseType_Float;    // Half or Float
+    const char*         typeName = NULL;       // For user defined types.
+    bool                array = false;
+    HLSLExpression*     arraySize = NULL;
+    int                 flags = 0;
+    HLSLAddressSpace    addressSpace = HLSLAddressSpace_Undefined;
 };
 
-/** Base class for all nodes in the HLSL AST */
+/// Base class for all nodes in the HLSL AST
 struct HLSLNode
 {
-    HLSLNodeType        nodeType;
-    const char*         fileName;
-    int                 line;
+    HLSLNodeType        nodeType; // set to s_type
+    const char*         fileName = NULL;
+    int                 line = 0;
 };
 
 struct HLSLRoot : public HLSLNode
 {
     static const HLSLNodeType s_type = HLSLNodeType_Root;
-    HLSLRoot()          { statement = NULL; }
-    HLSLStatement*      statement;          // First statement.
+    HLSLStatement*      statement = NULL;          // First statement.
 };
 
 struct HLSLStatement : public HLSLNode
 {
-    HLSLStatement() 
-    { 
-        nextStatement   = NULL; 
-        attributes      = NULL;
-        hidden          = false;
-    }
-    HLSLStatement*      nextStatement;      // Next statement in the block.
-    HLSLAttribute*      attributes;
-    mutable bool        hidden;
+    HLSLStatement*      nextStatement = NULL;      // Next statement in the block.
+    HLSLAttribute*      attributes = NULL;
+    mutable bool        hidden = false;
 };
 
 struct HLSLAttribute : public HLSLNode
 {
     static const HLSLNodeType s_type = HLSLNodeType_Attribute;
-	HLSLAttribute()
-	{
-		attributeType = HLSLAttributeType_Unknown;
-		argument      = NULL;
-		nextAttribute = NULL;
-	}
-    HLSLAttributeType   attributeType;
-    HLSLExpression*     argument;
-    HLSLAttribute*      nextAttribute;
+    HLSLAttributeType   attributeType = HLSLAttributeType_Unknown;
+    HLSLExpression*     argument = NULL;
+    HLSLAttribute*      nextAttribute = NULL;
 };
 
 struct HLSLDeclaration : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_Declaration;
-    HLSLDeclaration()
-    {
-        name            = NULL;
-        registerName    = NULL;
-        semantic        = NULL;
-        nextDeclaration = NULL;
-        assignment      = NULL;
-        buffer          = NULL;
-    }
-    const char*         name;
+    const char*         name  = NULL;
     HLSLType            type;
-    const char*         registerName;       // @@ Store register index?
-    const char*         semantic;
-    HLSLDeclaration*    nextDeclaration;    // If multiple variables declared on a line.
-    HLSLExpression*     assignment;
-    HLSLBuffer*         buffer;
+    const char*         registerName  = NULL;       // @@ Store register index?
+    const char*         semantic  = NULL;
+    HLSLDeclaration*    nextDeclaration = NULL;    // If multiple variables declared on a line.
+    HLSLExpression*     assignment = NULL;
+    
+    HLSLBuffer*         buffer = NULL; // reference cbuffer for decl
 };
 
 struct HLSLStruct : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_Struct;
-    HLSLStruct()
-    {
-        name            = NULL;
-        field           = NULL;
-    }
-    const char*         name;
-    HLSLStructField*    field;              // First field in the structure.
+    const char*         name = NULL;
+    HLSLStructField*    field = NULL;              // First field in the structure.
 };
 
 struct HLSLStructField : public HLSLNode
 {
     static const HLSLNodeType s_type = HLSLNodeType_StructField;
-    HLSLStructField()
-    {
-        name            = NULL;
-        semantic        = NULL;
-        sv_semantic     = NULL;
-        nextField       = NULL;
-        hidden          = false;
-    }
-    const char*         name;
+    const char*         name = NULL;
     HLSLType            type;
-    const char*         semantic;
-    const char*         sv_semantic;
-    HLSLStructField*    nextField;      // Next field in the structure.
-    bool                hidden;
+    const char*         semantic = NULL;
+    const char*         sv_semantic = NULL;
+    HLSLStructField*    nextField = NULL;      // Next field in the structure.
+    bool                hidden = false;
 };
 
-/** Buffer declaration. */
+/// Buffer declaration.
 struct HLSLBuffer : public HLSLStatement
 {
-    static const HLSLNodeType s_type = HLSLNodeType_Buffer;
-    HLSLBuffer()
-    {
-        name            = NULL;
-        registerName    = NULL;
-        field           = NULL;
-        
-        bufferType      = HLSLBufferType_CBuffer; // TODO: or add Unknown
-        bufferStruct    = NULL;
-    }
-    const char*         name;
-    const char*         registerName;
-    HLSLDeclaration*    field;
-    
+    // These spill a ton of globals throughout shader
     bool IsGlobalFields() const
     {
         return  bufferType == HLSLBufferType_CBuffer ||
                 bufferType == HLSLBufferType_TBuffer;
     }
-    HLSLBufferType      bufferType;
-    const HLSLStruct*   bufferStruct;
+    
+    // DX changes registers for read-only vs. read-write buffers (SRV vs. UAV)
+    // so constant/cbuffer use b, structured/byte use t (like textures),
+    // and read-write use u.  MSL only has u and
+    bool IsReadOnly() const
+    {
+        return  bufferType == HLSLBufferType_CBuffer ||
+                bufferType == HLSLBufferType_TBuffer ||
+                HLSLBufferType_ConstantBuffer ||
+                HLSLBufferType_StructuredBuffer ||
+                HLSLBufferType_ByteAddressBuffer;
+    }
+    
+    static const HLSLNodeType s_type = HLSLNodeType_Buffer;
+    const char*         name = NULL;
+    const char*         registerName = NULL;
+    HLSLDeclaration*    field = NULL;
+    HLSLBufferType      bufferType = HLSLBufferType_CBuffer;
+    HLSLStruct*         bufferStruct = NULL;
 };
 
 
-/** Function declaration */
+/// Function declaration
 struct HLSLFunction : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_Function;
-    HLSLFunction()
-    {
-        name            = NULL;
-        semantic        = NULL;
-        sv_semantic     = NULL;
-        statement       = NULL;
-        argument        = NULL;
-        numArguments    = 0;
-        numOutputArguments = 0;
-        forward         = NULL;
-    }
-    const char*         name;
+    const char*         name  = NULL;
     HLSLType            returnType;
-    const char*         semantic;
-    const char*         sv_semantic;
-    int                 numArguments;
-    int                 numOutputArguments;     // Includes out and inout arguments.
-    HLSLArgument*       argument;
-    HLSLStatement*      statement;
-    HLSLFunction*       forward; // Which HLSLFunction this one forward-declares
+    const char*         semantic  = NULL;
+    const char*         sv_semantic = NULL;
+    int                 numArguments = 0;
+    int                 numOutputArguments = 0;     // Includes out and inout arguments.
+    HLSLArgument*       argument = NULL;
+    HLSLStatement*      statement = NULL;
+    HLSLFunction*       forward = NULL; // Which HLSLFunction this one forward-declares
 };
 
-/** Declaration of an argument to a function. */
+/// Declaration of an argument to a function.
 struct HLSLArgument : public HLSLNode
 {
     static const HLSLNodeType s_type = HLSLNodeType_Argument;
-    HLSLArgument()
-    {
-        name            = NULL;
-        modifier        = HLSLArgumentModifier_None;
-        semantic        = NULL;
-        sv_semantic     = NULL;
-        defaultValue    = NULL;
-        nextArgument    = NULL;
-        hidden          = false;
-    }
-    const char*             name;
-    HLSLArgumentModifier    modifier;
+    const char*             name = NULL;
+    HLSLArgumentModifier    modifier = HLSLArgumentModifier_None;
     HLSLType                type;
-    const char*             semantic;
-    const char*             sv_semantic;
-    HLSLExpression*         defaultValue;
-    HLSLArgument*           nextArgument;
-    bool                    hidden;
+    const char*             semantic = NULL;
+    const char*             sv_semantic = NULL;
+    HLSLExpression*         defaultValue = NULL;
+    HLSLArgument*           nextArgument = NULL;
+    bool                    hidden = false;
 };
 
-/** A expression which forms a complete statement. */
+/// A expression which forms a complete statement.
 struct HLSLExpressionStatement : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_ExpressionStatement;
-    HLSLExpressionStatement()
-    {
-        expression = NULL;
-    }
-    HLSLExpression*     expression;
+    HLSLExpression*     expression = NULL;
 };
 
 struct HLSLReturnStatement : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_ReturnStatement;
-    HLSLReturnStatement()
-    {
-        expression = NULL;
-    }
-    HLSLExpression*     expression;
+    HLSLExpression*     expression = NULL;
 };
 
 struct HLSLDiscardStatement : public HLSLStatement
@@ -535,113 +476,72 @@ struct HLSLContinueStatement : public HLSLStatement
 struct HLSLIfStatement : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_IfStatement;
-    HLSLIfStatement()
-    {
-        condition     = NULL;
-        statement     = NULL;
-        elseStatement = NULL;
-        isStatic      = false;
-    }
-    HLSLExpression*     condition;
-    HLSLStatement*      statement;
-    HLSLStatement*      elseStatement;
-    bool                isStatic;
+    HLSLExpression*     condition = NULL;
+    HLSLStatement*      statement = NULL;
+    HLSLStatement*      elseStatement = NULL;
+    bool                isStatic = false;
 };
 
 struct HLSLForStatement : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_ForStatement;
-    HLSLForStatement()
-    {
-        initialization = NULL;
-        condition = NULL;
-        increment = NULL;
-        statement = NULL;
-    }
-    HLSLDeclaration*    initialization;
-    HLSLExpression*     condition;
-    HLSLExpression*     increment;
-    HLSLStatement*      statement;
+    HLSLDeclaration*    initialization = NULL;
+    HLSLExpression*     condition = NULL;
+    HLSLExpression*     increment = NULL;
+    HLSLStatement*      statement = NULL;
 };
 
 struct HLSLBlockStatement : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_BlockStatement;
-    HLSLBlockStatement()
-    {
-        statement = NULL;
-    }
-    HLSLStatement*      statement;
+    HLSLStatement*      statement = NULL;
 };
 
 
-/** Base type for all types of expressions. */
+/// Base type for all types of expressions.
 struct HLSLExpression : public HLSLNode
 {
     static const HLSLNodeType s_type = HLSLNodeType_Expression;
-    HLSLExpression()
-    {
-        nextExpression = NULL;
-    }
     HLSLType            expressionType;
-    HLSLExpression*     nextExpression; // Used when the expression is part of a list, like in a function call.
+    HLSLExpression*     nextExpression = NULL; // Used when the expression is part of a list, like in a function call.
 };
 
 struct HLSLUnaryExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_UnaryExpression;
-    HLSLUnaryExpression()
-    {
-        expression = NULL;
-    }
-    HLSLUnaryOp         unaryOp;
-    HLSLExpression*     expression;
+    HLSLUnaryOp         unaryOp = {};
+    HLSLExpression*     expression = NULL;
 };
 
 struct HLSLBinaryExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_BinaryExpression;
-    HLSLBinaryExpression()
-    {
-        expression1 = NULL;
-        expression2 = NULL;
-    }
-    HLSLBinaryOp        binaryOp;
-    HLSLExpression*     expression1;
-    HLSLExpression*     expression2;
+    HLSLBinaryOp        binaryOp = {};
+    HLSLExpression*     expression1 = NULL;
+    HLSLExpression*     expression2 = NULL;
 };
 
-/** ? : construct */
+/// ? : construct
 struct HLSLConditionalExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_ConditionalExpression;
-    HLSLConditionalExpression()
-    {
-        condition       = NULL;
-        trueExpression  = NULL;
-        falseExpression = NULL;
-    }
-    HLSLExpression*     condition;
-    HLSLExpression*     trueExpression;
-    HLSLExpression*     falseExpression;
+    HLSLExpression*     condition = NULL;
+    HLSLExpression*     trueExpression = NULL;
+    HLSLExpression*     falseExpression = NULL;
 };
 
 struct HLSLCastingExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_CastingExpression;
-    HLSLCastingExpression()
-    {
-        expression = NULL;
-    }
     HLSLType            type;
-    HLSLExpression*     expression;
+    HLSLExpression*     expression = NULL;
 };
 
-/** Float, integer, boolean, etc. literal constant. */
+/// Float, integer, boolean, etc. literal constant.
 struct HLSLLiteralExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_LiteralExpression;
-    HLSLBaseType        type;   // Note, not all types can be literals.
+    HLSLBaseType        type = HLSLBaseType_Unknown;   // Note, not all types can be literals.
     union
     {
         bool            bValue;
@@ -650,184 +550,122 @@ struct HLSLLiteralExpression : public HLSLExpression
     };
 };
 
-/** An identifier, typically a variable name or structure field name. */
+/// An identifier, typically a variable name or structure field name.
 struct HLSLIdentifierExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_IdentifierExpression;
-    HLSLIdentifierExpression()
-    {
-        name     = NULL;
-        global  = false;
-    }
-    const char*         name;
-    bool                global; // This is a global variable.
+    const char*         name = NULL;
+    bool                global = false; // This is a global variable.
 };
 
-/** float2(1, 2) */
+/// float2(1, 2)
 struct HLSLConstructorExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_ConstructorExpression;
-	HLSLConstructorExpression()
-	{
-		argument = NULL;
-	}
-    HLSLType            type;
-    HLSLExpression*     argument;
+	HLSLType            type;
+    HLSLExpression*     argument = NULL;
 };
 
-/** object.member **/
+/// object.member input.member or input[10].member
 struct HLSLMemberAccess : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_MemberAccess;
-	HLSLMemberAccess()
-	{
-		object  = NULL;
-		field   = NULL;
-		swizzle = false;
-	}
-    HLSLExpression*     object;
-    const char*         field;
-    bool                swizzle;
+	HLSLExpression*     object = NULL;
+    const char*         field = NULL;
+    bool                swizzle = false;
 };
 
-/** array[index] **/
+/// array[index]
 struct HLSLArrayAccess : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_ArrayAccess;
-	HLSLArrayAccess()
-	{
-		array = NULL;
-		index = NULL;
-	}
-    HLSLExpression*     array;
-    HLSLExpression*     index;
+	HLSLExpression*     array = NULL;
+    HLSLExpression*     index = NULL;
 };
 
 struct HLSLFunctionCall : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_FunctionCall;
-	HLSLFunctionCall()
-	{
-		function     = NULL;
-		argument     = NULL;
-		numArguments = 0;
-	}
-    const HLSLFunction* function;
-    HLSLExpression*     argument;
-    int                 numArguments;
+    const HLSLFunction* function = NULL;
+    HLSLExpression*     argument = NULL;
+    int                 numArguments = 0;
 };
 
+#if 1
+
+// These are all FX file constructs
+// TODO: may remove these, they just complicate the code
+//   but do want to specify mix of vs/ps/cs in single files
+
+// fx
 struct HLSLStateAssignment : public HLSLNode
 {
     static const HLSLNodeType s_type = HLSLNodeType_StateAssignment;
-    HLSLStateAssignment()
-    {
-        stateName = NULL;
-        sValue = NULL;
-        nextStateAssignment = NULL;
-    }
-
-    const char*             stateName;
-    int                     d3dRenderState;
+    const char*             stateName = NULL;
+    int                     d3dRenderState = 0;
     union {
         int                 iValue;
         float               fValue;
         const char *        sValue;
     };
-    HLSLStateAssignment*    nextStateAssignment;
+    HLSLStateAssignment*    nextStateAssignment = NULL;
 };
 
+// fx
 struct HLSLSamplerState : public HLSLExpression // @@ Does this need to be an expression? Does it have a type? I guess type is useful.
 {
     static const HLSLNodeType s_type = HLSLNodeType_SamplerState;
-    HLSLSamplerState()
-    {
-        numStateAssignments = 0;
-        stateAssignments = NULL;
-    }
-
-    int                     numStateAssignments;
-    HLSLStateAssignment*    stateAssignments;
+    int                     numStateAssignments = 0;
+    HLSLStateAssignment*    stateAssignments = NULL;
 };
 
+// fx
 struct HLSLPass : public HLSLNode
 {
     static const HLSLNodeType s_type = HLSLNodeType_Pass;
-    HLSLPass()
-    {
-        name = NULL;
-        numStateAssignments = 0;
-        stateAssignments = NULL;
-        nextPass = NULL;
-    }
-    
-    const char*             name;
-    int                     numStateAssignments;
-    HLSLStateAssignment*    stateAssignments;
-    HLSLPass*               nextPass;
+    const char*             name = NULL;
+    int                     numStateAssignments = 0;
+    HLSLStateAssignment*    stateAssignments = NULL;
+    HLSLPass*               nextPass = NULL;
 };
 
+// fx
 struct HLSLTechnique : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_Technique;
-    HLSLTechnique()
-    {
-        name = NULL;
-        numPasses = 0;
-        passes = NULL;
-    }
-
-    const char*         name;
-    int                 numPasses;
-    HLSLPass*           passes;
+    const char*         name = NULL;
+    int                 numPasses = 0;
+    HLSLPass*           passes = NULL;
 };
 
+// fx
 struct HLSLPipeline : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_Pipeline;
-    HLSLPipeline()
-    {
-        name = NULL;
-        numStateAssignments = 0;
-        stateAssignments = NULL;
-    }
-    
-    const char*             name;
-    int                     numStateAssignments;
-    HLSLStateAssignment*    stateAssignments;
+    const char*             name = NULL;
+    int                     numStateAssignments = 0;
+    HLSLStateAssignment*    stateAssignments = NULL;
 };
 
+// fx
 struct HLSLStage : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_Stage;
-    HLSLStage()
-    {
-        name = NULL;
-        statement = NULL;
-        inputs = NULL;
-        outputs = NULL;
-    }
-
-    const char*             name;
-    HLSLStatement*          statement;
-    HLSLDeclaration*        inputs;
-    HLSLDeclaration*        outputs;
+    const char*             name = NULL;
+    HLSLStatement*          statement = NULL;
+    HLSLDeclaration*        inputs = NULL;
+    HLSLDeclaration*        outputs = NULL;
 };
+
+#endif
 
 struct HLSLComment : public HLSLStatement
 {
     static const HLSLNodeType s_type = HLSLNodeType_Comment;
-    HLSLComment()
-    {
-        text = NULL;
-    }
-
-    const char*             text;
+    const char*             text = NULL;
 };
 
-/**
- * Abstract syntax tree for parsed HLSL code.
- */
+/// Abstract syntax tree for parsed HLSL code.
 class HLSLTree
 {
 
@@ -836,17 +674,17 @@ public:
     explicit HLSLTree(Allocator* allocator);
     ~HLSLTree();
 
-    /** Adds a string to the string pool used by the tree. */
+    /// Adds a string to the string pool used by the tree.
     const char* AddString(const char* string);
     const char* AddStringFormat(const char* string, ...);
 
-    /** Returns true if the string is contained within the tree. */
+    /// Returns true if the string is contained within the tree.
     bool GetContainsString(const char* string) const;
 
-    /** Returns the root block in the tree */
+    /// Returns the root block in the tree */
     HLSLRoot* GetRoot() const;
 
-    /** Adds a new node to the tree with the specified type. */
+    /// Adds a new node to the tree with the specified type.
     template <class T>
     T* AddNode(const char* fileName, int line)
     {
@@ -911,7 +749,7 @@ public:
     virtual void VisitStruct(HLSLStruct * node);
     virtual void VisitStructField(HLSLStructField * node);
     virtual void VisitBuffer(HLSLBuffer * node);
-    //virtual void VisitBufferField(HLSLBufferField * node);
+    //virtual void VisitBufferField(HLSLBufferField * node); // TODO:
     virtual void VisitFunction(HLSLFunction * node);
     virtual void VisitArgument(HLSLArgument * node);
     virtual void VisitExpressionStatement(HLSLExpressionStatement * node);
@@ -933,11 +771,7 @@ public:
     virtual void VisitMemberAccess(HLSLMemberAccess * node);
     virtual void VisitArrayAccess(HLSLArrayAccess * node);
     virtual void VisitFunctionCall(HLSLFunctionCall * node);
-    virtual void VisitStateAssignment(HLSLStateAssignment * node);
-    virtual void VisitSamplerState(HLSLSamplerState * node);
-    virtual void VisitPass(HLSLPass * node);
-    virtual void VisitTechnique(HLSLTechnique * node);
-    virtual void VisitPipeline(HLSLPipeline * node);
+    
     virtual void VisitComment(HLSLComment * node);
 
     virtual void VisitFunctions(HLSLRoot * root);
@@ -946,6 +780,13 @@ public:
     HLSLFunction * FindFunction(HLSLRoot * root, const char * name);
     HLSLDeclaration * FindGlobalDeclaration(HLSLRoot * root, const char * name);
     HLSLStruct * FindGlobalStruct(HLSLRoot * root, const char * name);
+    
+    // These are fx file constructs
+    virtual void VisitStateAssignment(HLSLStateAssignment * node);
+    virtual void VisitSamplerState(HLSLSamplerState * node);
+    virtual void VisitPass(HLSLPass * node);
+    virtual void VisitTechnique(HLSLTechnique * node);
+    virtual void VisitPipeline(HLSLPipeline * node);
 };
 
 

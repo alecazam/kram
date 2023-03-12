@@ -321,14 +321,6 @@ void HLSLTokenizer::Next()
     memcpy(m_identifier, start, length);
     m_identifier[length] = 0;
     
-#if 1 // hack
-    if (strcmp(m_identifier, "ConstantBuffer") == 0)
-    {
-        int bp = 0;
-        bp = bp;
-    }
-#endif
-    
     const int numReservedWords = sizeof(_reservedWords) / sizeof(const char*);
     for (int i = 0; i < numReservedWords; ++i)
     {
@@ -643,18 +635,13 @@ void HLSLTokenizer::Error(const char* format, ...)
         return;
     }
     m_error = true;
-
-
-    char buffer[1024];
+    
+    char buffer[4096]; // TODO: use dynamic string, sucks to cutoff logs
     va_list args;
     va_start(args, format);
     /*int result =*/ vsnprintf(buffer, sizeof(buffer) - 1, format, args);
     va_end(args);
 
-    // Make running in a build step does generate a clickable error/warning.
-    // But an app spitting out to Xcode console is not clickable.
-    
-    //Log_Error("%s(%d): error %s\n", m_fileName, m_lineNumber, buffer);
     Log_Error("%s(%d): %s\n", m_fileName, m_lineNumber, buffer);
 } 
 

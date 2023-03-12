@@ -41,6 +41,7 @@ enum CoreType
     CoreType_Void,
     CoreType_Expression,
     CoreType_Comment,
+    CoreType_Buffer,
     
     CoreType_Count // must be last
 };
@@ -105,6 +106,12 @@ bool IsTextureType(HLSLBaseType baseType)
 {
     return baseTypeDescriptions[baseType].coreType == CoreType_Texture;
 }
+
+bool IsBufferType(HLSLBaseType baseType)
+{
+    return baseTypeDescriptions[baseType].coreType == CoreType_Buffer;
+}
+
 
 bool IsCoreTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType)
 {
@@ -952,12 +959,17 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
         { "TextureCubeArray",     CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_TextureCubeArray
         { "Texture2DMS",        CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture2DMS
         
+        
         { "SamplerState",            CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler
         { "SamplerComparisonState",  CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_SamplerComparisonState
        
         { "struct",             CoreType_Struct, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },      // HLSLBaseType_UserDefined
+        
+        // These aren't real HLSL types
         { "expression",         CoreType_Expression, DimensionType_None, NumericType_NaN,     1, 0, 0, -1 },       // HLSLBaseType_Expression
         { "comment",            CoreType_Comment, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },       // HLSLBaseType_Comment
+        
+        { "buffer",        CoreType_Buffer, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Buffer
     };
 
 // IC: I'm not sure this table is right, but any errors should be caught by the backend compiler.
@@ -1070,7 +1082,7 @@ static const char* GetBinaryOpName(HLSLBinaryOp binaryOp)
     case HLSLBinaryOp_MulAssign:    return "*=";
     case HLSLBinaryOp_DivAssign:    return "/=";
     default:
-        ASSERT(0);
+        ASSERT(false);
         return "???";
     }
 }
@@ -1504,7 +1516,7 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
                 return false;
             }
            
-            buffer->bufferStruct = FindUserDefinedType(structName);
+            buffer->bufferStruct = const_cast<HLSLStruct*>(FindUserDefinedType(structName));
             if (!buffer->bufferStruct)
             {
                 return false;
@@ -1523,6 +1535,15 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
             }
             // TODO: Check that we aren't re-using a register.
         }
+        
+        // Buffer needs to show up to reference the fields
+        // of the struct of the templated type.
+        HLSLType type(HLSLBaseType_UserDefined);
+        type.typeName = buffer->bufferStruct->name; // this is for userDefined name (f.e. struct)
+        
+        DeclareVariable( buffer->name, type );
+       
+        // TODO: add fields as variables too?
         
         statement = buffer;
     }
@@ -1545,7 +1566,10 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
             // TODO: Check that we aren't re-using a register.
         }
 
-        // Fields.
+        // Fields are defined inside the c/tbuffer.
+        // These represent globals to the rest of the codebase which
+        // is simply evil.
+        
         if (!Expect('{'))
         {
             return false;
@@ -1570,6 +1594,8 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
                 m_tokenizer.Error("Expected variable declaration");
                 return false;
             }
+            
+            // These show up as global variables of the fields
             DeclareVariable( field->name, field->type );
             
             // chain fields onto buffer
@@ -2580,7 +2606,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
             }
 
             bool undeclaredIdentifier = false;
-
+ 
             const HLSLType* identifierType = FindVariable(identifierExpression->name, identifierExpression->global);
             if (identifierType != NULL)
             {
@@ -2591,6 +2617,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 if (GetIsFunction(identifierExpression->name))
                 {
                     // Functions are always global scope.
+                    // TODO: what about member functions?
                     identifierExpression->global = true;
                 }
                 else
@@ -2648,7 +2675,8 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
             {
                 return false;
             }
-            if (!GetMemberType( expression->expressionType, memberAccess))
+            
+            if (!GetMemberType(expression->expressionType, memberAccess))
             {
                 m_tokenizer.Error("Couldn't access '%s'", memberAccess->field);
                 return false;
@@ -2849,7 +2877,9 @@ bool HLSLParser::ParseArgumentList(HLSLArgument*& firstArgument, int& numArgumen
 
         HLSLArgument* argument = m_tree->AddNode<HLSLArgument>(fileName, line);
 
+        // what is unifor modifier ?
         if (Accept(HLSLToken_Uniform))     { argument->modifier = HLSLArgumentModifier_Uniform; }
+        
         else if (Accept(HLSLToken_In))     { argument->modifier = HLSLArgumentModifier_In;      }
         else if (Accept(HLSLToken_Out))    { argument->modifier = HLSLArgumentModifier_Out;     }
         else if (Accept(HLSLToken_InOut))  { argument->modifier = HLSLArgumentModifier_Inout;   }
@@ -3554,6 +3584,9 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
 
     if (token == HLSLToken_Comment)
     {
+        // TODO: should this advance the tokenizer?
+        // m_tokenizer.Next();
+        
         type.baseType = HLSLBaseType_Comment;
         return true;
     }
@@ -3684,7 +3717,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         type.baseType = HLSLBaseType_Short4;
         break;
             
-    // Textures
+    // Textures (TODO: could have baseType be texture, with subtype like buffer)
     case HLSLToken_Texture2D:
         type.baseType = HLSLBaseType_Texture2D;
         break;
@@ -3704,40 +3737,26 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         type.baseType = HLSLBaseType_TextureCubeArray;
         break;
             
-    //case HLSLToken_Texture:
-    //    type.baseType = HLSLBaseType_Texture;
-    //    break;
-      
     case HLSLToken_SamplerState:
         type.baseType = HLSLBaseType_SamplerState;
         break;
     case HLSLToken_SamplerComparisonState:
         type.baseType = HLSLBaseType_SamplerComparisonState;
         break;
-    /*
-    // Samplers
-    case HLSLToken_Sampler:
-        type.baseType = HLSLBaseType_Sampler2D;  // @@ IC: For now we assume that generic samplers are always sampler2D
+            
+    case HLSLToken_CBuffer:
+    case HLSLToken_TBuffer:
+        // might make these BufferGlobals?
+        type.baseType = HLSLBaseType_Buffer;
         break;
-    case HLSLToken_Sampler2D:
-        type.baseType = HLSLBaseType_Sampler2D;
+            
+    case HLSLToken_StructuredBuffer:
+    case HLSLToken_RWStructuredBuffer:
+    case HLSLToken_ByteAddressBuffer:
+    case HLSLToken_RWByteAddressBuffer:
+    case HLSLToken_ConstantBuffer:
+        type.baseType = HLSLBaseType_Buffer;
         break;
-    case HLSLToken_Sampler3D:
-        type.baseType = HLSLBaseType_Sampler3D;
-        break;
-    case HLSLToken_SamplerCube:
-        type.baseType = HLSLBaseType_SamplerCube;
-        break;
-    case HLSLToken_Sampler2DShadow:
-        type.baseType = HLSLBaseType_Sampler2DShadow;
-        break;
-    case HLSLToken_Sampler2DMS:
-        type.baseType = HLSLBaseType_Sampler2DMS;
-        break;
-    case HLSLToken_Sampler2DArray:
-        type.baseType = HLSLBaseType_Sampler2DArray;
-        break;
-    */
     }
     if (type.baseType != HLSLBaseType_Void)
     {
@@ -3786,6 +3805,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         if (FindUserDefinedType(identifier) != NULL)
         {
             m_tokenizer.Next();
+            
             type.baseType = HLSLBaseType_UserDefined;
             type.typeName = identifier;
             return true;
@@ -4066,11 +4086,20 @@ const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functi
     return matchedFunction;
 }
 
+inline bool IsSwizzle(char c)
+{
+    return c == 'x' || c == 'y' || c == 'z' || c ==  'w' ||
+           c == 'r' || c == 'g' || c == 'b' || c ==  'a';
+}
+
 bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * memberAccess)
 {
     const char* fieldName = memberAccess->field;
 
-    if (objectType.baseType == HLSLBaseType_UserDefined)
+    HLSLBaseType baseType = objectType.baseType;
+
+    // pull field from struct
+    if (baseType == HLSLBaseType_UserDefined)
     {
         const HLSLStruct* structure = FindUserDefinedType( objectType.typeName );
         ASSERT(structure != NULL);
@@ -4097,13 +4126,12 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
 
     int swizzleLength = 0;
 
-    if (baseTypeDescriptions[objectType.baseType].numDimensions <= 1)
+    if (IsScalarType(baseType) || IsVectorType(baseType))
     {
         // Check for a swizzle on the scalar/vector types.
         for (int i = 0; fieldName[i] != 0; ++i)
         {
-            if (fieldName[i] != 'x' && fieldName[i] != 'y' && fieldName[i] != 'z' && fieldName[i] != 'w' &&
-                fieldName[i] != 'r' && fieldName[i] != 'g' && fieldName[i] != 'b' && fieldName[i] != 'a')
+            if (!IsSwizzle(fieldName[i]))
             {
                 m_tokenizer.Error("Invalid swizzle '%s'", fieldName);
                 return false;
@@ -4112,7 +4140,7 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
         }
         ASSERT(swizzleLength > 0);
     }
-    else
+    else if (IsMatrixType(baseType))
     {
 
         // Check for a matrix element access (e.g. _m00 or _11)
@@ -4129,14 +4157,20 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
             }
             if (!isdigit(n[0]) || !isdigit(n[1]))
             {
+                m_tokenizer.Error("Invalid matrix digit");
                 return false;
             }
 
             int r = (n[0] - '0') - base;
             int c = (n[1] - '0') - base;
-            if (r >= baseTypeDescriptions[objectType.baseType].height ||
-                c >= baseTypeDescriptions[objectType.baseType].numComponents)
+            if (r >= baseTypeDescriptions[objectType.baseType].height)
             {
+                m_tokenizer.Error("Invalid matrix dimension %d", r);
+                return false;
+            }
+            if (c >= baseTypeDescriptions[objectType.baseType].numComponents)
+            {
+                m_tokenizer.Error("Invalid matrix dimension %d", c);
                 return false;
             }
             ++swizzleLength;
@@ -4149,6 +4183,10 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
             return false;
         }
 
+    }
+    else
+    {
+        return false;
     }
 
     if (swizzleLength > 4)
@@ -4182,7 +4220,7 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
             break;
     // TODO: double, u/char
     default:
-        ASSERT(0);
+        ASSERT(false);
     }
 
     memberAccess->swizzle = true;

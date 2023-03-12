@@ -115,7 +115,7 @@ HLSLDeclaration * HLSLTree::FindGlobalDeclaration(const char * name, HLSLBuffer 
         {
             HLSLBuffer* buffer = (HLSLBuffer*)statement;
             
-            // This searches the fields for the name
+            // This searches the fields to find the buffer,
             // since cbuffer/tbuffer represent globals.
             if (buffer->IsGlobalFields())
             {
@@ -131,12 +131,30 @@ HLSLDeclaration * HLSLTree::FindGlobalDeclaration(const char * name, HLSLBuffer 
                     field = (HLSLDeclaration*)field->nextStatement;
                 }
             }
-            /* hack
             else
             {
-                int bp = 0;
-                bp = bp;
-            } */
+                /* This isn't same type...
+                 
+                // Note: should pass buffers, but buffer/texture
+                // and cbuffer fields can be global to entire shader.
+                
+                // find struct first
+                const HLSLStruct* bufferStruct = buffer->bufferStruct;
+                
+                // new search those for the fields
+                HLSLStructField* field = bufferStruct->field;
+                while (field != NULL)
+                {
+                    ASSERT(field->nodeType == HLSLNodeType_Declaration);
+                    if (String_Equal(name, field->name))
+                    {
+                        if (buffer_out) *buffer_out = buffer;
+                        return field;
+                    }
+                    field = field->nextField;
+                }
+                */
+            }
         }
 
         statement = statement->nextStatement;
@@ -657,7 +675,7 @@ void HLSLTreeVisitor::VisitTopLevelStatement(HLSLStatement * node)
         VisitComment((HLSLComment*)node);
     }
     else {
-        ASSERT(0);
+        ASSERT(false);
     }
 }
 
@@ -703,7 +721,7 @@ void HLSLTreeVisitor::VisitStatement(HLSLStatement * node)
         VisitComment((HLSLComment *)node);
     }
     else {
-        ASSERT(0);
+        ASSERT(false);
     }
 }
 
@@ -738,12 +756,19 @@ void HLSLTreeVisitor::VisitStructField(HLSLStructField * node)
 
 void HLSLTreeVisitor::VisitBuffer(HLSLBuffer * node)
 {
-    HLSLDeclaration * field = node->field;
-    while (field != NULL) {
-        ASSERT(field->nodeType == HLSLNodeType_Declaration);
-        VisitDeclaration(field);
-        ASSERT(field->nextDeclaration == NULL);
-        field = (HLSLDeclaration *)field->nextStatement;
+    if (node->IsGlobalFields())
+    {
+        HLSLDeclaration* field = node->field;
+        while (field != NULL) {
+            ASSERT(field->nodeType == HLSLNodeType_Declaration);
+            VisitDeclaration(field);
+            ASSERT(field->nextDeclaration == NULL);
+            field = (HLSLDeclaration *)field->nextStatement;
+        }
+    }
+    else
+    {
+        VisitStruct(node->bufferStruct);
     }
 }
 
@@ -756,7 +781,7 @@ void HLSLTreeVisitor::VisitFunction(HLSLFunction * node)
 {
     VisitType(node->returnType);
 
-    HLSLArgument * argument = node->argument;
+    HLSLArgument* argument = node->argument;
     while (argument != NULL) {
         VisitArgument(argument);
         argument = argument->nextArgument;
@@ -817,7 +842,7 @@ void HLSLTreeVisitor::VisitExpression(HLSLExpression * node)
         VisitSamplerState((HLSLSamplerState *)node);
     }
     else {
-        ASSERT(0);
+        ASSERT(false);
     }
 }
 

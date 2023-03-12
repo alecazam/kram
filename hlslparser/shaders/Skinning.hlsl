@@ -41,11 +41,12 @@
 // StructuredBuffer<Struct> ssbo;
 
 // No u/int8_t or u/char in HLSL.
+// There is int64_t/uint46_t in MSL.
 // D3DCOLORtoUBYTE4: Decodes a D3DCOLOR packed DWORD to a float4.
 // Note the swizzle, and I don't want an int4.  I need to encode.
 // This is achieved by performing int4(input.zyxw * 255.002) using SPIR-V OpVectorShuffle, OpVectorTimesScalar, and OpConvertFToS, respectively.
 
-// have uint16_t/int16_t support in 6.2.  Need to add as type into parser.
+// Have uint16_t/int16_t support in 6.2.
 //
 // cbuffer are std140, and ssbo are std430 arrangment.  Affects arrays.
 // or -fvk-use-dx-layout vs. -fvk-use-gl-layout vs. -fvk-use-scalar-layout.
@@ -54,7 +55,9 @@
 // They can be enabled by -fvk-use-scalar-layout.
 // see table.  Vulkan can't use DX layout yet.
 //
-// cbuffer vs. ConstantBuffer<T> myCBuffer;
+// This is 6.1 change so constants can be array indexed
+// And it also reduces the quantity of globals throughout and ties to MSL better.
+// cbuffer vs. ConstantBuffer<T> myCBuffer[10];
 
 // struct VSInput {
 //   [[vk::location(0)]] float4 pos  : POSITION;
@@ -145,8 +148,8 @@ float4x4 DoSkinTfm(float4x4 skinTfms[256], float4 blendWeights, uint4 blendIndic
 
 // TODO: These don't compile for spv despite setting extension
 //  don't know what semantic to set?
-// uint vertexBase : BASE_VERTEX,
-// uint instanceBase : BASE_INSTANCE,
+// uint vertexBase : BASEVERTEX,
+// uint instanceBase : BASEINSTANCE,
 
 // TODO: fix ability to comment these out inside SkinningVS inputs
     
