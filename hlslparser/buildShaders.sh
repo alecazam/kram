@@ -95,6 +95,9 @@ if [[ $testMetal -eq 1 ]]; then
 
     xcrun -sdk macosx metal ${dstDir}Sample.metal ${metalMacOptions} -o mac/Sample.metallib
 
+    # this isn't going to compile yet
+    # xcrun -sdk macosx metal ${dstDir}Compute.metal ${metalMacOptions} -o mac/Compute.metallib
+
     # metaliosOptions="-frecord-sources -g "
     # metaliosOptions+="-std=ios-metal2.3 "
 

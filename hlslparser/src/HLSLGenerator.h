@@ -27,16 +27,9 @@ class HLSLGenerator
 {
 
 public:
-
-    enum Target
-    {
-        Target_VertexShader,
-        Target_PixelShader,
-    };
-
     HLSLGenerator();
     
-    bool Generate(HLSLTree* tree, Target target, const char* entryName);
+    bool Generate(HLSLTree* tree, HLSLTarget target, const char* entryName);
     const char* GetResult() const;
 
 private:
@@ -55,6 +48,8 @@ private:
      * isn't used in the syntax tree. */
     bool ChooseUniqueName(const char* base, char* dst, int dstLength) const;
 
+    const char* GetTypeName(const HLSLType& type);
+
     void Error(const char* format, ...);
     
 private:
@@ -63,7 +58,7 @@ private:
 
     const HLSLTree* m_tree;
     const char*     m_entryName;
-    Target          m_target;
+    HLSLTarget      m_target;
     bool            m_isInsideBuffer;
     bool            m_error;
 };

@@ -77,7 +77,7 @@ namespace M4
     {
         m_tree = NULL;
         m_entryName = NULL;
-        m_target = Target_VertexShader;
+        m_target = HLSLTarget_VertexShader;
         m_error = false;
 
         m_firstClassArgument = NULL;
@@ -118,7 +118,7 @@ namespace M4
     }
 
 
-    void MSLGenerator::Prepass(HLSLTree* tree, Target target, HLSLFunction* entryFunction)
+    void MSLGenerator::Prepass(HLSLTree* tree, HLSLTarget target, HLSLFunction* entryFunction)
     {
         // Hide unused arguments. @@ It would be good to do this in the other generators too.
         
@@ -267,7 +267,7 @@ namespace M4
                                 field->type.flags |= HLSLTypeFlag_NoPromote;
                             }
 
-                            /*if (target == Target_VertexShader && is_semantic(field->semantic, "COLOR"))
+                            /*if (target == HLSLTarget_VertexShader && is_semantic(field->semantic, "COLOR"))
                             {
                             field->type.flags |= HLSLTypeFlag_Swizzle_BGRA;
                             }*/
@@ -344,14 +344,14 @@ namespace M4
         m_writer.WriteLine(0, "#include \"ShaderMSL.h\"");
     }
 
-    bool MSLGenerator::Generate(HLSLTree* tree, Target target, const char* entryName, const Options& options)
+    bool MSLGenerator::Generate(HLSLTree* tree, HLSLTarget target, const char* entryName, const Options& options)
     {
         m_firstClassArgument = NULL;
         m_lastClassArgument = NULL;
 
         m_tree = tree;
         m_target = target;
-        ASSERT(m_target == Target_VertexShader || m_target == Target_FragmentShader);
+        //ASSERT(m_target == HLSLTarget_VertexShader || m_target == HLSLTarget_PixelShader);
         m_entryName = entryName;
         m_options = options;
 
@@ -464,13 +464,11 @@ namespace M4
         // @@ Add/Translate function attributes.
         // entryFunction->attributes
 
-        if (m_target == Target_VertexShader)
+        switch(m_target)
         {
-            m_writer.Write("vertex ");
-        }
-        else
-        {
-            m_writer.Write("fragment ");
+            case HLSLTarget_VertexShader:   m_writer.Write("vertex "); break;
+            case HLSLTarget_PixelShader:    m_writer.Write("fragment "); break;
+            case HLSLTarget_ComputeShader:  m_writer.Write("kernel "); break;
         }
 
         // Return type.
@@ -1952,7 +1950,7 @@ namespace M4
         unsigned int length, index;
         ParseSemantic(semantic, &length, &index);
 
-        if (m_target == MSLGenerator::Target_VertexShader)
+        if (m_target == HLSLTarget_VertexShader)
         {
             // These are DX10 convention
             if (String_Equal(semantic, "SV_InstanceID"))
@@ -1995,7 +1993,7 @@ namespace M4
 
             return m_tree->AddStringFormat("attribute(%s)", semantic);
         }
-        else if (m_target == MSLGenerator::Target_FragmentShader)
+        else if (m_target == HLSLTarget_PixelShader)
         {
             // PS inputs
             
@@ -2021,7 +2019,12 @@ namespace M4
             //if (String_Equal(semantic, "SV_Coverage")) return "sample_mask";
             //if (String_Equal(semantic, "SV_Coverage")) return "sample_mask,post_depth_coverage";
         }
-
+        else if (m_target == HLSLTarget_ComputeShader)
+        {
+            // compute inputs
+            if (String_Equal(semantic, "SV_DispatchThreadID"))
+                return "thread_position_in_grid";
+        }
         return NULL;
     }
 
@@ -2033,7 +2036,7 @@ namespace M4
         unsigned int length, index;
         ParseSemantic(semantic, &length, &index);
 
-        if (m_target == MSLGenerator::Target_VertexShader)
+        if (m_target == HLSLTarget_VertexShader)
         {
             if (String_Equal(semantic, "SV_Position"))
                 return "position";
@@ -2051,7 +2054,7 @@ namespace M4
             // SV_ViewportArrayIndex
             // SV_ClipDistance0..n, SV_CullDistance0..n
         }
-        else if (m_target == MSLGenerator::Target_FragmentShader)
+        else if (m_target == HLSLTarget_PixelShader)
         {
             if (m_options.flags & MSLGenerator::Flag_NoIndexAttribute)
             {
@@ -2092,7 +2095,11 @@ namespace M4
             if (String_Equal(semantic, "SV_Coverage"))
                 return "sample_mask";
         }
-
+        else if (m_target == HLSLTarget_ComputeShader)
+        {
+            // compute outputs
+            
+        }
         return NULL;
     }
 
@@ -2114,6 +2121,10 @@ namespace M4
         // struct
         if (baseType == HLSLBaseType_UserDefined)
             return type.typeName;
+        
+        // Functions can return void, especially with compute
+        if (baseType == HLSLBaseType_Void)
+            return "void";
         
         // sampler
         if (IsSamplerType(baseType))
@@ -2171,7 +2182,7 @@ namespace M4
             }
         }
         
-        Error("Uknown Type");
+        Error("Unknown Type");
         return NULL;
     }
 

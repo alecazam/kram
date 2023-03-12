@@ -16,28 +16,48 @@
 namespace M4
 {
 
-static const char* GetTypeName(const HLSLType& type)
+const char* HLSLGenerator::GetTypeName(const HLSLType& type)
 {
-    const char* name = GetNumericTypeName(type.baseType);
+    HLSLBaseType baseType = type.baseType;
+    
+    const char* name = GetNumericTypeName(baseType);
     if (name)
         return name;
     
-    switch (type.baseType)
+    if (baseType == HLSLBaseType_UserDefined)
+        return type.typeName;
+    
+    // Functions can return void, especially with compute
+    if (baseType == HLSLBaseType_Void)
+        return "void";
+    
+    // TODO: pull names from table, they should be same
+    if (IsSamplerType(baseType))
     {
-    case HLSLBaseType_SamplerState:              return "SamplerState";
-    case HLSLBaseType_SamplerComparisonState:    return "SamplerComparisonState";
-        
-    case HLSLBaseType_Texture2D:         return "Texture2D";
-    case HLSLBaseType_Texture2DArray:    return "Texture2DArray";
-    case HLSLBaseType_Texture3D:         return "Texture3D";
-    case HLSLBaseType_TextureCube:       return "TextureCube";
-    case HLSLBaseType_TextureCubeArray:  return "TextureCubeArray";
-    case HLSLBaseType_Texture2DMS:       return "Texture2DMS";
-            
-    // struct
-    case HLSLBaseType_UserDefined:  return type.typeName;
-    default: return "<unknown type>";
+        switch (baseType)
+        {
+            // samplers
+            case HLSLBaseType_SamplerState:              return "SamplerState";
+            case HLSLBaseType_SamplerComparisonState:    return "SamplerComparisonState";
+            default: break;
+        }
     }
+    else if (IsTextureType(baseType))
+    {
+        switch (baseType)
+        {
+            case HLSLBaseType_Texture2D:         return "Texture2D";
+            case HLSLBaseType_Texture2DArray:    return "Texture2DArray";
+            case HLSLBaseType_Texture3D:         return "Texture3D";
+            case HLSLBaseType_TextureCube:       return "TextureCube";
+            case HLSLBaseType_TextureCubeArray:  return "TextureCubeArray";
+            case HLSLBaseType_Texture2DMS:       return "Texture2DMS";
+            default: break;
+        }
+    }
+    
+    Error("Unknown type");
+    return NULL;
 }
 
 // TODO: copied from MSLGenerator
@@ -86,7 +106,7 @@ HLSLGenerator::HLSLGenerator()
 {
     m_tree                          = NULL;
     m_entryName                     = NULL;
-    m_target                        = Target_VertexShader;
+    m_target                        = HLSLTarget_VertexShader;
     m_isInsideBuffer                = false;
     m_error                         = false;
 }
@@ -96,12 +116,12 @@ HLSLGenerator::HLSLGenerator()
 // - Look at the function being generated.
 // - Return semantic, semantics associated to fields of the return structure, or output arguments, or fields of structures associated to output arguments -> output semantic replacement.
 // - Semantics associated input arguments or fields of the input arguments -> input semantic replacement.
-static const char * TranslateSemantic(const char* semantic, bool output, HLSLGenerator::Target target)
+static const char * TranslateSemantic(const char* semantic, bool output, HLSLTarget target)
 {
     // Note: these are all just passthrough of the DX10 semantics
     // except for BASEVERTEX/INSTANCE which doesn't seem to dxc compile.
     
-    if (target == HLSLGenerator::Target_VertexShader)
+    if (target == HLSLTarget_VertexShader)
     {
         if (output) 
         {
@@ -121,7 +141,7 @@ static const char * TranslateSemantic(const char* semantic, bool output, HLSLGen
                 return "BaseInstance";  // vulkan only
         }
     }
-    else if (target == HLSLGenerator::Target_PixelShader)
+    else if (target == HLSLTarget_PixelShader)
     {
         if (output)
         {
@@ -152,7 +172,7 @@ void HLSLGenerator::Error(const char* format, ...)
     va_end(arg);
 }
 
-bool HLSLGenerator::Generate(HLSLTree* tree, Target target, const char* entryName)
+bool HLSLGenerator::Generate(HLSLTree* tree, HLSLTarget target, const char* entryName)
 {
     m_tree      = tree;
     m_entryName = entryName;
@@ -927,38 +947,6 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
 void HLSLGenerator::OutputDeclarationType(const HLSLType& type)
 {
     const char* typeName = GetTypeName(type);
-    
-    /* TODO: remove, the textures now caart the type,
-       might need special flag for depth for MSL side, ignore in HLSL
-     
-    if (type.baseType == HLSLBaseType_Sampler2D)
-    {
-        if (type.textureType == HLSLBaseType_Half
-            // TODO: && !m_options.treatHalfAsFloat
-            ) {
-            typeName = "Texture2DHalfSampler";
-        }
-        else {
-            typeName = "Texture2DSampler";
-        }
-    }
-    else if (type.baseType == HLSLBaseType_Sampler3D)
-    {
-        typeName = "Texture3DSampler";
-    }
-    else if (type.baseType == HLSLBaseType_SamplerCube)
-    {
-        typeName =  "TextureCubeSampler";
-    }
-    else if (type.baseType == HLSLBaseType_Sampler2DShadow)
-    {
-        typeName = "Texture2DShadowSampler";
-    }
-    else if (type.baseType == HLSLBaseType_Sampler2DMS)
-    {
-        typeName = "Texture2DMS<float4>";
-    }
-    */
 
     if (type.flags & HLSLTypeFlag_Const)
     {

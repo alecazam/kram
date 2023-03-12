@@ -18,11 +18,14 @@ StructuredBuffer<BufType> Buffer0 : register(t0);
 StructuredBuffer<BufType> Buffer1 : register(t1);
 RWStructuredBuffer<BufType> BufferOut : register(u0);
 
-[numthreads(1, 1, 1)]
-void StructuredBufferCS( uint3 DTid : SV_DispatchThreadID )
+// TODO: support numthreads designator
+// [numthreads(1, 1, 1)]
+void ComputeCS( uint3 DTid : SV_DispatchThreadID )
 {
-    BufferOut[DTid.x].i = Buffer0[DTid.x].i + Buffer1[DTid.x].i;
-    BufferOut[DTid.x].f = Buffer0[DTid.x].f + Buffer1[DTid.x].f;
+    // TODO: Need array notation support on buffers like those above.
+    
+    //BufferOut[DTid.x].i = Buffer0[DTid.x].i + Buffer1[DTid.x].i;
+    //BufferOut[DTid.x].f = Buffer0[DTid.x].f + Buffer1[DTid.x].f;
 }
 
 //-------------------
@@ -33,7 +36,7 @@ void StructuredBufferCS( uint3 DTid : SV_DispatchThreadID )
 // RWByteAddressBuffer BufferOut : register(u0);
 //
 // [numthreads(1, 1, 1)]
-// void ByteBufferCS( uint3 DTid : SV_DispatchThreadID )
+// void ComputeCS( uint3 DTid : SV_DispatchThreadID )
 // {
 //     int i0 = asint( Buffer0.Load( DTid.x*8 ) );
 //     float f0 = asfloat( Buffer0.Load( DTid.x*8+4 ) );
@@ -42,5 +45,10 @@ void StructuredBufferCS( uint3 DTid : SV_DispatchThreadID )
 //
 //     BufferOut.Store( DTid.x*8, asuint(i0 + i1) );
 //     BufferOut.Store( DTid.x*8+4, asuint(f0 + f1) );
+//
+//     There is this new templated Load call.
+//     This greatly simplifies using BAB.
+//     float3 pos = Buffer0.Load<float3>(idx);
+//     Bufferout.Store<float3>(idx);
 // }
 

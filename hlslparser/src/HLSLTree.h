@@ -7,6 +7,22 @@
 namespace M4
 {
 
+enum HLSLTarget
+{
+    HLSLTarget_VertexShader,
+    HLSLTarget_PixelShader,
+    
+    HLSLTarget_ComputeShader,
+    
+    // none of these are portable to Metal/Android, they have own triangulation
+    // HLSLTarget_GeometryShader,
+    // HLSLTarget_HullShader,
+    // HLSLTarget_ControlShader,
+    
+    // This is compute prior to frag (combined vertex + geo state)
+    // HLSLTarget_MeshShader,
+};
+
 enum HLSLNodeType
 {
     HLSLNodeType_Root,

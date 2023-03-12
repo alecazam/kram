@@ -303,6 +303,8 @@ int2 GetDimensions(texture2d_array<float> t)
 // 16/16/2048 samplers
 // 64/128/16 on Tier1 macOS, see above for Tier2 (discrete gpu)
 
+// MSL 2.3 has function pointers
+// MSL 2.4 has compute recursion
 
     
 

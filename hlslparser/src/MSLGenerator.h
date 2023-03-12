@@ -16,12 +16,6 @@ struct HLSLStruct;
 class MSLGenerator
 {
 public:
-    enum Target
-    {
-        Target_VertexShader,
-        Target_FragmentShader,
-    };
-    
     enum Flags
     {
         Flag_None = 0,
@@ -53,7 +47,7 @@ public:
 
     MSLGenerator();
 
-    bool Generate(HLSLTree* tree, Target target, const char* entryName, const Options& options = Options());
+    bool Generate(HLSLTree* tree, HLSLTarget target, const char* entryName, const Options& options = Options());
     const char* GetResult() const;
 
 private:
@@ -77,7 +71,7 @@ private:
 
     void AddClassArgument(ClassArgument * arg);
 
-    void Prepass(HLSLTree* tree, Target target, HLSLFunction* entryFunction);
+    void Prepass(HLSLTree* tree, HLSLTarget target, HLSLFunction* entryFunction);
     void CleanPrepass();
     
     void PrependDeclarations();
@@ -118,7 +112,7 @@ private:
 
     HLSLTree*       m_tree;
     const char*     m_entryName;
-    Target          m_target;
+    HLSLTarget      m_target;
     Options         m_options;
 
     bool            m_error;

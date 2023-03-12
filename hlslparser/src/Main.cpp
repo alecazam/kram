@@ -12,22 +12,6 @@
 
 using namespace std;
 
-enum Target
-{
-    Target_VertexShader,
-    Target_FragmentShader,
-    
-    Target_ComputeShader,
-    
-    // none of these are portable to Metal/Android, they have own triangulation
-    //Target_GeometryShader,
-    //Target_HullShader,
-    //Target_ControlShader,
-    
-    // This is compute prior to frag (combined vertex + geo state)
-    // Target_MeshShader,
-};
-
 enum Language
 {
     Language_MSL,
@@ -113,7 +97,7 @@ int main( int argc, char* argv[] )
 	// in parser, lets this only splice code that is needed.
 
 	Language language = Language_MSL;
-	Target target = Target_FragmentShader;
+	HLSLTarget target = HLSLTarget_PixelShader;
     string outputFileName;
     bool isDebug = false;
     
@@ -146,11 +130,11 @@ int main( int argc, char* argv[] )
 // This is derived from end characters of entry point
 //        else if( String_Equal( arg, "-vs" ) )
 //        {
-//            target = Target_VertexShader;
+//            target = HLSLTarget_VertexShader;
 //        }
 //        else if( String_Equal( arg, "-fs" ) )
 //        {
-//            target = Target_FragmentShader;
+//            target = HLSLTarget_PixelShader;
 //        }
  // TODO: require a arg to set entryName
 //		else if( entryName == NULL )
@@ -204,7 +188,7 @@ int main( int argc, char* argv[] )
     
     // Allow a mix of shaders in file.
     // Code now finds entry points.
-    // outputFileName += (target == Target_FragmentShader) ? "PS" : "VS";
+    // outputFileName += (target == HLSLTarget_PixelShader) ? "PS" : "VS";
     
     if ( language == Language_MSL )
     {
@@ -220,15 +204,18 @@ int main( int argc, char* argv[] )
     auto path = filesystem::path(fileName);
     fileName = filesystem::canonical( path );
     
+    // if this file doesn't exist, then canonical throws exception
     path = filesystem::path(outputFileName);
-    outputFileName = filesystem::canonical( path );
-    
-    if ( outputFileName == fileName )
+    if (filesystem::exists(path))
     {
-        Log_Error( "Src and Dst filenames match.  Exiting.\n" );
-        return 1;
+        outputFileName = filesystem::canonical( path );
+        
+        if ( outputFileName == fileName )
+        {
+            Log_Error( "Src and Dst filenames match.  Exiting.\n" );
+            return 1;
+        }
     }
-    
     
     //------------------------------------
     // Now start the work
@@ -295,8 +282,7 @@ int main( int argc, char* argv[] )
                 }
                 else if (endsWith(name, "CS"))
                 {
-                    // compute not yet supported
-                    // entryPoints.push_back(name);
+                    entryPoints.push_back(name);
                 }
             }
 
@@ -307,17 +293,17 @@ int main( int argc, char* argv[] )
     {
         entryName = entryPoint;
         if (endsWith(entryPoint, "VS"))
-            target = Target_VertexShader;
+            target = HLSLTarget_VertexShader;
         else if (endsWith(entryPoint, "PS"))
-            target = Target_FragmentShader;
+            target = HLSLTarget_PixelShader;
         else if (endsWith(entryPoint, "CS"))
-            target = Target_ComputeShader;
+            target = HLSLTarget_ComputeShader;
             
         // Generate output
         if (language == Language_HLSL)
         {
             HLSLGenerator generator;
-            if (generator.Generate( &tree, HLSLGenerator::Target(target), entryName ))
+            if (generator.Generate( &tree, target, entryName ))
             {
                 fprintf( fp, "%s", generator.GetResult() );
             }
@@ -330,7 +316,7 @@ int main( int argc, char* argv[] )
         else if (language == Language_MSL)
         {
             MSLGenerator generator;
-            if (generator.Generate( &tree, MSLGenerator::Target(target), entryName ))
+            if (generator.Generate( &tree, target, entryName ))
             {
                 fprintf( fp, "%s", generator.GetResult() );
             }
