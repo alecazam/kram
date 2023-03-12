@@ -87,7 +87,7 @@ namespace M4
     }
 
     // Copied from GLSLGenerator
-    void MSLGenerator::Error(const char* format, ...)
+    void MSLGenerator::Error(const char* format, ...) const
     {
         // It's not always convenient to stop executing when an error occurs,
         // so just track once we've hit an error and stop reporting them until
@@ -183,7 +183,6 @@ namespace M4
                 HLSLBuffer * buffer = (HLSLBuffer *)statement;
                 
                 HLSLType type(HLSLBaseType_UserDefined);
-                type.addressSpace = HLSLAddressSpace_Constant;
                 
                 // TODO: on cbuffer is a ubo, not tbuffer, or others
                 // TODO: this is having to rename due to globals
@@ -191,6 +190,11 @@ namespace M4
                     type.typeName = m_tree->AddStringFormat("%s_ubo", buffer->name);
                 else
                     type.typeName = m_tree->AddStringFormat("%s", buffer->bufferStruct->name);
+                
+                if (buffer->IsReadOnly())
+                    type.addressSpace = HLSLAddressSpace_Constant;
+                else
+                    type.addressSpace = HLSLAddressSpace_Device;
                 
                 int bufferRegister = ParseRegister(buffer->registerName, nextBufferRegister) + m_options.bufferRegisterOffset;
 
@@ -344,6 +348,24 @@ namespace M4
         m_writer.WriteLine(0, "#include \"ShaderMSL.h\"");
     }
 
+    const char* MSLGenerator::GetAddressSpaceName(HLSLAddressSpace addressSpace) const
+    {
+        switch(addressSpace)
+        {
+            case HLSLAddressSpace_Constant: return "constant";
+            case HLSLAddressSpace_Device: return "device";
+            case HLSLAddressSpace_Thread: return "thread";
+            case HLSLAddressSpace_Shared: return "shared";
+            //case HLSLAddressSpace_Threadgroup:  return "threadgroup_local";
+            //case HLSLAddressSpace_ThreadgroupImageblock: return "threadgroup_imageblock");
+                
+            case HLSLAddressSpace_Undefined: break;
+        }
+        
+        Error("Uknown address space");
+        return "";
+    }
+
     bool MSLGenerator::Generate(HLSLTree* tree, HLSLTarget target, const char* entryName, const Options& options)
     {
         m_firstClassArgument = NULL;
@@ -399,9 +421,7 @@ namespace M4
         const ClassArgument* currentArg = m_firstClassArgument;
         while (currentArg != NULL)
         {
-            if (currentArg->type.addressSpace == HLSLAddressSpace_Constant)              m_writer.Write("constant ");
-            else
-                m_writer.Write("thread ");
+            m_writer.Write("%s ", GetAddressSpaceName(currentArg->type.addressSpace));
 
             m_writer.Write("%s & %s", GetTypeName(currentArg->type, /*exactType=*/true), currentArg->name);
 
@@ -533,12 +553,10 @@ namespace M4
         }
         while (currentArg != NULL)
         {
-            //if (currentArg->type.addressSpace == HLSLAddressSpace_Constant) m_writer.Write("constant ");
-            //else m_writer.Write("thread ");
-
             if (currentArg->type.baseType == HLSLBaseType_UserDefined)
             {
-                m_writer.Write("constant %s::%s & %s [[%s]]", shaderClassName, currentArg->type.typeName, currentArg->name, currentArg->registerName);
+                m_writer.Write("%s %s::%s & %s [[%s]]", GetAddressSpaceName(currentArg->type.addressSpace),
+                  shaderClassName, currentArg->type.typeName, currentArg->name, currentArg->registerName);
             }
             else
             {
@@ -966,8 +984,7 @@ namespace M4
             }
             else
             {
-                // is this thread space?
-                m_writer.WriteLine(indent, "thread %s & %s",  buffer->bufferStruct->name, buffer->name);
+                m_writer.WriteLine(indent, "device %s & %s",  buffer->bufferStruct->name, buffer->name);
             }
             
             m_writer.EndLine(";");
@@ -1578,7 +1595,7 @@ namespace M4
         {
             if (isRef && !isTypeCast)
             {
-                m_writer.Write("thread ");
+                m_writer.Write("%s ", GetAddressSpaceName(type.addressSpace));
             }
             if (isConst || type.flags & HLSLTypeFlag_Const)
             {
@@ -1586,6 +1603,7 @@ namespace M4
 
                 if ((type.flags & HLSLTypeFlag_Static) != 0 && !isTypeCast)
                 {
+                    // TODO: use GetAddressSpaceName?
                     m_writer.Write("static constant constexpr ");
                 }
             }

@@ -50,7 +50,7 @@ private:
 
     const char* GetTypeName(const HLSLType& type);
 
-    void Error(const char* format, ...);
+    void Error(const char* format, ...) M4_PRINTF_ATTR(2, 3);
     
 private:
 

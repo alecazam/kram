@@ -12,13 +12,6 @@
 #include "Engine.h"
 #include <string>
 
-// this is similar to printflike macro, checks format args
-#if defined(__GNUC__)
-#define M4_PRINTF_ATTR(string_index, first_to_check) __attribute__((format(printf, string_index, first_to_check)))
-#else
-#define M4_PRINTF_ATTR(string_index, first_to_check)
-#endif
-
 namespace M4
 {
 

@@ -21,6 +21,13 @@
 //#define assert(...)
 #define ASSERT assert
 
+// this is similar to printflike macro, checks format args
+#if defined(__GNUC__) || defined(__clang__)
+#define M4_PRINTF_ATTR(string_index, first_to_check) __attribute__((format(printf, string_index, first_to_check)))
+#else
+#define M4_PRINTF_ATTR(string_index, first_to_check)
+#endif
+
 namespace M4 {
 
 
@@ -45,7 +52,7 @@ public:
 
 // Engine/String.h
 
-int String_Printf(char * buffer, int size, const char * format, ...);
+int String_Printf(char * buffer, int size, const char * format, ...) M4_PRINTF_ATTR(3, 4);
 int String_PrintfArgList(char * buffer, int size, const char * format, va_list args);
 int String_FormatFloat(char * buffer, int size, float value);
 bool String_Equal(const char * a, const char * b);
@@ -57,7 +64,7 @@ void String_StripTrailingFloatZeroes(char* buffer);
 
 // Engine/Log.h
 
-void Log_Error(const char * format, ...);
+void Log_Error(const char * format, ...) M4_PRINTF_ATTR(1, 2);
 void Log_ErrorArgList(const char * format, va_list args);
 
 
@@ -181,7 +188,7 @@ struct StringPool {
     ~StringPool();
 
     const char * AddString(const char * string);
-    const char * AddStringFormat(const char * fmt, ...);
+    const char * AddStringFormat(const char * fmt, ...) M4_PRINTF_ATTR(2, 3);
     const char * AddStringFormatList(const char * fmt, va_list args);
     bool GetContainsString(const char * string) const;
 

@@ -179,7 +179,7 @@ public:
 
     /// Reports an error using printf style formatting. The current line number
     /// is included. Only the first error reported will be output.
-    void Error(const char* format, ...);
+    void Error(const char* format, ...) M4_PRINTF_ATTR(2, 3);
 
     /// Gets a human readable text description of the specified token.
     static void GetTokenName(int token, char buffer[s_maxIdentifier]);

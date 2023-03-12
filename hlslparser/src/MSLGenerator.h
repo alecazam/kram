@@ -103,8 +103,9 @@ private:
     const char* TranslateOutputSemantic(const char* semantic);
 
     const char* GetTypeName(const HLSLType& type, bool exactType);
+    const char* GetAddressSpaceName(HLSLAddressSpace addressSpace) const;
     
-    void Error(const char* format, ...);
+    void Error(const char* format, ...) const M4_PRINTF_ATTR(2, 3);
 
 private:
 
@@ -115,7 +116,7 @@ private:
     HLSLTarget      m_target;
     Options         m_options;
 
-    bool            m_error;
+    mutable bool            m_error;
 
     ClassArgument * m_firstClassArgument;
     ClassArgument * m_lastClassArgument;

@@ -418,9 +418,9 @@ struct HLSLBuffer : public HLSLStatement
     {
         return  bufferType == HLSLBufferType_CBuffer ||
                 bufferType == HLSLBufferType_TBuffer ||
-                HLSLBufferType_ConstantBuffer ||
-                HLSLBufferType_StructuredBuffer ||
-                HLSLBufferType_ByteAddressBuffer;
+                bufferType == HLSLBufferType_ConstantBuffer ||
+                bufferType == HLSLBufferType_StructuredBuffer ||
+                bufferType == HLSLBufferType_ByteAddressBuffer;
     }
     
     static const HLSLNodeType s_type = HLSLNodeType_Buffer;
@@ -692,7 +692,7 @@ public:
 
     /// Adds a string to the string pool used by the tree.
     const char* AddString(const char* string);
-    const char* AddStringFormat(const char* string, ...);
+    const char* AddStringFormat(const char* string, ...) M4_PRINTF_ATTR(2, 3);
 
     /// Returns true if the string is contained within the tree.
     bool GetContainsString(const char* string) const;
