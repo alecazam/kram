@@ -374,7 +374,7 @@ static const int _numberTypeRank[NumericType_Count][NumericType_Count] =
     { 5, 5, 4, 2, 0 },  // NumericType_Ushort
 };
 
-
+/* All FX state
 struct EffectStateValue
 {
     const char * name;
@@ -621,6 +621,7 @@ static const EffectState pipelineStates[] = {
     {"AlphaWrite", 0, booleanValues},
     {"AlphaTest", 0, booleanValues},       // This is really alpha to coverage.
 };
+*/
 
 #define INTRINSIC_FLOAT1_FUNCTION(name) \
         Intrinsic( name, HLSLBaseType_Float,   HLSLBaseType_Float  ),   \
@@ -795,6 +796,7 @@ const Intrinsic _intrinsic[] =
         Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3x3 ),
         Intrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4x4 ),
         
+        // half versions
         Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2x2 ),
         Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3x3 ),
         Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4x4 ),
@@ -1775,6 +1777,7 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
         }
     }
     
+    /*
     // These three are from .fx file syntax
     else if (ParseTechnique(statement)) {
         doesNotExpectSemicolon = true;
@@ -1785,7 +1788,8 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
     else if (ParseStage(statement)) {
         doesNotExpectSemicolon = true;
     }
-
+    */
+    
     if (statement != NULL) {
         statement->attributes = attributes;
     }
@@ -2185,13 +2189,13 @@ bool HLSLParser::ParseDeclarationAssignment(HLSLDeclaration* declaration)
                 return false;
             }
         }
-        else if (IsSamplerType(declaration->type.baseType)) // TODO: should be for SamplerStateBlock, not Sampler
-        {
-            if (!ParseSamplerState(declaration->assignment))
-            {
-                return false;
-            }
-        }
+//        else if (IsSamplerType(declaration->type.baseType)) // TODO: should be for SamplerStateBlock, not Sampler
+//        {
+//            if (!ParseSamplerState(declaration->assignment))
+//            {
+//                return false;
+//            }
+//        }
         else if (!ParseExpression(declaration->assignment))
         {
             return false;
@@ -2960,7 +2964,7 @@ bool HLSLParser::ParseArgumentList(HLSLArgument*& firstArgument, int& numArgumen
     return true;
 }
 
-
+/*
 bool HLSLParser::ParseSamplerState(HLSLExpression*& expression)
 {
     if (!Expect(HLSLToken_SamplerState))
@@ -2989,7 +2993,7 @@ bool HLSLParser::ParseSamplerState(HLSLExpression*& expression)
         }
 
         HLSLStateAssignment* stateAssignment = NULL;
-        if (!ParseStateAssignment(stateAssignment, /*isSamplerState=*/true, /*isPipeline=*/false))
+        if (!ParseStateAssignment(stateAssignment, true, false))
         {
             return false;
         }
@@ -3096,7 +3100,7 @@ bool HLSLParser::ParsePass(HLSLPass*& pass)
         }
 
         HLSLStateAssignment* stateAssignment = NULL;
-        if (!ParseStateAssignment(stateAssignment, /*isSamplerState=*/false, /*isPipelineState=*/false))
+        if (!ParseStateAssignment(stateAssignment, false, false))
         {
             return false;
         }
@@ -3145,7 +3149,7 @@ bool HLSLParser::ParsePipeline(HLSLStatement*& statement)
         }
 
         HLSLStateAssignment* stateAssignment = NULL;
-        if (!ParseStateAssignment(stateAssignment, /*isSamplerState=*/false, /*isPipeline=*/true))
+        if (!ParseStateAssignment(stateAssignment, false, true))
         {
             return false;
         }
@@ -3398,7 +3402,7 @@ bool HLSLParser::ParseStateAssignment(HLSLStateAssignment*& stateAssignment, boo
 
     return true;
 }
-
+*/
 
 bool HLSLParser::ParseAttributeList(HLSLAttribute*& firstAttribute)
 {
