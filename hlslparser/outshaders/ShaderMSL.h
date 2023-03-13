@@ -80,8 +80,8 @@ float2 mul(float2x2 m, float2 a) { return m * a; }
 float3 mul(float3x3 m, float3 a) { return m * a; }
 float4 mul(float4x4 m, float4 a) { return m * a; }
 
-float3 mul(float4 a, float3x4 m) { return a * m; } // why no macro ?
-float2 mul(float4 a, float2x4 m) { return a * m; }
+//float3 mul(float4 a, float3x4 m) { return a * m; } // why no macro ?
+//float2 mul(float4 a, float2x4 m) { return a * m; }
 
 #if USE_HALF
 half mad(half a, half b, half c) {
@@ -105,8 +105,8 @@ half2 mul(half2x2 m, half2 a) { return m * a; }
 half3 mul(half3x3 m, half3 a) { return m * a; }
 half4 mul(half4x4 m, half4 a) { return m * a; }
 
-half3 mul(half4 a, half3x4 m) { return a * m; } // why no macro ?
-half2 mul(half4 a, half2x4 m) { return a * m; }
+//half3 mul(half4 a, half3x4 m) { return a * m; } // why no macro ?
+//half2 mul(half4 a, half2x4 m) { return a * m; }
 #endif
 
 #define lerp mix
@@ -203,15 +203,6 @@ float4 SampleBias(texture2d<float> t, sampler s, float4 texCoordBias) {
     return t.sample(s, texCoordBias.xy, bias(texCoordBias.w));
 }
 
-// ios may need to hardcode sampler
-// constexpr sampler shadowSampler(mip_filter::none, min_filter::linear, mag_filter::linear, address::clamp_to_border, compare_func::greater);
-
-// May have to detect SamplerComparisonState, and mark texture as depth2d
-float4 SampleCmp(depth2d<float> t, sampler s, float4 texCoordCompare) {
-    // division for perspective shadows, but caller should handle this
-    return t.sample_compare(s, texCoordCompare.xy, texCoordCompare.z / texCoordCompare.w );
-}
-
 float4 Load(texture2d_ms<float> t, int2 texCoord, int sample) {
     return t.read((uint2)texCoord, (uint)sample);
 }
@@ -240,8 +231,13 @@ float4 Sample(depth2d<float> t, sampler s, float2 texCoord, int2 offset = 0)
     return t.sample(s, texCoord.xy, offset);
 }
 
+
+// ios may need to hardcode sampler for compare
+// constexpr sampler shadowSampler(mip_filter::none, min_filter::linear, mag_filter::linear, address::clamp_to_border, compare_func::greater);
+
+
 // For persp shadows, remember to divide z = z/w before calling, or w = z/w on cube
-float4 SampleCmp(depth2d<float> t, sampler s, float4 texCoord, int2 offset = 0)
+float SampleCmp(depth2d<float> t, sampler s, float4 texCoord, int2 offset = 0)
 {
     return t.sample_compare(s, texCoord.xy, texCoord.z, offset);
 }

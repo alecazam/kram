@@ -354,11 +354,18 @@ struct Intrinsic
     HLSLArgument    argument[4];
 };
     
-Intrinsic TextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType arg1, HLSLBaseType textureType, HLSLBaseType arg2)
+Intrinsic TextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType textureHalfOrFloat, HLSLBaseType uvType)
+{
+    Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerState, uvType);
+    i.argument[0].type.textureType = textureHalfOrFloat;
+    return i;
+}
+
+Intrinsic DepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType textureHalfOrFloat, HLSLBaseType uvType)
 {
     // Need to be able to pass SamplerComparisonState too
-    Intrinsic i(name, returnType, arg1, HLSLBaseType_SamplerState, arg2);
-    i.argument[0].type.textureType = textureType;
+    Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerComparisonState, uvType);
+    i.argument[0].type.textureType = textureHalfOrFloat;
     return i;
 }
 
@@ -653,9 +660,9 @@ static const EffectState pipelineStates[] = {
         Intrinsic( name, HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3,  HLSLBaseType_Half3 ),    \
         Intrinsic( name, HLSLBaseType_Half4,   HLSLBaseType_Half4,   HLSLBaseType_Half4,  HLSLBaseType_Half4 )
 
-#define TEXTURE_INTRINSIC_FUNCTION(name, sampler, arg1) \
-        TextureIntrinsic( name, HLSLBaseType_Float4, sampler, HLSLBaseType_Float, arg1),   \
-        TextureIntrinsic( name "H", HLSLBaseType_Half4,  sampler, HLSLBaseType_Half,  arg1  )
+#define TEXTURE_INTRINSIC_FUNCTION(name, textureType, uvType) \
+        TextureIntrinsic( name, HLSLBaseType_Float4, textureType, HLSLBaseType_Float, uvType),   \
+        TextureIntrinsic( name "H", HLSLBaseType_Half4, textureType, HLSLBaseType_Half, uvType  )
     
 // TODO: change this to a mutlimap or something
 // would make it easier to specify, can write functions to set all vec, all matrix, etc.  This is a nightmare to add things too below.  MSL and HLSL
@@ -789,13 +796,6 @@ const Intrinsic _intrinsic[] =
         //Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float4x3 ),
         //Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float4, HLSLBaseType_Float4x2 ),
 
-        Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2x2, HLSLBaseType_Float2  ),
-        Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3x3, HLSLBaseType_Float3  ),
-        Intrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4x4, HLSLBaseType_Float4  ),
-        Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2x2 ),
-        Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3x3 ),
-        Intrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4x4 ),
-        
         // half versions
         Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2x2 ),
         Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3x3 ),
@@ -803,14 +803,6 @@ const Intrinsic _intrinsic[] =
         Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2x2, HLSLBaseType_Half2 ),
         Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3x3, HLSLBaseType_Half3 ),
         Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4x4, HLSLBaseType_Half4 ),
-        
-        Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2x2, HLSLBaseType_Half2  ),
-        Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3x3, HLSLBaseType_Half3  ),
-        Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4x4, HLSLBaseType_Half4  ),
-        Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2x2 ),
-        Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3x3 ),
-        Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4x4 ),
-        
         
         // matrix transpose
 		Intrinsic( "transpose", HLSLBaseType_Float2x2, HLSLBaseType_Float2x2 ),
@@ -877,9 +869,12 @@ const Intrinsic _intrinsic[] =
         TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4),
         
         // Depth
-        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Depth2D, HLSLBaseType_Float2),
-        // TODO: TEXTURE_INTRINSIC_FUNCTION("SampleCmp", HLSLBaseType_Depth2D, HLSLBaseType_Float4),
-        // TODO: TEXTURE_INTRINSIC_FUNCTION("GatherCmp", HLSLBaseType_Depth2D, HLSLBaseType_Float4),
+        DepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float,  HLSLBaseType_Float2),
+        
+        // xyz are used, this doesn't match HLSL which is 2 + compare
+        DepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4),
+        DepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4),
+        
         
         // one more dimension than Sample
         TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3),

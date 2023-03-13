@@ -16,7 +16,8 @@ Texture2D<half4> diffuseMap : register(t1);
 Texture2D<half4> normalMap : register(t2);
 
 SamplerState sampleWrap : register(s0);
-SamplerState sampleClamp : register(s1);
+//SamplerState sampleClamp : register(s1);
+SamplerComparisonState shadowMapSampler : register(s1);
 
 // #define didn't compile due to lack of preprocesor
 static const int NUM_LIGHTS = 3;
@@ -50,11 +51,14 @@ struct SceneConstantBuffer
     bool sampleShadowMap;
     LightState lights[3];
 };
-// TODO: NUM_LIGHTS isn't unhidden when parsing structs
+// TODO: NUM_LIGHTS isn't unhidden when parsing structs, dupe what cbuffer fields do
 // LightState lights[NUM_LIGHTS];
 
 // SM 6.1
 ConstantBuffer<SceneConstantBuffer> scene : register(b0);
+
+// TODO: also have this form, where can index into
+// ConstantBuffer<SceneConstantBuffer> scene[10] : register(b0);
 
 struct InputVS
 {
@@ -131,21 +135,31 @@ half4 CalcLightingColor(float3 vLightPos, float3 vLightDir, half4 vLightColor, f
 //--------------------------------------------------------------------------------------
 // Test how much pixel is in shadow, using 2x2 percentage-closer filtering.
 //--------------------------------------------------------------------------------------
-float4 CalcUnshadowedAmountPCF2x2(int lightIndex, float4 vPosWorld, float4x4 viewProj)
+half CalcUnshadowedAmountPCF2x2(int lightIndex, float4 vPosWorld, float4x4 viewProj)
 {
     // Compute pixel position in light space.
     float4 vLightSpacePos = vPosWorld;
     vLightSpacePos = mul(vLightSpacePos, viewProj);
     
+    // need to reject before division (assuming revZ, infZ)
+    if (vLightSpacePos.z > vLightSpacePos.w)
+        return 1.0f;
+    
     vLightSpacePos.xyz /= vLightSpacePos.w;
 
+    vLightSpacePos.xy *= 0.5;
+    vLightSpacePos.xy += 0.5;
+    
     // Translate from homogeneous coords to texture coords.
-    float2 vShadowTexCoord = 0.5 * vLightSpacePos.xy + 0.5;
-    vShadowTexCoord.y = 1.0 - vShadowTexCoord.y;
+    //float2 vShadowTexCoord = 0.5 * vLightSpacePos.xy + 0.5;
+    vLightSpacePos.y = 1.0 - vLightSpacePos.y;
 
     // Depth bias to avoid pixel self-shadowing.
-    float vLightSpaceDepth = vLightSpacePos.z - SHADOW_DEPTH_BIAS;
+    vLightSpacePos.z -= SHADOW_DEPTH_BIAS;
 
+    // 2x2 percentage closer filtering.
+    /* Ick, Microsoft
+     
     // Find sub-pixel weights.
     float2 vShadowMapDims = float2(1280.0, 720.0); // need to keep in sync with .cpp file
     float4 vSubPixelCoords = float4(1.0, 1.0, 1.0, 1.0);
@@ -153,17 +167,21 @@ float4 CalcUnshadowedAmountPCF2x2(int lightIndex, float4 vPosWorld, float4x4 vie
     vSubPixelCoords.zw = 1.0 - vSubPixelCoords.xy;
     float4 vBilinearWeights = vSubPixelCoords.zxzx * vSubPixelCoords.wwyy;
 
-    // 2x2 percentage closer filtering.
     float2 vTexelUnits = 1.0 / vShadowMapDims;
+    
     float4 vShadowDepths;
     vShadowDepths.x = Sample(shadowMap, sampleClamp, vShadowTexCoord).x;
     vShadowDepths.y = Sample(shadowMap, sampleClamp, vShadowTexCoord + float2(vTexelUnits.x, 0.0)).x;
     vShadowDepths.z = Sample(shadowMap, sampleClamp, vShadowTexCoord + float2(0.0, vTexelUnits.y)).x;
     vShadowDepths.w = Sample(shadowMap, sampleClamp, vShadowTexCoord + vTexelUnits).x;
-
-    // What weighted fraction of the 4 samples are nearer to the light than this pixel?
     float4 vShadowTests = (vShadowDepths >= vLightSpaceDepth);
+     
+    // What weighted fraction of the 4 samples are nearer to the light than this pixel?
     return dot(vBilinearWeights, vShadowTests);
+    */
+
+    return (half)SampleCmp(shadowMap, shadowMapSampler, vLightSpacePos);
+   
 }
 
 OutputVS SampleVS(InputVS input)
@@ -201,7 +219,7 @@ float4 SamplePS(InputPS input) : SV_Target0
         half4 lightPass = CalcLightingColor(light.position, light.direction, light.color, light.falloff, input.worldpos.xyz, pixelNormal);
         if (scene.sampleShadowMap && i == 0)
         {
-            lightPass *= (half4)CalcUnshadowedAmountPCF2x2(i, input.worldpos, light.viewProj);
+            lightPass *= CalcUnshadowedAmountPCF2x2(i, input.worldpos, light.viewProj);
         }
         totalLight += lightPass;
     }

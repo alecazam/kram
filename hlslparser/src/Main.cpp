@@ -243,15 +243,6 @@ int main( int argc, char* argv[] )
 		Log_Error( "Parsing failed\n" );
 		return 1;
 	}
-
-    
-    // using wb to avoid having Win convert \n to \r\n
-    FILE* fp = fopen( outputFileName.c_str(), "wb" );
-    if ( !fp )
-    {
-        Log_Error( "Could not open output file %s\n", outputFileName.c_str() );
-        return 1;
-    }
     
     int status = 0;
     
@@ -289,6 +280,9 @@ int main( int argc, char* argv[] )
             statement = statement->nextStatement;
         }
     }
+    
+    string output;
+    
     for (auto& entryPoint: entryPoints)
     {
         entryName = entryPoint;
@@ -305,7 +299,8 @@ int main( int argc, char* argv[] )
             HLSLGenerator generator;
             if (generator.Generate( &tree, target, entryName ))
             {
-                fprintf( fp, "%s", generator.GetResult() );
+                // write the buffer out
+                output += generator.GetResult();
             }
             else
             {
@@ -318,7 +313,8 @@ int main( int argc, char* argv[] )
             MSLGenerator generator;
             if (generator.Generate( &tree, target, entryName ))
             {
-                fprintf( fp, "%s", generator.GetResult() );
+                // write the buffer out
+                output += generator.GetResult();
             }
             else
             {
@@ -326,9 +322,28 @@ int main( int argc, char* argv[] )
                 status = 1;
             }
         }
+        
+        if (status != 0)
+            break;
     }
     
-    fclose( fp );
-
+    if (status == 0)
+    {
+        // using wb to avoid having Win convert \n to \r\n
+        FILE* fp = fopen( outputFileName.c_str(), "wb" );
+        if ( !fp )
+        {
+            Log_Error( "Could not open output file %s\n", outputFileName.c_str() );
+            return 1;
+        }
+        
+        fprintf(fp, "%s", output.c_str());
+        fclose( fp );
+    }
+        
+    // It's not enough to return 1 from main, but set exit code.
+    if (status)
+        exit(status);
+    
     return status;
 }

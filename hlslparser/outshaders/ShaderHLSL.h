@@ -205,9 +205,10 @@ float4 SampleGrad(Texture2D<float4> t, SamplerState s, float2 texCoord, float2 g
 {
    return t.SampleGrad(s, texCoord.xy, gradx, grady);
 }
+
 //----------
 
-// typedef Texture2D Depth2D;
+typedef Texture2D Depth2D;
 
 // can just use the
 //float4 Sample(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 offset = 0)
@@ -216,7 +217,7 @@ float4 SampleGrad(Texture2D<float4> t, SamplerState s, float2 texCoord, float2 g
 //}
 
 // For persp shadows, remember to divide z = z/w before calling, or w = z/w on cube
-float4 SampleCmp(Texture2D<float4> t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
+float SampleCmp(Texture2D<float4> t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
 {
     return t.SampleCmp(s, texCoord.xy, texCoord.z, offset);
 }
