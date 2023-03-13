@@ -58,11 +58,13 @@ parserOptions+="-g "
 echo gen MSL
 ${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.metal
 ${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.metal
+${appHlslparser} ${parserOptions} -i ${srcDir}Compute.hlsl -o Compute.metal
 
 # build the hlsl shaders
 echo gen HLSL
 ${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.hlsl
 ${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.hlsl
+${appHlslparser} ${parserOptions} -i ${srcDir}Compute.hlsl -o Compute.hlsl
 
 #-------------------------------
 
@@ -88,6 +90,9 @@ if [[ $testMetal -eq 1 ]]; then
     # TODO: metal3.0 on M1 macOS13/iOS16
     metalMacOptions+="-std=macos-metal2.3 "
 
+    # Test case
+    # xcrun -sdk macosx metal ${dstDir}DepthTest.metal ${metalMacOptions} -o mac/DepthTest.metallib
+
     # TODO: build to air, and then compile to single metallib and metallibdsym
     # see if MSL compile
     echo compile MSL for macOS
@@ -95,6 +100,7 @@ if [[ $testMetal -eq 1 ]]; then
 
     xcrun -sdk macosx metal ${dstDir}Sample.metal ${metalMacOptions} -o mac/Sample.metallib
 
+    
     # this isn't going to compile yet
     # xcrun -sdk macosx metal ${dstDir}Compute.metal ${metalMacOptions} -o mac/Compute.metallib
 

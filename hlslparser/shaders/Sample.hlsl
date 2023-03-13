@@ -12,8 +12,8 @@
 // from here https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12Multithreading/src/shaders.hlsl
 
 Depth2D<float4> shadowMap : register(t0);
-Texture2D<float4> diffuseMap : register(t1);
-Texture2D<float4> normalMap : register(t2);
+Texture2D<half4> diffuseMap : register(t1);
+Texture2D<half4> normalMap : register(t2);
 
 SamplerState sampleWrap : register(s0);
 SamplerState sampleClamp : register(s1);
@@ -86,18 +86,18 @@ struct InputPS
 //--------------------------------------------------------------------------------------
 // Sample normal map, convert to signed, apply tangent-to-world space transform.
 //--------------------------------------------------------------------------------------
-float3 CalcPerPixelNormal(float2 vTexcoord, float3 vVertNormal, float3 vVertTangent)
+half3 CalcPerPixelNormal(float2 vTexcoord, half3 vVertNormal, half3 vVertTangent)
 {
     // Compute tangent frame.
     vVertNormal = normalize(vVertNormal);
     vVertTangent = normalize(vVertTangent);
 
-    float3 vVertBinormal = normalize(cross(vVertTangent, vVertNormal));
-    float3x3 mTangentSpaceToWorldSpace = float3x3(vVertTangent, vVertBinormal, vVertNormal);
+    half3 vVertBinormal = normalize(cross(vVertTangent, vVertNormal));
+    half3x3 mTangentSpaceToWorldSpace = half3x3(vVertTangent, vVertBinormal, vVertNormal);
 
     // Compute per-pixel normal.
-    float3 vBumpNormal = Sample(normalMap, sampleWrap, vTexcoord).xyz;
-    vBumpNormal = 2.0 * vBumpNormal - 1.0;
+    half3 vBumpNormal = SampleH(normalMap, sampleWrap, vTexcoord).xyz;
+    vBumpNormal = 2.0h * vBumpNormal - 1.0h;
 
     return mul(vBumpNormal, mTangentSpaceToWorldSpace);
 }
@@ -105,26 +105,27 @@ float3 CalcPerPixelNormal(float2 vTexcoord, float3 vVertNormal, float3 vVertTang
 //--------------------------------------------------------------------------------------
 // Diffuse lighting calculation, with angle and distance falloff.
 //--------------------------------------------------------------------------------------
-float4 CalcLightingColor(float3 vLightPos, float3 vLightDir, float4 vLightColor, float4 vFalloffs, float3 vPosWorld, float3 vPerPixelNormal)
+half4 CalcLightingColor(float3 vLightPos, float3 vLightDir, half4 vLightColor, float4 vFalloffs, float3 vPosWorld, half3 vPerPixelNormal)
 {
     float3 vLightToPixelUnNormalized = vPosWorld - vLightPos;
 
     // Dist falloff = 0 at vFalloffs.x, 1 at vFalloffs.x - vFalloffs.y
     float fDist = length(vLightToPixelUnNormalized);
 
-    float fDistFalloff = saturate((vFalloffs.x - fDist) / vFalloffs.y);
+    half fDistFalloff = (half)saturate((vFalloffs.x - fDist) / vFalloffs.y);
 
     // Normalize from here on.
-    float3 vLightToPixelNormalized = vLightToPixelUnNormalized / fDist;
+    half3 vLightToPixelNormalized = normalize(vLightToPixelUnNormalized);
 
     // Angle falloff = 0 at vFalloffs.z, 1 at vFalloffs.z - vFalloffs.w
-    float fCosAngle = dot(vLightToPixelNormalized, vLightDir / length(vLightDir));
-    float fAngleFalloff = saturate((fCosAngle - vFalloffs.z) / vFalloffs.w);
+    half3 lightDir = normalize(vLightDir);
+    half fCosAngle = dot(vLightToPixelNormalized, lightDir);
+    half fAngleFalloff = saturate((fCosAngle - (half)vFalloffs.z) / (half)vFalloffs.w);
 
     // Diffuse contribution.
-    float fNDotL = saturate(-dot(vLightToPixelNormalized, vPerPixelNormal));
+    half fNDotL = saturate(-dot(vLightToPixelNormalized, vPerPixelNormal));
 
-    return vLightColor * fNDotL * fDistFalloff * fAngleFalloff;
+    return vLightColor * (fNDotL * fDistFalloff * fAngleFalloff);
 }
 
 //--------------------------------------------------------------------------------------
@@ -190,22 +191,22 @@ OutputVS SampleVS(InputVS input)
 
 float4 SamplePS(InputPS input) : SV_Target0
 {
-    float4 diffuseColor = Sample(diffuseMap, sampleWrap, input.uv);
-    float3 pixelNormal = CalcPerPixelNormal(input.uv, input.normal, input.tangent);
-    float4 totalLight = scene.ambientColor;
+    half4 diffuseColor = SampleH(diffuseMap, sampleWrap, input.uv);
+    half3 pixelNormal = CalcPerPixelNormal(input.uv, input.normal, input.tangent);
+    half4 totalLight = (half4)scene.ambientColor;
 
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
         LightState light = scene.lights[i];
-        float4 lightPass = CalcLightingColor(light.position, light.direction, light.color, light.falloff, input.worldpos.xyz, pixelNormal);
+        half4 lightPass = CalcLightingColor(light.position, light.direction, light.color, light.falloff, input.worldpos.xyz, pixelNormal);
         if (scene.sampleShadowMap && i == 0)
         {
-            lightPass *= CalcUnshadowedAmountPCF2x2(i, input.worldpos, light.viewProj);
+            lightPass *= (half4)CalcUnshadowedAmountPCF2x2(i, input.worldpos, light.viewProj);
         }
         totalLight += lightPass;
     }
 
-    return diffuseColor * saturate(totalLight);
+    return (float4)(diffuseColor * saturate(totalLight));
 }
 
 

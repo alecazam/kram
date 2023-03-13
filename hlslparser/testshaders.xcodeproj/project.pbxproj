@@ -20,6 +20,7 @@
 		70CAA48B29BBD985004B7E7B /* Compute.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = Compute.hlsl; sourceTree = "<group>"; };
 		70CAA48C29BE6A62004B7E7B /* Compute.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = Compute.hlsl; sourceTree = "<group>"; };
 		70CAA48D29BE6A62004B7E7B /* Compute.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Compute.metal; sourceTree = "<group>"; };
+		70CAA48E29BEB04C004B7E7B /* DepthTest.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DepthTest.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -46,6 +47,7 @@
 			children = (
 				70CAA48929BAF707004B7E7B /* ShaderHLSL.h */,
 				70CAA48A29BAF707004B7E7B /* ShaderMSL.h */,
+				70CAA48E29BEB04C004B7E7B /* DepthTest.metal */,
 				70CAA48C29BE6A62004B7E7B /* Compute.hlsl */,
 				70CAA48D29BE6A62004B7E7B /* Compute.metal */,
 				70CAA48129BA7D28004B7E7B /* Sample.hlsl */,

@@ -94,13 +94,14 @@ void String_StripTrailingFloatZeroes(char* buffer)
         }
     }
     
+    // This breaks appending h to a number in MSL
     // strip the period (only for MSL)
-    char& c = buffer[bufferLen-1];
-    if (dotPos == &c)
-    {
-        c = 0;
-        bufferLen--;
-    }
+//    char& c = buffer[bufferLen-1];
+//    if (dotPos == &c)
+//    {
+//        c = 0;
+//        bufferLen--;
+//    }
 }
 
 // Engine/Log.cpp
