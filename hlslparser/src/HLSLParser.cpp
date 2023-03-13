@@ -743,6 +743,7 @@ const Intrinsic _intrinsic[] =
 
         // 3d cross product only
         Intrinsic( "cross", HLSLBaseType_Float3,  HLSLBaseType_Float3,  HLSLBaseType_Float3 ),
+        Intrinsic( "cross", HLSLBaseType_Half3,  HLSLBaseType_Half3,  HLSLBaseType_Half3 ),
 
         Intrinsic( "length", HLSLBaseType_Float,  HLSLBaseType_Float  ),
         Intrinsic( "length", HLSLBaseType_Float,  HLSLBaseType_Float2 ),
@@ -776,6 +777,7 @@ const Intrinsic _intrinsic[] =
         // vector<N> = mul(matrix<N,M>, vector<M>) ?
         // matrix<N,M> = mul(matrix<N,M>, matrix<M,N>) ?
         
+        // scalar/vec ops
         INTRINSIC_FLOAT2_FUNCTION( "mul" ),
 		Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2x2 ),
         Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3x3 ),
@@ -786,6 +788,28 @@ const Intrinsic _intrinsic[] =
         //Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float4x3 ),
         //Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float4, HLSLBaseType_Float4x2 ),
 
+        Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2x2, HLSLBaseType_Float2  ),
+        Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3x3, HLSLBaseType_Float3  ),
+        Intrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4x4, HLSLBaseType_Float4  ),
+        Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2x2 ),
+        Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3x3 ),
+        Intrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4x4 ),
+        
+        Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2x2 ),
+        Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3x3 ),
+        Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4x4 ),
+        Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2x2, HLSLBaseType_Half2 ),
+        Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3x3, HLSLBaseType_Half3 ),
+        Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4x4, HLSLBaseType_Half4 ),
+        
+        Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2x2, HLSLBaseType_Half2  ),
+        Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3x3, HLSLBaseType_Half3  ),
+        Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4x4, HLSLBaseType_Half4  ),
+        Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2x2 ),
+        Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3x3 ),
+        Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4x4 ),
+        
+        
         // matrix transpose
 		Intrinsic( "transpose", HLSLBaseType_Float2x2, HLSLBaseType_Float2x2 ),
         Intrinsic( "transpose", HLSLBaseType_Float3x3, HLSLBaseType_Float3x3 ),
