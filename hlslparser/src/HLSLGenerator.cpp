@@ -49,9 +49,11 @@ const char* HLSLGenerator::GetTypeName(const HLSLType& type)
         switch (baseType)
         {
             // depth textures just use Texture2D typedef
-            // TODO: add cube, array, ms, others
+            // TODO: add ms, others
             case HLSLBaseType_Depth2D:           return "Depth2D";
-                
+            case HLSLBaseType_Depth2DArray:      return "Depth2DArray";
+            case HLSLBaseType_DepthCube:         return "DepthCube";
+           
             case HLSLBaseType_Texture2D:         return "Texture2D";
             case HLSLBaseType_Texture2DArray:    return "Texture2DArray";
             case HLSLBaseType_Texture3D:         return "Texture3D";
@@ -621,32 +623,40 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
             HLSLBuffer* buffer = static_cast<HLSLBuffer*>(statement);
             HLSLDeclaration* field = buffer->field;
 
-            m_writer.BeginLine(indent, buffer->fileName, buffer->line);
-            
             if (!buffer->IsGlobalFields())
             {
+                m_writer.BeginLine(indent, buffer->fileName, buffer->line);
+                
                 // write out template
                 m_writer.Write("%s<%s> %s",
                                BufferTypeToName(buffer->bufferType),
                                buffer->bufferStruct->name,
                                buffer->name);
+                
+                // write out optinal register
+                if (buffer->registerName != NULL)
+                {
+                     m_writer.Write(" : register(%s)", buffer->registerName);
+                }
+                
+                m_writer.Write(";");
+                m_writer.EndLine();
             }
             else
             {
+                m_writer.BeginLine(indent, buffer->fileName, buffer->line);
+                
                 // not templated
                 m_writer.Write("%s %s",
                                BufferTypeToName(buffer->bufferType),
                                buffer->name);
-            }
-            
-            // write out optinal register
-            if (buffer->registerName != NULL)
-            {
-                 m_writer.Write(" : register(%s)", buffer->registerName);
-            }
-                         
-            if (buffer->IsGlobalFields())
-            {
+                
+                // write out optinal register
+                if (buffer->registerName != NULL)
+                {
+                     m_writer.Write(" : register(%s)", buffer->registerName);
+                }
+                
                 m_writer.EndLine(" {");
                 m_isInsideBuffer = true;
                 
@@ -665,11 +675,6 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
                 m_isInsideBuffer = false;
                 
                 m_writer.WriteLine(indent, "};");
-            }
-            else
-            {
-                m_writer.Write(";");
-                m_writer.EndLine();
             }
         }
         else if (statement->nodeType == HLSLNodeType_Function)

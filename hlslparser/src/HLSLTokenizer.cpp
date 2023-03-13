@@ -70,6 +70,8 @@ static const char* _reservedWords[] =
         "Texture2DMS",
         
         "Depth2D",
+        "Depth2DArray", // cascades
+        "DepthCube",
         
         "SamplerState",
         "SamplerComparisonState",
@@ -658,7 +660,7 @@ void HLSLTokenizer::GetTokenName(char buffer[s_maxIdentifier]) const
     // TODO: short/ushort/uint
     else if (m_token == HLSLToken_Identifier)
     {
-        strlcpy(buffer, m_identifier, s_maxIdentifier); // TODO: Alec, put in alt for Win
+        strlcpy(buffer, m_identifier, s_maxIdentifier); // TODO: Alec, put in alt strlcpy call for Win
     }
     else
     {
@@ -718,6 +720,11 @@ void HLSLTokenizer::GetTokenName(int token, char buffer[s_maxIdentifier])
         case HLSLToken_EndOfStream:
             strcpy(buffer, "<eof>");
             break;
+                
+        case HLSLToken_Comment:
+            strcpy(buffer, "comment");
+            break;
+            
         default:
             strcpy(buffer, "unknown");
             break;

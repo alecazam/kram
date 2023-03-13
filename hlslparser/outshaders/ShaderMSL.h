@@ -237,14 +237,14 @@ float4 Sample(depth2d<float> t, sampler s, float2 texCoord, int2 offset = 0)
 
 
 // For persp shadows, remember to divide z = z/w before calling, or w = z/w on cube
-float SampleCmp(depth2d<float> t, sampler s, float4 texCoord, int2 offset = 0)
+float SampleCmp(depth2d<float> t, sampler s, float4 texCompareCoord, int2 offset = 0)
 {
-    return t.sample_compare(s, texCoord.xy, texCoord.z, offset);
+    return t.sample_compare(s, texCompareCoord.xy, texCompareCoord.z, offset);
 }
 
-float4 GatherCmp(depth2d<float> t, sampler s, float4 texCoord, int2 offset = 0)
+float4 GatherCmp(depth2d<float> t, sampler s, float4 texCompareCoord, int2 offset = 0)
 {
-    return t.gather_compare(s, texCoord.xy, texCoord.z, offset);
+    return t.gather_compare(s, texCompareCoord.xy, texCompareCoord.z, offset);
 }
 
 

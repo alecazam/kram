@@ -127,6 +127,8 @@ enum HLSLBaseType
     HLSLBaseType_Texture2DMS,
     
     HLSLBaseType_Depth2D,
+    HLSLBaseType_Depth2DArray,
+    HLSLBaseType_DepthCube,
     // TODO: add more depth types as needed (pair with SamplerComparisonState)
     
     // Only 2 sampler types.
@@ -344,6 +346,9 @@ struct HLSLType
     HLSLAddressSpace    addressSpace = HLSLAddressSpace_Undefined;
 };
 
+// Only Statment, Argument, StructField can be marked hidden.
+// But many elements like Buffer derived from Statement.
+
 /// Base class for all nodes in the HLSL AST
 struct HLSLNode
 {
@@ -362,7 +367,13 @@ struct HLSLStatement : public HLSLNode
 {
     HLSLStatement*      nextStatement = NULL;      // Next statement in the block.
     HLSLAttribute*      attributes = NULL;
+    
+    // This allows tree pruning.  Marked true after traversing use in
     mutable bool        hidden = false;
+    
+    // This is marked as false at start, and multi endpoint traversal marks
+    // when a global is already written, and next write is skipped.
+    mutable bool        written = false;
 };
 
 struct HLSLAttribute : public HLSLNode

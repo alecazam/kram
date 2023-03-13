@@ -110,7 +110,9 @@ bool IsTextureType(HLSLBaseType baseType)
 bool IsDepthTextureType(HLSLBaseType baseType)
 {
     // return baseTypeDescriptions[baseType].coreType == CoreType_DepthTexture;
-    return baseType == HLSLBaseType_Depth2D;
+    return  baseType == HLSLBaseType_Depth2D ||
+            baseType == HLSLBaseType_Depth2DArray ||
+            baseType == HLSLBaseType_DepthCube;
 }
 
 
@@ -787,6 +789,24 @@ const Intrinsic _intrinsic[] =
         
         // scalar/vec ops
         INTRINSIC_FLOAT2_FUNCTION( "mul" ),
+        
+        // scalar mul, since * isn't working on Metal properly
+        Intrinsic( "mul", HLSLBaseType_Float2x2, HLSLBaseType_Float, HLSLBaseType_Float2x2 ),
+        Intrinsic( "mul", HLSLBaseType_Float3x3, HLSLBaseType_Float, HLSLBaseType_Float3x3 ),
+        Intrinsic( "mul", HLSLBaseType_Float4x4, HLSLBaseType_Float, HLSLBaseType_Float4x4 ),
+        Intrinsic( "mul", HLSLBaseType_Float2x2, HLSLBaseType_Float2x2, HLSLBaseType_Float ),
+        Intrinsic( "mul", HLSLBaseType_Float3x3, HLSLBaseType_Float3x3, HLSLBaseType_Float ),
+        Intrinsic( "mul", HLSLBaseType_Float4x4, HLSLBaseType_Float4x4, HLSLBaseType_Float ),
+        
+        Intrinsic( "mul", HLSLBaseType_Half2x2, HLSLBaseType_Half, HLSLBaseType_Half2x2 ),
+        Intrinsic( "mul", HLSLBaseType_Half3x3, HLSLBaseType_Half, HLSLBaseType_Half3x3 ),
+        Intrinsic( "mul", HLSLBaseType_Half4x4, HLSLBaseType_Half, HLSLBaseType_Half4x4 ),
+        Intrinsic( "mul", HLSLBaseType_Half2x2, HLSLBaseType_Half2x2, HLSLBaseType_Half ),
+        Intrinsic( "mul", HLSLBaseType_Half3x3, HLSLBaseType_Half3x3, HLSLBaseType_Half ),
+        Intrinsic( "mul", HLSLBaseType_Half4x4, HLSLBaseType_Half4x4, HLSLBaseType_Float ),
+        
+        
+        
 		Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2x2 ),
         Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3x3 ),
         Intrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4x4 ),
@@ -870,11 +890,19 @@ const Intrinsic _intrinsic[] =
         
         // Depth
         DepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float,  HLSLBaseType_Float2),
+        DepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float,  HLSLBaseType_Float3),
+        DepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float,  HLSLBaseType_Float3),
         
         // xyz are used, this doesn't match HLSL which is 2 + compare
         DepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4),
-        DepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4),
+        DepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float, HLSLBaseType_Float4),
+        DepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float, HLSLBaseType_Float4),
         
+        // returns float4 w/comparisons, probably only on mip0
+        // TODO: add GatherRed? to read 4 depth values
+        DepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4),
+        DepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2DArray, HLSLBaseType_Float, HLSLBaseType_Float4),
+        DepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_DepthCube, HLSLBaseType_Float, HLSLBaseType_Float4),
         
         // one more dimension than Sample
         TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3),
@@ -993,6 +1021,8 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
         { "Texture2DMS",        CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture2DMS
         
         { "Depth2D",            CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Depth2D
+        { "Depth2DArray",       CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Depth2DArray
+        { "DepthCube",          CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_DepthCube
         
         { "SamplerState",            CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler
         { "SamplerComparisonState",  CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_SamplerComparisonState
@@ -3775,6 +3805,12 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
        
     case HLSLToken_Depth2D:
         type.baseType = HLSLBaseType_Depth2D;
+        break;
+    case HLSLToken_Depth2DArray:
+        type.baseType = HLSLBaseType_Depth2DArray;
+        break;
+    case HLSLToken_DepthCube:
+        type.baseType = HLSLBaseType_DepthCube;
         break;
             
     case HLSLToken_SamplerState:

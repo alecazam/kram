@@ -2124,36 +2124,36 @@ namespace M4
             
             bool isHalfTexture  = promote && type.textureType == HLSLBaseType_Half && !m_options.treatHalfAsFloat;
             
+            // MSL docs state must be float type, but what about D16f texture?
+            if (IsDepthTextureType(baseType))
+                isHalfTexture = false;
+            
             switch (baseType)
             {
                 case HLSLBaseType_Depth2D:
                     return isHalfTexture ? "depth2d<half>" : "depth2d<float>";
-                /* TODO: add these
-                case HLSLBaseType_DepthCube:
-                    return isHalfTexture ? "depthcube<half>" : "depthcube<float>";
                 case HLSLBaseType_Depth2DArray:
                     return isHalfTexture ? "depth2d_array<half>" : "depth2d_array<float>";
+                case HLSLBaseType_DepthCube:
+                    return isHalfTexture ? "depthcube<half>" : "depthcube<float>";
+                /* TODO: add, also depth_ms_array, but no HLSL equivalent
                 case HLSLBaseType_Depth2DMS:
                     return isHalfTexture ? "depth2d_ms<half>" : "depth2d_ms<float>";
                 */
-                    
-                // TODO: no HLSL equivalent of this yet, but exists in MSL
-                // depth_ms_array
-                    
                 
                 case HLSLBaseType_Texture2D:
                     return isHalfTexture ? "texture2d<half>" : "texture2d<float>";
+                case HLSLBaseType_Texture2DArray:
+                    return isHalfTexture ? "texture2d_array<half>" : "texture2d_array<float>";
                 case HLSLBaseType_Texture3D:
                     return isHalfTexture ? "texture3d<half>" : "texture3d<float>";
                 case HLSLBaseType_TextureCube:
                     return isHalfTexture ? "texturecube<half>" : "texturecube<float>";
-                case HLSLBaseType_Texture2DMS:
-                    return isHalfTexture ? "texture2d_ms<half>" : "texture2d_ms<float>";
                 case HLSLBaseType_TextureCubeArray:
                     return isHalfTexture ? "texturecube_array<half>" : "texturecube_array<float>";
-                case HLSLBaseType_Texture2DArray:
-                    return isHalfTexture ? "texture2d_array<half>" : "texture2d_array<float>";
-                    
+                case HLSLBaseType_Texture2DMS:
+                    return isHalfTexture ? "texture2d_ms<half>" : "texture2d_ms<float>";
+                
                 default:
                     break;
             }

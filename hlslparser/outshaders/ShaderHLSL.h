@@ -208,9 +208,15 @@ float4 SampleGrad(Texture2D<float4> t, SamplerState s, float2 texCoord, float2 g
 
 //----------
 
-typedef Texture2D Depth2D;
+// This has templated elements appended, so typedef doesn't work.
+// HLSL doesn't distingush depth/color, but MSL does. These calls combine
+// the comparison value in the z or w element.
+#define Depth2D Texture2D
+#define Depth2DArray Texture2DArray
+#define DepthCube TextureCube
 
-// can just use the
+
+// can just use the default for Texture2D<float4>
 //float4 Sample(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 offset = 0)
 //{
 //    return t.Sample(s, texCoord.xy, offset);
