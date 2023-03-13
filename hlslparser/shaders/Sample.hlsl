@@ -16,7 +16,6 @@ Texture2D<half4> diffuseMap : register(t1);
 Texture2D<half4> normalMap : register(t2);
 
 SamplerState sampleWrap : register(s0);
-//SamplerState sampleClamp : register(s1);
 SamplerComparisonState shadowMapSampler : register(s1);
 
 // #define didn't compile due to lack of preprocesor
@@ -145,43 +144,23 @@ half CalcUnshadowedAmountPCF2x2(int lightIndex, float4 vPosWorld, float4x4 viewP
     if (vLightSpacePos.z > vLightSpacePos.w)
         return 1.0f;
     
+    // near/w for persp, z/1 for ortho
     vLightSpacePos.xyz /= vLightSpacePos.w;
 
+/*
+    // TODO: do all the flip and scaling and bias in the proj, not in shader
     vLightSpacePos.xy *= 0.5;
     vLightSpacePos.xy += 0.5;
     
     // Translate from homogeneous coords to texture coords.
-    //float2 vShadowTexCoord = 0.5 * vLightSpacePos.xy + 0.5;
     vLightSpacePos.y = 1.0 - vLightSpacePos.y;
 
     // Depth bias to avoid pixel self-shadowing.
     vLightSpacePos.z -= SHADOW_DEPTH_BIAS;
-
-    // 2x2 percentage closer filtering.
-    /* Ick, Microsoft
-     
-    // Find sub-pixel weights.
-    float2 vShadowMapDims = float2(1280.0, 720.0); // need to keep in sync with .cpp file
-    float4 vSubPixelCoords = float4(1.0, 1.0, 1.0, 1.0);
-    vSubPixelCoords.xy = frac(vShadowMapDims * vShadowTexCoord);
-    vSubPixelCoords.zw = 1.0 - vSubPixelCoords.xy;
-    float4 vBilinearWeights = vSubPixelCoords.zxzx * vSubPixelCoords.wwyy;
-
-    float2 vTexelUnits = 1.0 / vShadowMapDims;
+*/
     
-    float4 vShadowDepths;
-    vShadowDepths.x = Sample(shadowMap, sampleClamp, vShadowTexCoord).x;
-    vShadowDepths.y = Sample(shadowMap, sampleClamp, vShadowTexCoord + float2(vTexelUnits.x, 0.0)).x;
-    vShadowDepths.z = Sample(shadowMap, sampleClamp, vShadowTexCoord + float2(0.0, vTexelUnits.y)).x;
-    vShadowDepths.w = Sample(shadowMap, sampleClamp, vShadowTexCoord + vTexelUnits).x;
-    float4 vShadowTests = (vShadowDepths >= vLightSpaceDepth);
-     
-    // What weighted fraction of the 4 samples are nearer to the light than this pixel?
-    return dot(vBilinearWeights, vShadowTests);
-    */
-
+    // Use HW filtering
     return (half)SampleCmp(shadowMap, shadowMapSampler, vLightSpacePos);
-   
 }
 
 OutputVS SampleVS(InputVS input)
@@ -190,7 +169,6 @@ OutputVS SampleVS(InputVS input)
 
     float4 newPosition = float4(input.position, 1.0);
 
-    input.normal.z *= -1.0; // why negated?
     newPosition = mul(newPosition, scene.model);
 
     output.worldpos = newPosition;
@@ -200,9 +178,11 @@ OutputVS SampleVS(InputVS input)
     output.position = newPosition;
     output.uv = input.uv;
     
-    // TODO: need transformed to world space too?
-    output.normal = input.normal;
-    output.tangent = input.tangent;
+    // need transformed to world space too?
+    // this only works if only uniform scale and invT on normal
+    //input.normal.z *= -1.0; // why negated?
+    output.normal = mul(float4(input.normal, 0.0), scene.model);
+    output.tangent = mul(float4(input.tangent, 0.0), scene.model);
 
     return output;
 }
@@ -217,6 +197,8 @@ float4 SamplePS(InputPS input) : SV_Target0
     {
         LightState light = scene.lights[i];
         half4 lightPass = CalcLightingColor(light.position, light.direction, light.color, light.falloff, input.worldpos.xyz, pixelNormal);
+        
+        // only single light shadow map
         if (scene.sampleShadowMap && i == 0)
         {
             lightPass *= CalcUnshadowedAmountPCF2x2(i, input.worldpos, light.viewProj);
