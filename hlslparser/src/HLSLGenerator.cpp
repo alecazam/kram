@@ -38,6 +38,8 @@ const char* HLSLGenerator::GetTypeName(const HLSLType& type)
         {
             // samplers
             case HLSLBaseType_SamplerState:              return "SamplerState";
+                
+            // can only pair this with depth texture to match Metal
             case HLSLBaseType_SamplerComparisonState:    return "SamplerComparisonState";
             default: break;
         }
@@ -46,6 +48,10 @@ const char* HLSLGenerator::GetTypeName(const HLSLType& type)
     {
         switch (baseType)
         {
+            // depth textures just use Texture2D typedef
+            // TODO: add cube, array, ms, others
+            case HLSLBaseType_Depth2D:           return "Depth2D";
+                
             case HLSLBaseType_Texture2D:         return "Texture2D";
             case HLSLBaseType_Texture2DArray:    return "Texture2DArray";
             case HLSLBaseType_Texture3D:         return "Texture3D";
@@ -322,49 +328,7 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
         HLSLIdentifierExpression* identifierExpression = static_cast<HLSLIdentifierExpression*>(expression);
         const char* name = identifierExpression->name;
         
-        /* I don't want to pass structs
-        if (IsSamplerType(identifierExpression->expressionType) && identifierExpression->global)
-        {
-            // @@ Handle generic sampler type.
-
-            // Stupid HLSL doesn't have ctors, so have ctor calls.
-            if (identifierExpression->expressionType.baseType == HLSLBaseType_Texture2D)
-            {
-                if (identifierExpression->expressionType.textureType == HLSLBaseType_Half) // TODO: && !m_options.treatHalfAsFloat)
-                {
-                    m_writer.Write("Texture2DHalfSamplerCtor(%s_texture, %s_sampler)", name, name);
-                }
-                else
-                {
-                    m_writer.Write("Texture2DSamplerCtor(%s_texture, %s_sampler)", name, name);
-                }
-                
-                // Remove this, so have half support above
-                //m_writer.Write("%s(%s_texture, %s_sampler)", "Texture2DSamplerCtor", name, name);
-            }
-            else if (identifierExpression->expressionType.baseType == HLSLBaseType_Sampler3D)
-            {
-                m_writer.Write("%s(%s_texture, %s_sampler)", "Texture3DSamplerCtor", name, name);
-            }
-            else if (identifierExpression->expressionType.baseType == HLSLBaseType_SamplerCube)
-            {
-                m_writer.Write("%s(%s_texture, %s_sampler)", "TextureCubeSamplerCtor", name, name);
-            }
-            else if (identifierExpression->expressionType.baseType == HLSLBaseType_Sampler2DShadow)
-            {
-                m_writer.Write("%s(%s_texture, %s_sampler)", "Texture2DShadowSamplerCtor", name, name);
-            }
-            // TODO: add all ctor types
-            else if (identifierExpression->expressionType.baseType == HLSLBaseType_Sampler2DMS)
-            {
-                m_writer.Write("%s", name);
-            }
-        }
-        else
-        */
-        {
-            m_writer.Write("%s", name);
-        }
+        m_writer.Write("%s", name);
     }
     else if (expression->nodeType == HLSLNodeType_CastingExpression)
     {
@@ -893,32 +857,8 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
         // caller to specify more types.
         
         // texture carts the dimension and format
-        const char* textureType = NULL;
-        if (declaration->type.baseType == HLSLBaseType_Texture2D)
-        {
-            textureType = "Texture2D";
-        }
-        else if (declaration->type.baseType == HLSLBaseType_Texture2DArray)
-        {
-            textureType = "Texture2DArray";
-        }
-        else if (declaration->type.baseType == HLSLBaseType_Texture3D)
-        {
-            textureType = "Texture3D";
-        }
-        else if (declaration->type.baseType == HLSLBaseType_TextureCube)
-        {
-            textureType = "TextureCube";
-        }
-        else if (declaration->type.baseType == HLSLBaseType_TextureCubeArray)
-        {
-            textureType = "TextureCubeArray";
-        }
-        else if (declaration->type.baseType == HLSLBaseType_Texture2DMS)
-        {
-            textureType = "Texture2DMS";
-        }
-
+        const char* textureType = GetTypeName(declaration->type);
+    
         if (textureType != NULL)
         {
             if (reg != -1)

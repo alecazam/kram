@@ -126,6 +126,9 @@ enum HLSLBaseType
     HLSLBaseType_TextureCubeArray,
     HLSLBaseType_Texture2DMS,
     
+    HLSLBaseType_Depth2D,
+    // TODO: add more depth types as needed (pair with SamplerComparisonState)
+    
     // Only 2 sampler types.
     HLSLBaseType_SamplerState,
     HLSLBaseType_SamplerComparisonState,

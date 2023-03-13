@@ -11,7 +11,7 @@
 
 // from here https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12Multithreading/src/shaders.hlsl
 
-Texture2D<float4> shadowMap : register(t0);
+Depth2D<float4> shadowMap : register(t0);
 Texture2D<float4> diffuseMap : register(t1);
 Texture2D<float4> normalMap : register(t2);
 

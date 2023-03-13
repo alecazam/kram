@@ -69,21 +69,11 @@ static const char* _reservedWords[] =
         "TextureCubeArray",
         "Texture2DMS",
         
+        "Depth2D",
+        
         "SamplerState",
         "SamplerComparisonState",
-/*
-        // TODO: eliminate DX9 types
-        "texture",
-        
-        "sampler",
-        "sampler2D",
-        "sampler3D",
-        "samplerCUBE",
-        "sampler2DShadow",
-        "sampler2DMS",
-        "sampler2DArray",
-*/
-        
+
         "if",
         "else",
         "for",
@@ -94,11 +84,11 @@ static const char* _reservedWords[] =
         "void",
         "struct",
         
-        // DX9
+        // DX9 buffer types (tons of globals)
         "cbuffer",
         "tbuffer",
         
-        // DX10 templated types
+        // DX10 buffer templated types
         "ConstantBuffer", // indexable cbuffer
         "StructuredBuffer",
         "RWStructuredBuffer",

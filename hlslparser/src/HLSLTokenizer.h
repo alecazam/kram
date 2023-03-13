@@ -67,6 +67,9 @@ enum HLSLToken
     HLSLToken_TextureCubeArray,
     HLSLToken_Texture2DMS,
     
+    HLSLToken_Depth2D,
+    // TODO: other depth types
+    
     HLSLToken_SamplerState,
     HLSLToken_SamplerComparisonState,
     

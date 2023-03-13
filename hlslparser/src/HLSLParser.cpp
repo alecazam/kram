@@ -107,6 +107,13 @@ bool IsTextureType(HLSLBaseType baseType)
     return baseTypeDescriptions[baseType].coreType == CoreType_Texture;
 }
 
+bool IsDepthTextureType(HLSLBaseType baseType)
+{
+    // return baseTypeDescriptions[baseType].coreType == CoreType_DepthTexture;
+    return baseType == HLSLBaseType_Depth2D;
+}
+
+
 bool IsBufferType(HLSLBaseType baseType)
 {
     return baseTypeDescriptions[baseType].coreType == CoreType_Buffer;
@@ -843,6 +850,11 @@ const Intrinsic _intrinsic[] =
         TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCube, HLSLBaseType_Float3),
         TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4),
         
+        // Depth
+        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Depth2D, HLSLBaseType_Float2),
+        // TODO: TEXTURE_INTRINSIC_FUNCTION("SampleCmp", HLSLBaseType_Depth2D, HLSLBaseType_Float4),
+        // TODO: TEXTURE_INTRINSIC_FUNCTION("GatherCmp", HLSLBaseType_Depth2D, HLSLBaseType_Float4),
+        
         // one more dimension than Sample
         TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3),
         TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture3D, HLSLBaseType_Float4),
@@ -959,6 +971,7 @@ const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] =
         { "TextureCubeArray",     CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_TextureCubeArray
         { "Texture2DMS",        CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture2DMS
         
+        { "Depth2D",            CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Depth2D
         
         { "SamplerState",            CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler
         { "SamplerComparisonState",  CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_SamplerComparisonState
@@ -3735,6 +3748,10 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         break;
     case HLSLToken_TextureCubeArray:
         type.baseType = HLSLBaseType_TextureCubeArray;
+        break;
+       
+    case HLSLToken_Depth2D:
+        type.baseType = HLSLBaseType_Depth2D;
         break;
             
     case HLSLToken_SamplerState:

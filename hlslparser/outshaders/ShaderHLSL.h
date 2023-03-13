@@ -64,6 +64,9 @@ typedef uint16_t4 ushort4;
 //typedef float64_t3 double3;
 //typedef float64_t4 double4;
 
+// 6.6 is cutting edge, want to target 6.2 for now
+#define SM66 1
+#if SM66
 // compile to SM6.6 for these
 typedef uint8_t4_packed uchar4_packed;
 typedef int8_t4_packed char4_packed;
@@ -113,6 +116,7 @@ char4_packed fromInt4(int4 v, bool clamp = true)
 {
     return clamp ? pack_clamp_s8(v) : pack_s8(v);
 }
+#endif
 
 
 #define USE_HALF 1
@@ -201,32 +205,26 @@ float4 SampleGrad(Texture2D<float4> t, SamplerState s, float2 texCoord, float2 g
 {
    return t.SampleGrad(s, texCoord.xy, gradx, grady);
 }
-
 //----------
 
+// typedef Texture2D Depth2D;
+
+// can just use the
+//float4 Sample(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 offset = 0)
+//{
+//    return t.Sample(s, texCoord.xy, offset);
+//}
+
 // For persp shadows, remember to divide z = z/w before calling, or w = z/w on cube
-float4 SampleCmp(Texture2D t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
+float4 SampleCmp(Texture2D<float4> t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
 {
     return t.SampleCmp(s, texCoord.xy, texCoord.z, offset);
 }
 
-
-// no offset
-float4 SampleCmp(TextureCube t, SamplerComparisonState s, float4 texCoord)
+float4 GatherCmp(Texture2D<float4> t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
 {
-    return t.SampleCmp(s, texCoord.xyz, texCoord.w);
+    return t.GatherCmp(s, texCoord.xy, texCoord.z, offset);
 }
-
-// TODO: may need to add to HLSLParser intrinsics
-//float4 SampleCmp(Texture2DArray t, SamplerComparisonState s, float4 texCoord, int2 offset = 0)
-//{
-//    return t.SampleCmp(s, texCoord.xyz, offset);
-//}
-//
-//float4 SampleCmp(TextureCubeArray t, SamplerComparisonState s, float4 texCoord)
-//{
-//    return t.SampleCmp(s, texCoord.xyzw);
-//}
 
 //----------
 

@@ -233,6 +233,23 @@ float4 Sample(texturecube<float> t, sampler s, float3 texCoord) {
 float4 Sample(texturecube_array<float> t, sampler s, float4 texCoord) {
     return t.sample(s, texCoord.xyz, uint(texCoord.w));
 }
+//----------
+
+float4 Sample(depth2d<float> t, sampler s, float2 texCoord, int2 offset = 0)
+{
+    return t.sample(s, texCoord.xy, offset);
+}
+
+// For persp shadows, remember to divide z = z/w before calling, or w = z/w on cube
+float4 SampleCmp(depth2d<float> t, sampler s, float4 texCoord, int2 offset = 0)
+{
+    return t.sample_compare(s, texCoord.xy, texCoord.z, offset);
+}
+
+float4 GatherCmp(depth2d<float> t, sampler s, float4 texCoord, int2 offset = 0)
+{
+    return t.gather_compare(s, texCoord.xy, texCoord.z, offset);
+}
 
 
 // ----

@@ -103,7 +103,7 @@ private:
     const char* TranslateOutputSemantic(const char* semantic);
 
     const char* GetTypeName(const HLSLType& type, bool exactType);
-    const char* GetAddressSpaceName(HLSLAddressSpace addressSpace) const;
+    const char* GetAddressSpaceName(HLSLBaseType baseType, HLSLAddressSpace addressSpace) const;
     
     void Error(const char* format, ...) const M4_PRINTF_ATTR(2, 3);
 

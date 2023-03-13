@@ -168,6 +168,7 @@ extern bool IsMatrixType(HLSLBaseType baseType);
 extern bool IsVectorType(HLSLBaseType baseType);
 extern bool IsScalarType(HLSLBaseType baseType);
 extern bool IsTextureType(HLSLBaseType baseType);
+extern bool IsDepthTextureType(HLSLBaseType baseType);
 extern bool IsBufferType(HLSLBaseType baseType);
 extern bool IsNumericType(HLSLBaseType baseType);
 
