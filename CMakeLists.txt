@@ -161,6 +161,9 @@ endif()
 
 #-----------------------------------------------------
 
+# hack hlslparser for win build into kram for now
+add_subdirectory(hlslparser)
+
 # hlslparser is also now in the kram build.  Keep executables up to date.
 # I would use the sln file, but msbuild doesn't like to be called from cibuld.sh
 if (BUILD_WIN)
