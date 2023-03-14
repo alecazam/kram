@@ -86,8 +86,8 @@ elif [[ $buildType == windows ]]; then
 
 	pushd build
 
-	#cmake .. -G "Visual Studio 15 2017 Win64"
-	cmake .. -G "Visual Studio 16 2019" -A x64
+	# TODO: update to VS2022
+	make .. -G "Visual Studio 16 2019" -A x64
 
 	# build the release build
 	cmake --build . --config Release
@@ -97,12 +97,11 @@ elif [[ $buildType == windows ]]; then
 
 	popd
 
-	# build hlslparser to bin directory
-	#pushd hlslparser
-	# TODO: run the sln file to build Win version of hlslparser
-	#msbuild hlslparser.sln -target:NotInSlnfolder:Rebuild;NewFolder\InSolutionFolder:Clean
-	#popd
-
+	# build hlslparser (release) to bin folder
+	pushd hlslparser
+	msbuild hlslparser.sln /p:OutputPath=${binHolderPath}
+	popd
+	
 elif [[ $buildType == linux ]]; then
 	mkdir -p build
 
