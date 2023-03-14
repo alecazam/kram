@@ -78,14 +78,17 @@ add_subdirectory(libkram)
 # the CLI app for Mac/Win that can build content for other platforms, uses libkram
 add_subdirectory(kramc)
 
-# the viewer is only written for macOS Intel/ARM currently, uses libkram
 if (BUILD_MAC)
+    # the viewer is only written for macOS Intel/ARM currently, uses libkram
     add_subdirectory(kramv)
+
+    # ps plugin that uses libkram
+    add_subdirectory(plugin)
 endif()
 
-# ps plugin that uses libkram
-if (BUILD_MAC)
-    add_subdirectory(plugin)
+# hack hlslparser for win build into kram for now
+if (BUID_WIN)
+    add_subdirectory(hlslparser)
 endif()
 
 #-----------------------------------------------------
@@ -154,8 +157,6 @@ endif()
 
 #-----------------------------------------------------
 
-# hack hlslparser for win build into kram for now
-add_subdirectory(hlslparser)
 
 # hlslparser is also now in the kram build.  Keep executables up to date.
 # I would use the sln file, but msbuild doesn't like to be called from cibuld.sh
