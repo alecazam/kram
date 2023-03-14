@@ -199,6 +199,8 @@ int main( int argc, char* argv[] )
         outputFileName += ".hlsl";
     }
     
+    // Win build on github is failing on this, so skip for now
+#ifndef WIN32
     // find  full pathname of the fileName, so that errors are logged
     // in way that can be clicked to. absolute includes .. in it, canonical does not.
     auto path = filesystem::path(fileName);
@@ -216,6 +218,7 @@ int main( int argc, char* argv[] )
             return 1;
         }
     }
+#endif
     
     //------------------------------------
     // Now start the work

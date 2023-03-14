@@ -45,7 +45,7 @@ if (BUILD_MAC)
     set_target_properties(${myTargetApp} PROPERTIES
          # Note: match this up with CXX version
         # c++11 min
-        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14"
+        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
 
         # removed this in case run on Rosetta.  Not sure if this is Intel/Arm64 build.
