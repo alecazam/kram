@@ -87,7 +87,7 @@ elif [[ $buildType == windows ]]; then
 	pushd build
 
 	# TODO: update to VS2022
-	make .. -G "Visual Studio 16 2019" -A x64
+	cmake .. -G "Visual Studio 16 2019" -A x64
 
 	# build the release build
 	cmake --build . --config Release
