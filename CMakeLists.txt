@@ -87,7 +87,7 @@ if (BUILD_MAC)
 endif()
 
 # hack hlslparser for win build into kram for now
-if (BUID_WIN)
+if (BUILD_WIN)
     add_subdirectory(hlslparser)
 endif()
 
