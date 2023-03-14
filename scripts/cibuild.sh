@@ -97,10 +97,14 @@ elif [[ $buildType == windows ]]; then
 
 	popd
 
+	# mingW doesn't like running this Win style command line
+	# see here for another method https://github.com/microsoft/setup-msbuild
+	# just added the parser to cmake
+	#
 	# build hlslparser (release) to bin folder
-	pushd hlslparser
-	msbuild hlslparser.sln /p:OutputPath=${binHolderPath}
-	popd
+	#pushd hlslparser
+	#msbuild hlslparser.sln /p:OutputPath=${binHolderPath}
+	#popd
 	
 elif [[ $buildType == linux ]]; then
 	mkdir -p build
