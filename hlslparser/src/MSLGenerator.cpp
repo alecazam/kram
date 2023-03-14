@@ -509,6 +509,11 @@ namespace M4
         // @@ Add/Translate function attributes.
         // entryFunction->attributes
 
+        // TODO: hack, since don't actually parse bracket construct yet
+        // MSL doesn't seem to have this, set from code?
+        // if (m_target == HLSLTarget_ComputeShader)
+        //     m_writer.WriteLine(indent, "[numthreads(1,1,1)]");
+        
         switch(m_target)
         {
             case HLSLTarget_VertexShader:   m_writer.Write("vertex "); break;
@@ -575,6 +580,9 @@ namespace M4
         if (argumentCount && currentArg != NULL)
         {
             m_writer.Write(", ");
+            
+            indent = m_writer.EndLine();
+            m_writer.BeginLine(indent);
         }
         while (currentArg != NULL)
         {
@@ -619,6 +627,9 @@ namespace M4
                 if (currentArg)
                 {
                     m_writer.Write(", ");
+                    
+                    indent = m_writer.EndLine();
+                    m_writer.BeginLine(indent);
                 }
             }
 

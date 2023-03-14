@@ -2765,6 +2765,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
             {
                 // some buffer types (!IsGlobalFields) have array notation
                 arrayAccess->expressionType.baseType = HLSLBaseType_UserDefined;
+                arrayAccess->expressionType.typeName = expression->expressionType.typeName;
                 arrayAccess->expressionType.array     = true;
                 arrayAccess->expressionType.arraySize = NULL;
                 
@@ -4193,7 +4194,9 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
     {
         const HLSLStruct* structure = FindUserDefinedType( objectType.typeName );
         ASSERT(structure != NULL);
-
+        if (structure == NULL)
+            return false;
+        
         const HLSLStructField* field = structure->field;
         while (field != NULL)
         {
@@ -4229,6 +4232,8 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
             ++swizzleLength;
         }
         ASSERT(swizzleLength > 0);
+        if (swizzleLength == 0)
+            return false;
     }
     else if (IsMatrixType(baseType))
     {

@@ -1,41 +1,48 @@
 HLSLParser
 ==========
 
-This version of thekla/hlslparser takes a HLSL-like syntax and then converts that into modern HLSL and MSL.  Special thanks to Max McGuire (@Unknown Worlds) and Ignacio Castano and Johnathan Blow (@Thekla) for releasing this as open-source.  I've left out GLSL and DX9 legacy codegen to simplify maintaining the codebase.  This is a small amount of code compared with the Krhonos shader tools.
+This version of thekla/hlslparser takes a HLSL2021 syntax that then converts that into modern HLSL and MSL.  Special thanks to Max McGuire (@Unknown Worlds) and Ignacio Castano and Johnathan Blow (@Thekla) for releasing this as open-source.  I've left out GLSL and DX9 and FX legacy codegen to simplify maintaining the codebase.  This is a small amount of code compared with the Krhonos shader tools.
 
 There are still growing pains to using hlslparser.  It can't do all the manipulation that glsc and spriv-cross does to ensure that a valid shader model shader is created.  But compiling with DXC/metal should help avoid issues.  I still don't know how to resolve reflection, since each compiler generates it's own unique data formats.  Reflection is simpler on the spirv path.
 
-The point of this hlslparser is to preserve comments, generate MSL/HLSL code close to the original sources, and be easy to extend.  MSL and HLSL are nearly the same shader language at the core.  Typical spriv to MSL transpiles look  assembly-like in code flow.  Spriv-opt introduces 100's of temp registers into the code, gens 24 character floats, strips comments, and the resulting code isn't simple to step through in Metal GPU capture.  At the same time, Apple ignores generating Spirv from MSL, so here we are.  Spriv should remain a final assembly format to feed to Vulkan drivers.
+The point of this hlslparser is to preserve comments, generate MSL/HLSL code close to the original sources, and be easy to extend.  MSL and HLSL are nearly the same shader language at the core.  Typical spriv to MSL transpiles look assembly-like in code flow.  spriv-opt and spriv-cross introduces 100's of temp registers into the code, gens 24 character floats, strips comments, can't translate half samplers, and the resulting code isn't simple to step through in Metal GPU capture.  At the same time, Apple ignores generating Spirv from MSL, so here we are.  Spriv should remain a final assembly format to feed to Vulkan drivers.
 
 ---------------------------------
 
-Paths to generate MSL from HLSL 
+Paths to turn HLSL and SPV 
 
-* Spirv   HLSL9 > hlslparser > HLSL10 > DXC > spv  
-*  reflection                                 spv > spv-reflect -> ref
-* MSL     HLSL9 > hlslparser > MSL    > metal > air/metallib
+* HLSL2021 > hlslparser > HLSL2021 > DXC > spv  
+* HLSL2021 > hlslparser > MSL    > metal > air/metallib
 *
-* Transpiling MSL: HLSL10 > DXC   > spv > spirv-cross > MSL
-* Transpiling MSL: HLSL10 > glslc > spv > spirv-cross > MSL
+* Reflection: spv > spv-reflect -> refl
 *
-*  assumes DXC/glslc do optimizations similar to spirv-opt
+* Transpiling MSL: HLSL2021 > DXC   > spv > spirv-cross > MSL
+* Transpiling MSL: HLSL2021 > glslc > spv > spirv-cross > MSL (fails on simple HLSL)
 *
 * Variant generation 
-* HLSL9 > preprocess + defines > HLSL9
-*  or
-* HLSL9 + specialization > hlslparser
+* HLSL2021 + defines > preprocess > HLSL2021
+* HLSL2021 + specialization > hlslparser
 
 ---------------------------------
 
-TODO:
+DONE
+* u/int support
+* SSBO support
 * compute shader support
+* DX11/12 style syntax
+* chop out FX syntax
+* split out sampler / texture
+* handle depth textures 
+* compile HLSL with DXC to SPV
+* compile MSL with metalc to AIR/metallib
+
+TODO:
+* get tile shader kernels to work, may be MSL and Android SPV specific
 * generate reflection data from parse of HLSL
+* handle reflection (spirv-reflect?)
 * handle HLSL vulkan extension constructs, convert these to MSL kernels too
 * variants from preprocess or vulkan specialization constants
-* get tile shader kernels to work
-* get SSBO to work
 * fix shaders to not structify metal and mod the source names
-* handle reflection (spirv-reflect?)
 * poor syntax highlighting of output .metal file, does Xcode have to compile?
 * no syntax highlighting of .hlsl files in Xcode, but VSCode has HLSL but not MSL
 

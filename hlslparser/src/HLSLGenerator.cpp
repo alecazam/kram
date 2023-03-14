@@ -160,6 +160,17 @@ static const char * TranslateSemantic(const char* semantic, bool output, HLSLTar
 
         }
     }
+    else if (target == HLSLTarget_ComputeShader)
+    {
+        if (output)
+        {
+
+        }
+        else
+        {
+
+        }
+    }
     return NULL;
 }
 
@@ -715,6 +726,11 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
             const char* functionName   = function->name;
             const char* returnTypeName = GetTypeName(function->returnType);
 
+            // TODO: hack, since don't actually parse bracket construct yet
+            bool isEntryPoint = strcmp(functionName, m_entryName) == 0;
+            if (isEntryPoint && m_target == HLSLTarget_ComputeShader)
+                m_writer.WriteLine(indent, "[numthreads(1,1,1)]");
+            
             m_writer.BeginLine(indent, function->fileName, function->line);
             m_writer.Write("%s %s(", returnTypeName, functionName);
 

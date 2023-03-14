@@ -97,12 +97,8 @@ if [[ $testMetal -eq 1 ]]; then
     # see if MSL compile
     echo compile MSL for macOS
     xcrun -sdk macosx metal ${dstDir}Skinning.metal ${metalMacOptions} -o mac/Skinning.metallib
-
     xcrun -sdk macosx metal ${dstDir}Sample.metal ${metalMacOptions} -o mac/Sample.metallib
-
-    
-    # this isn't going to compile yet
-    # xcrun -sdk macosx metal ${dstDir}Compute.metal ${metalMacOptions} -o mac/Compute.metallib
+    xcrun -sdk macosx metal ${dstDir}Compute.metal ${metalMacOptions} -o mac/Compute.metallib
 
     # metaliosOptions="-frecord-sources -g "
     # metaliosOptions+="-std=ios-metal2.3 "
@@ -175,15 +171,13 @@ csargs+="-T cs_6_6 "
 echo gen SPIRV 1.2 with dxc
 ${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo android/Skinning.vert.spv -Fc android/Skinning.vert.spv.txt ${dstDir}Skinning.hlsl
 ${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo android/Skinning.frag.spv -Fc android/Skinning.frag.spv.txt ${dstDir}Skinning.hlsl
+${appDxc} ${csargs} -spirv -fspv-target-env=vulkan1.2 -E ComputeCS -Fo android/Compute.comp.spv -Fc android/Compute.frag.spv.txt ${dstDir}Compute.hlsl
 
 # -Fre not supported with spriv, so just use spirv-reflect
 # either yaml or random format, why can't this just output json?
 ${appSprivReflect} -y android/Skinning.vert.spv > android/Skinning.vert.refl
 ${appSprivReflect} -y android/Skinning.frag.spv > android/Skinning.frag.refl
-
-# TODO: support compute too
-#${appDxc} ${csargs} -spirv -fspv-target-env=vulkan1.2 -E ComputeCS -Fo android/Compute.comp.spv -Fc android/Compute.frag.spv.txt ${dstDir}Compute.hlsl
-#${appSprivReflect} -y android/Compute.comp.spv > android/Compute.comp.refl
+${appSprivReflect} -y android/Compute.comp.spv > android/Compute.comp.refl
 
 # skip this path, have to mod hlsl just to get valid code to compile with glslc
 testGlslc=0

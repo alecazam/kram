@@ -16,25 +16,21 @@ struct BufType
 
 StructuredBuffer<BufType> Buffer0 : register(t0);
 StructuredBuffer<BufType> Buffer1 : register(t1);
-RWStructuredBuffer<BufType> BufferOut : register(u0);
+
+RWStructuredBuffer<BufType> BufferOut : register(u2);
 
 // TODO: support numthreads designator
 // [numthreads(1, 1, 1)]
-void ComputeCS( uint3 DTid : SV_DispatchThreadID )
+void ComputeCS( uint3 tid : SV_DispatchThreadID )
 {
-    // TODO: Need array notation support on buffers like those above.
-    
-    //BufferOut[DTid.x].i = Buffer0[DTid.x].i + Buffer1[DTid.x].i;
-    //BufferOut[DTid.x].f = Buffer0[DTid.x].f + Buffer1[DTid.x].f;
+    BufferOut[tid.x].i = Buffer0[tid.x].i + Buffer1[tid.x].i;
+    BufferOut[tid.x].f = Buffer0[tid.x].f + Buffer1[tid.x].f;
 }
 
 //-------------------
 
-// Can't this have type?
-// ByteAddressBuffer Buffer0 : register(t0);
-// ByteAddressBuffer Buffer1 : register(t1);
-// RWByteAddressBuffer BufferOut : register(u0);
-//
+// Need better way to search entry points, don't use filename
+// Just search functions ending in VS/PS/CS
 // [numthreads(1, 1, 1)]
 // void ComputeCS( uint3 DTid : SV_DispatchThreadID )
 // {
