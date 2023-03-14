@@ -59,11 +59,12 @@ private:
         HLSLType type;
         //const char* typeName;     // @@ Do we need more than the type name?
         const char* registerName;
-
+        bool isRef;
+        
         ClassArgument * nextArg;
         
-        ClassArgument(const char* name, HLSLType type, const char * registerName) :
-            name(name), type(type), registerName(registerName)
+        ClassArgument(const char* name, HLSLType type, const char * registerName, bool isRef) :
+            name(name), type(type), registerName(registerName), isRef(isRef)
 		{
 			nextArg = NULL;
 		}

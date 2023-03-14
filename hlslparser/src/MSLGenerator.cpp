@@ -169,7 +169,7 @@ namespace M4
                     if (declaration->type.addressSpace == HLSLAddressSpace_Undefined)
                         declaration->type.addressSpace = HLSLAddressSpace_Device;
                     
-                    AddClassArgument(new ClassArgument(textureName, declaration->type, textureRegisterName));
+                    AddClassArgument(new ClassArgument(textureName, declaration->type, textureRegisterName, true));
                 }
                 else if (IsSamplerType(declaration->type))
                 {
@@ -181,7 +181,7 @@ namespace M4
                     if (declaration->type.addressSpace == HLSLAddressSpace_Undefined)
                         declaration->type.addressSpace = HLSLAddressSpace_Device;
                     
-                    AddClassArgument(new ClassArgument(samplerName, declaration->type, samplerRegisterName));
+                    AddClassArgument(new ClassArgument(samplerName, declaration->type, samplerRegisterName, true));
                 }
             }
             else if (statement->nodeType == HLSLNodeType_Buffer)
@@ -197,6 +197,10 @@ namespace M4
                 else
                     type.typeName = m_tree->AddStringFormat("%s", buffer->bufferStruct->name);
                 
+                // TODO: ConstantBuffer can use ptr notation, detect array decl
+                bool isRef = buffer->bufferType == HLSLBufferType_ConstantBuffer ||
+                             buffer->IsGlobalFields();
+   
                 if (buffer->IsReadOnly())
                     type.addressSpace = HLSLAddressSpace_Constant;
                 else
@@ -206,7 +210,7 @@ namespace M4
 
                 const char * bufferRegisterName = m_tree->AddStringFormat("buffer(%d)", bufferRegister);
 
-                AddClassArgument(new ClassArgument(buffer->name, type, bufferRegisterName));
+                AddClassArgument(new ClassArgument(buffer->name, type, bufferRegisterName, isRef));
             }
 
             statement = statement->nextStatement;
@@ -441,7 +445,10 @@ namespace M4
         {
             m_writer.Write("%s ", GetAddressSpaceName(currentArg->type.baseType, currentArg->type.addressSpace));
             
-            m_writer.Write("%s & %s", GetTypeName(currentArg->type, /*exactType=*/true), currentArg->name);
+            // ref vs. ptr
+            bool isRef = currentArg->isRef;
+            
+            m_writer.Write("%s %s %s", GetTypeName(currentArg->type, /*exactType=*/true), isRef ? "&" : "*", currentArg->name);
 
             currentArg = currentArg->nextArg;
             if (currentArg)
@@ -573,8 +580,11 @@ namespace M4
         {
             if (currentArg->type.baseType == HLSLBaseType_UserDefined)
             {
-                m_writer.Write("%s %s::%s & %s [[%s]]", GetAddressSpaceName(currentArg->type.baseType, currentArg->type.addressSpace),
-                  shaderClassName, currentArg->type.typeName, currentArg->name, currentArg->registerName);
+                bool isRef = currentArg->isRef;
+               
+                m_writer.Write("%s %s::%s %s %s [[%s]]", GetAddressSpaceName(currentArg->type.baseType, currentArg->type.addressSpace),
+                  shaderClassName, currentArg->type.typeName, isRef ? "&" : "*", currentArg->name,
+                               currentArg->registerName);
             }
             else
             {
@@ -997,15 +1007,21 @@ namespace M4
             // TODO: handle array count for indexing into constant buffer
             // some are unbounded array like BAB and SBO
             // TODO: may need to use t/u registers for those too and a thread?
+            
+            // TODO: fix this, ConstantBuffer can index into a constant buffer too
+            // detect use of array notation on decl
+            bool isRef = buffer->bufferType == HLSLBufferType_ConstantBuffer ||
+                         buffer->IsGlobalFields();
+            
             if (buffer->bufferType == HLSLBufferType_ConstantBuffer ||
                 buffer->bufferType == HLSLBufferType_ByteAddressBuffer ||
                 buffer->bufferType == HLSLBufferType_StructuredBuffer)
             {
-                m_writer.WriteLine(indent, "constant %s & %s", buffer->bufferStruct->name, buffer->name);
+                m_writer.WriteLine(indent, "constant %s %s %s", buffer->bufferStruct->name, isRef ? "&" : "*", buffer->name);
             }
             else
             {
-                m_writer.WriteLine(indent, "device %s & %s",  buffer->bufferStruct->name, buffer->name);
+                m_writer.WriteLine(indent, "device %s %s %s",  buffer->bufferStruct->name, isRef ? "&" : "*", buffer->name);
             }
             
             m_writer.EndLine(";");

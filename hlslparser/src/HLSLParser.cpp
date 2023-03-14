@@ -2761,7 +2761,15 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 return false;
             }
 
-            if (expression->expressionType.array)
+            if (expression->expressionType.baseType == HLSLBaseType_UserDefined)
+            {
+                // some buffer types (!IsGlobalFields) have array notation
+                arrayAccess->expressionType.baseType = HLSLBaseType_UserDefined;
+                arrayAccess->expressionType.array     = true;
+                arrayAccess->expressionType.arraySize = NULL;
+                
+            }
+            else if (expression->expressionType.array)
             {
                 arrayAccess->expressionType = expression->expressionType;
                 arrayAccess->expressionType.array     = false;

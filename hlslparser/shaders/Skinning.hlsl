@@ -103,24 +103,11 @@ struct UniformsStruct
 };
 ConstantBuffer<UniformsStruct> uniforms : register(b0);
 
- 
+// can have 14x 64K limit to each cbuffer, 128 tbuffers,
+
 // Example
 // uniforms.skinTfms
  
-/*
-
-// can have 14x 64K limit to each cbuffer, 128 tbuffers,
-// This show up as globals.  Much pref ConstantBuffer form.
-cbuffer Uniforms : register(b0)
-{
-    float4x4 skinTfms[256];
-    half3    lightDir;
-    float4x4 worldToClipTfm;
-};
-
-*/
- 
-/*
 // Structured buffers
 struct StructuredStruct
 {
@@ -128,7 +115,9 @@ struct StructuredStruct
     float4x4 worldToClipTfm;
 };
 
-// StructuredBuffer<StructuredStruct> bufferTest0 : register(t0);
+StructuredBuffer<StructuredStruct> bufferTest0 : register(t2);
+
+/*
 // RWStructuredBuffer<StructuredStruct> rwBufferTest0 : register(u0);
 */
 
@@ -194,10 +183,9 @@ OutputVS SkinningVS(InputVS input,
     output.diffuse = dot(uniforms.lightDir, normal);
 
     // TODO: test structured buffer
-    // StructuredStruct item = bufferTest0.Load(0);
-    // output.diffuse *= item.lightDir;
+    StructuredStruct item = bufferTest0[0];
+    output.diffuse *= item.lightDir.x;
    
-    
     // test the operators
     output.diffuse *= output.diffuse;
     output.diffuse += output.diffuse;
