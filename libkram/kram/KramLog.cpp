@@ -261,24 +261,29 @@ static int32_t logMessageImpl(const char* group, int32_t logLevel,
     const char* tag = "";
     const char* groupString = "";
     const char* space = "";
-
+    const char* level = "";
+    
     string fileLineFunc;
     switch (logLevel) {
         case LogLevelDebug:
             //tag = "[D]";
+            //level = " debug:";
             break;
         case LogLevelInfo:
             //tag = "[I]";
+            //level = " info:";
             break;
 
         case LogLevelWarning:
             tag = "[W]";
+            level = " warning:";
             groupString = group;
             space = " ";
 
             break;
         case LogLevelError: {
             tag = "[E]";
+            level = " error:";
             groupString = group;
             space = " ";
 
@@ -300,7 +305,13 @@ static int32_t logMessageImpl(const char* group, int32_t logLevel,
             // TODO: in clang only __PRETTY_FUNCTION__ has namespace::className::function(args...)
             // __FUNCTION__ is only the function call, but want class name if it's a method without going to RTTI
             // https://stackoverflow.com/questions/1666802/is-there-a-class-macro-in-c
-            sprintf(fileLineFunc, "@%s(%d): %s()\n", filename, line, func);
+#if KRAM_WIN
+            // format needed for Visual Studio to print
+            sprintf(fileLineFunc, "%s(%d):%s %s()\n", filename, line, level, func);
+#else
+            // format needed for Xcode to print
+            sprintf(fileLineFunc, "%s:%d:%s %s()\n", filename, line, level, func);
+#endif
             break;
         }
         default:
