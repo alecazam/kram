@@ -86,29 +86,28 @@ struct InputVS
     ushort4 testUShort : BITANGENT;
 };
 
+// half below won't work on many Adreno/Mali without inputOutput
 struct OutputVS
 {
     float4  position : SV_Position;
     half    diffuse : COLOR;
     float2  uv : TEXCOORD0;
-    float   pointSize : PSIZE;
 };
 
 // try to mondernize to ConstantBuffer
-/*
 struct UniformsStruct
 {
     float4x4 skinTfms[256];
     half3    lightDir;
     float4x4 worldToClipTfm;
 };
-
 ConstantBuffer<UniformsStruct> uniforms : register(b0);
+
  
 // Example
 // uniforms.skinTfms
  
-*/
+/*
 
 // can have 14x 64K limit to each cbuffer, 128 tbuffers,
 // This show up as globals.  Much pref ConstantBuffer form.
@@ -119,42 +118,46 @@ cbuffer Uniforms : register(b0)
     float4x4 worldToClipTfm;
 };
 
-
+*/
+ 
+/*
+// Structured buffers
 struct StructuredStruct
 {
     half3    lightDir;
     float4x4 worldToClipTfm;
 };
 
-
-// Structured buffers
 // StructuredBuffer<StructuredStruct> bufferTest0 : register(t0);
 // RWStructuredBuffer<StructuredStruct> rwBufferTest0 : register(u0);
+*/
 
 Texture2D<half4> tex : register(t1);
 SamplerState samplerClamp : register(s0);
 
-float4x4 DoSkinTfm(float4x4 skinTfms[256], float4 blendWeights, uint4 blendIndices)
+float4x4 DoSkinTfm(UniformsStruct uniforms, float4 blendWeights, uint4 blendIndices)
 {
-    float4x4 skinTfm = blendWeights[0] * skinTfms[blendIndices[0]];
-       
+    // Can use mul or * here
+    //float4x4 skinTfm = blendWeights[0] * uniforms.skinTfms[blendIndices[0]];
+    float4x4 skinTfm = mul(blendWeights[0], uniforms.skinTfms[blendIndices[0]]);
+    
     for (uint i = 1; i < 4; ++i)
     {
-        skinTfm += blendWeights[i] * skinTfms[blendIndices[i]];
+        //skinTfm += blendWeights[i] * uniforms.skinTfms[blendIndices[i]];
+        skinTfm += mul(blendWeights[i], uniforms.skinTfms[blendIndices[i]]);
     }
-
+    
     return skinTfm;
 }
 
-// TODO: These don't compile for spv despite setting extension
-//  don't know what semantic to set?
-// uint vertexBase : BASEVERTEX,
-// uint instanceBase : BASEINSTANCE,
+// TODO: this isn't working, wanted to share OutputVS, so left out of that
+// and moved to SkinningVS as output.  But something thinks out is type.
+// , out float pointSize : PSIZE
 
-// TODO: fix ability to comment these out inside SkinningVS inputs
-    
-// TODO: can't yet have commented out inputs or tokenizer fails
+// TODO: fix ability to comment out inputs
 OutputVS SkinningVS(InputVS input,
+    uint vertexBase : BASEVERTEX,
+    uint instanceBase : BASEINSTANCE,
     uint instanceID : SV_InstanceID,
     uint vertexID : SV_VertexID
 )
@@ -163,33 +166,32 @@ OutputVS SkinningVS(InputVS input,
 
     // TODO: this needs to declare array param as constant for
     // MSL function call.  Pointers can't be missing working space.
-    
-    //float4x4 skinTfm = 0;
-       // DoSkinTfm(skinTfms, input.blendWeights, input.blendIndices);
 
     // this is just to use these
-    uint vertexNum = vertexID;
-    uint instanceNum = instanceID;
+    //uint vertexNum = vertexID;
+    //uint instanceNum = instanceID;
 
-    // uint vertexNum = vertexBase + vertexID;
-    // uint instanceNum = instanceBase + instanceID;
+    uint vertexNum = vertexBase + vertexID;
+    uint instanceNum = instanceBase + instanceID;
 
     instanceNum += vertexNum;
     
-    // float4x4 skinTfm = skinTfms[ instanceNum ];
-    float4x4 skinTfm = skinTfms[ instanceNum ];
+    float4x4 skinTfm = uniforms.skinTfms[ instanceNum ];
     
+    // MSL doesn't like *=
+    skinTfm = skinTfm * DoSkinTfm(uniforms, input.blendWeights, input.blendIndices);
+
     // Skin to world space
     float3 position = mul(input.position, skinTfm).xyz;
     half3 normal = half3(mul(float4(input.normal,0.0), skinTfm).xyz);
         
     // Output stuff
-    output.position = mul(float4(position, 1.0), worldToClipTfm);
+    output.position = mul(float4(position, 1.0), uniforms.worldToClipTfm);
   
     // glslc fix
     // output.diffuse = half( dot(lightDir, normal) );
     // DXC
-    output.diffuse = dot(lightDir, normal);
+    output.diffuse = dot(uniforms.lightDir, normal);
 
     // TODO: test structured buffer
     // StructuredStruct item = bufferTest0.Load(0);
@@ -205,7 +207,7 @@ OutputVS SkinningVS(InputVS input,
     output.uv = input.uv;
     
     // only for Vulkan/MSL, DX12 can't control per vertex shader
-    output.pointSize = 1;
+    //pointSize = 1;
     
     return output;
 }
@@ -215,12 +217,12 @@ OutputVS SkinningVS(InputVS input,
 // this can include position on MSL, but not on HLSL.
 // Also for mobile the type should be higher precision to avoid banding.
 // So half from VS, but float in PS.
-struct InputPS
-{
-    float4  position : SV_Position;
-    half    diffuse : COLOR;
-    float2  uv : TEXCOORD0;
-};
+//struct InputPS
+//{
+//    float4  position : SV_Position;
+//    half    diffuse : COLOR;
+//    float2  uv : TEXCOORD0;
+//};
 
 struct OutputPS
 {
@@ -233,7 +235,7 @@ struct OutputPS
 // TODO: SV_Position differs from Vulkan/MSL in that pos.w = w and not 1/w like gl_FragCoord and [[position]].
 // DXC has a setting to invert w.
 
-OutputPS SkinningPS(InputPS input,
+OutputPS SkinningPS(OutputVS input,
      bool isFrontFace: SV_IsFrontFace
     )
 {

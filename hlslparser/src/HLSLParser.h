@@ -79,13 +79,16 @@ private:
 
     bool ParseStateName(bool isSamplerState, bool isPipelineState, const char*& name, const EffectState *& state);
     bool ParseColorMask(int& mask);
-    bool ParseStateValue(const EffectState * state, HLSLStateAssignment* stateAssignment);
-    bool ParseStateAssignment(HLSLStateAssignment*& stateAssignment, bool isSamplerState, bool isPipelineState);
-    bool ParseSamplerState(HLSLExpression*& expression);
-    bool ParseTechnique(HLSLStatement*& statement);
-    bool ParsePass(HLSLPass*& pass);
-    bool ParsePipeline(HLSLStatement*& pipeline);
-    bool ParseStage(HLSLStatement*& stage);
+    
+// FX file
+//    bool ParseStateValue(const EffectState * state, HLSLStateAssignment* stateAssignment);
+//    bool ParseStateAssignment(HLSLStateAssignment*& stateAssignment, bool isSamplerState, bool isPipelineState);
+//    bool ParseSamplerState(HLSLExpression*& expression);
+//    bool ParseTechnique(HLSLStatement*& statement);
+//    bool ParsePass(HLSLPass*& pass);
+//    bool ParsePipeline(HLSLStatement*& pipeline);
+//    bool ParseStage(HLSLStatement*& stage);
+    
     bool ParseComment(HLSLStatement*& statement);
 
     bool ParseAttributeList(HLSLAttribute*& attribute);

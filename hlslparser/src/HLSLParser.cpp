@@ -803,7 +803,7 @@ const Intrinsic _intrinsic[] =
         Intrinsic( "mul", HLSLBaseType_Half4x4, HLSLBaseType_Half, HLSLBaseType_Half4x4 ),
         Intrinsic( "mul", HLSLBaseType_Half2x2, HLSLBaseType_Half2x2, HLSLBaseType_Half ),
         Intrinsic( "mul", HLSLBaseType_Half3x3, HLSLBaseType_Half3x3, HLSLBaseType_Half ),
-        Intrinsic( "mul", HLSLBaseType_Half4x4, HLSLBaseType_Half4x4, HLSLBaseType_Float ),
+        Intrinsic( "mul", HLSLBaseType_Half4x4, HLSLBaseType_Half4x4, HLSLBaseType_Half ),
         
         
         
@@ -2859,20 +2859,25 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
             {
                 return false;
             }
-
+            
             if (expression->nodeType != HLSLNodeType_IdentifierExpression)
             {
                 m_tokenizer.Error("Expected function identifier");
                 return false;
             }
-
+            
             const HLSLIdentifierExpression* identifierExpression = static_cast<const HLSLIdentifierExpression*>(expression);
             const HLSLFunction* function = MatchFunctionCall( functionCall, identifierExpression->name );
             if (function == NULL)
             {
                 return false;
             }
-
+            
+            if (strcmp(function->name, "mul") == 0)
+            {
+                int bp = 0;
+                bp = bp;
+            }
             functionCall->function = function;
             functionCall->expressionType = function->returnType;
             expression = functionCall;
@@ -3497,6 +3502,7 @@ bool HLSLParser::ParseAttributeBlock(HLSLAttribute*& attribute)
     return true;
 }
 
+/* never completed
 bool HLSLParser::ParseStage(HLSLStatement*& statement)
 {
     if (!Accept("stage"))
@@ -3534,7 +3540,7 @@ bool HLSLParser::ParseStage(HLSLStatement*& statement)
     statement = stage;
     return true;
 }
-
+*/
 
 
 

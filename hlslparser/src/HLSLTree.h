@@ -622,7 +622,7 @@ struct HLSLFunctionCall : public HLSLExpression
 };
 
 #if 1
-
+/*
 // These are all FX file constructs
 // TODO: may remove these, they just complicate the code
 //   but do want to specify mix of vs/ps/cs in single files
@@ -686,7 +686,7 @@ struct HLSLStage : public HLSLStatement
     HLSLDeclaration*        inputs = NULL;
     HLSLDeclaration*        outputs = NULL;
 };
-
+*/
 #endif
 
 struct HLSLComment : public HLSLStatement
@@ -727,13 +727,16 @@ public:
 
     HLSLFunction * FindFunction(const char * name);
     HLSLDeclaration * FindGlobalDeclaration(const char * name, HLSLBuffer ** buffer_out = NULL);
+    
     HLSLStruct * FindGlobalStruct(const char * name);
-    HLSLTechnique * FindTechnique(const char * name);
-    HLSLPipeline * FindFirstPipeline();
-    HLSLPipeline * FindNextPipeline(HLSLPipeline * current);
-    HLSLPipeline * FindPipeline(const char * name);
     HLSLBuffer * FindBuffer(const char * name);
 
+// FX files
+//    HLSLTechnique * FindTechnique(const char * name);
+//    HLSLPipeline * FindFirstPipeline();
+//    HLSLPipeline * FindNextPipeline(HLSLPipeline * current);
+//    HLSLPipeline * FindPipeline(const char * name);
+ 
     bool GetExpressionValue(HLSLExpression * expression, int & value);
     int GetExpressionValue(HLSLExpression * expression, float values[4]);
 
@@ -812,11 +815,11 @@ public:
     HLSLStruct * FindGlobalStruct(HLSLRoot * root, const char * name);
     
     // These are fx file constructs
-    virtual void VisitStateAssignment(HLSLStateAssignment * node);
-    virtual void VisitSamplerState(HLSLSamplerState * node);
-    virtual void VisitPass(HLSLPass * node);
-    virtual void VisitTechnique(HLSLTechnique * node);
-    virtual void VisitPipeline(HLSLPipeline * node);
+//    virtual void VisitStateAssignment(HLSLStateAssignment * node);
+//    virtual void VisitSamplerState(HLSLSamplerState * node);
+//    virtual void VisitPass(HLSLPass * node);
+//    virtual void VisitTechnique(HLSLTechnique * node);
+//    virtual void VisitPipeline(HLSLPipeline * node);
 };
 
 

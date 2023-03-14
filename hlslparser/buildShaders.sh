@@ -136,13 +136,17 @@ args+="-HV 2021 "
  
 args+="-fspv-extension=SPV_KHR_shader_draw_parameters "
 
-# have to also compile to 6.2 for u/short and half
-# then 6.6 adds u/char8 pack/unpack calls
+# 6.1 for ConstantBuffer
+# 6.2 for u/short and half
+# 6.6 adds u/char8 pack/unpack calls
 vsargs=${args}
 vsargs+="-T vs_6_6 "
 
 psargs=${args}
 psargs+="-T ps_6_6 "
+
+csargs=${args}
+csargs+="-T cs_6_6 "
 
 #echo ${vsargs}
 #echo ${psargs}
@@ -176,6 +180,10 @@ ${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo android/
 # either yaml or random format, why can't this just output json?
 ${appSprivReflect} -y android/Skinning.vert.spv > android/Skinning.vert.refl
 ${appSprivReflect} -y android/Skinning.frag.spv > android/Skinning.frag.refl
+
+# TODO: support compute too
+#${appDxc} ${csargs} -spirv -fspv-target-env=vulkan1.2 -E ComputeCS -Fo android/Compute.comp.spv -Fc android/Compute.frag.spv.txt ${dstDir}Compute.hlsl
+#${appSprivReflect} -y android/Compute.comp.spv > android/Compute.comp.refl
 
 # skip this path, have to mod hlsl just to get valid code to compile with glslc
 testGlslc=0

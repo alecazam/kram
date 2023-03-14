@@ -394,7 +394,6 @@ namespace M4
 
         m_tree = tree;
         m_target = target;
-        //ASSERT(m_target == HLSLTarget_VertexShader || m_target == HLSLTarget_PixelShader);
         m_entryName = entryName;
         m_options = options;
 
@@ -423,8 +422,6 @@ namespace M4
         shaderClassNameStr += "NS"; // to distinguish from function
         
         const char* shaderClassName = shaderClassNameStr.c_str();
-        // This doesn't work if want to have multiple shaders in one file
-        // (target == MSLGenerator::Target_VertexShader) ? "Vertex_Shader" : "Pixel_Shader";
         m_writer.WriteLine(0, "struct %s {", shaderClassName);
 
         OutputStatements(1, root->statement);
@@ -436,8 +433,8 @@ namespace M4
         m_writer.Write("%s(", shaderClassName);
         
         // mod
-        m_writer.EndLine();
-        m_writer.BeginLine(1);
+        int indent = m_writer.EndLine();
+        m_writer.BeginLine(indent);
         
         const ClassArgument* currentArg = m_firstClassArgument;
         while (currentArg != NULL)
@@ -452,15 +449,15 @@ namespace M4
                 m_writer.Write(", ");
                 
                 // mod
-                m_writer.EndLine();
-                m_writer.BeginLine(1);
+                indent = m_writer.EndLine();
+                m_writer.BeginLine(indent);
             }
         }
         m_writer.Write(")");
         
         // mod
-        m_writer.EndLine(); 
-        m_writer.BeginLine(1);
+        indent = m_writer.EndLine();
+        m_writer.BeginLine(indent);
         
         currentArg = m_firstClassArgument;
         if (currentArg)
@@ -476,8 +473,8 @@ namespace M4
                 m_writer.Write(", ");
                 
                 // mod
-                m_writer.EndLine();
-                m_writer.BeginLine(1);
+                indent = m_writer.EndLine();
+                m_writer.BeginLine(indent);
             }
         }
         m_writer.EndLine(" {}");
@@ -529,8 +526,8 @@ namespace M4
         m_writer.Write(" %s(", entryName);
 
         // Alec added for readability
-        m_writer.EndLine();
-        m_writer.BeginLine(1);
+        indent = m_writer.EndLine();
+        m_writer.BeginLine(indent);
         
         int argumentCount = 0;
         HLSLArgument* argument = entryFunction->argument;
@@ -562,8 +559,8 @@ namespace M4
                 m_writer.Write(", ");
                 
                 // Alec added for readability
-                m_writer.EndLine();
-                m_writer.BeginLine(1);
+                indent = m_writer.EndLine();
+                m_writer.BeginLine(indent);
             }
         }
 
@@ -590,8 +587,8 @@ namespace M4
                 m_writer.Write(", ");
                 
                 // Alec added for readability
-                m_writer.EndLine();
-                m_writer.BeginLine(1);
+                indent = m_writer.EndLine();
+                m_writer.BeginLine(indent);
             }
         }
         m_writer.EndLine(") {");
@@ -710,12 +707,21 @@ namespace M4
         // Main generator loop: called recursively
         while (statement != NULL)
         {
+            // skip pruned statements
             if (statement->hidden)
             {
                 statement = statement->nextStatement;
                 continue;
             }
-
+            
+            // skip writing across multiple entry points
+//            if (statement->written)
+//            {
+//                statement = statement->nextStatement;
+//                continue;
+//            }
+            statement->written = true;
+            
             OutputAttributes(indent, statement->attributes);
             
             if (statement->nodeType == HLSLNodeType_Comment)
@@ -883,14 +889,16 @@ namespace M4
                 OutputStatements(indent + 1, blockStatement->statement);
                 m_writer.WriteLine(indent, "}");
             }
-            else if (statement->nodeType == HLSLNodeType_Technique)
-            {
-                // Techniques are ignored.
-            }
-            else if (statement->nodeType == HLSLNodeType_Pipeline)
-            {
-                // Pipelines are ignored.
-            }
+            
+            // fx file support for Technique/Pipeline
+//            else if (statement->nodeType == HLSLNodeType_Technique)
+//            {
+//                // Techniques are ignored.
+//            }
+//            else if (statement->nodeType == HLSLNodeType_Pipeline)
+//            {
+//                // Pipelines are ignored.
+//            }
             else
             {
                 // Unhandled statement type.
@@ -949,7 +957,7 @@ namespace M4
                 m_writer.Write(",");
                 OutputDeclarationBody(declaration->type, declaration->name, declaration->assignment);
                 declaration = declaration->nextDeclaration;
-            };
+            }
         }
     }
 
@@ -971,12 +979,6 @@ namespace M4
                 {
                     m_writer.Write(" [[%s]]", field->sv_semantic);
                 }
-// Alec added this fallback, but then it tags too many fields
-//                else if (field->semantic)
-//                {
-//                    m_writer.Write(" [[%s]]", field->semantic);
-//                }
-                
 
                 m_writer.Write(";");
                 m_writer.EndLine();
@@ -992,10 +994,12 @@ namespace M4
         {
             m_writer.BeginLine(indent, buffer->fileName, buffer->line);
             
-            // TODO: handle array case for indexing, also
+            // TODO: handle array count for indexing into constant buffer
+            // some are unbounded array like BAB and SBO
+            // TODO: may need to use t/u registers for those too and a thread?
             if (buffer->bufferType == HLSLBufferType_ConstantBuffer ||
-               buffer->bufferType == HLSLBufferType_ByteAddressBuffer ||
-               buffer->bufferType == HLSLBufferType_StructuredBuffer)
+                buffer->bufferType == HLSLBufferType_ByteAddressBuffer ||
+                buffer->bufferType == HLSLBufferType_StructuredBuffer)
             {
                 m_writer.WriteLine(indent, "constant %s & %s", buffer->bufferStruct->name, buffer->name);
             }
@@ -1008,11 +1012,11 @@ namespace M4
         }
         else
         {
+            // converted cbuffer that spill tons of globals for every field
             HLSLDeclaration* field = buffer->field;
             
             m_writer.BeginLine(indent, buffer->fileName, buffer->line);
             
-            // TODO: these aren't all ubo, some are structured buffer
             m_writer.Write("struct %s_ubo", buffer->name);
             m_writer.EndLine(" {");
             while (field != NULL)
@@ -1215,6 +1219,7 @@ namespace M4
             {
                 if (identifierExpression->global)
                 {
+                    // prepend cbuffer name
                     HLSLBuffer * buffer;
                     HLSLDeclaration * declaration = m_tree->FindGlobalDeclaration(identifierExpression->name, &buffer);
 
@@ -1340,30 +1345,7 @@ namespace M4
 
             bool addParenthesis = NeedsParenthesis(expression, parentExpression);
             if (addParenthesis) m_writer.Write("(");
-
-            /* forcing use of column matrices, this column work isn't needed
-            bool rewrite_assign = false;
-            if (binaryExpression->binaryOp == HLSLBinaryOp_Assign && binaryExpression->expression1->nodeType == HLSLNodeType_ArrayAccess)
-            {
-                HLSLArrayAccess* arrayAccess = static_cast<HLSLArrayAccess*>(binaryExpression->expression1);
-                if (!arrayAccess->array->expressionType.array && IsMatrixType(arrayAccess->array->expressionType.baseType))
-                {
-                    // TODO: Alec, I eliminated the set_column code
-                    // does that need added back?
-                    rewrite_assign = true;
-
-                    m_writer.Write("set_column(");
-                    OutputExpression(arrayAccess->array, NULL);
-                    m_writer.Write(", ");
-                    OutputExpression(arrayAccess->index, NULL);
-                    m_writer.Write(", ");
-                    OutputExpression(binaryExpression->expression2, NULL);
-                    m_writer.Write(")");
-                }
-            }
-
-            if (!rewrite_assign)
-            */
+            
             {
                 if (IsArithmeticOp(binaryExpression->binaryOp) || IsLogicOp(binaryExpression->binaryOp))
                 {
@@ -1411,6 +1393,7 @@ namespace M4
                 }
                 m_writer.Write("%s", op);
 
+                
                 if (binaryExpression->binaryOp == HLSLBinaryOp_MulAssign ||
                     binaryExpression->binaryOp == HLSLBinaryOp_DivAssign ||
                     IsArithmeticOp(binaryExpression->binaryOp) ||
@@ -1473,7 +1456,7 @@ namespace M4
             HLSLArrayAccess* arrayAccess = static_cast<HLSLArrayAccess*>(expression);
             
             // Just use the matrix notation, using column_order instead of row_order
-            if (arrayAccess->array->expressionType.array) // || !IsMatrixType(arrayAccess->array->expressionType.baseType))
+            //if (arrayAccess->array->expressionType.array) // || !IsMatrixType(arrayAccess->array->expressionType.baseType))
             {
                 OutputExpression(arrayAccess->array, expression);
                 m_writer.Write("[");
@@ -1497,7 +1480,7 @@ namespace M4
         }
         else
         {
-            m_writer.Write("<unknown expression>");
+            Error("unknown expression");
         }
     }
 

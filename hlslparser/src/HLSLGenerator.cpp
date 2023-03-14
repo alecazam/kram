@@ -235,6 +235,9 @@ bool HLSLGenerator::Generate(HLSLTree* tree, HLSLTarget target, const char* entr
             while (field) {
 				HLSLStructField * nextField = field->nextField;
 
+                // TODO: may have to be careful with SV_Position, since this puts
+                // those last.  SSBO won't use those semantics, so should be okay.
+                
                 if (field->semantic) {
 					field->hidden = false;
                     field->sv_semantic = TranslateSemantic(field->semantic, /*output=*/true, target);
@@ -495,7 +498,7 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
     }
     else
     {
-        m_writer.Write("<unknown expression>");
+        Error("unknown expression");
     }
 }
 
@@ -506,9 +509,24 @@ void HLSLGenerator::OutputArguments(HLSLArgument* argument)
     {
         if (numArgs > 0)
         {
-            m_writer.Write(", ");
+            int indent = m_writer.EndLine(",");
+            m_writer.BeginLine(indent);
         }
 
+        const char * semantic = argument->sv_semantic ? argument->sv_semantic : argument->semantic;
+
+        // Have to inject vulkan
+        if (semantic)
+        {
+            if (strcmp(semantic, "PSIZE") == 0)
+                m_writer.Write("%s ", "[[vk::builtin(\"PointSize\")]]");
+            else if (strcmp(semantic, "BaseVertex") == 0)
+                m_writer.Write("%s ", "[[vk::builtin(\"BaseVertex\")]]");
+            else if (strcmp(semantic, "BaseInstance") == 0)
+                m_writer.Write("%s ", "[[vk::builtin(\"BaseInstance\")]]");
+        }
+        
+        // Then modifier
         switch (argument->modifier)
         {
         case HLSLArgumentModifier_In:
@@ -526,10 +544,9 @@ void HLSLGenerator::OutputArguments(HLSLArgument* argument)
         default:
             break;
         }
-
-        const char * semantic = argument->sv_semantic ? argument->sv_semantic : argument->semantic;
-
+        
         OutputDeclaration(argument->type, argument->name, semantic, /*registerName=*/NULL, argument->defaultValue);
+        
         argument = argument->nextArgument;
         ++numArgs;
     }
@@ -579,12 +596,24 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
 {
     while (statement != NULL)
     {
+        // skip pruned statements
         if (statement->hidden) 
         {
             statement = statement->nextStatement;
             continue;
         }
 
+        // skip writing some types across multiple entry points
+        if (statement->written &&
+            (statement->nodeType == HLSLNodeType_Comment ||
+             statement->nodeType == HLSLNodeType_Buffer ||
+             statement->nodeType == HLSLNodeType_Struct))
+        {
+            statement = statement->nextStatement;
+            continue;
+        }
+        statement->written = true;
+        
         OutputAttributes(indent, statement->attributes);
 
         if (statement->nodeType == HLSLNodeType_Comment)
@@ -651,7 +680,7 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
                                BufferTypeToName(buffer->bufferType),
                                buffer->name);
                 
-                // write out optinal register
+                // write out optional register
                 if (buffer->registerName != NULL)
                 {
                      m_writer.Write(" : register(%s)", buffer->registerName);
@@ -782,14 +811,15 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
             OutputStatements(indent + 1, blockStatement->statement);
             m_writer.WriteLine(indent, "}");
         }
-        else if (statement->nodeType == HLSLNodeType_Technique)
-        {
-            // Techniques are ignored.
-        }
-        else if (statement->nodeType == HLSLNodeType_Pipeline)
-        {
-            // Pipelines are ignored.
-        }
+        // FX file constructs
+//        else if (statement->nodeType == HLSLNodeType_Technique)
+//        {
+//            // Techniques are ignored.
+//        }
+//        else if (statement->nodeType == HLSLNodeType_Pipeline)
+//        {
+//            // Pipelines are ignored.
+//        }
         else
         {
             // Unhanded statement type.
@@ -977,17 +1007,6 @@ void HLSLGenerator::OutputDeclarationBody(const HLSLType& type, const char* name
 
 void HLSLGenerator::OutputDeclaration(const HLSLType& type, const char* name, const char* semantic/*=NULL*/, const char* registerName/*=NULL*/, HLSLExpression * assignment/*=NULL*/)
 {
-    // Have to inject vulkan
-    if (semantic)
-    {
-        if (strcmp(semantic, "PSIZE") == 0)
-            m_writer.Write("%s ", "[[vk::builtin(\"PointSize\")]]");
-        else if (strcmp(semantic, "BaseVertex") == 0)
-            m_writer.Write("%s ", "[[vk::builtin(\"BaseVertex\")]]");
-        else if (strcmp(semantic, "BaseInstance") == 0)
-            m_writer.Write("%s ", "[[vk::builtin(\"BaseInstance\")]]");
-    }
-    
     OutputDeclarationType(type);
     OutputDeclarationBody(type, name, semantic, registerName, assignment);
 }

@@ -16,7 +16,7 @@
 namespace M4
 {
 
-static const int _maxLineLength = 2048;
+static const int _maxLineLength = 4096;
 
 CodeWriter::CodeWriter(bool writeFileNames)
 {
@@ -29,6 +29,9 @@ CodeWriter::CodeWriter(bool writeFileNames)
 
 void CodeWriter::BeginLine(int indent, const char* fileName, int lineNumber)
 {
+    // probably missing an EndLine
+    ASSERT(m_currentIndent == 0);
+    
     if (m_writeLines)
     {
         bool outputLine = false;
@@ -70,13 +73,14 @@ void CodeWriter::BeginLine(int indent, const char* fileName, int lineNumber)
     }
 
     // Handle the indentation.
-    for (int i = 0; i < indent * m_spacesPerIndent; ++i)
-    {
-        m_buffer += " ";
-    }
+    if (indent)
+        Write("%*s", indent * m_spacesPerIndent, "");
+    
+    m_currentIndent = indent;
+    
 }
 
-void CodeWriter::EndLine(const char* text)
+int CodeWriter::EndLine(const char* text)
 {
     if (text != NULL)
     {
@@ -84,6 +88,11 @@ void CodeWriter::EndLine(const char* text)
     }
     m_buffer += "\n";
     ++m_currentLine;
+    
+    // so can EndLine/BeginLine
+    int indent = m_currentIndent;
+    m_currentIndent = 0;
+    return indent;
 }
 
 void CodeWriter::Write(const char* format, ...)

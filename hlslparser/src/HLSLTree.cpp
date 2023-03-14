@@ -133,6 +133,12 @@ HLSLDeclaration * HLSLTree::FindGlobalDeclaration(const char * name, HLSLBuffer 
             }
             else
             {
+                if (String_Equal(name, buffer->name))
+                {
+                    if (buffer_out) *buffer_out = buffer;
+                    return NULL;
+                }
+                
                 /* This isn't same type...
                  
                 // Note: should pass buffers, but buffer/texture
@@ -184,6 +190,7 @@ HLSLStruct * HLSLTree::FindGlobalStruct(const char * name)
     return NULL;
 }
 
+/* FX files
 HLSLTechnique * HLSLTree::FindTechnique(const char * name)
 {
     HLSLStatement * statement = m_root->statement;
@@ -244,6 +251,7 @@ HLSLPipeline * HLSLTree::FindPipeline(const char * name)
 
     return NULL;
 }
+*/
 
 HLSLBuffer * HLSLTree::FindBuffer(const char * name)
 {
@@ -665,15 +673,18 @@ void HLSLTreeVisitor::VisitTopLevelStatement(HLSLStatement * node)
     else if (node->nodeType == HLSLNodeType_Function) {
         VisitFunction((HLSLFunction *)node);
     }
-    else if (node->nodeType == HLSLNodeType_Technique) {
-        VisitTechnique((HLSLTechnique *)node);
-    }
-    else if (node->nodeType == HLSLNodeType_Pipeline) {
-        VisitPipeline((HLSLPipeline *)node);
-    }
     else if (node->nodeType == HLSLNodeType_Comment) {
         VisitComment((HLSLComment*)node);
     }
+    
+    // FX file stuff
+//    else if (node->nodeType == HLSLNodeType_Technique) {
+//        VisitTechnique((HLSLTechnique *)node);
+//    }
+//    else if (node->nodeType == HLSLNodeType_Pipeline) {
+//        VisitPipeline((HLSLPipeline *)node);
+//    }
+    
     else {
         ASSERT(false);
     }
@@ -838,9 +849,9 @@ void HLSLTreeVisitor::VisitExpression(HLSLExpression * node)
         VisitFunctionCall((HLSLFunctionCall *)node);
     }
     // Acoget-TODO: This was missing. Did adding it break anything?
-    else if (node->nodeType == HLSLNodeType_SamplerState) {
-        VisitSamplerState((HLSLSamplerState *)node);
-    }
+//    else if (node->nodeType == HLSLNodeType_SamplerState) {
+//        VisitSamplerState((HLSLSamplerState *)node);
+//    }
     else {
         ASSERT(false);
     }
@@ -939,6 +950,7 @@ void HLSLTreeVisitor::VisitFunctionCall(HLSLFunctionCall * node)
     }
 }
 
+/*
 void HLSLTreeVisitor::VisitStateAssignment(HLSLStateAssignment * node) {}
 
 void HLSLTreeVisitor::VisitSamplerState(HLSLSamplerState * node)
@@ -968,14 +980,16 @@ void HLSLTreeVisitor::VisitTechnique(HLSLTechnique * node)
     }
 }
 
-void HLSLTreeVisitor::VisitComment(HLSLComment * node)
-{
-    
-}
 
 void HLSLTreeVisitor::VisitPipeline(HLSLPipeline * node)
 {
     // This is for FX files
+}
+*/
+
+void HLSLTreeVisitor::VisitComment(HLSLComment * node)
+{
+    
 }
 
 void HLSLTreeVisitor::VisitFunctions(HLSLRoot * root)
@@ -1066,18 +1080,23 @@ public:
     virtual void VisitIdentifierExpression(HLSLIdentifierExpression * node) override
     {
         HLSLTreeVisitor::VisitIdentifierExpression(node);
-
+        
         if (node->global)
         {
-            HLSLDeclaration * declaration = tree->FindGlobalDeclaration(node->name);
+            HLSLBuffer* buffer = NULL;
+            HLSLDeclaration * declaration = tree->FindGlobalDeclaration(node->name, &buffer);
             if (declaration != NULL && declaration->hidden)
             {
                 declaration->hidden = false;
                 VisitDeclaration(declaration);
             }
+            if (buffer != NULL && buffer->hidden)
+            {
+                buffer->hidden = false;
+            }
         }
     }
-
+        
     virtual void VisitType(HLSLType & type) override
     {
         if (type.baseType == HLSLBaseType_UserDefined)
@@ -1148,6 +1167,7 @@ void PruneTree(HLSLTree* tree, const char* entryName0, const char* entryName1/*=
                 // TODO: these load from a struct so may just need
                 // to somehow mark this if present.
                 
+                /* all struct fields are hidden = false, so this doesn't work
                 // mark buffer visible if any struct fields are used
                 HLSLStructField* field = buffer->bufferStruct->field;
                 while (field != NULL)
@@ -1160,6 +1180,7 @@ void PruneTree(HLSLTree* tree, const char* entryName0, const char* entryName1/*=
                     }
                     field = (HLSLStructField*)field->nextField;
                 }
+                */
             }
         }
 

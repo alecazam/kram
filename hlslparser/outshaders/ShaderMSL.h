@@ -72,6 +72,21 @@ float4 mad(float4 a, float4 b, float4 c) {
     return a * b + c;
 }
 
+// Might be easier to use * instead
+float2x2 mul(float a, float2x2 m) { return a * m; }
+float3x3 mul(float a, float3x3 m) { return a * m; }
+float4x4 mul(float a, float4x4 m) { return a * m; }
+float2x2 mul(float2x2 m, float a) { return a * m; }
+float3x3 mul(float3x3 m, float a) { return a * m; }
+float4x4 mul(float4x4 m, float a) { return a * m; }
+
+half2x2 mul(half a, half2x2 m) { return a * m; }
+half3x3 mul(half a, half3x3 m) { return a * m; }
+half4x4 mul(half a, half4x4 m) { return a * m; }
+half2x2 mul(half2x2 m, half a) { return a * m; }
+half3x3 mul(half3x3 m, half a) { return a * m; }
+half4x4 mul(half4x4 m, half a) { return a * m; }
+
 float2 mul(float2 a, float2x2 m) { return a * m; }
 float3 mul(float3 a, float3x3 m) { return a * m; }
 float4 mul(float4 a, float4x4 m) { return a * m; }
