@@ -97,6 +97,7 @@ enum HLSLBaseType
     HLSLBaseType_Bool2,
 	HLSLBaseType_Bool3,
 	HLSLBaseType_Bool4,
+    
     HLSLBaseType_Int,
     HLSLBaseType_Int2,
     HLSLBaseType_Int3,
@@ -139,7 +140,7 @@ enum HLSLBaseType
     
     HLSLBaseType_UserDefined,       // struct
     HLSLBaseType_Expression,        // type argument for defined() sizeof() and typeof().
-    HLSLBaseType_Auto,
+    //HLSLBaseType_Auto,
     HLSLBaseType_Comment,           // single line comments optionally transferred to output
     
     // There are subtypes below

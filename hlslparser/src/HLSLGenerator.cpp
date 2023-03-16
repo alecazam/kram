@@ -20,12 +20,13 @@ const char* HLSLGenerator::GetTypeName(const HLSLType& type)
 {
     HLSLBaseType baseType = type.baseType;
     
+    if (baseType == HLSLBaseType_UserDefined)
+        return type.typeName;
+    
+    // TODO: these can all just use a table entry, have another slot for MSL
     const char* name = GetNumericTypeName(baseType);
     if (name)
         return name;
-    
-    if (baseType == HLSLBaseType_UserDefined)
-        return type.typeName;
     
     // Functions can return void, especially with compute
     if (baseType == HLSLBaseType_Void)
@@ -50,16 +51,19 @@ const char* HLSLGenerator::GetTypeName(const HLSLType& type)
         {
             // depth textures just use Texture2D typedef
             // TODO: add ms, others
-            case HLSLBaseType_Depth2D:           return "Depth2D";
-            case HLSLBaseType_Depth2DArray:      return "Depth2DArray";
-            case HLSLBaseType_DepthCube:         return "DepthCube";
-           
             case HLSLBaseType_Texture2D:         return "Texture2D";
             case HLSLBaseType_Texture2DArray:    return "Texture2DArray";
             case HLSLBaseType_Texture3D:         return "Texture3D";
             case HLSLBaseType_TextureCube:       return "TextureCube";
             case HLSLBaseType_TextureCubeArray:  return "TextureCubeArray";
             case HLSLBaseType_Texture2DMS:       return "Texture2DMS";
+               
+            case HLSLBaseType_Depth2D:           return "Depth2D";
+            case HLSLBaseType_Depth2DArray:      return "Depth2DArray";
+            case HLSLBaseType_DepthCube:         return "DepthCube";
+           
+            case HLSLBaseType_RWTexture2D:       return "RWTexture2D";
+            
             default: break;
         }
     }
@@ -218,11 +222,7 @@ bool HLSLGenerator::Generate(HLSLTree* tree, HLSLTarget target, const char* entr
     // This strips any unused inputs to the entry point function
     HideUnusedArguments(entryFunction);
     
-    // Note sure if/where to add these calls.  Just wanted to point
-    // out that nothing is calling them, but could be useful.
-    //EmulateAlphaTest(tree, entryName, 0.5f);
-    
-    // Alec commented out to see if COmments survive
+    // Is this needed
     FlattenExpressions(tree);
     
     m_writer.WriteLine(0, "#include \"ShaderHLSL.h\"");
@@ -380,7 +380,7 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
         case HLSLBaseType_Int:
             m_writer.Write("%d", literalExpression->iValue);
             break;
-        // TODO: missing uint, u/short, double
+        // TODO: missing uint, u/short, u/long double
                 
         case HLSLBaseType_Bool:
             m_writer.Write("%s", literalExpression->bValue ? "true" : "false");
@@ -665,7 +665,20 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
 
             if (!buffer->IsGlobalFields())
             {
+                // Constant/Structured/ByteAdddressBuffer
                 m_writer.BeginLine(indent, buffer->fileName, buffer->line);
+                
+                // Handle push constant for Vulkan.
+                // This is just a buffer to MSL.
+                // VK is limited to 1 buffer as a result.  Cannot contain half on AMD.
+                if (buffer->bufferType == HLSLBufferType_ConstantBuffer)
+                {
+                    if (strstr(buffer->name, "Push") != nullptr ||
+                        strstr(buffer->name, "push") != nullptr)
+                    {
+                        m_writer.Write("[[vk::push_constant]] ");
+                    }
+                }
                 
                 // write out template
                 m_writer.Write("%s<%s> %s",
@@ -684,6 +697,7 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
             }
             else
             {
+                // c/tbuffer
                 m_writer.BeginLine(indent, buffer->fileName, buffer->line);
                 
                 // not templated
@@ -847,6 +861,29 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
     }
 }
 
+// Use for templated buffers/textures
+const char* HLSLGenerator::GetFormatName(HLSLBaseType bufferOrTextureType, HLSLBaseType formatType)
+{
+    // TODO: have a way to disable use of half (like on MSLGenerator)
+    bool isHalf = IsHalf(formatType);
+    
+    // Can't use half4 textures with spriv
+    // Can tell Vulkan was written by/for desktop IHVs.
+    // https://github.com/microsoft/DirectXShaderCompiler/issues/2711
+    bool isSpirvTarget = true; // TODO: tie to CLI option
+    if (isSpirvTarget)
+        isHalf = false;
+    
+    const char* formatName = isHalf ? "half4" : "float4";
+    
+    // Unlike Metal, that just uses half/float, the type
+    // seems to be dimension specific on HLSL.  So may need
+    // caller to specify more types.
+    
+    return formatName;
+}
+
+
 void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
 {
     if (IsSamplerType(declaration->type))
@@ -858,25 +895,26 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
         }
         
         // sampler
-        const char* samplerType = nullptr;
-        if (declaration->type.baseType == HLSLBaseType_SamplerState)
-        {
-            samplerType = "SamplerState";
-        }
-        else if (declaration->type.baseType == HLSLBaseType_SamplerComparisonState)
-        {
-            samplerType = "SamplerComparisonState";
-        }
-        
-        if (samplerType)
+        const char* samplerTypeName = GetTypeName(declaration->type);
+    
+//        if (declaration->type.baseType == HLSLBaseType_SamplerState)
+//        {
+//            samplerType = "SamplerState";
+//        }
+//        else if (declaration->type.baseType == HLSLBaseType_SamplerComparisonState)
+//        {
+//            samplerType = "SamplerComparisonState";
+//        }
+//
+        if (samplerTypeName)
         {
             if (reg != -1)
             {
-                m_writer.Write("%s %s : register(s%d)", samplerType, declaration->name, reg);
+                m_writer.Write("%s %s : register(s%d)", samplerTypeName, declaration->name, reg);
             }
             else
             {
-                m_writer.Write("%s %s", samplerType, declaration->name);
+                m_writer.Write("%s %s", samplerTypeName, declaration->name);
             }
         }
         return;
@@ -889,36 +927,20 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
             sscanf(declaration->registerName, "t%d", &reg);
         }
 
-        // @@ Handle generic sampler type.
-
-        // TODO: have a way to disable use of half (like on MSLGenerator)
-        bool isHalf = declaration->type.textureType == HLSLBaseType_Half;
-        
-        // Can't use half4 textures with spriv
-        // Can tell Vulkan was written by/for desktop IHVs.
-        // https://github.com/microsoft/DirectXShaderCompiler/issues/2711
-        bool isSpirvTarget = true; // TODO: tie to CLI option
-        if (isSpirvTarget)
-            isHalf = false;
-        
-        const char* formatType = isHalf ? "half4" : "float4";
-        
-        // Unlike Metal, that just uses half/float, the type
-        // seems to be dimension specific on HLSL.  So may need
-        // caller to specify more types.
-        
+        const char* formatTypeName = GetFormatName(declaration->type.baseType, declaration->type.formatType);
+       
         // texture carts the dimension and format
-        const char* textureType = GetTypeName(declaration->type);
+        const char* textureTypeName = GetTypeName(declaration->type);
     
-        if (textureType != NULL)
+        if (textureTypeName != NULL)
         {
             if (reg != -1)
             {
-                m_writer.Write("%s<%s> %s : register(t%d)", textureType, formatType, declaration->name, reg);
+                m_writer.Write("%s<%s> %s : register(t%d)", textureTypeName, formatTypeName, declaration->name, reg);
             }
             else
             {
-                m_writer.Write("%s<%s> %s", textureType, formatType, declaration->name);
+                m_writer.Write("%s<%s> %s", textureTypeName, formatTypeName, declaration->name);
             }
         }
         return;

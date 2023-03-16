@@ -73,6 +73,8 @@ static const char* _reservedWords[] =
         "Depth2DArray", // cascades
         "DepthCube",
         
+        "RWTexture2D",
+        
         "SamplerState",
         "SamplerComparisonState",
 

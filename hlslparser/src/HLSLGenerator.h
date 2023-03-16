@@ -52,6 +52,8 @@ private:
 
     void Error(const char* format, ...) M4_PRINTF_ATTR(2, 3);
     
+    const char* GetFormatName(HLSLBaseType bufferOrTextureType, HLSLBaseType formatType);
+    
 private:
 
     CodeWriter      m_writer;

@@ -241,6 +241,10 @@ HLSLBaseType NumericToBaseType(NumericType numericType)
         //case NumericType_Uint8: baseType = HLSLBaseType_Uint8; break;
         //case NumericType_Int8: baseType = HLSLBaseType_Int8; break;
         
+        // TODO:
+        //case NumericType_Uint64: baseType = HLSLBaseType_Uint8; break;
+        //case NumericType_Int64: baseType = HLSLBaseType_Int8; break;
+            
         default:
             break;
     }
@@ -359,7 +363,7 @@ struct Intrinsic
 Intrinsic TextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType textureHalfOrFloat, HLSLBaseType uvType)
 {
     Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerState, uvType);
-    i.argument[0].type.textureType = textureHalfOrFloat;
+    i.argument[0].type.formatType = textureHalfOrFloat;
     return i;
 }
 
@@ -367,7 +371,7 @@ Intrinsic DepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType
 {
     // Need to be able to pass SamplerComparisonState too
     Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerComparisonState, uvType);
-    i.argument[0].type.textureType = textureHalfOrFloat;
+    i.argument[0].type.formatType = textureHalfOrFloat;
     return i;
 }
 
@@ -1195,7 +1199,7 @@ static int GetTypeCastRank(HLSLTree * tree, const HLSLType& srcType, const HLSLT
     {
         if (IsTextureType(srcType.baseType))
         {
-            return srcType.textureType == dstType.textureType ? 0 : -1;
+            return srcType.formatType == dstType.formatType ? 0 : -1;
         }
         
         return 0;
@@ -3828,6 +3832,10 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         type.baseType = HLSLBaseType_DepthCube;
         break;
             
+    case HLSLToken_RWTexture2D:
+        type.baseType = HLSLBaseType_RWTexture2D;
+        break;
+            
     case HLSLToken_SamplerState:
         type.baseType = HLSLBaseType_SamplerState;
         break;
@@ -3860,14 +3868,14 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
             {
                 int token = m_tokenizer.GetToken();
                 
-                // TODO: need more types
+                // TODO: need more format types
                 if (token >= HLSLToken_Float && token <= HLSLToken_Float4)
                 {
-                    type.textureType = HLSLBaseType_Float;
+                    type.formatType = (HLSLBaseType)(HLSLBaseType_Float + (token - HLSLToken_Float));
                 }
                 else if (token >= HLSLToken_Half && token <= HLSLToken_Half4)
                 {
-                    type.textureType = HLSLBaseType_Half;
+                    type.formatType =  (HLSLBaseType)(HLSLBaseType_Half + (token - HLSLToken_Half));
                 }
                 else
                 {
