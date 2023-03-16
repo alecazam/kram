@@ -146,14 +146,16 @@ enum NumericType
 {
     NumericType_Float,
     NumericType_Half,
+    NumericType_Double, // not in MSL
+    
     NumericType_Bool,
     NumericType_Int,
     NumericType_Uint,
     NumericType_Short,
     NumericType_Ushort,
+    NumericType_Ulong,
+    NumericType_Long,
     
-    // TODO: add double
-    // NumericType_Double,
     // TODO: HLSL doesn't have byte/ubyte, MSL does
     // NumericType_UByte,
     // NumericType_Byte,
@@ -166,29 +168,32 @@ enum NumericType
 bool IsHalf(HLSLBaseType type);
 bool IsFloat(HLSLBaseType type);
 
-extern bool IsSamplerType(HLSLBaseType baseType);
-extern bool IsMatrixType(HLSLBaseType baseType);
-extern bool IsVectorType(HLSLBaseType baseType);
-extern bool IsScalarType(HLSLBaseType baseType);
-extern bool IsTextureType(HLSLBaseType baseType);
-extern bool IsDepthTextureType(HLSLBaseType baseType);
-extern bool IsBufferType(HLSLBaseType baseType);
-extern bool IsNumericType(HLSLBaseType baseType);
+bool IsSamplerType(HLSLBaseType baseType);
+bool IsMatrixType(HLSLBaseType baseType);
+bool IsVectorType(HLSLBaseType baseType);
+bool IsScalarType(HLSLBaseType baseType);
+bool IsTextureType(HLSLBaseType baseType);
+bool IsDepthTextureType(HLSLBaseType baseType);
+bool IsBufferType(HLSLBaseType baseType);
+bool IsNumericType(HLSLBaseType baseType);
 
-extern bool IsCoreTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
-extern bool IsNumericTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
-extern bool IsDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
-extern bool IsCrossDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
+bool IsCoreTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
+bool IsNumericTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
+bool IsDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
+bool IsCrossDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
 
-extern bool IsSamplerType(const HLSLType& type);
-extern bool IsMatrixType(const HLSLType& type);
-extern bool IsVectorType(const HLSLType& type);
-extern bool IsScalarType(const HLSLType& type);
-extern bool IsTextureType(const HLSLType& type);
+bool IsSamplerType(const HLSLType& type);
+bool IsMatrixType(const HLSLType& type);
+bool IsVectorType(const HLSLType& type);
+bool IsScalarType(const HLSLType& type);
+bool IsTextureType(const HLSLType& type);
 
-extern HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type);
+HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type);
 HLSLBaseType HalfToFloatBaseType(HLSLBaseType type);
 
 const char* GetNumericTypeName(HLSLBaseType type);
+
+const char* GetTypeName(const HLSLType& type);
+const char* GetTypeNameMetal(const HLSLType& type);
 
 }

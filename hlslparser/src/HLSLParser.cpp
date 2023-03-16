@@ -67,20 +67,25 @@ enum DimensionType
 // Can use this to break apart type to useful constructs
 struct BaseTypeDescription
 {
-    const char*     typeName;
-    CoreType        coreType;
-    DimensionType   dimensionType;
-    NumericType     numericType;
-    int             numComponents;
+    const char*     typeName = "";
+    const char*     typeNameMetal = "";
+    
+    HLSLBaseType    baseType = HLSLBaseType_Unknown;
+    CoreType        coreType = CoreType_None;
+    DimensionType   dimensionType = DimensionType_None;
+    NumericType     numericType = NumericType_NaN;
     
     // TODO: is this useful ?
-    int             numDimensions; // scalar = 0, vector = 1, matrix = 2
+   // int             numDimensions; // scalar = 0, vector = 1, matrix = 2
+    uint8_t             numDimensions = 0;
+    uint8_t             numComponents = 0;
+    uint8_t             height = 0;
     
-    int             height;
-    int             binaryOpRank;
+    int8_t              binaryOpRank = -1; // or was this supposed to be max (-1 in uint8_t)
 };
 
-extern const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count];
+// really const
+extern BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count];
 
 bool IsSamplerType(HLSLBaseType baseType)
 {
@@ -950,99 +955,213 @@ const int _binaryOpPriority[] =
         5, 3, 4, // &, |, ^
     };
 
-const BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count] = 
+// Note: these strings need to live until end of the app
+StringPool gPool(NULL);
+
+
+BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count];
+
+void RegisterMatrix(HLSLBaseType type, uint32_t typeOffset, NumericType numericType,  int binaryOpRank, const char* typeName, uint32_t dim1, uint32_t dim2)
+{
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%s%dx%d", typeName, dim1, dim2);
+    const char* name = gPool.AddString(buf);
+    
+    HLSLBaseType baseType = (HLSLBaseType)(type + typeOffset);
+    
+    BaseTypeDescription& desc = baseTypeDescriptions[baseType];
+    desc.typeName = name;
+    
+    desc.baseType = baseType;
+    desc.coreType = CoreType_Matrix;
+    desc.dimensionType = DimensionType(DimensionType_Matrix2x2 + (dim2 - 2));
+    desc.numericType = numericType;
+    
+    desc.numDimensions = 2;
+    desc.numComponents = dim1;
+    desc.height = dim2;
+    desc.binaryOpRank = binaryOpRank;
+}
+
+void RegisterVector(HLSLBaseType type, uint32_t typeOffset, NumericType numericType,  int binaryOpRank,  const char* typeName, uint32_t dim)
+{
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%s%d", typeName, dim);
+    const char* name = gPool.AddString(buf);
+    
+    HLSLBaseType baseType = (HLSLBaseType)(type + typeOffset);
+    
+    BaseTypeDescription& desc = baseTypeDescriptions[type + typeOffset];
+    desc.typeName = name;
+    desc.typeNameMetal = name;
+    
+    // 4 types
+    desc.baseType = baseType;
+    desc.coreType = CoreType_Vector;
+    desc.dimensionType = DimensionType(DimensionType_Vector2 + (dim - 2));
+    desc.numericType = numericType;
+    
+    desc.numDimensions = 1;
+    desc.numComponents = dim;
+    desc.height = 1;
+    desc.binaryOpRank = binaryOpRank;
+}
+
+void RegisterScalar(HLSLBaseType type, uint32_t typeOffset, NumericType numericType,  int binaryOpRank, const char* typeName)
+{
+    const char* name = gPool.AddString(typeName);
+    
+    HLSLBaseType baseType = (HLSLBaseType)(type + typeOffset);
+    
+    BaseTypeDescription& desc = baseTypeDescriptions[baseType];
+    desc.typeName = name;
+    desc.typeNameMetal = name;
+    
+    // 4 types
+    desc.baseType = baseType;
+    desc.coreType = CoreType_Scalar;
+    desc.dimensionType = DimensionType_Scalar;
+    desc.numericType = numericType;
+    
+    desc.numDimensions = 0;
+    desc.numComponents = 1;
+    desc.height = 1;
+    desc.binaryOpRank = binaryOpRank;
+}
+
+void RegisterTexture(HLSLBaseType baseType, const char* typeName, const char* typeNameMetal)
+{
+    BaseTypeDescription& desc = baseTypeDescriptions[baseType];
+    desc.baseType = baseType;
+    desc.typeName = typeName;
+    desc.typeNameMetal = typeNameMetal;
+    
+    desc.coreType = CoreType_Texture;
+}
+
+void RegisterSampler(HLSLBaseType baseType, const char* typeName, const char* typeNameMetal)
+{
+    BaseTypeDescription& desc = baseTypeDescriptions[baseType];
+    desc.baseType = baseType;
+    desc.typeName = typeName;
+    desc.typeNameMetal = typeNameMetal;
+    
+    desc.coreType = CoreType_Sampler;
+}
+
+void RegisterType(HLSLBaseType baseType, CoreType coreType, const char* typeName)
+{
+    BaseTypeDescription& desc = baseTypeDescriptions[baseType];
+    desc.baseType = baseType;
+    desc.typeName = typeName;
+    desc.typeNameMetal = typeName;
+    
+    desc.coreType = coreType;
+}
+
+
+bool initBaseTypeDescriptions()
+{
     {
-        { "unknown",       CoreType_None, DimensionType_None, NumericType_NaN,        0, 0, 0, -1 },      // HLSLBaseType_Unknown
-        { "void",               CoreType_Void, DimensionType_None, NumericType_NaN,        0, 0, 0, -1 },      // HLSLBaseType_Void
+        const uint32_t kNumTypes = 3;
+        const char* typeNames[kNumTypes] = { "float", "half", "double" };
+        const HLSLBaseType baseTypes[kNumTypes] = { HLSLBaseType_Float, HLSLBaseType_Half, HLSLBaseType_Double };
+        const NumericType numericTypes[kNumTypes] = { NumericType_Float, NumericType_Half, NumericType_Double };
+        const int binaryOpRanks[kNumTypes] = { 0, 1, 2 };
         
-        { "float",              CoreType_Scalar, DimensionType_Scalar, NumericType_Float,       1, 0, 1,  0 },      // HLSLBaseType_Float
-        { "float2",             CoreType_Vector, DimensionType_Vector2, NumericType_Float,      2, 1, 1,  0 },      // HLSLBaseType_Float2
-        { "float3",             CoreType_Vector, DimensionType_Vector3, NumericType_Float,      3, 1, 1,  0 },      // HLSLBaseType_Float3
-        { "float4",             CoreType_Vector, DimensionType_Vector4, NumericType_Float,      4, 1, 1,  0 },      // HLSLBaseType_Float4
+        for (uint32_t i = 0; i < kNumTypes; ++i)
+        {
+            const char* typeName = typeNames[i];
+            HLSLBaseType baseType = baseTypes[i];
+            NumericType numericType = numericTypes[i];
+            int binaryOpRank = binaryOpRanks[i];
+            
+            RegisterScalar(baseType, 0, numericType, binaryOpRank, typeName);
+            RegisterVector(baseType, 1, numericType, binaryOpRank, typeName, 2);
+            RegisterVector(baseType, 2, numericType, binaryOpRank, typeName, 3);
+            RegisterVector(baseType, 3, numericType, binaryOpRank, typeName, 4);
+            
+            RegisterMatrix(baseType, 4, numericType, binaryOpRank, typeName, 2, 2);
+            RegisterMatrix(baseType, 5, numericType, binaryOpRank, typeName, 3, 3);
+            RegisterMatrix(baseType, 6, numericType, binaryOpRank, typeName, 4, 4);
+        }
+    }
+    
+    {
+        const uint32_t kNumTypes = 7;
+        const char* typeNames[kNumTypes] = {
+            "int", "uint",
+            "long", "ulong",
+            "short", "ushort",
+            "bool"
+        };
+        const HLSLBaseType baseTypes[kNumTypes] = {
+            HLSLBaseType_Int,  HLSLBaseType_Uint,
+            HLSLBaseType_Long, HLSLBaseType_Ulong,
+            HLSLBaseType_Short, HLSLBaseType_Ushort,
+            HLSLBaseType_Bool
+        };
+        const NumericType numericTypes[kNumTypes] = {
+            NumericType_Int,  NumericType_Uint,
+            NumericType_Long,  NumericType_Ulong,
+            NumericType_Short, NumericType_Ushort,
+            NumericType_Bool
+        };
+        const int binaryOpRanks[kNumTypes] = {
+            2, 1, // Note: int seems like it should be highest
+            3, 2,
+            4, 3,
+            4
+        };
         
-		{ "float2x2",			CoreType_Matrix, DimensionType_Matrix2x2, NumericType_Float,     2, 2, 2,  0 },		// HLSLBaseType_Float2x2
-        { "float3x3",           CoreType_Matrix, DimensionType_Matrix3x3, NumericType_Float,     3, 2, 3,  0 },      // HLSLBaseType_Float3x3
-        { "float4x4",           CoreType_Matrix, DimensionType_Matrix4x4, NumericType_Float,     4, 2, 4,  0 },      // HLSLBaseType_Float4x4
-        //{ "float4x3",           CoreType_Matrix, DimensionType_Matrix4x3, NumericType_Float,     4, 2, 3,  0 },      // HLSLBaseType_Float4x3
-        //{ "float4x2",           CoreType_Matrix, DimensionType_Matrix4x2, NumericType_Float,     4, 2, 2,  0 },      // HLSLBaseType_Float4x2
+        for (uint32_t i = 0; i < kNumTypes; ++i)
+        {
+            const char* typeName = typeNames[i];
+            HLSLBaseType baseType = baseTypes[i];
+            NumericType numericType = numericTypes[i];
+            int binaryOpRank = binaryOpRanks[i];
+            
+            RegisterScalar(baseType, 0, numericType, binaryOpRank, typeName);
+            RegisterVector(baseType, 1, numericType, binaryOpRank, typeName, 2);
+            RegisterVector(baseType, 2, numericType, binaryOpRank, typeName, 3);
+            RegisterVector(baseType, 3, numericType, binaryOpRank, typeName, 4);
+        }
+    }
+    
+    // TODO: add u/char, but HLSL2021 doesn't have support, but MSL does
+    
+    // TODO: would it be better to use "texture" base type (see "buffer")
+    // and then have a TextureSubType off that?
+    
+    // texutres
+    RegisterTexture(HLSLBaseType_Texture2D, "Texture2D", "texture2d");
+    RegisterTexture(HLSLBaseType_Texture2DArray, "Texture2DArray", "texture2d_array");
+    RegisterTexture(HLSLBaseType_Texture3D, "Texture3D", "texture3d");
+    RegisterTexture(HLSLBaseType_TextureCube, "TextureCube", "texturecube");
+    RegisterTexture(HLSLBaseType_TextureCubeArray, "TextureCubeArray", "texturecube_rray");
+    RegisterTexture(HLSLBaseType_Texture2DMS, "Texture2DMS", "texture2d_ms");
+    
+    RegisterTexture(HLSLBaseType_Depth2D, "Depth2D", "depth2d");
+    RegisterTexture(HLSLBaseType_Depth2DArray, "Depth2DArray", "depth2d_array");
+    RegisterTexture(HLSLBaseType_DepthCube, "DepthCube", "depthcube");
+    
+    RegisterTexture(HLSLBaseType_RWTexture2D, "RWTexture2D", "texture2d");
+    
+    // samplers
+    RegisterSampler(HLSLBaseType_SamplerState, "SamplerState", "sampler");
+    RegisterSampler(HLSLBaseType_SamplerComparisonState, "SamplerComparisonState", "sampler");
+    
+    RegisterType(HLSLBaseType_UserDefined, CoreType_Struct, "struct");
+    RegisterType(HLSLBaseType_Void, CoreType_Void, "void");
+    RegisterType(HLSLBaseType_Unknown, CoreType_None, "unknown");
+    RegisterType(HLSLBaseType_Expression, CoreType_Expression, "expression");
+    RegisterType(HLSLBaseType_Comment, CoreType_Comment, "comment");
+    RegisterType(HLSLBaseType_Buffer, CoreType_Buffer, "buffer");
+    
+    return true;
+}
 
-        { "half",               CoreType_Scalar, DimensionType_Scalar, NumericType_Half,        1, 0, 1,  1 },      // HLSLBaseType_Half
-        { "half2",              CoreType_Vector, DimensionType_Vector2, NumericType_Half,       2, 1, 1,  1 },      // HLSLBaseType_Half2
-        { "half3",              CoreType_Vector, DimensionType_Vector3, NumericType_Half,       3, 1, 1,  1 },      // HLSLBaseType_Half3
-        { "half4",              CoreType_Vector, DimensionType_Vector4, NumericType_Half,       4, 1, 1,  1 },      // HLSLBaseType_Half4
-        
-		{ "half2x2",            CoreType_Matrix, DimensionType_Matrix2x2, NumericType_Half,		2, 2, 2,  0 },		// HLSLBaseType_Half2x2
-        { "half3x3",            CoreType_Matrix, DimensionType_Matrix3x3, NumericType_Half,     3, 2, 3,  1 },      // HLSLBaseType_Half3x3
-        { "half4x4",            CoreType_Matrix, DimensionType_Matrix4x4, NumericType_Half,     4, 2, 4,  1 },      // HLSLBaseType_Half4x4
-        //{ "half4x3",            CoreType_Matrix, DimensionType_Matrix4x3, NumericType_Half,     4, 2, 3,  1 },      // HLSLBaseType_Half4x3
-        //{ "half4x2",            CoreType_Matrix, DimensionType_Matrix4x2, NumericType_Half,     4, 2, 2,  1 },      // HLSLBaseType_Half4x2
-
-        // TODO: add double
-//        { "double",              CoreType_Scalar, DimensionType_Scalar, NumericType_Double,       1, 0, 1,  0 },      // HLSLBaseType_Double
-//        { "double2",             CoreType_Vector, DimensionType_Vector2, NumericType_Double,      2, 1, 1,  0 },      // HLSLBaseType_Double2
-//        { "double3",             CoreType_Vector, DimensionType_Vector3, NumericType_Double,      3, 1, 1,  0 },      // HLSLBaseType_Double3
-//        { "double4",             CoreType_Vector, DimensionType_Vector4, NumericType_Double,      4, 1, 1,  0 },      // HLSLBaseType_Double4
-//
-//        { "double2x2",            CoreType_Matrix, DimensionType_Matrix2x2, NumericType_Double,     2, 2, 2,  0 },        // HLSLBaseType_Doublet2x2
-//        { "double3x3",           CoreType_Matrix, DimensionType_Matrix3x3, NumericType_Double,     3, 2, 3,  0 },      // HLSLBaseType_Double3x3
-//        { "double4x4",           CoreType_Matrix, DimensionType_Matrix4x4, NumericType_Double,     4, 2, 4,  0 },      // HLSLBaseType_Double4x4
-        
-        { "bool",               CoreType_Scalar, DimensionType_Scalar, NumericType_Bool,       1, 0, 1,  4 },      // HLSLBaseType_Bool
-		{ "bool2",				CoreType_Vector, DimensionType_Vector2, NumericType_Bool,	   2, 1, 1,  4 },      // HLSLBaseType_Bool2
-		{ "bool3",				CoreType_Vector, DimensionType_Vector3, NumericType_Bool,	   3, 1, 1,  4 },      // HLSLBaseType_Bool3
-		{ "bool4",				CoreType_Vector, DimensionType_Vector4, NumericType_Bool,	   4, 1, 1,  4 },      // HLSLBaseType_Bool4
-
-        { "int",                CoreType_Scalar, DimensionType_Scalar, NumericType_Int,        1, 0, 1,  3 },      // HLSLBaseType_Int
-        { "int2",               CoreType_Vector, DimensionType_Vector2, NumericType_Int,       2, 1, 1,  3 },      // HLSLBaseType_Int2
-        { "int3",               CoreType_Vector, DimensionType_Vector3, NumericType_Int,       3, 1, 1,  3 },      // HLSLBaseType_Int3
-        { "int4",               CoreType_Vector, DimensionType_Vector4, NumericType_Int,       4, 1, 1,  3 },      // HLSLBaseType_Int4
-
-        { "uint",               CoreType_Scalar, DimensionType_Scalar, NumericType_Uint,       1, 0, 1,  2 },      // HLSLBaseType_Uint
-        { "uint2",              CoreType_Vector, DimensionType_Vector2, NumericType_Uint,      2, 1, 1,  2 },      // HLSLBaseType_Uint2
-        { "uint3",              CoreType_Vector, DimensionType_Vector3, NumericType_Uint,      3, 1, 1,  2 },      // HLSLBaseType_Uint3
-        { "uint4",              CoreType_Vector, DimensionType_Vector4, NumericType_Uint,      4, 1, 1,  2 },      // HLSLBaseType_Uint4
-
-        { "short",              CoreType_Scalar, DimensionType_Scalar, NumericType_Short,      1, 0, 1,  3 },      // HLSLBaseType_Short
-        { "short2",             CoreType_Vector, DimensionType_Vector2, NumericType_Short,     2, 1, 1,  3 },      // HLSLBaseType_Short2
-        { "short3",             CoreType_Vector, DimensionType_Vector3, NumericType_Short,     3, 1, 1,  3 },      // HLSLBaseType_Short3
-        { "short4",             CoreType_Vector, DimensionType_Vector4, NumericType_Short,     4, 1, 1,  3 },      // HLSLBaseType_Short4
-
-        { "ushort",             CoreType_Scalar, DimensionType_Scalar, NumericType_Ushort,     1, 0, 1,  2 },      // HLSLBaseType_Ushort
-        { "ushort2",            CoreType_Vector, DimensionType_Vector2, NumericType_Ushort,    2, 1, 1,  2 },      // HLSLBaseType_Ushort2
-        { "ushort3",            CoreType_Vector, DimensionType_Vector3, NumericType_Ushort,    3, 1, 1,  2 },      // HLSLBaseType_Ushort3
-        { "ushort4",            CoreType_Vector, DimensionType_Vector4, NumericType_Ushort,    4, 1, 1,  2 },      // HLSLBaseType_Ushort4
-
-        // TODO: add u/char, but HLSL2021 doesn't have support
-        
-       
-        //{ "texture",            CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture
-        
-        { "Texture2D",          CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture2D
-        { "Texture3D",          CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture3D
-        { "TextureCube",        CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_TextureCube
-        { "Texture2DArray",     CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture2DArray
-        { "TextureCubeArray",     CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_TextureCubeArray
-        { "Texture2DMS",        CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Texture2DMS
-        
-        { "Depth2D",            CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Depth2D
-        { "Depth2DArray",       CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Depth2DArray
-        { "DepthCube",          CoreType_Texture, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_DepthCube
-        
-        { "SamplerState",            CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Sampler
-        { "SamplerComparisonState",  CoreType_Sampler, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_SamplerComparisonState
-       
-        { "struct",             CoreType_Struct, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },      // HLSLBaseType_UserDefined
-        
-        // These aren't real HLSL types
-        { "expression",         CoreType_Expression, DimensionType_None, NumericType_NaN,     1, 0, 0, -1 },       // HLSLBaseType_Expression
-        { "comment",            CoreType_Comment, DimensionType_None, NumericType_NaN,         1, 0, 0, -1 },       // HLSLBaseType_Comment
-        
-        { "buffer",        CoreType_Buffer, DimensionType_None, NumericType_NaN,        1, 0, 0, -1 },      // HLSLBaseType_Buffer
-    };
-
-// IC: I'm not sure this table is right, but any errors should be caught by the backend compiler.
-// Also, this is operator dependent. The type resulting from (float4 * float4x4) is not the same as (float4 + float4x4).
-// We should probably distinguish between component-wise operator and only allow same dimensions
+static bool _initBaseTypeDescriptions = initBaseTypeDescriptions();
 
 
 HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSLBaseType t2)
@@ -1109,7 +1228,7 @@ HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSL
 // Priority of the ? : operator.
 const int _conditionalOpPriority = 1;
 
-static const char* GetTypeName(const HLSLType& type)
+const char* GetTypeName(const HLSLType& type)
 {
     if (type.baseType == HLSLBaseType_UserDefined)
     {
@@ -1118,6 +1237,18 @@ static const char* GetTypeName(const HLSLType& type)
     else
     {
         return baseTypeDescriptions[type.baseType].typeName;
+    }
+}
+
+const char* GetTypeNameMetal(const HLSLType& type)
+{
+    if (type.baseType == HLSLBaseType_UserDefined)
+    {
+        return type.typeName;
+    }
+    else
+    {
+        return baseTypeDescriptions[type.baseType].typeNameMetal;
     }
 }
 
@@ -1192,7 +1323,7 @@ static int GetTypeCastRank(HLSLTree * tree, const HLSLType& srcType, const HLSLT
 
     if (srcType.baseType == HLSLBaseType_UserDefined && dstType.baseType == HLSLBaseType_UserDefined)
     {
-        return strcmp(srcType.typeName, dstType.typeName) == 0 ? 0 : -1;
+        return String_Equal(srcType.typeName, dstType.typeName) ? 0 : -1;
     }
 
     if (srcType.baseType == dstType.baseType)
@@ -2886,11 +3017,11 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 return false;
             }
             
-            if (strcmp(function->name, "mul") == 0)
-            {
-                int bp = 0;
-                bp = bp;
-            }
+//            if (String_Equal(function->name, "mul"))
+//            {
+//                int bp = 0;
+//                bp = bp;
+//            }
             functionCall->function = function;
             functionCall->expressionType = function->returnType;
             expression = functionCall;
@@ -3461,10 +3592,10 @@ bool HLSLParser::ParseAttributeList(HLSLAttribute*& firstAttribute)
 
         HLSLAttribute * attribute = m_tree->AddNode<HLSLAttribute>(fileName, line);
         
-        if (strcmp(identifier, "unroll") == 0) attribute->attributeType = HLSLAttributeType_Unroll;
-        else if (strcmp(identifier, "flatten") == 0) attribute->attributeType = HLSLAttributeType_Flatten;
-        else if (strcmp(identifier, "branch") == 0) attribute->attributeType = HLSLAttributeType_Branch;
-        else if (strcmp(identifier, "nofastmath") == 0) attribute->attributeType = HLSLAttributeType_NoFastMath;
+        if (String_Equal(identifier, "unroll")) attribute->attributeType = HLSLAttributeType_Unroll;
+        else if (String_Equal(identifier, "flatten")) attribute->attributeType = HLSLAttributeType_Flatten;
+        else if (String_Equal(identifier, "branch")) attribute->attributeType = HLSLAttributeType_Branch;
+        else if (String_Equal(identifier, "nofastmath")) attribute->attributeType = HLSLAttributeType_NoFastMath;
         
         // @@ parse arguments, () not required if attribute constructor has no arguments.
 
@@ -3871,11 +4002,17 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
                 // TODO: need more format types
                 if (token >= HLSLToken_Float && token <= HLSLToken_Float4)
                 {
-                    type.formatType = (HLSLBaseType)(HLSLBaseType_Float + (token - HLSLToken_Float));
+                    // TODO: code only tests if texture formatType exactly matches
+                    // when looking for Intrinsics, need to fix that before changing
+                    // this.
+                    
+                    type.formatType = HLSLBaseType_Float;
+                    // (HLSLBaseType)(HLSLBaseType_Float + (token - HLSLToken_Float));
                 }
                 else if (token >= HLSLToken_Half && token <= HLSLToken_Half4)
                 {
-                    type.formatType =  (HLSLBaseType)(HLSLBaseType_Half + (token - HLSLToken_Half));
+                    type.formatType =  HLSLBaseType_Half;
+                    // (HLSLBaseType)(HLSLBaseType_Half + (token - HLSLToken_Half));
                 }
                 else
                 {
@@ -4147,10 +4284,18 @@ const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functi
     for (int i = 0; i < _numIntrinsics; ++i)
     {
         const HLSLFunction* function = &_intrinsic[i].function;
+        
+        // TODO: this is doing another O(n) search of intrinsic names
         if (String_Equal(function->name, name))
         {
             nameMatches = true;
 
+            if (String_Equal(name, "SampleH"))
+            {
+                int bp = 0;
+                bp = bp;
+            }
+            
             CompareFunctionsResult result = CompareFunctions( m_tree, functionCall, function, matchedFunction );
             if (result == Function1Better)
             {

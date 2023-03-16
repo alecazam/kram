@@ -16,23 +16,25 @@ enum HLSLToken
     HLSLToken_Float2,
     HLSLToken_Float3,
     HLSLToken_Float4,
-    
 	HLSLToken_Float2x2,
     HLSLToken_Float3x3,
     HLSLToken_Float4x4,
-    //HLSLToken_Float4x3,
-   // HLSLToken_Float4x2,
     
     HLSLToken_Half,
     HLSLToken_Half2,
     HLSLToken_Half3,
     HLSLToken_Half4,
-    
 	HLSLToken_Half2x2,
     HLSLToken_Half3x3,
     HLSLToken_Half4x4,
-    //HLSLToken_Half4x3,
-    //HLSLToken_Half4x2,
+    
+    HLSLToken_Double,
+    HLSLToken_Double2,
+    HLSLToken_Double3,
+    HLSLToken_Double4,
+    HLSLToken_Double2x2,
+    HLSLToken_Double3x3,
+    HLSLToken_Double4x4,
     
     HLSLToken_Bool,
 	HLSLToken_Bool2,
@@ -58,6 +60,16 @@ enum HLSLToken
     HLSLToken_Ushort2,
     HLSLToken_Ushort3,
     HLSLToken_Ushort4,
+    
+    HLSLToken_Long,
+    HLSLToken_Long2,
+    HLSLToken_Long3,
+    HLSLToken_Long4,
+    
+    HLSLToken_Ulong,
+    HLSLToken_Ulong2,
+    HLSLToken_Ulong3,
+    HLSLToken_Ulong4,
     
     // TODO: double, u/char
     HLSLToken_Texture2D,
@@ -122,6 +134,9 @@ enum HLSLToken
     HLSLToken_Technique,
     HLSLToken_Pass,
 
+    //===================
+    // End of strings that have to match in _reservedWords in .cpp
+    
     // Multi-character symbols.
     HLSLToken_LessEqual,
     HLSLToken_GreaterEqual,

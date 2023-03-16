@@ -17,23 +17,25 @@ static const char* _reservedWords[] =
         "float2",
         "float3",
         "float4",
-        
 		"float2x2",
         "float3x3",
         "float4x4",
-        //"float4x3",
-        //"float4x2",
         
         "half",
         "half2",
         "half3",
         "half4",
-        
 		"half2x2",
         "half3x3",
         "half4x4",
-        //"half4x3",
-        //"half4x2",
+        
+        "double",
+        "double2",
+        "double3",
+        "double4",
+        "double2x2",
+        "double3x3",
+        "double4x4",
         
         "bool",
 		"bool2",
@@ -59,6 +61,16 @@ static const char* _reservedWords[] =
         "ushort2",
         "ushort3",
         "ushort4",
+        
+        "long",
+        "long2",
+        "long3",
+        "long4",
+        
+        "ulong",
+        "ulong2",
+        "ulong3",
+        "ulong4",
         
         // TODO: double, u/char
         
@@ -318,7 +330,7 @@ void HLSLTokenizer::Next()
     const int numReservedWords = sizeof(_reservedWords) / sizeof(const char*);
     for (int i = 0; i < numReservedWords; ++i)
     {
-        if (strcmp(_reservedWords[i], m_identifier) == 0)
+        if (String_Equal(_reservedWords[i], m_identifier))
         {
             m_token = 256 + i;
             return;

@@ -170,7 +170,7 @@ StringPool::~StringPool() {
     
     // TODO: fix
     // delete the strings
-    for (auto& it : *impl) {
+    for (auto it : *impl) {
         const char* text = it;
         free((char*)text);
     }

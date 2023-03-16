@@ -76,10 +76,6 @@ enum HLSLBaseType
     HLSLBaseType_Float3x3,
     HLSLBaseType_Float4x4,
     
-    // TODO: remove
-    //HLSLBaseType_Float4x3, // TODO: missing Float3x4
-    //HLSLBaseType_Float4x2,
-    
     HLSLBaseType_Half,
     HLSLBaseType_Half2,
     HLSLBaseType_Half3,
@@ -88,9 +84,13 @@ enum HLSLBaseType
     HLSLBaseType_Half3x3,
     HLSLBaseType_Half4x4,
     
-    // TODO: remove
-    //HLSLBaseType_Half4x3, // TODO: missing Half3x4
-    //HLSLBaseType_Half4x2,
+    HLSLBaseType_Double,
+    HLSLBaseType_Double2,
+    HLSLBaseType_Double3,
+    HLSLBaseType_Double4,
+    HLSLBaseType_Double2x2,
+    HLSLBaseType_Double3x3,
+    HLSLBaseType_Double4x4,
     
     // integer
     HLSLBaseType_Bool,
@@ -102,6 +102,7 @@ enum HLSLBaseType
     HLSLBaseType_Int2,
     HLSLBaseType_Int3,
     HLSLBaseType_Int4,
+    
     HLSLBaseType_Uint,
     HLSLBaseType_Uint2,
     HLSLBaseType_Uint3,
@@ -111,11 +112,21 @@ enum HLSLBaseType
     HLSLBaseType_Short2,
     HLSLBaseType_Short3,
     HLSLBaseType_Short4,
-     
+    
     HLSLBaseType_Ushort,
     HLSLBaseType_Ushort2,
     HLSLBaseType_Ushort3,
     HLSLBaseType_Ushort4,
+    
+    HLSLBaseType_Long,
+    HLSLBaseType_Long2,
+    HLSLBaseType_Long3,
+    HLSLBaseType_Long4,
+    
+    HLSLBaseType_Ulong,
+    HLSLBaseType_Ulong2,
+    HLSLBaseType_Ulong3,
+    HLSLBaseType_Ulong4,
     
     // Seems like these should be subtype of HLSLTexture, but
     // many of the intrinsics require a specific type of texture.

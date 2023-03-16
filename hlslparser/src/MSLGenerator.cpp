@@ -275,7 +275,7 @@ namespace M4
                             field->sv_semantic = TranslateInputSemantic(field->semantic);
 
                             // Force type to uint.
-                            if (field->sv_semantic && strcmp(field->sv_semantic, "sample_id") == 0) {
+                            if (field->sv_semantic && String_Equal(field->sv_semantic, "sample_id")) {
                                 field->type.baseType = HLSLBaseType_Uint;
                                 field->type.flags |= HLSLTypeFlag_NoPromote;
                             }
@@ -293,7 +293,7 @@ namespace M4
                     argument->sv_semantic = TranslateInputSemantic(argument->semantic);
 
                     // Force type to uint.
-                    if (argument->sv_semantic && strcmp(argument->sv_semantic, "sample_id") == 0) {
+                    if (argument->sv_semantic && String_Equal(argument->sv_semantic, "sample_id")) {
                         argument->type.baseType = HLSLBaseType_Uint;
                         argument->type.flags |= HLSLTypeFlag_NoPromote;
                     }
@@ -493,7 +493,7 @@ namespace M4
 
         // If function return value has a non-color output semantic, declare a temporary struct for the output.
         bool wrapReturnType = false;
-        if (entryFunction->sv_semantic != NULL && strcmp(entryFunction->sv_semantic, "color(0)") != 0)
+        if (entryFunction->sv_semantic != NULL && !String_Equal(entryFunction->sv_semantic, "color(0)"))
         {
             wrapReturnType = true;
 

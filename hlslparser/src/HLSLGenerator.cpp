@@ -529,11 +529,11 @@ void HLSLGenerator::OutputArguments(HLSLArgument* argument)
         // Have to inject vulkan
         if (semantic)
         {
-            if (strcmp(semantic, "PSIZE") == 0)
+            if (String_Equal(semantic, "PSIZE"))
                 m_writer.Write("%s ", "[[vk::builtin(\"PointSize\")]]");
-            else if (strcmp(semantic, "BaseVertex") == 0)
+            else if (String_Equal(semantic, "BaseVertex"))
                 m_writer.Write("%s ", "[[vk::builtin(\"BaseVertex\")]]");
-            else if (strcmp(semantic, "BaseInstance") == 0)
+            else if (String_Equal(semantic, "BaseInstance"))
                 m_writer.Write("%s ", "[[vk::builtin(\"BaseInstance\")]]");
         }
         
@@ -741,7 +741,7 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
             const char* returnTypeName = GetTypeName(function->returnType);
 
             // TODO: hack, since don't actually parse bracket construct yet
-            bool isEntryPoint = strcmp(functionName, m_entryName) == 0;
+            bool isEntryPoint = String_Equal(functionName, m_entryName);
             if (isEntryPoint && m_target == HLSLTarget_ComputeShader)
                 m_writer.WriteLine(indent, "[numthreads(1,1,1)]");
             
