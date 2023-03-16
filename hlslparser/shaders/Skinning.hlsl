@@ -9,10 +9,11 @@
 // https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst
 
 // setup specialization
-// HLSL:
+// HLSL: at beginning
 // [[vk::constant_id(0)]] const int   specConstInt  = 1;
 // [[vk::constant_id(1)]] const bool  specConstBool  = true;
-// MSL:
+//
+// MSL: at end
 // constant bool a [[function_constant(0)]];
 // constant int  a [[function_constant(1)]]; // 0.. 64K-1
 
@@ -104,9 +105,6 @@ struct UniformsStruct
 ConstantBuffer<UniformsStruct> uniforms : register(b0);
 
 // can have 14x 64K limit to each cbuffer, 128 tbuffers,
-
-// Example
-// uniforms.skinTfms
  
 // Structured buffers
 struct StructuredStruct
@@ -117,9 +115,6 @@ struct StructuredStruct
 
 StructuredBuffer<StructuredStruct> bufferTest0 : register(t2);
 
-/*
-// RWStructuredBuffer<StructuredStruct> rwBufferTest0 : register(u0);
-*/
 
 Texture2D<half4> tex : register(t1);
 SamplerState samplerClamp : register(s0);

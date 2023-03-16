@@ -33,6 +33,10 @@ namespace M4 {
 
 // Engine/Allocator.h
 
+// This doesn't do placement new/delete, but is only
+// use to allocate NodePage and StringPool.  Then placement
+// new/delete is called explicitly by say NewNode.  So
+// there default ctor variable initializers are safe to use.
 class Allocator {
 public:
     template <typename T> T * New() {
@@ -187,12 +191,13 @@ struct StringPool {
     StringPool(Allocator * allocator);
     ~StringPool();
 
-    const char * AddString(const char * string);
+    const char * AddString(const char * text);
     const char * AddStringFormat(const char * fmt, ...) M4_PRINTF_ATTR(2, 3);
     const char * AddStringFormatList(const char * fmt, va_list args);
-    bool GetContainsString(const char * string) const;
-
-    Array<const char *> stringArray;
+    bool GetContainsString(const char * text) const;
+private:
+    const char*PrintFormattedVaList(const char* fmt, va_list args);
+    void* m_impl = NULL;
 };
 
 

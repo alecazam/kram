@@ -134,7 +134,6 @@ namespace M4
         
         // Note sure if/where to add these calls.  Just wanted to point
         // out that nothing is calling them, but could be useful.
-        //EmulateAlphaTest(tree, entryName, 0.5f);
         FlattenExpressions(tree);
         
         HLSLRoot* root = tree->GetRoot();
@@ -2037,7 +2036,7 @@ namespace M4
         {
             if (String_Equal(semantic, "SV_Position"))
                 return "position";
-            
+        
             // PSIZE is non-square in DX9, and square in DX10 (and MSL)
             // https://github.com/KhronosGroup/glslang/issues/1154
             if (String_Equal(semantic, "PSIZE"))
@@ -2068,6 +2067,15 @@ namespace M4
                     return "color(0), index(1)";
             }
 
+            // This is only in A14 and higher
+            if (String_Equal(semantic, "SV_Berycentrics"))
+                return "barycentric_coord";
+            
+            // Is there an HLSL euivalent.  Have vulkan ext for PointSize
+            // "point_coord"
+            
+            // "primitive_id"
+            
             if (strncmp(semantic, "SV_Target", length) == 0)
             {
                 return m_tree->AddStringFormat("color(%d)", index);
@@ -2132,7 +2140,7 @@ namespace M4
         {
             // unclear if depth supports half, may have to be float always
             
-            bool isHalfTexture  = promote && type.textureType == HLSLBaseType_Half && !m_options.treatHalfAsFloat;
+            bool isHalfTexture  = promote && IsHalf(type.formatType) && !m_options.treatHalfAsFloat;
             
             // MSL docs state must be float type, but what about D16f texture?
             if (IsDepthTextureType(baseType))
@@ -2151,6 +2159,10 @@ namespace M4
                     return isHalfTexture ? "depth2d_ms<half>" : "depth2d_ms<float>";
                 */
                 
+                // More types than just half/float for this
+                case HLSLBaseType_RWTexture2D:
+                    return isHalfTexture ? "texture2d<half, access::read_write>" : "texture2d<float, access::read_write>";
+                    
                 case HLSLBaseType_Texture2D:
                     return isHalfTexture ? "texture2d<half>" : "texture2d<float>";
                 case HLSLBaseType_Texture2DArray:

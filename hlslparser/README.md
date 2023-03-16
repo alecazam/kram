@@ -27,22 +27,34 @@ Paths to turn HLSL and SPV
 
 DONE
 * u/int support
+* u/short support, can't interpolate in HLSL
 * SSBO support
 * compute shader support
-* DX11/12 style syntax
-* chop out FX syntax
-* split out sampler / texture
+* HLSL2021 style syntax
+* chop out FX and GLSL support, can use spirv-cross for GLSL
+* split sampler and texture
 * handle depth textures 
 * compile HLSL with DXC to SPV
 * compile MSL with metalc to AIR/metallib
 
 TODO:
-* get tile shader kernels to work, may be MSL and Android SPV specific
+* u/int64_tN support
+* double support - not in MSL, can't interpolate vs/ps must pack to uint
+# RWTexture
+* more than half/float/int literals (f.e. uint)
+* ray-tracing kernels
+* passing variables only by value in HLSL vs. value/ref/ptr in MSL
+* argument buffers and descriptor sets (root tables for DX?)
+* halfio/2/3/4 type for Nvidia/Adreno, halfst2/3/4 for storage
+* specialization and push constants for variants (MSL/SPV only)
+* numgroups designator for DX kernel
+* tile shader kernels - may be MSL and Android SPV specific
+* triangulation shaders (geom, mesh, hull/etc) - platform specific
 * generate reflection data from parse of HLSL
 * handle reflection (spirv-reflect?)
 * handle HLSL vulkan extension constructs, convert these to MSL kernels too
-* variants from preprocess or vulkan specialization constants
-* fix shaders to not structify metal and mod the source names
+* preprocessor for handling platform specifics, and variants
+* fix shaders to not structify metal and mod the source names, turn on written, currently handling globals.  Could require passing elements from main shader.
 * poor syntax highlighting of output .metal file, does Xcode have to compile?
 * no syntax highlighting of .hlsl files in Xcode, but VSCode has HLSL but not MSL
 
@@ -83,14 +95,13 @@ Overview
 
 Dealing with Half
 ---
-HLSL 6.2 includes full half and int support.   So that is the compilation target.  Note table below before adopting half in shaders.  Nvidia/AMD tried to phase out half support on DX10, but iOS re-popularized half usage.  Android and Nvidia have many dragons using half (see below).  Half is only 10-bit mantissa with 5-bit exponent.  
+HLSL2021 6.2 includes full half and int support.   So that is the compilation target.  Note table below before adopting half in shaders.  Nvidia/AMD tried to phase out half support on DX10 era, but iOS re-popularized half usage.  Android and Nvidia have many dragons using half (see below).  Half is only 10-bit mantissa with 5-bit exponent.  Even the Mali table below is only all full on more recent hardware.
 
-Platforms - iOS/PowerVR, Adreno, Mali,   Nvida, AMD, Intel
-
-| Feature        | I | A | M | | N | A | I |
+| Platforms      | iOS/PowerVR, Mali, Adreno | Nvida, AMD, Intel |
+| Feature        | I | M | A | | N | A | I |
 |----------------|---|---|---|-|---|---|---|
-| Half Interp    | y | n | y | | n | y | ? |
-| Half UBO       | y | n | y | | n | y | ? | 
+| Half Interp    | y | y | n | | n | y | ? |
+| Half UBO       | y | y | n | | n | y | ? | 
 | Half Push      | y | y | y | | y | n | ? |
 | Half ALU       | y | y | y | | y | y | ? |
 
@@ -101,12 +112,13 @@ https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_16bit_s
 * StoragePushConstant16
 * StorageInputOutput16
 
-There is also the limitation of half interpolation creating banding, and likely why Adreno/Nvidia do not support StorageInputOutput16.  Mali recommends using half to minimize parameter buffer storage out of the vertex shader, but then declaring float for the same variables in the fragment shader.  This limits sharing input/output structs.
+* There is also the limitation of half interpolation creating banding, and likely why Adreno/Nvidia do not support StorageInputOutput16.  Mali recommends using half to minimize parameter buffer storage out of the vertex shader, but then declaring float for the same variables in the fragment shader.  This limits sharing input/output structs.
 
-macOS on M1 - Rosetta2 lacks f16c cpu support, so translated x64 apps crash.
-  build Apple Silicon
+* Adreno also doesn't support half storage, so this limits SSBO and UBO usage.   
 
-Android missing cpu arm64+f16 support from Redmi Note 8 and other chips.
+* macOS on M1 - Rosetta2 lacks AVX and f16c cpu support, so translated x64 apps crash. Build Apple Silicon to fix this.
+
+* Android missing cpu arm64+f16 support from Redmi Note 8 and other chips.
   vcvt_f32_f16 is still present without this.
   
 
@@ -361,7 +373,7 @@ GLSL/ES (WebGL)
 * https://www.khronos.org/files/webgl20-reference-guide.pdf
 
 WGSL (WebGPU)
-* WebGPU shading language orignally meant as text form of spriv
+* WebGPU shading language originally meant as text form of spriv
 * full compute support
 * now using Dart like syntax completely unlike CG origin of other languages
 * avoids pointers/references

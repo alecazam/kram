@@ -131,6 +131,8 @@ enum HLSLBaseType
     HLSLBaseType_DepthCube,
     // TODO: add more depth types as needed (pair with SamplerComparisonState)
     
+    HLSLBaseType_RWTexture2D,
+    
     // Only 2 sampler types.
     HLSLBaseType_SamplerState,
     HLSLBaseType_SamplerComparisonState,
@@ -338,7 +340,7 @@ struct HLSLType
         baseType    = _baseType;
     }
     HLSLBaseType        baseType = HLSLBaseType_Unknown;
-    HLSLBaseType        textureType = HLSLBaseType_Float;    // Half or Float
+    HLSLBaseType        formatType = HLSLBaseType_Float;    // Half or Float (rename to formatType - applies to templated params like buffer/texture)
     const char*         typeName = NULL;       // For user defined types.
     bool                array = false;
     HLSLExpression*     arraySize = NULL;
@@ -826,9 +828,8 @@ public:
 // Tree transformations:
 extern void PruneTree(HLSLTree* tree, const char* entryName0, const char* entryName1 = NULL);
 extern void SortTree(HLSLTree* tree);
-extern void GroupParameters(HLSLTree* tree);
+//extern void GroupParameters(HLSLTree* tree);
 extern void HideUnusedArguments(HLSLFunction * function);
-extern bool EmulateAlphaTest(HLSLTree* tree, const char* entryName, float alphaRef = 0.5f);
 extern void FlattenExpressions(HLSLTree* tree);
     
 } // M4

@@ -5,6 +5,8 @@
 #include <string.h> // strcmp, strcasecmp
 #include <stdlib.h>	// strtod, strtol
 
+// this is usually just an unordered_map internally
+#include <unordered_set>
 
 namespace M4 {
 
@@ -129,30 +131,71 @@ void Log_ErrorArgList(const char * format, va_list args) {
 
 // Engine/StringPool.cpp
 
-StringPool::StringPool(Allocator * allocator) : stringArray(allocator) {
-}
-StringPool::~StringPool() {
-    for (int i = 0; i < stringArray.GetSize(); i++) {
-        free((void *)stringArray[i]);
-        stringArray[i] = NULL;
+// Taken from Alec's HashHelper.h
+
+// case sensitive fnv1a hash, can pass existing hash to continue a hash
+inline uint32_t HashFnv1a(const char* val, uint32_t hash = 0x811c9dc5) {
+    const uint32_t prime  = 0x01000193; // 16777619 (32-bit)
+    while (*val) {
+        hash = (hash * prime) ^ (uint32_t)*val++;
     }
+    return hash;
 }
 
-const char * StringPool::AddString(const char * string) {
-    for (int i = 0; i < stringArray.GetSize(); i++) {
-        if (String_Equal(stringArray[i], string)) return stringArray[i];
+// this compares string stored as const char*
+struct CompareStrings
+{
+    template <class _Tp>
+    bool operator()(const _Tp& __x, const _Tp& __y) const
+    { return strcmp( __x, __y ) == 0; }
+    
+    template <class _Tp>
+    size_t operator()(const _Tp& __x) const {
+        // assumes 32-bit hash to int64 conversion here
+        return (size_t)HashFnv1a(__x);
     }
+};
+
+using StringPoolSet = std::unordered_set<const char*, CompareStrings, CompareStrings>;
+
+#define CastImpl(imp) (StringPoolSet*)imp
+
+StringPool::StringPool(Allocator * allocator) {
+    // allocator not used
+    
+    m_impl = new StringPoolSet();
+}
+StringPool::~StringPool() {
+    auto* impl = CastImpl(m_impl);
+    
+    // TODO: fix
+    // delete the strings
+    for (auto& it : *impl) {
+        const char* text = it;
+        free((char*)text);
+    }
+    
+    delete impl;
+}
+
+const char * StringPool::AddString(const char * text) {
+    auto* impl = CastImpl(m_impl);
+    auto it = impl->find(text);
+    if (it != impl->end())
+        return *it;
+    
+    // _strdup doesn't go through allocator either
 #if _MSC_VER
-    const char * dup = _strdup(string);
+    const char * dup = _strdup(text);
 #else
-    const char * dup = strdup(string);
+    const char * dup = strdup(text);
 #endif
-    stringArray.PushBack(dup);
+    
+    impl->insert(dup);
     return dup;
 }
 
-// @@ From mprintf.cpp
-static char* mprintf_valist(const char* fmt, va_list args) {
+const char* StringPool::PrintFormattedVaList(const char* fmt, va_list args) {
     char* res = nullptr;
     
     va_list tmp;
@@ -164,32 +207,39 @@ static char* mprintf_valist(const char* fmt, va_list args) {
     int len = vsnprintf(nullptr, 0, fmt, tmp);
     if (len >= 0)
     {
-        res = new char[len+1];
+        res = (char*)malloc(len+1);
         vsnprintf(res, len+1, fmt, tmp);
     }
     va_end(tmp);
 
+    // caller responsible for freeing mem
     return res;
 }
 
 const char * StringPool::AddStringFormatList(const char * format, va_list args) {
+    // don't format if no tokens
     va_list tmp;
     va_copy(tmp, args);
-    const char * string = mprintf_valist(format, tmp);
+    const char * text = PrintFormattedVaList(format, tmp);
     va_end(tmp);
 
-    for (int i = 0; i < stringArray.GetSize(); i++) {
-        if (String_Equal(stringArray[i], string)) {
-            delete [] string;
-            return stringArray[i];
-        }
+    auto* impl = CastImpl(m_impl);
+    
+    // add it if not found
+    auto it = impl->find(text);
+    if (it == impl->end())
+    {
+        impl->insert(text);
+        return text;
     }
-
-    stringArray.PushBack(string);
-    return string;
+    
+    // allocated inside PrintFormattedVaList
+    free((char*)text);
+    return *it;
 }
 
 const char * StringPool::AddStringFormat(const char * format, ...) {
+    // TODO: don't format if no tokens
     va_list args;
     va_start(args, format);
     const char * string = AddStringFormatList(format, args);
@@ -198,11 +248,9 @@ const char * StringPool::AddStringFormat(const char * format, ...) {
     return string;
 }
 
-bool StringPool::GetContainsString(const char * string) const {
-    for (int i = 0; i < stringArray.GetSize(); i++) {
-        if (String_Equal(stringArray[i], string)) return true;
-    }
-    return false;
+bool StringPool::GetContainsString(const char * text) const {
+    const auto* impl = CastImpl(m_impl);
+    return impl->find(text) != impl->end();
 }
 
 } // M4 namespace

@@ -4,7 +4,6 @@
 #include "HLSLGenerator.h"
 #include "MSLGenerator.h"
 
-#include <vector>
 #include <stdio.h>
 #include <sys/stat.h>
 
@@ -250,10 +249,10 @@ int main( int argc, char* argv[] )
     int status = 0;
     
     // build a list of entryPoints
-    vector<const char*> entryPoints;
+    Array<const char*> entryPoints(&allocator);
     if (entryName != nullptr)
     {
-        entryPoints.push_back(entryName);
+        entryPoints.PushBack(entryName);
     }
     else
     {
@@ -268,15 +267,15 @@ int main( int argc, char* argv[] )
                 
                 if (endsWith(name, "VS"))
                 {
-                    entryPoints.push_back(name);
+                    entryPoints.PushBack(name);
                 }
                 else if (endsWith(name, "PS"))
                 {
-                    entryPoints.push_back(name);
+                    entryPoints.PushBack(name);
                 }
                 else if (endsWith(name, "CS"))
                 {
-                    entryPoints.push_back(name);
+                    entryPoints.PushBack(name);
                 }
             }
 
@@ -286,8 +285,9 @@ int main( int argc, char* argv[] )
     
     string output;
     
-    for (auto& entryPoint: entryPoints)
+    for (uint32_t i = 0; i < entryPoints.GetSize(); ++i)
     {
+        const char* entryPoint = entryPoints[i];
         entryName = entryPoint;
         if (endsWith(entryPoint, "VS"))
             target = HLSLTarget_VertexShader;

@@ -72,6 +72,8 @@ enum HLSLToken
     HLSLToken_DepthCube,
     // TODO: other depth types
     
+    HLSLToken_RWTexture2D,
+    
     HLSLToken_SamplerState,
     HLSLToken_SamplerComparisonState,
     

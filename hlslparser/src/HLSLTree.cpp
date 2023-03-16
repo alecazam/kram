@@ -1300,7 +1300,7 @@ void AddSingleStatement(HLSLRoot * root, HLSLStatement * before, HLSLStatement *
 }
 
 
-
+/* *X file releated
 // @@ This is very game-specific. Should be moved to pipeline_parser or somewhere else.
 void GroupParameters(HLSLTree * tree)
 {
@@ -1409,13 +1409,13 @@ void GroupParameters(HLSLTree * tree)
                 }
             }
         }
-        /*else
-        {
-            if (statementBeforeBuffers == NULL) {
-                // This is the location where we will insert our buffers.
-                statementBeforeBuffers = previousStatement;
-            }
-        }*/
+        //else
+        //{
+        //if (statementBeforeBuffers == NULL) {
+        //        This is the location where we will insert our buffers.
+        //        statementBeforeBuffers = previousStatement;
+        //    }
+        //}
 
         if (statement->nextStatement == nextStatement) {
             previousStatement = statement;
@@ -1486,7 +1486,7 @@ void GroupParameters(HLSLTree * tree)
         AddSingleStatement(root, statementBeforeBuffers, perPassBuffer);
     }
 }
-
+*/
 
 class FindArgumentVisitor : public HLSLTreeVisitor
 {
@@ -1542,83 +1542,6 @@ void HideUnusedArguments(HLSLFunction * function)
 
         arg = arg->nextArgument;
     }
-}
-
-bool EmulateAlphaTest(HLSLTree* tree, const char* entryName, float alphaRef/*=0.5*/)
-{
-    // Find all return statements of this entry point.
-    HLSLFunction* entry = tree->FindFunction(entryName);
-    if (entry != NULL)
-    {
-        HLSLStatement ** ptr = &entry->statement;
-        HLSLStatement * statement = entry->statement;
-        while (statement != NULL)
-        {
-            if (statement->nodeType == HLSLNodeType_ReturnStatement)
-            {
-                HLSLReturnStatement * returnStatement = (HLSLReturnStatement *)statement;
-                HLSLBaseType returnType = returnStatement->expression->expressionType.baseType;
-                
-                // Build statement: "if (%s.a < 0.5) discard;"
-
-                HLSLDiscardStatement * discard = tree->AddNode<HLSLDiscardStatement>(statement->fileName, statement->line);
-                
-                HLSLExpression * alpha = NULL;
-                if (returnType == HLSLBaseType_Float4 || returnType == HLSLBaseType_Half4)
-                {
-                    // @@ If return expression is a constructor, grab 4th argument.
-                    // That's not as easy, since we support 'float4(float3, float)' or 'float4(float, float3)', extracting
-                    // the latter is not that easy.
-                    /*if (returnStatement->expression->nodeType == HLSLNodeType_ConstructorExpression) {
-                        HLSLConstructorExpression * constructor = (HLSLConstructorExpression *)returnStatement->expression;
-                        //constructor->
-                    }
-                    */
-                    
-                    if (alpha == NULL) {
-                        HLSLMemberAccess * access = tree->AddNode<HLSLMemberAccess>(statement->fileName, statement->line);
-                        access->expressionType = HLSLType(HLSLBaseType_Float);
-                        access->object = returnStatement->expression;     // @@ Is reference OK? Or should we clone expression?
-                        access->field = tree->AddString("a");
-                        access->swizzle = true;
-                        
-                        alpha = access;
-                    }
-                }
-                else if (returnType == HLSLBaseType_Float || returnType == HLSLBaseType_Half)
-                {
-                    alpha = returnStatement->expression;     // @@ Is reference OK? Or should we clone expression?
-                }
-                else
-                {
-                    return false;
-                }
-                
-                HLSLLiteralExpression * threshold = tree->AddNode<HLSLLiteralExpression>(statement->fileName, statement->line);
-                threshold->expressionType = HLSLType(HLSLBaseType_Float);
-                threshold->fValue = alphaRef;
-                threshold->type = HLSLBaseType_Float;
-                
-                HLSLBinaryExpression * condition = tree->AddNode<HLSLBinaryExpression>(statement->fileName, statement->line);
-                condition->expressionType = HLSLType(HLSLBaseType_Bool);
-                condition->binaryOp = HLSLBinaryOp_Less;
-                condition->expression1 = alpha;
-                condition->expression2 = threshold;
-
-                // Insert statement.
-                HLSLIfStatement * st = tree->AddNode<HLSLIfStatement>(statement->fileName, statement->line);
-                st->condition = condition;
-                st->statement = discard;
-                st->nextStatement = statement;
-                *ptr = st;
-            }
-        
-            ptr = &statement->nextStatement;
-            statement = statement->nextStatement;
-        }
-    }
-
-    return true;
 }
 
 bool NeedsFlattening(HLSLExpression * expr, int level = 0) {
