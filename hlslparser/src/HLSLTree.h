@@ -161,7 +161,7 @@ enum HLSLBaseType
     
     // counts
     HLSLBaseType_FirstNumeric = HLSLBaseType_Float,
-    HLSLBaseType_LastNumeric = HLSLBaseType_Ushort4,
+    HLSLBaseType_LastNumeric = HLSLBaseType_Ulong4,
     
     HLSLBaseType_FirstInteger = HLSLBaseType_Bool,
     HLSLBaseType_LastInteger = HLSLBaseType_LastNumeric,

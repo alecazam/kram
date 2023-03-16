@@ -154,6 +154,7 @@ bool IsNumericTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType)
            baseTypeDescriptions[rhsType].numericType;
 }
 
+// TODO: with so many types, should just request the numeric type
 bool IsHalf(HLSLBaseType type)
 {
     return baseTypeDescriptions[type].numericType == NumericType_Half;
@@ -163,6 +164,14 @@ bool IsFloat(HLSLBaseType type)
 {
     return baseTypeDescriptions[type].numericType == NumericType_Float;
 }
+
+bool IsDouble(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Double;
+}
+
+// TODO: IsUint, IsInt, ... or just get type.
+
 
 bool IsSamplerType(const HLSLType & type)
 {
@@ -266,8 +275,6 @@ HLSLBaseType HalfToFloatBaseType(HLSLBaseType type)
         case HLSLBaseType_Half4: return HLSLBaseType_Float4;
         case HLSLBaseType_Half2x2: return HLSLBaseType_Float2x2;
         case HLSLBaseType_Half3x3: return HLSLBaseType_Float3x3;
-        // case HLSLBaseType_Half4x2: return HLSLBaseType_Float4x2;
-        // case HLSLBaseType_Half4x3: return HLSLBaseType_Float4x3;
         case HLSLBaseType_Half4x4: return HLSLBaseType_Float4x4;
             
         default:
@@ -277,6 +284,27 @@ HLSLBaseType HalfToFloatBaseType(HLSLBaseType type)
     
     return type;
 }
+
+HLSLBaseType DoubleToFloatBaseType(HLSLBaseType type)
+{
+    switch(type)
+    {
+        case HLSLBaseType_Double: return HLSLBaseType_Float;
+        case HLSLBaseType_Double2: return HLSLBaseType_Float2;
+        case HLSLBaseType_Double3: return HLSLBaseType_Float3;
+        case HLSLBaseType_Double4: return HLSLBaseType_Float4;
+        case HLSLBaseType_Double2x2: return HLSLBaseType_Float2x2;
+        case HLSLBaseType_Double3x3: return HLSLBaseType_Float3x3;
+        case HLSLBaseType_Double4x4: return HLSLBaseType_Float4x4;
+            
+        default:
+           // do nothing;
+            break;
+    }
+    
+    return type;
+}
+
 
 static HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSLBaseType t2);
 
@@ -971,6 +999,7 @@ void RegisterMatrix(HLSLBaseType type, uint32_t typeOffset, NumericType numericT
     
     BaseTypeDescription& desc = baseTypeDescriptions[baseType];
     desc.typeName = name;
+    desc.typeNameMetal = name;
     
     desc.baseType = baseType;
     desc.coreType = CoreType_Matrix;
@@ -1228,7 +1257,7 @@ HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSL
 // Priority of the ? : operator.
 const int _conditionalOpPriority = 1;
 
-const char* GetTypeName(const HLSLType& type)
+const char* GetTypeNameHLSL(const HLSLType& type)
 {
     if (type.baseType == HLSLBaseType_UserDefined)
     {
@@ -1328,6 +1357,8 @@ static int GetTypeCastRank(HLSLTree * tree, const HLSLType& srcType, const HLSLT
 
     if (srcType.baseType == dstType.baseType)
     {
+        // This only works if textures are half or float, but not hwne
+        // there are more varied texture that can be cast.
         if (IsTextureType(srcType.baseType))
         {
             return srcType.formatType == dstType.formatType ? 0 : -1;
@@ -2411,8 +2442,8 @@ bool HLSLParser::CheckTypeCast(const HLSLType& srcType, const HLSLType& dstType)
 {
     if (GetTypeCastRank(m_tree, srcType, dstType) == -1)
     {
-        const char* srcTypeName = GetTypeName(srcType);
-        const char* dstTypeName = GetTypeName(dstType);
+        const char* srcTypeName = GetTypeNameHLSL(srcType);
+        const char* dstTypeName = GetTypeNameHLSL(dstType);
         m_tokenizer.Error("Cannot implicitly convert from '%s' to '%s'", srcTypeName, dstTypeName);
         return false;
     }
@@ -2444,8 +2475,8 @@ bool HLSLParser::ParseExpression(HLSLExpression*& expression)
 
         if (!CheckTypeCast(expression2->expressionType, expression->expressionType))
         {
-            const char* srcTypeName = GetTypeName(expression2->expressionType);
-            const char* dstTypeName = GetTypeName(expression->expressionType);
+            const char* srcTypeName = GetTypeNameHLSL(expression2->expressionType);
+            const char* dstTypeName = GetTypeNameHLSL(expression->expressionType);
             m_tokenizer.Error("Cannot implicitly convert from '%s' to '%s'", srcTypeName, dstTypeName);
             return false;
         }
@@ -2585,8 +2616,8 @@ bool HLSLParser::ParseBinaryExpression(int priority, HLSLExpression*& expression
             binaryExpression->expression2 = expression2;
             if (!GetBinaryOpResultType( binaryOp, expression->expressionType, expression2->expressionType, binaryExpression->expressionType ))
             {
-                const char* typeName1 = GetTypeName( binaryExpression->expression1->expressionType );
-                const char* typeName2 = GetTypeName( binaryExpression->expression2->expressionType );
+                const char* typeName1 = GetTypeNameHLSL( binaryExpression->expression1->expressionType );
+                const char* typeName2 = GetTypeNameHLSL( binaryExpression->expression2->expressionType );
                 m_tokenizer.Error("binary '%s' : no global operator found which takes types '%s' and '%s' (or there is no acceptable conversion)",
                     GetBinaryOpName(binaryOp), typeName1, typeName2);
 
@@ -2614,8 +2645,8 @@ bool HLSLParser::ParseBinaryExpression(int priority, HLSLExpression*& expression
             // Make sure both cases have compatible types.
             if (GetTypeCastRank(m_tree, expression1->expressionType, expression2->expressionType) == -1)
             {
-                const char* srcTypeName = GetTypeName(expression2->expressionType);
-                const char* dstTypeName = GetTypeName(expression1->expressionType);
+                const char* srcTypeName = GetTypeNameHLSL(expression2->expressionType);
+                const char* dstTypeName = GetTypeNameHLSL(expression1->expressionType);
                 m_tokenizer.Error("':' no possible conversion from from '%s' to '%s'", srcTypeName, dstTypeName);
                 return false;
             }
@@ -2682,7 +2713,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
             if (unaryExpression->expression->expressionType.baseType < HLSLBaseType_FirstInteger || 
                 unaryExpression->expression->expressionType.baseType > HLSLBaseType_LastInteger)
             {
-                const char * typeName = GetTypeName(unaryExpression->expression->expressionType);
+                const char * typeName = GetTypeNameHLSL(unaryExpression->expression->expressionType);
                 m_tokenizer.Error("unary '~' : no global operator found which takes type '%s' (or there is no acceptable conversion)", typeName);
                 return false;
             }
@@ -3017,11 +3048,6 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 return false;
             }
             
-//            if (String_Equal(function->name, "mul"))
-//            {
-//                int bp = 0;
-//                bp = bp;
-//            }
             functionCall->function = function;
             functionCall->expressionType = function->returnType;
             expression = functionCall;
@@ -3592,10 +3618,14 @@ bool HLSLParser::ParseAttributeList(HLSLAttribute*& firstAttribute)
 
         HLSLAttribute * attribute = m_tree->AddNode<HLSLAttribute>(fileName, line);
         
-        if (String_Equal(identifier, "unroll")) attribute->attributeType = HLSLAttributeType_Unroll;
-        else if (String_Equal(identifier, "flatten")) attribute->attributeType = HLSLAttributeType_Flatten;
-        else if (String_Equal(identifier, "branch")) attribute->attributeType = HLSLAttributeType_Branch;
-        else if (String_Equal(identifier, "nofastmath")) attribute->attributeType = HLSLAttributeType_NoFastMath;
+        if (String_Equal(identifier, "unroll"))
+            attribute->attributeType = HLSLAttributeType_Unroll;
+        else if (String_Equal(identifier, "flatten"))
+            attribute->attributeType = HLSLAttributeType_Flatten;
+        else if (String_Equal(identifier, "branch"))
+            attribute->attributeType = HLSLAttributeType_Branch;
+        else if (String_Equal(identifier, "nofastmath"))
+            attribute->attributeType = HLSLAttributeType_NoFastMath;
         
         // @@ parse arguments, () not required if attribute constructor has no arguments.
 
@@ -3967,6 +3997,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         type.baseType = HLSLBaseType_RWTexture2D;
         break;
             
+    // samplers
     case HLSLToken_SamplerState:
         type.baseType = HLSLBaseType_SamplerState;
         break;
@@ -3974,12 +4005,14 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         type.baseType = HLSLBaseType_SamplerComparisonState;
         break;
             
+    // older constants
     case HLSLToken_CBuffer:
     case HLSLToken_TBuffer:
         // might make these BufferGlobals?
         type.baseType = HLSLBaseType_Buffer;
         break;
             
+    // SSBO
     case HLSLToken_StructuredBuffer:
     case HLSLToken_RWStructuredBuffer:
     case HLSLToken_ByteAddressBuffer:
@@ -4000,6 +4033,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
                 int token = m_tokenizer.GetToken();
                 
                 // TODO: need more format types
+                // TODO: double, and other types
                 if (token >= HLSLToken_Float && token <= HLSLToken_Float4)
                 {
                     // TODO: code only tests if texture formatType exactly matches
@@ -4016,7 +4050,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
                 }
                 else
                 {
-                    m_tokenizer.Error("Expected half or float.");
+                    m_tokenizer.Error("Expected half or float format type on texture.");
                     return false;
                 }
                 m_tokenizer.Next();
@@ -4286,15 +4320,10 @@ const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functi
         const HLSLFunction* function = &_intrinsic[i].function;
         
         // TODO: this is doing another O(n) search of intrinsic names
+        // and there are a lot of them with all the input/output variants
         if (String_Equal(function->name, name))
         {
             nameMatches = true;
-
-            if (String_Equal(name, "SampleH"))
-            {
-                int bp = 0;
-                bp = bp;
-            }
             
             CompareFunctionsResult result = CompareFunctions( m_tree, functionCall, function, matchedFunction );
             if (result == Function1Better)

@@ -330,6 +330,7 @@ void HLSLTokenizer::Next()
     const int numReservedWords = sizeof(_reservedWords) / sizeof(const char*);
     for (int i = 0; i < numReservedWords; ++i)
     {
+        // TODO: remove O(N) search of strings, need unordered_map
         if (String_Equal(_reservedWords[i], m_identifier))
         {
             m_token = 256 + i;

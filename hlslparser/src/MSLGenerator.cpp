@@ -2116,24 +2116,21 @@ namespace M4
         // number
         bool isHalfNumerics = promote && !m_options.treatHalfAsFloat;
         auto baseType = type.baseType;
+        
+        // Note: these conversions should really be done during parsing
+        // so that casting gets applied.
         if (!isHalfNumerics)
             baseType = HalfToFloatBaseType(baseType);
         
-        const char* name = GetNumericTypeName(baseType);
-        if (name)
-            return name;
+        // MSL doesn't support double
+        if (IsDouble(baseType))
+            baseType = DoubleToFloatBaseType(baseType);
         
-        // struct
-        if (baseType == HLSLBaseType_UserDefined)
-            return type.typeName;
+        HLSLType remappedType(baseType);
+        remappedType.typeName = type.typeName; // in case it's a struct
         
-        // Functions can return void, especially with compute
-        if (baseType == HLSLBaseType_Void)
-            return "void";
-        
-        // sampler
-        if (IsSamplerType(baseType))
-            return "sampler";
+        if (IsSamplerType(baseType) || IsNumericType(baseType) || baseType == HLSLBaseType_Void || baseType == HLSLBaseType_UserDefined)
+            return GetTypeNameMetal(remappedType);
         
         // texture
         if (IsTextureType(baseType))
@@ -2146,6 +2143,14 @@ namespace M4
             if (IsDepthTextureType(baseType))
                 isHalfTexture = false;
             
+            // TODO: could use GetTypeNameMetal() but it doesn't include <> portion
+            // so would have to pool and then return the result.
+            
+            // This would allow more formats
+            // const char* textureTypeName = GetTypeNameMetal(baseType);
+            // const char* formatTypeName = GetFormatTypeName(baseType, formatType);
+            // snprintf(buf, sizeof(buf), "%s<%s>", textureTypeName, formatTypeName);
+            
             switch (baseType)
             {
                 case HLSLBaseType_Depth2D:
@@ -2154,7 +2159,8 @@ namespace M4
                     return isHalfTexture ? "depth2d_array<half>" : "depth2d_array<float>";
                 case HLSLBaseType_DepthCube:
                     return isHalfTexture ? "depthcube<half>" : "depthcube<float>";
-                /* TODO: add, also depth_ms_array, but no HLSL equivalent
+                    
+                /* TODO: also depth_ms_array, but HLSL6.6 equivalent
                 case HLSLBaseType_Depth2DMS:
                     return isHalfTexture ? "depth2d_ms<half>" : "depth2d_ms<float>";
                 */

@@ -31,17 +31,6 @@ struct LightState
     float4x4 viewProj;
 };
 
-/*
-cbuffer SceneConstantBuffer : register(b0)
-{
-    float4x4 model;
-    float4x4 viewProj;
-    float4 ambientColor;
-    bool sampleShadowMap;
-    LightState lights[NUM_LIGHTS];
-};
-*/
-
 struct SceneConstantBuffer
 {
     float4x4 model;

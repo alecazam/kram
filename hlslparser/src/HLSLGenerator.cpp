@@ -19,54 +19,11 @@ namespace M4
 const char* HLSLGenerator::GetTypeName(const HLSLType& type)
 {
     HLSLBaseType baseType = type.baseType;
-    
-    if (baseType == HLSLBaseType_UserDefined)
-        return type.typeName;
-    
-    // TODO: these can all just use a table entry, have another slot for MSL
-    const char* name = GetNumericTypeName(baseType);
-    if (name)
-        return name;
-    
+
+    // DONE: these can all just use a table entry, have another slot for MSL
     // Functions can return void, especially with compute
-    if (baseType == HLSLBaseType_Void)
-        return "void";
-    
-    // TODO: pull names from table, they should be same
-    if (IsSamplerType(baseType))
-    {
-        switch (baseType)
-        {
-            // samplers
-            case HLSLBaseType_SamplerState:              return "SamplerState";
-                
-            // can only pair this with depth texture to match Metal
-            case HLSLBaseType_SamplerComparisonState:    return "SamplerComparisonState";
-            default: break;
-        }
-    }
-    else if (IsTextureType(baseType))
-    {
-        switch (baseType)
-        {
-            // depth textures just use Texture2D typedef
-            // TODO: add ms, others
-            case HLSLBaseType_Texture2D:         return "Texture2D";
-            case HLSLBaseType_Texture2DArray:    return "Texture2DArray";
-            case HLSLBaseType_Texture3D:         return "Texture3D";
-            case HLSLBaseType_TextureCube:       return "TextureCube";
-            case HLSLBaseType_TextureCubeArray:  return "TextureCubeArray";
-            case HLSLBaseType_Texture2DMS:       return "Texture2DMS";
-               
-            case HLSLBaseType_Depth2D:           return "Depth2D";
-            case HLSLBaseType_Depth2DArray:      return "Depth2DArray";
-            case HLSLBaseType_DepthCube:         return "DepthCube";
-           
-            case HLSLBaseType_RWTexture2D:       return "RWTexture2D";
-            
-            default: break;
-        }
-    }
+    if (IsTextureType(baseType) || IsSamplerType(baseType) || IsNumericType(baseType) || baseType == HLSLBaseType_Void || baseType == HLSLBaseType_UserDefined)
+        return GetTypeNameHLSL(type);
     
     Error("Unknown type");
     return NULL;

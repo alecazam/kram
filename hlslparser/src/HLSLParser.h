@@ -167,6 +167,7 @@ enum NumericType
 
 bool IsHalf(HLSLBaseType type);
 bool IsFloat(HLSLBaseType type);
+bool IsDouble(HLSLBaseType type);
 
 bool IsSamplerType(HLSLBaseType baseType);
 bool IsMatrixType(HLSLBaseType baseType);
@@ -190,10 +191,11 @@ bool IsTextureType(const HLSLType& type);
 
 HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type);
 HLSLBaseType HalfToFloatBaseType(HLSLBaseType type);
+HLSLBaseType DoubleToFloatBaseType(HLSLBaseType type);
 
 const char* GetNumericTypeName(HLSLBaseType type);
 
-const char* GetTypeName(const HLSLType& type);
+const char* GetTypeNameHLSL(const HLSLType& type);
 const char* GetTypeNameMetal(const HLSLType& type);
 
 }

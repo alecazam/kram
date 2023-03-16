@@ -39,30 +39,44 @@
 
 // no using, so do typedef
 // this is ugly syntax
+//typedef int16_t  short;
 typedef int16_t2 short2;
 typedef int16_t3 short3;
 typedef int16_t4 short4;
 
+typedef uint16_t  ushort;
 typedef uint16_t2 ushort2;
 typedef uint16_t3 ushort3;
 typedef uint16_t4 ushort4;
 
-// TODO: double, u/char
-// TODO: add double, but won't work on mobile.
+//typedef int64_t  long;
+typedef int64_t2 long2;
+typedef int64_t3 long3;
+typedef int64_t4 long4;
+
+typedef uint64_t  ulong;
+typedef uint64_t2 ulong2;
+typedef uint64_t3 ulong3;
+typedef uint64_t4 ulong4;
+
+//typedef float64_t double;
+typedef float64_t2 double2;
+typedef float64_t3 double3;
+typedef float64_t4 double4;
+
+typedef float64_t2x2 double2x2;
+typedef float64_t3x3 double3x3;
+typedef float64_t4x4 double4x4;
+
+
+// Note: no u/char
+// Note: add double, but won't work on mobile (Android/MSL).
 //  also Intel removed fp64 GPU support.  Often runs 1/64th speed.
 //  But may be needed for ray-tracing large worlds.  Metal doesn't have double.
-//
-//typedef int64_t2 long2;
-//typedef int64_t3 long3;
-//typedef int64_t4 long4;
-//
-//typedef uint64_t2 ulong2;
-//typedef uint64_t3 ulong3;
-//typedef uint64_t4 ulong4;
-//
-//typedef float64_t2 double2;
-//typedef float64_t3 double3;
-//typedef float64_t4 double4;
+
+// TODO: add Atomics, more atomic u/long and float in SM 6.6
+//  otherwise it's most atomic_u/int that is portable.
+// Apple Metal 3 added atomic_float.
 
 // 6.6 is cutting edge, want to target 6.2 for now
 #define SM66 1

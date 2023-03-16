@@ -8,30 +8,31 @@
 //
 // https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst
 
-// setup specialization
-// HLSL: at beginning
+// setup variants
+// HLSL: specialization constants marked at beginning
 // [[vk::constant_id(0)]] const int   specConstInt  = 1;
 // [[vk::constant_id(1)]] const bool  specConstBool  = true;
 //
-// MSL: at end
+// MSL: function constants marked at end
 // constant bool a [[function_constant(0)]];
 // constant int  a [[function_constant(1)]]; // 0.. 64K-1
 
+// This is for tile shaders
 // subpass input, and SubpassLoad() calls
 // [[vk::input_attachment_index(i)]] SubpassInput input;
 // class SubpassInput<T> { T SubpassLoad(); };
 // class SubpassInputMS<T> { T SubpassLoad(int sampleIndex); };
 
-// push constants
+// push constants (DONE)
 // [[vk::push_constant]]
 
 // descriptors and arg buffers
 // [[vk::binding(X[, Y])]] and [[vk::counter_binding(X)]]
 
+// tagging the format of buffers/textures, since HLSL can't represent
 // [[vk::image_format("rgba8")]]
 // RWBuffer<float4> Buf;
-
-
+//
 // [[vk::image_format("rg16f")]]
 // RWTexture2D<float2> Tex;
 
