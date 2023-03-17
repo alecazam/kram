@@ -56,6 +56,8 @@ public:
 
 // Engine/String.h
 
+
+
 int String_Printf(char * buffer, int size, const char * format, ...) M4_PRINTF_ATTR(3, 4);
 int String_PrintfArgList(char * buffer, int size, const char * format, va_list args);
 int String_FormatFloat(char * buffer, int size, float value);
@@ -65,6 +67,32 @@ double String_ToDouble(const char * str, char ** end);
 int String_ToInteger(const char * str, char ** end);
 
 void String_StripTrailingFloatZeroes(char* buffer);
+
+// Hash and Compare are taken out of kram
+// case sensitive fnv1a hash, can pass existing hash to continue a hash
+inline uint32_t HashFnv1a(const char* val, uint32_t hash = 0x811c9dc5)
+{
+    const uint32_t prime  = 0x01000193; // 16777619 (32-bit)
+    while (*val)
+    {
+        hash = (hash * prime) ^ (uint32_t)*val++;
+    }
+    return hash;
+}
+
+// this compares string stored as const char*
+struct CompareAndHandStrings
+{
+    template <class _Tp>
+    bool operator()(const _Tp& __x, const _Tp& __y) const
+    { return String_Equal( __x, __y ) == 0; }
+    
+    template <class _Tp>
+    size_t operator()(const _Tp& __x) const {
+        // assumes 32-bit hash to int64 conversion here
+        return (size_t)HashFnv1a(__x);
+    }
+};
 
 // Engine/Log.h
 

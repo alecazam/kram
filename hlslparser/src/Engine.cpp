@@ -133,30 +133,8 @@ void Log_ErrorArgList(const char * format, va_list args) {
 
 // Taken from Alec's HashHelper.h
 
-// case sensitive fnv1a hash, can pass existing hash to continue a hash
-inline uint32_t HashFnv1a(const char* val, uint32_t hash = 0x811c9dc5) {
-    const uint32_t prime  = 0x01000193; // 16777619 (32-bit)
-    while (*val) {
-        hash = (hash * prime) ^ (uint32_t)*val++;
-    }
-    return hash;
-}
 
-// this compares string stored as const char*
-struct CompareStrings
-{
-    template <class _Tp>
-    bool operator()(const _Tp& __x, const _Tp& __y) const
-    { return strcmp( __x, __y ) == 0; }
-    
-    template <class _Tp>
-    size_t operator()(const _Tp& __x) const {
-        // assumes 32-bit hash to int64 conversion here
-        return (size_t)HashFnv1a(__x);
-    }
-};
-
-using StringPoolSet = std::unordered_set<const char*, CompareStrings, CompareStrings>;
+using StringPoolSet = std::unordered_set<const char*, CompareAndHandStrings, CompareAndHandStrings>;
 
 #define CastImpl(imp) (StringPoolSet*)imp
 

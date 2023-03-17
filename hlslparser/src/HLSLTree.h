@@ -786,6 +786,7 @@ private:
 class HLSLTreeVisitor
 {
 public:
+    virtual ~HLSLTreeVisitor() {}
     virtual void VisitType(HLSLType & type);
 
     virtual void VisitRoot(HLSLRoot * node);

@@ -436,6 +436,8 @@ bool HLSLTree::NeedsFunction(const char* name)
         const char* name;
         bool result;
 
+        virtual ~NeedsFunctionVisitor() {}
+        
         virtual void VisitTopLevelStatement(HLSLStatement * node)
         {
             if (!node->hidden)
@@ -1020,6 +1022,8 @@ void HLSLTreeVisitor::VisitParameters(HLSLRoot * root)
 class ResetHiddenFlagVisitor : public HLSLTreeVisitor
 {
 public:
+    virtual ~ResetHiddenFlagVisitor() {}
+    
     virtual void VisitTopLevelStatement(HLSLStatement * statement) override
     {
         statement->hidden = true;
@@ -1050,9 +1054,12 @@ public:
 class MarkVisibleStatementsVisitor : public HLSLTreeVisitor
 {
 public:
+    
     HLSLTree * tree;
     MarkVisibleStatementsVisitor(HLSLTree * tree) : tree(tree) {}
 
+    virtual ~MarkVisibleStatementsVisitor() {}
+    
     virtual void VisitComment(HLSLComment * node) override
     {
         node->hidden = false;
@@ -1494,16 +1501,18 @@ public:
     bool found;
     const char * name;
 
+    virtual ~FindArgumentVisitor() {}
+    
 	FindArgumentVisitor()
 	{
 		found = false;
 		name  = NULL;
 	}
 
-    bool FindArgument(const char * name, HLSLFunction * function)
+    bool FindArgument(const char * _name, HLSLFunction * function)
     {
-        this->found = false;
-        this->name = name;
+        found = false;
+        name = _name;
         VisitStatements(function->statement);
         return found;
     }
@@ -1630,6 +1639,7 @@ struct StatementList {
             statement_pointer = NULL;
             current_function = NULL;
         }
+        virtual ~ExpressionFlattener() {}
         
         void FlattenExpressions(HLSLTree * tree)
         {
