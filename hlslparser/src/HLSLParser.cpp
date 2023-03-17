@@ -13,9 +13,13 @@
 
 #include "HLSLTree.h"
 
-#include <algorithm>
 #include <ctype.h>
 #include <string.h>
+
+// stl
+#include <algorithm>
+#include <vector>
+#include <unordered_map>
 
 namespace M4
 {
@@ -329,95 +333,125 @@ HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type)
 /** This structure stores a HLSLFunction-like declaration for an intrinsic function */
 struct Intrinsic
 {
-    explicit Intrinsic(const char* name, HLSLBaseType returnType)
+    explicit Intrinsic(const char* name, uint32_t numArgs)
+    {
+        function.name         = name;
+        function.numArguments = numArgs;
+        
+        if (numArgs == 0) return;
+        
+        for (uint32_t i = 0; i < numArgs; ++i)
+        {
+            argument[i].type.flags = HLSLTypeFlag_Const;
+        }
+    }
+    
+    void ChainArgumentPointers()
+    {
+        function.argument = argument + 0;
+        
+        uint32_t numArgs = function.numArguments;
+        // This chain pf pointers won't surive copy
+        for (uint32_t i = 0; i < numArgs; ++i)
+        {
+            if (i < numArgs - 1)
+                argument[i].nextArgument = argument + i + 1;
+        }
+    }
+    
+    void SetArgumentTypes(HLSLBaseType returnType, HLSLBaseType args[4])
+    {
+        function.returnType.baseType = returnType;
+        for (uint32_t i = 0; i < function.numArguments; ++i)
+        {
+            ASSERT(args[i] != HLSLBaseType_Unknown);
+            argument[i].type.baseType = args[i];
+        }
+    }
+    
+    void ArgsToArray(HLSLBaseType args[4], uint32_t& numArgs, HLSLBaseType arg1, HLSLBaseType arg2, HLSLBaseType arg3, HLSLBaseType arg4)
+    {
+        numArgs = 0;
+        if (arg1 == HLSLBaseType_Unknown) return;
+        args[numArgs++] = arg1;
+        if (arg2 == HLSLBaseType_Unknown) return;
+        args[numArgs++] = arg2;
+        if (arg3 == HLSLBaseType_Unknown) return;
+        args[numArgs++] = arg3;
+        if (arg4 == HLSLBaseType_Unknown) return;
+        args[numArgs++] = arg4;
+    }
+    
+    explicit Intrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType arg1 = HLSLBaseType_Unknown, HLSLBaseType arg2 = HLSLBaseType_Unknown, HLSLBaseType arg3 = HLSLBaseType_Unknown, HLSLBaseType arg4 = HLSLBaseType_Unknown)
     {
         function.name                   = name;
-        function.returnType.baseType    = returnType;
-        function.numArguments           = 0;
+        
+        HLSLBaseType argumentTypes[4];
+        uint32_t numArgs = 0;
+        ArgsToArray(argumentTypes, numArgs, arg1, arg2, arg3, arg4);
+        
+        *this = Intrinsic(name, numArgs);
+        SetArgumentTypes(returnType, argumentTypes);
     }
-    explicit Intrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType arg1)
-    {
-        function.name                   = name;
-        function.returnType.baseType    = returnType;
-        function.numArguments           = 1;
-        function.argument               = argument + 0;
-        argument[0].type.baseType       = arg1;
-        argument[0].type.flags          = HLSLTypeFlag_Const;
-    }
-    explicit Intrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType arg1, HLSLBaseType arg2)
-    {
-        function.name                   = name;
-        function.returnType.baseType    = returnType;
-        function.argument               = argument + 0;
-        function.numArguments           = 2;
-        argument[0].type.baseType       = arg1;
-        argument[0].type.flags          = HLSLTypeFlag_Const;
-        argument[0].nextArgument        = argument + 1;
-        argument[1].type.baseType       = arg2;
-        argument[1].type.flags          = HLSLTypeFlag_Const;
-    }
-    explicit Intrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType arg1, HLSLBaseType arg2, HLSLBaseType arg3)
-    {
-        function.name                   = name;
-        function.returnType.baseType    = returnType;
-        function.argument               = argument + 0;
-        function.numArguments           = 3;
-        argument[0].type.baseType       = arg1;
-        argument[0].type.flags          = HLSLTypeFlag_Const;
-        argument[0].nextArgument        = argument + 1;
-        argument[1].type.baseType       = arg2;
-        argument[1].type.flags          = HLSLTypeFlag_Const;
-        argument[1].nextArgument        = argument + 2;
-        argument[2].type.baseType       = arg3;
-        argument[2].type.flags          = HLSLTypeFlag_Const;
-    }
-    explicit Intrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType arg1, HLSLBaseType arg2, HLSLBaseType arg3, HLSLBaseType arg4)
-    {
-        function.name                   = name;
-        function.returnType.baseType    = returnType;
-        function.argument               = argument + 0;
-        function.numArguments           = 4;
-        argument[0].type.baseType       = arg1;
-        argument[0].type.flags          = HLSLTypeFlag_Const;
-        argument[0].nextArgument        = argument + 1;
-        argument[1].type.baseType       = arg2;
-        argument[1].type.flags          = HLSLTypeFlag_Const;
-        argument[1].nextArgument        = argument + 2;
-        argument[2].type.baseType       = arg3;
-        argument[2].type.flags          = HLSLTypeFlag_Const;
-        argument[2].nextArgument        = argument + 3;
-        argument[3].type.baseType       = arg4;
-        argument[3].type.flags          = HLSLTypeFlag_Const;
-    }
+    
+    // TODO: allow member function intrinsices on buffers/textures
+    HLSLBaseType    memberType = HLSLBaseType_Unknown;
     HLSLFunction    function;
     HLSLArgument    argument[4];
 };
     
-Intrinsic TextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType textureHalfOrFloat, HLSLBaseType uvType)
+// So many calls are member functions in modern HLSL/MSL
+#define USE_MEMBER_FUNCTIONS 0
+
+static void AddIntrinsic(const Intrinsic& intrinsic);
+
+void AddTextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType textureHalfOrFloat, HLSLBaseType uvType)
 {
+#if USE_MEMBER_FUNCTIONS
+    Intrinsic i(name, returnType, HLSLBaseType_SamplerState, uvType);
+    i.memberType = textureType;
+#else
     Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerState, uvType);
+#endif
     i.argument[0].type.formatType = textureHalfOrFloat;
-    return i;
+
+    AddIntrinsic(i);
 }
 
-Intrinsic DepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType textureHalfOrFloat, HLSLBaseType uvType)
+// DepthCmp takes additional arg for comparison value, but this rolls it into uv
+void AddDepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType textureHalfOrFloat, HLSLBaseType uvType)
 {
-    // Need to be able to pass SamplerComparisonState too
-    Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerComparisonState, uvType);
+    // ComparisonState is only for SampleCmp/GatherCmp
+    bool isCompare = String_Equal(name, "GatherCmp") || String_Equal(name, "SampleCmp");
+    HLSLBaseType samplerType = isCompare ? HLSLBaseType_SamplerComparisonState : HLSLBaseType_SamplerState;
+    
+#if USE_MEMBER_FUNCTIONS
+    Intrinsic i(name, returnType, samplerType, uvType);
+    i.memberType = textureType;
+#else
+    Intrinsic i(name, returnType, textureType, samplerType, uvType);
+#endif
+    
     i.argument[0].type.formatType = textureHalfOrFloat;
-    return i;
+    AddIntrinsic(i);
 }
 
 static const int _numberTypeRank[NumericType_Count][NumericType_Count] = 
 {
-    //F  H  B  I  U    
-    { 0, 4, 4, 4, 4 },  // NumericType_Float
-    { 1, 0, 4, 4, 4 },  // NumericType_Half
-    { 5, 5, 0, 5, 5 },  // NumericType_Bool
-    { 5, 5, 4, 0, 3 },  // NumericType_Int
-    { 5, 5, 4, 2, 0 },  // NumericType_Uint
-    { 5, 5, 4, 0, 3 },  // NumericType_Short
-    { 5, 5, 4, 2, 0 },  // NumericType_Ushort
+    // across is what type list on right is converted into (5 means don't, 0 means best)
+    //F  H  D  B  I  UI  S US  L UL
+    { 0, 3, 3, 4, 4, 4,  4, 4, 4, 4 },  // NumericType_Float
+    { 2, 0, 4, 4, 4, 4,  4, 4, 4, 4 },  // NumericType_Half
+    { 1, 4, 0, 4, 4, 4,  4, 4, 4, 4 },  // NumericType_Double
+   
+    { 5, 5, 5, 0, 5, 5,  5, 5, 5, 5 },  // NumericType_Bool
+    { 5, 5, 5, 4, 0, 3,  4, 3, 5, 5 },  // NumericType_Int
+    { 5, 5, 5, 4, 2, 0,  3, 4, 5, 5 },  // NumericType_Uint
+    { 5, 5, 5, 4, 0, 3,  0, 5, 5, 5 },  // NumericType_Short
+    { 5, 5, 5, 4, 2, 0,  5, 0, 5, 5 },  // NumericType_Ushort
+    
+    { 5, 5, 5, 4, 0, 3,  5, 5, 0, 5 },  // NumericType_Long
+    { 5, 5, 5, 4, 2, 0,  5, 5, 5, 0 },  // NumericType_Ulong
 };
 
 /* All FX state
@@ -669,6 +703,7 @@ static const EffectState pipelineStates[] = {
 };
 */
 
+/*
 #define INTRINSIC_FLOAT1_FUNCTION(name) \
         Intrinsic( name, HLSLBaseType_Float,   HLSLBaseType_Float  ),   \
         Intrinsic( name, HLSLBaseType_Float2,  HLSLBaseType_Float2 ),   \
@@ -699,277 +734,398 @@ static const EffectState pipelineStates[] = {
         Intrinsic( name, HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3,  HLSLBaseType_Half3 ),    \
         Intrinsic( name, HLSLBaseType_Half4,   HLSLBaseType_Half4,   HLSLBaseType_Half4,  HLSLBaseType_Half4 )
 
+*/
+
+// TODO: elim the H version once have member functions, can check the member textuer format.
 #define TEXTURE_INTRINSIC_FUNCTION(name, textureType, uvType) \
-        TextureIntrinsic( name, HLSLBaseType_Float4, textureType, HLSLBaseType_Float, uvType),   \
-        TextureIntrinsic( name "H", HLSLBaseType_Half4, textureType, HLSLBaseType_Half, uvType  )
+AddTextureIntrinsic( name, HLSLBaseType_Float4, textureType, HLSLBaseType_Float, uvType)
+
+#define TEXTURE_INTRINSIC_FUNCTION_H(name, textureType, uvType) \
+        AddTextureIntrinsic( name "H", HLSLBaseType_Half4, textureType, HLSLBaseType_Half, uvType  )
+
+// Note: these strings need to live until end of the app
+StringPool gStringPool(NULL);
+
+enum All
+{
+    AllHalf = (1<<0),
+    AllFloat = (1<<1),
+    AllDouble = (1<<2),
     
-// TODO: change this to a mutlimap or something
-// would make it easier to specify, can write functions to set all vec, all matrix, etc.  This is a nightmare to add things too below.  MSL and HLSL
-// have a lot more operations now.
+    AllFloats = AllHalf | AllFloat | AllDouble,
+    
+    AllUint = (1<<3),
+    AllInt = (1<<4),
+    AllShort = (1<<5),
+    AllUshort = (1<<6),
+    AllLong = (1<<7),
+    AllUlong = (1<<8),
+    AllBool = (1<<9),
+    
+    AllInts = AllUint | AllInt | AllShort | AllUshort | AllLong | AllUlong | AllBool,
+    
+    //AllScalar  = (1<<15),
+    AllVecs = (1<<16),
+    AllMats = (1<<17),
+    AllDims = AllVecs | AllMats,
+};
+using AllMask = uint32_t;
 
-const Intrinsic _intrinsic[] =
+// TODO: want to use Array, but it needs Allocator passed
+struct Range
+{
+    uint32_t start;
+    uint32_t count;
+};
+using IntrinsicRangeMap = std::unordered_map<const char*, Range, CompareAndHandStrings, CompareAndHandStrings>;
+
+static std::vector<Intrinsic> _intrinsics;
+
+// This will help with comparison to avoid O(n) search of all 5000 intrinsics
+static IntrinsicRangeMap _intrinsicRangeMap;
+
+static void AddIntrinsic(const Intrinsic& intrinsic)
+{
+    const char* name = intrinsic.function.name;
+    
+    // Put in string pool since using this as a key.  Also means equals just ptr compar.
+   name = gStringPool.AddString(name);
+    
+    // track intrinsic range in a map, also the name lookup helps speed the parser up
+    auto it = _intrinsicRangeMap.find(name);
+    if (it != _intrinsicRangeMap.end())
     {
-        INTRINSIC_FLOAT1_FUNCTION( "abs" ),
-        INTRINSIC_FLOAT1_FUNCTION( "acos" ),
+        it->second.count++;
+    }
+    else
+    {
+        _intrinsicRangeMap[name] = { (uint32_t)_intrinsics.size(), 1 };
+    }
+    
+    // To avoid having growth destroy the argument chains
+    if (_intrinsics.empty())
+        _intrinsics.reserve(10000);
+        
+    _intrinsics.push_back(intrinsic);
+    _intrinsics.back().function.name = name;
+    
+    // These pointers change when copied or when vector grows, so do a reserve
+    _intrinsics.back().ChainArgumentPointers();
+}
 
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float2 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float3 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float4 ),
-		Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float2x2 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float3x3 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float4x4 ),
-        //Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float4x3 ),
-        //Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Float4x2 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half2 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half3 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half4 ),
-		Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half2x2 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half3x3 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half4x4 ),
-        //Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half4x3 ),
-        //Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Half4x2 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Bool ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Int ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Int2 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Int3 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Int4 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Uint ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Uint2 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Uint3 ),
-        Intrinsic( "any", HLSLBaseType_Bool, HLSLBaseType_Uint4 ),
+void AddIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType arg1 = HLSLBaseType_Unknown, HLSLBaseType arg2 = HLSLBaseType_Unknown, HLSLBaseType arg3 = HLSLBaseType_Unknown, HLSLBaseType arg4 = HLSLBaseType_Unknown)
+{
+    Intrinsic intrinsic(name, returnType, arg1, arg2, arg3, arg4);
+    AddIntrinsic(intrinsic);
+}
 
-        // TODO: "all"
-        // TODO: select
+void RegisterBaseTypeIntrinsic(Intrinsic& intrinsic, uint32_t numArgs, HLSLBaseType returnType, HLSLBaseType baseType, uint32_t start, uint32_t end)
+{
+    HLSLBaseType args[4] = {};
+    
+    for (uint32_t i = start; i < end; ++i)
+    {
+        HLSLBaseType baseTypeIter = (HLSLBaseType)(baseType + i);
         
-        INTRINSIC_FLOAT1_FUNCTION( "asin" ),
-        INTRINSIC_FLOAT1_FUNCTION( "atan" ),
-        INTRINSIC_FLOAT2_FUNCTION( "atan2" ),
-        INTRINSIC_FLOAT3_FUNCTION( "clamp" ),
-        INTRINSIC_FLOAT1_FUNCTION( "cos" ),
+        HLSLBaseType newReturnType = (returnType == HLSLBaseType_Unknown) ? baseTypeIter : returnType;
+        
+        for (uint32_t a = 0; a < numArgs; ++a)
+            args[a] = baseTypeIter;
+        
+        intrinsic.SetArgumentTypes(newReturnType, args);
+        AddIntrinsic(intrinsic);
+    }
+}
 
-        INTRINSIC_FLOAT3_FUNCTION( "lerp" ),
-        INTRINSIC_FLOAT3_FUNCTION( "smoothstep" ),
+bool TestBits(AllMask mask, AllMask maskTest)
+{
+    return (mask & maskTest) == maskTest;
+}
 
-        INTRINSIC_FLOAT1_FUNCTION( "floor" ),
-        INTRINSIC_FLOAT1_FUNCTION( "ceil" ),
-        INTRINSIC_FLOAT1_FUNCTION( "frac" ),
+void RegisterIntrinsics(const char* name, uint32_t numArgs, AllMask mask, HLSLBaseType returnType = HLSLBaseType_Unknown)
+{
+    Intrinsic intrinsic(name, numArgs);
 
-        INTRINSIC_FLOAT2_FUNCTION( "fmod" ),
+    {
+        const uint32_t kNumTypes = 3;
+        HLSLBaseType baseTypes[kNumTypes] = { HLSLBaseType_Float, HLSLBaseType_Half, HLSLBaseType_Double };
+    
+        bool skip[kNumTypes] = {};
+        if (!TestBits(mask, AllFloat))
+           skip[0] = true;
+        if (!TestBits(mask, AllHalf))
+           skip[1] = true;
+        if (!TestBits(mask, AllDouble))
+            skip[2] = true;
+        
+        for (uint32_t i = 0; i < kNumTypes; ++i)
+        {
+            if (skip[i]) continue;
+            HLSLBaseType baseType = baseTypes[i];
+            
+            if (mask & AllVecs)
+                RegisterBaseTypeIntrinsic(intrinsic, numArgs, returnType, baseType, 0, 4);
+            if (mask & AllMats)
+                RegisterBaseTypeIntrinsic(intrinsic, numArgs, returnType, baseType, 4, 7);
+        }
+    }
 
-        INTRINSIC_FLOAT3_FUNCTION("min3"),
-        INTRINSIC_FLOAT3_FUNCTION("max3"),
+    if ((mask & AllInts) == AllInts)
+    {
+        const uint32_t kNumTypes = 7;
+        HLSLBaseType baseTypes[kNumTypes] = {
+            HLSLBaseType_Long, HLSLBaseType_Ulong,
+            HLSLBaseType_Int,  HLSLBaseType_Uint,
+            HLSLBaseType_Short, HLSLBaseType_Ushort,
+            HLSLBaseType_Bool
+        };
         
-        // MSL constructs, may be in HLSL
-        // distance
-        // distance_squared
-        // refract
-        // deteriminant
+        bool skip[kNumTypes] = {};
+        if (!TestBits(mask, AllLong))
+            skip[0] = true;
+        if (!TestBits(mask, AllUlong))
+            skip[1] = true;
+        if (!TestBits(mask, AllInt))
+            skip[2] = true;
+        if (!TestBits(mask, AllUint))
+            skip[3] = true;
+        if (!TestBits(mask, AllShort))
+            skip[4] = true;
+        if (!TestBits(mask, AllUshort))
+            skip[5] = true;
+        if (!TestBits(mask, AllBool))
+            skip[6] = true;
         
-        // this one isn't cheap to emulate
-        //INTRINSIC_FLOAT3_FUNCTION("median3"),
         
-        Intrinsic( "clip", HLSLBaseType_Void,  HLSLBaseType_Float    ),
-        Intrinsic( "clip", HLSLBaseType_Void,  HLSLBaseType_Float2   ),
-        Intrinsic( "clip", HLSLBaseType_Void,  HLSLBaseType_Float3   ),
-        Intrinsic( "clip", HLSLBaseType_Void,  HLSLBaseType_Float4   ),
-        Intrinsic( "clip", HLSLBaseType_Void,  HLSLBaseType_Half     ),
-        Intrinsic( "clip", HLSLBaseType_Void,  HLSLBaseType_Half2    ),
-        Intrinsic( "clip", HLSLBaseType_Void,  HLSLBaseType_Half3    ),
-        Intrinsic( "clip", HLSLBaseType_Void,  HLSLBaseType_Half4    ),
+        for (uint32_t i = 0; i < kNumTypes; ++i)
+        {
+            if (skip[i]) continue;
+            HLSLBaseType baseType = baseTypes[i];
+            
+            if (mask & AllVecs)
+                RegisterBaseTypeIntrinsic(intrinsic, numArgs, returnType, baseType, 0, 4);
+            
+            // TODO: No int matrices yet, but could add them
+            //if (mask & AllMats)
+            //    RegisterBaseTypeIntrinsic(intrinsic, numArgs, returnType, 4, 7);
+        }
+    }
+}
 
-        Intrinsic( "dot", HLSLBaseType_Float,  HLSLBaseType_Float,   HLSLBaseType_Float  ),
-        Intrinsic( "dot", HLSLBaseType_Float,  HLSLBaseType_Float2,  HLSLBaseType_Float2 ),
-        Intrinsic( "dot", HLSLBaseType_Float,  HLSLBaseType_Float3,  HLSLBaseType_Float3 ),
-        Intrinsic( "dot", HLSLBaseType_Float,  HLSLBaseType_Float4,  HLSLBaseType_Float4 ),
-        Intrinsic( "dot", HLSLBaseType_Half,   HLSLBaseType_Half,    HLSLBaseType_Half   ),
-        Intrinsic( "dot", HLSLBaseType_Half,   HLSLBaseType_Half2,   HLSLBaseType_Half2  ),
-        Intrinsic( "dot", HLSLBaseType_Half,   HLSLBaseType_Half3,   HLSLBaseType_Half3  ),
-        Intrinsic( "dot", HLSLBaseType_Half,   HLSLBaseType_Half4,   HLSLBaseType_Half4  ),
+#define ArrayCount(array) (sizeof(array) / sizeof(array[0]) )
 
-        // 3d cross product only
-        Intrinsic( "cross", HLSLBaseType_Float3,  HLSLBaseType_Float3,  HLSLBaseType_Float3 ),
-        Intrinsic( "cross", HLSLBaseType_Half3,  HLSLBaseType_Half3,  HLSLBaseType_Half3 ),
-
-        Intrinsic( "length", HLSLBaseType_Float,  HLSLBaseType_Float  ),
-        Intrinsic( "length", HLSLBaseType_Float,  HLSLBaseType_Float2 ),
-        Intrinsic( "length", HLSLBaseType_Float,  HLSLBaseType_Float3 ),
-        Intrinsic( "length", HLSLBaseType_Float,  HLSLBaseType_Float4 ),
-        Intrinsic( "length", HLSLBaseType_Half,   HLSLBaseType_Half   ),
-        Intrinsic( "length", HLSLBaseType_Half,   HLSLBaseType_Half2  ),
-        Intrinsic( "length", HLSLBaseType_Half,   HLSLBaseType_Half3  ),
-        Intrinsic( "length", HLSLBaseType_Half,   HLSLBaseType_Half4  ),
-
-        // MSL construct, dumb that HLSL lacks this
-        Intrinsic( "length_squared", HLSLBaseType_Float,  HLSLBaseType_Float  ),
-        Intrinsic( "length_squared", HLSLBaseType_Float,  HLSLBaseType_Float2 ),
-        Intrinsic( "length_squared", HLSLBaseType_Float,  HLSLBaseType_Float3 ),
-        Intrinsic( "length_squared", HLSLBaseType_Float,  HLSLBaseType_Float4 ),
-        Intrinsic( "length_squared", HLSLBaseType_Half,   HLSLBaseType_Half   ),
-        Intrinsic( "length_squared", HLSLBaseType_Half,   HLSLBaseType_Half2  ),
-        Intrinsic( "length_squared", HLSLBaseType_Half,   HLSLBaseType_Half3  ),
-        Intrinsic( "length_squared", HLSLBaseType_Half,   HLSLBaseType_Half4  ),
-
-        
-        INTRINSIC_FLOAT2_FUNCTION( "max" ),
-        INTRINSIC_FLOAT2_FUNCTION( "min" ),
-
-        // @@ Add all combinations.
-        // scalar = mul(scalar, scalar)
-        // vector<N> = mul(scalar, vector<N>)
-        // vector<N> = mul(vector<N>, scalar)
-        // vector<N> = mul(vector<N>, vector<N>)
-        // vector<M> = mul(vector<N>, matrix<N,M>) ?
-        // vector<N> = mul(matrix<N,M>, vector<M>) ?
-        // matrix<N,M> = mul(matrix<N,M>, matrix<M,N>) ?
-        
-        // scalar/vec ops
-        INTRINSIC_FLOAT2_FUNCTION( "mul" ),
-        
-        // scalar mul, since * isn't working on Metal properly
-        Intrinsic( "mul", HLSLBaseType_Float2x2, HLSLBaseType_Float, HLSLBaseType_Float2x2 ),
-        Intrinsic( "mul", HLSLBaseType_Float3x3, HLSLBaseType_Float, HLSLBaseType_Float3x3 ),
-        Intrinsic( "mul", HLSLBaseType_Float4x4, HLSLBaseType_Float, HLSLBaseType_Float4x4 ),
-        Intrinsic( "mul", HLSLBaseType_Float2x2, HLSLBaseType_Float2x2, HLSLBaseType_Float ),
-        Intrinsic( "mul", HLSLBaseType_Float3x3, HLSLBaseType_Float3x3, HLSLBaseType_Float ),
-        Intrinsic( "mul", HLSLBaseType_Float4x4, HLSLBaseType_Float4x4, HLSLBaseType_Float ),
-        
-        Intrinsic( "mul", HLSLBaseType_Half2x2, HLSLBaseType_Half, HLSLBaseType_Half2x2 ),
-        Intrinsic( "mul", HLSLBaseType_Half3x3, HLSLBaseType_Half, HLSLBaseType_Half3x3 ),
-        Intrinsic( "mul", HLSLBaseType_Half4x4, HLSLBaseType_Half, HLSLBaseType_Half4x4 ),
-        Intrinsic( "mul", HLSLBaseType_Half2x2, HLSLBaseType_Half2x2, HLSLBaseType_Half ),
-        Intrinsic( "mul", HLSLBaseType_Half3x3, HLSLBaseType_Half3x3, HLSLBaseType_Half ),
-        Intrinsic( "mul", HLSLBaseType_Half4x4, HLSLBaseType_Half4x4, HLSLBaseType_Half ),
-        
-        
-        
-		Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2x2 ),
-        Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3x3 ),
-        Intrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4x4 ),
-        Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2x2, HLSLBaseType_Float2 ),
-        Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3x3, HLSLBaseType_Float3 ),
-        Intrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4x4, HLSLBaseType_Float4 ),
-        //Intrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float4, HLSLBaseType_Float4x3 ),
-        //Intrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float4, HLSLBaseType_Float4x2 ),
-
-        // half versions
-        Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2x2 ),
-        Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3x3 ),
-        Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4x4 ),
-        Intrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2x2, HLSLBaseType_Half2 ),
-        Intrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3x3, HLSLBaseType_Half3 ),
-        Intrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4x4, HLSLBaseType_Half4 ),
-        
-        // matrix transpose
-		Intrinsic( "transpose", HLSLBaseType_Float2x2, HLSLBaseType_Float2x2 ),
-        Intrinsic( "transpose", HLSLBaseType_Float3x3, HLSLBaseType_Float3x3 ),
-        Intrinsic( "transpose", HLSLBaseType_Float4x4, HLSLBaseType_Float4x4 ),
-        Intrinsic( "transpose", HLSLBaseType_Half2x2, HLSLBaseType_Half2x2 ),
-        Intrinsic( "transpose", HLSLBaseType_Half3x3, HLSLBaseType_Half3x3 ),
-        Intrinsic( "transpose", HLSLBaseType_Half4x4, HLSLBaseType_Half4x4 ),
-
-        INTRINSIC_FLOAT1_FUNCTION( "normalize" ),
-        INTRINSIC_FLOAT2_FUNCTION( "pow" ),
-        INTRINSIC_FLOAT1_FUNCTION( "saturate" ),
-        INTRINSIC_FLOAT1_FUNCTION( "sin" ),
-        INTRINSIC_FLOAT1_FUNCTION( "sqrt" ),
-        INTRINSIC_FLOAT1_FUNCTION( "rsqrt" ),
-        INTRINSIC_FLOAT1_FUNCTION( "rcp" ),
-        INTRINSIC_FLOAT1_FUNCTION( "exp" ),
-        INTRINSIC_FLOAT1_FUNCTION( "exp2" ),
-        // TODO: MSL INTRINSIC_FLOAT1_FUNCTION( "exp10" ),
-       
-        INTRINSIC_FLOAT1_FUNCTION( "log" ),
-        INTRINSIC_FLOAT1_FUNCTION( "log2" ),
-        // TODO: MSL INTRINSIC_FLOAT1_FUNCTION( "log10" ),
-        
-        INTRINSIC_FLOAT1_FUNCTION( "ddx" ),
-        INTRINSIC_FLOAT1_FUNCTION( "ddy" ),
-        
-        INTRINSIC_FLOAT1_FUNCTION( "sign" ),
-        INTRINSIC_FLOAT2_FUNCTION( "step" ),
-        INTRINSIC_FLOAT2_FUNCTION( "reflect" ),
-
-		INTRINSIC_FLOAT1_FUNCTION("isnan"),
-		INTRINSIC_FLOAT1_FUNCTION("isinf"),
-
-		Intrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Float),
-
-        // only for vec, void return type
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float,   HLSLBaseType_Float,  HLSLBaseType_Float ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float2,  HLSLBaseType_Float,  HLSLBaseType_Float2 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float3,  HLSLBaseType_Float,  HLSLBaseType_Float3 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Float4,  HLSLBaseType_Float,  HLSLBaseType_Float4 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half,    HLSLBaseType_Half,   HLSLBaseType_Half ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half2,   HLSLBaseType_Half2,  HLSLBaseType_Half2 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half3,   HLSLBaseType_Half3,  HLSLBaseType_Half3 ),
-        Intrinsic( "sincos", HLSLBaseType_Void,  HLSLBaseType_Half4,   HLSLBaseType_Half4,  HLSLBaseType_Half4 ),
-        
-        // why is this only defined for vec
-        Intrinsic( "mad", HLSLBaseType_Float, HLSLBaseType_Float, HLSLBaseType_Float, HLSLBaseType_Float ),
-        Intrinsic( "mad", HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2 ),
-        Intrinsic( "mad", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3 ),
-        Intrinsic( "mad", HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4 ),
-        Intrinsic( "mad", HLSLBaseType_Half, HLSLBaseType_Half, HLSLBaseType_Half, HLSLBaseType_Half ),
-        Intrinsic( "mad", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2 ),
-        Intrinsic( "mad", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3 ),
-        Intrinsic( "mad", HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4 ),
-        
-        // TODO: split off sampler intrinsics from math above
-        //------------------------
-        
-        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
-        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture3D, HLSLBaseType_Float3),
-        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture2DArray, HLSLBaseType_Float3),
-        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCube, HLSLBaseType_Float3),
-        TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4),
-        
-        // Depth
-        DepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float,  HLSLBaseType_Float2),
-        DepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float,  HLSLBaseType_Float3),
-        DepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float,  HLSLBaseType_Float3),
-        
-        // xyz are used, this doesn't match HLSL which is 2 + compare
-        DepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4),
-        DepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float, HLSLBaseType_Float4),
-        DepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float, HLSLBaseType_Float4),
-        
-        // returns float4 w/comparisons, probably only on mip0
-        // TODO: add GatherRed? to read 4 depth values
-        DepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4),
-        DepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2DArray, HLSLBaseType_Float, HLSLBaseType_Float4),
-        DepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_DepthCube, HLSLBaseType_Float, HLSLBaseType_Float4),
-        
-        // one more dimension than Sample
-        TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3),
-        TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture3D, HLSLBaseType_Float4),
-        TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4),
-        TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_TextureCube, HLSLBaseType_Float4),
-        // TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4, Float),
-        
-        // bias always in w
-        TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture2D, HLSLBaseType_Float4),
-        TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture3D, HLSLBaseType_Float4),
-        TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4),
-        TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_TextureCube, HLSLBaseType_Float4),
-        // TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4, Float),
-        
-        //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2),
-        //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2),
-        //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2),
-        
-        // TODO: for 2D tex (int2 offset is optional, how to indicate that?)
-        TEXTURE_INTRINSIC_FUNCTION("GatherRed", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
-        TEXTURE_INTRINSIC_FUNCTION("GatherGreen", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
-        TEXTURE_INTRINSIC_FUNCTION("GatherBlue", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
-        TEXTURE_INTRINSIC_FUNCTION("GatherAlpha", HLSLBaseType_Texture2D,  HLSLBaseType_Float2),
-        
-        // TODO: GetDimensions
-       
+bool InitIntrinsics()
+{
+    // TODO: these arrays shouldn't need to be static, but getting corrupt strings
+    static const char* ops1[] = {
+        "abs",
+        "acos", "asin", "atan",
+        "cos", "sin", "tan",
+        "floor", "ceil", "frac", "fmod",
+        "normalize", "saturate", "sqrt", "rcp", "exp", "exp2",
+        "log", "Log2",
+        "ddx", "ddy",
+        "isNan", "isInf", "sign",
+    };
+    
+    static const char* ops2[] = {
+        "atan2", "pow", // can't pow take sclar?
+        "step", "reflect",
+        "min", "max",
+    };
+    
+    static const char* ops3[] = {
+        "clamp", "lerp", "smoothstep",
+        "min3", "max3",
     };
 
-const int _numIntrinsics = sizeof(_intrinsic) / sizeof(Intrinsic);
+    // MSL constructs, may be in HLSL
+    // "distance"
+    // "distance_squared"
+    // "refract"
+    // "deteriminant"
+    // "median3" - takes 3 args
+    // "select"
+    
+    for (uint32_t i = 0, iEnd = ArrayCount(ops1); i < iEnd; ++i)
+    {
+        RegisterIntrinsics( ops1[i], 1, AllFloats | AllVecs );
+    }
+    for (uint32_t i = 0, iEnd = ArrayCount(ops2); i < iEnd; ++i)
+    {
+        RegisterIntrinsics( ops2[i], 2, AllFloats | AllVecs );
+    }
+    for (uint32_t i = 0, iEnd = ArrayCount(ops3); i < iEnd; ++i)
+    {
+        RegisterIntrinsics( ops3[i], 3, AllFloats | AllVecs );
+    }
+    
+    RegisterIntrinsics("sincos", 2, AllFloats | AllVecs, HLSLBaseType_Void);
+
+    RegisterIntrinsics( "mad", 3, AllFloats | AllVecs);
+   
+    RegisterIntrinsics( "any", 1, AllFloats | AllInts | AllVecs, HLSLBaseType_Bool);
+    RegisterIntrinsics( "all", 1, AllFloats | AllInts | AllVecs, HLSLBaseType_Bool);
+    
+    RegisterIntrinsics( "clip", 1, AllFloats | AllVecs, HLSLBaseType_Void);
+    
+    RegisterIntrinsics( "dot", 2, AllHalf | AllVecs, HLSLBaseType_Half);
+    RegisterIntrinsics( "dot", 2, AllFloat | AllVecs, HLSLBaseType_Float);
+    RegisterIntrinsics( "dot", 2, AllDouble | AllVecs, HLSLBaseType_Double);
+  
+    // 3d cross product only
+    AddIntrinsic( "cross", HLSLBaseType_Float3,  HLSLBaseType_Float3,  HLSLBaseType_Float3 );
+    AddIntrinsic( "cross", HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3 );
+    AddIntrinsic( "cross", HLSLBaseType_Double3, HLSLBaseType_Double3, HLSLBaseType_Double3 );
+
+    RegisterIntrinsics( "length", 1, AllHalf | AllVecs, HLSLBaseType_Half);
+    RegisterIntrinsics( "length", 1, AllFloat | AllVecs, HLSLBaseType_Float);
+    RegisterIntrinsics( "length", 1, AllDouble | AllVecs, HLSLBaseType_Double);
+  
+    // MSL construct
+    RegisterIntrinsics( "length_squared", 1, AllHalf | AllVecs, HLSLBaseType_Half);
+    RegisterIntrinsics( "length_squared", 1, AllFloat | AllVecs, HLSLBaseType_Float);
+    RegisterIntrinsics( "length_squared", 1, AllDouble | AllVecs, HLSLBaseType_Double);
+
+    // scalar/vec ops
+    RegisterIntrinsics( "mul", 2, AllFloat | AllVecs | AllMats );
+    
+    // scalar mul, since * isn't working on Metal properly
+    // m = s * m
+    AddIntrinsic( "mul", HLSLBaseType_Float2x2, HLSLBaseType_Float, HLSLBaseType_Float2x2 );
+    AddIntrinsic( "mul", HLSLBaseType_Float3x3, HLSLBaseType_Float, HLSLBaseType_Float3x3 );
+    AddIntrinsic( "mul", HLSLBaseType_Float4x4, HLSLBaseType_Float, HLSLBaseType_Float4x4 );
+    AddIntrinsic( "mul", HLSLBaseType_Float2x2, HLSLBaseType_Float2x2, HLSLBaseType_Float );
+    AddIntrinsic( "mul", HLSLBaseType_Float3x3, HLSLBaseType_Float3x3, HLSLBaseType_Float );
+    AddIntrinsic( "mul", HLSLBaseType_Float4x4, HLSLBaseType_Float4x4, HLSLBaseType_Float );
+    
+    // v = v * m
+    AddIntrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2x2 );
+    AddIntrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3, HLSLBaseType_Float3x3 );
+    AddIntrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4, HLSLBaseType_Float4x4 );
+    AddIntrinsic( "mul", HLSLBaseType_Float2, HLSLBaseType_Float2x2, HLSLBaseType_Float2 );
+    AddIntrinsic( "mul", HLSLBaseType_Float3, HLSLBaseType_Float3x3, HLSLBaseType_Float3 );
+    AddIntrinsic( "mul", HLSLBaseType_Float4, HLSLBaseType_Float4x4, HLSLBaseType_Float4 );
+    
+    // m = s * m
+    AddIntrinsic( "mul", HLSLBaseType_Half2x2, HLSLBaseType_Half, HLSLBaseType_Half2x2 );
+    AddIntrinsic( "mul", HLSLBaseType_Half3x3, HLSLBaseType_Half, HLSLBaseType_Half3x3 );
+    AddIntrinsic( "mul", HLSLBaseType_Half4x4, HLSLBaseType_Half, HLSLBaseType_Half4x4 );
+    AddIntrinsic( "mul", HLSLBaseType_Half2x2, HLSLBaseType_Half2x2, HLSLBaseType_Half );
+    AddIntrinsic( "mul", HLSLBaseType_Half3x3, HLSLBaseType_Half3x3, HLSLBaseType_Half );
+    AddIntrinsic( "mul", HLSLBaseType_Half4x4, HLSLBaseType_Half4x4, HLSLBaseType_Half );
+    
+    // v = v * m
+    AddIntrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2, HLSLBaseType_Half2x2 );
+    AddIntrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3, HLSLBaseType_Half3x3 );
+    AddIntrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4, HLSLBaseType_Half4x4 );
+    AddIntrinsic( "mul", HLSLBaseType_Half2, HLSLBaseType_Half2x2, HLSLBaseType_Half2 );
+    AddIntrinsic( "mul", HLSLBaseType_Half3, HLSLBaseType_Half3x3, HLSLBaseType_Half3 );
+    AddIntrinsic( "mul", HLSLBaseType_Half4, HLSLBaseType_Half4x4, HLSLBaseType_Half4 );
+    
+    // m = s * m
+    AddIntrinsic( "mul", HLSLBaseType_Double2x2, HLSLBaseType_Double, HLSLBaseType_Double2x2 );
+    AddIntrinsic( "mul", HLSLBaseType_Double3x3, HLSLBaseType_Double, HLSLBaseType_Double3x3 );
+    AddIntrinsic( "mul", HLSLBaseType_Double4x4, HLSLBaseType_Double, HLSLBaseType_Double4x4 );
+    AddIntrinsic( "mul", HLSLBaseType_Double2x2, HLSLBaseType_Double2x2, HLSLBaseType_Double );
+    AddIntrinsic( "mul", HLSLBaseType_Double3x3, HLSLBaseType_Double3x3, HLSLBaseType_Double );
+    AddIntrinsic( "mul", HLSLBaseType_Double4x4, HLSLBaseType_Double4x4, HLSLBaseType_Double );
+    
+    // v = v * m
+    AddIntrinsic( "mul", HLSLBaseType_Double2, HLSLBaseType_Double2, HLSLBaseType_Double2x2 );
+    AddIntrinsic( "mul", HLSLBaseType_Double3, HLSLBaseType_Double3, HLSLBaseType_Double3x3 );
+    AddIntrinsic( "mul", HLSLBaseType_Double4, HLSLBaseType_Double4, HLSLBaseType_Double4x4 );
+    AddIntrinsic( "mul", HLSLBaseType_Double2, HLSLBaseType_Double2x2, HLSLBaseType_Double2 );
+    AddIntrinsic( "mul", HLSLBaseType_Double3, HLSLBaseType_Double3x3, HLSLBaseType_Double3 );
+    AddIntrinsic( "mul", HLSLBaseType_Double4, HLSLBaseType_Double4x4, HLSLBaseType_Double4 );
+    
+    // matrix transpose
+    RegisterIntrinsics("transpose", 2, AllFloats | AllMats);
+    
+    // TODO: more conversions fp16, double, etc.
+    AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Float);
+    AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Double);
+    AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Half);
+
+    
+    // TODO: split off sampler intrinsics from math above
+    //------------------------
+    
+    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture3D, HLSLBaseType_Float3);
+    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture2DArray, HLSLBaseType_Float3);
+    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCube, HLSLBaseType_Float3);
+    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4);
+    
+    // Depth
+    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float,  HLSLBaseType_Float2);
+    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float,  HLSLBaseType_Float3);
+    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float,  HLSLBaseType_Float3);
+    
+    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_Texture3D, HLSLBaseType_Float3);
+    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_Texture2DArray, HLSLBaseType_Float3);
+    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_TextureCube, HLSLBaseType_Float3);
+    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4);
+    
+    
+    // xyz are used, this doesn't match HLSL which is 2 + compare
+    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4);
+    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float, HLSLBaseType_Float4);
+    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float, HLSLBaseType_Float4);
+    
+    // returns float4 w/comparisons, probably only on mip0
+    // TODO: add GatherRed? to read 4 depth values
+    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4);
+    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2DArray, HLSLBaseType_Float, HLSLBaseType_Float4);
+    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_DepthCube, HLSLBaseType_Float, HLSLBaseType_Float4);
+    
+    // one more dimension than Sample
+    TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3);
+    TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture3D, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_TextureCube, HLSLBaseType_Float4);
+    // TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4, Float);
+    
+    TEXTURE_INTRINSIC_FUNCTION_H("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3);
+    TEXTURE_INTRINSIC_FUNCTION_H("SampleLevel", HLSLBaseType_Texture3D, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION_H("SampleLevel", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION_H("SampleLevel", HLSLBaseType_TextureCube, HLSLBaseType_Float4);
+   
+    
+    // bias always in w
+    TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture2D, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture3D, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_TextureCube, HLSLBaseType_Float4);
+    // TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4, Float);
+    
+    TEXTURE_INTRINSIC_FUNCTION_H("SampleBias", HLSLBaseType_Texture2D, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION_H("SampleBias", HLSLBaseType_Texture3D, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION_H("SampleBias", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4);
+    TEXTURE_INTRINSIC_FUNCTION_H("SampleBias", HLSLBaseType_TextureCube, HLSLBaseType_Float4);
+    
+    
+    //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
+    //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
+    //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
+    
+    // TODO: for 2D tex (int2 offset is optional, how to indicate that?)
+    TEXTURE_INTRINSIC_FUNCTION("GatherRed", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    TEXTURE_INTRINSIC_FUNCTION("GatherGreen", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    TEXTURE_INTRINSIC_FUNCTION("GatherBlue", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    TEXTURE_INTRINSIC_FUNCTION("GatherAlpha", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    
+    TEXTURE_INTRINSIC_FUNCTION_H("GatherRed", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    TEXTURE_INTRINSIC_FUNCTION_H("GatherGreen", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    TEXTURE_INTRINSIC_FUNCTION_H("GatherBlue", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    TEXTURE_INTRINSIC_FUNCTION_H("GatherAlpha", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    
+    // TODO: GetDimensions
+    return true;
+};
+
+static bool initIntrinsics = InitIntrinsics();
 
 // The order in this array must match up with HLSLBinaryOp
 const int _binaryOpPriority[] =
@@ -983,8 +1139,6 @@ const int _binaryOpPriority[] =
         5, 3, 4, // &, |, ^
     };
 
-// Note: these strings need to live until end of the app
-StringPool gPool(NULL);
 
 
 BaseTypeDescription baseTypeDescriptions[HLSLBaseType_Count];
@@ -993,7 +1147,7 @@ void RegisterMatrix(HLSLBaseType type, uint32_t typeOffset, NumericType numericT
 {
     char buf[32];
     snprintf(buf, sizeof(buf), "%s%dx%d", typeName, dim1, dim2);
-    const char* name = gPool.AddString(buf);
+    const char* name = gStringPool.AddString(buf);
     
     HLSLBaseType baseType = (HLSLBaseType)(type + typeOffset);
     
@@ -1016,7 +1170,7 @@ void RegisterVector(HLSLBaseType type, uint32_t typeOffset, NumericType numericT
 {
     char buf[32];
     snprintf(buf, sizeof(buf), "%s%d", typeName, dim);
-    const char* name = gPool.AddString(buf);
+    const char* name = gStringPool.AddString(buf);
     
     HLSLBaseType baseType = (HLSLBaseType)(type + typeOffset);
     
@@ -1038,7 +1192,7 @@ void RegisterVector(HLSLBaseType type, uint32_t typeOffset, NumericType numericT
 
 void RegisterScalar(HLSLBaseType type, uint32_t typeOffset, NumericType numericType,  int binaryOpRank, const char* typeName)
 {
-    const char* name = gPool.AddString(typeName);
+    const char* name = gStringPool.AddString(typeName);
     
     HLSLBaseType baseType = (HLSLBaseType)(type + typeOffset);
     
@@ -1089,7 +1243,7 @@ void RegisterType(HLSLBaseType baseType, CoreType coreType, const char* typeName
 }
 
 
-bool initBaseTypeDescriptions()
+bool InitBaseTypeDescriptions()
 {
     {
         const uint32_t kNumTypes = 3;
@@ -1190,7 +1344,7 @@ bool initBaseTypeDescriptions()
     return true;
 }
 
-static bool _initBaseTypeDescriptions = initBaseTypeDescriptions();
+static bool _initBaseTypeDescriptions = InitBaseTypeDescriptions();
 
 
 HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSLBaseType t2)
@@ -1768,10 +1922,10 @@ bool HLSLParser::ParseTopLevel(HLSLStatement*& statement)
         
         // Buffer needs to show up to reference the fields
         // of the struct of the templated type.
-        HLSLType type(HLSLBaseType_UserDefined);
-        type.typeName = buffer->bufferStruct->name; // this is for userDefined name (f.e. struct)
+        HLSLType bufferType(HLSLBaseType_UserDefined);
+        bufferType.typeName = buffer->bufferStruct->name; // this is for userDefined name (f.e. struct)
         
-        DeclareVariable( buffer->name, type );
+        DeclareVariable( buffer->name, bufferType );
        
         // TODO: add fields as variables too?
         
@@ -2345,20 +2499,20 @@ bool HLSLParser::ParseDeclaration(HLSLDeclaration*& declaration)
             }
         }
 
-        HLSLDeclaration * declaration = m_tree->AddNode<HLSLDeclaration>(fileName, line);
-        declaration->type  = type;
-        declaration->name  = name;
+        HLSLDeclaration * parsedDeclaration = m_tree->AddNode<HLSLDeclaration>(fileName, line);
+        parsedDeclaration->type  = type;
+        parsedDeclaration->name  = name;
 
-        DeclareVariable( declaration->name, declaration->type );
+        DeclareVariable( parsedDeclaration->name, parsedDeclaration->type );
 
         // Handle option assignment of the declared variables(s).
-        if (!ParseDeclarationAssignment( declaration )) {
+        if (!ParseDeclarationAssignment( parsedDeclaration )) {
             return false;
         }
 
-        if (firstDeclaration == NULL) firstDeclaration = declaration;
-        if (lastDeclaration != NULL) lastDeclaration->nextDeclaration = declaration;
-        lastDeclaration = declaration;
+        if (firstDeclaration == NULL) firstDeclaration = parsedDeclaration;
+        if (lastDeclaration != NULL) lastDeclaration->nextDeclaration = parsedDeclaration;
+        lastDeclaration = parsedDeclaration;
 
     } while(Accept(','));
 
@@ -2887,11 +3041,11 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
         done = true;
 
         // Post fix unary operator
-        HLSLUnaryOp unaryOp;
-        while (AcceptUnaryOperator(false, unaryOp))
+        HLSLUnaryOp unaryOp2;
+        while (AcceptUnaryOperator(false, unaryOp2))
         {
             HLSLUnaryExpression* unaryExpression = m_tree->AddNode<HLSLUnaryExpression>(fileName, line);
-            unaryExpression->unaryOp = unaryOp;
+            unaryExpression->unaryOp = unaryOp2;
             unaryExpression->expression = expression;
             unaryExpression->expressionType = unaryExpression->expression->expressionType;
             expression = unaryExpression;
@@ -4030,7 +4184,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
             // Parse optional sampler type.
             if (Accept('<'))
             {
-                int token = m_tokenizer.GetToken();
+                token = m_tokenizer.GetToken();
                 
                 // TODO: need more format types
                 // TODO: double, and other types
@@ -4264,6 +4418,7 @@ void HLSLParser::DeclareVariable(const char* name, const HLSLType& type)
 
 bool HLSLParser::GetIsFunction(const char* name) const
 {
+    // check user defined functions
     for (int i = 0; i < m_functions.GetSize(); ++i)
     {
         // == is ok here because we're passed the strings through the string pool.
@@ -4272,17 +4427,10 @@ bool HLSLParser::GetIsFunction(const char* name) const
             return true;
         }
     }
-    for (int i = 0; i < _numIntrinsics; ++i)
-    {
-        // Intrinsic names are not in the string pool (since they are compile time
-        // constants, so we need full string compare).
-        if (String_Equal(name, _intrinsic[i].function.name))
-        {
-            return true;
-        }
-    }
-
-    return false;
+    
+    // see if it's an intrinsic
+    const auto& it = _intrinsicRangeMap.find(name);
+    return it != _intrinsicRangeMap.end();
 }
 
 const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functionCall, const char* name)
@@ -4315,14 +4463,17 @@ const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functi
     }
 
     // Get the intrinsic functions with the specified name.
-    for (int i = 0; i < _numIntrinsics; ++i)
+    const auto& iter = _intrinsicRangeMap.find(name);
+    if (iter != _intrinsicRangeMap.end())
     {
-        const HLSLFunction* function = &_intrinsic[i].function;
-        
-        // TODO: this is doing another O(n) search of intrinsic names
-        // and there are a lot of them with all the input/output variants
-        if (String_Equal(function->name, name))
+        Range range = iter->second;
+        for (int i = 0; i < range.count; ++i)
         {
+            uint32_t idx = range.start + i;
+            const HLSLFunction* function = &_intrinsics[idx].function;
+            
+            ASSERT(String_Equal(function->name, name));
+                   
             nameMatches = true;
             
             CompareFunctionsResult result = CompareFunctions( m_tree, functionCall, function, matchedFunction );
@@ -4337,7 +4488,7 @@ const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functi
             }
         }
     }
-
+    
     if (matchedFunction != NULL && numMatchedOverloads > 1)
     {
         // Multiple overloads match.

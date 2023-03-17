@@ -1146,16 +1146,17 @@ namespace M4
                 m_writer.Write("return { ");
 
                 int numArguments = 0;
-                HLSLArgument * argument = m_currentFunction->argument;
-                while (argument != NULL)
+                HLSLArgument * argument2 = m_currentFunction->argument;
+                while (argument2 != NULL)
                 {
-                    if (argument->modifier == HLSLArgumentModifier_Out || argument->modifier == HLSLArgumentModifier_Inout)
+                    if (argument2->modifier == HLSLArgumentModifier_Out ||
+                        argument2->modifier == HLSLArgumentModifier_Inout)
                     {
                         if (numArguments) m_writer.Write(", ");
-                        m_writer.Write("%s ", argument->name);
+                        m_writer.Write("%s ", argument2->name);
                         numArguments++;
                     }
-                    argument = argument->nextArgument;
+                    argument2 = argument2->nextArgument;
                 }
 
                 m_writer.EndLine(" };");
