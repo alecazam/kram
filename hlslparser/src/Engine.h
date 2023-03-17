@@ -85,7 +85,7 @@ struct CompareAndHandStrings
 {
     template <class _Tp>
     bool operator()(const _Tp& __x, const _Tp& __y) const
-    { return String_Equal( __x, __y ) == 0; }
+    { return String_Equal( __x, __y ); }
     
     template <class _Tp>
     size_t operator()(const _Tp& __x) const {
