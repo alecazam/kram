@@ -824,9 +824,9 @@ void RegisterIntrinsics(const char* name, uint32_t numArgs, AllMask mask, HLSLBa
     
         bool skip[kNumTypes] = {};
         if (!TestBits(mask, AllFloat))
-           skip[0] = true;
+            skip[0] = true;
         if (!TestBits(mask, AllHalf))
-           skip[1] = true;
+            skip[1] = true;
         if (!TestBits(mask, AllDouble))
             skip[2] = true;
         
@@ -868,7 +868,6 @@ void RegisterIntrinsics(const char* name, uint32_t numArgs, AllMask mask, HLSLBa
         if (!TestBits(mask, AllBool))
             skip[6] = true;
         
-        
         for (uint32_t i = 0; i < kNumTypes; ++i)
         {
             if (skip[i]) continue;
@@ -889,7 +888,7 @@ void RegisterIntrinsics(const char* name, uint32_t numArgs, AllMask mask, HLSLBa
 bool InitIntrinsics()
 {
     // TODO: these arrays shouldn't need to be static, but getting corrupt strings
-    static const char* ops1[] = {
+    const char* ops1[] = {
         "abs",
         "acos", "asin", "atan",
         "cos", "sin", "tan",
@@ -900,13 +899,13 @@ bool InitIntrinsics()
         "isNan", "isInf", "sign",
     };
     
-    static const char* ops2[] = {
+    const char* ops2[] = {
         "atan2", "pow", // can't pow take sclar?
         "step", "reflect",
         "min", "max",
     };
     
-    static const char* ops3[] = {
+    const char* ops3[] = {
         "clamp", "lerp", "smoothstep",
         "min3", "max3",
     };

@@ -22,38 +22,93 @@ void String_Copy(char* str, const char* b, uint32_t size)
 #endif
 }
 
-int String_PrintfArgList(char * buffer, int size, const char * format, va_list args) {
-    int n;
+// This version doesn't truncate and is simpler
+int String_PrintfArgList(std::string& buffer, const char * format, va_list args) {
+    int n = 0;
     
-    if (String_Equal(format, "%s"))
+    if (!String_HasChar(format, '%'))
+    {
+        buffer += format;
+        n = (uint32_t)strlen(format);
+    }
+    else if (String_Equal(format, "%s"))
     {
         va_list tmp;
         va_copy(tmp, args);
         const char* text = va_arg(args, const char*);
+        n = (uint32_t)strlen(text);
+        buffer += text;
+        va_end(tmp);
+    }
+    else
+    {
+        va_list tmp;
+        va_copy(tmp, args);
+        
+        int len = vsnprintf(nullptr, 0, format, tmp);
+        if (len >= 0)
+        {
+            size_t bufferLength = buffer.length();
+            buffer.resize(bufferLength+len);
+            vsnprintf((char*)buffer.data() + bufferLength, len+1, format, tmp);
+            
+            n = len;
+        }
+        va_end(tmp);
+    }
+    
+    return n;
+}
+
+// This version truncates but works on stack
+int String_PrintfArgList(char* buffer, int size, const char * format, va_list args) {
+    int n;
+    
+    if (!String_HasChar(format, '%'))
+    {
+        String_Copy(buffer, format, size);
+        
+        // truncation or not
+        n = (int)strlen(format);
+    }
+    else if (String_Equal(format, "%s"))
+    {
+        va_list tmp;
+        va_copy(tmp, args);
+        const char* text = va_arg(args, const char*);
+        n = (int)strlen(text);
+        
+        // truncation
         String_Copy(buffer, text, size);
         va_end(tmp);
-    
-        // truncation or not
-        size_t len = strlen(text);
-        n = (len > size) ? -1 : (int)len;
     }
     else
     {
         va_list tmp;
         va_copy(tmp, args);
 
+        // truncation
         // vsnprint returns -1 on failure
-#if _MSC_VER >= 1400
-        n = vsnprintf_s(buffer, size, _TRUNCATE, format, tmp);
-#else
         n = vsnprintf(buffer, size, format, tmp);
-#endif
         va_end(tmp);
     }
    
+	if (n < 0 || (n+1) > size)
+        return -1;
+	
+    return n;
+}
 
-	if (n < 0 || n > size) return -1;
-	return n;
+int String_Printf(std::string& buffer, const char * format, ...) {
+
+    va_list args;
+    va_start(args, format);
+
+    int n = String_PrintfArgList(buffer, format, args);
+
+    va_end(args);
+
+    return n;
 }
 
 int String_Printf(char * buffer, int size, const char * format, ...) {
@@ -167,14 +222,13 @@ using StringPoolSet = std::unordered_set<const char*, CompareAndHandStrings, Com
 #define CastImpl(imp) (StringPoolSet*)imp
 
 StringPool::StringPool(Allocator * allocator) {
-    // allocator not used
+    // NOTE: allocator not used
     
     m_impl = new StringPoolSet();
 }
 StringPool::~StringPool() {
     auto* impl = CastImpl(m_impl);
     
-    // TODO: fix
     // delete the strings
     for (auto it : *impl) {
         const char* text = it;

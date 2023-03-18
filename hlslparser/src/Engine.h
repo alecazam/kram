@@ -8,6 +8,9 @@
 #include <stdlib.h> // malloc
 #include <new> // for placement new
 
+// stl
+#include <string>
+
 #ifndef NULL
 #define NULL    0
 #endif
@@ -58,14 +61,20 @@ public:
 
 
 
-int String_Printf(char * buffer, int size, const char * format, ...) M4_PRINTF_ATTR(3, 4);
-int String_PrintfArgList(char * buffer, int size, const char * format, va_list args);
 int String_FormatFloat(char * buffer, int size, float value);
 bool String_Equal(const char * a, const char * b);
 bool String_EqualNoCase(const char * a, const char * b);
 double String_ToDouble(const char * str, char ** end);
 int String_ToInteger(const char * str, char ** end);
 bool String_HasChar(const char* str, char c);
+
+// just use these, it's way easier than using fixed buffers
+int String_PrintfArgList(std::string& buffer, const char * format, va_list args);
+int String_Printf(std::string& buffer, const char * format, ...) M4_PRINTF_ATTR(2, 3);
+
+// These 3 calls have truncation issues
+int String_Printf(char * buffer, int size, const char * format, ...) M4_PRINTF_ATTR(3, 4);
+int String_PrintfArgList(char * buffer, int size, const char * format, va_list args);
 void String_Copy(char* str, const char* b, uint32_t size);
 
 void String_StripTrailingFloatZeroes(char* buffer);

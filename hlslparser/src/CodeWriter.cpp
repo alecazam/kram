@@ -15,9 +15,6 @@
 
 namespace M4
 {
-
-static const int _maxLineLength = 4096;
-
 CodeWriter::CodeWriter(bool writeFileNames)
 {
     m_currentLine       = 1;
@@ -55,18 +52,13 @@ void CodeWriter::BeginLine(int indent, const char* fileName, int lineNumber)
          
         if (outputLine || outputFile)
         {
-            char buffer[256];
-            String_Printf(buffer, sizeof(buffer), "#line %d", lineNumber);
-            m_buffer += buffer;
             if (outputFile && m_writeFileNames)
             {
-                m_buffer += " \"";
-                m_buffer += fileName;
-                m_buffer += "\"\n";
+                String_Printf(m_buffer, "#line %d \"%s\"\n", lineNumber, fileName.c_str());
             }
             else
             {
-                m_buffer += "\n";
+                String_Printf(m_buffer, "#line %d\n", lineNumber);
             }
         }
         */
@@ -97,23 +89,11 @@ int CodeWriter::EndLine(const char* text)
 
 void CodeWriter::Write(const char* format, ...)
 {
-    // TODO: String_Equal(format, "\%s")
-    if (!String_HasChar(format, '%'))
-    {
-        m_buffer += format;
-    }
-    else
-    {
-        char buffer[_maxLineLength];
-        
-        va_list args;
-        va_start(args, format);
-        int result = String_PrintfArgList(buffer, sizeof(buffer), format, args);
-        ASSERT(result != -1);
-        va_end(args);
-        
-        m_buffer += buffer;
-    }
+    va_list args;
+    va_start(args, format);
+    int result = String_PrintfArgList(m_buffer, format, args);
+    ASSERT(result != -1);
+    va_end(args);
 }
 
 void CodeWriter::WriteLine(int indent, const char* format, ...)
@@ -121,24 +101,11 @@ void CodeWriter::WriteLine(int indent, const char* format, ...)
     if (indent)
         Write("%*s", indent * m_spacesPerIndent, "");
     
-    // avoid unnecessary work
-    // TODO: String_Equal(format, "\%s")
-    if (!String_HasChar(format, '%'))
-    {
-        m_buffer += format;
-    }
-    else
-    {
-        char buffer[_maxLineLength];
-        
-        va_list args;
-        va_start(args, format);
-        int result = String_PrintfArgList(buffer, sizeof(buffer), format, args);
-        ASSERT(result != -1);
-        va_end(args);
-        
-        m_buffer += buffer;
-    }
+    va_list args;
+    va_start(args, format);
+    int result = String_PrintfArgList(m_buffer, format, args);
+    ASSERT(result != -1);
+    va_end(args);
     
     EndLine();
 }
@@ -148,24 +115,12 @@ void CodeWriter::WriteLineTagged(int indent, const char* fileName, int lineNumbe
     // TODO: this should make sure that line isn't already Begu
     BeginLine(indent, fileName, lineNumber);
     
-    // TODO: String_Equal(format, "\%s")
-    if (!String_HasChar(format, '%'))
-    {
-        m_buffer += format;
-    }
-    else
-    {
-        char buffer[_maxLineLength];
+    va_list args;
+    va_start(args, format);
+    int result = String_PrintfArgList(m_buffer, format, args);
+    ASSERT(result != -1);
+    va_end(args);
         
-        va_list args;
-        va_start(args, format);
-        int result = String_PrintfArgList(buffer, sizeof(buffer), format, args);
-        ASSERT(result != -1);
-        va_end(args);
-        
-        m_buffer += buffer;
-    }
-    
     EndLine();
 }
 
