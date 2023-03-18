@@ -170,8 +170,8 @@ OutputVS SampleVS(InputVS input)
     // need transformed to world space too?
     // this only works if only uniform scale and invT on normal
     //input.normal.z *= -1.0; // why negated?
-    output.normal = mul(float4(input.normal, 0.0), scene.model);
-    output.tangent = mul(float4(input.tangent, 0.0), scene.model);
+    output.normal = mul(float4(input.normal, 0.0), scene.model).xyz;
+    output.tangent = mul(float4(input.tangent, 0.0), scene.model).xyz;
 
     return output;
 }

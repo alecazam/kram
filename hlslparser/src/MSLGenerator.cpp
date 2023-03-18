@@ -1515,6 +1515,8 @@ namespace M4
     {
         if (type.baseType == HLSLBaseType_Float3x3)
         {
+            // TODO: pull name from table, why is this special case?
+            // also why is this not in parens?
             m_writer.Write("float3x3");
         }
         else

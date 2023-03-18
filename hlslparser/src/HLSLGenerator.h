@@ -41,7 +41,7 @@ private:
     void OutputStatements(int indent, HLSLStatement* statement);
     void OutputDeclaration(HLSLDeclaration* declaration);
     void OutputDeclaration(const HLSLType& type, const char* name, const char* semantic = NULL, const char* registerName = NULL, HLSLExpression* defaultValue = NULL);
-    void OutputDeclarationType(const HLSLType& type);
+    void OutputDeclarationType(const HLSLType& type, bool isTypeCast = false);
     void OutputDeclarationBody(const HLSLType& type, const char* name, const char* semantic =NULL, const char* registerName = NULL, HLSLExpression * assignment = NULL);
 
     /** Generates a name of the format "base+n" where n is an integer such that the name

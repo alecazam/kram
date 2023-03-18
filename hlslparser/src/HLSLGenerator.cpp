@@ -307,7 +307,8 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
     {
         HLSLCastingExpression* castingExpression = static_cast<HLSLCastingExpression*>(expression);
         m_writer.Write("(");
-        OutputDeclaration(castingExpression->type, "");
+        // OutputDeclaration(castingExpression->type, "");
+        OutputDeclarationType(castingExpression->type, true/*isTypeCast*/);
         m_writer.Write(")(");
         OutputExpression(castingExpression->expression);
         m_writer.Write(")");
@@ -824,7 +825,7 @@ const char* HLSLGenerator::GetFormatName(HLSLBaseType bufferOrTextureType, HLSLB
     // TODO: have a way to disable use of half (like on MSLGenerator)
     bool isHalf = IsHalf(formatType);
     
-    // Can't use half4 textures with spriv
+    // Can't use half4 textures with spirv
     // Can tell Vulkan was written by/for desktop IHVs.
     // https://github.com/microsoft/DirectXShaderCompiler/issues/2711
     bool isSpirvTarget = true; // TODO: tie to CLI option
@@ -914,10 +915,16 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
     };
 }
 
-void HLSLGenerator::OutputDeclarationType(const HLSLType& type)
+void HLSLGenerator::OutputDeclarationType(const HLSLType& type, bool isTypeCast)
 {
     const char* typeName = GetTypeName(type);
 
+    if (isTypeCast)
+    {
+        m_writer.Write("%s", typeName);
+        return;
+    }
+    
     if (type.flags & HLSLTypeFlag_Const)
     {
         m_writer.Write("const ");

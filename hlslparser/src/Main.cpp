@@ -90,7 +90,7 @@ int main( int argc, char* argv[] )
 	const char* entryName = NULL;
 
 	// TODO: could we take modern DX12 HLSL and translate to MSL only
-	// That would simplify all this.  What spriv-cross already does though.
+	// That would simplify all this.  What spirv-cross already does though.
 	// Could drop HLSLGenerator then, and just use this to gen MSL.
 	// Much of the glue code can just be in a header, but having it
 	// in parser, lets this only splice code that is needed.
