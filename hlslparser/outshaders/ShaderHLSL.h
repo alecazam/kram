@@ -3,7 +3,7 @@
 
 // glslc doesn't support but DXC does
 // so had to add header guard
-#ifdef __spriv__
+#ifdef __spirv__
 #pragma once
 #endif
 
@@ -11,7 +11,7 @@
 // This means operators cannot overload [+-*/>><<]=.  Only builtins work.
 
 // HLSL2021 adds bitfields, so could define a color.
-// They say they are on bw compatible with DX12 releases, but spriv backed should warn.
+// They say they are on bw compatible with DX12 releases, but spirv backed should warn.
 //struct ColorRGBA {
 //  uint R : 8;
 //  uint G : 8;

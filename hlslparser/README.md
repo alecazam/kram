@@ -3,9 +3,9 @@ HLSLParser
 
 This version of thekla/hlslparser takes a HLSL2021 syntax that then converts that into modern HLSL and MSL.  Special thanks to Max McGuire (@Unknown Worlds) and Ignacio Castano and Johnathan Blow (@Thekla) for releasing this as open-source.  I've left out GLSL and DX9 and FX legacy codegen to simplify maintaining the codebase.  This is a small amount of code compared with the Krhonos shader tools.
 
-There are still growing pains to using hlslparser.  It can't do all the manipulation that glsc and spriv-cross does to ensure that a valid shader model shader is created.  But compiling with DXC/metal should help avoid issues.  I still don't know how to resolve reflection, since each compiler generates it's own unique data formats.  Reflection is simpler on the spirv path.
+There are still growing pains to using hlslparser.  It can't do all the manipulation that glsc and spirv-cross does to ensure that a valid shader model shader is created.  But compiling with DXC/metal should help avoid issues.  I still don't know how to resolve reflection, since each compiler generates it's own unique data formats.  Reflection is simpler on the spirv path.
 
-The point of this hlslparser is to preserve comments, generate MSL/HLSL code close to the original sources, and be easy to extend.  MSL and HLSL are nearly the same shader language at the core.  Typical spriv to MSL transpiles look assembly-like in code flow.  spriv-opt and spriv-cross introduces 100's of temp registers into the code, gens 24 character floats, strips comments, can't translate half samplers, and the resulting code isn't simple to step through in Metal GPU capture.  At the same time, Apple ignores generating Spirv from MSL, so here we are.  Spriv should remain a final assembly format to feed to Vulkan drivers.
+The point of this hlslparser is to preserve comments, generate MSL/HLSL code close to the original sources, and be easy to extend.  MSL and HLSL are nearly the same shader language at the core.  Typical spirv to MSL transpiles look assembly-like in code flow.  spirv-opt and spirv-cross introduces 100's of temp registers into the code, gens 24 character floats, strips comments, can't translate half samplers, and the resulting code isn't simple to step through in Metal GPU capture.  At the same time, Apple ignores generating Spirv from MSL, so here we are.  Spirv should remain a final assembly format to feed to Vulkan drivers.
 
 ---------------------------------
 
@@ -90,7 +90,7 @@ Overview
 |glslc | Google's wrapper to glslang, preprocessor, reflection, see below |
 |glslang | GLSL and HLSL compiler, but doesn't compile valid HLSL half code |
 |spirv-opt | spv optimizer |
-|spriv-cross | transpile spv to MSL, HLSL, and GLSL, but codegen has 100's of temp vars, no comments, can target specific MSL/HLSL models |
+|spirv-cross | transpile spv to MSL, HLSL, and GLSL, but codegen has 100's of temp vars, no comments, can target specific MSL/HLSL models |
 |spirv-reflect | gens reflection data from spv file |
 
 Dealing with Half
@@ -126,7 +126,7 @@ Terms
 ---
 
 * Shader Variants - it's good to define which variants of shaders to generate.  Can use static and dynamic branching to reduce variant count.  Can lead to requiring shader source if can't predefine variant count.
-* Specialization Constants - allow variants to be generated within a single shader.  Spriv is marked and compiled based on these settings.  Metal has equivalent function constants
+* Specialization Constants - allow variants to be generated within a single shader.  Spirv is marked and compiled based on these settings.  Metal has equivalent function constants
 * Tile shaders - kernels/fragment shaders that run at the tile level.  Subpasses in Vulkan.  tilegroup memory to and tile data passed from stage to stage without writing back to targets.
 
 
@@ -349,7 +349,7 @@ GLSL/ES
 * 3.0 on iOS, now emulated by Metal,
 * Khronos support ends at 3.1, moved to Vulkan/spirv
 * precision modifiers in ES for lowp (no support), mediump (might be fp16, fp24, fp32), highp (fp24 or fp32)
-* replaced with spriv
+* replaced with spirv
 * defaults needelessly removed from uniforms
 * dot or .0 required on all floating point numbers or shader fails to compile, int vs. float
 * line directives needlessly changed from GLSL
@@ -373,12 +373,12 @@ GLSL/ES (WebGL)
 * https://www.khronos.org/files/webgl20-reference-guide.pdf
 
 WGSL (WebGPU)
-* WebGPU shading language originally meant as text form of spriv
+* WebGPU shading language originally meant as text form of spirv
 * full compute support
 * now using Dart like syntax completely unlike CG origin of other languages
 * avoids pointers/references
 * can transpile spirv to WGSL via tint, WGSL still not in spirv-cross
-* converts WGSL back to spriv.
+* converts WGSL back to spirv.
 * supposedly Apple didn't want to require spirv.
 * similar in api syntax to Metal/Vulkan/DX12
 * https://www.w3.org/TR/webgpu/

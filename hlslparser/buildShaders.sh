@@ -5,6 +5,7 @@ mkdir -p out
 mkdir -p out/mac
 mkdir -p out/win
 mkdir -p out/android
+mkdir -p out/ios
 
 # mkdir -p out/ios
 
@@ -34,10 +35,13 @@ appHlslparser=../build/hlslparser/Build/Products/Release/hlslparser
 
 appDxc=${vulkanSDK}
 appGlslc=${vulkanSDK}
-appSprivReflect=${vulkanSDK}
+appSpirvReflect=${vulkanSDK}
+appSpirvCross=${vulkanSDK}
+
 appDxc+="dxc"
 appGlslc+="glslc"
-appSprivReflect+="spirv-reflect"
+appSpirvReflect+="spirv-reflect"
+appSpirvCross+="spirv-cross"
 
 # Xcode will only do clickthrough to warnings/errors if the filename
 # is a full path.  That's super annoying.
@@ -114,8 +118,9 @@ fi
 
 args="-nologo "
 
+# if this is left out the transpiled MSL has no var names
 # debug
-# args+="-Zi "
+args+="-Zi "
 
 # column matrices
 args+="-Zpc "
@@ -164,20 +169,34 @@ csargs+="-T cs_6_6 "
 # Optimization is also delegated to SPIRV-Tools.
 # Right now there are no difference between optimization levels greater than zero;
 # they will all invoke the same optimization recipe. That is, the recipe behind spirv-opt -O.
-# -Os is a special set of options.  Can run custom spriv optimizations via
+# -Os is a special set of options.  Can run custom spirv optimizations via
 # -Oconfig=--loop-unroll,--scalar-replacement=300,--eliminate-dead-code-aggressive
 
 # 1.0,1.1,1.2 default to spv1.1,1.3,1.5
 echo gen SPIRV 1.2 with dxc
 ${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo android/Skinning.vert.spv -Fc android/Skinning.vert.spv.txt ${dstDir}Skinning.hlsl
 ${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo android/Skinning.frag.spv -Fc android/Skinning.frag.spv.txt ${dstDir}Skinning.hlsl
-${appDxc} ${csargs} -spirv -fspv-target-env=vulkan1.2 -E ComputeCS -Fo android/Compute.comp.spv -Fc android/Compute.frag.spv.txt ${dstDir}Compute.hlsl
 
-# -Fre not supported with spriv, so just use spirv-reflect
+${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SampleVS -Fo android/Sample.vert.spv -Fc android/Sample.vert.spv.txt ${dstDir}Sample.hlsl
+${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SamplePS -Fo android/Sample.frag.spv -Fc android/Sample.frag.spv.txt ${dstDir}Sample.hlsl
+
+${appDxc} ${csargs} -spirv -fspv-target-env=vulkan1.2 -E ComputeCS -Fo android/Compute.comp.spv -Fc android/Compute.comp.spv.txt ${dstDir}Compute.hlsl
+
+# -Fre not supported with spirv, so just use spirv-reflect
 # either yaml or random format, why can't this just output json?
-${appSprivReflect} -y android/Skinning.vert.spv > android/Skinning.vert.refl
-${appSprivReflect} -y android/Skinning.frag.spv > android/Skinning.frag.refl
-${appSprivReflect} -y android/Compute.comp.spv > android/Compute.comp.refl
+${appSpirvReflect} -y android/Skinning.vert.spv > android/Skinning.vert.refl
+${appSpirvReflect} -y android/Skinning.frag.spv > android/Skinning.frag.refl
+${appSpirvReflect} -y android/Sample.vert.spv > android/Sample.vert.refl
+${appSpirvReflect} -y android/Sample.frag.spv > android/Sample.frag.refl
+${appSpirvReflect} -y android/Compute.comp.spv > android/Compute.comp.refl
+
+# transpile spirv to ios MSL for comparsion to what hlslparser MSL produces
+#  would never use this, would use hlslparser path directly
+${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Skinning.vert.spv --output ios/Skinning.vert.metal
+${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Skinning.frag.spv --output ios/Skinning.frag.metal
+${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Sample.vert.spv --output ios/Sample.vert.metal
+${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Sample.frag.spv --output ios/Sample.frag.metal
+${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Compute.comp.spv --output ios/Compute.comp.metal
 
 # skip this path, have to mod hlsl just to get valid code to compile with glslc
 testGlslc=0
@@ -203,11 +222,11 @@ if [[ $testGlslc -eq 1 ]]; then
     # -I include search path
     # note: glsl has a preprocesor
     
-    echo gen SPRIV 1.2 with glslc
+    echo gen SPIRV 1.2 with glslc
     ${appGlslc} ${vsargs} -fentry-point=SkinningVS -o android2/Skinning.vert.spv Skinning.hlsl
     ${appGlslc} ${psargs} -fentry-point=SkinningPS -o android2/Skinning.frag.spv Skinning.hlsl
 
-    # TODO: need to enable half (float16_t) usage in spriv generated shaders
+    # TODO: need to enable half (float16_t) usage in spirv generated shaders
     # how to identify compliation is targeting Vulkan?
 
     # barely human readable spv assembly listing
@@ -218,7 +237,7 @@ fi
 # TODO: need to group files into library/module
 # also create a readable spv file, so can look through that
 
-# TODO: create reflect data w/o needing spriv
+# TODO: create reflect data w/o needing spirv
 
 # here are flags to use w/DXC
 
@@ -251,7 +270,7 @@ fi
 # -WX                     Treat warnings as errors
 # -Zi                     Enable debug information
   
-# TODO: transpile with spriv-cross to WGSL, GLSL, etc off the spirv.
+# TODO: transpile with spirv-cross to WGSL, GLSL, etc off the spirv.
 
 # -enable-16bit-types     Enable 16bit types and disable min precision types. Available in HLSL 2018 and shader model 6.2
 # -Fc <file>              Output assembly code listing file
