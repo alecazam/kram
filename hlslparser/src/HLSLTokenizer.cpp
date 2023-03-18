@@ -52,12 +52,12 @@ static const char* _reservedWords[] =
         "uint3",
         "uint4",
         
-        "short", // HLSLToken_Short
+        "short", 
         "short2",
         "short3",
         "short4",
         
-        "ushort", // HLSLToken_Uhort
+        "ushort",
         "ushort2",
         "ushort3",
         "ushort4",
@@ -72,7 +72,7 @@ static const char* _reservedWords[] =
         "ulong3",
         "ulong4",
         
-        // TODO: double, u/char
+        // TODO: u/char
         
         "Texture2D",
         "Texture3D",

@@ -466,6 +466,7 @@ struct HLSLFunction : public HLSLStatement
     static const HLSLNodeType s_type = HLSLNodeType_Function;
     const char*         name  = NULL;
     HLSLType            returnType;
+    HLSLBaseType        memberType = HLSLBaseType_Unknown;
     const char*         semantic  = NULL;
     const char*         sv_semantic = NULL;
     int                 numArguments = 0;
@@ -473,6 +474,8 @@ struct HLSLFunction : public HLSLStatement
     HLSLArgument*       argument = NULL;
     HLSLStatement*      statement = NULL;
     HLSLFunction*       forward = NULL; // Which HLSLFunction this one forward-declares
+    
+    bool IsMemberFunction() const { return memberType != HLSLBaseType_Unknown; }
 };
 
 /// Declaration of an argument to a function.

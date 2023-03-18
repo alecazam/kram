@@ -19,7 +19,8 @@ pushd outshaders
 
 # TODO: consider putting in path
 # note bash can't expand tilda, so using HOME instead
-vulkanSDK="${HOME}/devref/vulkansdk/1.3.239.0/macOS/bin/"
+#svulkanSDK="${HOME}/devref/vulkansdk/1.3.239.0/macOS/bin/"
+vulkanSDK=""
 
 projectDir="${HOME}/devref/kram/hlslparser/"
 
@@ -29,6 +30,8 @@ srcDir+="shaders/"
 dstDir=${projectDir}
 dstDir+="outshaders/"
 
+dstDirOut=${projectDir}
+dstDirOut+="out/"
 
 # this only pulls the release build, so testing debug won't update
 appHlslparser=../build/hlslparser/Build/Products/Release/hlslparser
@@ -38,10 +41,18 @@ appGlslc=${vulkanSDK}
 appSpirvReflect=${vulkanSDK}
 appSpirvCross=${vulkanSDK}
 
+# compilers
 appDxc+="dxc"
 appGlslc+="glslc"
+appMetalMac="xcrun -sdk macosx metal"
+appMetaliOS="xcrun -sdk macosx metal"
+
+# reflect/transpile spv
 appSpirvReflect+="spirv-reflect"
 appSpirvCross+="spirv-cross"
+
+# TODO: also use the metal tools on Win to build
+# and already have vulkan sdk
 
 # Xcode will only do clickthrough to warnings/errors if the filename
 # is a full path.  That's super annoying.
@@ -78,37 +89,31 @@ pushd out
 
 #-------------------------------
 
+# TODO: metal3.0 on M1 macOS13/iOS16
+# record sources into code for gpu capture (don't ship this), debug mode
+
+# O2 + size opt
+# metalMacOptions+="-Os"
+
+    
 testMetal=1
 
 if [[ $testMetal -eq 1 ]]; then
     # Metal is C++14
+    metalMacOptions="-frecord-sources -g "
+    metalMacOptions+="-std=macos-metal2.3 "
 
     # see if HLSL compiles to MSL (requires macOS Vulkan install)
 
-    # record sources into code for gpu capture (don't ship this), debug mode
-    metalMacOptions="-frecord-sources -g "
-
-    # O2 + size opt
-    # metalMacOptions+="-Os"
-
-    # TODO: metal3.0 on M1 macOS13/iOS16
-    metalMacOptions+="-std=macos-metal2.3 "
-
     # Test case
-    # xcrun -sdk macosx metal ${dstDir}DepthTest.metal ${metalMacOptions} -o mac/DepthTest.metallib
+    # ${appMetalMac} ${dstDir}DepthTest.metal ${metalMacOptions} -o mac/DepthTest.metallib
 
     # TODO: build to air, and then compile to single metallib and metallibdsym
     # see if MSL compile
     echo compile MSL for macOS
-    xcrun -sdk macosx metal ${dstDir}Skinning.metal ${metalMacOptions} -o mac/Skinning.metallib
-    xcrun -sdk macosx metal ${dstDir}Sample.metal ${metalMacOptions} -o mac/Sample.metallib
-    xcrun -sdk macosx metal ${dstDir}Compute.metal ${metalMacOptions} -o mac/Compute.metallib
-
-    # metaliosOptions="-frecord-sources -g "
-    # metaliosOptions+="-std=ios-metal2.3 "
-
-    #echo compile MSL for iOS
-    #xcrun -sdk macosx metal ${dstDir}Skinning.metal ${metaliosOptions} -o ios/Skinning.metallib
+    ${appMetalMac} ${dstDir}Skinning.metal ${metalMacOptions} -o mac/Skinning.metallib
+    ${appMetalMac} ${dstDir}Sample.metal ${metalMacOptions} -o mac/Sample.metallib
+    ${appMetalMac} ${dstDir}Compute.metal ${metalMacOptions} -o mac/Compute.metallib
 fi
 
 #-------------------------------
@@ -190,13 +195,24 @@ ${appSpirvReflect} -y android/Sample.vert.spv > android/Sample.vert.refl
 ${appSpirvReflect} -y android/Sample.frag.spv > android/Sample.frag.refl
 ${appSpirvReflect} -y android/Compute.comp.spv > android/Compute.comp.refl
 
-# transpile spirv to ios MSL for comparsion to what hlslparser MSL produces
-#  would never use this, would use hlslparser path directly
-${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Skinning.vert.spv --output ios/Skinning.vert.metal
-${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Skinning.frag.spv --output ios/Skinning.frag.metal
-${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Sample.vert.spv --output ios/Sample.vert.metal
-${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Sample.frag.spv --output ios/Sample.frag.metal
-${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Compute.comp.spv --output ios/Compute.comp.metal
+if [[ $testMetal -eq 1 ]]; then
+    metaliOSOptions="-frecord-sources -g "
+    metaliOSOptions+="-std=ios-metal2.3 "
+
+    # transpile spirv to ios MSL for comparsion to what hlslparser MSL produces
+    #  would never use this, would use hlslparser path directly
+    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Skinning.vert.spv --output ios/Skinning.vert.metal
+    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Skinning.frag.spv --output ios/Skinning.frag.metal
+    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Sample.vert.spv --output ios/Sample.vert.metal
+    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Sample.frag.spv --output ios/Sample.frag.metal
+    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Compute.comp.spv --output ios/Compute.comp.metal
+
+    ${appMetaliOS} ${dstDirOut}ios/Skinning.vert.metal ${metaliOSOptions} -o ios/Skinning.vert.metallib
+    ${appMetaliOS} ${dstDirOut}ios/Skinning.frag.metal ${metaliOSOptions} -o ios/Skinning.frag.metallib
+    ${appMetaliOS} ${dstDirOut}ios/Sample.vert.metal ${metaliOSOptions} -o ios/Sample.vert.metallib
+    ${appMetaliOS} ${dstDirOut}ios/Sample.frag.metal ${metaliOSOptions} -o ios/Sample.frag.metallib
+    ${appMetaliOS} ${dstDirOut}ios/Compute.comp.metal ${metaliOSOptions} -o ios/Compute.comp.metallib
+fi
 
 # skip this path, have to mod hlsl just to get valid code to compile with glslc
 testGlslc=0

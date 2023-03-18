@@ -245,24 +245,20 @@ HLSLBaseType NumericToBaseType(NumericType numericType)
     {
         case NumericType_Float: baseType = HLSLBaseType_Float; break;
         case NumericType_Half: baseType = HLSLBaseType_Half; break;
+        case NumericType_Double: baseType = HLSLBaseType_Bool; break;
+       
         case NumericType_Int: baseType = HLSLBaseType_Int; break;
         case NumericType_Uint: baseType = HLSLBaseType_Uint; break;
-        case NumericType_Bool: baseType = HLSLBaseType_Bool; break;
-            
         case NumericType_Ushort: baseType = HLSLBaseType_Ushort; break;
         case NumericType_Short: baseType = HLSLBaseType_Short; break;
-            
-        // TODO: requires vec/matrix additions for double
-        // case NumericType_Double: baseType = HLSLBaseType_Bool; break;
-            
-        // TODO:
+        case NumericType_Ulong: baseType = HLSLBaseType_Ulong; break;
+        case NumericType_Long: baseType = HLSLBaseType_Long; break;
+        case NumericType_Bool: baseType = HLSLBaseType_Bool; break;
+        
+        // MSL has 8-bit, but HLSL/Vulkan don't
         //case NumericType_Uint8: baseType = HLSLBaseType_Uint8; break;
         //case NumericType_Int8: baseType = HLSLBaseType_Int8; break;
-        
-        // TODO:
-        //case NumericType_Uint64: baseType = HLSLBaseType_Uint8; break;
-        //case NumericType_Int64: baseType = HLSLBaseType_Int8; break;
-            
+    
         default:
             break;
     }
@@ -271,41 +267,15 @@ HLSLBaseType NumericToBaseType(NumericType numericType)
 
 HLSLBaseType HalfToFloatBaseType(HLSLBaseType type)
 {
-    switch(type)
-    {
-        case HLSLBaseType_Half: return HLSLBaseType_Float;
-        case HLSLBaseType_Half2: return HLSLBaseType_Float2;
-        case HLSLBaseType_Half3: return HLSLBaseType_Float3;
-        case HLSLBaseType_Half4: return HLSLBaseType_Float4;
-        case HLSLBaseType_Half2x2: return HLSLBaseType_Float2x2;
-        case HLSLBaseType_Half3x3: return HLSLBaseType_Float3x3;
-        case HLSLBaseType_Half4x4: return HLSLBaseType_Float4x4;
-            
-        default:
-           // do nothing;
-            break;
-    }
-    
+    if (IsHalf(type))
+        type = (HLSLBaseType)(HLSLBaseType_Float + (type - HLSLBaseType_Half));
     return type;
 }
 
 HLSLBaseType DoubleToFloatBaseType(HLSLBaseType type)
 {
-    switch(type)
-    {
-        case HLSLBaseType_Double: return HLSLBaseType_Float;
-        case HLSLBaseType_Double2: return HLSLBaseType_Float2;
-        case HLSLBaseType_Double3: return HLSLBaseType_Float3;
-        case HLSLBaseType_Double4: return HLSLBaseType_Float4;
-        case HLSLBaseType_Double2x2: return HLSLBaseType_Float2x2;
-        case HLSLBaseType_Double3x3: return HLSLBaseType_Float3x3;
-        case HLSLBaseType_Double4x4: return HLSLBaseType_Float4x4;
-            
-        default:
-           // do nothing;
-            break;
-    }
-    
+    if (IsDouble(type))
+        type = (HLSLBaseType)(HLSLBaseType_Float + (type - HLSLBaseType_Double));
     return type;
 }
 
@@ -395,12 +365,14 @@ struct Intrinsic
     }
     
     // TODO: allow member function intrinsices on buffers/textures
-    HLSLBaseType    memberType = HLSLBaseType_Unknown;
     HLSLFunction    function;
     HLSLArgument    argument[4];
 };
     
-// So many calls are member functions in modern HLSL/MSL
+// So many calls are member functions in modern HLSL/MSL.
+// This means the parser has to work harder to write out these intrinsics
+// since some have default args, and some need level(), bias() wrappers in MSL.
+// That complexity is currently hidden away in wrapper C-style calls in ShaderMSL.h.
 #define USE_MEMBER_FUNCTIONS 0
 
 static void AddIntrinsic(const Intrinsic& intrinsic);
@@ -409,7 +381,7 @@ void AddTextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType
 {
 #if USE_MEMBER_FUNCTIONS
     Intrinsic i(name, returnType, HLSLBaseType_SamplerState, uvType);
-    i.memberType = textureType;
+    i.function.memberType = textureType;
 #else
     Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerState, uvType);
 #endif
@@ -426,8 +398,8 @@ void AddDepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType t
     HLSLBaseType samplerType = isCompare ? HLSLBaseType_SamplerComparisonState : HLSLBaseType_SamplerState;
     
 #if USE_MEMBER_FUNCTIONS
-    Intrinsic i(name, returnType, samplerType, uvType);
-    i.memberType = textureType;
+    Intrinsic i(name, returnType, samplerType, uvType); 
+    i.function.memberType = textureType;
 #else
     Intrinsic i(name, returnType, textureType, samplerType, uvType);
 #endif
@@ -738,7 +710,7 @@ static const EffectState pipelineStates[] = {
 
 // TODO: elim the H version once have member functions, can check the member textuer format.
 #define TEXTURE_INTRINSIC_FUNCTION(name, textureType, uvType) \
-AddTextureIntrinsic( name, HLSLBaseType_Float4, textureType, HLSLBaseType_Float, uvType)
+    AddTextureIntrinsic( name, HLSLBaseType_Float4, textureType, HLSLBaseType_Float, uvType)
 
 #define TEXTURE_INTRINSIC_FUNCTION_H(name, textureType, uvType) \
         AddTextureIntrinsic( name "H", HLSLBaseType_Half4, textureType, HLSLBaseType_Half, uvType  )
@@ -3114,12 +3086,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 case HLSLBaseType_Float4x4:
                     arrayAccess->expressionType.baseType = HLSLBaseType_Float4;
                     break;
-//                case HLSLBaseType_Float4x3:
-//                    arrayAccess->expressionType.baseType = HLSLBaseType_Float3;
-//                    break;
-//                case HLSLBaseType_Float4x2:
-//                    arrayAccess->expressionType.baseType = HLSLBaseType_Float2;
-//                    break;
+
                 case HLSLBaseType_Half2:
                 case HLSLBaseType_Half3:
                 case HLSLBaseType_Half4:
@@ -3134,12 +3101,23 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 case HLSLBaseType_Half4x4:
                     arrayAccess->expressionType.baseType = HLSLBaseType_Half4;
                     break;
-//                case HLSLBaseType_Half4x3:
-//                    arrayAccess->expressionType.baseType = HLSLBaseType_Half3;
-//                    break;
-//                case HLSLBaseType_Half4x2:
-//                    arrayAccess->expressionType.baseType = HLSLBaseType_Half2;
-//                    break;
+
+                case HLSLBaseType_Double2:
+                case HLSLBaseType_Double3:
+                case HLSLBaseType_Double4:
+                    arrayAccess->expressionType.baseType = HLSLBaseType_Double;
+                    break;
+                case HLSLBaseType_Double2x2:
+                    arrayAccess->expressionType.baseType = HLSLBaseType_Double2;
+                    break;
+                case HLSLBaseType_Double3x3:
+                    arrayAccess->expressionType.baseType = HLSLBaseType_Double3;
+                    break;
+                case HLSLBaseType_Double4x4:
+                    arrayAccess->expressionType.baseType = HLSLBaseType_Double4;
+                    break;
+
+                        
                 case HLSLBaseType_Int2:
                 case HLSLBaseType_Int3:
                 case HLSLBaseType_Int4:
@@ -3165,8 +3143,18 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
                 case HLSLBaseType_Short4:
                     arrayAccess->expressionType.baseType = HLSLBaseType_Short;
                     break;
+                case HLSLBaseType_Ulong2:
+                case HLSLBaseType_Ulong3:
+                case HLSLBaseType_Ulong4:
+                    arrayAccess->expressionType.baseType = HLSLBaseType_Ulong;
+                    break;
+                case HLSLBaseType_Long2:
+                case HLSLBaseType_Long3:
+                case HLSLBaseType_Long4:
+                    arrayAccess->expressionType.baseType = HLSLBaseType_Long;
+                    break;
                         
-                // TODO: double, u/char
+                // TODO: u/char
                 default:
                     m_tokenizer.Error("array, matrix, vector, or indexable object type expected in index expression");
                     return false;
@@ -4017,12 +4005,6 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
     case HLSLToken_Float4x4:
         type.baseType = HLSLBaseType_Float4x4;
         break;
-//    case HLSLToken_Float4x3:
-//        type.baseType = HLSLBaseType_Float4x3;
-//        break;
-//    case HLSLToken_Float4x2:
-//        type.baseType = HLSLBaseType_Float4x2;
-//        break;
             
     case HLSLToken_Half:
         type.baseType = HLSLBaseType_Half;
@@ -4046,12 +4028,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
     case HLSLToken_Half4x4:
         type.baseType = HLSLBaseType_Half4x4;
         break;
-//    case HLSLToken_Half4x3:
-//        type.baseType = HLSLBaseType_Half4x3;
-//        break;
-//    case HLSLToken_Half4x2:
-//        type.baseType = HLSLBaseType_Half4x2;
-//        break;
+
     case HLSLToken_Bool:
         type.baseType = HLSLBaseType_Bool;
         break;
@@ -4187,7 +4164,7 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
                 token = m_tokenizer.GetToken();
                 
                 // TODO: need more format types
-                // TODO: double, and other types
+                // TODO: double, u/long, and other types
                 if (token >= HLSLToken_Float && token <= HLSLToken_Float4)
                 {
                     // TODO: code only tests if texture formatType exactly matches
@@ -4631,6 +4608,10 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
     case NumericType_Half:
         memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Half + swizzleLength - 1);
         break;
+    case NumericType_Double:
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Double + swizzleLength - 1);
+        break;
+        
     case NumericType_Int:
         memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Int + swizzleLength - 1);
         break;
@@ -4646,7 +4627,13 @@ bool HLSLParser::GetMemberType(const HLSLType& objectType, HLSLMemberAccess * me
     case NumericType_Ushort:
         memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Ushort + swizzleLength - 1);
             break;
-    // TODO: double, u/char
+    case NumericType_Long:
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Long + swizzleLength - 1);
+            break;
+    case NumericType_Ulong:
+        memberAccess->expressionType.baseType = (HLSLBaseType)(HLSLBaseType_Ulong + swizzleLength - 1);
+            break;
+    // TODO: u/char
     default:
         ASSERT(false);
     }

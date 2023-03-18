@@ -71,7 +71,7 @@ enum HLSLToken
     HLSLToken_Ulong3,
     HLSLToken_Ulong4,
     
-    // TODO: double, u/char
+    // TODO: u/char
     HLSLToken_Texture2D,
     HLSLToken_Texture3D,
     HLSLToken_TextureCube,
