@@ -36,18 +36,19 @@ DONE
 * handle depth textures 
 * compile HLSL with DXC to SPV
 * compile MSL with metalc to AIR/metallib
-
-TODO:
 * u/int64_tN support
 * double support - not in MSL, can't interpolate vs/ps must pack to uint
-# RWTexture
+* RWTexture (needs ops)
+* Vulkan push constants in HLSL
+
+TODO:
 * more than half/float/int literals (f.e. uint)
-* ray-tracing kernels
 * passing variables only by value in HLSL vs. value/ref/ptr in MSL
 * argument buffers and descriptor sets (root tables for DX?)
 * halfio/2/3/4 type for Nvidia/Adreno, halfst2/3/4 for storage
 * specialization and push constants for variants (MSL/SPV only)
 * numgroups designator for DX kernel
+* ray-tracing kernels
 * tile shader kernels - may be MSL and Android SPV specific
 * triangulation shaders (geom, mesh, hull/etc) - platform specific
 * generate reflection data from parse of HLSL
@@ -57,8 +58,9 @@ TODO:
 * fix shaders to not structify metal and mod the source names, turn on written, currently handling globals.  Could require passing elements from main shader.
 * poor syntax highlighting of output .metal file, does Xcode have to compile?
 * no syntax highlighting of .hlsl files in Xcode, but VSCode has HLSL but not MSL
-
-* May want to swtich to VSCode for shader development
+*
+* May want to switch to VSCode for shader development
+* Also Windows VS2022 has HLSL add-on from Tim Jones
 * https://marketplace.visualstudio.com/items?itemName=doublebuffer.metal-shader&utm_source=VSCode.pro&utm_campaign=AhmadAwais
 
 ---------------------------------
