@@ -437,7 +437,7 @@ namespace M4
         
         // mod
         int indent = m_writer.EndLine();
-        m_writer.BeginLine(indent);
+        m_writer.BeginLine(indent+1); // 1 more level for params
         
         const ClassArgument* currentArg = m_firstClassArgument;
         while (currentArg != NULL)
@@ -533,37 +533,45 @@ namespace M4
             }
             m_writer.Write("%s", GetTypeName(entryFunction->returnType, /*exactType=*/true));
         }
-
+        
         m_writer.Write(" %s(", entryName);
 
         // Alec added for readability
         indent = m_writer.EndLine();
-        m_writer.BeginLine(indent);
+        
+        m_writer.BeginLine(indent+1); // indent more
+        
+        //--------------------
+        // This is the class taking in arguments
         
         int argumentCount = 0;
         HLSLArgument* argument = entryFunction->argument;
         while (argument != NULL)
         {
-            if (!argument->hidden)
+            if (argument->hidden)
             {
-                if (argument->type.baseType == HLSLBaseType_UserDefined)
-                {
-                    m_writer.Write("%s::", shaderClassName);
-                }
-                m_writer.Write("%s %s", GetTypeName(argument->type, /*exactType=*/true), argument->name);
-
-                // @@ IC: We are assuming that the first argument is the 'stage_in'.
-                if (argument->type.baseType == HLSLBaseType_UserDefined && argument == entryFunction->argument)
-                {
-                    m_writer.Write(" [[stage_in]]");
-                }
-                else if (argument->sv_semantic)
-                {
-                    m_writer.Write(" [[%s]]", argument->sv_semantic);
-                }
-                
-                argumentCount++;
+                argument = argument->nextArgument;
+                continue;
             }
+            
+            if (argument->type.baseType == HLSLBaseType_UserDefined)
+            {
+                m_writer.Write("%s::", shaderClassName);
+            }
+            m_writer.Write("%s %s", GetTypeName(argument->type, /*exactType=*/true), argument->name);
+
+            // @@ IC: We are assuming that the first argument is the 'stage_in'.
+            if (argument->type.baseType == HLSLBaseType_UserDefined && argument == entryFunction->argument)
+            {
+                m_writer.Write(" [[stage_in]]");
+            }
+            else if (argument->sv_semantic)
+            {
+                m_writer.Write(" [[%s]]", argument->sv_semantic);
+            }
+            
+            argumentCount++;
+            
             argument = argument->nextArgument;
             if (argument && !argument->hidden)
             {
@@ -573,15 +581,21 @@ namespace M4
                 indent = m_writer.EndLine();
                 m_writer.BeginLine(indent);
             }
+            
+            
         }
 
+        // These are additional inputs/outputs not [[stage_in]]
+        
         currentArg = m_firstClassArgument;
         if (argumentCount && currentArg != NULL)
         {
-            m_writer.Write(", ");
+            m_writer.Write(",");
             
+            // Alec added for readability
             indent = m_writer.EndLine();
             m_writer.BeginLine(indent);
+            
         }
         while (currentArg != NULL)
         {
@@ -602,13 +616,14 @@ namespace M4
             if (currentArg)
             {
                 m_writer.Write(", ");
-                
-                // Alec added for readability
-                indent = m_writer.EndLine();
-                m_writer.BeginLine(indent);
             }
+            
+            // Alec added for readability
+            indent = m_writer.EndLine();
+            m_writer.BeginLine(indent);
         }
-        m_writer.EndLine(") {");
+        m_writer.EndLine(")");
+        m_writer.WriteLine(0, "{");
 
         // Create the helper class instance and call the entry point from the original shader
         m_writer.BeginLine(1);
@@ -627,8 +642,8 @@ namespace M4
                 {
                     m_writer.Write(", ");
                     
-                    indent = m_writer.EndLine();
-                    m_writer.BeginLine(indent);
+                    // indent = m_writer.EndLine();
+                    // m_writer.BeginLine(indent);
                 }
             }
 
@@ -1000,8 +1015,7 @@ namespace M4
                     m_writer.Write(" [[%s]]", field->sv_semantic);
                 }
 
-                m_writer.Write(";");
-                m_writer.EndLine();
+                m_writer.EndLine(";");
             }
             field = field->nextField;
         }
@@ -1027,11 +1041,11 @@ namespace M4
                 buffer->bufferType == HLSLBufferType_ByteAddressBuffer ||
                 buffer->bufferType == HLSLBufferType_StructuredBuffer)
             {
-                m_writer.WriteLine(indent, "constant %s %s %s", buffer->bufferStruct->name, isRef ? "&" : "*", buffer->name);
+                m_writer.Write("constant %s %s %s", buffer->bufferStruct->name, isRef ? "&" : "*", buffer->name);
             }
             else
             {
-                m_writer.WriteLine(indent, "device %s %s %s",  buffer->bufferStruct->name, isRef ? "&" : "*", buffer->name);
+                m_writer.Write("device %s %s %s",  buffer->bufferStruct->name, isRef ? "&" : "*", buffer->name);
             }
             
             m_writer.EndLine(";");
@@ -1042,9 +1056,9 @@ namespace M4
             HLSLDeclaration* field = buffer->field;
             
             m_writer.BeginLine(indent, buffer->fileName, buffer->line);
-            
             m_writer.Write("struct %s_ubo", buffer->name);
             m_writer.EndLine(" {");
+            
             while (field != NULL)
             {
                 if (!field->hidden)

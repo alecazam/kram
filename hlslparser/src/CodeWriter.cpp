@@ -97,54 +97,76 @@ int CodeWriter::EndLine(const char* text)
 
 void CodeWriter::Write(const char* format, ...)
 {
-    va_list args;
-    va_start(args, format);
-
-    char buffer[_maxLineLength];
-    String_PrintfArgList(buffer, sizeof(buffer), format, args);
-
-    m_buffer += buffer;
-
-    va_end(args);      
+    // TODO: String_Equal(format, "\%s")
+    if (!String_HasChar(format, '%'))
+    {
+        m_buffer += format;
+    }
+    else
+    {
+        char buffer[_maxLineLength];
+        
+        va_list args;
+        va_start(args, format);
+        int result = String_PrintfArgList(buffer, sizeof(buffer), format, args);
+        ASSERT(result != -1);
+        va_end(args);
+        
+        m_buffer += buffer;
+    }
 }
 
 void CodeWriter::WriteLine(int indent, const char* format, ...)
 {
-    va_list args;
-    va_start(args, format);
-
-    char buffer[_maxLineLength];
-
-    int result = String_PrintfArgList(buffer, sizeof(buffer), format, args);
-    ASSERT(result != -1);
-
-    for (int i = 0; i < indent * m_spacesPerIndent; ++i)
+    if (indent)
+        Write("%*s", indent * m_spacesPerIndent, "");
+    
+    // avoid unnecessary work
+    // TODO: String_Equal(format, "\%s")
+    if (!String_HasChar(format, '%'))
     {
-        m_buffer += " ";
+        m_buffer += format;
     }
-    m_buffer += buffer;
-
+    else
+    {
+        char buffer[_maxLineLength];
+        
+        va_list args;
+        va_start(args, format);
+        int result = String_PrintfArgList(buffer, sizeof(buffer), format, args);
+        ASSERT(result != -1);
+        va_end(args);
+        
+        m_buffer += buffer;
+    }
+    
     EndLine();
-
-    va_end(args);        
 }
 
 void CodeWriter::WriteLineTagged(int indent, const char* fileName, int lineNumber, const char* format, ...)
 {
-    va_list args;
-    va_start(args, format);
-
+    // TODO: this should make sure that line isn't already Begu
     BeginLine(indent, fileName, lineNumber);
-
-    char buffer[_maxLineLength];
-    int result = String_PrintfArgList(buffer, sizeof(buffer), format, args);
-    ASSERT(result != -1);
-
-    m_buffer += buffer;
-
+    
+    // TODO: String_Equal(format, "\%s")
+    if (!String_HasChar(format, '%'))
+    {
+        m_buffer += format;
+    }
+    else
+    {
+        char buffer[_maxLineLength];
+        
+        va_list args;
+        va_start(args, format);
+        int result = String_PrintfArgList(buffer, sizeof(buffer), format, args);
+        ASSERT(result != -1);
+        va_end(args);
+        
+        m_buffer += buffer;
+    }
+    
     EndLine();
-
-    va_end(args);        
 }
 
 const char* CodeWriter::GetResult() const

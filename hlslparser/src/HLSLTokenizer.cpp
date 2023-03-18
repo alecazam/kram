@@ -675,12 +675,7 @@ void HLSLTokenizer::GetTokenName(char buffer[s_maxIdentifier]) const
     // TODO: short/ushort/uint
     else if (m_token == HLSLToken_Identifier)
     {
-#ifdef WIN32
-        strncpy(buffer, m_identifier, sizeof(buffer));
-        buffer[s_maxIdentifier-1] = 0;
-#else
-        strlcpy(buffer, m_identifier, s_maxIdentifier); // TODO: Alec, put in alt strlcpy call for Win
-#endif
+        String_Copy(buffer, m_identifier, s_maxIdentifier);
     }
     else
     {

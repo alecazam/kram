@@ -11,13 +11,13 @@ The point of this hlslparser is to preserve comments, generate MSL/HLSL code clo
 
 Paths to turn HLSL and SPV 
 
-* HLSL2021 > hlslparser > HLSL2021 > DXC > spv  
-* HLSL2021 > hlslparser > MSL    > metal > air/metallib
+* HLSL2021 > hlslparser > HLSL2021 > dxc > SPV  
+* HLSL2021 > hlslparser > MSL    > metal > AIR(metallib)
 *
 * Reflection: spv > spv-reflect -> refl
 *
-* Transpiling MSL: HLSL2021 > DXC   > spv > spirv-cross > MSL
-* Transpiling MSL: HLSL2021 > glslc > spv > spirv-cross > MSL (fails on simple HLSL)
+* Transpiling MSL: HLSL2021 > dxc   > SPV > spirv-cross > MSL
+* Transpiling MSL: HLSL2021 > glslc > SPV > spirv-cross > MSL (fails on simple HLSL)
 *
 * Variant generation 
 * HLSL2021 + defines > preprocess > HLSL2021
@@ -42,6 +42,7 @@ DONE
 * Vulkan push constants in HLSL
 
 TODO:
+* atomics
 * more than half/float/int literals (f.e. uint)
 * passing variables only by value in HLSL vs. value/ref/ptr in MSL
 * argument buffers and descriptor sets (root tables for DX?)

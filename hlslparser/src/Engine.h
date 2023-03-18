@@ -65,6 +65,8 @@ bool String_Equal(const char * a, const char * b);
 bool String_EqualNoCase(const char * a, const char * b);
 double String_ToDouble(const char * str, char ** end);
 int String_ToInteger(const char * str, char ** end);
+bool String_HasChar(const char* str, char c);
+void String_Copy(char* str, const char* b, uint32_t size);
 
 void String_StripTrailingFloatZeroes(char* buffer);
 

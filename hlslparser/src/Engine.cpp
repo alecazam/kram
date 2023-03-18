@@ -12,18 +12,45 @@ namespace M4 {
 
 // Engine/String.cpp
 
-int String_PrintfArgList(char * buffer, int size, const char * format, va_list args) {
-
-    va_list tmp;
-    va_copy(tmp, args);
-
-#if _MSC_VER >= 1400
-	int n = vsnprintf_s(buffer, size, _TRUNCATE, format, tmp);
+void String_Copy(char* str, const char* b, uint32_t size)
+{
+#ifdef WIN32
+    strncpy(str, b, size);
+    str[size-1] = 0;
 #else
-	int n = vsnprintf(buffer, size, format, tmp);
+    strlcpy(str, b, size);
 #endif
+}
 
-    va_end(tmp);
+int String_PrintfArgList(char * buffer, int size, const char * format, va_list args) {
+    int n;
+    
+    if (String_Equal(format, "%s"))
+    {
+        va_list tmp;
+        va_copy(tmp, args);
+        const char* text = va_arg(args, const char*);
+        String_Copy(buffer, text, size);
+        va_end(tmp);
+    
+        // truncation or not
+        size_t len = strlen(text);
+        n = (len > size) ? -1 : (int)len;
+    }
+    else
+    {
+        va_list tmp;
+        va_copy(tmp, args);
+
+        // vsnprint returns -1 on failure
+#if _MSC_VER >= 1400
+        n = vsnprintf_s(buffer, size, _TRUNCATE, format, tmp);
+#else
+        n = vsnprintf(buffer, size, format, tmp);
+#endif
+        va_end(tmp);
+    }
+   
 
 	if (n < 0 || n > size) return -1;
 	return n;
@@ -43,6 +70,10 @@ int String_Printf(char * buffer, int size, const char * format, ...) {
 
 int String_FormatFloat(char * buffer, int size, float value) {
     return String_Printf(buffer, size, "%f", value);
+}
+
+bool String_HasChar(const char* str, char c) {
+    return strchr(str, c) != NULL;
 }
 
 bool String_Equal(const char * a, const char * b) {
@@ -130,9 +161,6 @@ void Log_ErrorArgList(const char * format, va_list args) {
 
 
 // Engine/StringPool.cpp
-
-// Taken from Alec's HashHelper.h
-
 
 using StringPoolSet = std::unordered_set<const char*, CompareAndHandStrings, CompareAndHandStrings>;
 

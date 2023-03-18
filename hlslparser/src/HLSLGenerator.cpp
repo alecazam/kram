@@ -307,9 +307,12 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
     {
         HLSLCastingExpression* castingExpression = static_cast<HLSLCastingExpression*>(expression);
         m_writer.Write("(");
-        // OutputDeclaration(castingExpression->type, "");
-        OutputDeclarationType(castingExpression->type, true/*isTypeCast*/);
-        m_writer.Write(")(");
+        // OutputDeclaration(castingExpression->type, ""); // old - adds space after type
+        OutputDeclarationType(castingExpression->type, true/*isTypeCast*/); // new
+        m_writer.Write(")");
+        
+        // These parens may not be needed
+        m_writer.Write("(");
         OutputExpression(castingExpression->expression);
         m_writer.Write(")");
     }
