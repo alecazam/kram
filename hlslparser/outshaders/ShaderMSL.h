@@ -124,6 +124,7 @@ half4 mul(half4x4 m, half4 a) { return m * a; }
 //half2 mul(half4 a, half2x4 m) { return a * m; }
 #endif
 
+// TODO: parser could replace these intrinsic names in metal
 #define lerp mix
 #define rcp recip
 #define ddx dfdx

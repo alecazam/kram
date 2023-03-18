@@ -887,51 +887,73 @@ void RegisterIntrinsics(const char* name, uint32_t numArgs, AllMask mask, HLSLBa
 
 bool InitIntrinsics()
 {
-    // TODO: these arrays shouldn't need to be static, but getting corrupt strings
-    const char* ops1[] = {
+    const char* kVecOps1[] = {
         "abs",
         "acos", "asin", "atan",
         "cos", "sin", "tan",
-        "floor", "ceil", "frac", "fmod",
-        "normalize", "saturate", "sqrt", "rcp", "exp", "exp2",
-        "log", "Log2",
-        "ddx", "ddy",
-        "isNan", "isInf", "sign",
+        "cosh", "sinh", "tanh",
+        "floor", "ceil", "frac", "fmod", "round", "trunc",
+        "normalize", "sqrt", "rsqrt", "rcp", "saturate", "sign",
+        "log", "log2", "log10",
+        "exp", "exp2",
+        "ddx", "ddy", // ps only
+        "isnan", "isinf", "isfinite",
+        "degrees", "radians" // emulated in MSL
     };
     
-    const char* ops2[] = {
-        "atan2", "pow", // can't pow take sclar?
-        "step", "reflect",
+    const char* kVecOps2[] = {
+        "atan2", "pow", // can't pow take scalar?
+        "step", "frexp",
         "min", "max",
     };
     
-    const char* ops3[] = {
-        "clamp", "lerp", "smoothstep",
+    const char* kVecOps3[] = {
+        "clamp", "lerp", // can clamp and lerp take a scalar for last args/arg?
+        "smoothstep", "fma",
         "min3", "max3",
     };
 
-    // MSL constructs, may be in HLSL
-    // "distance"
-    // "distance_squared"
+    
+    // HLSL
+    // countbits(x)
+    // D3DCOLORtoUBYTE4(x) // does nasty bgra swizzle, so have to convert back
+    // ddx_coarse/fine, ddy_coarse/fine
+    // msad4
+    // printf, errorf
+    
+    // TODO: get atomics working
+    // these work on atomic_int/uint, then bool/ulong 2.4,
+    //   then sub/add on float in MSL 3.0.  How does HLSL declare atomic values?
+    // InterlockedAdd(x,y, out orig value), And, Xor, Or, Min, Max, Exchange, CompareExchange
+    
+    // no "exp10" in HLSL, but is in MSL
+    
+    // both
     // "refract"
-    // "deteriminant"
-    // "median3" - takes 3 args
-    // "select"
     
-    for (uint32_t i = 0, iEnd = ArrayCount(ops1); i < iEnd; ++i)
+    // MSL constructs, may be in HLSL
+    // "distance_squared"
+    // "median3(x,y,z)"
+    // "select(x,y,z)"
+    // "clz", "ctz", count leading trailing zeros
+    // "popcount" count zeroes (opposite of countbits?)
+    // addsat, subsat,
+    // absdiff, hadd(x,y),
+    
+    for (uint32_t i = 0, iEnd = ArrayCount(kVecOps1); i < iEnd; ++i)
     {
-        RegisterIntrinsics( ops1[i], 1, AllFloats | AllVecs );
+        RegisterIntrinsics( kVecOps1[i], 1, AllFloats | AllVecs );
     }
-    for (uint32_t i = 0, iEnd = ArrayCount(ops2); i < iEnd; ++i)
+    for (uint32_t i = 0, iEnd = ArrayCount(kVecOps2); i < iEnd; ++i)
     {
-        RegisterIntrinsics( ops2[i], 2, AllFloats | AllVecs );
+        RegisterIntrinsics( kVecOps2[i], 2, AllFloats | AllVecs );
     }
-    for (uint32_t i = 0, iEnd = ArrayCount(ops3); i < iEnd; ++i)
+    for (uint32_t i = 0, iEnd = ArrayCount(kVecOps3); i < iEnd; ++i)
     {
-        RegisterIntrinsics( ops3[i], 3, AllFloats | AllVecs );
+        RegisterIntrinsics( kVecOps3[i], 3, AllFloats | AllVecs );
     }
     
-    RegisterIntrinsics("sincos", 2, AllFloats | AllVecs, HLSLBaseType_Void);
+    RegisterIntrinsics( "sincos", 2, AllFloats | AllVecs, HLSLBaseType_Void);
 
     RegisterIntrinsics( "mad", 3, AllFloats | AllVecs);
    
@@ -948,7 +970,15 @@ bool InitIntrinsics()
     AddIntrinsic( "cross", HLSLBaseType_Float3,  HLSLBaseType_Float3,  HLSLBaseType_Float3 );
     AddIntrinsic( "cross", HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3 );
     AddIntrinsic( "cross", HLSLBaseType_Double3, HLSLBaseType_Double3, HLSLBaseType_Double3 );
-
+    
+    AddIntrinsic( "reflect", HLSLBaseType_Float3,  HLSLBaseType_Float3,  HLSLBaseType_Float3 );
+    AddIntrinsic( "reflect", HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3 );
+    AddIntrinsic( "reflect", HLSLBaseType_Double3, HLSLBaseType_Double3, HLSLBaseType_Double3 );
+    
+    AddIntrinsic( "refract", HLSLBaseType_Float3,  HLSLBaseType_Float3,  HLSLBaseType_Float3, HLSLBaseType_Float );
+    AddIntrinsic( "refract", HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3, HLSLBaseType_Half );
+    AddIntrinsic( "refract", HLSLBaseType_Double3, HLSLBaseType_Double3, HLSLBaseType_Double3, HLSLBaseType_Double );
+    
     RegisterIntrinsics( "length", 1, AllHalf | AllVecs, HLSLBaseType_Half);
     RegisterIntrinsics( "length", 1, AllFloat | AllVecs, HLSLBaseType_Float);
     RegisterIntrinsics( "length", 1, AllDouble | AllVecs, HLSLBaseType_Double);
@@ -958,6 +988,17 @@ bool InitIntrinsics()
     RegisterIntrinsics( "length_squared", 1, AllFloat | AllVecs, HLSLBaseType_Float);
     RegisterIntrinsics( "length_squared", 1, AllDouble | AllVecs, HLSLBaseType_Double);
 
+    RegisterIntrinsics( "distance", 1, AllHalf | AllVecs, HLSLBaseType_Half);
+    RegisterIntrinsics( "distance", 1, AllFloat | AllVecs, HLSLBaseType_Float);
+    RegisterIntrinsics( "distance", 1, AllDouble | AllVecs, HLSLBaseType_Double);
+
+    RegisterIntrinsics( "distance_squared", 1, AllHalf | AllVecs, HLSLBaseType_Half);
+    RegisterIntrinsics( "distance_squared", 1, AllFloat | AllVecs, HLSLBaseType_Float);
+    RegisterIntrinsics( "distance_squared", 1, AllDouble | AllVecs, HLSLBaseType_Double);
+
+    // ps only
+    AddIntrinsic( "fwidth", HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float2 );
+   
     // scalar/vec ops
     RegisterIntrinsics( "mul", 2, AllFloat | AllVecs | AllMats );
     
@@ -1011,13 +1052,43 @@ bool InitIntrinsics()
     AddIntrinsic( "mul", HLSLBaseType_Double4, HLSLBaseType_Double4x4, HLSLBaseType_Double4 );
     
     // matrix transpose
-    RegisterIntrinsics("transpose", 2, AllFloats | AllMats);
+    RegisterIntrinsics("transpose", 1, AllFloats | AllMats);
     
+    // determinant needs to return scalar for all 9 mat types
+    AddIntrinsic("determinant", HLSLBaseType_Float,  HLSLBaseType_Float2x2);
+    AddIntrinsic("determinant", HLSLBaseType_Float,  HLSLBaseType_Float3x3);
+    AddIntrinsic("determinant", HLSLBaseType_Float,  HLSLBaseType_Float4x4);
+    AddIntrinsic("determinant", HLSLBaseType_Half,   HLSLBaseType_Half2x2);
+    AddIntrinsic("determinant", HLSLBaseType_Half,   HLSLBaseType_Half3x3);
+    AddIntrinsic("determinant", HLSLBaseType_Half,   HLSLBaseType_Half4x4);
+    AddIntrinsic("determinant", HLSLBaseType_Double, HLSLBaseType_Double2x2);
+    AddIntrinsic("determinant", HLSLBaseType_Double, HLSLBaseType_Double3x3);
+    AddIntrinsic("determinant", HLSLBaseType_Double, HLSLBaseType_Double4x4);
+   
     // TODO: more conversions fp16, double, etc.
     AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Float);
     AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Double);
     AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Half);
 
+    AddIntrinsic("asfloat", HLSLBaseType_Float, HLSLBaseType_Int );
+    
+    // AddIntrinsic("f16tof32", HLSLBaseType_Float, HLSLBaseType_Uint ); // lower 16-bits
+    // AddIntrinsic("f32tof16", HLSLBaseType_Uint, HLSLBaseType_Float );
+    
+    // "faceforward" Returns -n * sign(dot(i, ng)).
+    
+    // firstbithigh, firstbitlow
+
+    AddIntrinsic("asint", HLSLBaseType_Uint, HLSLBaseType_Float);
+    
+    // low/hi uint
+    AddIntrinsic("asdouble", HLSLBaseType_Double, HLSLBaseType_Uint, HLSLBaseType_Uint);
+   
+    // one for 64-bit too (low/hi uint)
+    AddIntrinsic("asuint", HLSLBaseType_Ulong, HLSLBaseType_Uint, HLSLBaseType_Uint);
+    AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Float);
+   
+    
     
     // TODO: split off sampler intrinsics from math above
     //------------------------

@@ -139,6 +139,7 @@ char4_packed fromInt4(int4 v, bool clamp = true)
 #define min3(x,y,z) min(x, min(y, z))
 #define max3(x,y,z) max(x, max(y, z))
 #define length_squared(x) ((x)*(x))
+#define distance_squared(x,y) (((x)-(y))*((x)-(y)))
 
 // TODO: fix parsing, so don't have to provide these overrides
 // The parser also has to know about all these
