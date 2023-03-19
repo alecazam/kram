@@ -1,0 +1,74 @@
+
+
+vulkanSDK=${HOME}/devref/vulkansdk/1.3.239.0/macOS/bin/
+projectDir=${HOME}/devref/kram/hlslparser/
+appBuildDir =./build/hlslparser/Build/Products/Release/
+
+hlslparser = ${appBuildDir}hlslparser
+
+#------
+
+metalCompile = xcrun -sdk macosx metal
+metalLib = xcrun -sdk macosx metallib
+
+# src files
+srcDir = ${projectDir}shaders/
+
+# headers and parser gen shaders
+intDir = ${projectDir}outshaders/
+
+# compiled shader per platform
+dstDir = ${projectDir}out
+
+
+flagsParser = -g
+flagsMSL = -g -frecord-sources -std=macos-metal2.3
+
+# for iOS
+# -std=ios-metal2.3
+    
+
+# hlslparser msl codegen
+rule genMSL
+  command = $hlslparser $flagsParser -i ${srcDir}$in -o ${intDir}$out
+
+# compiler to .air
+rule compileMSL
+  command = $metalCompile $flagsMSL -c $in -o $out
+
+# linker to metallib
+rule linkMSL
+  command = $metalLib $in -o $out
+
+# need correct dir
+# gen air
+build Skinning.metal: genMSL Skinning.hlsl
+build Sample.metal: genMSL Sample.hlsl
+build Compute.metal: genMSL Compute.hlsl
+
+build Skinning.air: compileMSL Skinning.metal
+build Sample.air: compileMSL Sample.metal
+build Compute.air: compileMSL Compute.metal
+
+# can ninja take file list?
+build Game.metallib: linkMSL Skinning.air Sample.air Compute.air
+
+#-------
+
+dxc = ${vulkanSDK}dxc
+
+flagsDXC = -nologo -Zi -Zpc -enable16-bit-types -HV 2021 -fspv-extension=SPV_KHR_shader_draw_parameters
+
+# hlslparser hlsl/msl codegen
+rule genHLSL
+  command = $hlslparser $flagsParser -i ${srcDir}$in -o ${intDir}$out
+
+# compiler to dxil or spriv
+# TODO: fix src/dstDir
+rule compileHLSL
+  command = $dxc $flagsDXC -i $in -o $out
+
+#build Skinning.hlsl: genHLSL Skinning.hlsl
+#build Sample.hlsl: genHLSL Sample.hlsl
+#build Compute.hlsl: genHLSL Compute.hlsl
+
