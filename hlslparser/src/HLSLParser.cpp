@@ -888,7 +888,6 @@ void RegisterIntrinsics(const char* name, uint32_t numArgs, AllMask mask, HLSLBa
 bool InitIntrinsics()
 {
     const char* kVecOps1[] = {
-        "abs",
         "acos", "asin", "atan",
         "cos", "sin", "tan",
         "cosh", "sinh", "tanh",
@@ -901,22 +900,39 @@ bool InitIntrinsics()
         "degrees", "radians" // emulated in MSL
     };
     
+    // apply to float/int
+    const char* kVecOps1All[] = {
+        "abs",
+    };
+    
     const char* kVecOps2[] = {
         "atan2", "pow", // can't pow take scalar?
         "step", "frexp",
+    };
+    
+    // apply to float/int
+    const char* kVecOps2All[] = {
         "min", "max",
     };
     
     const char* kVecOps3[] = {
-        "clamp", "lerp", // can clamp and lerp take a scalar for last args/arg?
+        "lerp", // can clamp and lerp take a scalar for last args/arg?
         "smoothstep", "fma",
-        "min3", "max3",
     };
 
+    // apply to float/int
+    const char* kVecOps3All[] = {
+        "clamp",
+        "min3", "max3",
+    };
     
     // HLSL
-    // countbits(x)
+    
+    // not going to support due to swizzle, just have similar routine for half
     // D3DCOLORtoUBYTE4(x) // does nasty bgra swizzle, so have to convert back
+    //   r0.xyzw = float4(255.001953,255.001953,255.001953,255.001953) * r0.zyxw;
+    //   ro0.xyzw = (int4)r0.xyzw;
+    
     // ddx_coarse/fine, ddy_coarse/fine
     // msad4
     // printf, errorf
@@ -927,31 +943,45 @@ bool InitIntrinsics()
     // InterlockedAdd(x,y, out orig value), And, Xor, Or, Min, Max, Exchange, CompareExchange
     
     // no "exp10" in HLSL, but is in MSL
-    
-    // both
-    // "refract"
-    
+
     // MSL constructs, may be in HLSL
-    // "distance_squared"
     // "median3(x,y,z)"
     // "select(x,y,z)"
-    // "clz", "ctz", count leading trailing zeros
-    // "popcount" count zeroes (opposite of countbits?)
     // addsat, subsat,
     // absdiff, hadd(x,y),
     
+    AllMask mask = AllFloats | AllVecs;
     for (uint32_t i = 0, iEnd = ArrayCount(kVecOps1); i < iEnd; ++i)
     {
-        RegisterIntrinsics( kVecOps1[i], 1, AllFloats | AllVecs );
+        RegisterIntrinsics( kVecOps1[i], 1, mask );
     }
     for (uint32_t i = 0, iEnd = ArrayCount(kVecOps2); i < iEnd; ++i)
     {
-        RegisterIntrinsics( kVecOps2[i], 2, AllFloats | AllVecs );
+        RegisterIntrinsics( kVecOps2[i], 2, mask );
     }
     for (uint32_t i = 0, iEnd = ArrayCount(kVecOps3); i < iEnd; ++i)
     {
-        RegisterIntrinsics( kVecOps3[i], 3, AllFloats | AllVecs );
+        RegisterIntrinsics( kVecOps3[i], 3, mask );
     }
+    
+    mask = AllFloats | AllInts | AllVecs;
+    for (uint32_t i = 0, iEnd = ArrayCount(kVecOps1All); i < iEnd; ++i)
+    {
+        RegisterIntrinsics( kVecOps1All[i], 1, mask );
+    }
+    for (uint32_t i = 0, iEnd = ArrayCount(kVecOps2All); i < iEnd; ++i)
+    {
+        RegisterIntrinsics( kVecOps2All[i], 2, mask );
+    }
+    for (uint32_t i = 0, iEnd = ArrayCount(kVecOps3All); i < iEnd; ++i)
+    {
+        RegisterIntrinsics( kVecOps3All[i], 3, mask );
+    }
+    
+    // bit counting
+    RegisterIntrinsics( "countbits", 1, AllInts | AllVecs); // popcount in MSL
+    RegisterIntrinsics( "firstbithigh", 1, AllInts | AllVecs); // clz in MSL
+    RegisterIntrinsics( "firstbitlow", 1, AllInts | AllVecs); // ctz in MSL
     
     RegisterIntrinsics( "sincos", 2, AllFloats | AllVecs, HLSLBaseType_Void);
 

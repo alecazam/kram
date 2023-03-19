@@ -7,6 +7,12 @@
 #pragma once
 #endif
 
+// Don't know why HLSL doesn't support these
+#define min3(x,y,z) min(x, min(y, z))
+#define max3(x,y,z) max(x, max(y, z))
+#define length_squared(x) ((x)*(x))
+#define distance_squared(x,y) (((x)-(y))*((x)-(y)))
+
 // no &* or ctors in HLSL limited C++
 // This means operators cannot overload [+-*/>><<]=.  Only builtins work.
 
@@ -135,11 +141,7 @@ char4_packed fromInt4(int4 v, bool clamp = true)
 
 #define USE_HALF 1
 
-// Don't know why HLSL doesn't support these
-#define min3(x,y,z) min(x, min(y, z))
-#define max3(x,y,z) max(x, max(y, z))
-#define length_squared(x) ((x)*(x))
-#define distance_squared(x,y) (((x)-(y))*((x)-(y)))
+
 
 // TODO: fix parsing, so don't have to provide these overrides
 // The parser also has to know about all these

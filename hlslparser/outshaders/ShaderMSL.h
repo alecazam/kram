@@ -72,20 +72,17 @@ float4 mad(float4 a, float4 b, float4 c) {
     return a * b + c;
 }
 
+// DirectX couldn't simply use operator * in all these years
+// so have to use a function call mul.
+
 // Might be easier to use * instead
 float2x2 mul(float a, float2x2 m) { return a * m; }
 float3x3 mul(float a, float3x3 m) { return a * m; }
 float4x4 mul(float a, float4x4 m) { return a * m; }
+
 float2x2 mul(float2x2 m, float a) { return a * m; }
 float3x3 mul(float3x3 m, float a) { return a * m; }
 float4x4 mul(float4x4 m, float a) { return a * m; }
-
-half2x2 mul(half a, half2x2 m) { return a * m; }
-half3x3 mul(half a, half3x3 m) { return a * m; }
-half4x4 mul(half a, half4x4 m) { return a * m; }
-half2x2 mul(half2x2 m, half a) { return a * m; }
-half3x3 mul(half3x3 m, half a) { return a * m; }
-half4x4 mul(half4x4 m, half a) { return a * m; }
 
 float2 mul(float2 a, float2x2 m) { return a * m; }
 float3 mul(float3 a, float3x3 m) { return a * m; }
@@ -99,6 +96,7 @@ float4 mul(float4x4 m, float4 a) { return m * a; }
 //float2 mul(float4 a, float2x4 m) { return a * m; }
 
 #if USE_HALF
+
 half mad(half a, half b, half c) {
     return a * b + c;
 }
@@ -112,6 +110,14 @@ half4 mad(half4 a, half4 b, half4 c) {
     return a * b + c;
 }
 
+half2x2 mul(half a, half2x2 m) { return a * m; }
+half3x3 mul(half a, half3x3 m) { return a * m; }
+half4x4 mul(half a, half4x4 m) { return a * m; }
+
+half2x2 mul(half2x2 m, half a) { return a * m; }
+half3x3 mul(half3x3 m, half a) { return a * m; }
+half4x4 mul(half4x4 m, half a) { return a * m; }
+
 half2 mul(half2 a, half2x2 m) { return a * m; }
 half3 mul(half3 a, half3x3 m) { return a * m; }
 half4 mul(half4 a, half4x4 m) { return a * m; }
@@ -120,8 +126,6 @@ half2 mul(half2x2 m, half2 a) { return m * a; }
 half3 mul(half3x3 m, half3 a) { return m * a; }
 half4 mul(half4x4 m, half4 a) { return m * a; }
 
-//half3 mul(half4 a, half3x4 m) { return a * m; } // why no macro ?
-//half2 mul(half4 a, half2x4 m) { return a * m; }
 #endif
 
 // TODO: parser could replace these intrinsic names in metal
@@ -131,10 +135,15 @@ half4 mul(half4x4 m, half4 a) { return m * a; }
 #define ddy dfdy
 #define frac fract
 #define isinfinite isinf
+#define degrees(x) ((x) / (M_PI/180.0))
+#define radians(x) ((x) * (M_PI/180.0))
 
-void clip(float x) {
-    if (x < 0.0) discard_fragment();
-}
+// bit ops
+#define countbits(x) popcount(x)
+#define firstbithigh(x) clz(x)
+#define firstbitlow(x) ctz(x)
+ 
+#define clip(x) if (all((x) < 0.0) discard_fragment()
 
 
     
@@ -181,9 +190,9 @@ half4 SampleBiasH(texture2d<half> t, sampler s, float4 texCoordBias) {
 
 #else
 
-#define tex2DH tex2D
-#define tex2DHlod tex2Dlod
-#define tex2DHbias tex2Dbias
+#define SampleH Sample
+#define SampleLevelH SampleLevel
+#define SampleBiasH SampleBias
 
 #endif
 
