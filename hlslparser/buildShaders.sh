@@ -19,8 +19,10 @@ pushd outshaders
 
 # TODO: consider putting in path
 # note bash can't expand tilda, so using HOME instead
-#svulkanSDK="${HOME}/devref/vulkansdk/1.3.239.0/macOS/bin/"
-vulkanSDK=""
+# This only works if running from terminal, and not from Xcode
+#  so back to hardcoding the path.
+vulkanSDK="${HOME}/devref/vulkansdk/1.3.239.0/macOS/bin/"
+#vulkanSDK=""
 
 projectDir="${HOME}/devref/kram/hlslparser/"
 
@@ -143,16 +145,16 @@ args+="-HV 2021 "
 args+="-fspv-extension=SPV_KHR_shader_draw_parameters "
 
 # 6.1 for ConstantBuffer
-# 6.2 for u/short and half
+# 6.2 for u/short and half <- target
 # 6.6 adds u/char8 pack/unpack calls
 vsargs=${args}
-vsargs+="-T vs_6_6 "
+vsargs+="-T vs_6_2 "
 
 psargs=${args}
-psargs+="-T ps_6_6 "
+psargs+="-T ps_6_2 "
 
 csargs=${args}
-csargs+="-T cs_6_6 "
+csargs+="-T cs_6_2 "
 
 #echo ${vsargs}
 #echo ${psargs}

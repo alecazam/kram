@@ -1289,13 +1289,12 @@ bool InitIntrinsics()
     // AddTextureIntrinsic( "SampleGrad", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
     
     // These constructs are not declaring the lod or offset param which have default
-    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
-    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
-    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
-    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
-    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
-    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
-    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2); // TODO: needs lod
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture3D, HLSLBaseType_Int3); // TODO: need lod
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2DArray, HLSLBaseType_Int2); // TODO: needs array, lod
+    //    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_TextureCube, HLSLBaseType_Int2); // TODO: needs face, lod
+    //    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_TextureCubeArray, HLSLBaseType_Int2); // TODO: needs face, lod, array
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2DMS, HLSLBaseType_Int2); // TODO: needs sampleIndex
     
     // TODO: aren't these uint instead of int?
     TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture2D, HLSLBaseType_Int2);

@@ -704,10 +704,25 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
             const char* functionName   = function->name;
             const char* returnTypeName = GetTypeName(function->returnType);
 
-            // TODO: hack, since don't actually parse bracket construct yet
             bool isEntryPoint = String_Equal(functionName, m_entryName);
-            if (isEntryPoint && m_target == HLSLTarget_ComputeShader)
-                m_writer.WriteLine(indent, "[numthreads(1,1,1)]");
+            if (isEntryPoint)
+            {
+                // This is a SM6.x construct for tagging entry points
+                switch(m_target)
+                {
+                    case HLSLTarget_VertexShader:
+                        m_writer.WriteLine(indent, "[shader(\"vertex\")] ");
+                        break;
+                    case HLSLTarget_PixelShader:
+                        m_writer.WriteLine(indent, "[shader(\"pixel\")] ");
+                        break;
+                    case HLSLTarget_ComputeShader:
+                        m_writer.WriteLine(indent, "[shader(\"compute\")] ");
+                        // TODO: hack, since don't actually parse bracket construct yet
+                        m_writer.WriteLine(indent, "[numthreads(1,1,1)]");
+                        break;
+                }
+            }
             
             m_writer.BeginLine(indent, function->fileName, function->line);
             m_writer.Write("%s %s(", returnTypeName, functionName);

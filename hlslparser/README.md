@@ -43,7 +43,7 @@ DONE
 
 TODO:
 * atomics
-* more than half/float/int literals (f.e. uint)
+* more than half/float/int literals (f.e. u/int, u/long), requires trailing U, L
 * passing variables only by value in HLSL vs. value/ref/ptr in MSL
 * argument buffers and descriptor sets (root tables for DX?)
 * halfio/2/3/4 type for Nvidia/Adreno, halfst2/3/4 for storage
@@ -280,27 +280,28 @@ Shading Languages
 ---
 
 CG
-* Where it all started.  HLSL is an offshoot of this.  MSL closely resembles HLSL.
+* Where it all started.  C like, multi-entrypoint.
 * Nvida has abandoned this
 * Unity was using but moved to HLSL
 * https://developer.nvidia.com/cg-toolkit
 
 MSL
-* C++14, has ctors, cg/hlsl like
-* buffers, textures, tile shaders, atomic int, 
+* C++14, has ctors, cg/hlsl like, multi-entrypoint
+* buffers, textures, tile shaders, atomic int
+* Can only sample using float uv, likely to avoid banding/precision issues
+* 
 * https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf
 
 HLSL
-* C++ like, missing ctors, cg derived for original Xbox
-* Added back int/half support in SM 6.2
+* C++ like, missing ctors, no virtuals, limited op overlaoad, cg derived for original Xbox, multi-entrypoint
+* uses mul instead of operator for vec/matrix math
+* Added back u/short, half support in SM 6.2
+* double require special packing
+* u/char4 doesn't exist, only int/short/uint64, uint64 is hw limited
 * Vulkan extensions for specialization constants and subpasses
 * SSBO - StructuredBuffers, ByteAddressBuffer
-* DX9 and DX10 style syntax differs
 * HLSL 2021 (latest) can distinguish structs with same types as unique
-* HLSL 2018 (default for DXC) can't tell structs apart if contain same types
 * HLSL added to clang
-* After 30 years, HLSL still does not have u/char support, and only 
-* added u/short support in 6.2.  So pack/unpack needed for SSBO.
 * https://github.com/Microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst#subpass-inputs
 * https://clang.llvm.org/docs/HLSL/HLSLSupport.html#:~:text=HLSL%20uses%20templates%20to%20define,case%20and%20issues%20a%20diagnostic.
 * https://devblogs.microsoft.com/directx/announcing-hlsl-2021/
@@ -345,6 +346,7 @@ GLSL
 * has extension mechanism
 * replaced with spirv
 * horrible glGetError() requires sync of cpu/gpu
+* not multi-entrypoint, each entrypoint called main()
 * locked at GL4.1 on macOS - no compute
 
 GLSL/ES
@@ -402,9 +404,9 @@ HLSL
 * https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_7_Advanced_Texture_Ops.html
 
 MSL
-* metal2.2, iOS13/macOS10.15,
-* metal2.3, iOS14/macOS11, target, function pointers,
-* metal2.4, iOS15/macOS12,
+* metal2.2, iOS13/macOS10.15,  A8 min
+* metal2.3, iOS14/macOS11, target, function pointers, A9 min
+* metal2.4, iOS15/macOS12, 
 * metal3.0, iOS16/macOS13, unified shader model, latest,
 
 Spirv
