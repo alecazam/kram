@@ -34,11 +34,11 @@ rule genMSL
 
 # compiler to .air
 rule compileMSL
-  command = $metalCompile $flagsMSL -c $in -o $out
+  command = $metalCompile $flagsMSL -c ${intDir}$in -o ${dstDir}$out
 
 # linker to metallib
 rule linkMSL
-  command = $metalLib $in -o $out
+  command = $metalLib ${outDir}$in -o ${outDir}$out
 
 # need correct dir
 # gen air
