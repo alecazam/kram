@@ -174,7 +174,41 @@ bool IsDouble(HLSLBaseType type)
     return baseTypeDescriptions[type].numericType == NumericType_Double;
 }
 
-// TODO: IsUint, IsInt, ... or just get type.
+bool IsInt(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Int;
+}
+
+bool IsUint(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Uint;
+}
+
+bool IsShort(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Short;
+}
+bool IsUshort(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Ushort;
+}
+
+bool IsLong(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Long;
+}
+bool IsUlong(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Ulong;
+}
+
+bool IsBool(HLSLBaseType type)
+{
+    return baseTypeDescriptions[type].numericType == NumericType_Bool;
+}
+
+
+
 
 
 bool IsSamplerType(const HLSLType & type)
@@ -263,6 +297,12 @@ HLSLBaseType NumericToBaseType(NumericType numericType)
             break;
     }
     return baseType;
+}
+
+HLSLBaseType GetScalarType(HLSLBaseType type)
+{
+    ASSERT(IsNumericType(type));
+    return NumericToBaseType(baseTypeDescriptions[type].numericType);
 }
 
 HLSLBaseType HalfToFloatBaseType(HLSLBaseType type)
@@ -377,7 +417,20 @@ struct Intrinsic
 
 static void AddIntrinsic(const Intrinsic& intrinsic);
 
-void AddTextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType textureHalfOrFloat, HLSLBaseType uvType)
+void AddTextureLoadIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType uvType)
+{
+#if USE_MEMBER_FUNCTIONS
+    Intrinsic i(name, returnType, uvType);
+    i.function.memberType = textureType;
+#else
+    Intrinsic i(name, returnType, textureType, uvType);
+#endif
+    i.argument[0].type.formatType = GetScalarType(returnType);
+
+    AddIntrinsic(i);
+}
+
+void AddTextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType uvType)
 {
 #if USE_MEMBER_FUNCTIONS
     Intrinsic i(name, returnType, HLSLBaseType_SamplerState, uvType);
@@ -385,13 +438,13 @@ void AddTextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType
 #else
     Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerState, uvType);
 #endif
-    i.argument[0].type.formatType = textureHalfOrFloat;
+    i.argument[0].type.formatType = GetScalarType(returnType);
 
     AddIntrinsic(i);
 }
 
 // DepthCmp takes additional arg for comparison value, but this rolls it into uv
-void AddDepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType textureHalfOrFloat, HLSLBaseType uvType)
+void AddDepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType uvType)
 {
     // ComparisonState is only for SampleCmp/GatherCmp
     bool isCompare = String_Equal(name, "GatherCmp") || String_Equal(name, "SampleCmp");
@@ -404,9 +457,17 @@ void AddDepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType t
     Intrinsic i(name, returnType, textureType, samplerType, uvType);
 #endif
     
-    i.argument[0].type.formatType = textureHalfOrFloat;
+    i.argument[0].type.formatType = GetScalarType(returnType);
     AddIntrinsic(i);
 }
+
+// TODO: elim the H version once have member functions, can check the member textuer format.
+#define TEXTURE_INTRINSIC_FUNCTION(name, textureType, uvType) \
+    AddTextureIntrinsic( name, HLSLBaseType_Float4, textureType, uvType)
+
+#define TEXTURE_INTRINSIC_FUNCTION_H(name, textureType, uvType) \
+    AddTextureIntrinsic( name "H", HLSLBaseType_Half4, textureType, uvType  )
+
 
 static const int _numberTypeRank[NumericType_Count][NumericType_Count] = 
 {
@@ -674,46 +735,6 @@ static const EffectState pipelineStates[] = {
     {"AlphaTest", 0, booleanValues},       // This is really alpha to coverage.
 };
 */
-
-/*
-#define INTRINSIC_FLOAT1_FUNCTION(name) \
-        Intrinsic( name, HLSLBaseType_Float,   HLSLBaseType_Float  ),   \
-        Intrinsic( name, HLSLBaseType_Float2,  HLSLBaseType_Float2 ),   \
-        Intrinsic( name, HLSLBaseType_Float3,  HLSLBaseType_Float3 ),   \
-        Intrinsic( name, HLSLBaseType_Float4,  HLSLBaseType_Float4 ),   \
-        Intrinsic( name, HLSLBaseType_Half,    HLSLBaseType_Half   ),   \
-        Intrinsic( name, HLSLBaseType_Half2,   HLSLBaseType_Half2  ),   \
-        Intrinsic( name, HLSLBaseType_Half3,   HLSLBaseType_Half3  ),   \
-        Intrinsic( name, HLSLBaseType_Half4,   HLSLBaseType_Half4  )
-
-#define INTRINSIC_FLOAT2_FUNCTION(name) \
-        Intrinsic( name, HLSLBaseType_Float,   HLSLBaseType_Float,   HLSLBaseType_Float  ),   \
-        Intrinsic( name, HLSLBaseType_Float2,  HLSLBaseType_Float2,  HLSLBaseType_Float2 ),   \
-        Intrinsic( name, HLSLBaseType_Float3,  HLSLBaseType_Float3,  HLSLBaseType_Float3 ),   \
-        Intrinsic( name, HLSLBaseType_Float4,  HLSLBaseType_Float4,  HLSLBaseType_Float4 ),   \
-        Intrinsic( name, HLSLBaseType_Half,    HLSLBaseType_Half,    HLSLBaseType_Half   ),   \
-        Intrinsic( name, HLSLBaseType_Half2,   HLSLBaseType_Half2,   HLSLBaseType_Half2  ),   \
-        Intrinsic( name, HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3  ),   \
-        Intrinsic( name, HLSLBaseType_Half4,   HLSLBaseType_Half4,   HLSLBaseType_Half4  )
-
-#define INTRINSIC_FLOAT3_FUNCTION(name) \
-        Intrinsic( name, HLSLBaseType_Float,   HLSLBaseType_Float,   HLSLBaseType_Float,  HLSLBaseType_Float ),   \
-        Intrinsic( name, HLSLBaseType_Float2,  HLSLBaseType_Float2,  HLSLBaseType_Float2,  HLSLBaseType_Float2 ),  \
-        Intrinsic( name, HLSLBaseType_Float3,  HLSLBaseType_Float3,  HLSLBaseType_Float3,  HLSLBaseType_Float3 ),  \
-        Intrinsic( name, HLSLBaseType_Float4,  HLSLBaseType_Float4,  HLSLBaseType_Float4,  HLSLBaseType_Float4 ),  \
-        Intrinsic( name, HLSLBaseType_Half,    HLSLBaseType_Half,    HLSLBaseType_Half,   HLSLBaseType_Half ),    \
-        Intrinsic( name, HLSLBaseType_Half2,   HLSLBaseType_Half2,   HLSLBaseType_Half2,  HLSLBaseType_Half2 ),    \
-        Intrinsic( name, HLSLBaseType_Half3,   HLSLBaseType_Half3,   HLSLBaseType_Half3,  HLSLBaseType_Half3 ),    \
-        Intrinsic( name, HLSLBaseType_Half4,   HLSLBaseType_Half4,   HLSLBaseType_Half4,  HLSLBaseType_Half4 )
-
-*/
-
-// TODO: elim the H version once have member functions, can check the member textuer format.
-#define TEXTURE_INTRINSIC_FUNCTION(name, textureType, uvType) \
-    AddTextureIntrinsic( name, HLSLBaseType_Float4, textureType, HLSLBaseType_Float, uvType)
-
-#define TEXTURE_INTRINSIC_FUNCTION_H(name, textureType, uvType) \
-        AddTextureIntrinsic( name "H", HLSLBaseType_Half4, textureType, HLSLBaseType_Half, uvType  )
 
 // Note: these strings need to live until end of the app
 StringPool gStringPool(NULL);
@@ -1203,9 +1224,9 @@ bool InitIntrinsics()
     TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4);
     
     // Depth
-    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float,  HLSLBaseType_Float2);
-    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float,  HLSLBaseType_Float3);
-    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float,  HLSLBaseType_Float3);
+    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float2);
+    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2DArray,  HLSLBaseType_Float3);
+    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_DepthCube,  HLSLBaseType_Float3);
     
     TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
     TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_Texture3D, HLSLBaseType_Float3);
@@ -1215,15 +1236,15 @@ bool InitIntrinsics()
     
     
     // xyz are used, this doesn't match HLSL which is 2 + compare
-    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4);
-    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float, HLSLBaseType_Float4);
-    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float, HLSLBaseType_Float4);
+    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float4);
+    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float4);
+    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float4);
     
     // returns float4 w/comparisons, probably only on mip0
     // TODO: add GatherRed? to read 4 depth values
-    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2D, HLSLBaseType_Float, HLSLBaseType_Float4);
-    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2DArray, HLSLBaseType_Float, HLSLBaseType_Float4);
-    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_DepthCube, HLSLBaseType_Float, HLSLBaseType_Float4);
+    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2D, HLSLBaseType_Float4);
+    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2DArray, HLSLBaseType_Float4);
+    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_DepthCube, HLSLBaseType_Float4);
     
     // one more dimension than Sample
     TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3);
@@ -1267,6 +1288,15 @@ bool InitIntrinsics()
     // first move to member functions, then add this with 4 args
     // AddTextureIntrinsic( "SampleGrad", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
     
+    // These constructs are not declaring the lod or offset param which have default
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    
     // TODO: aren't these uint instead of int?
     TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture2D, HLSLBaseType_Int2);
     TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture3D, HLSLBaseType_Int3);
@@ -1278,7 +1308,6 @@ bool InitIntrinsics()
     return true;
 };
 
-static bool initIntrinsics = InitIntrinsics();
 
 // The order in this array must match up with HLSLBinaryOp
 const int _binaryOpPriority[] =
@@ -1499,6 +1528,8 @@ bool InitBaseTypeDescriptions()
 
 static bool _initBaseTypeDescriptions = InitBaseTypeDescriptions();
 
+// this needs to happen after base descriptions
+static bool _initIntrinsics = InitIntrinsics();
 
 HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSLBaseType t2)
 {

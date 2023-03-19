@@ -169,6 +169,14 @@ bool IsHalf(HLSLBaseType type);
 bool IsFloat(HLSLBaseType type);
 bool IsDouble(HLSLBaseType type);
 
+bool IsInt(HLSLBaseType type);
+bool IsUnit(HLSLBaseType type);
+bool IsShort(HLSLBaseType type);
+bool IsUshort(HLSLBaseType type);
+bool IsLong(HLSLBaseType type);
+bool IsUlong(HLSLBaseType type);
+bool IsBool(HLSLBaseType type);
+
 bool IsSamplerType(HLSLBaseType baseType);
 bool IsMatrixType(HLSLBaseType baseType);
 bool IsVectorType(HLSLBaseType baseType);
@@ -197,5 +205,7 @@ const char* GetNumericTypeName(HLSLBaseType type);
 
 const char* GetTypeNameHLSL(const HLSLType& type);
 const char* GetTypeNameMetal(const HLSLType& type);
+
+HLSLBaseType GetScalarType(HLSLBaseType type);
 
 }
