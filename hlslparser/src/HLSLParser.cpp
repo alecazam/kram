@@ -887,6 +887,11 @@ void RegisterIntrinsics(const char* name, uint32_t numArgs, AllMask mask, HLSLBa
 
 bool InitIntrinsics()
 {
+    // Note that none of these need to be in alphabetical order
+    // since an unordered map is used for lookup.  But do need
+    // all intrinsics of the same name to be defined together in
+    // a single range.
+    
     const char* kVecOps1[] = {
         "acos", "asin", "atan",
         "cos", "sin", "tan",
@@ -926,29 +931,32 @@ bool InitIntrinsics()
         "min3", "max3",
     };
     
-    // HLSL
-    
+    // HLSL intrinsics
+    //
     // not going to support due to swizzle, just have similar routine for half
     // D3DCOLORtoUBYTE4(x) // does nasty bgra swizzle, so have to convert back
     //   r0.xyzw = float4(255.001953,255.001953,255.001953,255.001953) * r0.zyxw;
     //   ro0.xyzw = (int4)r0.xyzw;
-    
+    //
+    // there's already toint/tuint, but those don't normalize
+    //
     // ddx_coarse/fine, ddy_coarse/fine
     // msad4
     // printf, errorf
-    
-    // TODO: get atomics working
-    // these work on atomic_int/uint, then bool/ulong 2.4,
-    //   then sub/add on float in MSL 3.0.  How does HLSL declare atomic values?
-    // InterlockedAdd(x,y, out orig value), And, Xor, Or, Min, Max, Exchange, CompareExchange
-    
+    //
+    // faceforward = -n * sign(dot(i, ng))
     // no "exp10" in HLSL, but is in MSL
-
-    // MSL constructs, may be in HLSL
-    // "median3(x,y,z)"
-    // "select(x,y,z)"
-    // addsat, subsat,
+    //---------------------
+    // MSL intrinsics
+    // median3(x,y,z)
+    // select(x,y,z)
+    // addsat, subsat, rotate,
     // absdiff, hadd(x,y),
+    // is_null_texture(tex)
+    // tex.fence()
+    
+
+    
     
     AllMask mask = AllFloats | AllVecs;
     for (uint32_t i = 0, iEnd = ArrayCount(kVecOps1); i < iEnd; ++i)
@@ -982,7 +990,8 @@ bool InitIntrinsics()
     RegisterIntrinsics( "countbits", 1, AllInts | AllVecs); // popcount in MSL
     RegisterIntrinsics( "firstbithigh", 1, AllInts | AllVecs); // clz in MSL
     RegisterIntrinsics( "firstbitlow", 1, AllInts | AllVecs); // ctz in MSL
-    
+    RegisterIntrinsics( "reversebits", 1, AllInts | AllVecs); // ctz in MSL
+   
     RegisterIntrinsics( "sincos", 2, AllFloats | AllVecs, HLSLBaseType_Void);
 
     RegisterIntrinsics( "mad", 3, AllFloats | AllVecs);
@@ -1118,9 +1127,71 @@ bool InitIntrinsics()
     AddIntrinsic("asuint", HLSLBaseType_Ulong, HLSLBaseType_Uint, HLSLBaseType_Uint);
     AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Float);
    
+#if 0
+    // TODO: get atomics working
+    // these work on atomic_int/uint, then bool/ulong 2.4,
+    //   then sub/add on float in MSL 3.0.  How does HLSL declare atomic values?
+
+    // How to designate atomics?  These have atomic_u/int type in MSL.
+    // Metal just uses atomic<int>, atomic<uint>, ...
+
+    #include <metal_atomic>
+    // memory_order_relaxed is only value to pass
+    atomic_fetch_add_explicit(output, val, memory_order_relaxed);
+    atomic_fetch_sub_explicit(output, val, memory_order_relaxed);
+    atomic_fetch_min_explicit(output, val, memory_order_relaxed);
+    atomic_fetch_max_explicit(output, val, memory_order_relaxed);
+    atomic_fetch_and_explicit(output, val, memory_order_relaxed);
+    atomic_fetch_or_explicit(output,  val, memory_order_relaxed);
+    atomic_fetch_xor_explicit(output, val, memory_order_relaxed);
+   
+    bool atomic_compare_exchange_weak_explicit(device A* object,
+     C *expected, C desired, memory_order success,
+     memory_order failure)
     
+    void atomic_store_explicit(device A* object, C desired,
+     memory_order order)
+    
+    // Here's how to emulate in MSL
+    void InterlockedAdd(device atomic<uint>* dst, uint val, out uint original )
+    {
+        original = atomic_fetch_add_explicit(dst, val, memory_order_relaxed);
+    }
+    
+    AddIntrisic("InterlockedAdd", HLSLBaseType_Void, HLSLBaseType_AtomicInt, HLSLBaseType_Int, HLSLBaseType_Int);
+    AddIntrisic("InterlockedAdd", HLSLBaseType_Void, HLSLBaseType_AtomicUint, HLSLBaseType_Uint, HLSLBaseType_Uint);
+    
+    AddIntrisic("InterlockedSub", HLSLBaseType_Void, HLSLBaseType_AtomicInt, HLSLBaseType_Int, HLSLBaseType_Int);
+    AddIntrisic("InterlockedSub", HLSLBaseType_Void, HLSLBaseType_AtomicUint, HLSLBaseType_Uint, HLSLBaseType_Uint);
+    
+    AddIntrisic("InterlockedMin", HLSLBaseType_Void, HLSLBaseType_AtomicInt, HLSLBaseType_Int, HLSLBaseType_Int);
+    AddIntrisic("InterlockedMin", HLSLBaseType_Void, HLSLBaseType_AtomicUint, HLSLBaseType_Uint, HLSLBaseType_Uint);
+    
+    AddIntrisic("InterlockedMax", HLSLBaseType_Void, HLSLBaseType_AtomicInt, HLSLBaseType_Int, HLSLBaseType_Int);
+    AddIntrisic("InterlockedMax", HLSLBaseType_Void, HLSLBaseType_AtomicUint, HLSLBaseType_Uint, HLSLBaseType_Uint);
+    
+    AddIntrisic("InterlockedAnd", HLSLBaseType_Void, HLSLBaseType_AtomicInt, HLSLBaseType_Int, HLSLBaseType_Int);
+    AddIntrisic("InterlockedAnd", HLSLBaseType_Void, HLSLBaseType_AtomicUint, HLSLBaseType_Uint, HLSLBaseType_Uint);
+    
+    AddIntrisic("InterlockedOr", HLSLBaseType_Void, HLSLBaseType_AtomicInt, HLSLBaseType_Int, HLSLBaseType_Int);
+    AddIntrisic("InterlockedOr", HLSLBaseType_Void, HLSLBaseType_AtomicUint, HLSLBaseType_Uint, HLSLBaseType_Uint);
+    
+    AddIntrisic("InterlockedXor", HLSLBaseType_Void, HLSLBaseType_AtomicInt, HLSLBaseType_Int, HLSLBaseType_Int);
+    AddIntrisic("InterlockedXor", HLSLBaseType_Void, HLSLBaseType_AtomicUint, HLSLBaseType_Uint, HLSLBaseType_Uint);
+    
+    // compare dst + compareValue, and store 3rd if same, nothing returned
+    InterlockCompareStore(HLSLBaseType_Void, HLSLBaseType_AtomicInt, HLSLBaseType_Int, HLSLBaseType_Int)
+    
+    // extra param here, last value is always original value
+    // compare dst + compareValue, store 3rd if same, return original dst
+    InterlockedCompareExchage(HLSLBaseType_Void, HLSLBaseType_AtomicInt, HLSLBaseType_Int, HLSLBaseType_Int, HLSLBaseType_Int)
+
+#endif
+
     
     // TODO: split off sampler intrinsics from math above
+    // these need to be member functions and have default arg value support
+    
     //------------------------
     
     TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
@@ -1178,10 +1249,6 @@ bool InitIntrinsics()
     TEXTURE_INTRINSIC_FUNCTION_H("SampleBias", HLSLBaseType_TextureCube, HLSLBaseType_Float4);
     
     
-    //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
-    //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
-    //TEXTURE_INTRINSIC_FUNCTION("SampleGrad", HLSLBaseType_Texture3D, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
-    
     // TODO: for 2D tex (int2 offset is optional, how to indicate that?)
     TEXTURE_INTRINSIC_FUNCTION("GatherRed", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
     TEXTURE_INTRINSIC_FUNCTION("GatherGreen", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
@@ -1193,7 +1260,19 @@ bool InitIntrinsics()
     TEXTURE_INTRINSIC_FUNCTION_H("GatherBlue", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
     TEXTURE_INTRINSIC_FUNCTION_H("GatherAlpha", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
     
-    // TODO: GetDimensions
+    // TODO: add more types cube/3d takes gradient3d in MSL
+    // The Intrinsic ctor would need to have 5 args instead 4
+    // first move to member functions, then add this with 4 args
+    // AddTextureIntrinsic( "SampleGrad", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
+    
+    // TODO: aren't these uint instead of int?
+    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture3D, HLSLBaseType_Int3);
+    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture2DArray, HLSLBaseType_Int3);
+    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_TextureCube, HLSLBaseType_Int3);
+    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_TextureCubeArray, HLSLBaseType_Int3);
+    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture2DMS, HLSLBaseType_Int2);
+    
     return true;
 };
 

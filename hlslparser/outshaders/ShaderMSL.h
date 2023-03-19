@@ -137,6 +137,7 @@ half4 mul(half4x4 m, half4 a) { return m * a; }
 #define isinfinite isinf
 #define degrees(x) ((x) / (M_PI/180.0))
 #define radians(x) ((x) * (M_PI/180.0))
+#define reversebits(x) reverse_bits(x))
 
 // bit ops
 #define countbits(x) popcount(x)
@@ -228,9 +229,42 @@ float4 SampleBias(texture2d<float> t, sampler s, float4 texCoordBias) {
     return t.sample(s, texCoordBias.xy, bias(texCoordBias.w));
 }
 
+//------
+
+// see if some of these have offset
+float4 Load(texture2d<float> t, int2 texCoord, int lod = 0)
+{
+    return t.read((uint2)texCoord, (uint)lod);
+}
+
+float4 Load(texture3d<float> t, int3 texCoord, int lod = 0)
+{
+    return t.read((uint3)texCoord, (uint)lod);
+}
+
+float4 Load(texture2d_array<float> t, int3 texCoord, int lod = 0)
+{
+    return t.read((uint2)texCoord.xy, (uint)texCoord.z, (uint)lod);
+}
+
+// no HLSL equivalent, so don't define for MSL.  Maybe it's just offset that doesn't.
+//float4 Load(texturecube<float> t, int3 texCoord, int lod = 0)
+//{
+//    uv, face, lod, offset
+//    return t.read((uint2)texCoord.xy, (uint)texCoord.z, (uint2)lod);
+//}
+//
+//float4 Load(texturecube_array<float> t, int4 texCoord, int lod = 0)
+//{
+//    return t.read((uint2)texCoord.xy, (uint)texCoord.z, (uint)texcoord.w, (uint)lod);
+//}
+
+// this doesn't use SamplerState, raw load
 float4 Load(texture2d_ms<float> t, int2 texCoord, int sample) {
     return t.read((uint2)texCoord, (uint)sample);
 }
+
+// also write call (Store in HLSL)
 
 // ----
 
@@ -296,13 +330,19 @@ int2 GetDimensions(texturecube<float> t)
     return size;
 }
 
-int2 GetDimensions(texturecube_array<float> t)
+int3 GetDimensions(texturecube_array<float> t)
 {
-    int2 size(t.get_width(), t.get_width());
+    int3 size(t.get_width(), t.get_width(), t.get_array_size());
     return size;
 }
 
-int2 GetDimensions(texture2d_array<float> t)
+int3 GetDimensions(texture2d_array<float> t)
+{
+    int3 size(t.get_width(), t.get_height(), t.get_array_size());
+    return size;
+}
+
+int2 GetDimensions(texture2d_ms<float> t)
 {
     int2 size(t.get_width(), t.get_height());
     return size;

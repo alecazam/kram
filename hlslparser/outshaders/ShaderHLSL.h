@@ -141,10 +141,8 @@ char4_packed fromInt4(int4 v, bool clamp = true)
 
 #define USE_HALF 1
 
-
-
 // TODO: fix parsing, so don't have to provide these overrides
-// The parser also has to know about all these
+// The parser also has to rewrite params on MSL and wrap args.
 
 //----------
 
@@ -177,6 +175,7 @@ float4 Sample(TextureCubeArray<float4> t, SamplerState s, float4 texCoord)
 
 //----------
 
+// Can use these inside vertex shader
 float4 SampleLevel(Texture2D<float4> t, SamplerState s, float4 texCoord, int2 offset = 0)
 {
     return t.SampleLevel(s, texCoord.xy, texCoord.w, offset);
@@ -252,10 +251,46 @@ float4 GatherCmp(Texture2D<float4> t, SamplerComparisonState s, float4 texCoord,
 
 //----------
 
-// this doesn't use SamplerState, raw load
-float4 Load(Texture2DMS<float4> t, int2 texCoord, int sample)
+// Use these in VS.  Why doesn't bilinear work in VS?
+// TextureLevel should work in VS, since lod is specific.
+
+
+// can also use this stype
+// uint2 pos_xy = uint2( 0, 10 );
+// texelColor = tex0[ pos_xy ] ;
+
+
+// TODO: these also take offsets
+float4 Load(Texture2D<float4> t, int2 texCoord, int lod = 0, int2 offset = 0)
 {
-    return t.Load(texCoord, sample);
+    return t.Load(texCoord, lod, offset);
+}
+
+float4 Load(Texture3D<float4> t, int3 texCoord, int lod = 0, int3 offset = 0)
+{
+    return t.Load(texCoord, lod, offset);
+}
+
+float4 Load(Texture2DArray<float4> t, int3 texCoord, int lod = 0, int2 offset = 0)
+{
+    return t.Load(texCoord, lod, offset);
+}
+
+// no support in HLSL
+//float4 Load(TextureCube<float4> t, int3 texCoord)
+//{
+//    return t.Load(texCoord);
+//}
+//
+//float4 Load(TextureCubeArray<float4> t, int4 texCoord)
+//{
+//    return t.Load(texCoord);
+//}
+
+// this doesn't use SamplerState, raw load, not sampleIndex not lod
+float4 Load(Texture2DMS<float4> t, int2 texCoord, int sample, int2 offset = 0)
+{
+    return t.Load(texCoord, sample, offset);
 }
 
 //----------
@@ -311,6 +346,7 @@ half4 SampleBiasH(Texture2D<half> t, SamplerState s, float4 texCoordBias)
 
 #endif
 
+// TODO: these should be types, but by leaving off type, they apply to all types.
 int2 GetDimensions(Texture2D t)
 {
     int2 size;
@@ -345,6 +381,14 @@ int3 GetDimensions(Texture2DArray t)
     t.GetDimensions(size.x, size.y, size.z);
     return size;
 }
+
+int2 GetDimensions(Texture2DMS t)
+{
+    int2 size;
+    t.GetDimensions(size.x, size.y);
+    return size;
+}
+
 
 #endif // ShaderHLSL_h
     
