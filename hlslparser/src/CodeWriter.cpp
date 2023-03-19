@@ -15,13 +15,12 @@
 
 namespace M4
 {
-CodeWriter::CodeWriter(bool writeFileNames)
+CodeWriter::CodeWriter()
 {
     m_currentLine       = 1;
     m_currentFileName   = NULL;
     m_spacesPerIndent   = 4;
-    m_writeLines        = true;
-    m_writeFileNames    = writeFileNames;
+    m_writeFileLine     = false;
 }
 
 void CodeWriter::BeginLine(int indent, const char* fileName, int lineNumber)
@@ -29,7 +28,7 @@ void CodeWriter::BeginLine(int indent, const char* fileName, int lineNumber)
     // probably missing an EndLine
     ASSERT(m_currentIndent == 0);
     
-    if (m_writeLines)
+    if (m_writeFileLine)
     {
         bool outputLine = false;
         bool outputFile = false;
@@ -47,21 +46,15 @@ void CodeWriter::BeginLine(int indent, const char* fileName, int lineNumber)
             outputLine = true;
         }
 
-        /* TODO: Alec, removed this for now
-            This writes in #line directives back to orignal source files
-         
-        if (outputLine || outputFile)
+        // if previous filename is same, only output line
+        if (outputFile)
         {
-            if (outputFile && m_writeFileNames)
-            {
-                String_Printf(m_buffer, "#line %d \"%s\"\n", lineNumber, fileName.c_str());
-            }
-            else
-            {
-                String_Printf(m_buffer, "#line %d\n", lineNumber);
-            }
+            String_Printf(m_buffer, "#line %d \"%s\"\n", lineNumber, fileName);
         }
-        */
+        else if (outputLine)
+        {
+            String_Printf(m_buffer, "#line %d\n", lineNumber);
+        }
     }
 
     // Handle the indentation.

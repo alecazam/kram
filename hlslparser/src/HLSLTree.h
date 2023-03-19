@@ -630,6 +630,7 @@ struct HLSLArrayAccess : public HLSLExpression
     HLSLExpression*     index = NULL;
 };
 
+/// c-style foo(arg1, arg2)
 struct HLSLFunctionCall : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_FunctionCall;
@@ -637,6 +638,20 @@ struct HLSLFunctionCall : public HLSLExpression
     HLSLExpression*     argument = NULL;
     int                 numArguments = 0;
 };
+
+/// c++ style member.foo(arg1, arg2)
+struct HLSLMemberFunctionCall : public HLSLExpression
+{
+    static const HLSLNodeType s_type = HLSLNodeType_FunctionCall;
+    
+    // could be buffer, texture, raytrace
+    HLSLBaseType        memberType = HLSLBaseType_Unknown; // may need type for typeName?
+    
+    const HLSLFunction* function = NULL;
+    HLSLExpression*     argument = NULL;
+    int                 numArguments = 0;
+};
+
 
 #if 1
 /*

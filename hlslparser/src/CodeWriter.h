@@ -27,8 +27,10 @@ class CodeWriter
 {
 
 public:
-    CodeWriter(bool writeFileNames = true);
+    CodeWriter();
 
+    void SetWriteFileLine(bool enable) { m_writeFileLine = enable; }
+    
     void BeginLine(int indent, const char* fileName = NULL, int lineNumber = -1);
     void Write(const char* format, ...) M4_PRINTF_ATTR(2, 3);
     int EndLine(const char* text = NULL);
@@ -46,8 +48,7 @@ private:
     const char*     m_currentFileName;
     int             m_spacesPerIndent;
     int             m_currentIndent;
-    bool            m_writeLines;
-    bool            m_writeFileNames;
+    bool            m_writeFileLine;
 
 };
 

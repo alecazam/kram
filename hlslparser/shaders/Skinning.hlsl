@@ -224,7 +224,12 @@ OutputPS SkinningPS(OutputVS input,
     )
 {
     OutputPS output;
-
+    
+    // Syntax procoess can't handle this construct.
+    // Before parser was adding these wrappers, but also limiting split of tex/sampler.
+    // TexSampler<Texture2D> texWrap(tex, samplerClamp);
+    // half4 color = SampleH(texWrap.t, texWrap.s, input.uv);
+    
     // This is hard to reflect with combined tex/sampler
     // have way more textures than samplers on mobile.
     //float4 color = tex2D(tex, input.uv);

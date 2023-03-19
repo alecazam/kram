@@ -146,8 +146,15 @@ half4 mul(half4x4 m, half4 a) { return m * a; }
  
 #define clip(x) if (all((x) < 0.0) discard_fragment()
 
+// Use templated type to pass tex + sampler combos
+//template<typename T>
+//struct TexSampler
+//{
+//    T t;
+//    sampler s;
+//};
 
-    
+
 //---------
 
 // gather only works on mip0
@@ -356,23 +363,39 @@ int2 GetDimensions(texture2d_ms<float> t)
 // depth2d, _ms, _ms_array, _array,
 // depthcube, depthcube_array
 
-// TODO: add sparse_sample options
+/// TODO: add sparse_sample options
+//template <typename T>
+//struct sparse_color {
+//public:
+// constexpr sparse_color(T value, bool resident) thread;
+// // Indicates whether all memory addressed to retrieve the value was
+//mapped.
+// constexpr bool resident() const thread;
+//
+// // Retrieve the color value.
+// constexpr T const value() const thread;
+//};
+// sparse_sample(s, coord, offset), sparse_gather, sparse_sample_compare, sparse_gather_compare
+// min_lod_clamp(float) option to sample
+
 // gradientcube, gradient3d, min_lod_clamp(float lod),
 // bias(float value), level(float lod)
 // uint get_num_samples() const
 //
-// can have textures in structs
+// can have textures in structs, would help pass tex + sampler
+//   but already had that before in hlslparser.  Could
+//   bring that back, but have those built by caller.
+// could code rewrite calls to pass tex/sampler into them
+//   and then don't need the struct wrapper in MSL.  That
+// severly limits sharing structs, functions.  The structs
+//   don't really need to be in there.
+//
 // struct Foo {
 // texture2d<float> a [[texture(0)]];
 // depth2d<float> b [[texture(1)]];
 // };
 //
-// can pass into top level, can even nest inside structs
-// part of the argument buffer notation
-//
-// [[kernel]] void
-// my_kernel(Foo f)
-// {…}
+
 
 // handle access specifier RWTexture mods the template arg
 // texture2d<float, access::write> a;

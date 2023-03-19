@@ -1104,7 +1104,10 @@ bool InitIntrinsics()
     AddIntrinsic("determinant", HLSLBaseType_Double, HLSLBaseType_Double3x3);
     AddIntrinsic("determinant", HLSLBaseType_Double, HLSLBaseType_Double4x4);
    
+#if 0
     // TODO: more conversions fp16, double, etc.
+    // MSL can just do simple casts.  These are more for getting data in/out
+    // of shader stages, or out of DataAddressBuffer which has single type.
     AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Float);
     AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Double);
     AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Half);
@@ -1116,8 +1119,6 @@ bool InitIntrinsics()
     
     // "faceforward" Returns -n * sign(dot(i, ng)).
     
-    // firstbithigh, firstbitlow
-
     AddIntrinsic("asint", HLSLBaseType_Uint, HLSLBaseType_Float);
     
     // low/hi uint
@@ -1126,7 +1127,8 @@ bool InitIntrinsics()
     // one for 64-bit too (low/hi uint)
     AddIntrinsic("asuint", HLSLBaseType_Ulong, HLSLBaseType_Uint, HLSLBaseType_Uint);
     AddIntrinsic("asuint", HLSLBaseType_Uint, HLSLBaseType_Float);
-   
+#endif
+    
 #if 0
     // TODO: get atomics working
     // these work on atomic_int/uint, then bool/ulong 2.4,
@@ -2468,7 +2470,6 @@ bool HLSLParser::ParseStatement(HLSLStatement*& statement, const HLSLType& retur
 */
 #endif
     
-    // Getting 2 copies of some comments, why is that
     if (ParseComment(statement))
     {
         return true;
@@ -3206,16 +3207,36 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
         // Member access operator.
         while (Accept('.'))
         {
-            HLSLMemberAccess* memberAccess = m_tree->AddNode<HLSLMemberAccess>(fileName, line);
-            memberAccess->object = expression;
-            if (!ExpectIdentifier(memberAccess->field))
+            // member function
+            const char* text = NULL;
+            if (!ExpectIdentifier(text))
             {
                 return false;
             }
             
+            /*
+            const HLSLMemberFuction* memberFunction = FindMemberFunction(text);
+            if (function != NULL)
+            {
+                // check parent type, and args to see if it's a match
+
+                 HLSLMemberFunction* memberFunction = m_tree->AddNode<HLSLMemberFunction>(fileName, line);
+                    memberFunction->object = exprenssion;
+                    memberAccess->memberFunction = memberFunction;
+            
+           } */
+            
+            // member variable
+            HLSLMemberAccess* memberAccess = m_tree->AddNode<HLSLMemberAccess>(fileName, line);
+            memberAccess->object = expression;
+            memberAccess->field = text;
+            
             if (!GetMemberType(expression->expressionType, memberAccess))
             {
                 m_tokenizer.Error("Couldn't access '%s'", memberAccess->field);
+                
+                // this leaks memberAccess allocated above, but
+                // all allocated from single allocator, so just free/reset that
                 return false;
             }
             expression = memberAccess;

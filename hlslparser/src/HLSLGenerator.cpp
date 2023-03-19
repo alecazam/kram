@@ -80,7 +80,6 @@ HLSLGenerator::HLSLGenerator()
     m_error                         = false;
 }
 
-
 // @@ We need a better way of doing semantic replacement:
 // - Look at the function being generated.
 // - Return semantic, semantics associated to fields of the return structure, or output arguments, or fields of structures associated to output arguments -> output semantic replacement.
@@ -152,13 +151,17 @@ void HLSLGenerator::Error(const char* format, ...)
     va_end(arg);
 }
 
-bool HLSLGenerator::Generate(HLSLTree* tree, HLSLTarget target, const char* entryName)
+bool HLSLGenerator::Generate(HLSLTree* tree, HLSLTarget target, const char* entryName, const HLSLOptions& options)
 {
+    
     m_tree      = tree;
     m_entryName = entryName;
     m_target    = target;
     m_isInsideBuffer = false;
 
+    m_options   = options;
+    m_writer.SetWriteFileLine(options.writeFileLine);
+    
     m_writer.Reset();
 
     // Find entry point function

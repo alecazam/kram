@@ -45,6 +45,8 @@ void PrintUsage()
 		 "optional arguments:\n"
          " -g          debug mode, preserve comments\n"
          " -h, --help  show this help message and exit\n"
+         " -line   write #file/line directive\n"
+         " -nohalf     turn half into float (MSL only)"
 		);
 }
 
@@ -99,6 +101,8 @@ int main( int argc, char* argv[] )
 	HLSLTarget target = HLSLTarget_PixelShader;
     string outputFileName;
     bool isDebug = false;
+    bool isTreatHalfAsFloat = false;
+    bool isWriteFileLine = false;
     
 	for( int argn = 1; argn < argc; ++argn )
 	{
@@ -124,6 +128,16 @@ int main( int argc, char* argv[] )
         {
             // will preserve double-slash comments where possible
             isDebug = true;
+        }
+        else if ( String_Equal( arg, "-nohalf" ))
+        {
+            // will preserve double-slash comments where possible
+            isTreatHalfAsFloat = true;
+        }
+        else if ( String_Equal( arg, "-line" ))
+        {
+            // will preserve double-slash comments where possible
+            isWriteFileLine = true;
         }
         
 // This is derived from end characters of entry point
@@ -230,8 +244,6 @@ int main( int argc, char* argv[] )
         return 1;
     }
 
-    
-    
 	// Parse input file
 	Allocator allocator;
 	HLSLParser parser( &allocator, fileName.c_str(), source.data(), source.size() );
@@ -299,8 +311,11 @@ int main( int argc, char* argv[] )
         // Generate output
         if (language == Language_HLSL)
         {
+            HLSLOptions options;
+            options.writeFileLine = isWriteFileLine;
+            
             HLSLGenerator generator;
-            if (generator.Generate( &tree, target, entryName ))
+            if (generator.Generate( &tree, target, entryName, options))
             {
                 // write the buffer out
                 output += generator.GetResult();
@@ -313,8 +328,12 @@ int main( int argc, char* argv[] )
         }
         else if (language == Language_MSL)
         {
+            MSLOptions options;
+            options.writeFileLine = isWriteFileLine;
+            options.treatHalfAsFloat = isTreatHalfAsFloat;
+            
             MSLGenerator generator;
-            if (generator.Generate( &tree, target, entryName ))
+            if (generator.Generate(&tree, target, entryName, options))
             {
                 // write the buffer out
                 output += generator.GetResult();

@@ -19,6 +19,22 @@ class  HLSLTree;
 struct HLSLFunction;
 struct HLSLStruct;
 
+// TODO: try to unify some options with MSLGenerator
+struct HLSLOptions
+{
+    // int (*attributeCallback)(const char* name, uint32_t index) = NULL;
+    // uint32_t bufferRegisterOffset = 0;
+    
+    bool writeFileLine = false;
+    
+    // TODO: hook this up
+    // bool treatHalfAsFloat = false;
+    // bool treadDoubleAsFloat = true;
+    
+    // add vk constructions to HLSL source to convert to Spriv
+    // bool writeVulkan = true;
+};
+
 /**
  * This class is used to generate HLSL which is compatible with the D3D9
  * compiler (i.e. no cbuffers).
@@ -29,7 +45,9 @@ class HLSLGenerator
 public:
     HLSLGenerator();
     
-    bool Generate(HLSLTree* tree, HLSLTarget target, const char* entryName);
+    
+    
+    bool Generate(HLSLTree* tree, HLSLTarget target, const char* entryName, const HLSLOptions& options = HLSLOptions() );
     const char* GetResult() const;
 
 private:
@@ -63,6 +81,7 @@ private:
     HLSLTarget      m_target;
     bool            m_isInsideBuffer;
     bool            m_error;
+    HLSLOptions     m_options;
 };
 
 } // M4

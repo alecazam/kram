@@ -10,44 +10,26 @@ class  HLSLTree;
 struct HLSLFunction;
 struct HLSLStruct;
     
+struct MSLOptions
+{
+    int (*attributeCallback)(const char* name, uint32_t index) = NULL;
+    
+    // no CLI to set offset
+    uint32_t bufferRegisterOffset = 0;
+    
+    bool writeFileLine = false;
+    bool treatHalfAsFloat = false;
+};
+
 /**
  * This class is used to generate MSL shaders.
  */
 class MSLGenerator
 {
 public:
-    enum Flags
-    {
-        Flag_None = 0,
-        Flag_ConstShadowSampler = 1 << 0,
-        Flag_PackMatrixRowMajor = 1 << 1,
-        Flag_NoIndexAttribute   = 1 << 2,
-    };
-
-    struct Options
-    {
-        unsigned int flags;
-        unsigned int bufferRegisterOffset;
-        int (*attributeCallback)(const char* name, unsigned int index);
-        bool treatHalfAsFloat;
-        bool usePreciseFma;
-        //bool use16BitIntegers;
-
-        Options()
-        {
-            // DX and MSL are both column major
-            flags = Flag_None;
-            bufferRegisterOffset = 0;
-            attributeCallback = NULL;
-            treatHalfAsFloat = false;
-            usePreciseFma = false;
-            //use16BitIntegers = false;
-        }
-    };
-
     MSLGenerator();
 
-    bool Generate(HLSLTree* tree, HLSLTarget target, const char* entryName, const Options& options = Options());
+    bool Generate(HLSLTree* tree, HLSLTarget target, const char* entryName, const MSLOptions& options = MSLOptions());
     const char* GetResult() const;
 
 private:
@@ -115,7 +97,7 @@ private:
     HLSLTree*       m_tree;
     const char*     m_entryName;
     HLSLTarget      m_target;
-    Options         m_options;
+    MSLOptions      m_options;
 
     mutable bool            m_error;
 

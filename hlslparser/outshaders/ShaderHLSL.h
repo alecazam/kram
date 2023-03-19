@@ -13,6 +13,14 @@
 #define length_squared(x) ((x)*(x))
 #define distance_squared(x,y) (((x)-(y))*((x)-(y)))
 
+// Use templated type to pass tex + sampler combos
+//template<typename T>
+//struct TexSampler
+//{
+//    T t;
+//    SamplerState s;
+//};
+
 // no &* or ctors in HLSL limited C++
 // This means operators cannot overload [+-*/>><<]=.  Only builtins work.
 
@@ -263,17 +271,17 @@ float4 GatherCmp(Texture2D<float4> t, SamplerComparisonState s, float4 texCoord,
 // TODO: these also take offsets
 float4 Load(Texture2D<float4> t, int2 texCoord, int lod = 0, int2 offset = 0)
 {
-    return t.Load(texCoord, lod, offset);
+    return t.Load(int3(texCoord, lod), offset);
 }
 
 float4 Load(Texture3D<float4> t, int3 texCoord, int lod = 0, int3 offset = 0)
 {
-    return t.Load(texCoord, lod, offset);
+    return t.Load(int4(texCoord, lod), offset);
 }
 
 float4 Load(Texture2DArray<float4> t, int3 texCoord, int lod = 0, int2 offset = 0)
 {
-    return t.Load(texCoord, lod, offset);
+    return t.Load(int4(texCoord, lod), offset);
 }
 
 // no support in HLSL
@@ -346,6 +354,9 @@ half4 SampleBiasH(Texture2D<half> t, SamplerState s, float4 texCoordBias)
 
 #endif
 
+// There are 2 variants of GetDimensions, one that takes a mipLevel input
+// and returns params for that, and one that returns mip0.
+
 // TODO: these should be types, but by leaving off type, they apply to all types.
 int2 GetDimensions(Texture2D t)
 {
@@ -382,11 +393,11 @@ int3 GetDimensions(Texture2DArray t)
     return size;
 }
 
-int2 GetDimensions(Texture2DMS t)
+int2 GetDimensions(Texture2DMS<float4> t)
 {
-    int2 size;
-    t.GetDimensions(size.x, size.y);
-    return size;
+    int3 size;
+    t.GetDimensions(size.x, size.y, size.z);
+    return size.xy;
 }
 
 

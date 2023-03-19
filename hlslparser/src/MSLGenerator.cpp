@@ -27,7 +27,7 @@
 
 namespace M4
 {
-    static void ParseSemantic(const char* semantic, unsigned int* outputLength, unsigned int* outputIndex)
+    static void ParseSemantic(const char* semantic, uint32_t* outputLength, uint32_t* outputIndex)
     {
         const char* semanticIndex = semantic;
 
@@ -390,7 +390,7 @@ namespace M4
         return "";
     }
 
-    bool MSLGenerator::Generate(HLSLTree* tree, HLSLTarget target, const char* entryName, const Options& options)
+    bool MSLGenerator::Generate(HLSLTree* tree, HLSLTarget target, const char* entryName, const MSLOptions& options)
     {
         m_firstClassArgument = NULL;
         m_lastClassArgument = NULL;
@@ -398,8 +398,10 @@ namespace M4
         m_tree = tree;
         m_target = target;
         m_entryName = entryName;
+        
         m_options = options;
-
+        m_writer.SetWriteFileLine(options.writeFileLine);
+    
         m_writer.Reset();
 
         // Find entry point function
@@ -1960,7 +1962,7 @@ namespace M4
         if (semantic == NULL)
             return NULL;
 
-        unsigned int length, index;
+        uint32_t length, index;
         ParseSemantic(semantic, &length, &index);
 
         if (m_target == HLSLTarget_VertexShader)
@@ -2046,7 +2048,7 @@ namespace M4
         if (semantic == NULL)
             return NULL;
 
-        unsigned int length, index;
+        uint32_t length, index;
         ParseSemantic(semantic, &length, &index);
 
         if (m_target == HLSLTarget_VertexShader)
@@ -2069,12 +2071,13 @@ namespace M4
         }
         else if (m_target == HLSLTarget_PixelShader)
         {
-            if (m_options.flags & MSLGenerator::Flag_NoIndexAttribute)
-            {
-                // No dual-source blending on iOS, and no index() attribute
-                if (String_Equal(semantic, "COLOR0_1")) return NULL;
-            }
-            else
+// Not supporting flags, add as bool to options if needed
+//            if (m_options.flags & MSLGenerator::Flag_NoIndexAttribute)
+//            {
+//                // No dual-source blending on iOS, and no index() attribute
+//                if (String_Equal(semantic, "COLOR0_1")) return NULL;
+//            }
+//            else
             {
                 // See these settings
                 // MTLBlendFactorSource1Color, OneMinusSource1Color, Source1Alpha, OneMinuSource1Alpha.
