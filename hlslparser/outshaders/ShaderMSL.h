@@ -1,3 +1,8 @@
+#ifndef ShaderMSL_h
+#define ShaderMSL_h
+
+// For some reason the air link thinks all symbols in this header are duplicates
+// unles I mark them all as inline.  So do that for now.
 
 // glslc doesn't support, but this header is metal only
 #pragma once
@@ -59,72 +64,75 @@ using namespace simd;
 
 // #define mad precise::fma"
     
-float mad(float a, float b, float c) {
+
+inline float mad(float a, float b, float c) {
     return a * b + c;
 }
-float2 mad(float2 a, float2 b, float2 c) {
+inline float2 mad(float2 a, float2 b, float2 c) {
     return a * b + c;
 }
-float3 mad(float3 a, float3 b, float3 c) {
+inline float3 mad(float3 a, float3 b, float3 c) {
     return a * b + c;
 }
-float4 mad(float4 a, float4 b, float4 c) {
+inline float4 mad(float4 a, float4 b, float4 c) {
     return a * b + c;
 }
+
 
 // DirectX couldn't simply use operator * in all these years
 // so have to use a function call mul.
 
 // Might be easier to use * instead
-float2x2 mul(float a, float2x2 m) { return a * m; }
-float3x3 mul(float a, float3x3 m) { return a * m; }
-float4x4 mul(float a, float4x4 m) { return a * m; }
+inline float2x2 mul(float a, float2x2 m) { return a * m; }
+inline float3x3 mul(float a, float3x3 m) { return a * m; }
+inline float4x4 mul(float a, float4x4 m) { return a * m; }
 
-float2x2 mul(float2x2 m, float a) { return a * m; }
-float3x3 mul(float3x3 m, float a) { return a * m; }
-float4x4 mul(float4x4 m, float a) { return a * m; }
+inline float2x2 mul(float2x2 m, float a) { return a * m; }
+inline float3x3 mul(float3x3 m, float a) { return a * m; }
+inline float4x4 mul(float4x4 m, float a) { return a * m; }
 
-float2 mul(float2 a, float2x2 m) { return a * m; }
-float3 mul(float3 a, float3x3 m) { return a * m; }
-float4 mul(float4 a, float4x4 m) { return a * m; }
+inline float2 mul(float2 a, float2x2 m) { return a * m; }
+inline float3 mul(float3 a, float3x3 m) { return a * m; }
+inline float4 mul(float4 a, float4x4 m) { return a * m; }
 
-float2 mul(float2x2 m, float2 a) { return m * a; }
-float3 mul(float3x3 m, float3 a) { return m * a; }
-float4 mul(float4x4 m, float4 a) { return m * a; }
+inline float2 mul(float2x2 m, float2 a) { return m * a; }
+inline float3 mul(float3x3 m, float3 a) { return m * a; }
+inline float4 mul(float4x4 m, float4 a) { return m * a; }
 
 //float3 mul(float4 a, float3x4 m) { return a * m; } // why no macro ?
 //float2 mul(float4 a, float2x4 m) { return a * m; }
 
 #if USE_HALF
 
-half mad(half a, half b, half c) {
+inline half mad(half a, half b, half c) {
     return a * b + c;
 }
-half2 mad(half2 a, half2 b, half2 c) {
+inline half2 mad(half2 a, half2 b, half2 c) {
     return a * b + c;
 }
-half3 mad(half3 a, half3 b, half3 c) {
+inline half3 mad(half3 a, half3 b, half3 c) {
     return a * b + c;
 }
-half4 mad(half4 a, half4 b, half4 c) {
+inline half4 mad(half4 a, half4 b, half4 c) {
     return a * b + c;
 }
 
-half2x2 mul(half a, half2x2 m) { return a * m; }
-half3x3 mul(half a, half3x3 m) { return a * m; }
-half4x4 mul(half a, half4x4 m) { return a * m; }
 
-half2x2 mul(half2x2 m, half a) { return a * m; }
-half3x3 mul(half3x3 m, half a) { return a * m; }
-half4x4 mul(half4x4 m, half a) { return a * m; }
+inline half2x2 mul(half a, half2x2 m) { return a * m; }
+inline half3x3 mul(half a, half3x3 m) { return a * m; }
+inline half4x4 mul(half a, half4x4 m) { return a * m; }
 
-half2 mul(half2 a, half2x2 m) { return a * m; }
-half3 mul(half3 a, half3x3 m) { return a * m; }
-half4 mul(half4 a, half4x4 m) { return a * m; }
+inline half2x2 mul(half2x2 m, half a) { return a * m; }
+inline half3x3 mul(half3x3 m, half a) { return a * m; }
+inline half4x4 mul(half4x4 m, half a) { return a * m; }
 
-half2 mul(half2x2 m, half2 a) { return m * a; }
-half3 mul(half3x3 m, half3 a) { return m * a; }
-half4 mul(half4x4 m, half4 a) { return m * a; }
+inline half2 mul(half2 a, half2x2 m) { return a * m; }
+inline half3 mul(half3 a, half3x3 m) { return a * m; }
+inline half4 mul(half4 a, half4x4 m) { return a * m; }
+
+inline half2 mul(half2x2 m, half2 a) { return m * a; }
+inline half3 mul(half3x3 m, half3 a) { return m * a; }
+inline half4 mul(half4x4 m, half4 a) { return m * a; }
 
 #endif
 
@@ -158,25 +166,25 @@ half4 mul(half4x4 m, half4 a) { return m * a; }
 //---------
 
 // gather only works on mip0
-float4 GatherRed(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
+inline float4 GatherRed(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
     return t.gather(s, texCoord, offset, component::x);
 }
   
-float4 GatherGreen(texture2d<float> t, sampler s, float2 texCoord,  int2 offset=0) {
+inline float4 GatherGreen(texture2d<float> t, sampler s, float2 texCoord,  int2 offset=0) {
     return t.gather(s, texCoord, offset, component::y);
 }
 
-float4 GatherBlue(texture2d<float> t, sampler s, float2 texCoord,  int2 offset=0) {
+inline float4 GatherBlue(texture2d<float> t, sampler s, float2 texCoord,  int2 offset=0) {
     return t.gather(s, texCoord, offset, component::z);
 }
 
-float4 GatherAlpha(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
+inline float4 GatherAlpha(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
     return t.gather(s, texCoord, offset, component::w);
 }
 
 //---------
 
-float4 SampleGrad(texture2d<float> t, sampler s, float2 texCoord, float2 gradx, float2 grady) {
+inline float4 SampleGrad(texture2d<float> t, sampler s, float2 texCoord, float2 gradx, float2 grady) {
    return t.sample(s, texCoord.xy, gradient2d(gradx, grady));
 }
 
@@ -184,15 +192,15 @@ float4 SampleGrad(texture2d<float> t, sampler s, float2 texCoord, float2 gradx, 
 
 #if USE_HALF
 
-half4 SampleH(texture2d<half> t, sampler s, float2 texCoord) {
+inline half4 SampleH(texture2d<half> t, sampler s, float2 texCoord) {
     return t.sample(s, texCoord);
 }
 
-half4 SampleLevelH(texture2d<half> t, sampler s, float4 texCoordMip) {
+inline half4 SampleLevelH(texture2d<half> t, sampler s, float4 texCoordMip) {
     return t.sample(s, texCoordMip.xy, level(texCoordMip.w));
 }
 
-half4 SampleBiasH(texture2d<half> t, sampler s, float4 texCoordBias) {
+inline half4 SampleBiasH(texture2d<half> t, sampler s, float4 texCoordBias) {
     return t.sample(s, texCoordBias.xy, bias(texCoordBias.w));
 }
 
@@ -206,68 +214,68 @@ half4 SampleBiasH(texture2d<half> t, sampler s, float4 texCoordBias) {
 
 
 
-float4 SampleLevel(texture2d<float> t, sampler s, float4 texCoordMip) {
+inline float4 SampleLevel(texture2d<float> t, sampler s, float4 texCoordMip) {
     return t.sample(s, texCoordMip.xy, level(texCoordMip.w));
 }
 
-float4 SampleLevel(texturecube<float> t, sampler s, float4 texCoordMip) {
+inline float4 SampleLevel(texturecube<float> t, sampler s, float4 texCoordMip) {
     return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 }
 
-float4 SampleLevel(texture3d<float> t, sampler s, float4 texCoordMip) {
+inline float4 SampleLevel(texture3d<float> t, sampler s, float4 texCoordMip) {
     return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 }
 
 // TODO: may need to add to intrinsics
-//float4 SampleLevel(texture2d_array<float> t, sampler s, float4 texCoordMip) {
+//inline float4 SampleLevel(texture2d_array<float> t, sampler s, float4 texCoordMip) {
 //    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 //}
-//float4 SampleLevel(texturecube_array<float> t, sampler s, float4 texCoordMip) {
+//inline float4 SampleLevel(texturecube_array<float> t, sampler s, float4 texCoordMip) {
 //    return t.sample(s, texCoordMip.xyz, level(texCoordMip.w));
 //}
 
 // ----
 
-float4 SampleBias(texturecube<float> t, sampler s, float4 texCoordBias) {
+inline float4 SampleBias(texturecube<float> t, sampler s, float4 texCoordBias) {
     return t.sample(s, texCoordBias.xyz, bias(texCoordBias.w));
 }
    
-float4 SampleBias(texture2d<float> t, sampler s, float4 texCoordBias) {
+inline float4 SampleBias(texture2d<float> t, sampler s, float4 texCoordBias) {
     return t.sample(s, texCoordBias.xy, bias(texCoordBias.w));
 }
 
 //------
 
 // see if some of these have offset
-float4 Load(texture2d<float> t, int2 texCoord, int lod = 0)
+inline float4 Load(texture2d<float> t, int2 texCoord, int lod = 0)
 {
     return t.read((uint2)texCoord, (uint)lod);
 }
 
-float4 Load(texture3d<float> t, int3 texCoord, int lod = 0)
+inline float4 Load(texture3d<float> t, int3 texCoord, int lod = 0)
 {
     return t.read((uint3)texCoord, (uint)lod);
 }
 
-float4 Load(texture2d_array<float> t, int3 texCoord, int lod = 0)
+inline float4 Load(texture2d_array<float> t, int3 texCoord, int lod = 0)
 {
     return t.read((uint2)texCoord.xy, (uint)texCoord.z, (uint)lod);
 }
 
 // no HLSL equivalent, so don't define for MSL.  Maybe it's just offset that doesn't.
-//float4 Load(texturecube<float> t, int3 texCoord, int lod = 0)
+//inline float4 Load(texturecube<float> t, int3 texCoord, int lod = 0)
 //{
 //    uv, face, lod, offset
 //    return t.read((uint2)texCoord.xy, (uint)texCoord.z, (uint2)lod);
 //}
 //
-//float4 Load(texturecube_array<float> t, int4 texCoord, int lod = 0)
+//inline float4 Load(texturecube_array<float> t, int4 texCoord, int lod = 0)
 //{
 //    return t.read((uint2)texCoord.xy, (uint)texCoord.z, (uint)texcoord.w, (uint)lod);
 //}
 
 // this doesn't use SamplerState, raw load
-float4 Load(texture2d_ms<float> t, int2 texCoord, int sample) {
+inline float4 Load(texture2d_ms<float> t, int2 texCoord, int sample) {
     return t.read((uint2)texCoord, (uint)sample);
 }
 
@@ -275,24 +283,24 @@ float4 Load(texture2d_ms<float> t, int2 texCoord, int sample) {
 
 // ----
 
-float4 Sample(texture2d_array<float> t, sampler s, float3 texCoord, int2 offset=0) {
+inline float4 Sample(texture2d_array<float> t, sampler s, float3 texCoord, int2 offset=0) {
     return t.sample(s, texCoord.xy, uint(texCoord.z), offset);
 }
-float4 Sample(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
+inline float4 Sample(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
     return t.sample(s, texCoord, offset);
 }
-float4 Sample(texture3d<float> t, sampler s, float3 texCoord, int3 offset=0) {
+inline float4 Sample(texture3d<float> t, sampler s, float3 texCoord, int3 offset=0) {
     return t.sample(s, texCoord, offset);
 }
-float4 Sample(texturecube<float> t, sampler s, float3 texCoord) {
+inline float4 Sample(texturecube<float> t, sampler s, float3 texCoord) {
     return t.sample(s, texCoord);
 }
-float4 Sample(texturecube_array<float> t, sampler s, float4 texCoord) {
+inline float4 Sample(texturecube_array<float> t, sampler s, float4 texCoord) {
     return t.sample(s, texCoord.xyz, uint(texCoord.w));
 }
 //----------
 
-float4 Sample(depth2d<float> t, sampler s, float2 texCoord, int2 offset = 0)
+inline float4 Sample(depth2d<float> t, sampler s, float2 texCoord, int2 offset = 0)
 {
     return t.sample(s, texCoord.xy, offset);
 }
@@ -303,12 +311,12 @@ float4 Sample(depth2d<float> t, sampler s, float2 texCoord, int2 offset = 0)
 
 
 // For persp shadows, remember to divide z = z/w before calling, or w = z/w on cube
-float SampleCmp(depth2d<float> t, sampler s, float4 texCompareCoord, int2 offset = 0)
+inline float SampleCmp(depth2d<float> t, sampler s, float4 texCompareCoord, int2 offset = 0)
 {
     return t.sample_compare(s, texCompareCoord.xy, texCompareCoord.z, offset);
 }
 
-float4 GatherCmp(depth2d<float> t, sampler s, float4 texCompareCoord, int2 offset = 0)
+inline float4 GatherCmp(depth2d<float> t, sampler s, float4 texCompareCoord, int2 offset = 0)
 {
     return t.gather_compare(s, texCompareCoord.xy, texCompareCoord.z, offset);
 }
@@ -319,37 +327,37 @@ float4 GatherCmp(depth2d<float> t, sampler s, float4 texCompareCoord, int2 offse
 // get_num_mip_levels, get_array_size
 // get_width/height/depth(lod)
 // TODO: need half versions
-int2 GetDimensions(texture2d<float> t)
+inline int2 GetDimensions(texture2d<float> t)
 {
     int2 size(t.get_width(), t.get_height());
     return size;
 }
 
-int3 GetDimensions(texture3d<float> t)
+inline int3 GetDimensions(texture3d<float> t)
 {
     int3 size(t.get_width(), t.get_height(), t.get_depth());
     return size;
 }
 
-int2 GetDimensions(texturecube<float> t)
+inline int2 GetDimensions(texturecube<float> t)
 {
     int2 size(t.get_width(), t.get_width());
     return size;
 }
 
-int3 GetDimensions(texturecube_array<float> t)
+inline int3 GetDimensions(texturecube_array<float> t)
 {
     int3 size(t.get_width(), t.get_width(), t.get_array_size());
     return size;
 }
 
-int3 GetDimensions(texture2d_array<float> t)
+inline int3 GetDimensions(texture2d_array<float> t)
 {
     int3 size(t.get_width(), t.get_height(), t.get_array_size());
     return size;
 }
 
-int2 GetDimensions(texture2d_ms<float> t)
+inline int2 GetDimensions(texture2d_ms<float> t)
 {
     int2 size(t.get_width(), t.get_height());
     return size;
@@ -407,5 +415,5 @@ int2 GetDimensions(texture2d_ms<float> t)
 // MSL 2.3 has function pointers
 // MSL 2.4 has compute recursion
 
-    
+#endif
 

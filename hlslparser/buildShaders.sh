@@ -209,11 +209,16 @@ if [[ $testMetal -eq 1 ]]; then
     ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Sample.frag.spv --output ios/Sample.frag.metal
     ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Compute.comp.spv --output ios/Compute.comp.metal
 
+    # compile to make sure code is valid
+    # TODO: compile to air, and use metal-ar to link to one metalib and metalibdsym
+    # need cmake file to run all the steps by writing out ninja file
+    # or need makefile since ninja can't string manip
     ${appMetaliOS} ${dstDirOut}ios/Skinning.vert.metal ${metaliOSOptions} -o ios/Skinning.vert.metallib
     ${appMetaliOS} ${dstDirOut}ios/Skinning.frag.metal ${metaliOSOptions} -o ios/Skinning.frag.metallib
     ${appMetaliOS} ${dstDirOut}ios/Sample.vert.metal ${metaliOSOptions} -o ios/Sample.vert.metallib
     ${appMetaliOS} ${dstDirOut}ios/Sample.frag.metal ${metaliOSOptions} -o ios/Sample.frag.metallib
     ${appMetaliOS} ${dstDirOut}ios/Compute.comp.metal ${metaliOSOptions} -o ios/Compute.comp.metallib
+    
 fi
 
 # skip this path, have to mod hlsl just to get valid code to compile with glslc
