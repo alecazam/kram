@@ -1,8 +1,12 @@
 
+# TODO: need absolute paths for Xcode for error/warning clickthrough
+# ugh that ninja doesn't have path or wildcard support.
+# but coding by hand for now is better than dealing with cmake ninja
+homeDir = /Users/Alec/devref/
 
-vulkanSDK=/Users/Alec/devref/vulkansdk/1.3.239.0/macOS/bin/
-projectDir=/Users/Alec/devref/kram/hlslparser/
-appBuildDir =./build/hlslparser/Build/Products/Release/
+vulkanSDK = ${homeDir}vulkansdk/1.3.239.0/macOS/bin/
+projectDir = ${homeDir}kram/hlslparser/
+appBuildDir = ${projectDir}/build/hlslparser/Build/Products/Release/
 
 hlslparser = ${appBuildDir}hlslparser
 
@@ -19,27 +23,27 @@ srcDir = ${projectDir}shaders/
 intDir = ${projectDir}outshaders/
 
 # compiled shader per platform
+# 2.4 is first version to support companion sym
 dstDir = ${projectDir}out/mac/
+flagsMSL = -std=macos-metal2.4 -Werror -I ${srcDir}
+
+dependsMSL = ${srcDir}/ShaderMSL.h
+
+# for iOS
+#dstDir = ${projectDir}out/ios/
+#flagsMSL = -std=ios-metal2.4 -Werror
 
 # turn on file/line directives to jump back to original sources
 # and turn on comments in generated sources
 flagsParser = -g -line
 
-# this makes metallib 3x bigger, but not optimized
+# turn on debug, makes metallib 3x bigger and not optimized
 #flagsMSLDebug = -g
 
-# this allows Xcode to load the sym file
+# this allows Xcode to load the sym file, don't use with 2.3, or the file is giant.
 flagsMSLDebug = -frecord-sources
+# flagsMSLDebug =
 
-# target MSL2.3 for now on macOS
-flagsMSL = -std=macos-metal2.3 -Werror
-
-# this seems to gen weird warnings
-#
-
-# for iOS
-# -std=ios-metal2.3
-    
 # hlslparser msl codegen
 rule genMSL
     command = $hlslparser $flagsParser -i $in -o $out
@@ -53,17 +57,18 @@ rule compileMSL
 rule linkMSL
     command = $metalLib -o $out $in
 
-# strip metallib and gen metlalibsym
+# strip metallib and gen metlalibsym (only for SM2.4+)
 rule stripMSL
     command = $metalLibStrip -flat -remove-source $in
 
-dependsMSL = ${intDir}/ShaderMSL.h
 
 # gen air
 build ${intDir}Skinning.metal: genMSL ${srcDir}Skinning.hlsl | ${dependsMSL}
 build ${intDir}Sample.metal: genMSL ${srcDir}Sample.hlsl | ${dependsMSL}
 build ${intDir}Compute.metal: genMSL ${srcDir}Compute.hlsl | ${dependsMSL}
 
+# this avoids recompilation when there are a lot of files
+# but it does mean more compile calls to gen the one metallib and sym
 build ${dstDir}Skinning.air: compileMSL ${intDir}Skinning.metal
 build ${dstDir}Sample.air: compileMSL ${intDir}Sample.metal
 build ${dstDir}Compute.air: compileMSL ${intDir}Compute.metal
@@ -78,6 +83,8 @@ build ${dstDir}GameShaders.metallib: linkMSL ${dstDir}Skinning.air ${dstDir}Samp
 # with no debug flags, 87K and sym is 80K w/o debug, prob should skip gen of sym file
 # if not in debug
 
+# sources are still embedded in the 87K version
+
 # gen metallibsym
 build ${dstDir}GameShaders.metallibsym: stripMSL ${dstDir}GameShaders.metallib
 
@@ -85,36 +92,36 @@ build ${dstDir}GameShaders.metallibsym: stripMSL ${dstDir}GameShaders.metallib
 
 dxc = ${vulkanSDK}dxc
 
+dependsHLSL = ${srcDir}/ShaderHLSL.h
+dstDirHLSL = ${projectDir}out/android/
+
+# turn on debug
 # flagsDXDebug = -Zi
 flagsDXDebug =
 
-flagsDXC = -nologo -Zpc -enable-16bit-types -HV 2021 -Werror -fspv-extension=SPV_KHR_shader_draw_parameters -spirv -fspv-target-env=vulkan1.2
+flagsDXC = -nologo -Zpc -enable-16bit-types -HV 2021 -Werror -fspv-extension=SPV_KHR_shader_draw_parameters -spirv -fspv-target-env=vulkan1.2 -I ${srcDir}
 
 flagsVS = -T vs_6_2
 flagsPS = -T ps_6_2
 flagsCS = -T cs_6_2
 
-dependsHLSL = ${intDir}/ShaderHLSL.h
-
-dstDirHLSL = ${projectDir}out/android/
-
 # hlslparser hlsl/msl codegen
 rule genHLSL
-  command = $hlslparser $flagsParser -i $in -o $out
+    command = $hlslparser $flagsParser -i $in -o $out
 
 # this will get shadow replaced
 entryPoint = Foo
 
 # compile to spirv
 rule compileVS
-  command = $dxc $flagsDXC $flagsVS -E ${entryPoint}VS -Fo $out $in
+    command = $dxc $flagsDXC $flagsVS -E ${entryPoint}VS -Fo $out $in
 rule compilePS
-  command = $dxc $flagsDXC $flagsPS -E ${entryPoint}PS -Fo $out $in
+    command = $dxc $flagsDXC $flagsPS -E ${entryPoint}PS -Fo $out $in
 rule compileCS
-  command = $dxc $flagsDXC $flagsCS -E ${entryPoint}CS -Fo $out $in
+    command = $dxc $flagsDXC $flagsCS -E ${entryPoint}CS -Fo $out $in
 
 rule archiveSpriv
-  command = zip -r $out $in
+    command = zip -r $out $in
 
 # gen hlsl
 build ${intDir}Skinning.hlsl: genHLSL ${srcDir}Skinning.hlsl | ${dependsHLSL}
