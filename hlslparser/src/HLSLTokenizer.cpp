@@ -651,13 +651,10 @@ void HLSLTokenizer::Error(const char* format, ...)
 
     // can log error/warning/info messages
     bool isError = true;
-#if _MSC_VER
-    // VS convention
-    Log_Error("%s(%d): %s: %s\n", m_fileName, m_lineNumber,  isError ? "error" : "warning", buffer);
-#else
-    // Xcode convention (must be absolute filename for clickthrough)
+
+    // Gcc/lcang convention (must be absolute filename for clickthrough)
+    // Visual Stuidio can pick up on this formatting too
     Log_Error("%s:%d: %s: %s\n", m_fileName, m_lineNumber, isError ? "error" : "warning", buffer);
-#endif
 } 
 
 void HLSLTokenizer::GetTokenName(char buffer[s_maxIdentifier]) const

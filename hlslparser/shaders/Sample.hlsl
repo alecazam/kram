@@ -107,10 +107,10 @@ half4 CalcLightingColor(float3 vLightPos, float3 vLightDir, half4 vLightColor, f
     half fDistFalloff = (half)saturate((vFalloffs.x - fDist) / vFalloffs.y);
 
     // Normalize from here on.
-    half3 vLightToPixelNormalized = normalize(vLightToPixelUnNormalized);
+    half3 vLightToPixelNormalized = (half3)normalize(vLightToPixelUnNormalized);
 
     // Angle falloff = 0 at vFalloffs.z, 1 at vFalloffs.z - vFalloffs.w
-    half3 lightDir = normalize(vLightDir);
+    half3 lightDir = (half3)normalize(vLightDir);
     half fCosAngle = dot(vLightToPixelNormalized, lightDir);
     half fAngleFalloff = saturate((fCosAngle - (half)vFalloffs.z) / (half)vFalloffs.w);
 
@@ -179,13 +179,13 @@ OutputVS SampleVS(InputVS input)
 float4 SamplePS(InputPS input) : SV_Target0
 {
     half4 diffuseColor = SampleH(diffuseMap, sampleWrap, input.uv);
-    half3 pixelNormal = CalcPerPixelNormal(input.uv, input.normal, input.tangent);
+    half3 pixelNormal = CalcPerPixelNormal(input.uv, (half3)input.normal, (half3)input.tangent);
     half4 totalLight = (half4)scene.ambientColor;
 
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
         LightState light = scene.lights[i];
-        half4 lightPass = CalcLightingColor(light.position, light.direction, light.color, light.falloff, input.worldpos.xyz, pixelNormal);
+        half4 lightPass = CalcLightingColor(light.position, light.direction, (half4)light.color, light.falloff, input.worldpos.xyz, pixelNormal);
         
         // only single light shadow map
         if (scene.sampleShadowMap && i == 0)

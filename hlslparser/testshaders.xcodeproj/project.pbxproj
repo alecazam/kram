@@ -21,12 +21,14 @@
 		70CAA48C29BE6A62004B7E7B /* Compute.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = Compute.hlsl; sourceTree = "<group>"; };
 		70CAA48D29BE6A62004B7E7B /* Compute.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Compute.metal; sourceTree = "<group>"; };
 		70CAA48E29BEB04C004B7E7B /* DepthTest.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DepthTest.metal; sourceTree = "<group>"; };
+		70CAA48F29C63A46004B7E7B /* build.ninja */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.ninja; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		707D37A529B9787400B08D22 = {
 			isa = PBXGroup;
 			children = (
+				70CAA48F29C63A46004B7E7B /* build.ninja */,
 				707D37DA29B97A0900B08D22 /* buildShaders.sh */,
 				707D37D829B979EB00B08D22 /* shaders */,
 				707D37CA29B9797A00B08D22 /* outshaders */,
@@ -77,7 +79,7 @@
 			buildConfigurationList = 70CAA48629BAE9F5004B7E7B /* Build configuration list for PBXLegacyTarget "testshaders" */;
 			buildPhases = (
 			);
-			buildToolPath = ./buildShaders.sh;
+			buildToolPath = /opt/homebrew/bin/ninja;
 			buildWorkingDirectory = "";
 			dependencies = (
 			);

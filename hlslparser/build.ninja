@@ -10,6 +10,7 @@ hlslparser = ${appBuildDir}hlslparser
 
 metalCompile = xcrun -sdk macosx metal
 metalLib = xcrun -sdk macosx metallib
+metalLibStrip = xcrun -sdk macosx metal-dsymutil
 
 # src files
 srcDir = ${projectDir}shaders/
@@ -20,11 +21,21 @@ intDir = ${projectDir}outshaders/
 # compiled shader per platform
 dstDir = ${projectDir}out/mac/
 
+# turn on file/line directives to jump back to original sources
+# and turn on comments in generated sources
+flagsParser = -g -line
 
-flagsParser = -g
+# this makes metallib 3x bigger, but not optimized
+#flagsMSLDebug = -g
 
-# this is setup for .air file and metallibdsym creation
-flagsMSL = -g -frecord-sources=flat -std=macos-metal2.3
+# this allows Xcode to load the sym file
+flagsMSLDebug = -frecord-sources
+
+# target MSL2.3 for now on macOS
+flagsMSL = -std=macos-metal2.3 -Werror
+
+# this seems to gen weird warnings
+#
 
 # for iOS
 # -std=ios-metal2.3
@@ -35,16 +46,19 @@ rule genMSL
 
 # compile to .air
 rule compileMSL
-    command = $metalCompile $flagsMSL -c $in -o $out
+    command = $metalCompile $flagsMSLDebug $flagsMSL -c $in -o $out
 
 # https://developer.apple.com/documentation/metal/shader_libraries/compiling_shader_code_into_a_library_with_metal_s_command-line_tools?language=objc
 # linker to metallib
 rule linkMSL
     command = $metalLib -o $out $in
 
+# strip metallib and gen metlalibsym
+rule stripMSL
+    command = $metalLibStrip -flat -remove-source $in
+
 dependsMSL = ${intDir}/ShaderMSL.h
 
-# need correct dir
 # gen air
 build ${intDir}Skinning.metal: genMSL ${srcDir}Skinning.hlsl | ${dependsMSL}
 build ${intDir}Sample.metal: genMSL ${srcDir}Sample.hlsl | ${dependsMSL}
@@ -54,14 +68,27 @@ build ${dstDir}Skinning.air: compileMSL ${intDir}Skinning.metal
 build ${dstDir}Sample.air: compileMSL ${intDir}Sample.metal
 build ${dstDir}Compute.air: compileMSL ${intDir}Compute.metal
 
-# can ninja take file list?
-build ${dstDir}Game.metallib: linkMSL ${dstDir}Skinning.air ${dstDir}Sample.air ${dstDir}Compute.air
+# gen metallib (87K)
+build ${dstDir}GameShaders.metallib: linkMSL ${dstDir}Skinning.air ${dstDir}Sample.air ${dstDir}Compute.air
+
+# this is getting run every time since it strips the metallib, how to prevent that
+# also can compile all metal files into both metallib and dsycm
+# this also doesn't make metallib any smaller, but is supposed to strip it
+# goes from 299K down to 273K, but seems like it should go smaller
+# with no debug flags, 87K and sym is 80K w/o debug, prob should skip gen of sym file
+# if not in debug
+
+# gen metallibsym
+build ${dstDir}GameShaders.metallibsym: stripMSL ${dstDir}GameShaders.metallib
 
 #-------
 
 dxc = ${vulkanSDK}dxc
 
-flagsDXC = -nologo -Zi -Zpc -enable-16bit-types -HV 2021 -fspv-extension=SPV_KHR_shader_draw_parameters -spirv -fspv-target-env=vulkan1.2
+# flagsDXDebug = -Zi
+flagsDXDebug =
+
+flagsDXC = -nologo -Zpc -enable-16bit-types -HV 2021 -Werror -fspv-extension=SPV_KHR_shader_draw_parameters -spirv -fspv-target-env=vulkan1.2
 
 flagsVS = -T vs_6_2
 flagsPS = -T ps_6_2
@@ -78,8 +105,7 @@ rule genHLSL
 # this will get shadow replaced
 entryPoint = Foo
 
-# compile to dxil or spriv
-# TODO: fix src/dstDir
+# compile to spirv
 rule compileVS
   command = $dxc $flagsDXC $flagsVS -E ${entryPoint}VS -Fo $out $in
 rule compilePS
@@ -87,12 +113,15 @@ rule compilePS
 rule compileCS
   command = $dxc $flagsDXC $flagsCS -E ${entryPoint}CS -Fo $out $in
 
+rule archiveSpriv
+  command = zip -r $out $in
+
 # gen hlsl
 build ${intDir}Skinning.hlsl: genHLSL ${srcDir}Skinning.hlsl | ${dependsHLSL}
 build ${intDir}Sample.hlsl: genHLSL ${srcDir}Sample.hlsl | ${dependsHLSL}
 build ${intDir}Compute.hlsl: genHLSL ${srcDir}Compute.hlsl | ${dependsHLSL}
 
-# compile hlsl
+# gen spv
 build ${dstDirHLSL}Skinning.vert.spv: compileVS ${intDir}Skinning.hlsl
     entryPoint = Skinning
     
@@ -105,9 +134,12 @@ build ${dstDirHLSL}Sample.vert.spv: compileVS ${intDir}Sample.hlsl
 build ${dstDirHLSL}Sample.frag.spv: compilePS ${intDir}Sample.hlsl
     entryPoint = Sample
     
-# could zip up files
-        
 build ${dstDirHLSL}Compute.comp.spv: compileCS ${intDir}Compute.hlsl
     entryPoint = Compute
+
+# TODO: use strip command to gen pdb for each file, may only apply to DXIL
+
+# TODO: could zip spv to single archive (6k)
+build ${dstDirHLSL}GameShaders.zip: archiveSpriv ${dstDirHLSL}Skinning.vert.spv ${dstDirHLSL}Skinning.frag.spv ${dstDirHLSL}Sample.vert.spv ${dstDirHLSL}Sample.frag.spv ${dstDirHLSL}Compute.comp.spv
 
 
