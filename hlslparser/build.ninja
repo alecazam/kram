@@ -20,7 +20,7 @@ metalLibStrip = xcrun -sdk macosx metal-dsymutil
 srcDir = ${projectDir}shaders/
 
 # headers and parser gen shaders
-intDir = ${projectDir}outshaders/
+#intDir = ${projectDir}outshaders/
 
 # compiled shader per platform
 # 2.4 is first version to support companion sym
@@ -63,15 +63,15 @@ rule stripMSL
 
 
 # gen air
-build ${intDir}Skinning.metal: genMSL ${srcDir}Skinning.hlsl | ${dependsMSL}
-build ${intDir}Sample.metal: genMSL ${srcDir}Sample.hlsl | ${dependsMSL}
-build ${intDir}Compute.metal: genMSL ${srcDir}Compute.hlsl | ${dependsMSL}
+build ${dstDir}Skinning.metal: genMSL ${srcDir}Skinning.hlsl | ${dependsMSL}
+build ${dstDir}Sample.metal: genMSL ${srcDir}Sample.hlsl | ${dependsMSL}
+build ${dstDir}Compute.metal: genMSL ${srcDir}Compute.hlsl | ${dependsMSL}
 
 # this avoids recompilation when there are a lot of files
 # but it does mean more compile calls to gen the one metallib and sym
-build ${dstDir}Skinning.air: compileMSL ${intDir}Skinning.metal
-build ${dstDir}Sample.air: compileMSL ${intDir}Sample.metal
-build ${dstDir}Compute.air: compileMSL ${intDir}Compute.metal
+build ${dstDir}Skinning.air: compileMSL ${dstDir}Skinning.metal
+build ${dstDir}Sample.air: compileMSL ${dstDir}Sample.metal
+build ${dstDir}Compute.air: compileMSL ${dstDir}Compute.metal
 
 # gen metallib (87K)
 build ${dstDir}GameShaders.metallib: linkMSL ${dstDir}Skinning.air ${dstDir}Sample.air ${dstDir}Compute.air
@@ -124,24 +124,24 @@ rule archiveSpriv
     command = zip -r $out $in
 
 # gen hlsl
-build ${intDir}Skinning.hlsl: genHLSL ${srcDir}Skinning.hlsl | ${dependsHLSL}
-build ${intDir}Sample.hlsl: genHLSL ${srcDir}Sample.hlsl | ${dependsHLSL}
-build ${intDir}Compute.hlsl: genHLSL ${srcDir}Compute.hlsl | ${dependsHLSL}
+build ${dstDirHLSL}Skinning.hlsl: genHLSL ${srcDir}Skinning.hlsl | ${dependsHLSL}
+build ${dstDirHLSL}Sample.hlsl: genHLSL ${srcDir}Sample.hlsl | ${dependsHLSL}
+build ${dstDirHLSL}Compute.hlsl: genHLSL ${srcDir}Compute.hlsl | ${dependsHLSL}
 
 # gen spv
-build ${dstDirHLSL}Skinning.vert.spv: compileVS ${intDir}Skinning.hlsl
+build ${dstDirHLSL}Skinning.vert.spv: compileVS ${dstDirHLSL}Skinning.hlsl
     entryPoint = Skinning
     
-build ${dstDirHLSL}Skinning.frag.spv: compilePS ${intDir}Skinning.hlsl
+build ${dstDirHLSL}Skinning.frag.spv: compilePS ${dstDirHLSL}Skinning.hlsl
     entryPoint = Skinning
         
-build ${dstDirHLSL}Sample.vert.spv: compileVS ${intDir}Sample.hlsl
+build ${dstDirHLSL}Sample.vert.spv: compileVS ${dstDirHLSL}Sample.hlsl
     entryPoint = Sample
     
-build ${dstDirHLSL}Sample.frag.spv: compilePS ${intDir}Sample.hlsl
+build ${dstDirHLSL}Sample.frag.spv: compilePS ${dstDirHLSL}Sample.hlsl
     entryPoint = Sample
     
-build ${dstDirHLSL}Compute.comp.spv: compileCS ${intDir}Compute.hlsl
+build ${dstDirHLSL}Compute.comp.spv: compileCS ${dstDirHLSL}Compute.hlsl
     entryPoint = Compute
 
 # TODO: use strip command to gen pdb for each file, may only apply to DXIL
