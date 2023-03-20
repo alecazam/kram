@@ -15,13 +15,12 @@
 		70CAA47E29B9BB0E004B7E7B /* Sample.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; fileEncoding = 4; path = Sample.hlsl; sourceTree = "<group>"; };
 		70CAA48029BA7D28004B7E7B /* Sample.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = Sample.metal; sourceTree = "<group>"; };
 		70CAA48129BA7D28004B7E7B /* Sample.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; fileEncoding = 4; path = Sample.hlsl; sourceTree = "<group>"; };
-		70CAA48929BAF707004B7E7B /* ShaderHLSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderHLSL.h; sourceTree = "<group>"; };
-		70CAA48A29BAF707004B7E7B /* ShaderMSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderMSL.h; sourceTree = "<group>"; };
 		70CAA48B29BBD985004B7E7B /* Compute.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = Compute.hlsl; sourceTree = "<group>"; };
 		70CAA48C29BE6A62004B7E7B /* Compute.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = Compute.hlsl; sourceTree = "<group>"; };
 		70CAA48D29BE6A62004B7E7B /* Compute.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Compute.metal; sourceTree = "<group>"; };
-		70CAA48E29BEB04C004B7E7B /* DepthTest.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DepthTest.metal; sourceTree = "<group>"; };
 		70CAA48F29C63A46004B7E7B /* build.ninja */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.ninja; sourceTree = "<group>"; };
+		70CAA49029C8072C004B7E7B /* ShaderHLSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderHLSL.h; sourceTree = "<group>"; };
+		70CAA49129C8072C004B7E7B /* ShaderMSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderMSL.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -47,9 +46,6 @@
 		707D37CA29B9797A00B08D22 /* outshaders */ = {
 			isa = PBXGroup;
 			children = (
-				70CAA48929BAF707004B7E7B /* ShaderHLSL.h */,
-				70CAA48A29BAF707004B7E7B /* ShaderMSL.h */,
-				70CAA48E29BEB04C004B7E7B /* DepthTest.metal */,
 				70CAA48C29BE6A62004B7E7B /* Compute.hlsl */,
 				70CAA48D29BE6A62004B7E7B /* Compute.metal */,
 				70CAA48129BA7D28004B7E7B /* Sample.hlsl */,
@@ -63,6 +59,8 @@
 		707D37D829B979EB00B08D22 /* shaders */ = {
 			isa = PBXGroup;
 			children = (
+				70CAA49029C8072C004B7E7B /* ShaderHLSL.h */,
+				70CAA49129C8072C004B7E7B /* ShaderMSL.h */,
 				70CAA48B29BBD985004B7E7B /* Compute.hlsl */,
 				70CAA47E29B9BB0E004B7E7B /* Sample.hlsl */,
 				707D37D729B979EB00B08D22 /* Skinning.hlsl */,
