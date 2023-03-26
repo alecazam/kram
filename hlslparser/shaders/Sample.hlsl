@@ -37,7 +37,7 @@ struct SceneConstantBuffer
     float4x4 viewProj;
     float4 ambientColor;
     bool sampleShadowMap;
-    LightState lights[3];
+    LightState lights[NUM_LIGHTS];
 };
 
 // SM 6.1

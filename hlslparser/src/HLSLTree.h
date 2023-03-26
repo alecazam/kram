@@ -364,6 +364,8 @@ struct HLSLType
     { 
         baseType    = _baseType;
     }
+    bool TestFlags(int flags_) const { return (flags & flags_) == flags_; }
+    
     HLSLBaseType        baseType = HLSLBaseType_Unknown;
     HLSLBaseType        formatType = HLSLBaseType_Float;    // Half or Float (only applies to templated params like buffer/texture)
     const char*         typeName = NULL;       // For user defined types.

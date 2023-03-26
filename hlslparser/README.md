@@ -43,6 +43,7 @@ DONE
 * fix static constant handling
 
 TODO:
+* include handling
 * atomics
 * more than half/float/int literals (f.e. u/int, u/long), requires trailing U, L
 * passing variables only by value in HLSL vs. value/ref/ptr in MSL
@@ -129,23 +130,22 @@ https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_16bit_s
   
 Dealing with Double
 ---
-* HLSL double is a joke.  Nvidia hobble fp64 output to 1/16th or less of the fp32 performance on GeForce to sell Quadro for CAD.
-* HLSL only supports 3 ops - div, rcp, fma.
+* HLSL double suport is a joke.  Nvidia hobble fp64 output to 1/16th or less of the fp32 performance on GeForce to sell Quadro for CAD.  AMD is similar.
+* Intel removed fp64 support in Gen11/12/13 and from ARC.
+* HLSL only supports 3 ops in DX11.1 - div, rcp, fma.
 * HLSL requires touint and todouble to pass between shader stages
-* Intel removed fp64 support in Gen11/12/13.  Removed form ARC.
 * MSL has no fp64 support
 
 Dealing with uchar4
 ---
 * No vertex formats to srgb degamma uchar4 colors, only texture unit has this.
 * Compute can't do srgb gamma due to bypass of ROP units
-* HLSL lacks this a uchar type, and only has pack/unpack ops in 6.6
+* HLSL lacks uchar type, and only has pack/unpack ops in 6.6
 * Hard to use with SSBO despite uint32 chunks.
 * D3DColorToUBYTE4 has annoying bgra swizzle, so don't use it.
 
 Terms
 ---
-
 * Shader Variants - it's good to define which variants of shaders to generate.  Can use static and dynamic branching to reduce variant count.  Can lead to requiring shader source if can't predefine variant count.
 * Specialization Constants - allow variants to be generated within a single shader.  Spirv is marked and compiled based on these settings.  Metal has equivalent function constants
 * Tile shaders - kernels/fragment shaders that run at the tile level.  Subpasses in Vulkan.  tilegroup memory to and tile data passed from stage to stage without writing back to targets.
@@ -247,12 +247,16 @@ AMD
 Nvidia
 * scalar execution instead of vector based, compute, unified ALUs for rasterization
 * tile-based raster/binning in Maxwell (Tegra X1), not on same level as TBDR
-#
+* fp16 rates are the same as fp32 on 30x0/40x0, indicating little fp16 support
+*   but fp16 rates are double on 10x0/20x0
+* 1080 runs fp16 at 1/128th the speed of fp32 - ugh!  To hobble ML work
+*   on GeForce cards and push expensive Quadro which do full rate fp16.
+*
 * Tegra X1+ - Mariko, Nintendo Switch, ended chip production in 2021
-* 10x0 - no tensor core
+* 10x0 - no tensor core, 1/128th speed fp16, 
 * 20x0 - tensor cores, RT accel for triangle and bvh intersection
-* 30x0 - 
-* 40x0 - 
+* 30x0 - 36 fp32 vs. 0.6 fp64 Teraflops on 3090 (60x), fp16 same speed as fp32, faster RT/Tensor cores
+* 40x0 - fp16 same speed as fp32, faster RT/Tensor cores
 
 * https://en.wikipedia.org/wiki/List_of_Nvidia_graphics_processing_units
 * https://www.pcmag.com/news/report-nvidia-to-end-production-of-nintendo-switch-tegra-chip

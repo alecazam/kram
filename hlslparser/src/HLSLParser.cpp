@@ -853,7 +853,7 @@ void RegisterBaseTypeIntrinsic(Intrinsic& intrinsic, uint32_t numArgs, HLSLBaseT
     }
 }
 
-bool TestBits(AllMask mask, AllMask maskTest)
+inline bool TestBits(AllMask mask, AllMask maskTest)
 {
     return (mask & maskTest) == maskTest;
 }

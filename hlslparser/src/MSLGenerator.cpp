@@ -714,7 +714,7 @@ namespace M4
 
                 const HLSLType& type = declaration->type;
 
-                if ((type.flags & HLSLTypeFlag_Const) && (type.flags & HLSLTypeFlag_Static))
+                if (type.TestFlags(HLSLTypeFlag_Const | HLSLTypeFlag_Static))
                 {
                     if (!declaration->written)
                     {
@@ -1603,15 +1603,17 @@ namespace M4
             {
                 m_writer.Write("%s ", GetAddressSpaceName(type.baseType, type.addressSpace));
             }
-            if (isConst || type.flags & HLSLTypeFlag_Const)
+            if (isConst || type.TestFlags(HLSLTypeFlag_Const))
             {
-                m_writer.Write("const ");
-
-                if ((type.flags & HLSLTypeFlag_Static) != 0 && !isTypeCast)
-                {
-                    // TODO: use GetAddressSpaceName?
-                    m_writer.Write("static constant constexpr ");
-                }
+                m_writer.Write("constant ");
+                
+//                m_writer.Write("const ");
+//
+//                if ((type.flags & HLSLTypeFlag_Static) != 0 && !isTypeCast)
+//                {
+//                    // TODO: use GetAddressSpaceName?
+//                    m_writer.Write("static constant constexpr ");
+//                }
             }
         }
         
@@ -1630,19 +1632,19 @@ namespace M4
         }
 
         // Interpolation modifiers.
-        if (type.flags & HLSLTypeFlag_NoInterpolation)
+        if (type.TestFlags(HLSLTypeFlag_NoInterpolation))
         {
             m_writer.Write(" [[flat]]");
         }
         else
         {
-            if (type.flags & HLSLTypeFlag_NoPerspective)
+            if (type.TestFlags(HLSLTypeFlag_NoPerspective))
             {
-                if (type.flags & HLSLTypeFlag_Centroid)
+                if (type.TestFlags(HLSLTypeFlag_Centroid))
                 {
                     m_writer.Write(" [[centroid_no_perspective]]");
                 }
-                else if (type.flags & HLSLTypeFlag_Sample)
+                else if (type.TestFlags(HLSLTypeFlag_Sample))
                 {
                     m_writer.Write(" [[sample_no_perspective]]");
                 }
@@ -1653,11 +1655,11 @@ namespace M4
             }
             else
             {
-                if (type.flags & HLSLTypeFlag_Centroid)
+                if (type.TestFlags(HLSLTypeFlag_Centroid))
                 {
                     m_writer.Write(" [[centroid_perspective]]");
                 }
-                else if (type.flags & HLSLTypeFlag_Sample)
+                else if (type.TestFlags(HLSLTypeFlag_Sample))
                 {
                     m_writer.Write(" [[sample_perspective]]");
                 }

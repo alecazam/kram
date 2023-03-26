@@ -12,7 +12,6 @@ mkdir -p out/ios
 # for glslc testing
 #mkdir -p out/android2
 
-pushd outshaders
 
 # display commands
 # set -x
@@ -30,10 +29,10 @@ srcDir=${projectDir}
 srcDir+="shaders/"
 
 dstDir=${projectDir}
-dstDir+="outshaders/"
+dstDir+="out/"
 
-dstDirOut=${projectDir}
-dstDirOut+="out/"
+#dstDirOut=${projectDir}
+#dstDirOut+="out/"
 
 # this only pulls the release build, so testing debug won't update
 appHlslparser=../build/hlslparser/Build/Products/Release/hlslparser
@@ -59,17 +58,12 @@ appSpirvCross+="spirv-cross"
 # Xcode will only do clickthrough to warnings/errors if the filename
 # is a full path.  That's super annoying.
 
-#-------------------------------
-
-# copy over the headers that translate to MSL/HLSL
-# TODO: move to outshaders, so when there are errors can clickthough to orignal files
-#cp ${srcDir}/ShaderMSL.h .
-#cp ${srcDir}/ShaderHLSL.h .
-
 parserOptions=""
 
 # preserve comments
-parserOptions+="-g "
+parserOptions+="-g -line "
+
+pushd out/mac
 
 # build the metal shaders
 echo gen MSL
@@ -77,17 +71,28 @@ ${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.metal
 ${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.metal
 ${appHlslparser} ${parserOptions} -i ${srcDir}Compute.hlsl -o Compute.metal
 
+popd > /dev/null
+
+pushd out/ios
+
+# build the metal shaders
+echo gen MSL
+${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.metal
+${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.metal
+${appHlslparser} ${parserOptions} -i ${srcDir}Compute.hlsl -o Compute.metal
+
+popd > /dev/null
+
+pushd out/android
+
 # build the hlsl shaders
 echo gen HLSL
 ${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.hlsl
 ${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.hlsl
 ${appHlslparser} ${parserOptions} -i ${srcDir}Compute.hlsl -o Compute.hlsl
 
-#-------------------------------
-
 popd > /dev/null
 
-pushd out
 
 #-------------------------------
 
@@ -97,26 +102,28 @@ pushd out
 # O2 + size opt
 # metalMacOptions+="-Os"
 
-    
 testMetal=1
 
 if [[ $testMetal -eq 1 ]]; then
     # Metal is C++14
     metalMacOptions="-frecord-sources -g "
-    metalMacOptions+="-std=macos-metal2.3 "
+    metalMacOptions+="-std=macos-metal2.4 "
 
     # see if HLSL compiles to MSL (requires macOS Vulkan install)
+    
+    echo compile mac to metallib
+    ${appMetalMac} ${metalMacOptions} -I ${srcDir} -o ${dstDir}mac/GameShaders.metallib   ${dstDir}mac/Skinning.metal ${dstDir}mac/Sample.metal ${dstDir}mac/Compute.metal
 
-    # Test case
-    # ${appMetalMac} ${dstDir}DepthTest.metal ${metalMacOptions} -o mac/DepthTest.metallib
 
-    # TODO: build to air, and then compile to single metallib and metallibdsym
-    # see if MSL compile
-    echo compile MSL for macOS
-    ${appMetalMac} ${dstDir}Skinning.metal ${metalMacOptions} -o mac/Skinning.metallib
-    ${appMetalMac} ${dstDir}Sample.metal ${metalMacOptions} -o mac/Sample.metallib
-    ${appMetalMac} ${dstDir}Compute.metal ${metalMacOptions} -o mac/Compute.metallib
+    metaliOSOptions="-frecord-sources -g "
+    metaliOSOptions+="-std=ios-metal2.4 "
+
+    echo compile iOS to metallib
+    ${appMetaliOS} ${metaliOSOptions} -I ${srcDir} -o ${dstDir}ios/GameShaders.metallib   ${dstDir}ios/Skinning.metal ${dstDir}ios/Sample.metal ${dstDir}ios/Compute.metal
 fi
+
+
+pushd out/android
 
 #-------------------------------
 
@@ -181,83 +188,40 @@ csargs+="-T cs_6_2 "
 
 # 1.0,1.1,1.2 default to spv1.1,1.3,1.5
 echo gen SPIRV 1.2 with dxc
-${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo android/Skinning.vert.spv -Fc android/Skinning.vert.spv.txt ${dstDir}Skinning.hlsl
-${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo android/Skinning.frag.spv -Fc android/Skinning.frag.spv.txt ${dstDir}Skinning.hlsl
+${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo Skinning.vert.spv -Fc Skinning.vert.spv.txt Skinning.hlsl
+${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo Skinning.frag.spv -Fc Skinning.frag.spv.txt Skinning.hlsl
 
-${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SampleVS -Fo android/Sample.vert.spv -Fc android/Sample.vert.spv.txt ${dstDir}Sample.hlsl
-${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SamplePS -Fo android/Sample.frag.spv -Fc android/Sample.frag.spv.txt ${dstDir}Sample.hlsl
+${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SampleVS -Fo Sample.vert.spv -Fc Sample.vert.spv.txt Sample.hlsl
+${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SamplePS -Fo Sample.frag.spv -Fc Sample.frag.spv.txt Sample.hlsl
 
-${appDxc} ${csargs} -spirv -fspv-target-env=vulkan1.2 -E ComputeCS -Fo android/Compute.comp.spv -Fc android/Compute.comp.spv.txt ${dstDir}Compute.hlsl
+${appDxc} ${csargs} -spirv -fspv-target-env=vulkan1.2 -E ComputeCS -Fo Compute.comp.spv -Fc Compute.comp.spv.txt Compute.hlsl
 
 # -Fre not supported with spirv, so just use spirv-reflect
 # either yaml or random format, why can't this just output json?
-${appSpirvReflect} -y android/Skinning.vert.spv > android/Skinning.vert.refl
-${appSpirvReflect} -y android/Skinning.frag.spv > android/Skinning.frag.refl
-${appSpirvReflect} -y android/Sample.vert.spv > android/Sample.vert.refl
-${appSpirvReflect} -y android/Sample.frag.spv > android/Sample.frag.refl
-${appSpirvReflect} -y android/Compute.comp.spv > android/Compute.comp.refl
+${appSpirvReflect} -y Skinning.vert.spv > Skinning.vert.refl
+${appSpirvReflect} -y Skinning.frag.spv > Skinning.frag.refl
+${appSpirvReflect} -y Sample.vert.spv > Sample.vert.refl
+${appSpirvReflect} -y Sample.frag.spv > Sample.frag.refl
+${appSpirvReflect} -y Compute.comp.spv > Compute.comp.refl
 
 if [[ $testMetal -eq 1 ]]; then
-    metaliOSOptions="-frecord-sources -g "
-    metaliOSOptions+="-std=ios-metal2.3 "
+    #metaliOSOptions="-frecord-sources -g "
+    #metaliOSOptions+="-std=ios-metal2.4 "
 
-    # transpile spirv to ios MSL for comparsion to what hlslparser MSL produces
-    #  would never use this, would use hlslparser path directly
-    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Skinning.vert.spv --output ios/Skinning.vert.metal
-    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Skinning.frag.spv --output ios/Skinning.frag.metal
-    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Sample.vert.spv --output ios/Sample.vert.metal
-    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Sample.frag.spv --output ios/Sample.frag.metal
-    ${appSpirvCross} --msl --msl-version 20300 --msl-ios android/Compute.comp.spv --output ios/Compute.comp.metal
+    # transpile android spirv to ios MSL for comparsion to what hlslparser MSL produces
+    #  would never use this, would use hlslparser path directly or gen spirv
+    #  specific for this target
+    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Skinning.vert.spv --output ios/Skinning.vert.metal
+    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Skinning.frag.spv --output ios/Skinning.frag.metal
+    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Sample.vert.spv --output ios/Sample.vert.metal
+    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Sample.frag.spv --output ios/Sample.frag.metal
+    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Compute.comp.spv --output ios/Compute.comp.metal
 
     # compile to make sure code is valid
-    # TODO: compile to air, and use metal-ar to link to one metalib and metalibdsym
-    # need cmake file to run all the steps by writing out ninja file
-    # or need makefile since ninja can't string manip
-    ${appMetaliOS} ${dstDirOut}ios/Skinning.vert.metal ${metaliOSOptions} -o ios/Skinning.vert.metallib
-    ${appMetaliOS} ${dstDirOut}ios/Skinning.frag.metal ${metaliOSOptions} -o ios/Skinning.frag.metallib
-    ${appMetaliOS} ${dstDirOut}ios/Sample.vert.metal ${metaliOSOptions} -o ios/Sample.vert.metallib
-    ${appMetaliOS} ${dstDirOut}ios/Sample.frag.metal ${metaliOSOptions} -o ios/Sample.frag.metallib
-    ${appMetaliOS} ${dstDirOut}ios/Compute.comp.metal ${metaliOSOptions} -o ios/Compute.comp.metallib
-    
+    ${appMetaliOS} ${metaliOSOptions} -o ${dstDir}ios/GameShadersTranspile.metallib -I ${srcDir} ${dstDir}ios/Skinning.vert.metal ${dstDir}ios/Skinning.frag.metal ${dstDir}ios/Sample.vert.metal ${dstDir}ios/Sample.frag.metal ${dstDir}ios/Compute.comp.metal
 fi
 
-# skip this path, have to mod hlsl just to get valid code to compile with glslc
-testGlslc=0
-
-if [[ $testGlslc -eq 1 ]]; then
-    vsargs="-Os -fshader-stage=vert --target-env=vulkan1.2 "
-    psargs="-Os -fshader-stage=frag --target-env=vulkan1.2 "
-
-    # TODO: probably no equivlent to this?
-    # vsargs+="-HV 2021 "
-    # psargs+="-HV 2021 "
-    
-    # turn on half/short/ushort support
-    # TODO: seems that dot, min, max and other calls don't have half3 versions needed, casts required
-    # and even half3(half) isn't valid.
-    # https://github.com/google/shaderc/issues/1309
-    vsargs+="-fhlsl-16bit-types "
-    psargs+="-fhlsl-16bit-types "
-
-    # see SPV_GOOGLE_hlsl_functionality1
-    # -fhlsl_functionality1
-    # -g source level debugging info
-    # -I include search path
-    # note: glsl has a preprocesor
-    
-    echo gen SPIRV 1.2 with glslc
-    ${appGlslc} ${vsargs} -fentry-point=SkinningVS -o android2/Skinning.vert.spv Skinning.hlsl
-    ${appGlslc} ${psargs} -fentry-point=SkinningPS -o android2/Skinning.frag.spv Skinning.hlsl
-
-    # TODO: need to enable half (float16_t) usage in spirv generated shaders
-    # how to identify compliation is targeting Vulkan?
-
-    # barely human readable spv assembly listing
-    ${appGlslc} -S ${vsargs} -fentry-point=SkinningVS -o android2/Skinning.vert.spv.txt Skinning.hlsl
-    ${appGlslc} -S ${psargs} -fentry-point=SkinningPS -o android2/Skinning.frag.spv.txt Skinning.hlsl
-fi
-
-# TODO: need to group files into library/module
+# DONE: need to group files into library/module
 # also create a readable spv file, so can look through that
 
 # TODO: create reflect data w/o needing spirv
