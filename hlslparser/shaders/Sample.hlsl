@@ -77,78 +77,78 @@ struct OutputVS
 //--------------------------------------------------------------------------------------
 // Sample normal map, convert to signed, apply tangent-to-world space transform.
 //--------------------------------------------------------------------------------------
-half3 CalcPerPixelNormal(float2 vTexcoord, half3 vVertNormal, half3 vVertTangent)
+half3 CalcPerPixelNormal(float2 texcoord, half3 vertNormal, half3 vertTangent)
 {
     // Compute tangent frame.
-    vVertNormal = normalize(vVertNormal);
-    vVertTangent = normalize(vVertTangent);
+    vertNormal = normalize(vertNormal);
+    vertTangent = normalize(vertTangent);
 
-    half3 vVertBinormal = normalize(cross(vVertTangent, vVertNormal));
-    half3x3 mTangentSpaceToWorldSpace = half3x3(vVertTangent, vVertBinormal, vVertNormal);
+    half3 vertBinormal = normalize(cross(vertTangent, vertNormal));
+    half3x3 tangentSpaceToWorldSpace = half3x3(vertTangent, vertBinormal, vertNormal);
 
     // Compute per-pixel normal.
-    half3 vBumpNormal = SampleH(normalMap, sampleWrap, vTexcoord).xyz;
-    vBumpNormal = 2.0h * vBumpNormal - 1.0h;
+    half3 bumpNormal = SampleH(normalMap, sampleWrap, texcoord).xyz;
+    bumpNormal = 2.0h * bumpNormal - 1.0h;
 
-    return mul(vBumpNormal, mTangentSpaceToWorldSpace);
+    return mul(bumpNormal, tangentSpaceToWorldSpace);
 }
 
 //--------------------------------------------------------------------------------------
 // Diffuse lighting calculation, with angle and distance falloff.
 //--------------------------------------------------------------------------------------
-half4 CalcLightingColor(float3 vLightPos, float3 vLightDir, half4 vLightColor, float4 vFalloffs, float3 vPosWorld, half3 vPerPixelNormal)
+half4 CalcLightingColor(float3 lightPos, float3 lightDir, half4 lightColor, float4 falloffs, float3 posWorld, half3 perPixelNormal)
 {
-    float3 vLightToPixelUnNormalized = vPosWorld - vLightPos;
+    float3 lightToPixelUnNormalized = posWorld - lightPos;
 
-    // Dist falloff = 0 at vFalloffs.x, 1 at vFalloffs.x - vFalloffs.y
-    float fDist = length(vLightToPixelUnNormalized);
+    // Dist falloff = 0 at falloffs.x, 1 at falloffs.x - falloffs.y
+    float dist = length(lightToPixelUnNormalized);
 
-    half fDistFalloff = (half)saturate((vFalloffs.x - fDist) / vFalloffs.y);
+    half distFalloff = (half)saturate((falloffs.x - dist) / falloffs.y);
 
     // Normalize from here on.
-    half3 vLightToPixelNormalized = (half3)normalize(vLightToPixelUnNormalized);
+    half3 lightToPixelNormalized = (half3)normalize(lightToPixelUnNormalized);
 
-    // Angle falloff = 0 at vFalloffs.z, 1 at vFalloffs.z - vFalloffs.w
-    half3 lightDir = (half3)normalize(vLightDir);
-    half fCosAngle = dot(vLightToPixelNormalized, lightDir);
-    half fAngleFalloff = saturate((fCosAngle - (half)vFalloffs.z) / (half)vFalloffs.w);
+    // Angle falloff = 0 at falloffs.z, 1 at falloffs.z - falloffs.w
+    half3 lightDirHalf = (half3)normalize(lightDir);
+    half cosAngle = dot(lightToPixelNormalized, lightDirHalf);
+    half angleFalloff = saturate((cosAngle - (half)falloffs.z) / (half)falloffs.w);
 
     // Diffuse contribution.
-    half fNDotL = saturate(-dot(vLightToPixelNormalized, vPerPixelNormal));
+    half dotNL = saturate(-dot(lightToPixelNormalized, perPixelNormal));
 
-    return vLightColor * (fNDotL * fDistFalloff * fAngleFalloff);
+    return lightColor * (dotNL * distFalloff * angleFalloff);
 }
 
 //--------------------------------------------------------------------------------------
 // Test how much pixel is in shadow, using 2x2 percentage-closer filtering.
 //--------------------------------------------------------------------------------------
-half CalcUnshadowedAmountPCF2x2(int lightIndex, float4 vPosWorld, float4x4 viewProj)
+half CalcUnshadowedAmountPCF2x2(int lightIndex, float4 posWorld, float4x4 viewProj)
 {
     // Compute pixel position in light space.
-    float4 vLightSpacePos = vPosWorld;
-    vLightSpacePos = mul(vLightSpacePos, viewProj);
+    float4 lightSpacePos = posWorld;
+    lightSpacePos = mul(lightSpacePos, viewProj);
     
     // need to reject before division (assuming revZ, infZ)
-    if (vLightSpacePos.z > vLightSpacePos.w)
-        return 1.0f;
+    if (lightSpacePos.z > lightSpacePos.w)
+        return 1.0h;
     
     // near/w for persp, z/1 for ortho
-    vLightSpacePos.xyz /= vLightSpacePos.w;
+    lightSpacePos.xyz /= lightSpacePos.w;
 
 /*
     // TODO: do all the flip and scaling and bias in the proj, not in shader
-    vLightSpacePos.xy *= 0.5;
-    vLightSpacePos.xy += 0.5;
+    lightSpacePos.xy *= 0.5;
+    lightSpacePos.xy += 0.5;
     
     // Translate from homogeneous coords to texture coords.
-    vLightSpacePos.y = 1.0 - vLightSpacePos.y;
+    lightSpacePos.y = 1.0 - lightSpacePos.y;
 
     // Depth bias to avoid pixel self-shadowing.
-    vLightSpacePos.z -= SHADOW_DEPTH_BIAS;
+    lightSpacePos.z -= SHADOW_DEPTH_BIAS;
 */
     
     // Use HW filtering
-    return (half)SampleCmp(shadowMap, shadowMapSampler, vLightSpacePos);
+    return (half)SampleCmp(shadowMap, shadowMapSampler, lightSpacePos);
 }
 
 OutputVS SampleVS(InputVS input)

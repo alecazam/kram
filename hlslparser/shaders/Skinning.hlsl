@@ -96,14 +96,15 @@ struct OutputVS
     float2  uv : TEXCOORD0;
 };
 
-// try to mondernize to ConstantBuffer
+static const uint kMaxSkinTfms = 256;
+
 // Note: SkinTfms makes MSL air shader 60K bigger at 256,
 // so may want to limit large hardcoded arrays.  It's 61K @256, and 7.8K @1.
 // Doesn't seem to affect spriv at 4K.
 // GameShaders.metallib is 33K, and Zip of Spirv is 6K.
 struct UniformsStruct
 {
-    float4x4 skinTfms[1];
+    float4x4 skinTfms[kMaxSkinTfms];
     half3    lightDir;
     float4x4 worldToClipTfm;
 };
