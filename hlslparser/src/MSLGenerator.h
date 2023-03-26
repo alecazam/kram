@@ -88,6 +88,8 @@ private:
     const char* GetTypeName(const HLSLType& type, bool exactType);
     const char* GetAddressSpaceName(HLSLBaseType baseType, HLSLAddressSpace addressSpace) const;
     
+    bool CanSkipWrittenStatement(const HLSLStatement* statement) const;
+    
     void Error(const char* format, ...) const M4_PRINTF_ATTR(2, 3);
 
 private:

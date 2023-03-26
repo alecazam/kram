@@ -63,14 +63,15 @@ struct OutputVS
     float3 tangent : TANGENT;
 };
 
-struct InputPS
-{
-    float4 position : SV_Position;
-    float4 worldpos : TEXCOORD0;
-    float2 uv : TEXCOORD1;
-    float3 normal : NORMAL;
-    float3 tangent : TANGENT;
-};
+// Don't need this
+//struct InputPS
+//{
+//    float4 position : SV_Position;
+//    float4 worldpos : TEXCOORD0;
+//    float2 uv : TEXCOORD1;
+//    float3 normal : NORMAL;
+//    float3 tangent : TANGENT;
+//};
 
 
 //--------------------------------------------------------------------------------------
@@ -174,7 +175,7 @@ OutputVS SampleVS(InputVS input)
     return output;
 }
 
-float4 SamplePS(InputPS input) : SV_Target0
+float4 SamplePS(OutputVS input) : SV_Target0
 {
     half4 diffuseColor = SampleH(diffuseMap, sampleWrap, input.uv);
     half3 pixelNormal = CalcPerPixelNormal(input.uv, (half3)input.normal, (half3)input.tangent);

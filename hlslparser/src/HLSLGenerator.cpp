@@ -998,15 +998,15 @@ void HLSLGenerator::OutputDeclarationType(const HLSLType& type, bool isTypeCast)
         return;
     }
     
-    if (type.flags & HLSLTypeFlag_Const)
-    {
-        m_writer.Write("const ");
-    }
     if (type.flags & HLSLTypeFlag_Static)
     {
         m_writer.Write("static ");
     }
-
+    if (type.flags & HLSLTypeFlag_Const)
+    {
+        m_writer.Write("const ");
+    }
+    
     // Interpolation modifiers.
     if (type.flags & HLSLTypeFlag_Centroid)
     {

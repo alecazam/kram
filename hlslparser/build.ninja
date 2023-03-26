@@ -163,9 +163,7 @@ build ${dstDirHLSL}Sample.frag.spv: compilePS ${dstDirHLSL}Sample.hlsl
 build ${dstDirHLSL}Compute.comp.spv: compileCS ${dstDirHLSL}Compute.hlsl
     entryPoint = Compute
 
-# TODO: use strip command to gen pdb for each file, may only apply to DXIL
-
-# TODO: could zip spv to single archive (6k)
+# zip spv to single archive (6k)
 build ${dstDirHLSL}GameShaders.zip: archiveSpriv ${dstDirHLSL}Skinning.vert.spv ${dstDirHLSL}Skinning.frag.spv ${dstDirHLSL}Sample.vert.spv ${dstDirHLSL}Sample.frag.spv ${dstDirHLSL}Compute.comp.spv
 
 
