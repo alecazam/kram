@@ -20,7 +20,7 @@ SamplerComparisonState shadowMapSampler : register(s1);
 
 // #define didn't compile due to lack of preprocesor
 static const int NUM_LIGHTS = 3;
-static const float SHADOW_DEPTH_BIAS = 0.00005;
+//static const float SHADOW_DEPTH_BIAS = 0.00005;
 
 struct LightState
 {
@@ -39,8 +39,6 @@ struct SceneConstantBuffer
     bool sampleShadowMap;
     LightState lights[3];
 };
-// TODO: NUM_LIGHTS isn't unhidden when parsing structs, dupe what cbuffer fields do
-// LightState lights[NUM_LIGHTS];
 
 // SM 6.1
 ConstantBuffer<SceneConstantBuffer> scene : register(b0);

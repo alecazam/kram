@@ -45,8 +45,8 @@ void PrintUsage()
 		 "optional arguments:\n"
          " -g          debug mode, preserve comments\n"
          " -h, --help  show this help message and exit\n"
-         " -line   write #file/line directive\n"
-         " -nohalf     turn half into float (MSL only)"
+         " -line       write #file/line directive\n"
+         " -nohalf     turn half into float"
 		);
 }
 
@@ -313,6 +313,8 @@ int main( int argc, char* argv[] )
         {
             HLSLOptions options;
             options.writeFileLine = isWriteFileLine;
+            options.treatHalfAsFloat = isTreatHalfAsFloat;
+            options.writeVulkan = true; // TODO: tie to CLI
             
             HLSLGenerator generator;
             if (generator.Generate( &tree, target, entryName, options))

@@ -64,9 +64,20 @@ public:
 int String_FormatFloat(char * buffer, int size, float value);
 bool String_Equal(const char * a, const char * b);
 bool String_EqualNoCase(const char * a, const char * b);
+
 double String_ToDouble(const char * str, char ** end);
-int String_ToInteger(const char * str, char ** end);
+float String_ToFloat(const char * str, char ** end);
+// no half
+
+int32_t String_ToIntHex(const char * str, char ** end);
+int32_t String_ToInt(const char * str, char ** end);
+uint32_t String_ToUint(const char * str, char ** end);
+
+uint64_t String_ToUlong(const char * str, char ** end);
+int64_t String_ToLong(const char * str, char ** end);
+
 bool String_HasChar(const char* str, char c);
+bool String_HasString(const char* str, const char* search);
 
 // just use these, it's way easier than using fixed buffers
 int String_PrintfArgList(std::string& buffer, const char * format, va_list args);

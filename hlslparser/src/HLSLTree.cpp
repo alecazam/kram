@@ -5,8 +5,16 @@
 namespace M4
 {
 
+// TODO: split helper calls out to new .h, so can include that
 // over to HLSLParser.cpp
 extern bool IsSamplerType(const HLSLType & type);
+
+extern bool IsScalarType(HLSLBaseType type);
+extern bool IsIntegerType(HLSLBaseType type);
+extern bool IsFloatingType(HLSLBaseType type);
+
+extern int32_t GetVectorDimension(HLSLBaseType type);
+
 
 
 HLSLTree::HLSLTree(Allocator* allocator) :
@@ -285,8 +293,12 @@ bool HLSLTree::GetExpressionValue(HLSLExpression * expression, int & value)
         return false;
     }
 
-    // We are expecting an integer scalar. @@ Add support for type conversion from other scalar types.
-    if (expression->expressionType.baseType != HLSLBaseType_Int &&
+    // We are expecting an integer scalar.
+    // TODO: Add support for type conversion from uint scalar types.
+    if (expression->expressionType.baseType != HLSLBaseType_Long &&
+        expression->expressionType.baseType != HLSLBaseType_Short &&
+        expression->expressionType.baseType != HLSLBaseType_Int &&
+        
         expression->expressionType.baseType != HLSLBaseType_Bool)
     {
         return false;
@@ -415,9 +427,17 @@ bool HLSLTree::GetExpressionValue(HLSLExpression * expression, int & value)
     {
         HLSLLiteralExpression * literal = (HLSLLiteralExpression *)expression;
    
-        if (literal->expressionType.baseType == HLSLBaseType_Int) value = literal->iValue;
-        else if (literal->expressionType.baseType == HLSLBaseType_Bool) value = (int)literal->bValue;
-        else return false;
+        if (literal->expressionType.baseType == HLSLBaseType_Int)
+            value = literal->iValue;
+        else if (literal->expressionType.baseType == HLSLBaseType_Long)
+            value = literal->iValue; // precision loss to Int
+        else if (literal->expressionType.baseType == HLSLBaseType_Short)
+            value = literal->iValue;
+        
+        else if (literal->expressionType.baseType == HLSLBaseType_Bool)
+            value = (int)literal->bValue;
+        else
+            return false;
         
         return true;
     }
@@ -425,6 +445,7 @@ bool HLSLTree::GetExpressionValue(HLSLExpression * expression, int & value)
     return false;
 }
 
+// TODO: Nothing calling this?
 bool HLSLTree::NeedsFunction(const char* name)
 {
     // Early out
@@ -461,21 +482,6 @@ bool HLSLTree::NeedsFunction(const char* name)
     return visitor.result;
 }
 
-// TODO: the descriptionTable instead of hardcoding this again
-int GetVectorDimension(HLSLType & type)
-{
-    if (type.baseType >= HLSLBaseType_FirstNumeric &&
-        type.baseType <= HLSLBaseType_LastNumeric)
-    {
-        if (type.baseType == HLSLBaseType_Float || type.baseType == HLSLBaseType_Half) return 1;
-        if (type.baseType == HLSLBaseType_Float2 || type.baseType == HLSLBaseType_Half2) return 2;
-        if (type.baseType == HLSLBaseType_Float3 || type.baseType == HLSLBaseType_Half3) return 3;
-        if (type.baseType == HLSLBaseType_Float4 || type.baseType == HLSLBaseType_Half4) return 4;
-
-    }
-    return 0;
-}
-
 // Returns dimension, 0 if invalid.
 int HLSLTree::GetExpressionValue(HLSLExpression * expression, float values[4])
 {
@@ -487,27 +493,24 @@ int HLSLTree::GetExpressionValue(HLSLExpression * expression, float values[4])
         return 0;
     }
 
-    if (expression->expressionType.baseType == HLSLBaseType_Int ||
-        expression->expressionType.baseType == HLSLBaseType_Bool)
+    HLSLBaseType type = expression->expressionType.baseType;
+    
+    if (IsIntegerType(type))
     {
-        int int_value;
-        if (GetExpressionValue(expression, int_value)) {
-            for (int i = 0; i < 4; i++) values[i] = (float)int_value;   // @@ Warn if conversion is not exact.
-            return 1;
+        if (IsScalarType(type))
+        {
+            int intValue;
+            if (GetExpressionValue(expression, intValue)) {
+                for (int i = 0; i < 4; i++) values[i] = (float)intValue;   // @@ Warn if conversion is not exact.
+                return 1;
+            }
         }
-
+        
         return 0;
     }
-    if (expression->expressionType.baseType >= HLSLBaseType_FirstInteger && expression->expressionType.baseType <= HLSLBaseType_LastInteger)
-    {
-        // TODO: Add support for uints?
-        // TODO: Add support for int vectors?
+    // this skips other int types not handled above
+    if (!IsFloatingType(type))
         return 0;
-    }
-    if (expression->expressionType.baseType > HLSLBaseType_LastNumeric)
-    {
-        return 0;
-    }
 
     // @@ Not supported yet, but we may need it?
     if (expression->expressionType.array) 
@@ -515,11 +518,12 @@ int HLSLTree::GetExpressionValue(HLSLExpression * expression, float values[4])
         return false;
     }
 
+    int dim = GetVectorDimension(type);
+
     if (expression->nodeType == HLSLNodeType_BinaryExpression) 
     {
         HLSLBinaryExpression * binaryExpression = (HLSLBinaryExpression *)expression;
-        int dim = GetVectorDimension(binaryExpression->expressionType);
-
+        
         float values1[4], values2[4];
         int dim1 = GetExpressionValue(binaryExpression->expression1, values1);
         int dim2 = GetExpressionValue(binaryExpression->expression2, values2);
@@ -531,7 +535,7 @@ int HLSLTree::GetExpressionValue(HLSLExpression * expression, float values[4])
 
         if (dim1 != dim2)
         {
-            // Brodacast scalar to vector size.
+            // Broadcast scalar to vector size.
             if (dim1 == 1)
             {
                 for (int i = 1; i < dim2; i++) values1[i] = values1[0];
@@ -570,8 +574,7 @@ int HLSLTree::GetExpressionValue(HLSLExpression * expression, float values[4])
     else if (expression->nodeType == HLSLNodeType_UnaryExpression) 
     {
         HLSLUnaryExpression * unaryExpression = (HLSLUnaryExpression *)expression;
-        int dim = GetVectorDimension(unaryExpression->expressionType);
-
+       
         int dim1 = GetExpressionValue(unaryExpression->expression, values);
         if (dim1 == 0)
         {
@@ -594,8 +597,6 @@ int HLSLTree::GetExpressionValue(HLSLExpression * expression, float values[4])
     else if (expression->nodeType == HLSLNodeType_ConstructorExpression)
     {
         HLSLConstructorExpression * constructor = (HLSLConstructorExpression *)expression;
-
-        int dim = GetVectorDimension(constructor->expressionType);
 
         int idx = 0;
         HLSLExpression * arg = constructor->argument;
@@ -632,12 +633,26 @@ int HLSLTree::GetExpressionValue(HLSLExpression * expression, float values[4])
     {
         HLSLLiteralExpression * literal = (HLSLLiteralExpression *)expression;
 
-        if (literal->expressionType.baseType == HLSLBaseType_Float) values[0] = literal->fValue;
-        else if (literal->expressionType.baseType == HLSLBaseType_Half) values[0] = literal->fValue;
-        else if (literal->expressionType.baseType == HLSLBaseType_Bool) values[0] = literal->bValue;
-        else if (literal->expressionType.baseType == HLSLBaseType_Int) values[0] = (float)literal->iValue;  // @@ Warn if conversion is not exact.
-        else return 0;
-        // TODO: add short/ushore/uint
+        if (literal->expressionType.baseType == HLSLBaseType_Float)
+            values[0] = literal->fValue;
+        else if (literal->expressionType.baseType == HLSLBaseType_Half)
+            values[0] = literal->fValue;
+        else if (literal->expressionType.baseType == HLSLBaseType_Double)
+            values[0] = literal->fValue; // TODO: need more precision
+        
+        else if (literal->expressionType.baseType == HLSLBaseType_Bool)
+            values[0] = literal->bValue;
+        
+        // TODO: add uint types, fix precision of short/long/double/half
+        // signed ints
+        else if (literal->expressionType.baseType == HLSLBaseType_Int)
+            values[0] = (float)literal->iValue;  // @@ Warn if conversion is not exact.
+        else if (literal->expressionType.baseType == HLSLBaseType_Short)
+            values[0] = (float)literal->iValue;
+        else if (literal->expressionType.baseType == HLSLBaseType_Long)
+            values[0] = (float)literal->iValue;
+        else
+            return 0;
         
         return 1;
     }
@@ -764,6 +779,12 @@ void HLSLTreeVisitor::VisitStruct(HLSLStruct * node)
 
 void HLSLTreeVisitor::VisitStructField(HLSLStructField * node)
 {
+    // This can use a constant in an array field that must be resolved
+    if (node->type.array)
+    {
+        VisitExpression(node->type.arraySize);
+    }
+    
     VisitType(node->type);
 }
 
@@ -1037,7 +1058,7 @@ public:
     // Hide buffer fields.
     virtual void VisitDeclaration(HLSLDeclaration * node) override
     {
-        node->hidden = true;
+       // node->hidden = true;
     }
 
     virtual void VisitComment(HLSLComment * node) override
@@ -1092,6 +1113,7 @@ public:
         {
             HLSLBuffer* buffer = NULL;
             HLSLDeclaration * declaration = tree->FindGlobalDeclaration(node->name, &buffer);
+
             if (declaration != NULL && declaration->hidden)
             {
                 declaration->hidden = false;
@@ -1106,6 +1128,17 @@ public:
         
     virtual void VisitType(HLSLType & type) override
     {
+//        if (type.array)
+//        {
+//            //  Alec added this to try to handle structs with array constants, but
+//            // it causes other issues.  VisitStructField calls VisitType.
+//
+//            // handle sized or unsized array, since sized may use constant
+//            // VisitExpression(type.arraySize);
+//            int bp = 0;
+//            bp = bp;
+//        }
+//        else
         if (type.baseType == HLSLBaseType_UserDefined)
         {
             HLSLStruct * globalStruct = tree->FindGlobalStruct(type.typeName);
@@ -1199,64 +1232,96 @@ void PruneTree(HLSLTree* tree, const char* entryName0, const char* entryName1/*=
 void SortTree(HLSLTree * tree)
 {
     // Stable sort so that statements are in this order:
-    // structs, declarations, functions, techniques.
+    // const scalars for arrays, structs, declarations, functions, techniques.
 	// but their relative order is preserved.
 
     HLSLRoot* root = tree->GetRoot();
 
+    HLSLStatement* constScalarDeclarations = NULL;
+    HLSLStatement* lastConstScalarDeclaration = NULL;
+    
     HLSLStatement* structs = NULL;
     HLSLStatement* lastStruct = NULL;
+    
     HLSLStatement* constDeclarations = NULL;
     HLSLStatement* lastConstDeclaration = NULL;
+    
     HLSLStatement* declarations = NULL;
     HLSLStatement* lastDeclaration = NULL;
+    
     HLSLStatement* functions = NULL;
     HLSLStatement* lastFunction = NULL;
+    
     HLSLStatement* other = NULL;
     HLSLStatement* lastOther = NULL;
 
+    
+#define AppendToList(statement, list, listLast) \
+    if (list == NULL) list = statement; \
+    if (listLast != NULL) listLast->nextStatement = statement; \
+    listLast = statement;
+    
     HLSLStatement* statement = root->statement;
     while (statement != NULL) {
         HLSLStatement* nextStatement = statement->nextStatement;
         statement->nextStatement = NULL;
 
         if (statement->nodeType == HLSLNodeType_Struct) {
-            if (structs == NULL) structs = statement;
-            if (lastStruct != NULL) lastStruct->nextStatement = statement;
-            lastStruct = statement;
+            AppendToList(statement, structs, lastStruct);
         }
         else if (statement->nodeType == HLSLNodeType_Declaration ||
                  statement->nodeType == HLSLNodeType_Buffer)
         {
-            if (statement->nodeType == HLSLNodeType_Declaration && (((HLSLDeclaration *)statement)->type.flags & HLSLTypeFlag_Const)) {
-                if (constDeclarations == NULL) constDeclarations = statement;
-                if (lastConstDeclaration != NULL) lastConstDeclaration->nextStatement = statement;
-                lastConstDeclaration = statement;
+            // There are cases where a struct uses a const array size,
+            // so those need to be ordered prior to the struct.
+            if (statement->nodeType == HLSLNodeType_Declaration)
+            {
+                HLSLDeclaration* decl = (HLSLDeclaration *)statement;
+                
+                if (decl->type.flags & HLSLTypeFlag_Const)
+                {
+                    // this is a global scalar, so best to order first
+                    if (IsScalarType(decl->type.baseType))
+                    {
+                        AppendToList(statement, constScalarDeclarations, lastConstScalarDeclaration);
+                    }
+                    else
+                    {
+                        AppendToList(statement, constDeclarations, lastConstDeclaration);
+                    }
+                }
+                else
+                {
+                    AppendToList(statement, declarations, lastDeclaration);
+                }
             }
-            else {
-                if (declarations == NULL) declarations = statement;
-                if (lastDeclaration != NULL) lastDeclaration->nextStatement = statement;
-                lastDeclaration = statement;
+            else if (statement->nodeType == HLSLNodeType_Buffer)
+            {
+                AppendToList(statement, declarations, lastDeclaration);
             }
         }
-        else if (statement->nodeType == HLSLNodeType_Function) {
-            if (functions == NULL) functions = statement;
-            if (lastFunction != NULL) lastFunction->nextStatement = statement;
-            lastFunction = statement;
+        else if (statement->nodeType == HLSLNodeType_Function)
+        {
+            AppendToList(statement, functions, lastFunction);
         }
-        else {
-            if (other == NULL) other = statement;
-            if (lastOther != NULL) lastOther->nextStatement = statement;
-            lastOther = statement;
+        else
+        {
+            AppendToList(statement, other, lastOther);
         }
 
         statement = nextStatement;
     }
 
     // Chain all the statements in the order that we want.
-    HLSLStatement * firstStatement = structs;
-    HLSLStatement * lastStatement = lastStruct;
+    HLSLStatement * firstStatement = constScalarDeclarations;
+    HLSLStatement * lastStatement = lastConstScalarDeclaration;
 
+    if (structs != NULL) {
+        if (firstStatement == NULL) firstStatement = structs;
+        else lastStatement->nextStatement = structs;
+        lastStatement = lastStruct;
+    }
+    
     if (constDeclarations != NULL) {
         if (firstStatement == NULL) firstStatement = constDeclarations;
         else lastStatement->nextStatement = constDeclarations;

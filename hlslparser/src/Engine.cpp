@@ -124,11 +124,15 @@ int String_Printf(char * buffer, int size, const char * format, ...) {
 }
 
 int String_FormatFloat(char * buffer, int size, float value) {
-    return String_Printf(buffer, size, "%f", value);
+    return String_Printf(buffer, size, "%.6f", value);
 }
 
 bool String_HasChar(const char* str, char c) {
     return strchr(str, c) != NULL;
+}
+
+bool String_HasString(const char* str, const char* search) {
+    return strstr(str, search) != NULL;
 }
 
 bool String_Equal(const char * a, const char * b) {
@@ -151,13 +155,37 @@ double String_ToDouble(const char * str, char ** endptr) {
 	return strtod(str, endptr);
 }
 
-int String_ToInteger(const char * str, char ** endptr) {
-	return (int)strtol(str, endptr, 10);
+float String_ToFloat(const char * str, char ** endptr) {
+    return strtof(str, endptr);
 }
 
-int String_ToIntegerHex(const char * str, char ** endptr) {
-	return (int)strtol(str, endptr, 16);
+static const int kBase10 = 10;
+static const int kBase16 = 16;
+
+int32_t String_ToIntHex(const char * str, char ** endptr) {
+    return (int)strtol(str, endptr, kBase16);
 }
+
+int32_t String_ToInt(const char * str, char ** endptr) {
+	return (int)strtol(str, endptr, kBase10);
+}
+
+uint32_t String_ToUint(const char * str, char ** endptr) {
+    return (int)strtoul(str, endptr, kBase10);
+}
+
+uint64_t String_ToUlong(const char * str, char ** endptr) {
+    return (int)strtoull(str, endptr, kBase10);
+}
+
+int64_t String_ToLong(const char * str, char ** endptr) {
+    return (int)strtoll(str, endptr, kBase10);
+}
+
+
+
+
+
 
 
 void String_StripTrailingFloatZeroes(char* buffer)

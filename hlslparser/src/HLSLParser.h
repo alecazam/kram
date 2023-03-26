@@ -186,15 +186,19 @@ bool IsDepthTextureType(HLSLBaseType baseType);
 bool IsBufferType(HLSLBaseType baseType);
 bool IsNumericType(HLSLBaseType baseType);
 
+bool IsFloatingType(HLSLBaseType type);
+bool IsIntegerType(HLSLBaseType type);
+
 bool IsCoreTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
 bool IsNumericTypeEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
 bool IsDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
 bool IsCrossDimensionEqual(HLSLBaseType lhsType, HLSLBaseType rhsType);
 
-bool IsSamplerType(const HLSLType& type);
-bool IsMatrixType(const HLSLType& type);
-bool IsVectorType(const HLSLType& type);
 bool IsScalarType(const HLSLType& type);
+bool IsVectorType(const HLSLType& type);
+bool IsMatrixType(const HLSLType& type);
+
+bool IsSamplerType(const HLSLType& type);
 bool IsTextureType(const HLSLType& type);
 
 HLSLBaseType PromoteType(HLSLBaseType toType, HLSLBaseType type);
@@ -207,5 +211,8 @@ const char* GetTypeNameHLSL(const HLSLType& type);
 const char* GetTypeNameMetal(const HLSLType& type);
 
 HLSLBaseType GetScalarType(HLSLBaseType type);
+
+// returns 1 for scalar or 2/3/4 for vector types.
+int32_t GetVectorDimension(HLSLBaseType type);
 
 }

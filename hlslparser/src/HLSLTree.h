@@ -26,13 +26,16 @@ enum HLSLTarget
 enum HLSLNodeType
 {
     HLSLNodeType_Root,
+    
     HLSLNodeType_Declaration,
     HLSLNodeType_Struct,
     HLSLNodeType_StructField,
     HLSLNodeType_Buffer,
     HLSLNodeType_BufferField, // TODO: or just ref structField
+    
     HLSLNodeType_Function,
     HLSLNodeType_Argument,
+    
     HLSLNodeType_ExpressionStatement,
     HLSLNodeType_Expression,
     HLSLNodeType_ReturnStatement,
@@ -52,13 +55,17 @@ enum HLSLNodeType
     HLSLNodeType_MemberAccess,
     HLSLNodeType_ArrayAccess,
     HLSLNodeType_FunctionCall,
+    
+    /* FX file stuff
     HLSLNodeType_StateAssignment,
     HLSLNodeType_SamplerState,
     HLSLNodeType_Pass,
     HLSLNodeType_Technique,
-    HLSLNodeType_Attribute,
     HLSLNodeType_Pipeline,
     HLSLNodeType_Stage,
+    */
+    
+    HLSLNodeType_Attribute,
     HLSLNodeType_Comment
 };
 
@@ -145,28 +152,28 @@ enum HLSLBaseType
     
     HLSLBaseType_RWTexture2D,
     
-    // Only 2 sampler types.
+    // Only 2 sampler types. - type is for defining state inside them
     HLSLBaseType_SamplerState,
     HLSLBaseType_SamplerComparisonState,
     
     HLSLBaseType_UserDefined,       // struct
     HLSLBaseType_Expression,        // type argument for defined() sizeof() and typeof().
-    //HLSLBaseType_Auto,
+    //HLSLBaseType_Auto,            // this wasn't hooked up
     HLSLBaseType_Comment,           // single line comments optionally transferred to output
     
-    // There are subtypes below
+    // Buffer subtypes below
     HLSLBaseType_Buffer,
     
     HLSLBaseType_Count,
     
     // counts
-    HLSLBaseType_FirstNumeric = HLSLBaseType_Float,
-    HLSLBaseType_LastNumeric = HLSLBaseType_Ulong4,
+    //HLSLBaseType_FirstNumeric = HLSLBaseType_Float,
+    //HLSLBaseType_LastNumeric = HLSLBaseType_Ulong4,
     
-    HLSLBaseType_FirstInteger = HLSLBaseType_Bool,
-    HLSLBaseType_LastInteger = HLSLBaseType_LastNumeric,
+    //HLSLBaseType_FirstInteger = HLSLBaseType_Bool,
+    //HLSLBaseType_LastInteger = HLSLBaseType_LastNumeric,
    
-    HLSLBaseType_NumericCount = HLSLBaseType_LastNumeric - HLSLBaseType_FirstNumeric + 1
+    HLSLBaseType_NumericCount = HLSLBaseType_Ulong4 - HLSLBaseType_Float + 1
 };
   
 // This a subtype to HLSLBaseType_Buffer
@@ -307,10 +314,14 @@ enum HLSLTypeFlags
 enum HLSLAttributeType
 {
     HLSLAttributeType_Unknown,
+    
+    // TODO: a lot more attributes, these are loop attributes
+    // f.e. specialization constant and numthreads for HLSL
     HLSLAttributeType_Unroll,
     HLSLAttributeType_Branch,
     HLSLAttributeType_Flatten,
     HLSLAttributeType_NoFastMath,
+    
 };
 
 enum HLSLAddressSpace
@@ -322,6 +333,8 @@ enum HLSLAddressSpace
     HLSLAddressSpace_Device,
     HLSLAddressSpace_Thread,
     HLSLAddressSpace_Shared,
+    // TODO: Threadgroup,
+    // TODO: ThreadgroupImageblock
 };
 
 
@@ -352,16 +365,16 @@ struct HLSLType
         baseType    = _baseType;
     }
     HLSLBaseType        baseType = HLSLBaseType_Unknown;
-    HLSLBaseType        formatType = HLSLBaseType_Float;    // Half or Float (rename to formatType - applies to templated params like buffer/texture)
+    HLSLBaseType        formatType = HLSLBaseType_Float;    // Half or Float (only applies to templated params like buffer/texture)
     const char*         typeName = NULL;       // For user defined types.
     bool                array = false;
-    HLSLExpression*     arraySize = NULL;
+    HLSLExpression*     arraySize = NULL; // can ref constant like NUM_LIGHTS
     int                 flags = 0;
-    HLSLAddressSpace    addressSpace = HLSLAddressSpace_Undefined;
+    HLSLAddressSpace    addressSpace = HLSLAddressSpace_Undefined; // MSL mostly
 };
 
 // Only Statment, Argument, StructField can be marked hidden.
-// But many elements like Buffer derived from Statement.
+// But many elements like Buffer derive from Statement.
 
 /// Base class for all nodes in the HLSL AST
 struct HLSLNode
@@ -390,6 +403,7 @@ struct HLSLStatement : public HLSLNode
     mutable bool        written = false;
 };
 
+// [unroll]
 struct HLSLAttribute : public HLSLNode
 {
     static const HLSLNodeType s_type = HLSLNodeType_Attribute;
@@ -553,6 +567,7 @@ struct HLSLExpression : public HLSLNode
     HLSLExpression*     nextExpression = NULL; // Used when the expression is part of a list, like in a function call.
 };
 
+// -a
 struct HLSLUnaryExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_UnaryExpression;
@@ -560,6 +575,7 @@ struct HLSLUnaryExpression : public HLSLExpression
     HLSLExpression*     expression = NULL;
 };
 
+/// a + b
 struct HLSLBinaryExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_BinaryExpression;
@@ -577,6 +593,7 @@ struct HLSLConditionalExpression : public HLSLExpression
     HLSLExpression*     falseExpression = NULL;
 };
 
+/// v = (half4)v2
 struct HLSLCastingExpression : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_CastingExpression;
@@ -593,7 +610,7 @@ struct HLSLLiteralExpression : public HLSLExpression
     {
         bool            bValue;
         float           fValue;
-        int             iValue;
+        int32_t         iValue;
     };
 };
 
@@ -630,7 +647,7 @@ struct HLSLArrayAccess : public HLSLExpression
     HLSLExpression*     index = NULL;
 };
 
-/// c-style foo(arg1, arg2)
+/// c-style foo(arg1, arg2) - args can have defaults that are parsed
 struct HLSLFunctionCall : public HLSLExpression
 {
     static const HLSLNodeType s_type = HLSLNodeType_FunctionCall;
@@ -639,6 +656,7 @@ struct HLSLFunctionCall : public HLSLExpression
     int                 numArguments = 0;
 };
 
+// TODO: finish adding this for texture and buffer ops
 /// c++ style member.foo(arg1, arg2)
 struct HLSLMemberFunctionCall : public HLSLExpression
 {
@@ -666,7 +684,7 @@ struct HLSLStateAssignment : public HLSLNode
     const char*             stateName = NULL;
     int                     d3dRenderState = 0;
     union {
-        int                 iValue;
+        int32_t             iValue;
         float               fValue;
         const char *        sValue;
     };

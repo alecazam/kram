@@ -174,6 +174,21 @@ bool IsDouble(HLSLBaseType type)
     return baseTypeDescriptions[type].numericType == NumericType_Double;
 }
 
+bool IsFloatingType(HLSLBaseType type)
+{
+    NumericType n = baseTypeDescriptions[type].numericType;
+    return n == NumericType_Half || n == NumericType_Float || n == NumericType_Double;
+}
+
+bool IsIntegerType(HLSLBaseType type)
+{
+    NumericType n = baseTypeDescriptions[type].numericType;
+    return n == NumericType_Int || n == NumericType_Uint ||
+           n == NumericType_Short || n == NumericType_Ushort ||
+           n == NumericType_Long || n == NumericType_Ulong;
+}
+
+
 bool IsInt(HLSLBaseType type)
 {
     return baseTypeDescriptions[type].numericType == NumericType_Int;
@@ -303,6 +318,14 @@ HLSLBaseType GetScalarType(HLSLBaseType type)
 {
     ASSERT(IsNumericType(type));
     return NumericToBaseType(baseTypeDescriptions[type].numericType);
+}
+
+int32_t GetVectorDimension(HLSLBaseType type)
+{
+    if (IsScalarType(type)) return 1;
+    if (!IsVectorType(type)) return 0;
+    
+    return baseTypeDescriptions[type].numComponents;
 }
 
 HLSLBaseType HalfToFloatBaseType(HLSLBaseType type)
@@ -1543,8 +1566,6 @@ HLSLBaseType ArithmeticOpResultType(HLSLBinaryOp binaryOp, HLSLBaseType t1, HLSL
     {
         bool isSameDimensions = IsDimensionEqual(t1, t2);
         
-            
-        
         if (IsScalarType(t1) && IsScalarType(t2))
         {
             if (isSameDimensions) return t1;
@@ -1829,16 +1850,15 @@ static CompareFunctionsResult CompareFunctions(HLSLTree* tree, const HLSLFunctio
 static bool GetBinaryOpResultType(HLSLBinaryOp binaryOp, const HLSLType& type1, const HLSLType& type2, HLSLType& result)
 {
     // only allow numeric types for binary operators
-    if (type1.baseType < HLSLBaseType_FirstNumeric || type1.baseType > HLSLBaseType_LastNumeric || type1.array ||
-        type2.baseType < HLSLBaseType_FirstNumeric || type2.baseType > HLSLBaseType_LastNumeric || type2.array)
+    if (!IsNumericType(type1.baseType) || type1.array ||
+        !IsNumericType(type2.baseType) || type2.array)
     {
          return false;
     }
 
     if (IsBitOp(binaryOp))
     {
-        if (type1.baseType < HLSLBaseType_FirstInteger ||
-            type1.baseType > HLSLBaseType_LastInteger)
+        if (!IsIntegerType(type1.baseType))
         {
             return false;
         }
@@ -1959,9 +1979,9 @@ bool HLSLParser::AcceptFloat(float& value)
     return false;
 }
 
-bool HLSLParser::AcceptHalf( float& value )
+bool HLSLParser::AcceptHalf(float& value)
 {
-	if( m_tokenizer.GetToken() == HLSLToken_HalfLiteral )
+	if(m_tokenizer.GetToken() == HLSLToken_HalfLiteral)
 	{
 		value = m_tokenizer.GetFloat();
 		m_tokenizer.Next();
@@ -3046,8 +3066,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
         }
         if (unaryOp == HLSLUnaryOp_BitNot)
         {
-            if (unaryExpression->expression->expressionType.baseType < HLSLBaseType_FirstInteger || 
-                unaryExpression->expression->expressionType.baseType > HLSLBaseType_LastInteger)
+            if (!IsIntegerType(unaryExpression->expression->expressionType.baseType))
             {
                 const char * typeName = GetTypeNameHLSL(unaryExpression->expression->expressionType);
                 m_tokenizer.Error("unary '~' : no global operator found which takes type '%s' (or there is no acceptable conversion)", typeName);
@@ -3111,7 +3130,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
             expression = literalExpression;
             return true;
         }
-		if( AcceptHalf( fValue ) )
+		if(AcceptHalf(fValue))
 		{
 			HLSLLiteralExpression* literalExpression = m_tree->AddNode<HLSLLiteralExpression>( fileName, line );
 			literalExpression->type = HLSLBaseType_Half;
@@ -3131,7 +3150,7 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
             expression = literalExpression;
             return true;
         }
-        // TODO: need uint, u/short
+        // TODO: need uint, u/short, double
         
         // boolean
         if (Accept(HLSLToken_True))

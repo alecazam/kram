@@ -40,6 +40,7 @@ DONE
 * double support - not in MSL, can't interpolate vs/ps must pack to uint
 * RWTexture (needs ops)
 * Vulkan push constants in HLSL
+* fix static constant handling
 
 TODO:
 * atomics
@@ -47,7 +48,7 @@ TODO:
 * passing variables only by value in HLSL vs. value/ref/ptr in MSL
 * argument buffers and descriptor sets (root tables for DX?)
 * halfio/2/3/4 type for Nvidia/Adreno, halfst2/3/4 for storage
-* specialization and push constants for variants (MSL/SPV only)
+* specialization/function constants for variants (MSL/SPV only)
 * numgroups designator for DX kernel
 * ray-tracing kernels
 * tile shader kernels - may be MSL and Android SPV specific
@@ -55,13 +56,15 @@ TODO:
 * generate reflection data from parse of HLSL
 * handle reflection (spirv-reflect?)
 * handle HLSL vulkan extension constructs, convert these to MSL kernels too
-* preprocessor for handling platform specifics, and variants
+* preprocessor for handling includes, platform specifics, and variants
 * fix shaders to not structify metal and mod the source names, turn on written, currently handling globals.  Could require passing elements from main shader.
 * poor syntax highlighting of output .metal file, does Xcode have to compile?
 * no syntax highlighting of .hlsl files in Xcode, but VSCode has HLSL but not MSL
-*
+
+Shader Editor
+* Xcode has the worst syntax highlighting of any IDE with an undocumented plugin api that is constantly broken by newer version of Xcode.  Hightlighting only works if files are compiled by IDE, but using CLI tool.
 * May want to switch to VSCode for shader development
-* Also Windows VS2022 has HLSL add-on from Tim Jones
+* Also Windows VS2022 has HLSL add-on from Tim Jones, but this doesn't work with VS on macOS
 * https://marketplace.visualstudio.com/items?itemName=doublebuffer.metal-shader&utm_source=VSCode.pro&utm_campaign=AhmadAwais
 
 ---------------------------------
@@ -91,7 +94,7 @@ Overview
 |hlslparser | convert dx9 style HLSL to DX10 HLSL and MSL |
 |DXC | Microsoft's open-source compiler, gens HLSL 6.0-6.6 DXIL, and spv1.0-1.2, clang-based optimizer, installed with Vulkan SDK |
 |glslc | Google's wrapper to glslang, preprocessor, reflection, see below |
-|glslang | GLSL and HLSL compiler, but doesn't compile valid HLSL half code |
+|glslang | GLSL and HLSL compiler, but doesn't compile valid HLSL half code, only SM 5.1 |
 |spirv-opt | spv optimizer |
 |spirv-cross | transpile spv to MSL, HLSL, and GLSL, but codegen has 100's of temp vars, no comments, can target specific MSL/HLSL models |
 |spirv-reflect | gens reflection data from spv file |
@@ -103,10 +106,10 @@ HLSL2021 6.2 includes full half and int support.   So that is the compilation ta
 | Platforms      | iOS/PowerVR, Mali, Adreno | Nvida, AMD, Intel |
 | Feature        | I | M | A | | N | A | I |
 |----------------|---|---|---|-|---|---|---|
-| Half Interp    | y | y | n | | n | y | ? |
-| Half UBO       | y | y | n | | n | y | ? | 
-| Half Push      | y | y | y | | y | n | ? |
-| Half ALU       | y | y | y | | y | y | ? |
+| Half Interp    | y | y | n | | n | y | y |
+| Half UBO       | y | y | n | | y | y | y | 
+| Half Push      | y | y | y | | y | n | y |
+| Half ALU       | y | y | y | | y | y | y |
 
 https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_16bit_storage.html
 
@@ -124,6 +127,21 @@ https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_16bit_s
 * Android missing cpu arm64+f16 support from Redmi Note 8 and other chips.
   vcvt_f32_f16 is still present without this.
   
+Dealing with Double
+---
+* HLSL double is a joke.  Nvidia hobble fp64 output to 1/16th or less of the fp32 performance on GeForce to sell Quadro for CAD.
+* HLSL only supports 3 ops - div, rcp, fma.
+* HLSL requires touint and todouble to pass between shader stages
+* Intel removed fp64 support in Gen11/12/13.  Removed form ARC.
+* MSL has no fp64 support
+
+Dealing with uchar4
+---
+* No vertex formats to srgb degamma uchar4 colors, only texture unit has this.
+* Compute can't do srgb gamma due to bypass of ROP units
+* HLSL lacks this a uchar type, and only has pack/unpack ops in 6.6
+* Hard to use with SSBO despite uint32 chunks.
+* D3DColorToUBYTE4 has annoying bgra swizzle, so don't use it.
 
 Terms
 ---

@@ -366,8 +366,6 @@ namespace M4
         }
         if (IsTextureType(baseType))
         {
-            //if (IsDepthTextureType(baseType))
-            //    return "device";
             return "thread";
         }
 
@@ -718,20 +716,31 @@ namespace M4
 
                 if ((type.flags & HLSLTypeFlag_Const) && (type.flags & HLSLTypeFlag_Static))
                 {
-                    m_writer.BeginLine(indent, declaration->fileName, declaration->line);
-                    OutputDeclaration(declaration);
-                    m_writer.EndLine(";");
-
+                    if (!declaration->written)
+                    {
+                        m_writer.BeginLine(indent, declaration->fileName, declaration->line);
+                        OutputDeclaration(declaration);
+                        m_writer.EndLine(";");
+                    }
+                    
                     // hide declaration from subsequent passes
                     declaration->hidden = true;
+                    
+                    // skipped for multi-entrypoint
+                    declaration->written = true;
                 }
             }
             else if (statement->nodeType == HLSLNodeType_Function)
             {
                 HLSLFunction* function = static_cast<HLSLFunction*>(statement);
-
+                
                 if (!function->forward)
+                {
                     OutputStaticDeclarations(indent, function->statement);
+                    
+                    // skipped for multi-entrypoint
+                    //function->written = true;
+                }
             }
 
             statement = statement->nextStatement;
@@ -1317,37 +1326,37 @@ namespace M4
         else if (expression->nodeType == HLSLNodeType_LiteralExpression)
         {
             HLSLLiteralExpression* literalExpression = static_cast<HLSLLiteralExpression*>(expression);
+        
+            HLSLBaseType type = literalExpression->type;
+            if (m_options.treatHalfAsFloat && IsHalf(type))
+                type = HLSLBaseType_Float;
             
-            char floatBuffer[32];
-            
-            switch (literalExpression->type)
+            switch (type)
             {
+                    
             case HLSLBaseType_Half:
-                if (m_options.treatHalfAsFloat) {
-                    snprintf(floatBuffer, sizeof(floatBuffer), "%f", literalExpression->fValue);
-                    String_StripTrailingFloatZeroes(floatBuffer);
-                    m_writer.Write("%s", floatBuffer);
-                }
-                else {
-                    // TODO: reduce digits since fp16 has much less precision
-                    snprintf(floatBuffer, sizeof(floatBuffer), "%f", literalExpression->fValue);
-                    String_StripTrailingFloatZeroes(floatBuffer);
-                    m_writer.Write("%sh", floatBuffer);
-                }
-                break;
+            case HLSLBaseType_Double:
             case HLSLBaseType_Float:
-                snprintf(floatBuffer, sizeof(floatBuffer), "%f", literalExpression->fValue);
+            {
+                char floatBuffer[64];
+                
+                String_FormatFloat(floatBuffer, sizeof(floatBuffer), literalExpression->fValue);
                 String_StripTrailingFloatZeroes(floatBuffer);
-                m_writer.Write("%s", floatBuffer);
+                m_writer.Write("%s%s", floatBuffer, type == HLSLBaseType_Half ? "h" : "");
                 break;
+            }
+            // TODO: missing uint types (trailing character u, ul, ..)
+                    
+            case HLSLBaseType_Short:
+            case HLSLBaseType_Long:
             case HLSLBaseType_Int:
                 m_writer.Write("%d", literalExpression->iValue);
                 break;
+                    
             case HLSLBaseType_Bool:
                 m_writer.Write("%s", literalExpression->bValue ? "true" : "false");
                 break;
-            // TODO: missing uint, u/short, double
-            default:
+           default:
                 Error("Unhandled literal");
                 //ASSERT(0);
             }
@@ -2135,7 +2144,7 @@ namespace M4
 
         // number
         bool isHalfNumerics = promote && !m_options.treatHalfAsFloat;
-        auto baseType = type.baseType;
+        HLSLBaseType baseType = type.baseType;
         
         // Note: these conversions should really be done during parsing
         // so that casting gets applied.

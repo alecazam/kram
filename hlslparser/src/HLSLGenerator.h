@@ -27,12 +27,12 @@ struct HLSLOptions
     
     bool writeFileLine = false;
     
+    bool treatHalfAsFloat = false;
     // TODO: hook this up
-    // bool treatHalfAsFloat = false;
-    // bool treadDoubleAsFloat = true;
+    // bool treatDoubleAsFloat = true;
     
     // add vk constructions to HLSL source to convert to Spriv
-    // bool writeVulkan = true;
+    bool writeVulkan = false;
 };
 
 /**
@@ -71,7 +71,8 @@ private:
     void Error(const char* format, ...) M4_PRINTF_ATTR(2, 3);
     
     const char* GetFormatName(HLSLBaseType bufferOrTextureType, HLSLBaseType formatType);
-    
+    bool CanSkipWrittenStatement(const HLSLStatement* statement) const;
+
 private:
 
     CodeWriter      m_writer;

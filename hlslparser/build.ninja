@@ -1,7 +1,17 @@
 
-# TODO: need absolute paths for Xcode for error/warning clickthrough
+# Note: need absolute paths for Xcode for error/warning clickthrough
 # ugh that ninja doesn't have path or wildcard support.
 # but coding by hand for now is better than dealing with cmake ninja
+
+# some handy commands
+# ninja -t clean
+# ninja -t rules -d
+# ninja -t targets
+
+# ninja_required_version = 1.5
+# include rules.ninja
+
+
 homeDir = /Users/Alec/devref/
 
 vulkanSDK = ${homeDir}vulkansdk/1.3.239.0/macOS/bin/
@@ -47,20 +57,24 @@ flagsMSLDebug = -frecord-sources
 # hlslparser msl codegen
 rule genMSL
     command = $hlslparser $flagsParser -i $in -o $out
-
+    description = Gen MSL
+    
 # compile to .air
 rule compileMSL
     command = $metalCompile $flagsMSLDebug $flagsMSL -c $in -o $out
-
+    description = Gen Air
+        
 # https://developer.apple.com/documentation/metal/shader_libraries/compiling_shader_code_into_a_library_with_metal_s_command-line_tools?language=objc
 # linker to metallib
 rule linkMSL
     command = $metalLib -o $out $in
-
+    description = Link metallib
+    
 # strip metallib and gen metlalibsym (only for SM2.4+)
 rule stripMSL
     command = $metalLibStrip -flat -remove-source $in
-
+    description = Gen metallibsym
+    
 
 # gen air
 build ${dstDir}Skinning.metal: genMSL ${srcDir}Skinning.hlsl | ${dependsMSL}
@@ -108,21 +122,28 @@ flagsCS = -T cs_6_2
 # hlslparser hlsl/msl codegen
 rule genHLSL
     command = $hlslparser $flagsParser -i $in -o $out
-
+    description = Gen HLSL
+    
 # this will get shadow replaced
 entryPoint = Foo
 
 # compile to spirv
 rule compileVS
     command = $dxc $flagsDXC $flagsVS -E ${entryPoint}VS -Fo $out $in
+    description = Gen spirv VS
+    
 rule compilePS
     command = $dxc $flagsDXC $flagsPS -E ${entryPoint}PS -Fo $out $in
+    description = Gen spirv PS
+        
 rule compileCS
     command = $dxc $flagsDXC $flagsCS -E ${entryPoint}CS -Fo $out $in
-
+    description = Gen spirv CS
+   
 rule archiveSpriv
     command = zip -r $out $in
-
+    description = Gen Archive
+   
 # gen hlsl
 build ${dstDirHLSL}Skinning.hlsl: genHLSL ${srcDir}Skinning.hlsl | ${dependsHLSL}
 build ${dstDirHLSL}Sample.hlsl: genHLSL ${srcDir}Sample.hlsl | ${dependsHLSL}
@@ -131,13 +152,11 @@ build ${dstDirHLSL}Compute.hlsl: genHLSL ${srcDir}Compute.hlsl | ${dependsHLSL}
 # gen spv
 build ${dstDirHLSL}Skinning.vert.spv: compileVS ${dstDirHLSL}Skinning.hlsl
     entryPoint = Skinning
-    
 build ${dstDirHLSL}Skinning.frag.spv: compilePS ${dstDirHLSL}Skinning.hlsl
     entryPoint = Skinning
         
 build ${dstDirHLSL}Sample.vert.spv: compileVS ${dstDirHLSL}Sample.hlsl
     entryPoint = Sample
-    
 build ${dstDirHLSL}Sample.frag.spv: compilePS ${dstDirHLSL}Sample.hlsl
     entryPoint = Sample
     

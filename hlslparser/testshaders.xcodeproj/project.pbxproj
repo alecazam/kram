@@ -7,17 +7,11 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		707D37CC29B9797A00B08D22 /* Skinning.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = Skinning.metal; sourceTree = "<group>"; };
-		707D37CD29B9797A00B08D22 /* Skinning.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; fileEncoding = 4; path = Skinning.hlsl; sourceTree = "<group>"; };
 		707D37D129B9798600B08D22 /* out */ = {isa = PBXFileReference; lastKnownFileType = folder; path = out; sourceTree = "<group>"; };
 		707D37D729B979EB00B08D22 /* Skinning.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = Skinning.hlsl; sourceTree = "<group>"; };
 		707D37DA29B97A0900B08D22 /* buildShaders.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = buildShaders.sh; sourceTree = "<group>"; };
 		70CAA47E29B9BB0E004B7E7B /* Sample.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; fileEncoding = 4; path = Sample.hlsl; sourceTree = "<group>"; };
-		70CAA48029BA7D28004B7E7B /* Sample.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = Sample.metal; sourceTree = "<group>"; };
-		70CAA48129BA7D28004B7E7B /* Sample.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; fileEncoding = 4; path = Sample.hlsl; sourceTree = "<group>"; };
 		70CAA48B29BBD985004B7E7B /* Compute.hlsl */ = {isa = PBXFileReference; explicitFileType = sourcecode.metal; path = Compute.hlsl; sourceTree = "<group>"; };
-		70CAA48C29BE6A62004B7E7B /* Compute.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = Compute.hlsl; sourceTree = "<group>"; };
-		70CAA48D29BE6A62004B7E7B /* Compute.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Compute.metal; sourceTree = "<group>"; };
 		70CAA48F29C63A46004B7E7B /* build.ninja */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.ninja; sourceTree = "<group>"; };
 		70CAA49029C8072C004B7E7B /* ShaderHLSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderHLSL.h; sourceTree = "<group>"; };
 		70CAA49129C8072C004B7E7B /* ShaderMSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderMSL.h; sourceTree = "<group>"; };
@@ -30,7 +24,6 @@
 				70CAA48F29C63A46004B7E7B /* build.ninja */,
 				707D37DA29B97A0900B08D22 /* buildShaders.sh */,
 				707D37D829B979EB00B08D22 /* shaders */,
-				707D37CA29B9797A00B08D22 /* outshaders */,
 				707D37D129B9798600B08D22 /* out */,
 				707D37AF29B9787400B08D22 /* Products */,
 			);
@@ -41,19 +34,6 @@
 			children = (
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		707D37CA29B9797A00B08D22 /* outshaders */ = {
-			isa = PBXGroup;
-			children = (
-				70CAA48C29BE6A62004B7E7B /* Compute.hlsl */,
-				70CAA48D29BE6A62004B7E7B /* Compute.metal */,
-				70CAA48129BA7D28004B7E7B /* Sample.hlsl */,
-				70CAA48029BA7D28004B7E7B /* Sample.metal */,
-				707D37CD29B9797A00B08D22 /* Skinning.hlsl */,
-				707D37CC29B9797A00B08D22 /* Skinning.metal */,
-			);
-			path = outshaders;
 			sourceTree = "<group>";
 		};
 		707D37D829B979EB00B08D22 /* shaders */ = {
@@ -168,7 +148,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -220,7 +200,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;

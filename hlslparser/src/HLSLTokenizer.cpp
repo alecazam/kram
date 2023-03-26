@@ -441,11 +441,11 @@ bool HLSLTokenizer::ScanNumber()
     if (m_bufferEnd - m_buffer > 2 && m_buffer[0] == '0' && m_buffer[1] == 'x')
     {
         char*   hEnd = NULL;
-        int     iValue = (int)strtol(m_buffer+2, &hEnd, 16);
+        int     iValue = (int)String_ToIntHex(m_buffer+2, &hEnd);
         if (GetIsNumberSeparator(hEnd[0]))
         {
             m_buffer = hEnd;
-            m_token  = HLSLToken_IntLiteral;
+            m_token  = HLSLToken_IntLiteral; // TODO: handle uint, etc.
             m_iValue = iValue;
             return true;
         }
@@ -460,8 +460,11 @@ bool HLSLTokenizer::ScanNumber()
     }
 
     char*  iEnd = NULL;
-    int    iValue = String_ToInteger(m_buffer, &iEnd);
+    int    iValue = String_ToInt(m_buffer, &iEnd);
 
+    // TODO: handle lf, etc.  Double not really worth adding, since it's
+    // so hobbled.
+    
     // If the character after the number is an f then the f is treated as part
     // of the number (to handle 1.0f syntax).
     bool isHalf = false;
@@ -508,7 +511,7 @@ bool HLSLTokenizer::ScanLineDirective()
         }
 
         char* iEnd = NULL;
-        int lineNumber = String_ToInteger(m_buffer, &iEnd);
+        int lineNumber = String_ToInt(m_buffer, &iEnd);
 
         if (!isspace(*iEnd))
         {

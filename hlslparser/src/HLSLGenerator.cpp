@@ -18,12 +18,28 @@ namespace M4
 
 const char* HLSLGenerator::GetTypeName(const HLSLType& type)
 {
-    HLSLBaseType baseType = type.baseType;
+    bool promote = ((type.flags & HLSLTypeFlag_NoPromote) == 0);
 
+    // number
+    bool isHalfNumerics = promote && !m_options.treatHalfAsFloat;
+    HLSLBaseType baseType = type.baseType;
+    
+    // Note: these conversions should really be done during parsing
+    // so that casting gets applied.
+    if (!isHalfNumerics)
+        baseType = HalfToFloatBaseType(baseType);
+    
+    // MSL doesn't support double, and many HLSL cards don't either.
+    //if (IsDouble(baseType))
+    //    baseType = DoubleToFloatBaseType(baseType);
+    
+    HLSLType remappedType(type);
+    remappedType.baseType = baseType;
+    
     // DONE: these can all just use a table entry, have another slot for MSL
     // Functions can return void, especially with compute
     if (IsTextureType(baseType) || IsSamplerType(baseType) || IsNumericType(baseType) || baseType == HLSLBaseType_Void || baseType == HLSLBaseType_UserDefined)
-        return GetTypeNameHLSL(type);
+        return GetTypeNameHLSL(remappedType);
     
     Error("Unknown type");
     return NULL;
@@ -329,18 +345,27 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
     else if (expression->nodeType == HLSLNodeType_LiteralExpression)
     {
         HLSLLiteralExpression* literalExpression = static_cast<HLSLLiteralExpression*>(expression);
-        switch (literalExpression->type)
+        
+        HLSLBaseType type = literalExpression->type;
+        if (m_options.treatHalfAsFloat && IsHalf(type))
+            type = HLSLBaseType_Float;
+        
+        switch (type)
         {
         case HLSLBaseType_Half:
         case HLSLBaseType_Float:
+        case HLSLBaseType_Double:
             {
                 // Don't use printf directly so that we don't use the system locale.
                 char buffer[64];
                 String_FormatFloat(buffer, sizeof(buffer), literalExpression->fValue);
                 String_StripTrailingFloatZeroes(buffer);
-                m_writer.Write("%s%s", buffer, literalExpression->type == HLSLBaseType_Half ? "h" : "" );
+                m_writer.Write("%s%s", buffer, type == HLSLBaseType_Half ? "h" : "" );
             }
-            break;        
+            break;
+                
+        case HLSLBaseType_Short:
+        case HLSLBaseType_Ulong:
         case HLSLBaseType_Int:
             m_writer.Write("%d", literalExpression->iValue);
             break;
@@ -491,7 +516,7 @@ void HLSLGenerator::OutputArguments(HLSLArgument* argument)
         const char * semantic = argument->sv_semantic ? argument->sv_semantic : argument->semantic;
 
         // Have to inject vulkan
-        if (semantic)
+        if (semantic && m_options.writeVulkan)
         {
             if (String_Equal(semantic, "PSIZE"))
                 m_writer.Write("%s ", "[[vk::builtin(\"PointSize\")]]");
@@ -567,6 +592,31 @@ static const char* BufferTypeToName(HLSLBufferType bufferType)
     
     return name;
 }
+
+bool HLSLGenerator::CanSkipWrittenStatement(const HLSLStatement* statement) const
+{
+    if (!statement->written) return false;
+    
+    // only write these once for multi-entrypoint
+    if (statement->nodeType == HLSLNodeType_Comment ||
+         statement->nodeType == HLSLNodeType_Buffer ||
+         statement->nodeType == HLSLNodeType_Struct)
+        return true;
+    
+    // only write const scalars out once, so they don't conflict
+    if (statement->nodeType == HLSLNodeType_Declaration)
+    {
+        const HLSLDeclaration* decl = (const HLSLDeclaration*)statement;
+        if (IsScalarType(decl->type.baseType) && decl->type.flags & HLSLTypeFlag_Const)
+        {
+            return true;
+        }
+    }
+    
+    // TODO: need to skip helper functions, etc.
+        
+    return false;
+}
 void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
 {
     while (statement != NULL)
@@ -579,10 +629,7 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
         }
 
         // skip writing some types across multiple entry points
-        if (statement->written &&
-            (statement->nodeType == HLSLNodeType_Comment ||
-             statement->nodeType == HLSLNodeType_Buffer ||
-             statement->nodeType == HLSLNodeType_Struct))
+        if (CanSkipWrittenStatement(statement))
         {
             statement = statement->nextStatement;
             continue;
@@ -637,8 +684,9 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
                 // VK is limited to 1 buffer as a result.  Cannot contain half on AMD.
                 if (buffer->bufferType == HLSLBufferType_ConstantBuffer)
                 {
-                    if (strstr(buffer->name, "Push") != nullptr ||
-                        strstr(buffer->name, "push") != nullptr)
+                    if (m_options.writeVulkan &&
+                        (String_HasString(buffer->name, "Push") ||
+                         String_HasString(buffer->name, "push")))
                     {
                         m_writer.Write("[[vk::push_constant]] ");
                     }
@@ -906,7 +954,11 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
             sscanf(declaration->registerName, "t%d", &reg);
         }
 
-        const char* formatTypeName = GetFormatName(declaration->type.baseType, declaration->type.formatType);
+        HLSLBaseType formatType = declaration->type.formatType;
+        if (m_options.treatHalfAsFloat && IsHalf(formatType))
+            formatType = HalfToFloatBaseType(formatType);
+            
+        const char* formatTypeName = GetFormatName(declaration->type.baseType, formatType);
        
         // texture carts the dimension and format
         const char* textureTypeName = GetTypeName(declaration->type);
