@@ -613,8 +613,12 @@ bool HLSLGenerator::CanSkipWrittenStatement(const HLSLStatement* statement) cons
         }
     }
     
-    // TODO: need to skip helper functions, etc.
-        
+    // Helper functions should be skipped once written out
+    if (statement->nodeType == HLSLNodeType_Function)
+    {
+        return true;
+    }
+    
     return false;
 }
 void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)

@@ -797,8 +797,15 @@ bool MSLGenerator::CanSkipWrittenStatement(const HLSLStatement* statement) const
         }
     }
 
-    // TODO: need to skip helper functions, etc.
-        
+    // TODO: all functions are currently thrown into the namespace class
+    // so can't yet strip them.
+    
+    // Helper functions should be skipped once written out
+//    if (statement->nodeType == HLSLNodeType_Function)
+//    {
+//        return true;
+//    }
+    
     return false;
 }
 
