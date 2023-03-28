@@ -20,6 +20,18 @@ enum HLSLToken
     HLSLToken_Float3x3,
     HLSLToken_Float4x4,
     
+    // for Nvidia/Adreno
+    HLSLToken_Halfio,
+    HLSLToken_Half2io,
+    HLSLToken_Half3io,
+    HLSLToken_Half4io,
+    
+    // for Android w/o fp16 storage
+    HLSLToken_Halfst,
+    HLSLToken_Half2st,
+    HLSLToken_Half3st,
+    HLSLToken_Half4st,
+    
     HLSLToken_Half,
     HLSLToken_Half2,
     HLSLToken_Half3,
@@ -130,10 +142,15 @@ enum HLSLToken
     HLSLToken_InOut,
 
     // Effect keywords.
-    HLSLToken_SamplerStateBlock, 
-    HLSLToken_Technique,
-    HLSLToken_Pass,
+    //HLSLToken_SamplerStateBlock,
+    //HLSLToken_Technique,
+    //HLSLToken_Pass,
 
+    // These all start with #
+    HLSLToken_Include,
+    // HLSLToken_Pragma
+    // HLSLToken_Line
+    
     //===================
     // End of strings that have to match in _reservedWords in .cpp
     
@@ -214,6 +231,8 @@ private:
     bool SkipWhitespace();
     bool SkipComment();
 	bool SkipPragmaDirective();
+    bool SkipInclude();
+    
     bool ScanNumber();
     bool ScanLineDirective();
 

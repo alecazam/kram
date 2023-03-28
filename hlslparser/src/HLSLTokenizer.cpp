@@ -12,124 +12,138 @@ namespace M4
 {
 // The order here must match the order in the Token enum.
 static const char* _reservedWords[] =
-    {
-        "float",
-        "float2",
-        "float3",
-        "float4",
-		"float2x2",
-        "float3x3",
-        "float4x4",
-        
-        "half",
-        "half2",
-        "half3",
-        "half4",
-		"half2x2",
-        "half3x3",
-        "half4x4",
-        
-        "double",
-        "double2",
-        "double3",
-        "double4",
-        "double2x2",
-        "double3x3",
-        "double4x4",
-        
-        "bool",
-		"bool2",
-		"bool3",
-		"bool4",
-        
-        "int",
-        "int2",
-        "int3",
-        "int4",
-        
-        "uint",
-        "uint2",
-        "uint3",
-        "uint4",
-        
-        "short", 
-        "short2",
-        "short3",
-        "short4",
-        
-        "ushort",
-        "ushort2",
-        "ushort3",
-        "ushort4",
-        
-        "long",
-        "long2",
-        "long3",
-        "long4",
-        
-        "ulong",
-        "ulong2",
-        "ulong3",
-        "ulong4",
-        
-        // TODO: u/char
-        
-        "Texture2D",
-        "Texture3D",
-        "TextureCube",
-        "Texture2DArray",
-        "TextureCubeArray",
-        "Texture2DMS",
-        
-        "Depth2D",
-        "Depth2DArray", // cascades
-        "DepthCube",
-        
-        "RWTexture2D",
-        
-        "SamplerState",
-        "SamplerComparisonState",
+{
+    "float",
+    "float2",
+    "float3",
+    "float4",
+    "float2x2",
+    "float3x3",
+    "float4x4",
+    
+    // for Nvidia/Adreno
+    "halfio",
+    "half2io",
+    "half3io",
+    "half4io",
+    
+    // for Android
+    "halfst",
+    "half2st",
+    "half3st",
+    "half4st",
+    
+    "half",
+    "half2",
+    "half3",
+    "half4",
+    "half2x2",
+    "half3x3",
+    "half4x4",
+    
+    "double",
+    "double2",
+    "double3",
+    "double4",
+    "double2x2",
+    "double3x3",
+    "double4x4",
+    
+    "bool",
+    "bool2",
+    "bool3",
+    "bool4",
+    
+    "int",
+    "int2",
+    "int3",
+    "int4",
+    
+    "uint",
+    "uint2",
+    "uint3",
+    "uint4",
+    
+    "short",
+    "short2",
+    "short3",
+    "short4",
+    
+    "ushort",
+    "ushort2",
+    "ushort3",
+    "ushort4",
+    
+    "long",
+    "long2",
+    "long3",
+    "long4",
+    
+    "ulong",
+    "ulong2",
+    "ulong3",
+    "ulong4",
+    
+    // TODO: u/char
+    
+    "Texture2D",
+    "Texture3D",
+    "TextureCube",
+    "Texture2DArray",
+    "TextureCubeArray",
+    "Texture2DMS",
+    
+    "Depth2D",
+    "Depth2DArray", // cascades
+    "DepthCube",
+    
+    "RWTexture2D",
+    
+    "SamplerState",
+    "SamplerComparisonState",
 
-        "if",
-        "else",
-        "for",
-        "while",
-        "break",
-        "true",
-        "false",
-        "void",
-        "struct",
-        
-        // DX9 buffer types (tons of globals)
-        "cbuffer",
-        "tbuffer",
-        
-        // DX10 buffer templated types
-        "ConstantBuffer", // indexable cbuffer
-        "StructuredBuffer",
-        "RWStructuredBuffer",
-        "ByteAddressBuffer",
-        "RWByteAddressBuffer",
-        
-        "register",
-        "return",
-        "continue",
-        "discard",
-        
-        "const",
-        "static",
-        "inline",
-        
-        "uniform",
-        "in",
-        "out",
-        "inout",
-        
-        // these are from fx file
-        "sampler_state",
-        "technique",
-        "pass",
-    };
+    "if",
+    "else",
+    "for",
+    "while",
+    "break",
+    "true",
+    "false",
+    "void",
+    "struct",
+    
+    // DX9 buffer types (tons of globals)
+    "cbuffer",
+    "tbuffer",
+    
+    // DX10 buffer templated types
+    "ConstantBuffer", // indexable cbuffer
+    "StructuredBuffer",
+    "RWStructuredBuffer",
+    "ByteAddressBuffer",
+    "RWByteAddressBuffer",
+    
+    "register",
+    "return",
+    "continue",
+    "discard",
+    
+    "const",
+    "static",
+    "inline",
+
+    "uniform",
+    "in",
+    "out",
+    "inout",
+    
+    "#include",
+    
+    // these are from fx file
+    //"sampler_state",
+    //"technique",
+    //"pass",
+};
 
 static bool GetIsSymbol(char c)
 {
@@ -174,7 +188,7 @@ HLSLTokenizer::HLSLTokenizer(const char* fileName, const char* buffer, size_t le
 
 void HLSLTokenizer::Next()
 {
-	while( SkipWhitespace() || SkipComment() || ScanLineDirective() || SkipPragmaDirective() )
+	while(SkipWhitespace() || SkipComment() || ScanLineDirective() || SkipPragmaDirective() || SkipInclude())
     {
     }
 
@@ -342,6 +356,30 @@ void HLSLTokenizer::Next()
 
 }
 
+bool HLSLTokenizer::SkipInclude()
+{
+    bool result = false;
+    
+    static const char* keyword = "#include";
+    static uint32_t keywordLen = (uint32_t)strlen(keyword);
+    
+    if( strncmp( m_buffer, keyword, keywordLen ) == 0 && isspace( m_buffer[ keywordLen ] ) )
+    {
+        m_buffer += keywordLen;
+        result = true;
+        while( m_buffer < m_bufferEnd )
+        {
+            if( *( m_buffer++ ) == '\n' )
+            {
+                ++m_lineNumber;
+                break;
+            }
+        }
+    }
+    return result;
+}
+
+    
 bool HLSLTokenizer::SkipWhitespace()
 {
     bool result = false;
@@ -405,26 +443,24 @@ bool HLSLTokenizer::SkipComment()
 bool HLSLTokenizer::SkipPragmaDirective()
 {
 	bool result = false;
-	if( m_bufferEnd - m_buffer > 7 && *m_buffer == '#' )
-	{
-		const char* ptr = m_buffer + 1;
-		while( isspace( *ptr ) )
-			ptr++;
+	
+    static const char* keyword = "#include";
+    static uint32_t keywordLen = (uint32_t)strlen(keyword);
 
-		if( strncmp( ptr, "pragma", 6 ) == 0 && isspace( ptr[ 6 ] ) )
-		{
-			m_buffer = ptr + 6;
-			result = true;
-			while( m_buffer < m_bufferEnd )
-			{
-				if( *( m_buffer++ ) == '\n' )
-				{
-					++m_lineNumber;
-					break;
-				}
-			}
-		}
-	}
+    if( strncmp( m_buffer, keyword, keywordLen ) == 0 && isspace( m_buffer[ keywordLen ] ) )
+    {
+        m_buffer += keywordLen;
+        result = true;
+        while( m_buffer < m_bufferEnd )
+        {
+            if( *( m_buffer++ ) == '\n' )
+            {
+                ++m_lineNumber;
+                break;
+            }
+        }
+    }
+
 	return result;
 }
 
@@ -494,11 +530,12 @@ bool HLSLTokenizer::ScanNumber()
 
 bool HLSLTokenizer::ScanLineDirective()
 {
+    static const char* keyword = "#line";
+    static uint32_t keywordLen = (uint32_t)strlen(keyword);
     
-    if (m_bufferEnd - m_buffer > 5 && strncmp(m_buffer, "#line", 5) == 0 && isspace(m_buffer[5]))
+    if (strncmp(m_buffer, keyword, keywordLen) == 0 && isspace(m_buffer[keywordLen]))
     {
-
-        m_buffer += 5;
+        m_buffer += keywordLen;
         
         while (m_buffer < m_bufferEnd && isspace(m_buffer[0]))
         {
@@ -646,18 +683,17 @@ void HLSLTokenizer::Error(const char* format, ...)
     }
     m_error = true;
     
-    char buffer[4096]; // TODO: use dynamic string, sucks to cutoff logs
     va_list args;
     va_start(args, format);
-    /*int result =*/ vsnprintf(buffer, sizeof(buffer) - 1, format, args);
+    Log_ErrorArgList(format, args, m_fileName, m_lineNumber);
     va_end(args);
 
     // can log error/warning/info messages
-    bool isError = true;
+    //bool isError = true;
 
     // Gcc/lcang convention (must be absolute filename for clickthrough)
     // Visual Stuidio can pick up on this formatting too
-    Log_Error("%s:%d: %s: %s\n", m_fileName, m_lineNumber, isError ? "error" : "warning", buffer);
+    //Log_Error("%s:%d: %s: %s\n", m_fileName, m_lineNumber, isError ? "error" : "warning", buffer);
 } 
 
 void HLSLTokenizer::GetTokenName(char buffer[s_maxIdentifier]) const
@@ -685,6 +721,7 @@ void HLSLTokenizer::GetTokenName(char buffer[s_maxIdentifier]) const
 
 void HLSLTokenizer::GetTokenName(int token, char buffer[s_maxIdentifier])
 {
+    // ascii
     if (token < 256)
     {
         buffer[0] = (char)token;
@@ -704,6 +741,7 @@ void HLSLTokenizer::GetTokenName(int token, char buffer[s_maxIdentifier])
         case HLSLToken_MinusMinus:
             strcpy(buffer, "--");
             break;
+                
         case HLSLToken_PlusEqual:
             strcpy(buffer, "+=");
             break;
@@ -716,7 +754,28 @@ void HLSLTokenizer::GetTokenName(int token, char buffer[s_maxIdentifier])
         case HLSLToken_DivideEqual:
             strcpy(buffer, "/=");
             break;
-        
+                
+        // DONE: Missing several token types
+        case HLSLToken_LessEqual:
+            strcpy(buffer, "<=");
+            break;
+        case HLSLToken_GreaterEqual:
+            strcpy(buffer, ">=");
+            break;
+        case HLSLToken_EqualEqual:
+            strcpy(buffer, "==");
+            break;
+        case HLSLToken_NotEqual:
+            strcpy(buffer, "!=");
+            break;
+
+        case HLSLToken_LogicalAnd:
+            strcpy(buffer, "&&");
+            break;
+        case HLSLToken_LogicalOr:
+            strcpy(buffer, "||");
+            break;
+                
         // literals
 		case HLSLToken_HalfLiteral:
 			strcpy( buffer, "half" );

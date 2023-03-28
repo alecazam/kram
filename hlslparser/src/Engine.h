@@ -119,7 +119,8 @@ struct CompareAndHandStrings
 // Engine/Log.h
 
 void Log_Error(const char * format, ...) M4_PRINTF_ATTR(1, 2);
-void Log_ErrorArgList(const char * format, va_list args);
+
+void Log_ErrorArgList(const char * format, va_list args, const char* filename = NULL, uint32_t line = 0);
 
 
 // Engine/Array.h

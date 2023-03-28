@@ -112,7 +112,10 @@ HLSL2021 6.2 includes full half and int support.   So that is the compilation ta
 | Half Push      | y | y | y | | y | n | y |
 | Half ALU       | y | y | y | | y | y | y |
 
-https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_16bit_storage.html
+* https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_16bit_storage.html
+
+* AMD has no fp16 div/exp on Vega, constant buffer should use fp16.
+* https://gpuopen.com/learn/first-steps-implementing-fp16/
 
 * StorageBuffer16BitAccess
 * UniformAndStorageBuffer16BitAccess
@@ -232,8 +235,8 @@ AMD
 * GCN1  - wave64, 1 instr/4 cycles, 1 cu = 4 simd16 units
 * GCN2  - Puma, PS4(Liverpool)/Xbone(Durango), sparse texturing, 2 async compute + 1 raster/compute pipe
 * GCN3  - lossless DCC, high quality video scalar, video encoder/decoder
-* GCN4  - Polaris, PS4 Pro(Neo)/XboneX(Scorpio), checkerboarding, degen tri removal, fp16 added back,
-* GCN5  - Vega, fp16 2x perf of fp32, fp64 is 1/16 typically, mesh shaders, 
+* GCN4  - Polaris, PS4 Pro(Neo)/XboneX(Scorpio), checkerboarding, degen tri removal, fp16 added back, little point to fp16
+* GCN5  - Vega, fp16 2x, fp64 is 1/16 typically, mesh shaders
 *
 * RDNA  - RX5300, wave32 (or 64), 1 instr/cycle, 2cpu = 1 wgp, mesh shaders, wave32 = 1 simd32 unit, display compression, 
 * RDNA2 - PS5/XboxX/SteamDeck, RX6000, RT hw, FSR
@@ -250,13 +253,15 @@ Nvidia
 * fp16 rates are the same as fp32 on 30x0/40x0, indicating little fp16 support
 *   but fp16 rates are double on 10x0/20x0
 * 1080 runs fp16 at 1/128th the speed of fp32 - ugh!  To hobble ML work
-*   on GeForce cards and push expensive Quadro which do full rate fp16.
+*   on GeForce cards and push expensive Quadro.
+*   Also double was hobbled.
 *
 * Tegra X1+ - Mariko, Nintendo Switch, ended chip production in 2021
-* 10x0 - no tensor core, 1/128th speed fp16, 
-* 20x0 - tensor cores, RT accel for triangle and bvh intersection
-* 30x0 - 36 fp32 vs. 0.6 fp64 Teraflops on 3090 (60x), fp16 same speed as fp32, faster RT/Tensor cores
-* 40x0 - fp16 same speed as fp32, faster RT/Tensor cores
+* 10x0 - 1/64x fp16, 
+* 16x0 - 2x fp16,
+* 20x0 - 2x fp16, tensor cores, RT accel for triangle and bvh intersection
+* 30x0 - 1x fp16, 36 fp32 vs. 0.6 fp64 Teraflops on 3090 (60x), faster RT/Tensor cores
+* 40x0 - 1x fp16, faster RT/Tensor cores
 
 * https://en.wikipedia.org/wiki/List_of_Nvidia_graphics_processing_units
 * https://www.pcmag.com/news/report-nvidia-to-end-production-of-nintendo-switch-tegra-chip
@@ -337,6 +342,7 @@ SPIRV
 * clang optimizer
 * linked into module
 * cannot represent Texture2D<half4>, so can't tranpsile to MSL texture2d<half>
+* OpTypeImage must be fp32, i32/i64 format only in 1.2 spec.
 * https://github.com/microsoft/DirectXShaderCompiler/issues/2711
 * https://www.khronos.org/spir/
 

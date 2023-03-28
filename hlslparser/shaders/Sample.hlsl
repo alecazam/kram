@@ -21,6 +21,8 @@
 // into an argument buffer which holds all that.
 // Vulkan has descriptor sets.
 
+#include "ShaderHLSL.h"
+
 Depth2D<float4> shadowMap : register(t0);
 Texture2D<half4> diffuseMap : register(t1);
 Texture2D<half4> normalMap : register(t2);
@@ -64,6 +66,7 @@ inline half3  mulr(half3  v, half3x3  m) { return mul(m,v); }
 // ConstantBuffer<SceneConstantBuffer> scene[10] : register(b0);
 
 // TODO: normal/tangent should be half3/4, but use 101010A2 in buffer
+// but have to transform them by float4x4, so no point in declaring as half here
 struct InputVS
 {
     float3 position : SV_Position;
@@ -73,7 +76,7 @@ struct InputVS
     float4 tangent : TANGENT;
 };
 
-// TODO: normal/tangent should be half3/4 to cut parameter buffer
+// DONE: normal/tangent should be half3/4 to cut parameter buffer
 // but that will break Nvidia/Adreno.
 struct OutputVS
 {
@@ -81,14 +84,14 @@ struct OutputVS
     float4 worldPos : TEXCOORD0;
     float2 uv : TEXCOORD1;
     
-    float3 normal : NORMAL;
-    float4 tangent : TANGENT;
+    half3io normal : NORMAL;
+    half4io tangent : TANGENT;
 };
 
-// TODO: should output half4
+// DONE: color is now half
 struct OutputPS
 {
-    float4 target0 : SV_Target0;
+    half4io target0 : SV_Target0;
 };
 
 // Sample normal map, convert to signed, apply tangent-to-world space transform.
@@ -98,12 +101,13 @@ half3 CalcPerPixelNormal(float2 texcoord, half3 vertNormal, half3 vertTangent, h
     half3x3 tangentSpaceToWorldSpace = half3x3(vertTangent, vertBinormal, vertNormal);
 
     // Compute per-pixel normal.
-    half3 bumpNormal = SampleH(normalMap, sampleWrap, texcoord).xyz;
+    half4 bumpSample = normalMap.Sample(sampleWrap, texcoord);
+    half3 bumpNormal = bumpSample.xyz; // normalMap.Sample(sampleWrap, texcoord).xyz;
     
     // TODO: let snorm format handle, and do z reconstruct
     bumpNormal = 2.0h * bumpNormal - 1.0h;
 
-    return mul(bumpNormal, tangentSpaceToWorldSpace);
+    return mulr(bumpNormal, tangentSpaceToWorldSpace);
 }
 
 // Diffuse lighting calculation, with angle and distance falloff.
@@ -145,7 +149,7 @@ half CalcUnshadowedAmountPCF2x2(float4 posWorld, float4x4 viewProj)
     lightSpacePos.xyz /= lightSpacePos.w;
 
     // Use HW filtering
-    return (half)SampleCmp(shadowMap, shadowMapSampler, lightSpacePos);
+    return (half)shadowMap.SampleCmp(shadowMapSampler, lightSpacePos.xy, lightSpacePos.z);
 }
 
 OutputVS SampleVS(InputVS input)
@@ -154,7 +158,6 @@ OutputVS SampleVS(InputVS input)
 
     float4 newPosition = float4(input.position, 1.0);
 
-    // TODO: need to flip these muls for column matrix
     newPosition = mulr(newPosition, scene.model);
 
     output.worldPos = newPosition;
@@ -164,12 +167,10 @@ OutputVS SampleVS(InputVS input)
     output.position = newPosition;
     output.uv = input.uv;
     
-    // TODO: preserve bitan sign in tangent.w down to PS
-    // need transformed to world space too?
-    // this only works if only uniform scale and invT on normal
-    output.normal = mulr(float4(input.normal, 0.0), scene.model).xyz;
-    output.tangent.xyz = mulr(float4(input.tangent.xyz, 0.0), scene.model).xyz;
-    output.tangent.w = input.tangent.w;
+    // This only works if only uniform scale and invT on normal
+    output.normal = (half3io)mulr(input.normal, (float3x3)scene.model);
+    output.tangent.xyz = (half3io)mulr(input.tangent.xyz, (float3x3)scene.model);
+    output.tangent.w = (halfio)input.tangent.w;
     
     return output;
 }
@@ -177,18 +178,18 @@ OutputVS SampleVS(InputVS input)
 OutputPS SamplePS(OutputVS input)
 {
     // Compute tangent frame.
-    half3 normal = (half3)normalize(input.normal);
-    half3 tangent = (half3)normalize(input.tangent.xyz);
+    half3 normal = normalize((half3)input.normal);
+    half3 tangent = normalize((half3)input.tangent.xyz);
     half  bitanSign = (half)input.tangent.w;
     
-    half4 diffuseColor = SampleH(diffuseMap, sampleWrap, input.uv);
+    half4 diffuseColor = diffuseMap.Sample(sampleWrap, input.uv);
     half3 pixelNormal = CalcPerPixelNormal(input.uv, normal, tangent, bitanSign);
     half4 totalLight = (half4)scene.ambientColor;
 
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
         LightState light = scene.lights[i];
-        half4 lightPass = CalcLightingColor(light.position, (half3)normalize(light.direction), (half4)light.color, light.falloff, input.worldPos.xyz, pixelNormal);
+        half4 lightPass = CalcLightingColor(light.position, normalize((half3)light.direction), (half4)light.color, light.falloff, input.worldPos.xyz, pixelNormal);
         
         // only single light shadow map
         if (i == 0 && scene.sampleShadowMap)
@@ -199,7 +200,7 @@ OutputPS SamplePS(OutputVS input)
     }
 
     OutputPS output;
-    output.target0 = (float4)(diffuseColor * saturate(totalLight));
+    output.target0 = (half4io)(diffuseColor * saturate(totalLight));
     return output;
 }
 

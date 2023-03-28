@@ -20,6 +20,15 @@ appBuildDir = ${projectDir}/build/hlslparser/Build/Products/Release/
 
 hlslparser = ${appBuildDir}hlslparser
 
+# this is annoying that ninja doesn't cache app modstamps
+#rule cleanBuild
+#    command = ninja -t clean
+#    description = Clean Build
+
+# this doesn't have anything to compare, need app timestamps
+# also couldn't add to dependsMSL or dependsHLSL
+#build clean: cleanBuild | ${hlslparser}
+
 #------
 
 metalCompile = xcrun -sdk macosx metal
@@ -46,6 +55,7 @@ dependsMSL = ${srcDir}/ShaderMSL.h
 # turn on file/line directives to jump back to original sources
 # and turn on comments in generated sources
 flagsParser = -g -line
+#flagsParser = -g
 
 # turn on debug, makes metallib 3x bigger and not optimized
 #flagsMSLDebug = -g

@@ -252,7 +252,13 @@ int main( int argc, char* argv[] )
         parser.SetKeepComments(true);
     }
 	HLSLTree tree( &allocator );
-	if( !parser.Parse( &tree ) )
+    
+    // TODO: tie this to CLI, MSL should set both to true
+    HLSLParserOptions parserOptions;
+    parserOptions.isHalfst = true;
+    parserOptions.isHalfio = true;
+    
+	if( !parser.Parse( &tree, parserOptions ) )
 	{
 		Log_Error( "Parsing failed\n" );
 		return 1;

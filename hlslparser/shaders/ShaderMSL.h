@@ -21,6 +21,7 @@
 #import <Foundation/Foundation.h>
 #else
 #include <metal_stdlib>
+#include <metal_atomic>
 #endif
 
 #import <simd/simd.h>
@@ -61,6 +62,20 @@ using namespace simd;
 
 // can safely use half on Metal
 #define USE_HALF 1
+
+#define USE_HALFIO USE_HALF
+
+// these aren't really needed, HLSLParser has options that replace this
+// in the output code.
+typedef half  halfio;
+typedef half2 half2io;
+typedef half3 half3io;
+typedef half4 half4io;
+
+typedef half  halfst;
+typedef half2 half2st;
+typedef half3 half3st;
+typedef half4 half4st;
 
 // #define mad precise::fma"
     
@@ -134,6 +149,14 @@ inline half2 mul(half2x2 m, half2 a) { return m * a; }
 inline half3 mul(half3x3 m, half3 a) { return m * a; }
 inline half4 mul(half4x4 m, half4 a) { return m * a; }
 
+inline float3x3 tofloat3x3(float4x4 m) {
+    return float3x3(m[0].xyz, m[1].xyz, m[2].xyz);
+}
+inline half3x3 tohalf3x3(half4x4 m) {
+    return half3x3(m[0].xyz, m[1].xyz, m[2].xyz);
+}
+ 
+                           
 #endif
 
 // TODO: parser could replace these intrinsic names in metal
@@ -155,6 +178,7 @@ inline half4 mul(half4x4 m, half4 a) { return m * a; }
 #define clip(x) if (all((x) < 0.0) discard_fragment()
 
 // Use templated type to pass tex + sampler combos
+// Then parser would have to handle templates.  Ick.
 //template<typename T>
 //struct TexSampler
 //{
@@ -162,9 +186,9 @@ inline half4 mul(half4x4 m, half4 a) { return m * a; }
 //    sampler s;
 //};
 
-
 //---------
 
+/*
 // gather only works on mip0
 inline float4 GatherRed(texture2d<float> t, sampler s, float2 texCoord, int2 offset=0) {
     return t.gather(s, texCoord, offset, component::x);
@@ -262,7 +286,7 @@ inline float4 Load(texture2d_array<float> t, int3 texCoord, int lod = 0)
     return t.read((uint2)texCoord.xy, (uint)texCoord.z, (uint)lod);
 }
 
-// no HLSL equivalent, so don't define for MSL.  Maybe it's just offset that doesn't.
+// no HLSL equivalent, so don't define for MSL.  Maybe it's just offset that is missing.
 //inline float4 Load(texturecube<float> t, int3 texCoord, int lod = 0)
 //{
 //    uv, face, lod, offset
@@ -282,6 +306,7 @@ inline float4 Load(texture2d_ms<float> t, int2 texCoord, int sample) {
 // also write call (Store in HLSL)
 
 // ----
+
 
 inline float4 Sample(texture2d_array<float> t, sampler s, float3 texCoord, int2 offset=0) {
     return t.sample(s, texCoord.xy, uint(texCoord.z), offset);
@@ -306,10 +331,6 @@ inline float4 Sample(depth2d<float> t, sampler s, float2 texCoord, int2 offset =
 }
 
 
-// ios may need to hardcode sampler for compare
-// constexpr sampler shadowSampler(mip_filter::none, min_filter::linear, mag_filter::linear, address::clamp_to_border, compare_func::greater);
-
-
 // For persp shadows, remember to divide z = z/w before calling, or w = z/w on cube
 inline float SampleCmp(depth2d<float> t, sampler s, float4 texCompareCoord, int2 offset = 0)
 {
@@ -320,7 +341,34 @@ inline float4 GatherCmp(depth2d<float> t, sampler s, float4 texCompareCoord, int
 {
     return t.gather_compare(s, texCompareCoord.xy, texCompareCoord.z, offset);
 }
+ */
 
+// Trying to override member functions is just not simple like
+// raw functions are.   And macros are insufficient when the args
+// differ across the same named call.  Also macros can't handle
+// defaults.
+
+
+// TODO: some have optional offsets, but not cube/cubearray in HLSL
+// TODO: array lookup on Sample is uint?,
+#define Sample(s, uv)              sample(s, uv)
+#define SampleLevel(s, uv, level_) sample(s, uv, level(level_))
+#define SampleBias(s, uv, bias_)   sample(s, uv, bias(bias_))
+
+// only valid for Texture2D, there is gradient3d
+#define SampleGrad(s, uv, gradx, grady)   sample(s, uv, gradient2d(gradx, grady))
+
+#define SampleCmp(s, uv, val)     sample_compare(s, uv, val)
+#define GatherCmp(s, uv, val)     gather_compare(s, uv, val)
+
+// TODO: must pass uint, not int to read unlike HLSL
+// more complex with face, array, lod
+#define Load(uv, sample)                  read(uv, sample)
+
+#define GatherRed(s, uv)   gather(x, uv, (int2)0, component::x)
+#define GatherGreen(s, uv) gather(x, uv, (int2)0, component::y)
+#define GatherBlue(s, uv)  gather(x, uv, (int2)0, component::z)
+#define GatherAlpha(s, uv) gather(x, uv, (int2)0, component::w)
 
 // ----
 

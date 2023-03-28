@@ -55,6 +55,7 @@ enum HLSLNodeType
     HLSLNodeType_MemberAccess,
     HLSLNodeType_ArrayAccess,
     HLSLNodeType_FunctionCall,
+    HLSLNodeType_MemberFunctionCall,
     
     /* FX file stuff
     HLSLNodeType_StateAssignment,
@@ -482,7 +483,7 @@ struct HLSLFunction : public HLSLStatement
     static const HLSLNodeType s_type = HLSLNodeType_Function;
     const char*         name  = NULL;
     HLSLType            returnType;
-    HLSLBaseType        memberType = HLSLBaseType_Unknown;
+    HLSLBaseType        memberType = HLSLBaseType_Unknown; // for sampler members, must also look at GetScalarType(returnType)
     const char*         semantic  = NULL;
     const char*         sv_semantic = NULL;
     int                 numArguments = 0;
@@ -660,18 +661,13 @@ struct HLSLFunctionCall : public HLSLExpression
 
 // TODO: finish adding this for texture and buffer ops
 /// c++ style member.foo(arg1, arg2)
-struct HLSLMemberFunctionCall : public HLSLExpression
+struct HLSLMemberFunctionCall : public HLSLFunctionCall
 {
-    static const HLSLNodeType s_type = HLSLNodeType_FunctionCall;
+    static const HLSLNodeType s_type = HLSLNodeType_MemberFunctionCall;
     
     // could be buffer, texture, raytrace
-    HLSLBaseType        memberType = HLSLBaseType_Unknown; // may need type for typeName?
-    
-    const HLSLFunction* function = NULL;
-    HLSLExpression*     argument = NULL;
-    int                 numArguments = 0;
+    const HLSLIdentifierExpression* memberIdentifier = NULL;
 };
-
 
 #if 1
 /*

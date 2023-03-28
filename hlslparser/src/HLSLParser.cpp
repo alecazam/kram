@@ -436,60 +436,69 @@ struct Intrinsic
 // This means the parser has to work harder to write out these intrinsics
 // since some have default args, and some need level(), bias() wrappers in MSL.
 // That complexity is currently hidden away in wrapper C-style calls in ShaderMSL.h.
-#define USE_MEMBER_FUNCTIONS 0
+#define USE_MEMBER_FUNCTIONS 1
 
 static void AddIntrinsic(const Intrinsic& intrinsic);
 
-void AddTextureLoadIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType uvType)
+void AddTextureLoadIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType uvType, HLSLBaseType arg3 = HLSLBaseType_Unknown, HLSLBaseType arg4 = HLSLBaseType_Unknown)
 {
 #if USE_MEMBER_FUNCTIONS
-    Intrinsic i(name, returnType, uvType);
-    i.function.memberType = textureType;
+    Intrinsic i(name, returnType, uvType, arg3, arg4);
+    i.function.memberType = textureType; // extract formatType from return type
 #else
-    Intrinsic i(name, returnType, textureType, uvType);
+//    Intrinsic i(name, returnType, textureType, uvType);
+//
+//    // classify textureType subtype off scalar
+//    i.argument[0].type.formatType = GetScalarType(returnType);
 #endif
-    i.argument[0].type.formatType = GetScalarType(returnType);
-
+    
     AddIntrinsic(i);
 }
 
-void AddTextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType uvType)
+void AddTextureIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType uvType, HLSLBaseType arg3 = HLSLBaseType_Unknown, HLSLBaseType arg4 = HLSLBaseType_Unknown)
 {
 #if USE_MEMBER_FUNCTIONS
-    Intrinsic i(name, returnType, HLSLBaseType_SamplerState, uvType);
+    Intrinsic i(name, returnType, HLSLBaseType_SamplerState, uvType, arg3, arg4);
     i.function.memberType = textureType;
 #else
-    Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerState, uvType);
+//    Intrinsic i(name, returnType, textureType, HLSLBaseType_SamplerState, uvType);
+//
+//    // classify textureType subtype off scalar
+//    i.argument[0].type.formatType = GetScalarType(returnType);
 #endif
-    i.argument[0].type.formatType = GetScalarType(returnType);
-
+    
     AddIntrinsic(i);
 }
+
+void AddTextureIntrinsics(const char* name, HLSLBaseType textureType, HLSLBaseType uvType, HLSLBaseType arg3 = HLSLBaseType_Unknown, HLSLBaseType arg4 = HLSLBaseType_Unknown)
+{
+    AddTextureIntrinsic( name, HLSLBaseType_Float4, textureType, uvType, arg3, arg4);
+    AddTextureIntrinsic( name, HLSLBaseType_Half4, textureType, uvType, arg3, arg4);
+}
+
 
 // DepthCmp takes additional arg for comparison value, but this rolls it into uv
-void AddDepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType uvType)
+void AddDepthIntrinsic(const char* name, HLSLBaseType returnType, HLSLBaseType textureType, HLSLBaseType uvType, HLSLBaseType arg3 = HLSLBaseType_Unknown, HLSLBaseType arg4 = HLSLBaseType_Unknown)
 {
     // ComparisonState is only for SampleCmp/GatherCmp
     bool isCompare = String_Equal(name, "GatherCmp") || String_Equal(name, "SampleCmp");
     HLSLBaseType samplerType = isCompare ? HLSLBaseType_SamplerComparisonState : HLSLBaseType_SamplerState;
     
 #if USE_MEMBER_FUNCTIONS
-    Intrinsic i(name, returnType, samplerType, uvType); 
+    Intrinsic i(name, returnType, samplerType, uvType, arg3, arg4);
     i.function.memberType = textureType;
 #else
-    Intrinsic i(name, returnType, textureType, samplerType, uvType);
+//    Intrinsic i(name, returnType, textureType, samplerType, uvType);
+//    i.argument[0].type.formatType = GetScalarType(returnType);
 #endif
     
-    i.argument[0].type.formatType = GetScalarType(returnType);
     AddIntrinsic(i);
 }
 
 // TODO: elim the H version once have member functions, can check the member textuer format.
-#define TEXTURE_INTRINSIC_FUNCTION(name, textureType, uvType) \
-    AddTextureIntrinsic( name, HLSLBaseType_Float4, textureType, uvType)
-
-#define TEXTURE_INTRINSIC_FUNCTION_H(name, textureType, uvType) \
-    AddTextureIntrinsic( name "H", HLSLBaseType_Half4, textureType, uvType  )
+//#define TEXTURE_INTRINSIC_FUNCTION(name, textureType, uvType) \
+//    AddTextureIntrinsic( name, HLSLBaseType_Float4, textureType, uvType) \
+//    AddTextureIntrinsic( name, HLSLBaseType_Half4, textureType, uvType )
 
 
 static const int _numberTypeRank[NumericType_Count][NumericType_Count] = 
@@ -819,9 +828,11 @@ static void AddIntrinsic(const Intrinsic& intrinsic)
     }
     
     // To avoid having growth destroy the argument chains
+    const uint32_t kMaxIntrinsics = 10000; // TODO: reduce once count is known
     if (_intrinsics.empty())
-        _intrinsics.reserve(10000);
-        
+        _intrinsics.reserve(kMaxIntrinsics);
+    ASSERT(_intrinsics.size() < kMaxIntrinsics);
+    
     _intrinsics.push_back(intrinsic);
     _intrinsics.back().function.name = name;
     
@@ -1181,7 +1192,6 @@ bool InitIntrinsics()
     // How to designate atomics?  These have atomic_u/int type in MSL.
     // Metal just uses atomic<int>, atomic<uint>, ...
 
-    #include <metal_atomic>
     // memory_order_relaxed is only value to pass
     atomic_fetch_add_explicit(output, val, memory_order_relaxed);
     atomic_fetch_sub_explicit(output, val, memory_order_relaxed);
@@ -1240,76 +1250,62 @@ bool InitIntrinsics()
     
     //------------------------
     
-    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
-    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture3D, HLSLBaseType_Float3);
-    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_Texture2DArray, HLSLBaseType_Float3);
-    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCube, HLSLBaseType_Float3);
-    TEXTURE_INTRINSIC_FUNCTION("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4);
+    // TODO: need optional offset
+    
+    // Cannot use Sample with 2DMS/Array
+    AddTextureIntrinsics("Sample", HLSLBaseType_Texture2D, HLSLBaseType_Float2); // Int2 offset
+    AddTextureIntrinsics("Sample", HLSLBaseType_Texture3D, HLSLBaseType_Float3); // Int3 offset
+    AddTextureIntrinsics("Sample", HLSLBaseType_Texture2DArray, HLSLBaseType_Float3); // Int2 offset
+    
+    // these don't have offset
+    AddTextureIntrinsics("Sample", HLSLBaseType_TextureCube, HLSLBaseType_Float3);
+    AddTextureIntrinsics("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4);
     
     // Depth
-    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float2);
-    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2DArray,  HLSLBaseType_Float3);
-    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_DepthCube,  HLSLBaseType_Float3);
+    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float2); // Int2 offset
+    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_Depth2DArray,  HLSLBaseType_Float3); // Int2 offset
+    AddDepthIntrinsic("Sample", HLSLBaseType_Float, HLSLBaseType_DepthCube,  HLSLBaseType_Float3); // no offset
     
-    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
-    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_Texture3D, HLSLBaseType_Float3);
-    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_Texture2DArray, HLSLBaseType_Float3);
-    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_TextureCube, HLSLBaseType_Float3);
-    TEXTURE_INTRINSIC_FUNCTION_H("Sample", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4);
-    
-    
-    // xyz are used, this doesn't match HLSL which is 2 + compare
-    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float4);
-    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float4);
-    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float4);
+    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2D, HLSLBaseType_Float2, HLSLBaseType_Float);
+    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_Depth2DArray, HLSLBaseType_Float3, HLSLBaseType_Float);
+    AddDepthIntrinsic("SampleCmp", HLSLBaseType_Float, HLSLBaseType_DepthCube, HLSLBaseType_Float3, HLSLBaseType_Float);
     
     // returns float4 w/comparisons, probably only on mip0
     // TODO: add GatherRed? to read 4 depth values
-    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2D, HLSLBaseType_Float4);
-    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2DArray, HLSLBaseType_Float4);
-    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_DepthCube, HLSLBaseType_Float4);
+    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2D, HLSLBaseType_Float2, HLSLBaseType_Float);
+    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_Depth2DArray, HLSLBaseType_Float3, HLSLBaseType_Float);
+    AddDepthIntrinsic("GatherCmp", HLSLBaseType_Float4, HLSLBaseType_DepthCube, HLSLBaseType_Float3, HLSLBaseType_Float);
     
     // one more dimension than Sample
-    TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3);
-    TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture3D, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_TextureCube, HLSLBaseType_Float4);
+    AddTextureIntrinsics("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float2, HLSLBaseType_Float);
+    AddTextureIntrinsics("SampleLevel", HLSLBaseType_Texture3D, HLSLBaseType_Float3, HLSLBaseType_Float);
+    AddTextureIntrinsics("SampleLevel", HLSLBaseType_Texture2DArray, HLSLBaseType_Float3, HLSLBaseType_Float);
+    AddTextureIntrinsics("SampleLevel", HLSLBaseType_TextureCube, HLSLBaseType_Float3, HLSLBaseType_Float);
     // TEXTURE_INTRINSIC_FUNCTION("SampleLevel", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4, Float);
     
-    TEXTURE_INTRINSIC_FUNCTION_H("SampleLevel", HLSLBaseType_Texture2D, HLSLBaseType_Float3);
-    TEXTURE_INTRINSIC_FUNCTION_H("SampleLevel", HLSLBaseType_Texture3D, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION_H("SampleLevel", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION_H("SampleLevel", HLSLBaseType_TextureCube, HLSLBaseType_Float4);
-   
-    
     // bias always in w
-    TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture2D, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture3D, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_TextureCube, HLSLBaseType_Float4);
-    // TEXTURE_INTRINSIC_FUNCTION("SampleBias", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4, Float);
-    
-    TEXTURE_INTRINSIC_FUNCTION_H("SampleBias", HLSLBaseType_Texture2D, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION_H("SampleBias", HLSLBaseType_Texture3D, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION_H("SampleBias", HLSLBaseType_Texture2DArray, HLSLBaseType_Float4);
-    TEXTURE_INTRINSIC_FUNCTION_H("SampleBias", HLSLBaseType_TextureCube, HLSLBaseType_Float4);
+    AddTextureIntrinsics("SampleBias", HLSLBaseType_Texture2D, HLSLBaseType_Float2, HLSLBaseType_Float);
+    AddTextureIntrinsics("SampleBias", HLSLBaseType_Texture3D, HLSLBaseType_Float3, HLSLBaseType_Float);
+    AddTextureIntrinsics("SampleBias", HLSLBaseType_Texture2DArray, HLSLBaseType_Float3, HLSLBaseType_Float);
     
     
+    // no offset on cube/cubearray
+    AddTextureIntrinsics("SampleBias", HLSLBaseType_TextureCube, HLSLBaseType_Float3, HLSLBaseType_Float);
+    // AddTextureIntrinsics("SampleBias", HLSLBaseType_TextureCubeArray, HLSLBaseType_Float4, Float);
+    
+
     // TODO: for 2D tex (int2 offset is optional, how to indicate that?)
-    TEXTURE_INTRINSIC_FUNCTION("GatherRed", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
-    TEXTURE_INTRINSIC_FUNCTION("GatherGreen", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
-    TEXTURE_INTRINSIC_FUNCTION("GatherBlue", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
-    TEXTURE_INTRINSIC_FUNCTION("GatherAlpha", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    // arguments have defaultValue that can be set.
     
-    TEXTURE_INTRINSIC_FUNCTION_H("GatherRed", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
-    TEXTURE_INTRINSIC_FUNCTION_H("GatherGreen", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
-    TEXTURE_INTRINSIC_FUNCTION_H("GatherBlue", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
-    TEXTURE_INTRINSIC_FUNCTION_H("GatherAlpha", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    AddTextureIntrinsics("GatherRed", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    AddTextureIntrinsics("GatherGreen", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    AddTextureIntrinsics("GatherBlue", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
+    AddTextureIntrinsics("GatherAlpha", HLSLBaseType_Texture2D,  HLSLBaseType_Float2);
     
     // TODO: add more types cube/3d takes gradient3d in MSL
     // The Intrinsic ctor would need to have 5 args instead 4
     // first move to member functions, then add this with 4 args
-    // AddTextureIntrinsic( "SampleGrad", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
+    // AddTextureIntrinsics( "SampleGrad", HLSLBaseType_Texture2D, HLSLBaseType_Float, HLSLBaseType_Float2, HLSLBaseType_Float2, HLSLBaseType_Float2);
     
     // These constructs are not declaring the lod or offset param which have default
     AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2D, HLSLBaseType_Int2); // TODO: needs lod
@@ -1320,12 +1316,12 @@ bool InitIntrinsics()
     AddTextureLoadIntrinsic("Load", HLSLBaseType_Float4, HLSLBaseType_Texture2DMS, HLSLBaseType_Int2); // TODO: needs sampleIndex
     
     // TODO: aren't these uint instead of int?
-    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture2D, HLSLBaseType_Int2);
-    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture3D, HLSLBaseType_Int3);
-    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture2DArray, HLSLBaseType_Int3);
-    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_TextureCube, HLSLBaseType_Int3);
-    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_TextureCubeArray, HLSLBaseType_Int3);
-    TEXTURE_INTRINSIC_FUNCTION("GetDimensions", HLSLBaseType_Texture2DMS, HLSLBaseType_Int2);
+    AddTextureIntrinsics("GetDimensions", HLSLBaseType_Texture2D, HLSLBaseType_Int2);
+    AddTextureIntrinsics("GetDimensions", HLSLBaseType_Texture3D, HLSLBaseType_Int3);
+    AddTextureIntrinsics("GetDimensions", HLSLBaseType_Texture2DArray, HLSLBaseType_Int3);
+    AddTextureIntrinsics("GetDimensions", HLSLBaseType_TextureCube, HLSLBaseType_Int3);
+    AddTextureIntrinsics("GetDimensions", HLSLBaseType_TextureCubeArray, HLSLBaseType_Int3);
+    AddTextureIntrinsics("GetDimensions", HLSLBaseType_Texture2DMS, HLSLBaseType_Int2);
     
     return true;
 };
@@ -3256,40 +3252,85 @@ bool HLSLParser::ParseTerminalExpression(HLSLExpression*& expression, bool& need
         // Member access operator.
         while (Accept('.'))
         {
-            // member function
+            // member or member function
             const char* text = NULL;
             if (!ExpectIdentifier(text))
             {
                 return false;
             }
             
-            /*
-            const HLSLMemberFuction* memberFunction = FindMemberFunction(text);
-            if (function != NULL)
+            //const HLSLMemberFuction* memberFunction = FindMemberFunction(text);
+            //if (function != NULL)
             {
                 // check parent type, and args to see if it's a match
-
-                 HLSLMemberFunction* memberFunction = m_tree->AddNode<HLSLMemberFunction>(fileName, line);
-                    memberFunction->object = exprenssion;
-                    memberAccess->memberFunction = memberFunction;
-            
-           } */
-            
-            // member variable
-            HLSLMemberAccess* memberAccess = m_tree->AddNode<HLSLMemberAccess>(fileName, line);
-            memberAccess->object = expression;
-            memberAccess->field = text;
-            
-            if (!GetMemberType(expression->expressionType, memberAccess))
-            {
-                m_tokenizer.Error("Couldn't access '%s'", memberAccess->field);
                 
-                // this leaks memberAccess allocated above, but
-                // all allocated from single allocator, so just free/reset that
-                return false;
-            }
-            expression = memberAccess;
-            done = false;
+                // copied from intrinsic lookup at end
+                if (Accept('('))
+                {
+                    HLSLMemberFunctionCall* functionCall = m_tree->AddNode<HLSLMemberFunctionCall>(fileName, line);
+                      
+                    done = false;
+                    
+                    // parse the args
+                    if (!ParseExpressionList(')', false, functionCall->argument, functionCall->numArguments))
+                    {
+                        return false;
+                    }
+                    
+                    if (expression->nodeType != HLSLNodeType_IdentifierExpression)
+                    {
+                        m_tokenizer.Error("Expected function identifier");
+                        return false;
+                    }
+                    
+                    // This is "tex" of tex.Sample(...)
+                    const HLSLIdentifierExpression* identifierExpression = static_cast<const HLSLIdentifierExpression*>(expression);
+                    
+                    // TODO: what if it's a chain of member functions?
+                    functionCall->memberIdentifier = identifierExpression;
+                    
+                    // TODO: lookup texture, buffer, struct for identiferExpression
+                    // TODO: prob need formatType to match half/float return type.
+                    
+                    // TODO: could lookup only float memberFunctions if spirv
+                    // which can't handle fp16 samplers.
+                    
+                    // This is matching to a member function (mostly intrinsics)
+                    const HLSLFunction* function = MatchFunctionCall( functionCall, text, &identifierExpression->expressionType );
+                    if (function == NULL)
+                    {
+                        return false;
+                    }
+                    
+                    functionCall->function = function;
+                    functionCall->expressionType = function->returnType;
+                    
+                    // or is it the identiferExpression?
+                    expression = functionCall;
+                    
+                    // for now don't allow chained member functions
+                    return true;
+                }
+                
+           }
+           //else
+           {
+               // member variable
+               HLSLMemberAccess* memberAccess = m_tree->AddNode<HLSLMemberAccess>(fileName, line);
+               memberAccess->object = expression;
+               memberAccess->field = text;
+               
+               if (!GetMemberType(expression->expressionType, memberAccess))
+               {
+                   m_tokenizer.Error("Couldn't access '%s'", memberAccess->field);
+                   
+                   // this leaks memberAccess allocated above, but
+                   // all allocated from single allocator, so just free/reset that
+                   return false;
+               }
+               expression = memberAccess;
+               done = false;
+           }
         }
 
         // Handle array access.
@@ -4109,9 +4150,10 @@ bool HLSLParser::ParseStage(HLSLStatement*& statement)
 
 
 
-bool HLSLParser::Parse(HLSLTree* tree)
+bool HLSLParser::Parse(HLSLTree* tree, const HLSLParserOptions& options)
 {
     m_tree = tree;
+    m_options = options;
     
     HLSLRoot* root = m_tree->GetRoot();
     HLSLStatement* lastStatement = NULL;
@@ -4253,6 +4295,34 @@ bool HLSLParser::AcceptType(bool allowVoid, HLSLType& type/*, bool acceptFlags*/
         break;
     case HLSLToken_Float4x4:
         type.baseType = HLSLBaseType_Float4x4;
+        break;
+          
+    // The parser is remapping the type here
+    case HLSLToken_Halfio:
+        type.baseType = m_options.isHalfio ? HLSLBaseType_Half : HLSLBaseType_Float;
+        break;
+    case HLSLToken_Half2io:
+        type.baseType = m_options.isHalfio ? HLSLBaseType_Half2 : HLSLBaseType_Float2;
+        break;
+    case HLSLToken_Half3io:
+        type.baseType = m_options.isHalfio ? HLSLBaseType_Half3 : HLSLBaseType_Float3;
+        break;
+    case HLSLToken_Half4io:
+        type.baseType = m_options.isHalfio ? HLSLBaseType_Half4 : HLSLBaseType_Float4;
+        break;
+            
+    // The parser is remapping the type here
+    case HLSLToken_Halfst:
+        type.baseType = m_options.isHalfst ? HLSLBaseType_Half : HLSLBaseType_Float;
+        break;
+    case HLSLToken_Half2st:
+        type.baseType = m_options.isHalfst ? HLSLBaseType_Half2 : HLSLBaseType_Float2;
+        break;
+    case HLSLToken_Half3st:
+        type.baseType = m_options.isHalfst ? HLSLBaseType_Half3 : HLSLBaseType_Float3;
+        break;
+    case HLSLToken_Half4st:
+        type.baseType = m_options.isHalfst ? HLSLBaseType_Half4 : HLSLBaseType_Float4;
         break;
             
     case HLSLToken_Half:
@@ -4580,6 +4650,7 @@ const HLSLType* HLSLParser::FindVariable(const char* name, bool& global) const
     return NULL;
 }
 
+// This only search user-defined c-style functions.  Intrinsics are not in this.
 const HLSLFunction* HLSLParser::FindFunction(const char* name) const
 {
     for (int i = 0; i < m_functions.GetSize(); ++i)
@@ -4659,7 +4730,7 @@ bool HLSLParser::GetIsFunction(const char* name) const
     return it != _intrinsicRangeMap.end();
 }
 
-const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functionCall, const char* name)
+const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functionCall, const char* name, const HLSLType* memberType)
 {
     const HLSLFunction* matchedFunction     = NULL;
 
@@ -4667,13 +4738,34 @@ const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functi
     int  numMatchedOverloads    = 0;
     bool nameMatches            = false;
 
-    // Get the user defined functions with the specified name.
+    // Get the user defined c functions with the specified name.
+    // There may be more than one, and these are not ordered.
     for (int i = 0; i < m_functions.GetSize(); ++i)
     {
         const HLSLFunction* function = m_functions[i];
         if (function->name == name)
         {
             nameMatches = true;
+            
+            // if caller requests member function, then memberType must match
+            bool isMemberFunc = function->IsMemberFunction();
+           
+            if (memberType)
+            {
+                if (!isMemberFunc)
+                    continue;
+                
+                if (memberType->baseType != function->memberType)
+                    continue;
+                
+                if (memberType->formatType != GetScalarType(function->returnType.baseType))
+                    continue;
+            }
+            else
+            {
+                if (isMemberFunc)
+                    continue;
+            }
             
             CompareFunctionsResult result = CompareFunctions( m_tree, functionCall, function, matchedFunction );
             if (result == Function1Better)
@@ -4698,6 +4790,24 @@ const HLSLFunction* HLSLParser::MatchFunctionCall(const HLSLFunctionCall* functi
             uint32_t idx = range.start + i;
             const HLSLFunction* function = &_intrinsics[idx].function;
             
+            // if caller requests member function, then memberType must match
+            bool isMemberFunc = function->IsMemberFunction();
+            if (memberType)
+            {
+                if (!isMemberFunc)
+                    break;
+            
+                if (memberType->baseType != function->memberType)
+                    continue;
+                
+                if (memberType->formatType != GetScalarType(function->returnType.baseType))
+                    continue;
+            }
+            else
+            {
+                if (isMemberFunc)
+                    break;
+            }
             ASSERT(String_Equal(function->name, name));
                    
             nameMatches = true;

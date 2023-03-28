@@ -1,4 +1,5 @@
 
+#include "ShaderHLSL.h"
 
 // TODO: syntax highlighting as Metal doesn't work
 // This isn't including header, but that doesn't seem to fix either.
@@ -76,6 +77,12 @@
 // MSL rule;
 // If a vertex function writes to one or more buffers or textures, its return type must be void.
 
+// no preprocessor to do this yet, so have to add functions
+// can't seem to have overloads like this with same name
+inline float4 mulr(float4 v, float4x4 m) { return mul(m,v); }
+inline float3 mulr(float3 v, float3x3 m) { return mul(m,v); }
+inline half3  mulr(half3  v, half3x3  m) { return mul(m,v); }
+
 struct InputVS
 {
     float4 position : SV_Position;
@@ -83,17 +90,22 @@ struct InputVS
     float2 uv : TEXCOORD0;
     float4 blendWeights : BLENDWEIGHT;
     uint4  blendIndices : BLENDINDICES;
-    
-    short4 testShort : TANGENT;
-    ushort4 testUShort : BITANGENT;
 };
 
-// half below won't work on many Adreno/Mali without inputOutput
+// these were just tests
+//short4 testShort : TANGENT;
+//ushort4 testUShort : BITANGENT;
+
 struct OutputVS
 {
     float4  position : SV_Position;
-    half    diffuse : COLOR;
+    halfio  diffuse : COLOR;
     float2  uv : TEXCOORD0;
+};
+
+struct OutputPS
+{
+    half4io color : SV_Target0;
 };
 
 static const uint kMaxSkinTfms = 256;
@@ -105,7 +117,8 @@ static const uint kMaxSkinTfms = 256;
 struct UniformsStruct
 {
     float4x4 skinTfms[kMaxSkinTfms];
-    half3    lightDir;
+    
+    half3st  lightDir;
     float4x4 worldToClipTfm;
 };
 ConstantBuffer<UniformsStruct> uniforms : register(b0);
@@ -113,28 +126,26 @@ ConstantBuffer<UniformsStruct> uniforms : register(b0);
 // can have 14x 64K limit to each cbuffer, 128 tbuffers,
  
 // Structured buffers
-struct StructuredStruct
-{
-    half3    lightDir;
-    float4x4 worldToClipTfm;
-};
-
-StructuredBuffer<StructuredStruct> bufferTest0 : register(t2);
+//struct StructuredStruct
+//{
+//    half3st  lightDir;
+//    float4x4 worldToClipTfm;
+//};
+//
+//StructuredBuffer<StructuredStruct> bufferTest0 : register(t2);
 
 
 Texture2D<half4> tex : register(t1);
 SamplerState samplerClamp : register(s0);
 
-float4x4 DoSkinTfm(UniformsStruct uniforms, float4 blendWeights, uint4 blendIndices)
+float4x4 DoSkinTfm(/*UniformsStruct uniforms,*/ float4 blendWeights, uint4 blendIndices)
 {
-    // Can use mul or * here
-    //float4x4 skinTfm = blendWeights[0] * uniforms.skinTfms[blendIndices[0]];
-    float4x4 skinTfm = mul(blendWeights[0], uniforms.skinTfms[blendIndices[0]]);
+    // weight the transforms, could use half4x4 and 101010A2 for weights
+    float4x4 skinTfm = blendWeights[0] * uniforms.skinTfms[blendIndices[0]];
     
     for (uint i = 1; i < 4; ++i)
     {
-        //skinTfm += blendWeights[i] * uniforms.skinTfms[blendIndices[i]];
-        skinTfm += mul(blendWeights[i], uniforms.skinTfms[blendIndices[i]]);
+        skinTfm += blendWeights[i] * uniforms.skinTfms[blendIndices[i]];
     }
     
     return skinTfm;
@@ -166,32 +177,31 @@ OutputVS SkinningVS(InputVS input,
 
     instanceNum += vertexNum;
     
-    float4x4 skinTfm = uniforms.skinTfms[ instanceNum ];
+    // not using above
     
-    // MSL doesn't like *=
-    skinTfm = skinTfm * DoSkinTfm(uniforms, input.blendWeights, input.blendIndices);
+    // float4x4 skinTfm = uniforms.skinTfms[ instanceNum ];
+    
+    float4x4 skinTfm = DoSkinTfm(input.blendWeights, input.blendIndices);
 
     // Skin to world space
-    float3 position = mul(input.position, skinTfm).xyz;
-    half3 normal = half3(mul(float4(input.normal,0.0), skinTfm).xyz);
-        
+    float3 normal = mulr(input.normal, (float3x3)skinTfm);
+    normal = mulr(normal, (float3x3)uniforms.worldToClipTfm);
+    
     // Output stuff
-    output.position = mul(float4(position, 1.0), uniforms.worldToClipTfm);
+    float4 worldPos = mulr(input.position, skinTfm);
+    output.position = mulr(worldPos, uniforms.worldToClipTfm);
   
-    // glslc fix
-    // output.diffuse = half( dot(lightDir, normal) );
-    // DXC
-    output.diffuse = dot(uniforms.lightDir, normal);
+    output.diffuse = (halfio)dot((half3)uniforms.lightDir, (half3)normal);
 
-    // TODO: test structured buffer
-    StructuredStruct item = bufferTest0[0];
-    output.diffuse *= item.lightDir.x;
+    // test structured buffer
+    // StructuredStruct item = bufferTest0[0];
+    //output.diffuse *= item.lightDir.x;
    
     // test the operators
-    output.diffuse *= output.diffuse;
-    output.diffuse += output.diffuse;
-    output.diffuse -= output.diffuse;
-    output.diffuse /= output.diffuse;
+//    output.diffuse *= output.diffuse;
+//    output.diffuse += output.diffuse;
+//    output.diffuse -= output.diffuse;
+//    output.diffuse /= output.diffuse;
     
     output.uv = input.uv;
     
@@ -201,22 +211,7 @@ OutputVS SkinningVS(InputVS input,
     return output;
 }
 
-// Want to pass OutputVS as input, but DXC can't handle the redefinition
-// in the same file.  So have to keep OutputVS and InputPS in sync.
-// this can include position on MSL, but not on HLSL.
-// Also for mobile the type should be higher precision to avoid banding.
-// So half from VS, but float in PS.
-//struct InputPS
-//{
-//    float4  position : SV_Position;
-//    half    diffuse : COLOR;
-//    float2  uv : TEXCOORD0;
-//};
 
-struct OutputPS
-{
-    half4 color : SV_Target0;
-};
 
 // Note: don't write as void SkinningPS(VS_OUTPUT input, out PS_OUTPUT output)
 // this is worse MSL codegen.
@@ -228,32 +223,11 @@ OutputPS SkinningPS(OutputVS input,
      bool isFrontFace: SV_IsFrontFace
     )
 {
-    OutputPS output;
-    
-    // Syntax procoess can't handle this construct.
-    // Before parser was adding these wrappers, but also limiting split of tex/sampler.
-    // TexSampler<Texture2D> texWrap(tex, samplerClamp);
-    // half4 color = SampleH(texWrap.t, texWrap.s, input.uv);
-    
-    // This is hard to reflect with combined tex/sampler
-    // have way more textures than samplers on mobile.
-    //float4 color = tex2D(tex, input.uv);
-    //half4 color = half4(1.0h);
-    half4 color = SampleH(tex, samplerClamp, input.uv);
-    
-    // TODO: move to DX10 style, but MSL codegen is trickier then
-    // since it wraps the vars
-    // half4 color = tex.Sample(pointSampler, input.uv);
-    
-    // just to test min3 support
-    // glslc fix
-    //half c = half( min3(color.r, color.g, color.b) );
-    //color.rgb = half3(c,c,c); // can't use half3(c)!
-    // DXC
+    half4 color = tex.Sample(samplerClamp, input.uv);
     color.rgb = min3(color.r, color.g, color.b);
-
-    color.rgb *= input.diffuse;
-    output.color = color;
-
+    color.rgb *= (half)input.diffuse;
+    
+    OutputPS output;
+    output.color = (half4io)color;
     return output;
 }

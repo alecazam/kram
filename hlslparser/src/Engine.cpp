@@ -222,24 +222,33 @@ void String_StripTrailingFloatZeroes(char* buffer)
 
 // Engine/Log.cpp
 
-void Log_Error(const char * format, ...) {
+void Log_Error(const char * format, ...)
+{
     va_list args;
     va_start(args, format);
     Log_ErrorArgList(format, args);
     va_end(args);
 }
 
-void Log_ErrorArgList(const char * format, va_list args) {
-#if 1 // @@ Don't we need to do this?
+void Log_ErrorArgList(const char * format, va_list args, const char* filename, uint32_t line)
+{
     va_list tmp;
     va_copy(tmp, args);
+    
+    // Not thread-safe
+    static std::string buffer;
+    buffer.clear();
+    String_PrintfArgList(buffer, format, tmp);
+    
     // TODO: this doesn't work on Win/Android
     // use a real log abstraction to ODS/etc from Kram
-    vfprintf( stderr, format, tmp );
+    if (filename)
+        fprintf( stderr, "%s:%d: error: %s", filename, line, buffer.c_str());
+    else
+        fprintf( stderr, "error: %s", buffer.c_str());
+    
     va_end(tmp);
-#else
-    vprintf( format, args );
-#endif
+
 }
 
 

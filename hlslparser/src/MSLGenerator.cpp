@@ -1593,6 +1593,15 @@ void MSLGenerator::OutputExpression(HLSLExpression* expression, HLSLExpression* 
         HLSLFunctionCall* functionCall = static_cast<HLSLFunctionCall*>(expression);
         OutputFunctionCall(functionCall, parentExpression);
     }
+    else if (expression->nodeType == HLSLNodeType_MemberFunctionCall)
+    {
+        HLSLMemberFunctionCall* functionCall = static_cast<HLSLMemberFunctionCall*>(expression);
+        
+        // Write out the member identifier
+        m_writer.Write("%s.", functionCall->memberIdentifier->name);
+
+        OutputFunctionCall(functionCall, parentExpression);
+    }
     else
     {
         Error("unknown expression");
@@ -1601,11 +1610,14 @@ void MSLGenerator::OutputExpression(HLSLExpression* expression, HLSLExpression* 
 
 void MSLGenerator::OutputCast(const HLSLType& type)
 {
+    // Note: msl fails on float4x4 to float3x3 casting
     if (type.baseType == HLSLBaseType_Float3x3)
     {
-        // TODO: pull name from table, why is this special case?
-        // also why is this not in parens?
-        m_writer.Write("float3x3");
+        m_writer.Write("tofloat3x3");
+    }
+    else if (type.baseType == HLSLBaseType_Half3x3)
+    {
+        m_writer.Write("tohalft3x3");
     }
     else
     {

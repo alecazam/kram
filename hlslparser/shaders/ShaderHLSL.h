@@ -3,7 +3,7 @@
 
 // glslc doesn't support but DXC does
 // so had to add header guard
-#ifdef __spirv__
+#ifndef __spirv__
 #pragma once
 #endif
 
@@ -93,7 +93,7 @@ typedef float64_t4x4 double4x4;
 // Apple Metal 3 added atomic_float.
 
 // 6.6 is cutting edge, want to target 6.2 for now
-#define SM66 1
+#define SM66 0
 #if SM66
 // compile to SM6.6 for these
 typedef uint8_t4_packed uchar4_packed;
@@ -147,8 +147,63 @@ char4_packed fromInt4(int4 v, bool clamp = true)
 #endif
 
 
+// TODO: toggle building shaders for Andreno/Nvidia
 #define USE_HALF 1
 
+// Only Android Adreno doesn't have fp16 storage, but MSL/desktop has this.
+// Can't use min16Float since that is remapped to fp16.
+
+#define USE_HALF_STORAGE 1
+
+#if USE_HALFIO
+
+typedef half  halfst;
+typedef half2 half2st;
+typedef half3 half3st;
+typedef half4 half4st;
+
+#else
+
+typedef float  halfst;
+typedef float2 half2st;
+typedef float3 half3st;
+typedef float4 half4st;
+
+#endif
+
+// Nvidia/Adreno don't support half as inputOutput, but that
+// just wastes parameter buffer on tiled architectures.  Can
+// just used these as casts and types inside input/output.
+
+#define USE_HALFIO USE_HALF
+
+// This is handled by parser, but syntax highlighting would need this
+#if USE_HALFIO
+
+typedef half  halfio;
+typedef half2 half2io;
+typedef half3 half3io;
+typedef half4 half4io;
+
+#else
+
+typedef float  halfio;
+typedef float2 half2io;
+typedef float3 half3io;
+typedef float4 half4io;
+
+#endif
+
+// This has templated elements appended, so typedef doesn't work.
+// HLSL doesn't distingush depth/color, but MSL does. These calls combine
+// the comparison value in the z or w element.
+#define Depth2D Texture2D
+#define Depth2DArray Texture2DArray
+#define DepthCube TextureCube
+
+
+/* These are now defined as member function intrinsics
+ 
 // TODO: fix parsing, so don't have to provide these overrides
 // The parser also has to rewrite params on MSL and wrap args.
 
@@ -232,12 +287,6 @@ float4 SampleGrad(Texture2D<float4> t, SamplerState s, float2 texCoord, float2 g
 
 //----------
 
-// This has templated elements appended, so typedef doesn't work.
-// HLSL doesn't distingush depth/color, but MSL does. These calls combine
-// the comparison value in the z or w element.
-#define Depth2D Texture2D
-#define Depth2DArray Texture2DArray
-#define DepthCube TextureCube
 
 
 // can just use the default for Texture2D<float4>
@@ -301,6 +350,7 @@ float4 Load(Texture2DMS<float4> t, int2 texCoord, int sample, int2 offset = 0)
     return t.Load(texCoord, sample, offset);
 }
 
+
 //----------
 
 // gather only works on mip0
@@ -323,6 +373,7 @@ float4 GatherAlpha(Texture2D<float4> t, SamplerState s, float2 texCoord, int2 of
 {
     return t.GatherAlpha(s, texCoord, offset);
 }
+
 
 
 #if USE_HALF
@@ -353,6 +404,8 @@ half4 SampleBiasH(Texture2D<half> t, SamplerState s, float4 texCoordBias)
 #define SampleBiasH SampleBias
 
 #endif
+
+ */
 
 // There are 2 variants of GetDimensions, one that takes a mipLevel input
 // and returns params for that, and one that returns mip0.

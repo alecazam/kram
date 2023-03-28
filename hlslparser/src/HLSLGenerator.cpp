@@ -496,6 +496,26 @@ void HLSLGenerator::OutputExpression(HLSLExpression* expression)
         OutputExpressionList(functionCall->argument);
         m_writer.Write(")");
     }
+    else if (expression->nodeType == HLSLNodeType_MemberFunctionCall)
+    {
+        HLSLMemberFunctionCall* functionCall = static_cast<HLSLMemberFunctionCall*>(expression);
+        
+        // Spriv only supports fp32 or i32/i64 OpTypeImage
+        if (IsHalf(functionCall->function->returnType.baseType) && m_options.writeVulkan)
+        {
+            // TODO: may need parens
+            m_writer.Write("(half4)");
+        }
+        
+        // Write out the member identifier
+        m_writer.Write("%s.", functionCall->memberIdentifier->name);
+        
+        // Same as FunctionCall
+        const char* name = functionCall->function->name;
+        m_writer.Write("%s(", name);
+        OutputExpressionList(functionCall->argument);
+        m_writer.Write(")");
+    }
     else
     {
         Error("unknown expression");
@@ -884,7 +904,7 @@ void HLSLGenerator::OutputStatements(int indent, HLSLStatement* statement)
         else
         {
             // Unhanded statement type.
-            Error("Unhandled statemement");
+            Error("Unhandled statement");
             //ASSERT(false);
         }
 
@@ -898,18 +918,17 @@ const char* HLSLGenerator::GetFormatName(HLSLBaseType bufferOrTextureType, HLSLB
     // TODO: have a way to disable use of half (like on MSLGenerator)
     bool isHalf = IsHalf(formatType);
     
-    // Can't use half4 textures with spirv
+    // Can't use half4 textures with spirv.  Can only cast from full float sampler.
     // Can tell Vulkan was written by/for desktop IHVs.
     // https://github.com/microsoft/DirectXShaderCompiler/issues/2711
-    bool isSpirvTarget = true; // TODO: tie to CLI option
+    bool isSpirvTarget = m_options.writeVulkan;
     if (isSpirvTarget)
         isHalf = false;
     
     const char* formatName = isHalf ? "half4" : "float4";
     
-    // Unlike Metal, that just uses half/float, the type
-    // seems to be dimension specific on HLSL.  So may need
-    // caller to specify more types.
+    // MSL only uses half/float mostly. With HLSL, this is a full
+    // template format of float/2/3/4.
     
     return formatName;
 }
@@ -927,16 +946,6 @@ void HLSLGenerator::OutputDeclaration(HLSLDeclaration* declaration)
         
         // sampler
         const char* samplerTypeName = GetTypeName(declaration->type);
-    
-//        if (declaration->type.baseType == HLSLBaseType_SamplerState)
-//        {
-//            samplerType = "SamplerState";
-//        }
-//        else if (declaration->type.baseType == HLSLBaseType_SamplerComparisonState)
-//        {
-//            samplerType = "SamplerComparisonState";
-//        }
-//
         if (samplerTypeName)
         {
             if (reg != -1)

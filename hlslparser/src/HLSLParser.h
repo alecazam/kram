@@ -19,6 +19,14 @@ namespace M4
 
 struct EffectState;
 
+// This wouldn't be needed if could preprocess prior to calling parser.
+struct HLSLParserOptions
+{
+    bool isHalfst = false;
+    
+    bool isHalfio = false;
+};
+
 class HLSLParser
 {
 
@@ -27,7 +35,7 @@ public:
     HLSLParser(Allocator* allocator, const char* fileName, const char* buffer, size_t length);
     void SetKeepComments(bool enable) { m_tokenizer.SetKeepComments(enable); }
     
-    bool Parse(HLSLTree* tree);
+    bool Parse(HLSLTree* tree, const HLSLParserOptions& options = HLSLParserOptions());
 
 private:
 
@@ -103,7 +111,7 @@ private:
 
     void DeclareVariable(const char* name, const HLSLType& type);
 
-    /** Returned pointer is only valid until Declare or Begin/EndScope is called. */
+    /// Returned pointer is only valid until Declare or Begin/EndScope is called. 
     const HLSLType* FindVariable(const char* name, bool& global) const;
 
     const HLSLFunction* FindFunction(const char* name) const;
@@ -111,10 +119,11 @@ private:
 
     bool GetIsFunction(const char* name) const;
     
-    /** Finds the overloaded function that matches the specified call. */
-    const HLSLFunction* MatchFunctionCall(const HLSLFunctionCall* functionCall, const char* name);
+    /// Finds the overloaded function that matches the specified call.
+    /// Pass memberType to match member functions.
+    const HLSLFunction* MatchFunctionCall(const HLSLFunctionCall* functionCall, const char* name, const HLSLType* memberType = NULL);
 
-    /** Gets the type of the named field on the specified object type (fieldName can also specify a swizzle. ) */
+    /// Gets the type of the named field on the specified object type (fieldName can also specify a swizzle. )
     bool GetMemberType(const HLSLType& objectType, HLSLMemberAccess * memberAccess);
 
     bool CheckTypeCast(const HLSLType& srcType, const HLSLType& dstType);
@@ -140,6 +149,8 @@ private:
     
     bool                    m_allowUndeclaredIdentifiers = false;
     bool                    m_disableSemanticValidation = false;
+    
+    HLSLParserOptions       m_options;
 };
 
 enum NumericType

@@ -6,6 +6,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 //--------------------------------------------------------------------------------------
 
+#include "ShaderHLSL.h"
+
 // adapted from https://learn.microsoft.com/en-us/windows/win32/direct3d11/direct3d-11-advanced-stages-compute-create
 
 struct BufType
