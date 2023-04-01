@@ -46,7 +46,7 @@ srcDir = ${projectDir}shaders/
 dstDir = ${projectDir}out/mac/
 flagsMSL = -std=macos-metal2.4 -Werror -I ${srcDir}
 
-dependsMSL = ${srcDir}/ShaderMSL.h
+dependsMSL = ${srcDir}ShaderMSL.h
 
 # for iOS
 #dstDir = ${projectDir}out/ios/
@@ -116,7 +116,7 @@ build ${dstDir}GameShaders.metallibsym: stripMSL ${dstDir}GameShaders.metallib
 
 dxc = ${vulkanSDK}dxc
 
-dependsHLSL = ${srcDir}/ShaderHLSL.h
+dependsHLSL = ${srcDir}ShaderHLSL.h
 dstDirHLSL = ${projectDir}out/android/
 
 # turn on debug

@@ -168,13 +168,14 @@ Tesselation differs on mobile vs. desktop.  Mali does tesselation after VS (Andr
 Mali
 * TBDR
 * Vulkan gpu - Midgard, Bifrost, Valhall, Immortalis
-* Vulkan can read but not write SSBO in VS.
+* Vulkan can read but not write SSBO in VS.  VS then depends on PS output.  Use CS.
 * Sparse index buffer limits 
 * 180MB parameter buffer limit - device lost after exceeded
 * Missing VK_POLYGON_MODE_LINE (feature.fillModeNonSolid) - affects debug visuals
-* Missing firstInstance to use MDI and SBO (G52 adds this)
 * ARM licenses mobile cpu reference designs
 * ARM bought Mali gpu from Falanx Microsystems
+* Sets maxDrawIndirectCount = 1, limiting MDI utility
+* Raytracing and VRS on Immortalis
 * ETC2/ASTC, created ASTC format and encoders, no BC
 * https://en.wikipedia.org/wiki/Mali_(processor)
 * https://community.arm.com/support-forums/f/graphics-gaming-and-vr-forum/53672/vulkan-what-should-i-do-about-this-warning-bestpractices-vkcmddrawindexed-sparse-index-buffer
@@ -183,11 +184,11 @@ Mali
 Adreno
 * TBDR
 * Occlusion queries can cause a switch from TBDR to IMR
-* Half shader limits
+* Half shader limits from lack of fp16 storage/inputOuptut
 * Qualcomm bought ATI Radeon mobile gpu
 * 8K constant cache for UBO
-* SSBO bypass cache
-* lacks baseInstance (firstInstance) support
+* SSBO bypass 16K uniform cache
+* lacks baseInstance support, indirectDrawFirstInstance = false on 4x0/5x0, limiting MDI utility
 * ETC2/ASTC, no BC
 
 PowerVR
