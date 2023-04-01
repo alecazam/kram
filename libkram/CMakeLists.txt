@@ -260,7 +260,7 @@ elseif (BUILD_WIN)
     target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX /MP)
     
     # fix STL
-    target_compile_definitions(${myTargetLib} PRIVATE "-D_D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
+    target_compile_definitions(${myTargetLib} PRIVATE "-D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
         
 endif()
 

@@ -84,7 +84,7 @@ elseif (BUILD_WIN)
 
     # When Win rebuilds library, it doesn't relink app to correct code when you
     # build the app target project.  Breakpoints stop working after any library source edit,
-    # and you have to rebuild solution to get the correct code to exectute.  Since 2014.  Try this.
+    # and you have to rebuild solution to get the correct code to execute.  Since 2014.  Try this.
     # And BUILD_ALL never launches properly.
     # https://cmake.org/pipermail/cmake/2014-October/058798.html
     SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR})
@@ -102,7 +102,7 @@ elseif (BUILD_WIN)
     target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX /MP /GF /FC)
     
     # fix STL
-    target_compile_definitions(${myTargetApp} PRIVATE "-D_D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
+    target_compile_definitions(${myTargetApp} PRIVATE "-D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
     
     if (CMAKE_BUILD_TYPE EQUAL "Debug")
         target_compile_definitions(${myTargetLib} PRIVATE "/INCREMENTAL")
