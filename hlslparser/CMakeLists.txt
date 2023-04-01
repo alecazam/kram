@@ -104,7 +104,7 @@ elseif (BUILD_WIN)
     target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX /MP /GF /FC)
     
     # fix STL
-    target_compile_definitions(${myTargetApp} PRIVATE "-D_HAS_EXCEPTIONS=0 -D_ITERATOR_DEBUG_LEVEL=0")
+    target_compile_definitions(${myTargetApp} PRIVATE "-D_ITERATOR_DEBUG_LEVEL=0")
     
     if (CMAKE_BUILD_TYPE EQUAL "Debug")
         target_compile_definitions(${myTargetLib} PRIVATE "/INCREMENTAL")
