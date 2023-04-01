@@ -14,6 +14,7 @@
 #include "HLSLTree.h"
 
 #include <ctype.h>
+#include <malloc.h> // for alloca
 #include <string.h>
 
 // stl
