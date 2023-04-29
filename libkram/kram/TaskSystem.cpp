@@ -35,6 +35,9 @@ enum class CoreType : uint8_t
 struct CoreNum
 {
     uint8_t index;
+#if KRAM_WIN
+    uint8_t group; // for Win only
+#endif
     CoreType type;
 };
 
@@ -127,20 +130,28 @@ static const CoreInfo& GetCoreInfo()
     // have to walk array of data, and assemble this info, ugh
     // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformation
     
+    // https://docs.microsoft.com/en-us/windows/win32/procthread/multiple-processors
+    
     DWORD logicalCoreCount = 0;
     DWORD physicalCoreCount = 0;
     bool isHyperthreaded = false;
     
     DWORD returnLength = 0;
-    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = nullptr;
-    DWORD rc = GetLogicalProcessorInformation(buffer, &returnLength);
+    
+    using ProcInfo = SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+    
+    // This returns data on processor groupings
+    char buffer[16*1024];
+    uint32_t returnLength = sizeof(buffer);
+    DWORD rc = GetLogicalProcessorInformationEx(RelationAll, (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer, &returnLength);
+    
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr = nullptr;
     DWORD byteOffset = 0;
     
     // walk the array
-    ptr = buffer;
+    ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer;
     byteOffset = 0;
-    while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength) {
+    while (byteOffset + sizeof(ProcInfo) <= returnLength) {
         switch (ptr->Relationship) {
             case RelationProcessorCore: {
                 uint32_t logicalCores = CountSetBits(ptr->ProcessorMask);
@@ -154,15 +165,22 @@ static const CoreInfo& GetCoreInfo()
         if (isHyperthreaded)
             break;
         
-        byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+        byteOffset += sizeof(ProcInfo);
         ptr++;
     }
     
-    ptr = buffer;
+    ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer;
     byteOffset = 0;
+    
+    uint8_t groupNumber = 0;
     uint32_t coreNumber = 0;
-    while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength) {
+    while (byteOffset + sizeof(ProcInfo) <= returnLength) {
         switch (ptr->Relationship) {
+            case RelationGroup:
+                // Sounds like Win11 now allows all cores to be mapped.
+                // TODO: groupNumber = ptr->activeGroup;
+                break;
+                
             case RelationProcessorCore: {
                 physicalCoreCount++;
                 
@@ -171,11 +189,11 @@ static const CoreInfo& GetCoreInfo()
                 uint32_t logicalCores = CountSetBits(ptr->ProcessorMask);
                 if (logicalCores > 1 || !isHyperthreaded) {
                     coreInfo.bigCoreCount++;
-                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, CoreType::Big});
+                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, (uint8_t)groupNumber, CoreType::Big});
                 }
                 else {
                     coreInfo.littleCoreCount++;
-                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, CoreType::Little});
+                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, (uint8_t)groupNumber, CoreType::Little});
                 }
                 
                 // Is this the correct index for physical cores?
@@ -186,7 +204,7 @@ static const CoreInfo& GetCoreInfo()
                 break;
             }
         }
-        byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+        byteOffset += sizeof(ProcInfo);
         ptr++;
     }
     
@@ -385,6 +403,7 @@ static void setThreadPriority(std::thread::native_handle_type handle, ThreadPrio
 
 static void setThreadPriority(std::thread::native_handle_type handle, uint8_t priority)
 {
+    // This doesn't change policy.
     // Android on -20 to 20, where lower is higher priority
     int prioritySys = 0;
     switch(priority) {
@@ -402,6 +421,7 @@ static void setThreadPriority(std::thread::native_handle_type handle, uint8_t pr
 
 static void setThreadPriority(std::thread::native_handle_type handle, ThreadPriority priority)
 {
+    // This doesn't change policy.
     // Win has 0 to 15 normal, then 16-31 real time priority
     int prioritySys = 0;
     switch(priority) {
@@ -469,10 +489,15 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
     // Revisit Numa groups on Win, have 128-core/256 ThreadRipper
     // https://chrisgreendevelopmentblog.wordpress.com/2017/08/29/thread-pools-and-windows-processor-groups/
     
+    // https://docs.microsoft.com/en-us/windows/win32/procthread/processor-groups
+    // None of this runs on x86, only on x64.
+    //
+    // Starting with Windows 11 and Windows Server 2022, it is no longer the case that applications are constrained by default to a single processor group. Instead, processes and their threads have processor affinities that by default span all processors in the system, across multiple groups on machines with more than 64 processors.
+    
     // win thread pool, but seems to limit to group 0
     //  https://github.com/stlab/libraries/blob/develop/stlab/concurrency/default_executor.hpp
     
-    int32_t threadIndexToGroup(int32_t threadIndex)
+    static int32_t threadIndexToGroup(int32_t threadIndex)
     {
         for (int32_t i = 0; i < nNumGroups; i++)
         {
@@ -482,7 +507,7 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
         return 0; // error
     }
     
-    void setupWinCoreGroups()
+    static void setupWinCoreGroups()
     {
         // Also have to test for HT on these, and fix remap table.
         // Table will need to be larger to accomodate.
@@ -507,6 +532,9 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
     affinity.group = groupNum;
     affinity.mask = *(const DWORD_PTR*)&affinityMask;
     success = SetThreadGroupAffinity(hndl, &affinity, nullptr);
+    
+    // also this hint to scheduler (for > 64 cores)
+    // SetThreadIdealProcessorEx( );
 #endif
     
 #else
