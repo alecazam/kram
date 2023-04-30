@@ -35,9 +35,9 @@ enum class CoreType : uint8_t
 struct CoreNum
 {
     uint8_t index;
-#if KRAM_WIN
-    uint8_t group; // for Win only
-#endif
+//#if KRAM_WIN
+//    uint8_t group; // for Win only
+//#endif
     CoreType type;
 };
 
@@ -132,27 +132,30 @@ static const CoreInfo& GetCoreInfo()
     
     // https://docs.microsoft.com/en-us/windows/win32/procthread/multiple-processors
     
+    // Really need to use _EX version to get at numa groups
+    // but it doesn't have same bitmask for logical cores.
+    // Revisit when really building app on Win, but it just
+    // broke the build too many times.
+    
     DWORD logicalCoreCount = 0;
     DWORD physicalCoreCount = 0;
     bool isHyperthreaded = false;
     
-    using ProcInfo = SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
-    using ProcInfoPtr = PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+    using ProcInfo = SYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    using ProcInfoPtr = PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
     
-    // get the exact size
     DWORD returnLength = 0;
-    GetLogicalProcessorInformationEx(RelationAll, (ProcInfoPtr)nullptr, &returnLength);
+    DWORD rc = GetLogicalProcessorInformation((ProcInfoPtr)nullptr, &returnLength);
     
-    // This returns data on processor groupings
     vector<uint8_t> buffer;
     buffer.resize(returnLength);
-    DWORD rc = GetLogicalProcessorInformationEx(RelationAll, (ProcInfoPtr)buffer.data(), &returnLength);
+    rc = GetLogicalProcessorInformation(buffer, &returnLength);
     
-    ProcInfoPtr ptr = nullptr;
+    ProcInfoPtr ptr = (ProcInfoPtr)buffer.data();
     DWORD byteOffset = 0;
     
     // walk the array
-    ptr = (ProcInfoPtr)buffer.data();
+    ptr = buffer;
     byteOffset = 0;
     while (byteOffset + sizeof(ProcInfo) <= returnLength) {
         switch (ptr->Relationship) {
@@ -174,16 +177,9 @@ static const CoreInfo& GetCoreInfo()
     
     ptr = (ProcInfoPtr)buffer.data();
     byteOffset = 0;
-    
-    uint8_t groupNumber = 0;
     uint32_t coreNumber = 0;
     while (byteOffset + sizeof(ProcInfo) <= returnLength) {
         switch (ptr->Relationship) {
-            case RelationGroup:
-                // Sounds like Win11 now allows all cores to be mapped.
-                // TODO: groupNumber = ptr->activeGroup;
-                break;
-                
             case RelationProcessorCore: {
                 physicalCoreCount++;
                 
@@ -192,11 +188,11 @@ static const CoreInfo& GetCoreInfo()
                 uint32_t logicalCores = CountSetBits(ptr->ProcessorMask);
                 if (logicalCores > 1 || !isHyperthreaded) {
                     coreInfo.bigCoreCount++;
-                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, (uint8_t)groupNumber, CoreType::Big});
+                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, CoreType::Big});
                 }
                 else {
                     coreInfo.littleCoreCount++;
-                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, (uint8_t)groupNumber, CoreType::Little});
+                    coreInfo.remapTable.push_back({(uint8_t)coreNumber, CoreType::Little});
                 }
                 
                 // Is this the correct index for physical cores?
@@ -210,6 +206,7 @@ static const CoreInfo& GetCoreInfo()
         byteOffset += sizeof(ProcInfo);
         ptr++;
     }
+    
     
     coreInfo.isHyperthreaded = isHyperthreaded;
     coreInfo.physicalCoreCount = physicalCoreCount;
@@ -487,58 +484,6 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
     // each processor group only has 64 bits
     DWORD_PTR mask = SetThreadAffinityMask(handle, *(const DWORD_PTR*)&affinityMask);
     success = mask != 0;
-    
-#if 0 // TODO: finish this
-    // Revisit Numa groups on Win, have 128-core/256 ThreadRipper
-    // https://chrisgreendevelopmentblog.wordpress.com/2017/08/29/thread-pools-and-windows-processor-groups/
-    
-    // https://docs.microsoft.com/en-us/windows/win32/procthread/processor-groups
-    // None of this runs on x86, only on x64.
-    //
-    // Starting with Windows 11 and Windows Server 2022, it is no longer the case that applications are constrained by default to a single processor group. Instead, processes and their threads have processor affinities that by default span all processors in the system, across multiple groups on machines with more than 64 processors.
-    
-    // win thread pool, but seems to limit to group 0
-    //  https://github.com/stlab/libraries/blob/develop/stlab/concurrency/default_executor.hpp
-    
-    static int32_t threadIndexToGroup(int32_t threadIndex)
-    {
-        for (int32_t i = 0; i < nNumGroups; i++)
-        {
-            if (threadIndex < totalCores[i])
-                return i;
-        }
-        return 0; // error
-    }
-    
-    static void setupWinCoreGroups()
-    {
-        // Also have to test for HT on these, and fix remap table.
-        // Table will need to be larger to accomodate.
-        
-        int32_t nNumGroups = GetActiveProcessorGroupCount();
-        int32_t numCores[16] = {}; // TODO: make members
-        int32_t totalCores[16] = 0;
-        for (int32_t i = 0; i < nNumGroups; i++)
-        {
-            numCores[i] = GetMaximumProcessorCount(i);
-            totalCores[i] += numCores[i];
-        }
-    }
-
-    // have to adjust the mask for the core group
-    int32_t groupNum = threadIndexToGroup(threadIndex);
-    int32_t groupThreadIndex = (groupNum == 0) ? 0 : totalCores[groupNum-1];
-    affinityMask = ((uint64_t)1) << (threadIndex - groupThreadIndex);
-
-    // set group and affinity
-    GROUP_AFFINITY affinity;
-    affinity.group = groupNum;
-    affinity.mask = *(const DWORD_PTR*)&affinityMask;
-    success = SetThreadGroupAffinity(hndl, &affinity, nullptr);
-    
-    // also this hint to scheduler (for > 64 cores)
-    // SetThreadIdealProcessorEx( );
-#endif
     
 #else
     // most systems are pthread-based, this is represented with array of bits
