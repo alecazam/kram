@@ -138,18 +138,21 @@ static const CoreInfo& GetCoreInfo()
     
     DWORD returnLength = 0;
     
+    // get the exact size
+    GetLogicalProcessorInformationEx(RelationAll, (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)nullptr, &returnLength);
+    
     using ProcInfo = SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
     
     // This returns data on processor groupings
-    char buffer[16*1024];
-    uint32_t returnLength = sizeof(buffer);
-    DWORD rc = GetLogicalProcessorInformationEx(RelationAll, (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer, &returnLength);
+    vector<uint8_t> buffer;
+    buffer.resize(returnLength);
+    DWORD rc = GetLogicalProcessorInformationEx(RelationAll, (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer.data(), &returnLength);
     
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr = nullptr;
     DWORD byteOffset = 0;
     
     // walk the array
-    ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer;
+    ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer.data();
     byteOffset = 0;
     while (byteOffset + sizeof(ProcInfo) <= returnLength) {
         switch (ptr->Relationship) {
@@ -169,7 +172,7 @@ static const CoreInfo& GetCoreInfo()
         ptr++;
     }
     
-    ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer;
+    ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer.data();
     byteOffset = 0;
     
     uint8_t groupNumber = 0;
