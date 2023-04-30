@@ -151,11 +151,11 @@ static const CoreInfo& GetCoreInfo()
     buffer.resize(returnLength);
     rc = GetLogicalProcessorInformation(buffer, &returnLength);
     
-    ProcInfoPtr ptr = (ProcInfoPtr)buffer.data();
+    ProcInfoPtr ptr = nullptr;
     DWORD byteOffset = 0;
     
     // walk the array
-    ptr = buffer;
+    ptr = (ProcInfoPtr)buffer.data();
     byteOffset = 0;
     while (byteOffset + sizeof(ProcInfo) <= returnLength) {
         switch (ptr->Relationship) {
