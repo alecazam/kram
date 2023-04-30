@@ -136,23 +136,23 @@ static const CoreInfo& GetCoreInfo()
     DWORD physicalCoreCount = 0;
     bool isHyperthreaded = false;
     
-    DWORD returnLength = 0;
+    using ProcInfo = SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+    using ProcInfoPtr = PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
     
     // get the exact size
-    GetLogicalProcessorInformationEx(RelationAll, (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)nullptr, &returnLength);
-    
-    using ProcInfo = SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+    DWORD returnLength = 0;
+    GetLogicalProcessorInformationEx(RelationAll, (ProcInfoPtr)nullptr, &returnLength);
     
     // This returns data on processor groupings
     vector<uint8_t> buffer;
     buffer.resize(returnLength);
-    DWORD rc = GetLogicalProcessorInformationEx(RelationAll, (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer.data(), &returnLength);
+    DWORD rc = GetLogicalProcessorInformationEx(RelationAll, (ProcInfoPtr)buffer.data(), &returnLength);
     
-    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr = nullptr;
+    ProcInfoPtr ptr = nullptr;
     DWORD byteOffset = 0;
     
     // walk the array
-    ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer.data();
+    ptr = (ProcInfoPtr)buffer.data();
     byteOffset = 0;
     while (byteOffset + sizeof(ProcInfo) <= returnLength) {
         switch (ptr->Relationship) {
@@ -172,7 +172,7 @@ static const CoreInfo& GetCoreInfo()
         ptr++;
     }
     
-    ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)buffer.data();
+    ptr = (ProcInfoPtr)buffer.data();
     byteOffset = 0;
     
     uint8_t groupNumber = 0;
