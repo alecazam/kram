@@ -149,7 +149,7 @@ static const CoreInfo& GetCoreInfo()
     
     vector<uint8_t> buffer;
     buffer.resize(returnLength);
-    rc = GetLogicalProcessorInformation(buffer, &returnLength);
+    rc = GetLogicalProcessorInformation((ProcInfoPtr)buffer.data(), &returnLength);
     
     ProcInfoPtr ptr = nullptr;
     DWORD byteOffset = 0;
