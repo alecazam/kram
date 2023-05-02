@@ -13,6 +13,9 @@
 
 #include "HLSLTree.h"
 
+#ifdef _WIN32
+#include <malloc.h> // for alloca
+#endif
 #include <ctype.h>
 #include <string.h>
 

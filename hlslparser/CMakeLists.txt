@@ -6,13 +6,8 @@ set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
 
 if (APPLE)
-    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
-        message("build for iOS")
-        set(BUILD_IOS TRUE)
-    else()
-        message("build for macOS")
-        set(BUILD_MAC TRUE)
-    endif()
+    message("build for macOS")
+    set(BUILD_MAC TRUE)
 elseif (WIN32)
     message("build for win x64")
     set(BUILD_WIN TRUE)
@@ -37,11 +32,6 @@ add_executable(${myTargetApp})
 #-----------------------------------------------------
     
 if (BUILD_MAC)
-    # ate is a macOS/iOS only library, and it varies in encode support by OS revision
-    #target_link_libraries(${myTargetApp}
-    #    ate
-    #    libkram)
-
     set_target_properties(${myTargetApp} PROPERTIES
          # Note: match this up with CXX version
         # c++11 min
@@ -82,8 +72,6 @@ if (BUILD_MAC)
     target_compile_options(${myTargetApp} PRIVATE -W -Wall)
 
 elseif (BUILD_WIN)
-    #target_link_libraries(${myTargetApp} libkram)
-
     # When Win rebuilds library, it doesn't relink app to correct code when you
     # build the app target project.  Breakpoints stop working after any library source edit,
     # and you have to rebuild solution to get the correct code to exectute.  Since 2014.  Try this.
@@ -101,29 +89,24 @@ elseif (BUILD_WIN)
     # don't need force with apps, since they only access kram folder files which include KramConfig
     
     # all warnings, AVX1, and multiprocess compiles
-    target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX /MP /GF /FC)
+    target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX -mf16c /MP /GF /FC)
     
-    # fix STL
-    target_compile_definitions(${myTargetApp} PRIVATE "-D_ITERATOR_DEBUG_LEVEL=0")
-    
+    # fix STL (don't use -D here, will remove)
+    target_compile_definitions(${myTargetApp} PRIVATE _ITERATOR_DEBUG_LEVEL=0 _HAS_EXCEPTIONS=0)
+
     if (CMAKE_BUILD_TYPE EQUAL "Debug")
-        target_compile_definitions(${myTargetLib} PRIVATE "/INCREMENTAL")
+        target_compile_definitions(${myTargetApp} PRIVATE "/INCREMENTAL")
         
     elseif (CMAKE_BUILD_TYPE EQUAL "Release")
         # only dead strip on Release builds since this disables Incremental linking, may want Profile build that doesn't use this
-        target_compile_definitions(${myTargetLib} PRIVATE "/OPT:REF")
+        target_compile_definitions(${myTargetApp} PRIVATE "/OPT:REF")
         
         # other possibliities
         # /GL - whole program optimization
-        # /Gy - edit and continue with function level linking
+        # /Gy - edit and continue with function level linking (no clang)
         # /Oi - enable intrinsic functions
     
     endif()
-    
-elseif (BUILD_UNIX)
-    #target_link_libraries(${myTargetApp} libkram)
-
-    # TODO: finish this
     
 endif()
 

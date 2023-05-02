@@ -109,7 +109,8 @@
 // clang can compile simd/simd.h code on other platforms
 // this provides vector extensions from gcc that were setup for OpenCL shaders
 #ifndef USE_SIMDLIB
-#if defined(__clang__)
+// TODO: bring over simd for Win
+#if !KRAM_WIN 
 #define USE_SIMDLIB 1
 #else
 #define USE_SIMDLIB 0

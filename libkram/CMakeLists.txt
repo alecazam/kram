@@ -256,12 +256,12 @@ elseif (BUILD_WIN)
     # force include (public)
     target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
        
-    # all warnings, AVX, and multiprocess compiles
-    target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX /MP)
+    # all warnings, AVX, and multiprocess compiles, clang needs mf16c or -mavx2
+    target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX -mf16c /MP)
     
-    # fix STL
-    target_compile_definitions(${myTargetLib} PRIVATE "-D_ITERATOR_DEBUG_LEVEL=0")
-        
+    # fix STL (don't use -D here, will remove)
+    target_compile_definitions(${myTargetLib} PRIVATE _ITERATOR_DEBUG_LEVEL=0 _HAS_EXCEPTIONS=0)
+
 endif()
 
 # turn on dead-code stripping in release.  Don't set this in debug.

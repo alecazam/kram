@@ -213,17 +213,17 @@ int main( int argc, char* argv[] )
     }
     
     // Win build on github is failing on this, so skip for now
-#ifndef WIN32
     // find  full pathname of the fileName, so that errors are logged
     // in way that can be clicked to. absolute includes .. in it, canonical does not.
+    std::error_code errorCode; // To shutup exceptions
     auto path = filesystem::path(fileName);
-    fileName = filesystem::canonical( path );
+    fileName = filesystem::canonical(path, errorCode).generic_string();
     
     // if this file doesn't exist, then canonical throws exception
     path = filesystem::path(outputFileName);
     if (filesystem::exists(path))
     {
-        outputFileName = filesystem::canonical( path );
+        outputFileName = filesystem::canonical(path, errorCode).generic_string();
         
         if ( outputFileName == fileName )
         {
@@ -231,7 +231,6 @@ int main( int argc, char* argv[] )
             return 1;
         }
     }
-#endif
     
     //------------------------------------
     // Now start the work
@@ -303,7 +302,7 @@ int main( int argc, char* argv[] )
     
     string output;
     
-    for (uint32_t i = 0; i < entryPoints.GetSize(); ++i)
+    for (uint32_t i = 0; i < (uint32_t)entryPoints.GetSize(); ++i)
     {
         const char* entryPoint = entryPoints[i];
         entryName = entryPoint;
