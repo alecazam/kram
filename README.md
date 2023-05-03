@@ -7,7 +7,7 @@ C++11 library from 200 to 800KB in size depending on encoder options.  Compiles 
 
 # hslparser
 Parses HLSL syntax and generates readable HLSL/MSL code without transpiling.  DXC is then used to compile to spirv.
-https://github.com/alecaam/kram/hlslparser
+https://github.com/alecazam/kram/tree/main/hlslparser
 
 # kramv.app
 ObjC++ Viewer for PNG/KTX/KTX2/DDS supported files from kram.  530KB in size.  Uses Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  No dmg yet, just drop onto /Applications folder.  Runs on macOS (ARM/Intel).
