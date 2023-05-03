@@ -1,8 +1,13 @@
+
 # kram, kram.exe
 C++11 main to libkram to create CLI tool.  Encode/decode/info on PNG/KTX/KTX2/DDS files with LDR/HDR and BC/ASTC/ETC2.  Runs on macOS/win.
 
 # libkram.a, libkram-ios.a, kram.lib
 C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS (ARM), macOS (ARM/Intel), win (Intel).
+
+# hslparser
+Parses HLSL syntax and generates readable HLSL/MSL code without transpiling.  DXC is then used to compile to spirv.
+https://github.com/alecaam/kram/hlslparser
 
 # kramv.app
 ObjC++ Viewer for PNG/KTX/KTX2/DDS supported files from kram.  530KB in size.  Uses Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  No dmg yet, just drop onto /Applications folder.  Runs on macOS (ARM/Intel).
