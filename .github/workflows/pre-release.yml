@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         #os: [ubuntu-latest, macos-latest, windows-latest]
-        os: [macos-latest, windows-2019]
+        os: [macos-latest, windows-latest]
         
     steps:
       - name: Update CMake
