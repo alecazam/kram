@@ -2,6 +2,9 @@
 # kram, kram.exe
 C++11 main to libkram to create CLI tool.  Encode/decode/info on PNG/KTX/KTX2/DDS files with LDR/HDR and BC/ASTC/ETC2.  Runs on macOS/win.
 
+# kram-thumb-win.dll
+Windows thumbnailer for DDS/KTX/KTX2.  Go to build or bin folder.  Install with "regsrv32.exe kram-thumb-win.dll".  Uninstall with "regsrv32.exe /u kram-thumb-win.dll"
+
 # libkram.a, libkram-ios.a, kram.lib
 C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS (ARM), macOS (ARM/Intel), win (Intel).
 
