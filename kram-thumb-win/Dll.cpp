@@ -86,7 +86,7 @@ public:
         return hr;
     }
 
-    CClassFactory(PFNCREATEINSTANCE pfnCreate)
+    virtual CClassFactory(PFNCREATEINSTANCE pfnCreate)
         : mReferences(1)
         , mCreateFunc(pfnCreate) {
         DllAddRef();

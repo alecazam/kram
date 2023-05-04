@@ -314,16 +314,30 @@ private:
             return false;
         }
 
+        // TODO: super tiny icons like 2x2 or 4x4 look terrible.  Windows says it never upsamples textures
+        // but a 2x2 thumbnail inside a 32x32 thumbnail isn't visible.  Apple does the right thing and upsamples.
+
         // copy into bgra image (swizzle b and r).
         const Color* srcPixels = (const Color*)mipData.data();
         // copy pixels over and swap RGBA -> BGRA
         const uint32_t numPixels = w * h;
         for (uint32_t i = 0; i < numPixels; ++i) {
             // TODO: use uint32_t to do component swizzle
-            dstPixels[i].b = srcPixels[i].r;
-            dstPixels[i].g = srcPixels[i].g;
             dstPixels[i].r = srcPixels[i].b;
-            dstPixels[i].a = srcPixels[i].a;
+            dstPixels[i].g = srcPixels[i].g;
+            dstPixels[i].b = srcPixels[i].r;
+
+            // setting to 1 for premul is equivalent of blend to opaque black
+            dstPixels[i].a = 255;
+             
+            if (!isPremul) {
+                uint32_t alpha = srcPixels[i].a;
+                if (alpha < 255) {
+                    dstPixels[i].r = (dstPixels[i].r * alpha) / 255;
+                    dstPixels[i].g = (dstPixels[i].g * alpha) / 255;
+                    dstPixels[i].b = (dstPixels[i].b * alpha) / 255;
+                }
+            }
         }
 
         *phbmp = hbmp;
