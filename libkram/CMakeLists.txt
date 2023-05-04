@@ -277,6 +277,7 @@ target_precompile_headers(${myTargetLib} PRIVATE
 )
 
 # public
+# TODO: these should not be in quotes?
 target_compile_definitions(${myTargetLib} 
     PUBLIC
     "-DCOMPILE_EASTL=${COMPILE_EASTL}"

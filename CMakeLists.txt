@@ -86,7 +86,12 @@ if (BUILD_MAC)
     add_subdirectory(plugin)
 endif()
 
-# hack hlslparser for win build into kram for now
+# this is an Explorer thumbnail extension (run script to un/register), uses libkrma
+if (BUILD_WIN)
+    add_subdirectory(kram-thumb-win)
+endif()
+
+# hack hlslparser for win build into kram for now, does not use kram
 if (BUILD_WIN)
     add_subdirectory(hlslparser)
 endif()
@@ -150,13 +155,14 @@ if (BUILD_MAC)
 	install(TARGETS kramv BUNDLE DESTINATION ${BIN_DIR})
 endif()
 
+if (BUILD_WIN)
+    install(TARGETS kram-thumb-win LIBRARY DESTINATION ${BIN_DIR})
+endif()
+
 # don't install this yet
 #if (BUILD_MAC)
 #    install(TARGETS kram-ps BUNDLE DESTINATION ${BIN_DIR})
 #endif()
-
-#-----------------------------------------------------
-
 
 # hlslparser is also now in the kram build.  Keep executables up to date.
 # I would use the sln file, but msbuild doesn't like to be called from cibuld.sh

@@ -1,0 +1,38 @@
+#include <winres.h>
+
+#ifndef DEBUG
+#define VER_DEBUG                   0
+#else
+#define VER_DEBUG                   VS_FF_DEBUG
+#endif
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     0,0,2,0
+PRODUCTVERSION  0,0,2,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       VER_DEBUG
+FILEOS          VOS__WINDOWS32
+FILETYPE        VFT_DLL
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName",      "ba"
+            VALUE "FileDescription",  "Kram Thumbnail Provider"
+            VALUE "FileVersion",      "0.0.2.0"
+            VALUE "InternalName",     "KramThumbProvider.dll"
+            VALUE "LegalCopyright",   "2023, Alec Miller"
+            VALUE "LegalTrademarks1", ""
+            VALUE "LegalTrademarks2", ""
+            VALUE "OriginalFilename", "KramThumbProvider.dll"
+            VALUE "ProductName",      "KramThumbProvider"
+            VALUE "ProductVersion",   "0, 0, 2, 0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

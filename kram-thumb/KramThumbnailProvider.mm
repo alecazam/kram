@@ -67,7 +67,7 @@ struct ImageToPass
         KTXImageData& imageData = imageToPass->imageData;
         
         if (!imageData.open(filename, image)) {
-            error = KLOGF(2, "kramv %s coould not open file\n", filename);
+            error = KLOGF(2, "kramv %s could not open file\n", filename);
             handler(nil, error);
             return;
         }
