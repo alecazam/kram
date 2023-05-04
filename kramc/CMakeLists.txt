@@ -6,13 +6,8 @@ set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
 
 if (APPLE)
-    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
-        message("build for iOS")
-        set(BUILD_IOS TRUE)
-    else()
-        message("build for macOS")
-        set(BUILD_MAC TRUE)
-    endif()
+    message("build for macOS")
+    set(BUILD_MAC TRUE)
 elseif (WIN32)
     message("build for win x64")
     set(BUILD_WIN TRUE)
@@ -45,7 +40,7 @@ if (BUILD_MAC)
     set_target_properties(${myTargetApp} PROPERTIES
          # Note: match this up with CXX version
         # c++11 min
-        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14"
+        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
 
         # avx1
@@ -99,10 +94,10 @@ elseif (BUILD_WIN)
     # don't need force with apps, since they only access kram folder files which include KramConfig
     
     # all warnings, AVX1, and multiprocess compiles
-    target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX /MP /GF /FC)
+    target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX -f16c /MP /GF /FC)
     
     # fix STL
-    target_compile_definitions(${myTargetApp} PRIVATE "-D_ITERATOR_DEBUG_LEVEL=0")
+    target_compile_definitions(${myTargetApp} PRIVATE -D_ITERATOR_DEBUG_LEVEL=0 -D_HAS_EXCEPTIONS=0)
     
     if (CMAKE_BUILD_TYPE EQUAL "Debug")
         target_compile_definitions(${myTargetLib} PRIVATE "/INCREMENTAL")
@@ -113,16 +108,11 @@ elseif (BUILD_WIN)
         
         # other possibliities
         # /GL - whole program optimization
-        # /Gy - edit and continue with function level linking
+        # /Gy - edit and continue with function level linking (unsupported for clang)
         # /Oi - enable intrinsic functions
     
     endif()
-    
-elseif (BUILD_UNIX)
-    target_link_libraries(${myTargetApp} libkram)
-
-    # TODO: finish this
-    
+       
 endif()
 
 
