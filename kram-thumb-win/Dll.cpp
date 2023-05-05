@@ -86,10 +86,14 @@ public:
         return hr;
     }
 
-    virtual CClassFactory(PFNCREATEINSTANCE pfnCreate)
+    CClassFactory(PFNCREATEINSTANCE pfnCreate)
         : mReferences(1)
         , mCreateFunc(pfnCreate) {
         DllAddRef();
+    }
+
+    virtual ~CClassFactory() {
+        DllRelease();
     }
 
     // IUnknown
@@ -128,10 +132,6 @@ public:
     }
 
 private:
-    ~CClassFactory() {
-        DllRelease();
-    }
-
     std::atomic_long    mReferences;
     PFNCREATEINSTANCE   mCreateFunc;
 };
