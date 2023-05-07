@@ -2,9 +2,6 @@
 # kram, kram.exe
 C++11 main to libkram to create CLI tool.  Encode/decode/info on PNG/KTX/KTX2/DDS files with LDR/HDR and BC/ASTC/ETC2.  Runs on macOS/win.
 
-# kram-thumb-win.dll
-Windows thumbnailer for DDS/KTX/KTX2.  Go to build or bin folder.  Install with "regsvr32.exe kram-thumb-win.dll".  Uninstall with "regsvr32.exe /u kram-thumb-win.dll"
-
 # libkram.a, libkram-ios.a, kram.lib
 C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS (ARM), macOS (ARM/Intel), win (Intel).
 
@@ -12,13 +9,20 @@ C++11 library from 200 to 800KB in size depending on encoder options.  Compiles 
 Parses HLSL syntax and generates readable HLSL/MSL code without transpiling.  DXC is then used to compile to spirv.
 https://github.com/alecazam/kram/tree/main/hlslparser
 
+# kram-thumb-win.dll
+Windows thumbnailer for DDS/KTX/KTX2.  Go to build or bin folder.  Install with "regsvr32.exe kram-thumb-win.dll".  Uninstall with "regsvr32.exe /u kram-thumb-win.dll"
+
+https://github.com/alecazam/kram/tree/main/kram-thumb-win
+
+https://github.com/iOrange/QOIThumbnailProvider
+
 # kramv.app
-ObjC++ Viewer for PNG/KTX/KTX2/DDS supported files from kram.  530KB in size.  Uses Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, and array access.  No dmg yet, just drop onto /Applications folder.  Runs on macOS (ARM/Intel).
+ObjC++ viewer for PNG/KTX/KTX2/DDS supported files from kram.  Uses Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, volume, and array access.  No dmg yet, just drop onto /Applications folder.  Runs on macOS (arm64/x64).  Generates Finder thumbnails and QuickLook previews via modern macOS app extension mechanisms.
 
 Diagrams and screenshots can be located here:
 https://www.figma.com/file/bPmPSpBGTi2xTVnBDqVEq0/kram
 
-#### Releases includes builds for macOS (Xcode 12.3 - arm64/x64) and Windows x64 (VS 2019 - x64).  kramv for macOS, kram for macOS/Win, libkram for macOS/iOS/Win.  Android library via NDK is possible, but f16 support is spotty on devices.
+#### Releases includes builds for macOS (Xcode 14.3 - arm64/x64/clang) and Windows x64 (VS 2022 - x64/clang).  kramv for macOS, kram for macOS/Win, libkram for macOS/iOS/Win, win-thumb-kram for Win.  Android library via NDK is possible, but f16 support is spotty on devices.
 
 ### About kram
 kram is a wrapper to several popular encoders.  Most encoders have sources, and have been optimized to use very little memory and generate high quality encodings at all settings.  All kram encoders are currently CPU-based.  Some of these encoders use SSE, and a SSE to Neon layer translates those.  kram was built to be small and used as a library or app.  It's also designed for mobile and desktop use.  The final size with all encoders is under 1MB, and disabling each encoder chops off around 200KB down to a final 200KB app size via dead-code stripping.  The code should compile with C++11 or higher.
@@ -166,7 +170,7 @@ open build2/kram.xcworkspace
 ```
 
 
-kram was using CMake to setup the projects and build.  kramv.app, kram, and libkram are generated, but kramv.app and kram are stand-alone.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
+kram was using CMake to setup the projects and build, but it doesn't support workspaces, clean, or the thumbnail/preview extension linking.  As a result, kramv.app, kram, and libkram are generated.  So I'm building kramv.app and everything with a custom Xcode project now.  The library can be useful in apps that want to include the decoder, or runtime compression of gpu-generated data.
 
 For Mac, the CMake build is out-of-source, and can be built from the command line, or debugged from the xcodeproj that is built.  Ninja and Makefiles can also be generated from cmake, but remember to trash the CMakeCache.txt file.
 
@@ -181,13 +185,13 @@ or
 cmake --install ../bin --config Release
 ```
 
-For Windows, CMake is still used. I tried to fix CMake to build the library into the app directory so the app is updated.  "Rebuild Solution" if your changes don't take effect, or if breakpoints stop being hit.
+For Windows, CMake is still used. CMake build libkram, kramc, and kram-thumb-win.dll. This uses the clang compiler and x64 only.
 
 ```
 mkdir build
-cmake .. -G "Visual Studio 15 2017 Win64" 
+cmake .. -G "Visual Studio 16 2019" -T ClangCL -A x64
 or
-cmake .. -G "Visual Studio 16 2019" -A x64
+cmake .. -G "Visual Studio 17 2022" -T ClangCL -A x64
 
 cmake --build . --config Release
 or
@@ -230,7 +234,7 @@ Win
 python3.exe -m pip install -U pip
 python3.exe -m pip install -r ../scripts/requirements.txt
 
-# this uses 8 processes, and bundles the results to a zip file
+# Gen ktx using 8 processes, and bundles the results to a zip file
 ../scripts/kramTextures.py --jobs 8 -p android --bundle
 
 # this writes out a script of all commands and runs on threads in a single process
@@ -238,13 +242,15 @@ python3.exe -m pip install -r ../scripts/requirements.txt
 ../scripts/kramTextures.py --jobs 8 -p mac --script --force 
 ../scripts/kramTextures.py --jobs 8 -p win --script --force 
 
-# To move towards supercompressed ktx2 files, the following flags convert ktx output to ktx2
+# Generate ktx2 output, and then bundle them into a zip
+../scripts/kramTextures.py -p any -c ktx2 --bundle
+../scripts/kramTextures.py -p android -c ktx2 --bundle --check
 
-# if ktxsc and ktx2ktx2 are present in the path, then these scripts generate ktx2 output, and then bundle them into a zip
-../scripts/kramTextures.py -p any --ktx2 --bundle
-../scripts/kramTextures.py -p android --ktx2 --bundle --check
+# Generate dds output, and then bundle them into a zip
+../scripts/kramTextures.py -p any -c dds --bundle
+../scripts/kramTextures.py -p android -c dds --bundle --check
 
-# if ktxsc and ktx2ktx2 are present in the path, this runs kramTextures across all platforms, requires ktx2ktx2
+# Generate textures for all platforms
 ../scripts/kramTests.sh 
 
 ```
@@ -331,6 +337,12 @@ kram includes additional open-source:
 | zstd           | Yann Collett (FB)  | BSD-2     | KTX2 mip decode           |
 | miniz	         | Rich Gelreich      | Unlicense | bundle support via zip    |
 | gltfKit        | Warren Moore       | MIT       | gltf decoder/renderer     |
+
+kram-thumb-win.dll addtional open-source
+
+| Library        | Author             | License   | Purpose                   |
+|----------------|--------------------|-----------|---------------------------|
+| QOI thumbnails | iOrange            | MIT       | win thumbnailer           |
 
 #### Open source changes
 
