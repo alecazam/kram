@@ -14,8 +14,6 @@ Windows thumbnailer for DDS/KTX/KTX2.  Go to build or bin folder.  Install with 
 
 https://github.com/alecazam/kram/tree/main/kram-thumb-win
 
-https://github.com/iOrange/QOIThumbnailProvider
-
 # kramv.app
 ObjC++ viewer for PNG/KTX/KTX2/DDS supported files from kram.  Uses Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, volume, and array access.  No dmg yet, just drop onto /Applications folder.  Runs on macOS (arm64/x64).  Generates Finder thumbnails and QuickLook previews via modern macOS app extension mechanisms.
 
