@@ -37,7 +37,7 @@ namespace M4 {
 // Engine/Allocator.h
 
 // This doesn't do placement new/delete, but is only
-// use to allocate NodePage and StringPool.  Then placement
+// used to allocate NodePage and StringPool.  Then placement
 // new/delete is called explicitly by say NewNode.  So
 // there default ctor variable initializers are safe to use.
 class Allocator {

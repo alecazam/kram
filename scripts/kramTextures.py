@@ -48,12 +48,6 @@ class TextureProcessor:
 
 	appKram = ""
 
-	appKtx2 = ""
-	appKtx2sc = ""
-	appKtx2check = ""
-	doUastc = False
-	doKTX2 = False
-	
 	# preset formats for a given platform
 	textureFormats = []
 
@@ -70,12 +64,14 @@ class TextureProcessor:
 
 	# so script can be killed
 	doExit = False
+	container = ""
 
-	def __init__(self, platform, appKram, maxCores, force, script, scriptFilename, textureFormats):
+	def __init__(self, platform, appKram, maxCores, force, script, scriptFilename, textureFormats, container):
 		self.platform = platform
 
 		self.appKram = appKram
 		self.textureFormats = textureFormats
+		self.container = container
 
 		if script:
 			self.doScript = True
@@ -162,16 +158,14 @@ class TextureProcessor:
 		# skip unrecognized extensions in the folder
 		srcRoot, srcExtension = os.path.splitext(srcPath)
 		srcExtension = srcExtension.lower()
-		if not (srcExtension == ".png" or srcExtension == ".ktx" or srcExtension == ".ktx2"):
+		if not (srcExtension == ".png" or srcExtension == ".ktx" or srcExtension == ".ktx2" or srcExtension == ".dds"):
 			if not srcPath.endswith(".DS_Store"):
 				print("skipping unknown extension on file {0}".format(srcPath))
 			return 0
 		
 		srcFilename = os.path.basename(srcRoot) # just the name no ext
 
-		ext = ".ktx"
-		if self.doKTX2:
-			ext = ".ktx2"
+		ext = "." + self.container
 		dstName = srcFilename 
 
 		# replace -h with -n, since it will be converted to a normal
@@ -220,7 +214,7 @@ class TextureProcessor:
 
 		# choice of none, zlib, or zstd
 		compressorText = ""
-		if self.doKTX2:
+		if self.container == "ktx2":
 			compressorText = " -zstd 0"
 
 		# this could work on 3d and cubearray textures, but for now only use on 2D textures
@@ -249,42 +243,6 @@ class TextureProcessor:
 			timer += time.perf_counter()
 			if timer > slowTextureTime:
 				print("perf: encode {0} took {1:.3f}s".format(dstName, timer))
-
-			
-			# TODO: split this off into another modstamp testing pass, and only do work if ktx is older than ktx2
-			# convert ktx -> ktx2, and zstd supercompress the mips, kram can read these and decompress
-			# for now, this is only possible when not scripted
-			# could read these in kram, and then execute them, or write these to another file
-			# and then execute that if script file suceeds
-			# if self.appKtx2:
-			# 	ktx2Filename = dstFile + "2"
-				
-			# 	# create the ktx2
-			# 	result = self.spawn(self.appKtx2 + " -f -o " + ktx2Filename + " " + dstFile)
-				
-			# 	# too bad this can't check ktx1...
-			# 	if self.appKtx2check != "" and result == 0:
-			# 		result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
-
-			# 	# can only zstd compress block encoded files, but can do BasisLZ on 
-			# 	#   explicit files.
-
-			# 	# overwrite it with supercompressed version
-			# 	# basis uastc supercompress - only if content isn't already block encoded, TODO: kramv and loader cannot read this
-			# 	# zstd supercompress - works on everything, kramv and loader can read this
-			# 	if self.appKtx2sc != "" and result == 0:
-			# 		if self.doUastc:
-			# 			result = self.spawn(self.appKtx2sc + " --uastc 2 --uastc_rdo_q 1.0 --zcmp 3 --threads 1 " + ktx2Filename)
-			# 		else:
-			# 			result = self.spawn(self.appKtx2sc + " --zcmp 3 --threads 1 " + ktx2Filename)
-
-			if self.doKTX2:
-				ktx2Filename = dstFile
-				
-				# double check supercompressed version, may not be necessary
-				if self.appKtx2check != "" and result == 0:
-			 		result = self.spawn(self.appKtx2check + " -q " + ktx2Filename)
-			
 
 		return result
 
@@ -372,52 +330,22 @@ class TextureProcessor:
 		return 0
 
 @click.command()
-@click.option('-p', '--platform', type=click.Choice(['ios', 'mac', 'win', 'android', 'any']), required=True, help="build platform")
-@click.option('-c', '--container', type=click.Choice(['ktx', 'ktx2']), default="ktx2", help="container type")
+@click.option('-p', '--platform', type=click.Choice(['ios', 'mac', 'win', 'android']), required=True, help="build platform")
+@click.option('-c', '--container', type=click.Choice(['ktx', 'ktx2', 'dds']), default="ktx2", help="container type")
 @click.option('-v', '--verbose', is_flag=True, help="verbose output")
 @click.option('-q', '--quality', default=49, type=click.IntRange(0, 100), help="quality affects encode speed")
 @click.option('-j', '--jobs', default=64, help="max physical cores to use")
 @click.option('--force', is_flag=True, help="force rebuild ignoring modstamps")
 @click.option('--script', is_flag=True, help="generate kram script and execute that")
-@click.option('--check', is_flag=True, help="check ktx2 files when generated")
 @click.option('--bundle', is_flag=True, help="bundle files by updating a zip file")
-def processTextures(platform, container, verbose, quality, jobs, force, script, check, bundle):
+def processTextures(platform, container, verbose, quality, jobs, force, script, bundle):
 	# output to multiple dirs by type
 
 	# eventually pass these in as strings, so script is generic
 	# Mac can handle this, but Win want's absolute path (or kram run from PATH)
 	binDir = "../bin/"
 	appKram = os.path.abspath(binDir + "kram")
-	
-	appKtx2 = ""
-	appKtx2sc = ""
-	appKtx2check = ""
-	doUastc = False
 
-	ktx2 = True
-	if container == "ktx":
-		ktx2 = False
-
-	# can convert ktx -> ktx2 files with zstd and Basis supercompression
-	# caller must have ktx2ktx2 and ktx2sc in path build from https://github.com/KhronosGroup/KTX-Software
-	if platform == "any":
-		ktx2 = True
-		doUastc = True
-
-	if ktx2:
-		# have to run check script after generating, or have to convert ktx to ktx2
-		# so that's why these disable scripting
-		if doUastc or check:
-			script = False
-
-		# these were for converting ktx output from kram to ktx2, and for uastc from original png
-		appKtx2 = "ktx2ktx2"
-		appKtx2sc ="ktxsc"
-
-		# this is a validator app
-		if check:
-			appKtx2check = "ktx2check"
-	
 	# abspath strips the trailing slash off - ugh
 	srcDirBase = os.path.abspath("../tests/src/")
 	srcDirBase += "/"
@@ -545,19 +473,8 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 
 	result = 0
 		
-	processor = TextureProcessor(platform, appKram, maxCores, force, script, scriptFile, formats)
-	if ktx2:
-		processor.doKTX2 = ktx2
-
-		# used to need all of these apps to gen ktx2, but can gen directly from kram now
-		# leaving these to test aastc case
-		processor.appKtx2 = appKtx2
-		processor.appKtx2sc = appKtx2sc
-		processor.doUastc = doUastc
-
-		# check app still useful
-		processor.appKtx2check = appKtx2check
-		
+	processor = TextureProcessor(platform, appKram, maxCores, force, script, scriptFile, formats, container)
+	
 	for srcDir in srcDirs:
 		dstDir = dstDirForPlatform + srcDir
 		os.makedirs(dstDir, exist_ok = True)
@@ -577,18 +494,23 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 	if bundle:
 		# TODO: build an asset catalog symlinked to zip for app slicing and ODR on iOS/macOS, Android has similar
 		
+		# see https://aras-p.info/blog/2021/08/05/EXR-Zip-compression-levels/ 
+		# compression level 4 is 2x faster, and only slightly less compression than default of 6
+			
 		# DONE: need to push/popDir but basically strip the full path before files are zipped.
 		#  want find to generate files from within the out/platform directory.
 		os.chdir(dstDirForPlatform)
 
-		# either store ktx2 or compress ktx in updating a zip with the data
-		if ktx2:
+		# Either store pre-compressed ktx2 or compress dds/ktx. Update a zip with the data for speed.
+		if container == "ktx2":
 			compressionLevel = 0
 			dstBundle = "bundle-" + platform + "-ktx2" + ".zip"
 			command = "find {0} -name '*.ktx2' | zip -u -{1} -@ {2}".format(".", compressionLevel, dstBundle)
-		else:
-			# see https://aras-p.info/blog/2021/08/05/EXR-Zip-compression-levels/ 
-			# compression level 4 is 2x faster, and only slightly less compression than default of 6
+		elif container == "dds":
+			compressionLevel = 4
+			dstBundle = "bundle-" + platform + "-dds" + ".zip"
+			command = "find {0} -name '*.dds' | zip -u -{1} -@ {2}".format(".", compressionLevel, dstBundle)
+		elif container == "ktx":
 			compressionLevel = 4
 			dstBundle = "bundle-" + platform + "-ktx" + ".zip"
 			command = "find {0} -name '*.ktx' | zip -u -{1} -@ {2}".format(".", compressionLevel, dstBundle)
