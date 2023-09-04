@@ -2004,20 +2004,21 @@ void Data::initActions()
     // copy all of them to a vector, and then assign the action ptrs
     for (int32_t i = 0; i < numActions; ++i) {
         Action& action = actions[i];
-        const char* icon = action.icon;  // single char
-        
-        // skip separators
-        bool isSeparator = icon[0] == 0;
-        if (isSeparator) continue;
-        
         _actions.push_back(action);
     }
 
     // now alias Actions to the vector above
-    //assert(_actions.size() == ArrayCount(actionPtrs));
+    uint32_t counter = 0;
     for (int32_t i = 0; i < _actions.size(); ++i) {
-        *(actionPtrs[i]) = &_actions[i];
+        // skip separators
+        Action& action = _actions[i];
+        const char* icon = action.icon;  // single char
+        bool isSeparator = icon[0] == 0;
+        if (isSeparator) continue;
+        
+        *(actionPtrs[counter++]) = &_actions[i];
     }
+    KASSERT(counter == ArrayCount(actionPtrs));
 }
 
 void Data::initDisabledButtons()

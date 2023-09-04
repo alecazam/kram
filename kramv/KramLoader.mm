@@ -118,7 +118,7 @@ bool decodeImage(const KTXImage &image, KTXImage &imageDecoded)
     }
 #endif
     else {
-        assert(false);  // don't call this routine if decode not needed
+        KASSERT(false);  // don't call this routine if decode not needed
     }
 
     // TODO: decode BC format on iOS when not supported, but viewer only on macOS
@@ -398,7 +398,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
                 chunkNum = 0;
             }
 
-            // assert(blit.textureIndex < _blitTextures.count);
+            // KASSERT(blit.textureIndex < _blitTextures.count);
             id<MTLTexture> texture = _blitTextures[blit.textureIndex];
 
             [blitEncoder copyFromBuffer:_buffer

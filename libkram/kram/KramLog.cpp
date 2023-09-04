@@ -273,7 +273,7 @@ static const char* getFormatTokens(const LogMessage& msg) {
 }
 
 
-static void formatMessage(string& buffer, LogMessage& msg, const char* tokens)
+static void formatMessage(string& buffer, const LogMessage& msg, const char* tokens)
 {
     buffer.clear();
    
@@ -384,10 +384,8 @@ constexpr const uint32_t kMaxThreadName = 32;
 extern void getCurrentThreadName(char name[kMaxThreadName]);
 
 
-static int32_t logMessageImpl(LogMessage& msg)
+void setMessageFields(LogMessage& msg)
 {
-    // TODO: add any filtering up here, or before msg is built
-    
     const char* text = msg.msg;
     
     msg.msgHasNewline = false;
@@ -403,13 +401,17 @@ static int32_t logMessageImpl(LogMessage& msg)
     
     // retrieve timestamp
     msg.timestamp = currentTimestamp();
+}
+
+static int32_t logMessageImpl(const LogMessage& msg)
+{
+    // TODO: add any filtering up here, or before msg is built
     
-    // stdout isn't thread safe, so to prevent mixed output put this under mutex
     mylock lock(gLogLock);
 
     // this means caller needs to know all errors to display in the hud
     if (gIsErrorLogCapture && msg.logLevel == LogLevelError) {
-        gErrorLogCaptureText += text;
+        gErrorLogCaptureText += msg.msg;
         if (!msg.msgHasNewline)
             gErrorLogCaptureText += "\n";
     }
@@ -458,12 +460,9 @@ static int32_t logMessageImpl(LogMessage& msg)
             androidLogLevel = ANDROID_LOG_ERROR;
             break;
     }
-
-    // TODO: can also fix printf to work on Android
-    // but can't set log level like with this call, but no dump buffer limit
     
     // TODO: split string up into multiple logs
-    // this can only write 4K - 40? chars at time, don't use print it's 1023
+    // this can only write 4K - 80 chars at time, don't use print it's 1023
     // API 30
     __android_log_message msg = {
         LOG_ID_MAIN, msg.file, msg.line, buffer.c_str(), androidLogLevel, sizeof(__android_log_message), msg.group);
@@ -506,6 +505,7 @@ int32_t logMessage(const char* group, int32_t logLevel,
         file, line, func, nullptr,
         msg, false, 0.0
     };
+    setMessageFields(logMessage);
     return logMessageImpl(logMessage);
 }
 
@@ -532,6 +532,7 @@ int32_t logMessage(const char* group, int32_t logLevel,
         file, line, func, nullptr,
         msg, false, 0.0
     };
+    setMessageFields(logMessage);
     return logMessageImpl(logMessage);
 }
 
