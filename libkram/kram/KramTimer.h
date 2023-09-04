@@ -1,4 +1,4 @@
-// kram - Copyright 2020-2022 by Alec Miller. - MIT License
+// kram - Copyright 2020-2023 by Alec Miller. - MIT License
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
@@ -10,7 +10,7 @@
 
 namespace kram {
 // Can obtain a timestamp to nanosecond accuracy.
-extern double currentTimestamp();
+double currentTimestamp();
 
 // This can record timings for each start/stop call.
 class Timer {

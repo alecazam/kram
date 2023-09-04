@@ -266,6 +266,7 @@ std::thread::native_handle_type getCurrentThread()
 // Of course, Windows has to make portability difficult.
 // And Mac non-standardly, doesn't even pass thread to call.
 //   This requires it to be set from thread itself.
+constexpr const uint32_t kMaxThreadName = 32;
 
 #if KRAM_WIN
 
@@ -299,6 +300,26 @@ void setThreadName(std::thread& thread, const char* threadName)
     setThreadName(thread.native_handle(), threadName);
 }
 
+void getCurrentThreadName(char name[kMaxThreadName])
+{
+    name[0] = 0;
+    
+    WSTR* threadNameW = nullptr;
+    HRESULT hr = ::GetThreadDescription(getCurrentThread(), &threadNameW);
+    if (SUCCEEDED(hr)) {
+        // convert name back
+        uint32_t len = wstrlen(threadNameW);
+        if (len > kMaxThreadName)
+            len = kMaxThreadName;
+        for (uint32_t i = 0; i < len; ++i) {
+            name[i] = (char)threadNameW[i];
+        }
+        name[kMaxThreadName-1] = 0;
+        
+        LocalFree(threadNameW);
+    }
+}
+
 #elif KRAM_MAC || KRAM_IOS
 
 void setThreadName(std::thread::native_handle_type macroUnusedArg(handle), const char* threadName)
@@ -322,6 +343,10 @@ void setCurrentThreadName(const char* threadName)
 //    setThreadName(handle, threadName);
 //}
 
+void getCurrentThreadName(char name[kMaxThreadName])
+{
+    pthread_getname_np(getCurrentThread(), name, kMaxThreadName);
+}
 #else
 
 // 15 char name limit on Linux/Android, how modern!
@@ -340,6 +365,11 @@ void setCurrentThreadName(const char* threadName)
 void setThreadName(std::thread& thread, const char* threadName)
 {
     setThreadName(thread.native_handle(), threadName);
+}
+
+void getCurrentThreadName(char name[kMaxThreadName])
+{
+    pthread_getname_np(getCurrentThread(), name, kMaxThreadName);
 }
 
 #endif

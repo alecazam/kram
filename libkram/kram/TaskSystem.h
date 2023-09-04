@@ -50,7 +50,7 @@ public:
         if (!lock || _q.empty()) {
             return false;
         }
-        x = move(_q.front());
+        x = std::move(_q.front());
         _q.pop_front();
         return true;
     }
@@ -68,7 +68,7 @@ public:
         }
 
         // return the work while lock is held
-        x = move(_q.front());
+        x = std::move(_q.front());
         _q.pop_front();
         return true;
     }

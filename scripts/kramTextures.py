@@ -413,9 +413,6 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtHeight = fmtNormal + fmtHeightArgs
 
 	elif platform == "mac":
-		# bc1 on Toof has purple, green, yellow artifacts with bc7enc, and has more banding
-		# and a lot of weird blocky artifacts, look into bc1 encoder.  
-		# Squish BC1 has more blocky artifacts, but not random color artifacts.
 		fmtAlbedo = " -f bc7 -srgb -premul" # + " -optopaque"
 		fmtNormal = " -f bc5 -signed -normal"
 		fmtMetalRoughness = " -f bc5"
@@ -424,23 +421,11 @@ def processTextures(platform, container, verbose, quality, jobs, force, script, 
 		fmtHeight = fmtNormal + fmtHeightArgs
 
 	elif platform == "win":
-		# bc1 on Toof has purple, green, yellow artifacts with bc7enc, and has more banding
-		# and a lot of weird blocky artifacts, look into bc1 encoder
 		fmtAlbedo = " -f bc7 -srgb -premul" # + " -optopaque"
 		fmtNormal = " -f bc5 -signed -normal"
 		fmtMetalRoughness = " -f bc5"
 		fmtMask = " -f bc4"
 		fmtSDF = " -f bc4 -signed -sdf"
-		fmtHeight = fmtNormal + fmtHeightArgs
-
-	elif platform == "any":
-		# output to s/rgba8u, then run through ktxsc to go to BasisLZ
-		# no signed formats, but probably can transcode to one
-		fmtAlbedo = " -f rgba8 -srgb -premul" # + " -optopaque"
-		fmtNormal = " -f rgba8 -swizzle rg01 -normal"
-		fmtMetalRoughness = " -f rgba8 -swizzle r001"
-		fmtMask = " -f rgba8 -swizzle r001"
-		fmtSDF = " -f rgba8 -swizzle r001 -sdf"
 		fmtHeight = fmtNormal + fmtHeightArgs
 
 	else:

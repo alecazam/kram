@@ -1,4 +1,4 @@
-// kram - Copyright 2020-2022 by Alec Miller. - MIT License
+// kram - Copyright 2020-2023 by Alec Miller. - MIT License
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
@@ -18,6 +18,7 @@
 #endif
 
 #include "KramFmt.h"
+#include "KramTimer.h"
 #include "format.h" // really fmt/format.h
 
 namespace kram {
@@ -234,106 +235,188 @@ inline void OutputDebugStringU(LPCSTR lpOutputString, uint32_t len8)
 
 //----------------------------------
 
-static int32_t logMessageImpl(const char* group, int32_t logLevel,
-                          const char* file, int32_t line, const char* func,
-                          const char* fmt, const char* msg)
+struct LogMessage
 {
-    // TOOD: add any filtering up here, or before msg is built
-
-    // pipe to correct place, could even be file output
-    FILE* fp = stdout;
-    if (logLevel >= LogLevelWarning)
-        fp = stderr;
-
-    // see if newline required
-    int32_t len = (int32_t)strlen(fmt);
-    bool needsNewline = false;
-    if (len >= 1)
-        needsNewline = fmt[len - 1] != '\n';
-
-    if (needsNewline) {
-        len = (int32_t)strlen(msg);
-        if (len >= 1)
-            needsNewline = msg[len - 1] != '\n';
-    }
-
-    // format soem strings to embellish the message
-    const char* tag = "";
-    const char* groupString = "";
-    const char* space = "";
-    const char* level = "";
+    const char* group;
+    int32_t logLevel;
     
-    string fileLineFunc;
-    switch (logLevel) {
-        case LogLevelDebug:
-            //tag = "[D]";
-            //level = " debug:";
-            break;
-        case LogLevelInfo:
-            //tag = "[I]";
-            //level = " info:";
-            break;
+    const char* file;
+    int32_t line;
+    const char* func;
+    const char* threadName;
+    
+    const char* msg;
+    bool msgHasNewline;
+    
+    double timestamp;
+};
 
-        case LogLevelWarning:
-            tag = "[W]";
-            level = " warning:";
-            groupString = group;
-            space = " ";
-
-            break;
-        case LogLevelError: {
-            tag = "[E]";
-            level = " error:";
-            groupString = group;
-            space = " ";
-
+static const char* getFormatTokens(const LogMessage& msg) {
 #if KRAM_WIN
-            const char fileSeparator = '\\';
+    if (msg.logLevel <= LogLevelInfo)
+        return "m\n";
+    if (msg.file)
+        return "[l] g m\n" "F: L: u\n";
+    return "[l] g m\n";
+#elif KRAM_ANDROID
+    return "m\n";
 #else
-            const char fileSeparator = '/';
+    // copy of formatters above
+    if (msg.logLevel <= LogLevelInfo)
+        return "m\n";
+    if (msg.file)
+        return "[l] g m\n" "F: L: u\n";
+    return "[l] g m\n";
 #endif
+}
 
-            // shorten filename
-            const char* filename = strrchr(file, fileSeparator);
-            if (filename) {
-                filename++;
-            }
-            else {
-                filename = file;
-            }
 
-            // TODO: in clang only __PRETTY_FUNCTION__ has namespace::className::function(args...)
-            // __FUNCTION__ is only the function call, but want class name if it's a method without going to RTTI
-            // https://stackoverflow.com/questions/1666802/is-there-a-class-macro-in-c
+static void formatMessage(string& buffer, LogMessage& msg, const char* tokens)
+{
+    buffer.clear();
+   
+    char c = 0;
+    while ((c = *tokens++) != 0) {
+        switch(c) {
+            case ' ':
+            case ':':
+            case '[':
+            case ']':
+            case '\n':
+                buffer += c;
+                break;
+                
+            case 'l':
+            case 'L': {
+                bool isVerbose = c == 'L';
+                const char* level = "";
+                switch(msg.logLevel) {
+                    case LogLevelDebug:
+                        level = isVerbose ? "debug" : "D";
+                        break;
+                    case LogLevelInfo:
+                        level = isVerbose ? "info" : "I";
+                        break;
+                    case LogLevelWarning:
+                        level = isVerbose ? "warning" : "W";
+                        break;
+                    case LogLevelError:
+                        level = isVerbose ? "error" : "E";
+                        break;
+                }
+                buffer += level;
+                break;
+            }
+            case 'g': {
+                buffer += msg.group;
+                break;
+            }
+                
+            case 'u': {
+                if (msg.func) {
+                    buffer += msg.func;
+                    int32_t len = (int32_t)strlen(msg.func);
+                    if (len > 1 && msg.func[len-1] != ']')
+                        buffer += "()";
+                }
+                break;
+            }
+                
+            case 'T': {
+                append_sprintf(buffer, "%f", msg.timestamp);
+                break;
+            }
+            case 't': {
+                if (msg.threadName) {
+                    buffer += msg.threadName;
+                }
+                break;
+            }
+            case 'm': {
+                if (msg.msg) {
+                    // strip any trailing newline, should be in the tokens
+                    buffer += msg.msg;
+                    if (msg.msgHasNewline)
+                        buffer.pop_back();
+                }
+                break;
+            }
+                
+            case 'f':
+            case 'F': {
+                if (msg.file) {
 #if KRAM_WIN
-            // format needed for Visual Studio to print
-            sprintf(fileLineFunc, "%s(%d):%s %s()\n", filename, line, level, func);
+                    const char fileSeparator = '\\';
 #else
-            // format needed for Xcode to print
-            sprintf(fileLineFunc, "%s:%d:%s %s()\n", filename, line, level, func);
+                    const char fileSeparator = '/';
 #endif
-            break;
+                    bool isVerbose = c == 'L';
+                    
+                    const char* filename = msg.file;
+                    
+                    // shorten filename
+                    if (!isVerbose) {
+                        const char* shortFilename = strrchr(filename, fileSeparator);
+                        if (shortFilename) {
+                            shortFilename++;
+                            filename = shortFilename;
+                        }
+                    }
+                    
+#if KRAM_WIN
+                    // format needed for Visual Studio to collect/clickthrough
+                    append_sprintf(buffer, "%s(%d)", filename, msg.line);
+#else
+                    // format needed for Xcode/VSCode to print
+                    append_sprintf(buffer, "%s:%d", filename, msg.line);
+#endif
+                }
+                break;
+            }
         }
-        default:
-            break;
     }
+}
 
+// Pulled in from TaskSystem.cpp
+constexpr const uint32_t kMaxThreadName = 32;
+extern void getCurrentThreadName(char name[kMaxThreadName]);
+
+
+static int32_t logMessageImpl(LogMessage& msg)
+{
+    // TODO: add any filtering up here, or before msg is built
+    
+    const char* text = msg.msg;
+    
+    msg.msgHasNewline = false;
+    int32_t len = (int32_t)strlen(text);
+    if (len >= 1 && text[len - 1] == '\n')
+        msg.msgHasNewline = true;
+    
+    // fill out thread name
+    char threadName[kMaxThreadName] = {};
+    getCurrentThreadName(threadName);
+    msg.threadName = threadName;
+    
+    // retrieve timestamp
+    msg.timestamp = currentTimestamp();
+    
     // stdout isn't thread safe, so to prevent mixed output put this under mutex
     mylock lock(gLogLock);
 
     // this means caller needs to know all errors to display in the hud
-    if (gIsErrorLogCapture && logLevel == LogLevelError) {
-        gErrorLogCaptureText += msg;
-        if (needsNewline) {
+    if (gIsErrorLogCapture && msg.logLevel == LogLevelError) {
+        gErrorLogCaptureText += text;
+        if (!msg.msgHasNewline)
             gErrorLogCaptureText += "\n";
-        }
     }
 
-    // format into a buffer
+    // format into a buffer (it's under lock, so can use static)
     static string buffer;
-    sprintf(buffer, "%s%s%s%s%s%s", tag, groupString, space, msg, needsNewline ? "\n" : "", fileLineFunc.c_str());
     
 #if KRAM_WIN
+    formatMessage(buffer, msg, getFormatTokens(msg));
+    
     if (::IsDebuggerPresent()) {
         // TODO: split string up into multiple logs
         // this is limited to 32K
@@ -344,9 +427,18 @@ static int32_t logMessageImpl(const char* group, int32_t logLevel,
     }
     else {
         // avoid double print to debugger
+        FILE* fp = stdout;
         fprintf(fp, "%s", buffer.c_str());
+        fflush(fp);
     }
 #elif KRAM_ANDROID
+    // TODO: move higher up
+    // API 30
+    if (!__android_log_is_loggable(androidLogLevel, msg.group, androidLogLevel))
+        return;
+    
+    formatMessage(buffer, msg, getFormatTokens(msg));
+    
     AndroidLogLevel androidLogLevel = ANDROID_LOG_ERROR;
     switch (logLevel) {
         case LogLevelDebug:
@@ -363,15 +455,23 @@ static int32_t logMessageImpl(const char* group, int32_t logLevel,
             androidLogLevel = ANDROID_LOG_ERROR;
             break;
     }
-    
+
     // TODO: can also fix printf to work on Android
     // but can't set log level like with this call, but no dump buffer limit
     
     // TODO: split string up into multiple logs
     // this can only write 4K - 40? chars at time, don't use print it's 1023
-    __android_log_write(androidLogLevel, tag, buffer.c_str());
+    // API 30
+    __android_log_message msg = {
+        LOG_ID_MAIN, msg.file, msg.line, buffer.c_str(), androidLogLevel, sizeof(__android_log_message), msg.group);
+    }
+    __android_log_write_log_message(msg);
 #else
+    formatMessage(buffer, msg, getFormatTokens(msg));
+    
+    FILE* fp = stdout;
     fprintf(fp, "%s", buffer.c_str());
+    fflush(fp);
 #endif
 
     return 0;  // reserved for later
@@ -384,6 +484,7 @@ int32_t logMessage(const char* group, int32_t logLevel,
     // convert var ags to a msg
     const char* msg;
 
+    // TODO: handle %s too, also this is heap allocating str
     string str;
     if (strrchr(fmt, '%') == nullptr) {
         msg = fmt;
@@ -397,8 +498,12 @@ int32_t logMessage(const char* group, int32_t logLevel,
         msg = str.c_str();
     }
     
-    return logMessageImpl(group, logLevel, file, line, func,
-                          fmt, msg);
+    LogMessage logMessage = {
+        group, logLevel,
+        file, line, func, nullptr,
+        msg, false, 0.0
+    };
+    return logMessageImpl(logMessage);
 }
 
 
@@ -419,8 +524,12 @@ int32_t logMessage(const char* group, int32_t logLevel,
     string str = fmt::vformat(format, args);
     const char* msg = str.c_str();
     
-    return logMessageImpl(group, logLevel, file, line, func,
-                          format.data(), msg);
+    LogMessage logMessage = {
+        group, logLevel,
+        file, line, func, nullptr,
+        msg, false, 0.0
+    };
+    return logMessageImpl(logMessage);
 }
 
 }  // namespace kram

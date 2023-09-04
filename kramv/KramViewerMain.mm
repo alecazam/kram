@@ -524,8 +524,6 @@ NSDictionary* pasteboardOptions = @{
     Data _data;
 }
 
-
-
 - (void)awakeFromNib
 {
     [super awakeFromNib];
@@ -540,8 +538,10 @@ NSDictionary* pasteboardOptions = @{
     _data._delegate.view = (__bridge void*)self;
 
     // TODO: see if can only open this
-    // NSLog(@"AwakeFromNIB");
+    //KLOGI("Viewer", "AwakeFromNIB");
 }
+
+
 
 // to get upper left origin like on UIView
 #if KRAM_MAC
@@ -1500,6 +1500,9 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
 
 -(BOOL)loadFile
 {
+    if (_data._files.empty())
+        return NO;
+    
     // lookup the filename and data at that entry
     const File& file = _data._files[_data._fileIndex];
     const char* filename = file.nameShort.c_str();
@@ -1612,8 +1615,29 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     _hudHidden = false;
     [self updateHudVisibility];
     
+    const char* filename = "";
     NSURL* url = urls[0];
-    const char* filename = url.fileSystemRepresentation;
+    if ([url.scheme isEqualToString:@"kram"])
+    {
+        // the resource specifier has port and other data
+        // for now treat this as a local file path.
+        
+        // kram://filename.ktx
+        filename = [url.resourceSpecifier UTF8String];
+        filename = filename + 2; // skip the //
+        
+        // can't get Slack to honor links like these
+        // with a kram:///Users/...
+        // or with kram://~/blah
+        //
+        // Also note that loadFilesFromURLs
+        // also need this same treatment instead
+        // of relying on url.fileSystemRepresentation
+    }
+    else
+    {
+        filename = url.fileSystemRepresentation;
+    }
     bool isSingleFile = urls.count == 1;
     
     Renderer* renderer = (Renderer *)self.delegate;
