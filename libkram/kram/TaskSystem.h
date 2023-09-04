@@ -145,6 +145,16 @@ enum class ThreadPriority
     Interactive = 5,
 };
 
+struct ThreadInfo {
+    const char* name = "";
+    ThreadPriority priority = ThreadPriority::Default;
+    int affinity = 0; // single core for now
+};
+
+// This only works for current thread, but simplifies setting several thread params.
+void setThreadInfo(ThreadInfo& info);
+
+    
 class task_system {
     NOT_COPYABLE(task_system);
 

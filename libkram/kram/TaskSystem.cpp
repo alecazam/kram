@@ -270,7 +270,8 @@ constexpr const uint32_t kMaxThreadName = 32;
 
 #if KRAM_WIN
 
-// TODO: on Win, also need to set the following.  Then use Windows Termnial.
+// TODO: on Win, also need to set the following.  Then use Windows Terminal/
+// Can just set in manifest file.
 // SetConsoleOutputCP(CP_UTF8);
 
 void setThreadName(std::thread::native_handle_type handle, const char* threadName)
@@ -582,12 +583,6 @@ void task_system::run(int32_t threadIndex)
         f();
     }
 }
-
-struct ThreadInfo {
-    const char* name = "";
-    ThreadPriority priority = ThreadPriority::Default;
-    int affinity = 0; // single core for now
-};
 
 // This only works for current thread, but simplifies setting several thread params.
 void setThreadInfo(ThreadInfo& info) {

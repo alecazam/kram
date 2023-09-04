@@ -19,6 +19,7 @@
 // C++
 #include "KramLib.h"
 #include "KramVersion.h"  // keep kramv version in sync with libkram
+#include "TaskSystem.h"
 
 //#include "KramMipper.h"
 
@@ -527,7 +528,7 @@ NSDictionary* pasteboardOptions = @{
 - (void)awakeFromNib
 {
     [super awakeFromNib];
-
+    
     // vertical offset of table down so hud can display info
     NSScrollView* scrollView = [_tableView enclosingScrollView];
     CGRect rect = scrollView.frame;
@@ -536,12 +537,10 @@ NSDictionary* pasteboardOptions = @{
     
     // C++ delegate
     _data._delegate.view = (__bridge void*)self;
-
+    
     // TODO: see if can only open this
     //KLOGI("Viewer", "AwakeFromNIB");
 }
-
-
 
 // to get upper left origin like on UIView
 #if KRAM_MAC
@@ -1875,6 +1874,9 @@ bool DataDelegate::loadTextureFromImage(const char* fullFilename, double timesta
 
 int main(int argc, const char *argv[])
 {
+    ThreadInfo infoMain = { "Main", ThreadPriority::Interactive, 0 };
+    setThreadInfo(infoMain);
+    
     @autoreleasepool {
         // Setup code that might create autoreleased objects goes here.
     }

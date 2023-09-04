@@ -256,7 +256,8 @@ static const char* getFormatTokens(const LogMessage& msg) {
     if (msg.logLevel <= LogLevelInfo)
         return "m\n";
     if (msg.file)
-        return "[l] g m\n" "F: L: u\n";
+        return "[l] g m\n"
+               "F: L: t u\n";
     return "[l] g m\n";
 #elif KRAM_ANDROID
     return "m\n";
@@ -265,7 +266,8 @@ static const char* getFormatTokens(const LogMessage& msg) {
     if (msg.logLevel <= LogLevelInfo)
         return "m\n";
     if (msg.file)
-        return "[l] g m\n" "F: L: u\n";
+        return "[l] g m\n"
+               "F: L: t u\n";
     return "[l] g m\n";
 #endif
 }
@@ -396,7 +398,8 @@ static int32_t logMessageImpl(LogMessage& msg)
     // fill out thread name
     char threadName[kMaxThreadName] = {};
     getCurrentThreadName(threadName);
-    msg.threadName = threadName;
+    if (threadName[0] != 0)
+        msg.threadName = threadName;
     
     // retrieve timestamp
     msg.timestamp = currentTimestamp();
