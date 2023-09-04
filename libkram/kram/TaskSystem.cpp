@@ -308,7 +308,7 @@ void getCurrentThreadName(char name[kMaxThreadName])
     HRESULT hr = ::GetThreadDescription(getCurrentThread(), &threadNameW);
     if (SUCCEEDED(hr)) {
         // convert name back
-        uint32_t len = wstrlen(threadNameW);
+        uint32_t len = wcslen(threadNameW);
         if (len > kMaxThreadName)
             len = kMaxThreadName;
         for (uint32_t i = 0; i < len; ++i) {
