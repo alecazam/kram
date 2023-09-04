@@ -304,7 +304,7 @@ void getCurrentThreadName(char name[kMaxThreadName])
 {
     name[0] = 0;
     
-    WSTR* threadNameW = nullptr;
+    wchar_t* threadNameW = nullptr;
     HRESULT hr = ::GetThreadDescription(getCurrentThread(), &threadNameW);
     if (SUCCEEDED(hr)) {
         // convert name back
