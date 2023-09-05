@@ -23,35 +23,16 @@
 
 namespace kram {
 
+// Pulled in from TaskSystem.cpp
+constexpr const uint32_t kMaxThreadName = 32;
+extern void getCurrentThreadName(char name[kMaxThreadName]);
+
 using mymutex = std::recursive_mutex;
 using mylock = std::unique_lock<mymutex>;
 
 using namespace NAMESPACE_STL;
 
-static mymutex gLogLock;
-static string gErrorLogCaptureText;
-static bool gIsErrorLogCapture = false;
-void setErrorLogCapture(bool enable)
-{
-    gIsErrorLogCapture = enable;
-    if (enable) {
-        mylock lock(gLogLock);
-        gErrorLogCaptureText.clear();
-    }
-}
-bool isErrorLogCapture() { return gIsErrorLogCapture; }
 
-// return the text
-void getErrorLogCaptureText(string& text)
-{
-    if (gIsErrorLogCapture) {
-        mylock lock(gLogLock);
-        text = gErrorLogCaptureText;
-    }
-    else {
-        text.clear();
-    }
-}
 
 // TODO: install assert handler to intercept, and also add a verify (assert that leaves source in)
 //void __assert(const char *expression, const char *file, int32_t line) {
@@ -190,6 +171,8 @@ bool endsWithExtension(const char* str, const string& substring)
     return strcmp(search, substring.c_str()) == 0;
 }
 
+//----------------------------------
+
 #if KRAM_WIN
 // Adapted from Emil Persson's post.
 // https://twitter.com/_Humus_/status/1629165133359460352
@@ -233,7 +216,43 @@ inline void OutputDebugStringU(LPCSTR lpOutputString, uint32_t len8)
 
 #endif
 
-//----------------------------------
+struct LogState
+{
+    mymutex lock;
+    string errorLogCaptureText;
+    string buffer;
+    bool isErrorLogCapture = false;
+    uint32_t counter = 0;
+    
+#if KRAM_WIN
+    bool isWindowsSubsystemApp = false;
+    bool isWindowsDebugger = false;
+#endif
+};
+static LogState gLogState;
+
+void setErrorLogCapture(bool enable)
+{
+    gLogState.isErrorLogCapture = enable;
+    if (enable) {
+        mylock lock(gLogState.lock);
+        gLogState.errorLogCaptureText.clear();
+    }
+}
+
+bool isErrorLogCapture() { return gLogState.isErrorLogCapture; }
+
+// return the text
+void getErrorLogCaptureText(string& text)
+{
+    if (gLogState.isErrorLogCapture) {
+        mylock lock(gLogState.lock);
+        text = gLogState.errorLogCaptureText;
+    }
+    else {
+        text.clear();
+    }
+}
 
 struct LogMessage
 {
@@ -289,7 +308,7 @@ static void formatMessage(string& buffer, const LogMessage& msg, const char* tok
                 break;
                 
             case 'l':
-            case 'L': {
+            case 'L': { // level
                 bool isVerbose = c == 'L';
                 const char* level = "";
                 switch(msg.logLevel) {
@@ -309,12 +328,12 @@ static void formatMessage(string& buffer, const LogMessage& msg, const char* tok
                 buffer += level;
                 break;
             }
-            case 'g': {
+            case 'g': { // group
                 buffer += msg.group;
                 break;
             }
                 
-            case 'u': {
+            case 'u': { // func
                 if (msg.func) {
                     buffer += msg.func;
                     int32_t len = (int32_t)strlen(msg.func);
@@ -324,17 +343,20 @@ static void formatMessage(string& buffer, const LogMessage& msg, const char* tok
                 break;
             }
                 
-            case 'T': {
-                append_sprintf(buffer, "%f", msg.timestamp);
+            case 'd': { // date/timestamp
+                if (msg.timestamp != 0.0) {
+                    append_sprintf(buffer, "%f", msg.timestamp);
+                }
                 break;
             }
-            case 't': {
+                
+            case 't': { // thread
                 if (msg.threadName) {
                     buffer += msg.threadName;
                 }
                 break;
             }
-            case 'm': {
+            case 'm': { // message
                 if (msg.msg) {
                     // strip any trailing newline, should be in the tokens
                     buffer += msg.msg;
@@ -344,7 +366,7 @@ static void formatMessage(string& buffer, const LogMessage& msg, const char* tok
                 break;
             }
                 
-            case 'f':
+            case 'f': // file:line
             case 'F': {
                 if (msg.file) {
 #if KRAM_WIN
@@ -379,12 +401,9 @@ static void formatMessage(string& buffer, const LogMessage& msg, const char* tok
     }
 }
 
-// Pulled in from TaskSystem.cpp
-constexpr const uint32_t kMaxThreadName = 32;
-extern void getCurrentThreadName(char name[kMaxThreadName]);
 
 
-void setMessageFields(LogMessage& msg)
+void setMessageFields(LogMessage& msg, char threadName[kMaxThreadName])
 {
     const char* text = msg.msg;
     
@@ -393,8 +412,18 @@ void setMessageFields(LogMessage& msg)
     if (len >= 1 && text[len - 1] == '\n')
         msg.msgHasNewline = true;
     
+    // Note: this could analyze the format tokens for all reporters.
+    // Also may want a log file with own formatting/fields.
+#if KRAM_ANDROID
+    // logcat only needs the tag, file, line, message
+    return;
+#else
+    // only reporting message on info/debug
+    if (msg.logLevel <= LogLevelInfo)
+        return;
+#endif
+    
     // fill out thread name
-    char threadName[kMaxThreadName] = {};
     getCurrentThreadName(threadName);
     if (threadName[0] != 0)
         msg.threadName = threadName;
@@ -407,33 +436,50 @@ static int32_t logMessageImpl(const LogMessage& msg)
 {
     // TODO: add any filtering up here, or before msg is built
     
-    mylock lock(gLogLock);
+    mylock lock(gLogState.lock);
 
     // this means caller needs to know all errors to display in the hud
-    if (gIsErrorLogCapture && msg.logLevel == LogLevelError) {
-        gErrorLogCaptureText += msg.msg;
+    if (gLogState.isErrorLogCapture && msg.logLevel == LogLevelError) {
+        gLogState.errorLogCaptureText += msg.msg;
         if (!msg.msgHasNewline)
-            gErrorLogCaptureText += "\n";
+            gLogState.errorLogCaptureText += "\n";
     }
 
     // format into a buffer (it's under lock, so can use static)
-    static string buffer;
+    string& buffer = gLogState.buffer;
+    
+    gLogState.counter++;
     
 #if KRAM_WIN
+    
+    // This is only needed for Window subsystem.
+    // Assumes gui app didn't call AllocConsole.
+    // TODO: keep testing IsDebuggerPresent from time to time for attach
+    if (gLogState.counter == 1) {
+        gLogState.isWindowsSubsystemApp = GetStdHandle( ) == nullptr;
+        gLogState.isWindowsDebugger = ::IsDebuggerPresent();
+    }
+    
+    if (gLogState.isWindowsSubsystemApp && !gLogState.isWindowsDebugger)
+        return;
+    
     formatMessage(buffer, msg, getFormatTokens(msg));
     
-    if (::IsDebuggerPresent()) {
+    if (gLogState.isWindowsSubsystemApp) {
         // TODO: split string up into multiple logs
         // this is limited to 32K
         // OutputDebugString(buffer.c_str());
         
-        // This supports UTF8 strings by converting them to wide
+        // This supports UTF8 strings by converting them to wide.
+        // TODO: Wine doesn't handle.
         OutputDebugStringU(buffer.c_str(), buffer.size());
     }
     else {
         // avoid double print to debugger
         FILE* fp = stdout;
-        fprintf(fp, "%s", buffer.c_str());
+        //fprintf(fp, "%s", buffer.c_str()); // or fwrite?
+        fwrite(buffer.c_str(), 1, buffer.size(), fp);
+        // if heavy logging, then could delay fflusu
         fflush(fp);
     }
 #elif KRAM_ANDROID
@@ -461,7 +507,7 @@ static int32_t logMessageImpl(const LogMessage& msg)
             break;
     }
     
-    // TODO: split string up into multiple logs
+    // TODO: split string up into multiple logs by /n
     // this can only write 4K - 80 chars at time, don't use print it's 1023
     // API 30
     __android_log_message msg = {
@@ -469,10 +515,15 @@ static int32_t logMessageImpl(const LogMessage& msg)
     }
     __android_log_write_log_message(msg);
 #else
+    // Note: this doesn't go out to Console, but does go out to Xcode.
+    // NSLog/os_log sucks with no intercepts, filtering, or formatting.
+    
     formatMessage(buffer, msg, getFormatTokens(msg));
     
     FILE* fp = stdout;
-    fprintf(fp, "%s", buffer.c_str());
+    //fprintf(fp, "%s", buffer.c_str()); // or fwrite?
+    fwrite(buffer.c_str(), 1, buffer.size(), fp);
+    // if heavy logging, then could delay fflusu
     fflush(fp);
 #endif
 
@@ -486,10 +537,16 @@ int32_t logMessage(const char* group, int32_t logLevel,
     // convert var ags to a msg
     const char* msg;
 
-    // TODO: handle %s too, also this is heap allocating str
     string str;
     if (strrchr(fmt, '%') == nullptr) {
         msg = fmt;
+    }
+    else if (strcmp(fmt, "%s") == 0) {
+        // hope can reference this past va_end
+        va_list args;
+        va_start(args, fmt);
+        msg = va_arg(args, const char*);
+        va_end(args);
     }
     else {
         va_list args;
@@ -505,7 +562,8 @@ int32_t logMessage(const char* group, int32_t logLevel,
         file, line, func, nullptr,
         msg, false, 0.0
     };
-    setMessageFields(logMessage);
+    char threadName[kMaxThreadName] = {};
+    setMessageFields(logMessage, threadName);
     return logMessageImpl(logMessage);
 }
 
@@ -532,7 +590,8 @@ int32_t logMessage(const char* group, int32_t logLevel,
         file, line, func, nullptr,
         msg, false, 0.0
     };
-    setMessageFields(logMessage);
+    char threadName[kMaxThreadName] = {};
+    setMessageFields(logMessage, threadName);
     return logMessageImpl(logMessage);
 }
 
