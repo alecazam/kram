@@ -450,6 +450,8 @@ static int32_t logMessageImpl(const LogMessage& msg)
     
     gLogState.counter++;
     
+    int32_t status = (msg.logLevel == LogLevelError) ? 1 : 0;
+    
 #if KRAM_WIN
     
     // This is only needed for Window subsystem.
@@ -461,7 +463,7 @@ static int32_t logMessageImpl(const LogMessage& msg)
     }
     
     if (gLogState.isWindowsSubsystemApp && !gLogState.isWindowsDebugger)
-        return;
+        return status;
     
     formatMessage(buffer, msg, getFormatTokens(msg));
     
@@ -477,16 +479,15 @@ static int32_t logMessageImpl(const LogMessage& msg)
     else {
         // avoid double print to debugger
         FILE* fp = stdout;
-        //fprintf(fp, "%s", buffer.c_str()); // or fwrite?
         fwrite(buffer.c_str(), 1, buffer.size(), fp);
-        // if heavy logging, then could delay fflusu
+        // if heavy logging, then could delay fflush
         fflush(fp);
     }
 #elif KRAM_ANDROID
     // TODO: move higher up
     // API 30
     if (!__android_log_is_loggable(androidLogLevel, msg.group, androidLogLevel))
-        return;
+        return status;
     
     formatMessage(buffer, msg, getFormatTokens(msg));
     
@@ -521,13 +522,12 @@ static int32_t logMessageImpl(const LogMessage& msg)
     formatMessage(buffer, msg, getFormatTokens(msg));
     
     FILE* fp = stdout;
-    //fprintf(fp, "%s", buffer.c_str()); // or fwrite?
     fwrite(buffer.c_str(), 1, buffer.size(), fp);
-    // if heavy logging, then could delay fflusu
+    // if heavy logging, then could delay fflush
     fflush(fp);
 #endif
 
-    return 0;  // reserved for later
+    return status;  // reserved for later
 }
 
 int32_t logMessage(const char* group, int32_t logLevel,
