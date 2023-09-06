@@ -225,7 +225,7 @@ struct LogState
     uint32_t counter = 0;
     
 #if KRAM_WIN
-    bool isWindowsSubsystemApp = false;
+    bool isWindowsGuiApp = false; // default isConsole
     bool isWindowsDebugger = false;
 #endif
 };
@@ -402,7 +402,13 @@ static void formatMessage(string& buffer, const LogMessage& msg, const char* tok
 }
 
 
-
+bool isMessageFiltered(const LogMessage& msg) {
+#if KRAM_RELEASE
+    if (msg.logLevel == LogLevelDebug)
+        return true;
+#endig
+    return false;
+}
 void setMessageFields(LogMessage& msg, char threadName[kMaxThreadName])
 {
     const char* text = msg.msg;
@@ -454,20 +460,23 @@ static int32_t logMessageImpl(const LogMessage& msg)
     
 #if KRAM_WIN
     
-    // This is only needed for Window subsystem.
+    // This is only needed for Window Gui.
     // Assumes gui app didn't call AllocConsole.
-    // TODO: keep testing IsDebuggerPresent from time to time for attach
     if (gLogState.counter == 1) {
-        gLogState.isWindowsSubsystemApp = GetStdHandle( ) == nullptr;
-        gLogState.isWindowsDebugger = ::IsDebuggerPresent();
+        bool hasConsole = ::GetStdHandle(STD_OUTPUT_HANDLE) != nullptr;
+        
+        // only way to debug a gui app without console is to attach debugger
+        gLogState.isWindowsGuiApp = !hasConsole;
     }
-    
-    if (gLogState.isWindowsSubsystemApp && !gLogState.isWindowsDebugger)
+    // TODO: test IsDebuggerPresent once per frame, not on every log
+    gLogState.isWindowsDebugger = ::IsDebuggerPresent();
+
+    if (gLogState.isWindowsGuiApp && !gLogState.isWindowsDebugger)
         return status;
     
     formatMessage(buffer, msg, getFormatTokens(msg));
     
-    if (gLogState.isWindowsSubsystemApp) {
+    if (gLogState.isWindowsGuiApp) {
         // TODO: split string up into multiple logs
         // this is limited to 32K
         // OutputDebugString(buffer.c_str());
@@ -534,6 +543,16 @@ int32_t logMessage(const char* group, int32_t logLevel,
                           const char* file, int32_t line, const char* func,
                           const char* fmt, ...)
 {
+    LogMessage logMessage = {
+        group, logLevel,
+        file, line, func, nullptr,
+        nullptr, false, 0.0
+    };
+    if (isMessageFiltered(logMessage)) {
+        return 0;
+    }
+    
+    
     // convert var ags to a msg
     const char* msg;
 
@@ -557,11 +576,8 @@ int32_t logMessage(const char* group, int32_t logLevel,
         msg = str.c_str();
     }
     
-    LogMessage logMessage = {
-        group, logLevel,
-        file, line, func, nullptr,
-        msg, false, 0.0
-    };
+    logMessage.msg = msg;
+    
     char threadName[kMaxThreadName] = {};
     setMessageFields(logMessage, threadName);
     return logMessageImpl(logMessage);
@@ -582,14 +598,20 @@ int32_t logMessage(const char* group, int32_t logLevel,
     // and then reserve that space in str.  Use that for impl of append_format.
     // can then append to existing string (see vsprintf)
     
-    string str = fmt::vformat(format, args);
-    const char* msg = str.c_str();
-    
     LogMessage logMessage = {
         group, logLevel,
         file, line, func, nullptr,
-        msg, false, 0.0
+        nullptr, false, 0.0
     };
+    if (isMessageFiltered(logMessage)) {
+        return 0;
+    }
+    
+    string str = fmt::vformat(format, args);
+    const char* msg = str.c_str();
+    
+    logMessage.msg = msg;
+    
     char threadName[kMaxThreadName] = {};
     setMessageFields(logMessage, threadName);
     return logMessageImpl(logMessage);

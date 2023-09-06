@@ -57,6 +57,9 @@ bool isErrorLogCapture();
 // return the text
 void getErrorLogCaptureText(string& text);
 
+//-----------------------
+// String Ops
+
 // returns length of string, -1 if failure
 int32_t sprintf(string& str, const char* format, ...) __printflike(2, 3);
 
