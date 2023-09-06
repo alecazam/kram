@@ -406,7 +406,7 @@ bool isMessageFiltered(const LogMessage& msg) {
 #if KRAM_RELEASE
     if (msg.logLevel == LogLevelDebug)
         return true;
-#endig
+#endif
     return false;
 }
 void setMessageFields(LogMessage& msg, char threadName[kMaxThreadName])
