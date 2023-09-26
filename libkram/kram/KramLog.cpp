@@ -627,7 +627,7 @@ static const char* getFormatTokens(char tokens[kMaxTokens], const LogMessage& ms
 {
 #if KRAM_WIN
     if (msg.logLevel <= LogLevelInfo) {
-        stlcpy(tokens, "m\n", kMaxTokens);
+        strlcpy(tokens, "m\n", kMaxTokens);
     }
     else if (msg.file) {
         strlcpy(tokens, "[l] g m\n" "F: L: t u\n", kMaxTokens);
