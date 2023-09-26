@@ -33,6 +33,7 @@
 		708D44D4272FA4C800783DCE /* tropical_beach.ktx in Resources */ = {isa = PBXBuildFile; fileRef = 708D44D2272FA4C800783DCE /* tropical_beach.ktx */; };
 		708D44D5272FA4C800783DCE /* piazza_san_marco.ktx in Resources */ = {isa = PBXBuildFile; fileRef = 708D44D3272FA4C800783DCE /* piazza_san_marco.ktx */; };
 		7099CFBD28E8319C008D4ABF /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */; };
+		70B5BFF828F5254000CD83D8 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B5BFF728F5253F00CD83D8 /* CoreText.framework */; };
 		70E33EC826E536BF00CBA422 /* QuickLookThumbnailing.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC726E536BF00CBA422 /* QuickLookThumbnailing.framework */; };
 		70E33ECA26E536BF00CBA422 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC926E536BF00CBA422 /* Quartz.framework */; };
 		70E33ECE26E536BF00CBA422 /* KramThumbnailProvider.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70E33ECD26E536BF00CBA422 /* KramThumbnailProvider.mm */; };
@@ -130,6 +131,7 @@
 		708D44D2272FA4C800783DCE /* tropical_beach.ktx */ = {isa = PBXFileReference; lastKnownFileType = file; path = tropical_beach.ktx; sourceTree = "<group>"; };
 		708D44D3272FA4C800783DCE /* piazza_san_marco.ktx */ = {isa = PBXFileReference; lastKnownFileType = file; path = piazza_san_marco.ktx; sourceTree = "<group>"; };
 		7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
+		70B5BFF728F5253F00CD83D8 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
 		70E33EC626E536BF00CBA422 /* kram-thumb.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "kram-thumb.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E33EC726E536BF00CBA422 /* QuickLookThumbnailing.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLookThumbnailing.framework; path = System/Library/Frameworks/QuickLookThumbnailing.framework; sourceTree = SDKROOT; };
 		70E33EC926E536BF00CBA422 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
@@ -155,6 +157,7 @@
 				706EF24D26D17C30001C950E /* ModelIO.framework in Frameworks */,
 				706EF25226D17C6F001C950E /* MetalKit.framework in Frameworks */,
 				70871D4327CAD3EA00D0B9E1 /* libkram.a in Frameworks */,
+				70B5BFF828F5254000CD83D8 /* CoreText.framework in Frameworks */,
 				706EF25526D17C85001C950E /* Metal.framework in Frameworks */,
 				7099CFBD28E8319C008D4ABF /* UniformTypeIdentifiers.framework in Frameworks */,
 				706EF25726D17C9D001C950E /* AppKit.framework in Frameworks */,
@@ -239,6 +242,7 @@
 		706EF24726D17BC2001C950E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				70B5BFF728F5253F00CD83D8 /* CoreText.framework */,
 				7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */,
 				70833668271575EA0077BCB6 /* GLTFMTL.framework */,
 				70833664271575E50077BCB6 /* GLTF.framework */,
@@ -563,7 +567,7 @@
 					"$(PROJECT_DIR)/../libkram/kram",
 					"$(PROJECT_DIR)/../libkram",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				MTL_LANGUAGE_REVISION = UseDeploymentTarget;
@@ -633,7 +637,7 @@
 					"$(PROJECT_DIR)/../libkram/kram",
 					"$(PROJECT_DIR)/../libkram",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				MTL_LANGUAGE_REVISION = UseDeploymentTarget;
@@ -671,12 +675,14 @@
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
 				INFOPLIST_FILE = ../kramv/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = kramv;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.ba.kramv;
+				MARKETING_VERSION = 2.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hialec.kramv;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -704,12 +710,21 @@
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
 				INFOPLIST_FILE = ../kramv/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = kramv;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.ba.kramv;
+				MARKETING_VERSION = 2.0.0;
+				OTHER_CFLAGS = (
+					"-DNDEBUG=1",
+					"-DCOMPILE_FASTL=0",
+					"-DCOMPILE_EASTL=0",
+					"-include",
+					KramConfig.h,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hialec.kramv;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -726,8 +741,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.ba.kramv.kram-thumb";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.hialec.kramv.kram-thumb";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -745,8 +759,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.ba.kramv.kram-thumb";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.hialec.kramv.kram-thumb";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -764,8 +777,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.ba.kramv.kram-preview";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.hialec.kramv.kram-preview";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -783,8 +795,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.ba.kramv.kram-preview";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.hialec.kramv.kram-preview";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};

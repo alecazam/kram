@@ -29,10 +29,10 @@ inline NSError* KLOGF(uint32_t code, const char* format, ...) {
     
     // Console prints this as <private>, so what's the point of producing a localizedString ?
     // This doesn't seem to work to Console app, but maybe if logs are to terminal
-    // sudo log config --mode "level:debug" --subsystem com.ba.kramv
+    // sudo log config --mode "level:debug" --subsystem com.hialec.kramv
     
     NSString* errorText = [NSString stringWithUTF8String:str.c_str()];
-    return [NSError errorWithDomain:@"com.ba.kramv" code:code userInfo:@{NSLocalizedDescriptionKey:errorText}];
+    return [NSError errorWithDomain:@"com.hialec.kramv" code:code userInfo:@{NSLocalizedDescriptionKey:errorText}];
 }
 
 struct ImageToPass

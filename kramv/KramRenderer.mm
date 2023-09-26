@@ -21,7 +21,7 @@
 using mymutex = std::recursive_mutex;
 using mylock = std::unique_lock<mymutex>;
 
-os_log_t gLogKramv = os_log_create("com.ba.kramv", "");
+os_log_t gLogKramv = os_log_create("com.hialec.kramv", "");
 
 class Signpost
 {
@@ -205,6 +205,9 @@ struct ViewFramebufferData {
 #endif
 
     __weak id _delegateHud;
+    
+    bool _useFramePacing;
+    double _avgGpuTime;
 }
 
 @synthesize playAnimations;
@@ -1626,12 +1629,44 @@ inline const char* toFilenameShort(const char* filename) {
 
         // These are equivalent
         // [commandBuffer presentDrawable:view.currentDrawable];
+        
+        typeof(self) __weak weakSelf = self;
         [commandBuffer addScheduledHandler:^(id<MTLCommandBuffer> cmdBuf) {
+            if (cmdBuf.error) return;
             Signpost postPresent("presentDrawble");
-            [drawable present];
+            [weakSelf _present:drawable];
         }];
 
+        // This only works if only using one commandBuffer
+        [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> cmdBuf) {
+            if (cmdBuf.error) return;
+            double gpuTime = cmdBuf.GPUEndTime - cmdBuf.GPUStartTime;
+            [weakSelf _updateFramePacing:gpuTime];
+        }];
+            
         [commandBuffer commit];
+    }
+}
+    
+- (void)_present:(id<CAMetalDrawable>)drawable {
+    if (_useFramePacing)
+        [drawable presentAfterMinimumDuration:_avgGpuTime];
+    else
+        [drawable present];
+}
+
+- (void)_updateFramePacing:(double)gpuTime {
+    if (_useFramePacing) {
+        _avgGpuTime = lerp(_avgGpuTime, gpuTime, 0.25);
+    }
+}
+
+- (void)setFramePacingEnabled:(bool)enable {
+    if (_useFramePacing != enable) {
+        _useFramePacing = enable;
+        
+        // this will get adjusted by updateFramePacing
+        _avgGpuTime = 1.0 / 60.0;
     }
 }
 
@@ -2444,7 +2479,7 @@ private:
 - (void)assetWithURL:(NSURL *)assetURL didFailToLoadWithError:(NSError *)error;
 {
     // TODO: display this error to the user
-    NSLog(@"Asset load failed with error: %@", error);
+    KLOGE("Renderer", "Asset load failed with error: %s", [[error localizedDescription] UTF8String]);
 }
 #endif
 

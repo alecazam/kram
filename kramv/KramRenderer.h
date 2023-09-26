@@ -82,6 +82,9 @@ class KTXImage;
 // So caller can respond to completed callback
 - (void)setEyedropperDelegate:(nullable id)delegate;
 
+// Can enable frame pacing for VRR
+- (void)setFramePacingEnabled:(bool)enable;
+
 // can play animations in gltf models
 @property (nonatomic) BOOL playAnimations;
 

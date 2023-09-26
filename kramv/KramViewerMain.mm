@@ -539,7 +539,7 @@ NSDictionary* pasteboardOptions = @{
     _data._delegate.view = (__bridge void*)self;
     
     // TODO: see if can only open this
-    //KLOGI("Viewer", "AwakeFromNIB");
+    // KLOGI("Viewer", "AwakeFromNIB");
 }
 
 // to get upper left origin like on UIView
@@ -572,12 +572,9 @@ NSDictionary* pasteboardOptions = @{
     // only re-render when changes are made
     // Note: this breaks ability to gpu capture, since display link not running.
     // so disable this if want to do captures.  Or just move the cursor to capture.
-//#ifndef NDEBUG  // KRAM_RELEASE
     self.enableSetNeedsDisplay = YES;
-//#endif
-    // openFile in appDelegate handles "Open in..."
 
-   
+    // openFile in appDelegate handles "Open in..."
 
     // added for drag-drop support
     [self registerForDraggedTypes:pasteboardTypes];

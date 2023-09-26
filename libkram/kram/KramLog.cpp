@@ -6,6 +6,15 @@
 
 //#include <string>
 
+#if KRAM_IOS || KRAM_MAC
+#define KRAM_LOG_STACKTRACE KRAM_DEBUG
+#elif KRAM_WIN
+// TODO: need to debug code before enabling
+#define KRAM_LOG_STACKTRACE 0 // KRAM_DEBUG
+#else
+#define KRAM_LOG_STACKTRACE 0 // KRAM_DEBUG
+#endif
+
 // for Win
 #include <stdarg.h>
 
@@ -13,8 +22,22 @@
 
 #if KRAM_WIN
 #include <windows.h>
+#include <intrin.h> // for AddressOfReturnAdress, ReturnAddress
+
+#if KRAM_LOG_STACKTRACE
+// There is a DbgHelp.lib that is redistributable
+#include <dbghelp.h>
+#pragma comment(lib, "DbgHelp.lib");
+#endif
+
 #elif KRAM_ANDROID
 #include <log.h>
+
+#elif KRAM_IOS || KRAM_MAC
+#include <os/log.h>
+#include <cxxabi.h> // demangle
+#include <dlfcn.h>  // address to symbol
+#include <execinfo.h>
 #endif
 
 #include "KramFmt.h"
@@ -32,6 +55,321 @@ using mylock = std::unique_lock<mymutex>;
 
 using namespace NAMESPACE_STL;
 
+
+#if KRAM_WIN
+// https://stackoverflow.com/questions/18547251/when-i-use-strlcpy-function-in-c-the-compilor-give-me-an-error
+
+// '_cups_strlcat()' - Safely concatenate two strings.
+size_t                    // O - Length of string
+strlcat(char       *dst,  // O - Destination string
+        const char *src,  // I - Source string
+        size_t     size)  // I - Size of destination string buffer
+{
+  size_t    srclen;         // Length of source string
+  size_t    dstlen;         // Length of destination string
+
+
+   // Figure out how much room is left...
+  dstlen = strlen(dst);
+  size   -= dstlen + 1;
+
+  if (!size)
+    return (dstlen);        // No room, return immediately...
+
+  // Figure out how much room is needed...
+  srclen = strlen(src);
+
+  // Copy the appropriate amount...
+  if (srclen > size)
+    srclen = size;
+
+  memcpy(dst + dstlen, src, srclen);
+  dst[dstlen + srclen] = '\0';
+
+  return (dstlen + srclen);
+}
+
+// '_cups_strlcpy()' - Safely copy two strings.
+size_t                          // O - Length of string
+strlcpy(char       *dst,        // O - Destination string
+        const char *src,        // I - Source string
+        size_t      size)       // I - Size of destination string buffer
+{
+  size_t    srclen; // Length of source string
+
+
+  // Figure out how much room is needed...
+  size --;
+
+  srclen = strlen(src);
+
+  // Copy the appropriate amount...
+  if (srclen > size)
+    srclen = size;
+
+  memcpy(dst, src, srclen);
+  dst[srclen] = '\0';
+
+  return (srclen);
+}
+#endif
+
+#if KRAM_LOG_STACKTRACE
+
+#if KRAM_WIN
+// https://learn.microsoft.com/en-us/windows/win32/debug/retrieving-symbol-information-by-address?redirectedfrom=MSDN
+class AddressHelper
+{
+private:
+    
+    HANDLE m_process = 0;
+    
+public:
+    AddressHelper()
+    {
+        m_process = GetCurrentProcess();
+        
+        // produces line number and demangles name
+        SymSetOptions(SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
+        
+        // load the symbols
+        SymInitialize(m_process, NULL, TRUE);
+    }
+    
+    bool isStackTraceSupported() const { return true; }
+    
+    bool getAddressInfo(const void* address, string& symbolName, string& filename, uint32_t& line)
+    {
+        string.clear();
+        filename.clear()
+        line = 0;
+        
+        IMAGEHLP_LINE64 loc = {}
+        loc.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+        DWORD  displacement;
+        
+        // This grabs the symbol name
+        char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+        SYMBOL_INFO& symbol = *(SYMBOL_INFO*)buffer;
+        symbol.SizeOfStruct = sizeof(SYMBOL_INFO);
+        symbol.MaxNameLen = MAX_SYM_NAME;
+        SymFromAddr(process, (ULONG64)address, &displacement, &symbol);
+        symbolName = symbol.Name;
+        
+        // all demangle ops are single-threaded, so run this under log mutex
+        if (!SymGetLineFromAddr64(m_process, (DWORD64)address, &displacement, &loc))
+            return false;
+        
+        filename = loc.Filename;
+        line = loc.LineNumber;
+        return true;
+    }
+    
+    void getStackInfo(string& stackInfo, uint32_t skipStackLevels)
+    {
+        STACKFRAME64 stack = {};
+        
+        string symbolName, filename;
+        uint32_t line;
+        
+        for( frame = 0; ; frame++ ) {
+            if (frame < skipStackLevels)
+                continue;
+            
+            BOOL result = StackWalk64(
+              IMAGE_FILE_MACHINE_AMD64, // Intel licensed this - is x64 now
+              m_process,
+              GetCurrentThread(),
+              &stack,
+              &ctxCopy,
+              NULL,
+              SymFunctionTableAccess64,
+              SymGetModuleBase64,
+              NULL
+              );
+            
+            // no knowledge of stack depth, so just have to keep waking
+            if (!result)
+                return;
+            
+            if (getAddressInfo(mstack.AddrPC.Offset, symbolName, filename, line))
+                append_sprintf(stackInfo, "%s:%u: %s", filename.c_str(), line, symbolName.c_str());
+            
+            // Note: can get Module with a different call if above fails
+        }
+    }
+    
+    // https://stackoverflow.com/questions/22467604/how-can-you-use-capturestackbacktrace-to-capture-the-exception-stack-not-the-ca
+};
+
+// Check this out
+// https://github.com/vtjnash/dbghelp2
+
+// Also here, cross-platform symbol lookup/demangle
+// handles ASLR on mach-o, but only using relative offsets on the .o file
+// https://dynamorio.org/page_drsyms.html
+
+// https://stackoverflow.com/questions/22467604/how-can-you-use-capturestackbacktrace-to-capture-the-exception-stack-not-the-ca
+// CaptureStackBackTrace().
+
+#else
+
+// here's nm on osx
+// https://opensource.apple.com/source/cctools/cctools-622.5.1/misc/nm.c
+
+
+// The dladdr() function is available only in dynamically linked programs.
+// #include <dlfcn.h>
+// int dladdr(const void *addr, Dl_info *info);
+// int dladdr1(const void *addr, Dl_info *info, void **extra_info,
+//                   int flags);
+// Here's supposed to be code that deals with static libs too
+// https://stackoverflow.com/questions/19848567/how-to-get-the-build-uuid-in-runtime-and-the-image-base-address/19859516#19859516
+
+class AddressHelper
+{
+private:
+    void substr(string& str, const char* start, const char* end) {
+        str = str.substr(start - str.c_str(), end - start);
+    }
+    
+    const char* strrchr(const char* start, const char* end, char c) {
+        while (end > start) {
+            end--;
+            if (*end == c)
+                return end;
+        }
+        
+        return nullptr;
+    }
+    
+    void demangleSymbol(string& symbolName)
+    {
+        size_t size = 0;
+        int status = 0;
+        
+        // This one is getting chopped up incorrect
+        // 10  AppKit                              0x0000000193079730 __24-[NSViewController view]_block_invoke + 28
+        
+        // Some other examples
+        // 14  AppKit                              0x0000000192c7b230 NSPerformVisuallyAtomicChange + 108
+        // 24  kramv                               0x0000000104c6b4e0 main + 76
+        
+        const char* text = symbolName.c_str();
+        // chop off the "+ 132" offset
+        const char* plusOffsetEnd = strstr(text, " +");
+        const char* objCStart = strstr(text, " -");
+        if (!objCStart)
+            objCStart = strstr(text, " __24-"); // block invoke
+        
+        const char* cppStart = strstr(text, " _ZN4");
+        const char* spaceStart = plusOffsetEnd ? strrchr(text, plusOffsetEnd, ' ') : nullptr;
+        
+        if (objCStart)
+            substr(symbolName, objCStart+1, plusOffsetEnd);
+        else if (cppStart)
+            substr(symbolName, cppStart+1, plusOffsetEnd);
+        else if (spaceStart)
+            substr(symbolName, spaceStart+1, plusOffsetEnd);
+        
+        // Note: some objC does need demangle
+        if (cppStart) {
+            // This allocates memory using malloc
+            // Must have just the name, not all the other cruft around it
+            // ObjC is not manged.
+            char* symbol = abi::__cxa_demangle(symbolName.c_str(), nullptr, &size, &status);
+            if (status == 0) {
+                symbolName = symbol;
+                free(symbol);
+            }
+        }
+    }
+    
+public:
+    bool isStackTraceSupported() const { return true; }
+   
+    bool getAddressInfo(const void* address, string& symbolName, string& filename, uint32_t& line)
+    {
+        void* callstack[1] = { (void*)address };
+        
+        // this allocates memory
+        char** strs = backtrace_symbols(callstack, 1);
+        
+        // may need -no_pie to turn off ASLR, also don't reuse stack-frame reg
+        // Will have to parse symbolName, filename, line
+        symbolName = strs[0];
+        
+        free(strs);
+        
+        // TODO: figure out file/line lookup, don't want to fire nm/addr2line process each time
+        // Those are GPL poison into codebases.  But they no doubt do a ton
+        // or work on each launch to then lookup 1+ symbols.
+        // Apple doesn't even have addr2line, and needs to use atos. 
+        // But atos doesn't exist except on dev systems.
+        // atos goes to private framework CoreSymbolication.  Ugh.
+        // There is also boost::stack_trace which does gen a valid stack somehow.
+        
+        // CoreSymbolicate might have calls
+        // https://opensource.apple.com/source/xnu/xnu-3789.21.4/tools/tests/darwintests/backtracing.c.auto.html
+        
+        // https://developer.apple.com/documentation/xcode/adding-identifiable-symbol-names-to-a-crash-report
+        // https://developer.apple.com/documentation/xcode/analyzing-a-crash-report
+        
+        // Note: this can provide the file/line, but requires calling out to external process
+        // also nm and addr2line
+        // system("atos -o kramv.app.dSYM/Contents/Resources/DWARF/kramv -arch arm64 -l %p", address);
+        
+        filename.clear();
+        line = 0;
+        
+        demangleSymbol(symbolName);
+        
+        return true;
+    }
+    
+    void getStackInfo(string& stackInfo, uint32_t skipStackLevels)
+    {
+        void* callstack[128];
+        uint32_t frames = backtrace(callstack, 128);
+        
+        // Also this call, but can't use it to lookup a symbol, and it's ObjC.
+        // but it just returns the same data as below (no file/line).
+        // +[NSThread callStackSymbols]
+        
+        // backtrace_symbols() attempts to transform a call stack obtained by
+        // backtrace() into an array of human-readable strings using dladdr().
+        char** strs = backtrace_symbols(callstack, frames);
+        string symbolName;
+        for (uint32_t i = skipStackLevels; i < frames; ++i) {
+            symbolName = strs[i];
+            
+            demangleSymbol(symbolName);
+            
+            append_sprintf(stackInfo, "[%2u] ", i-skipStackLevels);
+            stackInfo += symbolName;
+            stackInfo += "\n";
+        }
+        
+        free(strs);
+    }
+    
+    // nm is typically used to decode, but that's an executable
+};
+#endif
+
+#else
+
+class AddressHelper
+{
+public:
+    bool isStackTraceSupported() const { return false; }
+    bool getAddressInfo(const void* address, string& symbolName, string& filename, uint32_t& line) { return false; }
+    void getStackInfo(string& stackInfo, uint32_t skipStackLevels) {}
+};
+
+#endif
+
+static AddressHelper gAddressHelper;
 
 
 // TODO: install assert handler to intercept, and also add a verify (assert that leaves source in)
@@ -259,36 +597,72 @@ struct LogMessage
     const char* group;
     int32_t logLevel;
     
+    // from macro
     const char* file;
     int32_t line;
     const char* func;
+    
+    // embelished
     const char* threadName;
+    double timestamp;
+    
+    void* dso;
+    void* returnAddress;
     
     const char* msg;
     bool msgHasNewline;
-    
-    double timestamp;
 };
 
-static const char* getFormatTokens(const LogMessage& msg) {
+enum DebuggerType
+{
+    DebuggerOutputDebugString,
+    DebuggerOSLog,
+    DebuggerLogcat,
+    Debugger,
+};
+
+constexpr const uint32_t kMaxTokens = 32;
+
+static const char* getFormatTokens(char tokens[kMaxTokens], const LogMessage& msg, DebuggerType type) 
+{
 #if KRAM_WIN
-    if (msg.logLevel <= LogLevelInfo)
-        return "m\n";
-    if (msg.file)
-        return "[l] g m\n"
-               "F: L: t u\n";
-    return "[l] g m\n";
+    if (msg.logLevel <= LogLevelInfo) {
+        stlcpy(tokens, "m\n", kMaxTokens);
+    }
+    else if (msg.file) {
+        strlcpy(tokens, "[l] g m\n" "F: L: t u\n", kMaxTokens);
+    }
+    else {
+        strlcpy(tokens, "[l] g m\n", kMaxTokens);
+    }
 #elif KRAM_ANDROID
-    return "m\n";
+    // Android logcat has level, tag, file/line passed in the mesasge
+   strlcpy(tokens, "m\n", kMaxTokens);
 #else
     // copy of formatters above
-    if (msg.logLevel <= LogLevelInfo)
-        return "m\n";
-    if (msg.file)
-        return "[l] g m\n"
-               "F: L: t u\n";
-    return "[l] g m\n";
+    if (msg.logLevel <= LogLevelInfo) {
+        strlcpy(tokens, "m\n", kMaxTokens);
+    }
+    else if (msg.file) {
+        strlcpy(tokens, "[l] g m\n" "F: L: t u\n", kMaxTokens);
+    }
+    else {
+        strlcpy(tokens, "[l] g m\n", kMaxTokens);
+    }
+    
+    if (gAddressHelper.isStackTraceSupported() && msg.logLevel >= LogLevelError) {
+        
+        // can just report the caller, and not a full stack
+        // already have function, so returnAddress printing is the same.
+        /* if (msg.returnAddress) {
+            strlcat(tokens, "s\n", kMaxTokens);
+        }
+        else */ {
+            strlcat(tokens, "S", kMaxTokens);
+        }
+    }
 #endif
+    return tokens;
 }
 
 
@@ -333,6 +707,23 @@ static void formatMessage(string& buffer, const LogMessage& msg, const char* tok
                 break;
             }
                 
+            case 's': { // return address (1 line stack)
+                if (msg.returnAddress) {
+                    string symbolName, filename;
+                    uint32_t line = 0;
+                    gAddressHelper.getAddressInfo(msg.returnAddress, symbolName, filename, line);
+                    buffer += symbolName;
+                }
+                break;
+            }
+            case 'S': { // full stack
+                uint32_t skipStackLevels = 3;
+#if KRAM_DEBUG
+                skipStackLevels++;
+#endif
+                gAddressHelper.getStackInfo(buffer, skipStackLevels);
+                break;
+            }
             case 'u': { // func
                 if (msg.func) {
                     buffer += msg.func;
@@ -443,14 +834,14 @@ static int32_t logMessageImpl(const LogMessage& msg)
     // TODO: add any filtering up here, or before msg is built
     
     mylock lock(gLogState.lock);
-
+    
     // this means caller needs to know all errors to display in the hud
     if (gLogState.isErrorLogCapture && msg.logLevel == LogLevelError) {
         gLogState.errorLogCaptureText += msg.msg;
         if (!msg.msgHasNewline)
             gLogState.errorLogCaptureText += "\n";
     }
-
+    
     // format into a buffer (it's under lock, so can use static)
     string& buffer = gLogState.buffer;
     
@@ -470,13 +861,16 @@ static int32_t logMessageImpl(const LogMessage& msg)
     }
     // TODO: test IsDebuggerPresent once per frame, not on every log
     gLogState.isWindowsDebugger = ::IsDebuggerPresent();
-
+    
     if (gLogState.isWindowsGuiApp && !gLogState.isWindowsDebugger)
         return status;
     
-    formatMessage(buffer, msg, getFormatTokens(msg));
     
     if (gLogState.isWindowsGuiApp) {
+        char tokens[kMaxTokens] = {};
+        getFormatTokens(tokens, msg, DebuggerOutputDebugString);
+        formatMessage(buffer, msg, tokens);
+        
         // TODO: split string up into multiple logs
         // this is limited to 32K
         // OutputDebugString(buffer.c_str());
@@ -486,6 +880,10 @@ static int32_t logMessageImpl(const LogMessage& msg)
         OutputDebugStringU(buffer.c_str(), buffer.size());
     }
     else {
+        char tokens[kMaxTokens] = {};
+        getFormatTokens(tokens, msg, Debugger);
+        formatMessage(buffer, msg, tokens);
+        
         // avoid double print to debugger
         FILE* fp = stdout;
         fwrite(buffer.c_str(), 1, buffer.size(), fp);
@@ -495,66 +893,129 @@ static int32_t logMessageImpl(const LogMessage& msg)
 #elif KRAM_ANDROID
     // TODO: move higher up
     // API 30
-    if (!__android_log_is_loggable(androidLogLevel, msg.group, androidLogLevel))
-        return status;
-    
-    formatMessage(buffer, msg, getFormatTokens(msg));
-    
-    AndroidLogLevel androidLogLevel = ANDROID_LOG_ERROR;
-    switch (logLevel) {
+    AndroidLogLevel osLogLevel = ANDROID_LOG_ERROR;
+    switch (msg.logLevel) {
         case LogLevelDebug:
-            androidLogLevel = ANDROID_LOG_DEBUG;
+            osLogLevel = ANDROID_LOG_DEBUG;
             break;
         case LogLevelInfo:
-            androidLogLevel = ANDROID_LOG_INFO;
+            osLogLevel = ANDROID_LOG_INFO;
             break;
-
+            
         case LogLevelWarning:
-            androidLogLevel = ANDROID_LOG_WARNING;
+            osLogLevel = ANDROID_LOG_WARNING;
             break;
         case LogLevelError:
-            androidLogLevel = ANDROID_LOG_ERROR;
+            osLogLevel = ANDROID_LOG_ERROR;
             break;
     }
+    
+    if (!__android_log_is_loggable(osLogLevel, msg.group, __android_log_get_minimum_priority())) // will be default level if not set
+        return status;
+    
+    char tokens[kMaxTokens] = {};
+    getFormatTokens(tokens, msg, DebuggerLogcat);
+    formatMessage(buffer, msg, tokens);
     
     // TODO: split string up into multiple logs by /n
     // this can only write 4K - 80 chars at time, don't use print it's 1023
     // API 30
     __android_log_message msg = {
-        LOG_ID_MAIN, msg.file, msg.line, buffer.c_str(), androidLogLevel, sizeof(__android_log_message), msg.group);
-    }
+        LOG_ID_MAIN, msg.file, msg.line, buffer.c_str(), osLogLevel, sizeof(__android_log_message), msg.group
+    };
     __android_log_write_log_message(msg);
 #else
-    // Note: this doesn't go out to Console, but does go out to Xcode.
-    // NSLog/os_log sucks with no intercepts, filtering, or formatting.
     
-    formatMessage(buffer, msg, getFormatTokens(msg));
+#if KRAM_IOS || KRAM_MAC
+    // test os_log
     
-    FILE* fp = stdout;
-    fwrite(buffer.c_str(), 1, buffer.size(), fp);
-    // if heavy logging, then could delay fflush
-    fflush(fp);
+    static bool useOSLog = true;
+    if (useOSLog)
+    {
+        char tokens[kMaxTokens] = {};
+        getFormatTokens(tokens, msg, DebuggerOSLog);
+        formatMessage(buffer, msg, tokens);
+        
+        // os_log reports this as the callsite, and doesn't jump to another file
+        // or if the dso is even passed from this file, the file/line aren't correct.
+        // So os_log_impl is grabbing return address whithin the function that can't be set.
+        // So have to inject the NSLog, os_log, syslog calls directly into code, but that
+        // not feasible.   This will at least color the mesages.
+        
+        auto osLogLevel = OS_LOG_TYPE_INFO;
+        switch (msg.logLevel) {
+            case LogLevelDebug:
+                osLogLevel = OS_LOG_TYPE_DEBUG;
+                break;
+            case LogLevelInfo:
+                osLogLevel = OS_LOG_TYPE_INFO;
+                break;
+                
+            case LogLevelWarning:
+                osLogLevel = OS_LOG_TYPE_ERROR; // no warning level
+                break;
+            case LogLevelError:
+                osLogLevel = OS_LOG_TYPE_FAULT;
+                break;
+        }
+        
+        // TODO: have kramc and kramv using this logger, can we get at subsystem?
+        const char* subsystem = "com.hialec.kram";
+        
+        os_log_with_type(os_log_create(subsystem, msg.group), osLogLevel, "%{public}s", buffer.c_str());
+    }
+    else
+#endif
+    {
+        char tokens[kMaxTokens] = {};
+        getFormatTokens(tokens, msg, Debugger);
+        formatMessage(buffer, msg, tokens);
+        
+        FILE* fp = stdout;
+        fwrite(buffer.c_str(), 1, buffer.size(), fp);
+        // if heavy logging, then could delay fflush
+        fflush(fp);
+    }
 #endif
 
     return status;  // reserved for later
 }
 
+
+                     
 int32_t logMessage(const char* group, int32_t logLevel,
                           const char* file, int32_t line, const char* func,
                           const char* fmt, ...)
 {
+    void* dso = nullptr;
+    void* logAddress = nullptr;
+    
+#if KRAM_IOS || KRAM_MAC
+    dso = &__dso_handle; // may need to come from call site for the mach_header of .o
+    logAddress = __builtin_return_address(0); // or __builtin_frame_address(0))
+#elif KRAM_WIN
+    //
+    // TODO: use SymFromAddr to convert address to mangled symbol, and demangle it
+    // from DbgHelp.dll
+    logAddress = _ReturnAddress(); // or _AddressOfReturnAddress()
+#endif
+    
     LogMessage logMessage = {
         group, logLevel,
-        file, line, func, nullptr,
-        nullptr, false, 0.0
+        file, line, func, 
+        nullptr, 0.0, // threadname, timestamp
+        
+        // must set -no_pie to use __builtin_return_address to turn off ASLR
+        dso, logAddress,
+        nullptr, false, // msg, msgHasNewline
     };
+    
     if (isMessageFiltered(logMessage)) {
         return 0;
     }
     
-    
     // convert var ags to a msg
-    const char* msg;
+    const char* msg = nullptr;
 
     string str;
     if (strrchr(fmt, '%') == nullptr) {
@@ -570,9 +1031,10 @@ int32_t logMessage(const char* group, int32_t logLevel,
     else {
         va_list args;
         va_start(args, fmt);
-        vsprintf(str, fmt, args);
+        int res = vsprintf(str, fmt, args);
         va_end(args);
-
+        if (res < 0) return 0;
+        
         msg = str.c_str();
     }
     
@@ -597,11 +1059,21 @@ int32_t logMessage(const char* group, int32_t logLevel,
     // TODO: size_t size = std::formatted_size(format, args);
     // and then reserve that space in str.  Use that for impl of append_format.
     // can then append to existing string (see vsprintf)
+#if KRAM_IOS || KRAM_MAC
+    void* dso = &__dso_handle;
+    void* logAddress = __builtin_return_address(0); // or __builtin_frame_address(0))
+#else
+    void* dso = nullptr;
+    void* logAddress = nullptr;
+#endif
     
     LogMessage logMessage = {
         group, logLevel,
-        file, line, func, nullptr,
-        nullptr, false, 0.0
+        file, line, func, nullptr, 0.0, // threadName, timestamp
+        
+        // must set -no_pie to use __builtin_return_address to turn off ASLR
+        dso, logAddress,
+        nullptr, false, // msg, msgHasNewline
     };
     if (isMessageFiltered(logMessage)) {
         return 0;
