@@ -136,20 +136,25 @@ public:
         SymInitialize(m_process, NULL, TRUE);
     }
     
+    ~AddressHelper()
+    {
+        SymCleanup(m_process);
+    }
+    
     bool isStackTraceSupported() const { return true; }
     
     bool getAddressInfo(const void* address, string& symbolName, string& filename, uint32_t& line)
     {
         string.clear();
-        filename.clear()
+        filename.clear();
         line = 0;
         
-        IMAGEHLP_LINE64 loc = {}
+        IMAGEHLP_LINE64 loc = {};
         loc.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-        DWORD  displacement;
+        DWORD  displacement = 0;
         
         // This grabs the symbol name
-        char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+        char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)] = {};
         SYMBOL_INFO& symbol = *(SYMBOL_INFO*)buffer;
         symbol.SizeOfStruct = sizeof(SYMBOL_INFO);
         symbol.MaxNameLen = MAX_SYM_NAME;
@@ -167,38 +172,27 @@ public:
     
     void getStackInfo(string& stackInfo, uint32_t skipStackLevels)
     {
-        STACKFRAME64 stack = {};
-        
         string symbolName, filename;
-        uint32_t line;
+        uint32_t line = 0;
         
-        for( frame = 0; ; frame++ ) {
-            if (frame < skipStackLevels)
-                continue;
-            
-            BOOL result = StackWalk64(
-              IMAGE_FILE_MACHINE_AMD64, // Intel licensed this - is x64 now
-              m_process,
-              GetCurrentThread(),
-              &stack,
-              &ctxCopy,
-              NULL,
-              SymFunctionTableAccess64,
-              SymGetModuleBase64,
-              NULL
-              );
-            
-            // no knowledge of stack depth, so just have to keep waking
-            if (!result)
-                return;
-            
-            if (getAddressInfo(mstack.AddrPC.Offset, symbolName, filename, line))
+        const uint32_t kMaxStackTrace = 128;
+        void* stacktrace[kMaxStackTrace] = {};
+        
+        // Can use this hash to uniquely identify stacks that are the same
+        ULONG stackTraceHash = 0;
+        
+        // This provides the symbols
+        uint32_t frameCount = CaptureStackBackTrace(skipStackLevels, kMaxStackTrace, stacktrace, &stackTraceHash);
+        
+        for(uint32_t i = 0; i < frameCount; ++i) {
+            if (getAddressInfo(stacktrace[i], symbolName, filename, line))
                 append_sprintf(stackInfo, "%s:%u: %s", filename.c_str(), line, symbolName.c_str());
             
             // Note: can get Module with a different call if above fails
         }
     }
     
+    // See here on using StackWalk64 to walk up the SEH context.
     // https://stackoverflow.com/questions/22467604/how-can-you-use-capturestackbacktrace-to-capture-the-exception-stack-not-the-ca
 };
 
