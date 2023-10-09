@@ -8,9 +8,9 @@ Windows thumbnailer for DDS/KTX/KTX2 containers in C++.  To use the thumbnailer:
 
 # About kram thumbnailer
 
-The thumbnailer runs the same libkram decoders that kramv uses for macOS.  This is an ancient Win7 thumbnailer that Microsoft last updated in Vista.  The Microsoft samples didn't work off github.  
+The thumbnailer dll runs the same libkram decoders that kramv thumbnailer uses for macOS.  An ancient Win7 thumbnil service calls over to the dll.  The Microsoft service harkens back to Win7, was last updated in vista, and their sample didn't work off github.  So thankfully a dev on github can cleaned all this up. 
 
-A sanitized stream of bytes is supplied by the Explorer thumbnail service to the dll, the dll decodes the image container to a single image, and then returns the closest mip as a bitmap.  The bitmap is assumed to be sRGB, but there are few details or settings.  Explorer caches the thumbnails.  Windows also seems to generate thumbnails when apps are tied to specific extensions.
+A sanitized stream of bytes is supplied by the Explorer thumbnail service to the dll, the dll uses libkram to decode the image container to a single image, and returns the closest mip as a bitmap to the service.  The bitmap is assumed to be sRGB, but there are few details or settings.  Explorer caches the thumbnails.  Windows also seems to generate thumbnails when apps are tied to specific extensions.
 
 For some reason, Microsoft doesn't upscale small 2x2 thumbnails.  These show up as barely visible dots despite a request for a 32x32 pixel.  macOS does upscale these so they are viewable.
 
@@ -21,7 +21,7 @@ These are the default thumbnail sizes that are subject to change.  Note that Mic
 * 256x256
 * 1024x1024
 
-Adapted from Microosoft sample code that iOrange cleaned up for QOI images. 
+Adapted from Microsoft sample code that iOrange cleaned to generate thumbnails for QOI images. 
 
 https://github.com/iOrange/QOIThumbnailProvider
 

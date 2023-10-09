@@ -1,4 +1,4 @@
-// kram - Copyright 2020-2022 by Alec Miller. - MIT License
+// kram - Copyright 2020-2023 by Alec Miller. - MIT License
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
@@ -44,6 +44,42 @@ using namespace kram;
 using namespace NAMESPACE_STL;
 
 
+// ktx, ktx2, png, and dds for images
+// zip, metallib
+// gltf, glb files for models
+NSArray<NSString*>* utis = @[
+  @"public.directory",
+    
+  [UTType typeWithFilenameExtension: @"png"].identifier,
+  [UTType typeWithFilenameExtension: @"ktx"].identifier,
+  [UTType typeWithFilenameExtension: @"ktx2"].identifier,
+  [UTType typeWithFilenameExtension: @"dds"].identifier,
+  
+  [UTType typeWithFilenameExtension: @"zip"].identifier,
+  [UTType typeWithFilenameExtension: @"metallib"].identifier,
+  
+#if USE_GLTF
+  [UTType typeWithFilenameExtension: @"gltf"].identifier,
+  [UTType typeWithFilenameExtension: @"glb"].identifier,
+  //@"model/gltf+json",
+  //@"model/gltf+binary"
+#endif
+#if USE_USD
+  [UTType typeWithFilenameExtension: @"usd"].identifier,
+  [UTType typeWithFilenameExtension: @"usd"].identifier,
+  [UTType typeWithFilenameExtension: @"usda"].identifier,
+#endif
+  
+  // read -atlas.json files
+  [UTType typeWithFilenameExtension: @"json"].identifier
+];
+NSDictionary* pasteboardOptions = @{
+    // This means only these uti can be droped.
+    NSPasteboardURLReadingContentsConformToTypesKey: utis
+    
+    // Don't use this it prevents folder urls
+    //, NSPasteboardURLReadingFileURLsOnlyKey: @YES
+};
 
 
 struct MouseData
@@ -382,7 +418,41 @@ withCurrentSearchString:(NSString *)searchString
     [view fixupDocumentList];
 }
 
+// this isn't filtered by the document types specified, NSDocumentController?
+// added public.folder instead, this would nedd to call readFromURL
+- (IBAction)openDocument:(id)sender
+{
+    // need to implement, or default NSOpenPanel can't specify a directory
+    NSDocumentController* controller = [NSDocumentController sharedDocumentController];
+ 
+#if 0
+    // Would be nice, but doesn't allow directory.
+    // How is NSDocument aware of directory, from Info.plist?
+    NSArray<NSURL*>* urls = [controller URLsFromRunningOpenPanel];
+    if (urls) {
+        NSLog(@"selected URL: %@", urls[0]);
+        
+    }
+#else
+    
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    [panel setCanChooseFiles:YES];
+    [panel setCanChooseDirectories:YES];
+    [panel setAllowsMultipleSelection:NO];
 
+    if ([controller runModalOpenPanel:panel forTypes:utis] == NSModalResponseOK)
+    {
+        NSURL* selectedURL = [[panel URLs] objectAtIndex:0];
+
+        //NSLog(@"selected URL: %@", selectedURL);
+        NSError* error = nil;
+
+        [controller    openDocumentWithContentsOfURL:selectedURL
+                                 display:YES
+                                   error:&error];
+    }
+#endif
+}
 
 - (IBAction)showAboutDialog:(id)sender
 {
@@ -394,7 +464,7 @@ withCurrentSearchString:(NSString *)searchString
 
     // want to embed the git tag here
     options[@"Copyright"] =
-        [NSString stringWithUTF8String:"kram ©2020-2022 by Alec Miller"];
+        [NSString stringWithUTF8String:"kram ©2020-2023 by Alec Miller"];
 
     // add a link to kram website, skip the Visit text
     NSMutableAttributedString* str = [[NSMutableAttributedString alloc]
@@ -461,42 +531,6 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
  
 */
 
-// ktx, ktx2, png, and dds for images
-// zip, metallib
-// gltf, glb files for models
-NSArray<NSString*>* utis = @[
-  @"public.directory",
-    
-  [UTType typeWithFilenameExtension: @"png"].identifier,
-  [UTType typeWithFilenameExtension: @"ktx"].identifier,
-  [UTType typeWithFilenameExtension: @"ktx2"].identifier,
-  [UTType typeWithFilenameExtension: @"dds"].identifier,
-  
-  [UTType typeWithFilenameExtension: @"zip"].identifier,
-  [UTType typeWithFilenameExtension: @"metallib"].identifier,
-  
-#if USE_GLTF
-  [UTType typeWithFilenameExtension: @"gltf"].identifier,
-  [UTType typeWithFilenameExtension: @"glb"].identifier,
-  //@"model/gltf+json",
-  //@"model/gltf+binary"
-#endif
-#if USE_USD
-  [UTType typeWithFilenameExtension: @"usd"].identifier,
-  [UTType typeWithFilenameExtension: @"usd"].identifier,
-  [UTType typeWithFilenameExtension: @"usda"].identifier,
-#endif
-  
-  // read -atlas.json files
-  [UTType typeWithFilenameExtension: @"json"].identifier
-];
-NSDictionary* pasteboardOptions = @{
-    // This means only these uti can be droped.
-    NSPasteboardURLReadingContentsConformToTypesKey: utis
-    
-    // Don't use this it prevents folder urls
-    //, NSPasteboardURLReadingFileURLsOnlyKey: @YES
-};
 
 
 

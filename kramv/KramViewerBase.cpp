@@ -1,6 +1,6 @@
 #include "KramViewerBase.h"
 
-#include "simdjson/simdjson.h"
+#include "json11/json11.h"
 
 namespace kram {
 using namespace simd;
@@ -670,8 +670,6 @@ float4x4 orthographic_rhs(float width, float height, float nearZ, float farZ,
 //--------------------------------
 
 // Want to avoid Apple libs for things that have C++ equivalents.
-// simdjson without exceptions isn't super readable or safe looking.
-// TODO: see if simdjson is stable enough, using unsafe calls
 
 Data::Data()
 {
@@ -684,47 +682,71 @@ Data::~Data()
     delete _showSettings;
 }
 
+void Data::clearAtlas() {
+    _showSettings->atlas.clear();
+    _showSettings->lastAtlas = nullptr;
+}
+
 bool Data::loadAtlasFile(const char* filename)
 {
-    using namespace simdjson;
+    using namespace json11;
     
-    ondemand::parser parser;
+    clearAtlas();
     
-    // TODO: can just mmap the json to provide
-    auto json = padded_string::load(filename);
-    auto atlasProps = parser.iterate(json);
-       
+    // can just mmap the json
+    MmapHelper mmap;
+    if (!mmap.open(filename)) {
+        KLOGE("kramv", "Failed to open %s", filename);
+        return false;
+    }
+    
+    Timer timer;
+    JsonReader jsonReader;
+    const Json* root = jsonReader.read((const char*)mmap.data(), mmap.dataLength());
+    string err = jsonReader.error();
+    if (!root || !err.empty()) {
+        KLOGE("kramv", "Failed parsing %s: %s", filename, err.c_str());
+        return false;
+    }
+    timer.stop();
+    
+    KLOGI("kramv", "parsed %.0f KB of json using %.0f KB of memory in %.3fms",
+          (double)mmap.dataLength() / 1024.0,
+          (double)jsonReader.memoryUse() / 1024.0,
+          timer.timeElapsedMillis());
+    
+    const Json& atlasProps = (*root)[(uint32_t)0];
+    
     // Can use hover or a show all on these entries and names.
     // Draw names on screen using system text in the upper left corner if 1
     // if showing all, then show names across each mip level.  May want to
     // snap to pixels on each mip level so can see overlap.
     
-    _showSettings->atlas.clear();
     
     {
         std::vector<double> values;
         // string_view atlasName = atlasProps["name"].get_string().value_unsafe();
         
-        uint64_t width = atlasProps["width"].get_uint64().value_unsafe();
-        uint64_t height = atlasProps["height"].get_uint64().value_unsafe();
+        int width = atlasProps["width"].int_value();
+        int height = atlasProps["height"].int_value();
     
-        uint64_t slice = atlasProps["slice"].get_uint64().value_unsafe();
+        int slice = atlasProps["slice"].int_value();
         
         float uPad = 0.0f;
         float vPad = 0.0f;
         
-        if (atlasProps["paduv"].get_array().error() != NO_SUCH_FIELD) {
+        if (atlasProps["paduv"].is_array()) {
             values.clear();
-            for (auto value : atlasProps["paduv"])
-                values.push_back(value.get_double().value_unsafe());
+            for (const auto& value : atlasProps["paduv"])
+                values.push_back(value.number_value());
             
             uPad = values[0];
             vPad = values[1];
         }
-        else if (atlasProps["padpx"].get_array().error() != NO_SUCH_FIELD) {
+        else if (atlasProps["padpx"].is_array()) {
             values.clear();
-            for (auto value : atlasProps["padpx"])
-                values.push_back(value.get_double().value_unsafe());
+            for (const auto& value : atlasProps["padpx"])
+                values.push_back(value.number_value());
             
             uPad = values[0];
             vPad = values[1];
@@ -733,20 +755,21 @@ bool Data::loadAtlasFile(const char* filename)
             vPad /= height;
         }
         
+        string decodedName;
         for (auto regionProps: atlasProps["regions"])
         {
-            string_view name = regionProps["name"].get_string().value_unsafe();
+            const char* name = regionProps["name"].string_value(decodedName);
             
             float x = 0.0f;
             float y = 0.0f;
             float w = 0.0f;
             float h = 0.0f;
             
-            if (regionProps["ruv"].get_array().error() != NO_SUCH_FIELD)
+            if (regionProps["ruv"].is_array())
             {
                 values.clear();
                 for (auto value : regionProps["ruv"])
-                    values.push_back(value.get_double().value_unsafe());
+                    values.push_back(value.number_value());
             
                 // Note: could convert pixel and mip0 size to uv.
                 // normalized uv make these easier to draw across all mips
@@ -755,11 +778,11 @@ bool Data::loadAtlasFile(const char* filename)
                 w = values[2];
                 h = values[3];
             }
-            else if (regionProps["rpx"].get_array().error() != NO_SUCH_FIELD)
+            else if (regionProps["rpx"].is_array())
             {
                 values.clear();
                 for (auto value : regionProps["rpx"])
-                    values.push_back(value.get_double().value_unsafe());
+                    values.push_back(value.number_value());
             
                 x = values[0];
                 y = values[1];
@@ -776,7 +799,7 @@ bool Data::loadAtlasFile(const char* filename)
             const char* verticalProp = "f"; // regionProps["rot"];
             bool isVertical = verticalProp && verticalProp[0] == 't';
             
-            Atlas atlas = {(string)name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
+            Atlas atlas = {name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
             _showSettings->atlas.emplace_back(std::move(atlas));
         }
     }
@@ -1099,6 +1122,7 @@ bool Data::loadFile()
         }
     }
     if (!hasAtlas) {
+        clearAtlas();
         atlasFilename.clear();
     }
     

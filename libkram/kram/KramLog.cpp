@@ -644,7 +644,8 @@ static const char* getFormatTokens(char tokens[kMaxTokens], const LogMessage& ms
         strlcpy(tokens, "[l] g m\n", kMaxTokens);
     }
     
-    if (gAddressHelper.isStackTraceSupported() && msg.logLevel >= LogLevelError) {
+    bool printStacksForErrors = false;
+    if (printStacksForErrors && gAddressHelper.isStackTraceSupported() && msg.logLevel >= LogLevelError) {
         
         // can just report the caller, and not a full stack
         // already have function, so returnAddress printing is the same.
