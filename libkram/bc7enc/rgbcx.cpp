@@ -370,8 +370,10 @@ namespace rgbcx
 	static bc1_match_entry g_bc1_match5_equals_1[256], g_bc1_match6_equals_1[256];
 	static bc1_match_entry g_bc1_match5_half[256], g_bc1_match6_half[256];
 
+#ifndef NDEBUG // only used in asserts
 	static inline int scale_5_to_8(int v) { return (v << 3) | (v >> 2); }
 	static inline int scale_6_to_8(int v) { return (v << 2) | (v >> 4); }
+#endif
 
 	// v0, v1 = unexpanded DXT1 endpoint values (5/6-bits)
 	// c0, c1 = expanded DXT1 endpoint values (8-bits)

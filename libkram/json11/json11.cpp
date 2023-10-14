@@ -31,6 +31,11 @@
 #include <cstdio>
 #include <limits>
 
+// This sucks that clang C++17 in 2023 doesn't have float conversion impl
+#if USE_CHARCONV
+#include <charconv> // for from_chars
+#endif
+
 // not including this in KramConfig.h - used for pool
 #include "BlockedLinearAllocator.h"
 
@@ -257,30 +262,63 @@ const Json & Json::operator[] (uint32_t i) const {
     
     return sNullValue;
 }
+    
+
+// run this to delete nodes that used allocateJson
+/* add/fix this, iterator is const only
+void Json::deleteJsonTree() {
+    // need to call placement delete on anything with allocations
+    // but right now that's only allocated strings from writer
+    for (auto& it : *this) {
+        it.deleteJsonTree();
+    }
+    if (is_string())
+        this->~Json();
+    
+}
+*/
+
+const Json & Json::find(ImmutableString key) const {
+    
+    for (const auto& it : *this) {
+        // since can't remap incoming string to immutable or index, have to do strcmp
+        // and also store 8B instead of 2B for the key.
+        if (key == it._key)
+            return it;
+    }
+ 
+    return sNullValue;
+}
 
 const Json & Json::operator[] (const char* key) const {
     assert(_type == TypeObject);
     
-    // was converting to uint16_t, then doing comparison
-    //uint16_t keyIndex = _data.getIndexFromKey(key);
+    // Need to be able to test incoming for immutable
+    // and could skip the strcmp then
     
     // Has to walk node linked list
     for (const auto& it : *this) {
         // since can't remap incoming string to immutable or index, have to do strcmp
         // and also store 8B instead of 2B for the key.
-        if ((key == it._key) || (strcmp(key, it._key) == 0))
+        if (key == it._key) // immutable passed in
+            return it;
+    
+        // could speedup with comparing lengths first
+        // all immutable kes have size at ptr - 2
+        if (strcmp(key, it._key) == 0)
             return it;
     }
     return sNullValue;
 }
 
 bool Json::iterate(const Json*& it) const {
-    assert(_type == TypeObject || _type == TypeArray);
-    
-    if (it == nullptr)
+    if (it == nullptr) {
+        assert(_type == TypeObject || _type == TypeArray);
         it = _value.aval;
-    else
+    }
+    else {
         it = it->_next;
+    }
     
     return it != nullptr;
 }
@@ -504,18 +542,14 @@ static bool decode_string(const char* str, uint32_t strSize, string& out) {
     return true;
 }
 
-//namespace {
-// Object that tracks all state of an in-progress parse.
-//class JsonReader final {
-//public:
-    // TODO: move parser state into _data?
+//------------------------------------
 
 JsonReader::JsonReader() {
-    _data = new JsonReaderData();
+    _data = make_unique<JsonReaderData>();
 }
 JsonReader::~JsonReader() {
-    delete _data;
-    _data = nullptr;
+    //delete _data;
+    //_data = nullptr;
 }
 
 size_t JsonReader::memoryUse() const {
@@ -646,9 +680,9 @@ void JsonReader::parse_string_location(uint32_t& count) {
 // Parse a double.
 double JsonReader::parse_number() {
     size_t start_pos = i;
-
-    // TODO: This is buffer overrun city!
-    // this is mostly a bunch of validation, then strtod
+    double value = 0.0;
+    
+    // this is mostly a bunch of validation, then atoi/strtod
     if (str[i] == '-')
         i++;
 
@@ -657,7 +691,7 @@ double JsonReader::parse_number() {
         i++;
         if (in_range(str[i], '0', '9')) {
             fail("leading 0s not permitted in numbers");
-            return 0.0;
+            return value;
         }
     } else if (in_range(str[i], '1', '9')) {
         i++;
@@ -665,15 +699,21 @@ double JsonReader::parse_number() {
             i++;
     } else {
         fail("invalid " + esc(str[i]) + " in number");
-        return 0.0;
+        return value;
     }
 
     if (str[i] != '.' && str[i] != 'e' && str[i] != 'E'
             && (i - start_pos) <= static_cast<size_t>(numeric_limits<int>::digits10)) {
         
-        // TODO: switch to from_chars, why using this instead of strtod?
-        // This has local and global conflicts
-        return atoi(str + start_pos);
+        
+#if USE_CHARCONV
+        // TODO:: switch to from_chars, int but not fp supported
+        from_chars(str + start_pos, str + i, value);
+#else
+        // this is locale dependent, other bad stuff
+        value = atoi(str + start_pos);
+#endif
+        return value;
     }
 
     // Decimal part
@@ -681,7 +721,7 @@ double JsonReader::parse_number() {
         i++;
         if (!in_range(str[i], '0', '9')) {
             fail("at least one digit required in fractional part");
-            return 0.0;
+            return value;
         }
         
         while (in_range(str[i], '0', '9'))
@@ -697,15 +737,19 @@ double JsonReader::parse_number() {
 
         if (!in_range(str[i], '0', '9')) {
             fail("at least one digit required in exponent");
-            return 0.0;
+            return value;
         }
         
         while (in_range(str[i], '0', '9'))
             i++;
     }
 
-    // TODO: switch to from_chars()
-    return strtod(str + start_pos, nullptr);
+#if USE_CHARCONV
+    from_chars(str + start_pos, str + i, value);
+#else
+    value = strtod(str + start_pos, nullptr);
+#endif
+    return value;
 }
 
 bool JsonReader::compareStringForLength(const char* expected, size_t length)
@@ -959,24 +1003,24 @@ Json::Json(const Json::array &values, Json::Type t)
     assert(t == TypeObject || t == TypeArray);
 }
 
-// Want to use msize to avoid storing length
 Json::~Json() {
     switch(_type) {
         case TypeString:
             if (_flags == FlagsAllocatedUnencoded) {
                 delete [] _value.sval;
                 //_data.trackMemory(-_count);
+                _value.sval = nullptr;
+                _count = 0;
             }
-            _value.sval = nullptr;
-            _count = 0;
             break;
-        case TypeArray:
-        case TypeObject:
-            // TODO: this has to free tree if there are allocated strings
-            // but that would only be during writes?
-            _value.aval = nullptr;
-            _count = 0;
-            break;
+            
+//        case TypeArray:
+//        case TypeObject:
+//            // TODO: this has to free tree if there are allocated strings
+//            // but that would only be during writes?
+//            _value.aval = nullptr;
+//            _count = 0;
+//            break;
         default: break;
     }
 }

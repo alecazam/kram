@@ -144,7 +144,7 @@ private:
     uint32_t maxDepth = 200;
     
     // allocator and immutable string pool are here
-    JsonReaderData* _data = nullptr;
+    unique_ptr<JsonReaderData> _data;
 };
 
 //--------------------------
@@ -304,6 +304,13 @@ public:
     // typedef std::initializer_list<pair<string, Type>> shape;
     // bool has_shape(const shape & types, string & err) const;
 
+    // quickly find a node using immutable string
+    const Json & find(ImmutableString key) const;
+
+    // useful for deleting allocated string values in block allocated nodes
+    // so it does a placement delete
+    // void deleteJsonTree();
+   
 private:
     friend class JsonReader;
     

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -37,7 +37,7 @@
 		70E33EC826E536BF00CBA422 /* QuickLookThumbnailing.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC726E536BF00CBA422 /* QuickLookThumbnailing.framework */; };
 		70E33ECA26E536BF00CBA422 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC926E536BF00CBA422 /* Quartz.framework */; };
 		70E33ECE26E536BF00CBA422 /* KramThumbnailProvider.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70E33ECD26E536BF00CBA422 /* KramThumbnailProvider.mm */; };
-		70E33ED326E536BF00CBA422 /* kram-thumb.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 70E33EC626E536BF00CBA422 /* kram-thumb.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		70E33ED326E536BF00CBA422 /* kram-thumb.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 70E33EC626E536BF00CBA422 /* kram-thumb.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		70E33ED826E5377000CBA422 /* libkram.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF24826D17BC2001C950E /* libkram.a */; };
 		70E33ED926E5378800CBA422 /* libate.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF25926D17CAA001C950E /* libate.tbd */; };
 		70E33EDB26E5379900CBA422 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EDA26E5379900CBA422 /* CoreGraphics.framework */; };
@@ -45,7 +45,7 @@
 		70E33EE326E5478900CBA422 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC926E536BF00CBA422 /* Quartz.framework */; };
 		70E33EE726E5478900CBA422 /* KramPreviewViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70E33EE626E5478900CBA422 /* KramPreviewViewController.mm */; };
 		70E33EEA26E5478900CBA422 /* KramPreviewViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70E33EE826E5478900CBA422 /* KramPreviewViewController.xib */; };
-		70E33EEF26E5478900CBA422 /* kram-preview.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 70E33EE226E5478900CBA422 /* kram-preview.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		70E33EEF26E5478900CBA422 /* kram-preview.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 70E33EE226E5478900CBA422 /* kram-preview.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		70E33EF326E548C700CBA422 /* libkram.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF24826D17BC2001C950E /* libkram.a */; };
 		70E33EF426E548CF00CBA422 /* libate.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF25926D17CAA001C950E /* libate.tbd */; };
 		70E33EF526E548D800CBA422 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EDA26E5379900CBA422 /* CoreGraphics.framework */; };
@@ -83,16 +83,16 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		70E33ED426E536BF00CBA422 /* Embed App Extensions */ = {
+		70E33ED426E536BF00CBA422 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				70E33EEF26E5478900CBA422 /* kram-preview.appex in Embed App Extensions */,
-				70E33ED326E536BF00CBA422 /* kram-thumb.appex in Embed App Extensions */,
+				70E33EEF26E5478900CBA422 /* kram-preview.appex in Embed Foundation Extensions */,
+				70E33ED326E536BF00CBA422 /* kram-thumb.appex in Embed Foundation Extensions */,
 			);
-			name = "Embed App Extensions";
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -323,7 +323,7 @@
 				706EF20B26D17A26001C950E /* Sources */,
 				706EF20C26D17A26001C950E /* Frameworks */,
 				706EF20D26D17A26001C950E /* Resources */,
-				70E33ED426E536BF00CBA422 /* Embed App Extensions */,
+				70E33ED426E536BF00CBA422 /* Embed Foundation Extensions */,
 				70833667271575E50077BCB6 /* Embed Frameworks */,
 			);
 			buildRules = (
@@ -377,7 +377,8 @@
 		706EF20726D17A26001C950E /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1240;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					706EF20E26D17A26001C950E = {
 						CreatedOnToolsVersion = 12.4;
@@ -521,7 +522,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_COMMA = NO;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
@@ -547,16 +548,13 @@
 				DONT_GENERATE_INFOPLIST_FILE = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -597,7 +595,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_COMMA = NO;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
@@ -623,6 +621,7 @@
 				DONT_GENERATE_INFOPLIST_FILE = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;

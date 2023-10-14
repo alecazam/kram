@@ -428,28 +428,58 @@ withCurrentSearchString:(NSString *)searchString
 #if 0
     // Would be nice, but doesn't allow directory.
     // How is NSDocument aware of directory, from Info.plist?
-    NSArray<NSURL*>* urls = [controller URLsFromRunningOpenPanel];
-    if (urls) {
-        NSLog(@"selected URL: %@", urls[0]);
-        
-    }
+//    NSArray<NSURL*>* urls = [controller URLsFromRunningOpenPanel];
+//    if (urls) {
+//        NSLog(@"selected URL: %@", urls[0]);
+//        
+//    }
 #else
     
-    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    NSOpenPanel* panel = [NSOpenPanel openPanel];
     [panel setCanChooseFiles:YES];
     [panel setCanChooseDirectories:YES];
     [panel setAllowsMultipleSelection:NO];
 
     if ([controller runModalOpenPanel:panel forTypes:utis] == NSModalResponseOK)
     {
-        NSURL* selectedURL = [[panel URLs] objectAtIndex:0];
-
-        //NSLog(@"selected URL: %@", selectedURL);
-        NSError* error = nil;
-
-        [controller    openDocumentWithContentsOfURL:selectedURL
-                                 display:YES
-                                   error:&error];
+        NSArray<NSURL*>* urls = [panel URLs];
+        NSURL* url = [urls objectAtIndex:0];
+        
+        // This gets a file:// urls, and then openDocument won't open it if
+        // it's a folder.
+        
+        bool isDirectory = false;
+        if (url.isFileURL) {
+            BOOL isDir = NO;
+            // Verify that the file exists
+            // and is indeed a directory (isDirectory is an out parameter)
+            if ([[NSFileManager defaultManager] fileExistsAtPath: url.path isDirectory: &isDir]
+                && isDir) {
+                isDirectory = true;
+            }
+        }
+        
+        if (isDirectory) {
+            // have to open this directory URL directly
+            //[self openURLs:[NSApplication sharedApplication] urls:urls];
+            
+            // this is called from "Open In..."
+            NSApplication* app = [NSApplication sharedApplication];
+            MyMTKView* view = app.mainWindow.contentView;
+            [view loadTextureFromURLs:urls];
+            [view fixupDocumentList];
+        }
+        else {
+            [controller openDocumentWithContentsOfURL:url
+                                              display:YES
+                                    completionHandler:
+                 ^(NSDocument* doc, BOOL isAlreadOpen, NSError* error ) {
+                if (!error) {
+                    // what should this do?
+                }
+            }
+            ];
+        }
     }
 #endif
 }

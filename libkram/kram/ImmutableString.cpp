@@ -88,6 +88,8 @@ ImmutableString ImmutableStringPool::getImmutableString(const char* s) {
     // keep aligned to 2 bytes
     size_t align = alignof(ImmutableStringInfo);
     assert(align == 2);
+    (void)align;
+    
     if (size & 1)
         ++size;
     

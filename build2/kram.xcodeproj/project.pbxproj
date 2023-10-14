@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -410,6 +410,10 @@
 		70D222E52AD22BED00B9EA23 /* BlockedLinearAllocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D222E22AD22BED00B9EA23 /* BlockedLinearAllocator.cpp */; };
 		70D222E62AD22BED00B9EA23 /* BlockedLinearAllocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 70D222E32AD22BED00B9EA23 /* BlockedLinearAllocator.h */; };
 		70D222E72AD22BED00B9EA23 /* BlockedLinearAllocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 70D222E32AD22BED00B9EA23 /* BlockedLinearAllocator.h */; };
+		70D222EB2ADAF25E00B9EA23 /* simdjson.h in Headers */ = {isa = PBXBuildFile; fileRef = 70D222E92ADAF25E00B9EA23 /* simdjson.h */; };
+		70D222EC2ADAF25E00B9EA23 /* simdjson.h in Headers */ = {isa = PBXBuildFile; fileRef = 70D222E92ADAF25E00B9EA23 /* simdjson.h */; };
+		70D222ED2ADAF25E00B9EA23 /* simdjson.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D222EA2ADAF25E00B9EA23 /* simdjson.cpp */; };
+		70D222EE2ADAF25E00B9EA23 /* simdjson.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D222EA2ADAF25E00B9EA23 /* simdjson.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -761,6 +765,8 @@
 		70D222DD2AD2132300B9EA23 /* ImmutableString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImmutableString.h; sourceTree = "<group>"; };
 		70D222E22AD22BED00B9EA23 /* BlockedLinearAllocator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BlockedLinearAllocator.cpp; sourceTree = "<group>"; };
 		70D222E32AD22BED00B9EA23 /* BlockedLinearAllocator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BlockedLinearAllocator.h; sourceTree = "<group>"; };
+		70D222E92ADAF25E00B9EA23 /* simdjson.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = simdjson.h; sourceTree = "<group>"; };
+		70D222EA2ADAF25E00B9EA23 /* simdjson.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = simdjson.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -831,6 +837,7 @@
 				706EEE1026D1583F001C950E /* miniz */,
 				706EEE1326D1583F001C950E /* heman */,
 				70D222D52AC800AC00B9EA23 /* json11 */,
+				70D222E82ADAF25E00B9EA23 /* simdjson */,
 				706EEE1626D1583F001C950E /* stb */,
 				706EEE1826D1583F001C950E /* kram */,
 				706EEE3926D1583F001C950E /* squish */,
@@ -1037,7 +1044,6 @@
 				706EEE2126D1583F001C950E /* KramFileHelper.cpp */,
 				706EEE3726D1583F001C950E /* KramMipper.h */,
 				706EEE1C26D1583F001C950E /* KramMipper.cpp */,
-				706EEE1D26D1583F001C950E /* _clang-format */,
 				706EEE2D26D1583F001C950E /* win_mmap.h */,
 				706EEE2226D1583F001C950E /* sse2neon.h */,
 				706EEE3426D1583F001C950E /* float4a.h */,
@@ -1048,6 +1054,7 @@
 				70D222DC2AD2132300B9EA23 /* ImmutableString.cpp */,
 				706EEE3826D1583F001C950E /* TaskSystem.h */,
 				706EEE1F26D1583F001C950E /* TaskSystem.cpp */,
+				706EEE1D26D1583F001C950E /* _clang-format */,
 			);
 			path = kram;
 			sourceTree = "<group>";
@@ -1370,6 +1377,15 @@
 			path = json11;
 			sourceTree = "<group>";
 		};
+		70D222E82ADAF25E00B9EA23 /* simdjson */ = {
+			isa = PBXGroup;
+			children = (
+				70D222E92ADAF25E00B9EA23 /* simdjson.h */,
+				70D222EA2ADAF25E00B9EA23 /* simdjson.cpp */,
+			);
+			path = simdjson;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1448,6 +1464,7 @@
 				706EF00826D15985001C950E /* Kram.h in Headers */,
 				70D222E02AD2132300B9EA23 /* ImmutableString.h in Headers */,
 				704738C8289F6AEE00C77A9F /* vector.h in Headers */,
+				70D222EB2ADAF25E00B9EA23 /* simdjson.h in Headers */,
 				70871DED27DDDBCD00D0B9E1 /* astcenc_diagnostic_trace.h in Headers */,
 				707789DB2881BA81008A51BC /* ert.h in Headers */,
 				706EF00926D15985001C950E /* KTXImage.h in Headers */,
@@ -1566,6 +1583,7 @@
 				706EF18226D166C5001C950E /* Kram.h in Headers */,
 				70D222E12AD2132300B9EA23 /* ImmutableString.h in Headers */,
 				704738C9289F6AEE00C77A9F /* vector.h in Headers */,
+				70D222EC2ADAF25E00B9EA23 /* simdjson.h in Headers */,
 				70871DEE27DDDBCD00D0B9E1 /* astcenc_diagnostic_trace.h in Headers */,
 				707789DC2881BA81008A51BC /* ert.h in Headers */,
 				706EF18326D166C5001C950E /* KTXImage.h in Headers */,
@@ -1652,7 +1670,8 @@
 		706ECDD626D1577A001C950E /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1240;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					706ECDDD26D1577A001C950E = {
 						CreatedOnToolsVersion = 12.4;
@@ -1666,7 +1685,6 @@
 			knownRegions = (
 				en,
 				Base,
-				English,
 				english,
 			);
 			mainGroup = 706ECDD526D1577A001C950E;
@@ -1695,6 +1713,7 @@
 				706EEF7F26D1595D001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */,
 				70871DCD27DDDBCD00D0B9E1 /* astcenc_find_best_partitioning.cpp in Sources */,
 				70CDB65227A1382700A546C1 /* KramDDSHelper.cpp in Sources */,
+				70D222ED2ADAF25E00B9EA23 /* simdjson.cpp in Sources */,
 				706EEF8026D1595D001C950E /* EtcImage.cpp in Sources */,
 				70871DEB27DDDBCD00D0B9E1 /* astcenc_block_sizes.cpp in Sources */,
 				70D222E42AD22BED00B9EA23 /* BlockedLinearAllocator.cpp in Sources */,
@@ -1787,6 +1806,7 @@
 				70871DD227DDDBCD00D0B9E1 /* astcenc_averages_and_directions.cpp in Sources */,
 				70871DE027DDDBCD00D0B9E1 /* astcenc_mathlib_softfloat.cpp in Sources */,
 				709B8D3828D7BCAD0081BD1F /* os.cpp in Sources */,
+				70D222EE2ADAF25E00B9EA23 /* simdjson.cpp in Sources */,
 				706EFC2426D1C39B001C950E /* ateencoder.mm in Sources */,
 				707789EE2881BA81008A51BC /* bc7decomp_ref.cpp in Sources */,
 				706EF19826D166C5001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */,
@@ -1881,6 +1901,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -1891,6 +1912,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = NO;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_CXX0X_EXTENSIONS = YES;
 				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
@@ -1918,6 +1940,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
@@ -1931,6 +1954,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				"GCC_WARN_64_TO_32_BIT_CONVERSION[arch=*64]" = NO;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -1970,6 +1994,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -1980,6 +2005,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = NO;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_CXX0X_EXTENSIONS = YES;
 				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
@@ -2007,6 +2033,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
@@ -2014,6 +2041,7 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "$(PROJECT_DIR)/../libkram/kram/KramPrefix.pch";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				"GCC_WARN_64_TO_32_BIT_CONVERSION[arch=*64]" = NO;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -2080,7 +2108,6 @@
 		706EF1DF26D166C5001C950E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
 				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				CODE_SIGN_STYLE = Automatic;
@@ -2097,7 +2124,6 @@
 		706EF1E026D166C5001C950E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
 				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				CODE_SIGN_STYLE = Automatic;
