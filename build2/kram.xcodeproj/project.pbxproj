@@ -414,6 +414,10 @@
 		70D222EC2ADAF25E00B9EA23 /* simdjson.h in Headers */ = {isa = PBXBuildFile; fileRef = 70D222E92ADAF25E00B9EA23 /* simdjson.h */; };
 		70D222ED2ADAF25E00B9EA23 /* simdjson.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D222EA2ADAF25E00B9EA23 /* simdjson.cpp */; };
 		70D222EE2ADAF25E00B9EA23 /* simdjson.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D222EA2ADAF25E00B9EA23 /* simdjson.cpp */; };
+		70D222F52ADAF78300B9EA23 /* dlmalloc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D222F42ADAF78300B9EA23 /* dlmalloc.cpp */; };
+		70D222F62ADAF78300B9EA23 /* dlmalloc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D222F42ADAF78300B9EA23 /* dlmalloc.cpp */; };
+		70D222F82ADAFA1500B9EA23 /* dlmalloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 70D222F72ADAFA1500B9EA23 /* dlmalloc.h */; };
+		70D222F92ADAFA1500B9EA23 /* dlmalloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 70D222F72ADAFA1500B9EA23 /* dlmalloc.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -767,6 +771,8 @@
 		70D222E32AD22BED00B9EA23 /* BlockedLinearAllocator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BlockedLinearAllocator.h; sourceTree = "<group>"; };
 		70D222E92ADAF25E00B9EA23 /* simdjson.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = simdjson.h; sourceTree = "<group>"; };
 		70D222EA2ADAF25E00B9EA23 /* simdjson.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = simdjson.cpp; sourceTree = "<group>"; };
+		70D222F42ADAF78300B9EA23 /* dlmalloc.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = dlmalloc.cpp; sourceTree = "<group>"; };
+		70D222F72ADAFA1500B9EA23 /* dlmalloc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dlmalloc.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -825,6 +831,7 @@
 		706EEDA826D1583E001C950E /* libkram */ = {
 			isa = PBXGroup;
 			children = (
+				70D222F32ADAF78300B9EA23 /* allocate */,
 				708A6A882708CE4700BA5410 /* compressonator */,
 				706EFC3E26D3473F001C950E /* eastl */,
 				704738AF289F6AEE00C77A9F /* fastl */,
@@ -1386,6 +1393,15 @@
 			path = simdjson;
 			sourceTree = "<group>";
 		};
+		70D222F32ADAF78300B9EA23 /* allocate */ = {
+			isa = PBXGroup;
+			children = (
+				70D222F72ADAFA1500B9EA23 /* dlmalloc.h */,
+				70D222F42ADAF78300B9EA23 /* dlmalloc.cpp */,
+			);
+			path = allocate;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1503,6 +1519,7 @@
 				709B8D2D28D7BCAD0081BD1F /* ostream.h in Headers */,
 				706EF01B26D15985001C950E /* lodepng.h in Headers */,
 				709B8D4928D7BCAD0081BD1F /* format.h in Headers */,
+				70D222F82ADAFA1500B9EA23 /* dlmalloc.h in Headers */,
 				706EF01C26D15985001C950E /* tmpfileplus.h in Headers */,
 				709B8D3328D7BCAD0081BD1F /* xchar.h in Headers */,
 			);
@@ -1622,6 +1639,7 @@
 				709B8D2E28D7BCAD0081BD1F /* ostream.h in Headers */,
 				706EF19526D166C5001C950E /* lodepng.h in Headers */,
 				709B8D4A28D7BCAD0081BD1F /* format.h in Headers */,
+				70D222F92ADAFA1500B9EA23 /* dlmalloc.h in Headers */,
 				706EF19626D166C5001C950E /* tmpfileplus.h in Headers */,
 				709B8D3428D7BCAD0081BD1F /* xchar.h in Headers */,
 			);
@@ -1704,6 +1722,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				70871DD727DDDBCD00D0B9E1 /* astcenc_quantization.cpp in Sources */,
+				70D222F52ADAF78300B9EA23 /* dlmalloc.cpp in Sources */,
 				707789E52881BA81008A51BC /* ert.cpp in Sources */,
 				70871E0327DDDBCD00D0B9E1 /* astcenc_color_unquantize.cpp in Sources */,
 				70871DD127DDDBCD00D0B9E1 /* astcenc_averages_and_directions.cpp in Sources */,
@@ -1885,6 +1904,7 @@
 				706EF1D626D166C5001C950E /* maths.cpp in Sources */,
 				706EF1D726D166C5001C950E /* singlecolourfit.cpp in Sources */,
 				706EF1D826D166C5001C950E /* zstd.cpp in Sources */,
+				70D222F62ADAF78300B9EA23 /* dlmalloc.cpp in Sources */,
 				706EF1D926D166C5001C950E /* zstddeclib.cpp in Sources */,
 				706EF1DA26D166C5001C950E /* lodepng.cpp in Sources */,
 				707789E22881BA81008A51BC /* utils.cpp in Sources */,
