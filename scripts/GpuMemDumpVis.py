@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -323,6 +324,8 @@ Main data structure - variable `data` - is a dictionary. Key is string - memory 
     - Fixed key 'Type'. Value is string.
     - Fixed key 'Size'. Value is int.
     - Fixed key 'Usage'. Value is int.
+    - Key 'Name' optional, Value is string
+    - Key'CustomData' optional
 - Fixed key 'Blocks'. Value is list of objects, each containing dictionary with:
     - Fixed key 'ID'. Value is int.
     - Fixed key 'Size'. Value is int.

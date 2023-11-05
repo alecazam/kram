@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # kram - Copyright 2020-2023 by Alec Miller. - MIT License
 # The license and copyright notice shall be included
 # in all copies or substantial portions of the Software.
@@ -33,6 +35,9 @@ import json
 
 PROGRAM_VERSION = 'Vulkan/D3D12 Memory Allocator Dump Perfetto 3.0.3'
 
+# TODO: Perfetto can't handle empty string for name on the allocs
+# so had to set them to 'M'
+
 # dx12 or vulkan
 currentApi = ""
 
@@ -41,8 +46,8 @@ data = {}
 
  # now convert the dictonaries to new dictionaries, and then out to json 
 perfettoDict = {
-    'displayTimeUnit': 'ms', # TODO: /1000, not quite kb
-    'systemTraceEvents': 'systemTraceEvents',
+    'displayTimeUnit': 'ns', # TODO: /1000, not quite kb, ns or ms only
+    'systemTraceEvents': 'SystemTraceData',
     'traceEvents': [],
 }
 
@@ -72,7 +77,8 @@ def ProcessBlock(poolData, block):
     for alloc in block[1]['Suballocations']:
         allocData = {'Type': alloc['Type'], 
                      'Size': int(alloc['Size']), 
-                     'Usage': int(alloc['Usage']) if 'Usage' in alloc else 0 }
+                     'Usage': int(alloc['Usage']) if 'Usage' in alloc else 0,
+                     'Name': alloc['Name'] if 'Name' in alloc else 'M' }
         blockInfo['Suballocations'].append(allocData)
     poolData['Blocks'].append(blockInfo)
     
@@ -120,7 +126,10 @@ def AllocTypeToCategory(type, usage):
         if type == 'BUFFER':
             if (usage & 0x1C0) != 0: # INDIRECT_BUFFER | VERTEX_BUFFER | INDEX_BUFFER
                 isVB = True # TODO: split up
-                return ifelse(isVB, "VB", "IB") 
+                if isVB: 
+                    return "VB"
+                else: 
+                    return "IB" 
             elif (usage & 0x28) != 0: # STORAGE_BUFFER | STORAGE_TEXEL_BUFFER
                 return "SB"
             elif (usage & 0x14) != 0: # UNIFORM_BUFFER | UNIFORM_TEXEL_BUFFER
@@ -165,20 +174,15 @@ def AddTraceEventsAlloc(alloc, address, blockCounter):
     size = alloc['Size']
     type = AllocTypeToCategory(alloc['Type'], alloc['Usage'])
 
-    # begin/end events for Perfetto, address is treated as a time value for plotting rects
-    perfettoDict['traceEvents'].add({
-        'name': alloc['Name'], # TODO: conditionally add only if name present
-        'ph': 'B',
+    # complete event is much less data than B/E
+    perfettoDict['traceEvents'].append({
+        'name': alloc['Name'],
+        'ph': 'X',
         'ts': int(address),
+        'dur': int(size),
         'tid': int(blockCounter),
+        #'pid': 0,
         'cat': type
-    })
-    perfettoDict['traceEvents'].add(
-    {
-        'ph': 'E',
-        'ts': int(address+size),
-        'tid': int(blockCounter),
-        'cat': type # TODO: needed if begin already has it spec'd?
     })
 
 def AddTraceEventsBlock(block, blockCounter):
@@ -188,14 +192,15 @@ def AddTraceEventsBlock(block, blockCounter):
         AddTraceEventsAlloc(alloc, address, blockCounter)
         address += alloc['Size']
 
-def AddBlockName(blockCounter, blockName):
+def AddBlockName(blockName, blockCounter):
     global perfettoDict
 
-    # TODO: are these just loose added into the object ?
-    perfettoDict.add({
+    # TODO: would be nice to add at top, rather than intermingled
+    perfettoDict['traceEvents'].append({
         'name': 'thread_name',
         'ph': 'M',
         'tid': int(blockCounter),
+        #'pid': 0,
         'args': {
             'name': blockName
         }
@@ -213,8 +218,8 @@ def AddTraceEvents():
         blockIndex = 0
         for block in poolData['Blocks']:
             blockName = "p{} block{} {}".format(poolIndex, blockIndex, block['ID'])
-            AddTraceEventsBlock(block, blockCounter)
             AddBlockName(blockName, blockCounter)
+            AddTraceEventsBlock(block, blockCounter)
             blockCounter += 1
             blockIndex += 1
 
@@ -222,30 +227,30 @@ def AddTraceEvents():
         allocationIndex = 0
         for dedicatedAlloc in poolData['DedicatedAllocations']:
             blockName = 'p{} alloc{} {}'.format(poolIndex, allocationIndex, dedicatedAlloc['Name'])
-            AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
             AddBlockName(blockName, blockCounter)
+            AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
             blockCounter += 1
             allocationIndex += 1
             
         # repeat for custom pools
         for customPoolData in poolData['CustomPools'].values():
-            customPoolName = customPoolData['Name']
+            customPoolName = "" # TODO: hook up, but it's not a field customPoolData['Name']
 
             # pool block allocs
             blockIndex = 0
             for block in customPoolData['Blocks']:
                 blockName = 'p{} {} block{} {}'.format(poolIndex, customPoolName, blockIndex, block['ID'])
-                AddTraceEventsBlock(block, blockCounter)
                 AddBlockName(blockName, blockCounter)
+                AddTraceEventsBlock(block, blockCounter)
                 blockCounter += 1
                 blockIndex += 1
 
             # pool dedicated allocs
             allocationIndex = 0
             for dedicatedAlloc in customPoolData['DedicatedAllocations']:
-                blockName = 'p{} {} alloc{} {}'.format(poolIndex, customPoolName, dedicatedAlloc['Name'])
-                AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
+                blockName = 'p{} {} alloc{} {}'.format(poolIndex, customPoolName, allocationIndex, dedicatedAlloc['Name'])
                 AddBlockName(blockName, blockCounter)
+                AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
                 blockCounter += 1
                 allocationIndex += 1
                 
@@ -269,7 +274,8 @@ if __name__ == '__main__':
             for dedicatedAlloc in memoryPool[1]['DedicatedAllocations']:
                 allocData = {'Type': dedicatedAlloc['Type'], 
                              'Size': int(dedicatedAlloc['Size']), 
-                             'Usage': int(dedicatedAlloc['Usage'])}
+                             'Usage': int(dedicatedAlloc['Usage']),
+                             'Name': dedicatedAlloc['Name'] if 'Name' in dedicatedAlloc else 'M'}
                 poolData['DedicatedAllocations'].append(allocData)
             # Get allocations in block vectors
             for block in memoryPool[1]['Blocks'].items():
@@ -286,7 +292,8 @@ if __name__ == '__main__':
                 for dedicatedAlloc in pool['DedicatedAllocations']:
                     allocData = {'Type': dedicatedAlloc['Type'], 
                                  'Size': int(dedicatedAlloc['Size']), 
-                                 'Usage': int(dedicatedAlloc['Usage'])}
+                                 'Usage': int(dedicatedAlloc['Usage']),
+                                 'Name': dedicatedAlloc['Name'] if 'Name' in dedicatedAlloc else 'M'}
                     poolData['CustomPools'][poolName]['DedicatedAllocations'].append(allocData)
                 # Get allocations in block vectors
                 for block in pool['Blocks'].items():
@@ -300,7 +307,8 @@ if __name__ == '__main__':
     
     AddTraceEvents()
 
-    perfettoJson = json.dumps(perfettoDict, indent=4)
+    # perfettoJson = json.dumps(perfettoDict, indent=4)
+    perfettoJson = json.dumps(perfettoDict, indent=0)
     
     with open(args.output, "w") as outfile:
         outfile.write(perfettoJson)
@@ -311,6 +319,8 @@ Main data structure - variable `data` - is a dictionary. Key is string - memory 
     - Fixed key 'Type'. Value is string.
     - Fixed key 'Size'. Value is int.
     - Fixed key 'Usage'. Value is int.
+    - Key 'Name' optional, Value is string
+    - Key'CustomData' optional
 - Fixed key 'Blocks'. Value is list of objects, each containing dictionary with:
     - Fixed key 'ID'. Value is int.
     - Fixed key 'Size'. Value is int.
