@@ -36,18 +36,15 @@ import json
 PROGRAM_VERSION = 'Vulkan/D3D12 Memory Allocator Dump Perfetto 3.0.3'
 
 # TODO: Perfetto can't handle empty string for name on the allocs
-#   so had to set them to 'M'
+#   so had to set them to 'M'.  This is getting fixed
 # TODO: cname doesn't seem to import and has limited colors
 #  cname is ignored by parser
 #  https://github.com/google/perfetto/blob/master/src/trace_processor/importers/json/json_trace_parser.cc
-# TODO: need TO_TIMECODE or something to display the values with formatting
-#  can call 'set timestamp format' from UI, but this doesn't affect duration display
-#  which is still formatted.
-# TODO: could vsync markers be used to demarkate 4 or 8mb sections?  
-#  Workaround: Just set timestamp to seconds.
+# TODO: call 'set timestamp format' to seconds from UI (cmd+shift+P), 
+#  but this doesn't affect duration display which is still formatted. Second lines reflect MB.
 # TODO: Pefetto doesn't care about supporting Cataylst json format, but doesn't have a json of its own
-# https://github.com/google/perfetto/issues/622
-# https://github.com/google/perfetto/issues/623
+#  https://github.com/google/perfetto/issues/622
+#  https://github.com/google/perfetto/issues/623
 
 
 # dx12 or vulkan
@@ -68,7 +65,7 @@ perfettoDict = {
     'displayTimeUnit': 'ms', 
     'systemTraceEvents': 'SystemTraceData',
     'traceEvents': [],
-}
+}    
 
 def ParseArgs():
     argParser = argparse.ArgumentParser(description='Visualization of Vulkan/D3D12 Memory Allocator JSON dump in Perfetto.')
@@ -144,17 +141,16 @@ def AllocTypeToCategory(type, usage):
 
     if currentApi == 'Vulkan':
         if type == 'BUFFER':
-            if (usage & 0x1C0) != 0: # INDIRECT_BUFFER | VERTEX_BUFFER | INDEX_BUFFER
-                if (usage & 0x080) != 0:
-                    return "VB"
-                elif (usage & 0x040) != 0:
-                    return "IB"
-                elif (usage & 0x0100) != 0:
-                    return "DB"
-            elif (usage & 0x28) != 0: # STORAGE_BUFFER | STORAGE_TEXEL_BUFFER
-                return "SB"
-            elif (usage & 0x14) != 0: # UNIFORM_BUFFER | UNIFORM_TEXEL_BUFFER
+            if (usage & 0x0080) != 0:  # VERTEX_BUFFER
+                return "VB"
+            elif (usage & 0x040) != 0: # INDEX_BUFFER
+                return "IB"
+            elif (usage & 0x0014) != 0: # UNIFORM_BUFFER | UNIFORM_TEXEL_BUFFER
                 return "UB"
+            elif (usage & 0x0100) != 0: # INDIRECT_BUFFER
+                return "DB"
+            elif (usage & 0x0028) != 0: # STORAGE_BUFFER | STORAGE_TEXEL_BUFFER
+                return "SB"
             else:
                 return "?B"
         elif type == 'IMAGE_OPTIMAL':
@@ -286,6 +282,20 @@ def AddBlockName(blockName, blockCounter):
         }
     })
 
+def AddProcessName(processName):
+    global perfettoDict
+
+    # TODO: would be nice to add at top, rather than intermingled
+    perfettoDict['traceEvents'].append({
+        'name': 'process_name',
+        'ph': 'M',
+        'pid': 0,
+        'args': {
+            'name': processName
+        }
+    })
+
+
 def AddTraceEvents():
     global perfettoDict
     blockCounter = 0
@@ -393,10 +403,16 @@ if __name__ == '__main__':
         exit(1)
     RemoveEmptyType()
     
+    # using process name to indicate source file
+    AddProcessName(args.DumpFile)
+
     AddTraceEvents()
 
-    # perfettoJson = json.dumps(perfettoDict, indent=4)
-    perfettoJson = json.dumps(perfettoDict, indent=0)
+    compactJson = False
+    if compactJson:
+         perfettoJson = json.dumps(perfettoDict)
+    else:
+        perfettoJson = json.dumps(perfettoDict, indent=0)
     
     with open(args.output, "w") as outfile:
         outfile.write(perfettoJson)
