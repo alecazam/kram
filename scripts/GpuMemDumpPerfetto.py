@@ -43,8 +43,8 @@ PROGRAM_VERSION = 'Vulkan/D3D12 Memory Allocator Dump Perfetto 3.0.3'
 # TODO: need TO_TIMECODE or something to display the values with formatting
 #  can call 'set timestamp format' from UI, but this doesn't affect duration display
 #  which is still formatted.
-# TODO: could vsync markers be used to demarkate 4 or 8mb sections?
-#
+# TODO: could vsync markers be used to demarkate 4 or 8mb sections?  
+#  Workaround: Just set timestamp to seconds.
 # TODO: Pefetto doesn't care about supporting Cataylst json format, but doesn't have a json of its own
 # https://github.com/google/perfetto/issues/622
 # https://github.com/google/perfetto/issues/623
@@ -212,7 +212,7 @@ def AllocCategoryToColor(category):
 def RemapName(name):
 
     # TODO: perfetto doesn't uniquely color the names if using numbers
-    # or even N + num when they differ.  Find out what criteria needs.
+    # or even N + num when they differ.  Find out what color criteria needs.
     useNameIndexer = False
     if useNameIndexer:
         global nameIndexer
@@ -242,11 +242,11 @@ def AddTraceEventsAlloc(alloc, addr, blockCounter):
     name = RemapName(alloc['Name'])
 
     # prepend category
-    if (alloc['Type'] != 'FREE'):
+    prependCategory = True
+    if (prependCategory and alloc['Type'] != 'FREE'):
         name = category + "-" + name
 
-    # complete event is much less data than B/E
-    perfettoDict['traceEvents'].append({
+    traceEvent = {
         'name': name,
         'ph': 'X',
         'ts': int(addr),
@@ -255,7 +255,11 @@ def AddTraceEventsAlloc(alloc, addr, blockCounter):
         #'pid': 0,
         #'cname': color, 
         'cat': category
-    })
+    }
+
+    # complete event X is much less data than B/E
+    # these cannot be nested or overlap, so no aliasing
+    perfettoDict['traceEvents'].append(traceEvent)
 
 def AddTraceEventsBlock(block, blockCounter):
     global perfettoDict
@@ -285,17 +289,24 @@ def AddBlockName(blockName, blockCounter):
 def AddTraceEvents():
     global perfettoDict
     blockCounter = 0
-    poolIndex = 0
+    
+    # TODO: add all block names first across all pools, then add the allocations
+    # TODO: do dedicated allocations need sorted?
+    # TODO: could specify pid for memType, but think has to be stored per alloc
 
-    for poolData in data.values():
+    # for poolData in data.values():
+    for memType in sorted(data.keys()):
+        memPoolData = data[memType]
 
+        # strip 'Type ' off string
+        poolIndex = memType[5:]
+        
         # report for default pool
 
-        # TODO: add all block names first across all pools, then add the allocations
-       
+        
         # block allocs
         blockIndex = 0
-        for block in poolData['Blocks']:
+        for block in sorted(poolData['Blocks']):
             blockName = "T{} b{} {}".format(poolIndex, blockIndex, block['ID'])
             AddBlockName(blockName, blockCounter)
             AddTraceEventsBlock(block, blockCounter)
@@ -316,7 +327,7 @@ def AddTraceEvents():
            
             # pool block allocs
             blockIndex = 0
-            for block in customPoolData['Blocks']:
+            for block in sorted(customPoolData['Blocks']):
                 blockName = 'T{} {} b{} {}'.format(poolIndex, customPoolName, blockIndex, block['ID'])
                 AddBlockName(blockName, blockCounter)
                 AddTraceEventsBlock(block, blockCounter)
@@ -332,8 +343,7 @@ def AddTraceEvents():
                 blockCounter += 1
                 allocationIndex += 1
                 
-        poolIndex += 1
-
+       
 if __name__ == '__main__':
     args = ParseArgs()
     jsonSrc = json.load(open(args.DumpFile, 'rb'))
