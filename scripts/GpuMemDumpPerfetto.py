@@ -36,7 +36,19 @@ import json
 PROGRAM_VERSION = 'Vulkan/D3D12 Memory Allocator Dump Perfetto 3.0.3'
 
 # TODO: Perfetto can't handle empty string for name on the allocs
-# so had to set them to 'M'
+#   so had to set them to 'M'
+# TODO: cname doesn't seem to import and has limited colors
+#  cname is ignored by parser
+#  https://github.com/google/perfetto/blob/master/src/trace_processor/importers/json/json_trace_parser.cc
+# TODO: need TO_TIMECODE or something to display the values with formatting
+#  can call 'set timestamp format' from UI, but this doesn't affect duration display
+#  which is still formatted.
+# TODO: could vsync markers be used to demarkate 4 or 8mb sections?
+#
+# TODO: Pefetto doesn't care about supporting Cataylst json format, but doesn't have a json of its own
+# https://github.com/google/perfetto/issues/622
+# https://github.com/google/perfetto/issues/623
+
 
 # dx12 or vulkan
 currentApi = ""
@@ -45,8 +57,11 @@ currentApi = ""
 data = {}
 
  # now convert the dictonaries to new dictionaries, and then out to json 
+ # TODO: ms = *1e-3 not quite kb, ns = *1E-9
+ # when using ms, then values can hit minute and hour time conversions which /60 instead of /100,
+ # but ns is also goofy due to 1e9 being gb.
 perfettoDict = {
-    'displayTimeUnit': 'ns', # TODO: /1000, not quite kb, ns or ms only
+    'displayTimeUnit': 'ms', 
     'systemTraceEvents': 'SystemTraceData',
     'traceEvents': [],
 }
@@ -115,12 +130,13 @@ def RemoveEmptyType():
         if empty:
             del data[poolType]
 
+
 def AllocTypeToCategory(type, usage):
     global currentApi
     if type == 'FREE':
-        return ""
+        return "  "
     elif type == 'UNKNOWN':
-        return "?"
+        return "??"
 
     if currentApi == 'Vulkan':
         if type == 'BUFFER':
@@ -168,29 +184,57 @@ def AllocTypeToCategory(type, usage):
     assert False
     return "??"
 
-def AddTraceEventsAlloc(alloc, address, blockCounter):
+# not many cname colors to choose from
+# https://github.com/catapult-project/catapult/blob/master/tracing/tracing/base/color_scheme.html
+def AllocCategoryToColor(category):
+    color = "grey"
+
+    if category[1] == 'B':
+        if category == 'VB':
+            color = "olive"
+        elif category == 'IB':
+            color = "white"
+        else:
+            color = "white"
+    elif category[1] == 'T':
+        color = "yellow"
+    
+    return color
+                     
+def AddTraceEventsAlloc(alloc, addr, blockCounter):
     global perfettoDict
 
     size = alloc['Size']
-    type = AllocTypeToCategory(alloc['Type'], alloc['Usage'])
+    category = AllocTypeToCategory(alloc['Type'], alloc['Usage'])
+    
+    # this is optinonal, Pefetto will psuedocolor different names
+    # but this is one option for consistent coloring
+    # perfetto doesn't seem to honor set cname
+    # https://github.com/catapult-project/catapult/blob/master/tracing/tracing/base/color_scheme.html
+    #color = AllocCategoryToColor(category)
 
     # complete event is much less data than B/E
     perfettoDict['traceEvents'].append({
         'name': alloc['Name'],
         'ph': 'X',
-        'ts': int(address),
+        'ts': int(addr),
         'dur': int(size),
         'tid': int(blockCounter),
         #'pid': 0,
-        'cat': type
+        #'cname': color, 
+        'cat': category
     })
 
 def AddTraceEventsBlock(block, blockCounter):
     global perfettoDict
-    address = 0
+
+    # TODO: could collect together contig empty blocks.  Lots of 'M' values otherwise.
+    #  this would require passing down size 
+       
+    addr = int(0)
     for alloc in block['Suballocations']:
-        AddTraceEventsAlloc(alloc, address, blockCounter)
-        address += alloc['Size']
+        AddTraceEventsAlloc(alloc, addr, blockCounter)
+        addr = addr + int(alloc['Size'])
 
 def AddBlockName(blockName, blockCounter):
     global perfettoDict
@@ -210,14 +254,17 @@ def AddTraceEvents():
     global perfettoDict
     blockCounter = 0
     poolIndex = 0
+
     for poolData in data.values():
 
         # report for default pool
 
+        # TODO: add all block names first across all pools, then add the allocations
+       
         # block allocs
         blockIndex = 0
         for block in poolData['Blocks']:
-            blockName = "p{} block{} {}".format(poolIndex, blockIndex, block['ID'])
+            blockName = "T{} b{} {}".format(poolIndex, blockIndex, block['ID'])
             AddBlockName(blockName, blockCounter)
             AddTraceEventsBlock(block, blockCounter)
             blockCounter += 1
@@ -226,20 +273,19 @@ def AddTraceEvents():
         # dedicated allocs
         allocationIndex = 0
         for dedicatedAlloc in poolData['DedicatedAllocations']:
-            blockName = 'p{} alloc{} {}'.format(poolIndex, allocationIndex, dedicatedAlloc['Name'])
+            blockName = 'T{} a{} {}'.format(poolIndex, allocationIndex, dedicatedAlloc['Name'])
             AddBlockName(blockName, blockCounter)
             AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
             blockCounter += 1
             allocationIndex += 1
             
         # repeat for custom pools
-        for customPoolData in poolData['CustomPools'].values():
-            customPoolName = "" # TODO: hook up, but it's not a field customPoolData['Name']
-
+        for customPoolName, customPoolData in poolData['CustomPools'].items():
+           
             # pool block allocs
             blockIndex = 0
             for block in customPoolData['Blocks']:
-                blockName = 'p{} {} block{} {}'.format(poolIndex, customPoolName, blockIndex, block['ID'])
+                blockName = 'T{} {} b{} {}'.format(poolIndex, customPoolName, blockIndex, block['ID'])
                 AddBlockName(blockName, blockCounter)
                 AddTraceEventsBlock(block, blockCounter)
                 blockCounter += 1
@@ -248,7 +294,7 @@ def AddTraceEvents():
             # pool dedicated allocs
             allocationIndex = 0
             for dedicatedAlloc in customPoolData['DedicatedAllocations']:
-                blockName = 'p{} {} alloc{} {}'.format(poolIndex, customPoolName, allocationIndex, dedicatedAlloc['Name'])
+                blockName = 'T{} {} a{} {}'.format(poolIndex, customPoolName, allocationIndex, dedicatedAlloc['Name'])
                 AddBlockName(blockName, blockCounter)
                 AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
                 blockCounter += 1
