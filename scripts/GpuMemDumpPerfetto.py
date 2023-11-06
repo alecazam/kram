@@ -56,6 +56,10 @@ currentApi = ""
 # input data dictionary
 data = {}
 
+# remap names to index for obfuscation, can then share mem maps
+nameIndexer = { "": 0 }
+nameIndexerCounter = 0
+
  # now convert the dictonaries to new dictionaries, and then out to json 
  # TODO: ms = *1e-3 not quite kb, ns = *1E-9
  # when using ms, then values can hit minute and hour time conversions which /60 instead of /100,
@@ -141,11 +145,12 @@ def AllocTypeToCategory(type, usage):
     if currentApi == 'Vulkan':
         if type == 'BUFFER':
             if (usage & 0x1C0) != 0: # INDIRECT_BUFFER | VERTEX_BUFFER | INDEX_BUFFER
-                isVB = True # TODO: split up
-                if isVB: 
+                if (usage & 0x080) != 0:
                     return "VB"
-                else: 
-                    return "IB" 
+                elif (usage & 0x040) != 0:
+                    return "IB"
+                elif (usage & 0x0100) != 0:
+                    return "DB"
             elif (usage & 0x28) != 0: # STORAGE_BUFFER | STORAGE_TEXEL_BUFFER
                 return "SB"
             elif (usage & 0x14) != 0: # UNIFORM_BUFFER | UNIFORM_TEXEL_BUFFER
@@ -194,16 +199,37 @@ def AllocCategoryToColor(category):
             color = "olive"
         elif category == 'IB':
             color = "white"
+        elif category == 'DB':
+            color = "white"
         else:
             color = "white"
     elif category[1] == 'T':
         color = "yellow"
     
     return color
-                     
+
+# a way to obscure names, so can share maps publicly
+def RemapName(name):
+
+    # TODO: perfetto doesn't uniquely color the names if using numbers
+    # or even N + num when they differ.  Find out what criteria needs.
+    useNameIndexer = False
+    if useNameIndexer:
+        global nameIndexer
+        global nameIndexerCounter
+        
+        if name in nameIndexer:
+            name = str(nameIndexer[name])
+        else:
+            nameIndexer[name] = nameIndexerCounter
+            name = str(nameIndexerCounter)
+            nameIndexerCounter += 1
+
+    return name
+
 def AddTraceEventsAlloc(alloc, addr, blockCounter):
     global perfettoDict
-
+    
     size = alloc['Size']
     category = AllocTypeToCategory(alloc['Type'], alloc['Usage'])
     
@@ -213,9 +239,15 @@ def AddTraceEventsAlloc(alloc, addr, blockCounter):
     # https://github.com/catapult-project/catapult/blob/master/tracing/tracing/base/color_scheme.html
     #color = AllocCategoryToColor(category)
 
+    name = RemapName(alloc['Name'])
+
+    # prepend category
+    if (alloc['Type'] != 'FREE'):
+        name = category + "-" + name
+
     # complete event is much less data than B/E
     perfettoDict['traceEvents'].append({
-        'name': alloc['Name'],
+        'name': name,
         'ph': 'X',
         'ts': int(addr),
         'dur': int(size),
