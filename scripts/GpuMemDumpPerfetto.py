@@ -33,19 +33,34 @@
 import argparse
 import json
 
+# this is all for doing queries, not writing out traces which only has C++ calls
+# did a pip3 install perfetto, but no docs on it https://pypi.org/project/perfetto/
+# import perfetto
+# https://android.googlesource.com/platform/external/perfetto/+/refs/heads/master/python/example.py
+# from perfetto.trace_processor import TraceProcessor, TraceProcessorConfig
+# https://perfetto.dev/docs/analysis/batch-trace-processor
+#
+# https://perfetto.dev/docs/reference/synthetic-track-event
+# No phtyon writer, and so everything has to be protobuf based
+# https://perfetto.dev/docs/design-docs/protozero
+
 PROGRAM_VERSION = 'Vulkan/D3D12 Memory Allocator Dump Perfetto 3.0.3'
 
-# TODO: Perfetto can't handle empty string for name on the allocs
-#   so had to set them to 'M'.  This is getting fixed
-# TODO: cname doesn't seem to import and has limited colors
-#  cname is ignored by parser
+# DONE: Perfetto can't handle empty string for name on the allocs
+#   so had to set them to 'M'.  This is getting fixed.
+#   https://r.android.com/2817378
+# DONE: cname doesn't seem to import and has limited colors
+#  cname is ignored by parser, there is a layer and bg color, but need to set color for a block
+#  find out how Peretto consistently colors layers by name
 #  https://github.com/google/perfetto/blob/master/src/trace_processor/importers/json/json_trace_parser.cc
-# TODO: call 'set timestamp format' to seconds from UI (cmd+shift+P), 
+#  https://github.com/google/perfetto/issues/620
+# DONE: call 'set timestamp format' to seconds from UI (cmd+shift+P), 
 #  but this doesn't affect duration display which is still formatted. Second lines reflect MB.
 # TODO: Pefetto doesn't care about supporting Cataylst json format, but doesn't have a json of its own
 #  https://github.com/google/perfetto/issues/622
 #  https://github.com/google/perfetto/issues/623
-
+# TODO: add totals, already know none are empty.  Add these to a summary track.
+#   can have count/mem of each time and potentially across all types
 
 # dx12 or vulkan
 currentApi = ""
@@ -141,7 +156,8 @@ def AllocTypeToCategory(type, usage):
 
     if currentApi == 'Vulkan':
         if type == 'BUFFER':
-            if (usage & 0x0080) != 0:  # VERTEX_BUFFER
+            # https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBufferUsageFlagBits.html
+            if (usage & 0x0080) != 0:  # VK_USAGE_VERTEX_BUFFER_BIT
                 return "VB"
             elif (usage & 0x040) != 0: # INDEX_BUFFER
                 return "IB"
@@ -152,9 +168,10 @@ def AllocTypeToCategory(type, usage):
             elif (usage & 0x0028) != 0: # STORAGE_BUFFER | STORAGE_TEXEL_BUFFER
                 return "SB"
             else:
-                return "?B"
+                return "?B" # TODO: getting this on some buffers, so identify more
         elif type == 'IMAGE_OPTIMAL':
             # TODO: need tex type (2d, 3d, ...)
+            # https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkImageUsageFlagBits.html
             if (usage & 0x20) != 0: # DEPTH_STENCIL_ATTACHMENT
                 return "DT"
             elif (usage & 0xD0) != 0: # INPUT_ATTACHMENT | TRANSIENT_ATTACHMENT | COLOR_ATTACHMENT
@@ -313,10 +330,9 @@ def AddTraceEvents():
         
         # report for default pool
 
-        
         # block allocs
         blockIndex = 0
-        for block in sorted(poolData['Blocks']):
+        for block in poolData['Blocks']:
             blockName = "T{} b{} {}".format(poolIndex, blockIndex, block['ID'])
             AddBlockName(blockName, blockCounter)
             AddTraceEventsBlock(block, blockCounter)
@@ -337,7 +353,7 @@ def AddTraceEvents():
            
             # pool block allocs
             blockIndex = 0
-            for block in sorted(customPoolData['Blocks']):
+            for block in customPoolData['Blocks']:
                 blockName = 'T{} {} b{} {}'.format(poolIndex, customPoolName, blockIndex, block['ID'])
                 AddBlockName(blockName, blockCounter)
                 AddTraceEventsBlock(block, blockCounter)
