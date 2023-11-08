@@ -332,7 +332,7 @@ def AddTraceEvents():
 
         # block allocs
         blockIndex = 0
-        for blockKey in storted(poolData['Blocks'].keys()):
+        for blockKey in sorted(poolData['Blocks'].keys()):
             block = poolData['Blocks'][blockKey]
             blockName = "T{} b{} {}".format(poolIndex, blockIndex, block['ID'])
             AddBlockName(blockName, blockCounter)
