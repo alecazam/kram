@@ -323,7 +323,7 @@ def AddTraceEvents():
 
     # for poolData in data.values():
     for memType in sorted(data.keys()):
-        memPoolData = data[memType]
+        poolData = data[memType]
 
         # strip 'Type ' off string
         poolIndex = memType[5:]
@@ -332,9 +332,8 @@ def AddTraceEvents():
 
         # block allocs
         blockIndex = 0
-        for blockKey in sorted(poolData['Blocks'].keys()):
-            block = poolData['Blocks'][blockKey]
-            blockName = "T{} b{} {}".format(poolIndex, blockIndex, block['ID'])
+        for bloc in poolData['Blocks']:
+            WblockName = "T{} b{} {}".format(poolIndex, blockIndex, block['ID'])
             AddBlockName(blockName, blockCounter)
             AddTraceEventsBlock(block, blockCounter)
             blockCounter += 1
@@ -354,8 +353,7 @@ def AddTraceEvents():
            
             # pool block allocs
             blockIndex = 0
-            for blockKey in sorted(customPoolData['Blocks'].keys()):
-                block = poolData['Blocks'][blockKey]
+            for block in customPoolData['Blocks']:
                 blockName = 'T{} {} b{} {}'.format(poolIndex, customPoolName, blockIndex, block['ID'])
                 AddBlockName(blockName, blockCounter)
                 AddTraceEventsBlock(block, blockCounter)
