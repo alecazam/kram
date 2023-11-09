@@ -56,7 +56,7 @@ PROGRAM_VERSION = 'Vulkan/D3D12 Memory Allocator Dump Perfetto 3.0.3'
 #  https://github.com/google/perfetto/issues/620
 # DONE: call 'set timestamp format' to seconds from UI (cmd+shift+P), 
 #  but this doesn't affect duration display which is still formatted. Second lines reflect MB.
-# TODO: Pefetto doesn't care about supporting Cataylst json format, but doesn't have a json of its own
+# TODO: Pefetto doesn't want to extend/support Cataylst json format, but doesn't have a json of its own
 #  https://github.com/google/perfetto/issues/622
 #  https://github.com/google/perfetto/issues/623
 # TODO: add totals, already know none are empty.  Add these to a summary track.
@@ -72,7 +72,7 @@ data = {}
 nameIndexer = { "": 0 }
 nameIndexerCounter = 0
 
- # now convert the dictonaries to new dictionaries, and then out to json 
+ # now convert the dictionaries to new dictionaries, and then out to json 
  # TODO: ms = *1e-3 not quite kb, ns = *1E-9
  # when using ms, then values can hit minute and hour time conversions which /60 instead of /100,
  # but ns is also goofy due to 1e9 being gb.
@@ -167,6 +167,8 @@ def AllocTypeToCategory(type, usage):
                 return "DB"
             elif (usage & 0x0028) != 0: # STORAGE_BUFFER | STORAGE_TEXEL_BUFFER
                 return "SB"
+            elif (usage & 0x0003) != 0: # Staging buffer only sets 1 or 2 bit, calling this MB for memory
+                return "MB"
             else:
                 return "?B" # TODO: getting this on some buffers, so identify more
         elif type == 'IMAGE_OPTIMAL':
@@ -243,6 +245,21 @@ def RemapName(name):
 def AddTraceEventsAlloc(alloc, addr, blockCounter):
     global perfettoDict
     
+    # settings
+
+    # this makes it harder to look for strings, but Perfetto can't control color
+    # so this prepends the type/category
+    prependCategory = True
+
+    # this has a downside that empty blocks and tail end of block isn't clear
+    # but it does cut down on data 
+    skipFreeAlloc = True
+
+    isFreeAlloc = alloc['Type'] == 'FREE'
+
+    if (skipFreeAlloc and isFreeAlloc):
+        return
+
     size = alloc['Size']
     category = AllocTypeToCategory(alloc['Type'], alloc['Usage'])
     
@@ -255,8 +272,7 @@ def AddTraceEventsAlloc(alloc, addr, blockCounter):
     name = RemapName(alloc['Name'])
 
     # prepend category
-    prependCategory = True
-    if (prependCategory and alloc['Type'] != 'FREE'):
+    if (prependCategory and not isFreeAlloc):
         name = category + "-" + name
 
     traceEvent = {
@@ -288,7 +304,6 @@ def AddTraceEventsBlock(block, blockCounter):
 def AddBlockName(blockName, blockCounter):
     global perfettoDict
 
-    # TODO: would be nice to add at top, rather than intermingled
     perfettoDict['traceEvents'].append({
         'name': 'thread_name',
         'ph': 'M',
@@ -302,7 +317,6 @@ def AddBlockName(blockName, blockCounter):
 def AddProcessName(processName):
     global perfettoDict
 
-    # TODO: would be nice to add at top, rather than intermingled
     perfettoDict['traceEvents'].append({
         'name': 'process_name',
         'ph': 'M',
@@ -313,11 +327,11 @@ def AddProcessName(processName):
     })
 
 
-def AddTraceEvents():
+def AddTraceEvents(addBlockNames):
     global perfettoDict
     blockCounter = 0
     
-    # TODO: add all block names first across all pools, then add the allocations
+    # DONE: add all block names first across all pools, then add the allocations
     # TODO: do dedicated allocations need sorted?
     # TODO: could specify pid for memType, but think has to be stored per alloc
 
@@ -332,19 +346,23 @@ def AddTraceEvents():
 
         # block allocs
         blockIndex = 0
-        for bloc in poolData['Blocks']:
-            WblockName = "T{} b{} {}".format(poolIndex, blockIndex, block['ID'])
-            AddBlockName(blockName, blockCounter)
-            AddTraceEventsBlock(block, blockCounter)
+        for block in poolData['Blocks']:
+            if addBlockNames:
+                blockName = "T{} b{} {}".format(poolIndex, blockIndex, block['ID'])
+                AddBlockName(blockName, blockCounter)
+            else:
+                AddTraceEventsBlock(block, blockCounter)
             blockCounter += 1
             blockIndex += 1
 
         # dedicated allocs
         allocationIndex = 0
         for dedicatedAlloc in poolData['DedicatedAllocations']:
-            blockName = 'T{} a{} {}'.format(poolIndex, allocationIndex, dedicatedAlloc['Name'])
-            AddBlockName(blockName, blockCounter)
-            AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
+            if addBlockNames:
+                blockName = 'T{} a{} {}'.format(poolIndex, allocationIndex, dedicatedAlloc['Name'])
+                AddBlockName(blockName, blockCounter)
+            else:
+                AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
             blockCounter += 1
             allocationIndex += 1
             
@@ -354,18 +372,22 @@ def AddTraceEvents():
             # pool block allocs
             blockIndex = 0
             for block in customPoolData['Blocks']:
-                blockName = 'T{} {} b{} {}'.format(poolIndex, customPoolName, blockIndex, block['ID'])
-                AddBlockName(blockName, blockCounter)
-                AddTraceEventsBlock(block, blockCounter)
+                if addBlockNames:
+                    blockName = 'T{} {} b{} {}'.format(poolIndex, customPoolName, blockIndex, block['ID'])
+                    AddBlockName(blockName, blockCounter)
+                else:
+                    AddTraceEventsBlock(block, blockCounter)
                 blockCounter += 1
                 blockIndex += 1
 
             # pool dedicated allocs
             allocationIndex = 0
             for dedicatedAlloc in customPoolData['DedicatedAllocations']:
-                blockName = 'T{} {} a{} {}'.format(poolIndex, customPoolName, allocationIndex, dedicatedAlloc['Name'])
-                AddBlockName(blockName, blockCounter)
-                AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
+                if addBlockNames:
+                    blockName = 'T{} {} a{} {}'.format(poolIndex, customPoolName, allocationIndex, dedicatedAlloc['Name'])
+                    AddBlockName(blockName, blockCounter)
+                else:
+                    AddTraceEventsAlloc(dedicatedAlloc, 0, blockCounter)
                 blockCounter += 1
                 allocationIndex += 1
                 
@@ -419,12 +441,18 @@ if __name__ == '__main__':
         exit(1)
     RemoveEmptyType()
     
-    # using process name to indicate source file
+    # add process name to indicate source file
     AddProcessName(args.DumpFile)
 
-    AddTraceEvents()
+    # add thread names to indicate block names
+    AddTraceEvents(True)
 
+    # add the actual memory block size/offset/name
+    AddTraceEvents(False)
+
+    # setting
     compactJson = False
+
     if compactJson:
          perfettoJson = json.dumps(perfettoDict)
     else:
