@@ -1495,7 +1495,7 @@ static void setupTestArgs(vector<const char*>& args)
                 break;
             }
 
-            testNumber = atoi(args[i + 1]);
+            testNumber = StringToInt32(args[i + 1]);
 
             if (!kramTestCommand(testNumber, argsTest, cmd)) {
                 KLOGE("Kram", "Test %d not found\n", testNumber);
@@ -2672,7 +2672,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
             
-            infoArgs.sdfThreshold = atoi(args[i]);
+            infoArgs.sdfThreshold = StringToInt32(args[i]);
             if (infoArgs.sdfThreshold < 1 || infoArgs.sdfThreshold > 255) {
                 KLOGE("Kram", "sdfThreshold arg invalid");
                 error = true;
@@ -2695,7 +2695,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
 
-            infoArgs.mipMaxSize = atoi(args[i]);
+            infoArgs.mipMaxSize = StringToInt32(args[i]);
             if (infoArgs.mipMaxSize < 1 || infoArgs.mipMaxSize > 65536) {
                 KLOGE("Kram", "mipmax arg invalid");
                 error = true;
@@ -2710,7 +2710,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
 
-            infoArgs.mipMinSize = atoi(args[i]);
+            infoArgs.mipMinSize = StringToInt32(args[i]);
             if (infoArgs.mipMinSize < 1 || infoArgs.mipMinSize > 65536) {
                 KLOGE("Kram", "mipmin arg invalid");
                 error = true;
@@ -2725,7 +2725,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
 
-            infoArgs.mipSkip = atoi(args[i]);
+            infoArgs.mipSkip = StringToInt32(args[i]);
             if (infoArgs.mipSkip < 0 || infoArgs.mipSkip > 16) {
                 KLOGE("Kram", "mipskip arg invalid");
                 error = true;
@@ -2848,7 +2848,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 break;
             }
 
-            infoArgs.quality = atoi(args[i]);
+            infoArgs.quality = StringToInt32(args[i]);
         }
 
         else if (isStringEqual(word, "-output") ||
@@ -2962,7 +2962,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-            infoArgs.compressor.compressorLevel = atoi(args[i]);
+            infoArgs.compressor.compressorLevel = StringToInt32(args[i]);
         }
         else if (isStringEqual(word, "-zlib")) {
             infoArgs.compressor.compressorType = KTX2SupercompressionZlib;
@@ -2972,7 +2972,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-            infoArgs.compressor.compressorLevel = atoi(args[i]);
+            infoArgs.compressor.compressorLevel = StringToInt32(args[i]);
         }
         else {
             KLOGE("Kram", "unexpected argument \"%s\"\n",
@@ -3281,7 +3281,7 @@ int32_t kramAppScript(vector<const char*>& args)
                 break;
             }
 
-            numJobs = atoi(args[i]);
+            numJobs = StringToInt32(args[i]);
         }
         else if (isStringEqual(word, "-v") ||
                  isStringEqual(word, "-verbose")) {

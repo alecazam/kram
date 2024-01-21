@@ -19,11 +19,6 @@
  * THE SOFTWARE.
  */
 
-// Heavily modifed by Alec Miller 10/1/23
-// This codebase was frozen by DropBox with very little effort put into it.
-// And I liked the readability of the code.  Optimized with ImmutableStrings
-// and a BlockedLinearAllocator.
-
 #include "json11.h"
 #include <cassert>
 #include <cmath>
@@ -39,7 +34,16 @@
 // not including this in KramConfig.h - used for pool
 #include "BlockedLinearAllocator.h"
 
-// This now uses 600K Debug (32B node) to read 100K of json.
+// Heavily modifed by Alec Miller 10/1/23
+// This codebase was frozen by DropBox with very little effort put into it.
+// And I liked the readability of the code.  Optimized with ImmutableStrings
+// and a BlockedLinearAllocator.
+//
+// This is DOM reader/writer.  Building up stl data structures in a DOM
+// to write isn't great memory wise.  May move to a SAX writer.
+// Times to read ui rectangle file on M1 MBP 14".  1/21/24
+// Release - parsed 101 KB of json using 576 KB of memory in 14.011ms
+// Debug   - parsed 101 KB of json using 576 KB of memory in 26.779ms
 // TODO: parser doesn't handle trailing comments
 
 namespace json11 {
@@ -711,7 +715,7 @@ double JsonReader::parse_number() {
         from_chars(str + start_pos, str + i, value);
 #else
         // this is locale dependent, other bad stuff
-        value = atoi(str + start_pos);
+        value = (double)StringToInt64(str + start_pos);
 #endif
         return value;
     }

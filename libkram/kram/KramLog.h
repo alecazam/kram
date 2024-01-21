@@ -81,4 +81,30 @@ size_t strlcat(char* dst, const char* src, size_t size);
 size_t strlcpy(char* dst, const char* src, size_t size);
 #endif
 
+// Note: never use atoi, it doesn't handle unsigned value with high bit set.
+inline int64_t StringToInt64(const char* num)
+{
+    char* endPtr = nullptr;
+    int64_t value = strtol(num, &endPtr, 10);
+    return value;
+}
+
+inline uint64_t StringToUInt64(const char* num)
+{
+    char* endPtr = nullptr;
+    uint64_t value = strtoul(num, &endPtr, 10);
+    return value;
+}
+
+inline int32_t StringToInt32(const char* num)
+{
+    return (int32_t)StringToInt64(num);
+}
+
+inline uint32_t StringToUInt32(const char* num)
+{
+    return (int32_t)StringToUInt64(num);
+}
+
+
 }  // namespace kram

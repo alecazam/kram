@@ -311,7 +311,7 @@ public:
         
         // Note: this can provide the file/line, but requires calling out to external process
         // also nm and addr2line
-        // system("atos -o kramv.app.dSYM/Contents/Resources/DWARF/kramv -arch arm64 -l %p", address);
+        // posix_spawn("atos -o kramv.app.dSYM/Contents/Resources/DWARF/kramv -arch arm64 -l %p", address);
         
         filename.clear();
         line = 0;
