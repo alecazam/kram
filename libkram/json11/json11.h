@@ -102,46 +102,94 @@ public:
     
     void pushObject(const char* key = "") {
         if (key[0])
-            sprintf(*_out, "{\"%s\"", key);
+        {
+            sprintf(*_out, "{\"%s\":\n", key);
+        }
         else
+        {
             _out->push_back('{');
-        
+            _out->push_back('\n');
+        }
         _stack.push_back('}');
+        _isFirst.push_back(false);
     }
     void pushArray(const char* key = "") {
         if (key[0])
-            sprintf(*_out, "[\"%s\"", key);
+            sprintf(*_out, "[\"%s\":\n", key);
         else
+        {
             _out->push_back('[');
-        
+            _out->push_back('\n');
+        }
         _stack.push_back(']');
+        _isFirst.push_back(false);
     }
+    
+    // can call pop() or variants to check pairing
     void pop() {
         KASSERT(_stack.empty());
         char c = _stack.back();
-        _stack.pop_back();
+        
         _out->push_back(c);
+        _out->push_back('\n');
+        
+        _stack.pop_back();
+        _isFirst.pop_back();
+    }
+    void popObject() {
+        KASSERT(_stack.empty());
+        char c = _stack.back();
+        KASSERT(c == '}');
+        pop();
+    }
+    void popArray() {
+        KASSERT(_stack.empty());
+        char c = _stack.back();
+        KASSERT(c == ']');
+        pop();
     }
     
     void writeString(const char* key, const char* value) {
-        sprintf(*_out, "\"%s\"=\"%s\"", key, EscapeString(value));
+        writeCommaAndNewline();
+        int indent = _stack.size();
+        append_sprintf(*_out, "%*s\"%s\":\"%s\"", indent, "", key, escapedString(value));
     }
     void writeDouble(const char* key, double value) {
-        sprintf(*_out, "\"%s\"=\"%f\"", key, value);
+        writeCommaAndNewline();
+        int indent = _stack.size();
+        append_sprintf(*_out, "%*s\"%s\":\"%f\"", indent, "", key, value);
     }
     void writeInt32(const char* key, int32_t value) {
-        sprintf(*_out, "\"%s\"=\"%d\"", key, value);
+        writeCommaAndNewline();
+        int indent = _stack.size();
+        append_sprintf(*_out, "%*s\"%s\":\"%d\"", indent, "", key, value);
+        
     }
     void writeBool(const char* key, bool value) {
-        sprintf(*_out, "\"%s\"=\"%s\"", key, value ? "true" : "false");
+        writeCommaAndNewline();
+        int indent = _stack.size();
+        append_sprintf(*_out, "%*s\"%s\":\"%s\"", indent, "", key, value ? "true" : "false");
     }
     void writeNull(const char* key) {
-        sprintf(*_out, "\"%s\"=\"%s\"", key, "null");
+        writeCommaAndNewline();
+        int indent = _stack.size();
+        append_sprintf(*_out, "%*s\"%s\":\"%s\"", indent, "", key, "null");
     }
     
 private:
-    const char* EscapeString(const char* str);
+    void writeCommaAndNewline()
+    {
+        bool isFirst = _isFirst.back();
+        if (!isFirst)
+            _out->push_back(',');
+        _out->push_back('\n');
+        
+        // vector<bool> is special
+        _isFirst[_isFirst.size()-1] = true;
+    }
+    const char* escapedString(const char* str);
     
+    vector<bool> _isFirst;
     string* _out = nullptr;
     string _stack;
     string _escapedString;

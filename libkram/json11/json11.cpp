@@ -59,7 +59,7 @@ using namespace kram;
 
 //---------------------
 
-const char* JsonWriter::EscapeString(const char* str)
+const char* JsonWriter::escapedString(const char* str)
 {
     size_t strLen = strlen(str);
     

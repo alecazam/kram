@@ -4,7 +4,13 @@
 
 #include "KramViewerBase.h"
 
+// compare perf of these readers
+#define USE_SIMDJSON 1
+#if USE_SIMDJSON
+#include "simdjson/simdjson.h"
+#else
 #include "json11/json11.h"
+#endif
 
 namespace kram {
 using namespace simd;
@@ -691,6 +697,128 @@ void Data::clearAtlas() {
     _showSettings->lastAtlas = nullptr;
 }
 
+#if USE_SIMDJSON
+
+bool Data::loadAtlasFile(const char* filename)
+{
+    using namespace simdjson;
+    
+    clearAtlas();
+    
+    Timer timer;
+    
+    // can just mmap the json
+    MmapHelper mmap;
+    if (!mmap.open(filename)) {
+        KLOGE("kramv", "Failed to open %s", filename);
+        return false;
+    }
+    
+    ondemand::parser parser;
+    
+    padded_string json((const char*)mmap.data(), mmap.dataLength());
+    auto atlasProps = parser.iterate(json);
+       
+    // can we get at memory use numbers to do the parse?
+    KLOGI("kramv", "parsed %.0f KB of json in %.3fms",
+          (double)mmap.dataLength() / 1024.0,
+          timer.timeElapsedMillis());
+    
+    // Can use hover or a show all on these entries and names.
+    // Draw names on screen using system text in the upper left corner if 1
+    // if showing all, then show names across each mip level.  May want to
+    // snap to pixels on each mip level so can see overlap.
+    
+    {
+        std::vector<double> values;
+        //string_view atlasName = atlasProps["name"].get_string().value_unsafe();
+        
+        uint64_t width = atlasProps["width"].get_uint64().value_unsafe();
+        uint64_t height = atlasProps["height"].get_uint64().value_unsafe();
+    
+        uint64_t slice = atlasProps["slice"].get_uint64().value_unsafe();
+        
+        float uPad = 0.0f;
+        float vPad = 0.0f;
+        
+        if (atlasProps["paduv"].get_array().error() != NO_SUCH_FIELD) {
+            values.clear();
+            for (auto value : atlasProps["paduv"])
+                values.push_back(value.get_double().value_unsafe());
+            
+            uPad = values[0];
+            vPad = values[1];
+        }
+        else if (atlasProps["padpx"].get_array().error() != NO_SUCH_FIELD) {
+            values.clear();
+            for (auto value : atlasProps["padpx"])
+                values.push_back(value.get_double().value_unsafe());
+            
+            uPad = values[0];
+            vPad = values[1];
+            
+            uPad /= width;
+            vPad /= height;
+        }
+        
+        for (auto regionProps: atlasProps["regions"])
+        {
+            string_view name = regionProps["name"].get_string().value_unsafe();
+            
+            float x = 0.0f;
+            float y = 0.0f;
+            float w = 0.0f;
+            float h = 0.0f;
+            
+            if (regionProps["ruv"].get_array().error() != NO_SUCH_FIELD)
+            {
+                values.clear();
+                for (auto value : regionProps["ruv"])
+                    values.push_back(value.get_double().value_unsafe());
+            
+                // Note: could convert pixel and mip0 size to uv.
+                // normalized uv make these easier to draw across all mips
+                x = values[0];
+                y = values[1];
+                w = values[2];
+                h = values[3];
+            }
+            else if (regionProps["rpx"].get_array().error() != NO_SUCH_FIELD)
+            {
+                values.clear();
+                for (auto value : regionProps["rpx"])
+                    values.push_back(value.get_double().value_unsafe());
+            
+                x = values[0];
+                y = values[1];
+                w = values[2];
+                h = values[3];
+                
+                // normalize to uv using the width/height
+                x /= width;
+                y /= height;
+                w /= width;
+                h /= height;
+            }
+                
+            const char* verticalProp = "f"; // regionProps["rot"];
+            bool isVertical = verticalProp && verticalProp[0] == 't';
+            
+            Atlas atlas = {(string)name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
+            _showSettings->atlas.emplace_back(std::move(atlas));
+        }
+    }
+    
+    // TODO: also need to be able to bring in vector shapes
+    // maybe from svg or files written out from figma or photoshop.
+    // Can triangulate those, and use xatlas to pack those.
+    // Also xatlas can flatten out a 3d model into a chart.
+    
+    return true;
+}
+
+#else
+
 bool Data::loadAtlasFile(const char* filename)
 {
     using namespace json11;
@@ -815,6 +943,8 @@ bool Data::loadAtlasFile(const char* filename)
     
     return true;
 }
+
+#endif
 
 // opens archive
 bool Data::openArchive(const char * zipFilename, int32_t urlIndex)
