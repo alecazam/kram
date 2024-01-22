@@ -64,6 +64,7 @@ class JsonReaderData;
 
 //--------------------------
 
+/* Don't want to maintain this form.  Use SAX not DOM for writer.
 // Write json nodes out to a string.  String data is encoded.
 class JsonWriter final {
 public:
@@ -90,6 +91,62 @@ private:
 private:
     string* _out = nullptr;
 };
+*/
+
+// Write json nodes out to a string.  String data is encoded.
+// This is way simpler than building up stl DOM to then write it out.
+// And keys go out in the order added.
+class JsonWriter final {
+public:
+    JsonWriter(string* str) : _out(str) {}
+    
+    void pushObject(const char* key = "") {
+        if (key[0])
+            sprintf(*_out, "{\"%s\"", key);
+        else
+            _out->push_back('{');
+        
+        _stack.push_back('}');
+    }
+    void pushArray(const char* key = "") {
+        if (key[0])
+            sprintf(*_out, "[\"%s\"", key);
+        else
+            _out->push_back('[');
+        
+        _stack.push_back(']');
+    }
+    void pop() {
+        KASSERT(_stack.empty());
+        char c = _stack.back();
+        _stack.pop_back();
+        _out->push_back(c);
+    }
+    
+    void writeString(const char* key, const char* value) {
+        sprintf(*_out, "\"%s\"=\"%s\"", key, EscapeString(value));
+    }
+    void writeDouble(const char* key, double value) {
+        sprintf(*_out, "\"%s\"=\"%f\"", key, value);
+    }
+    void writeInt32(const char* key, int32_t value) {
+        sprintf(*_out, "\"%s\"=\"%d\"", key, value);
+    }
+    void writeBool(const char* key, bool value) {
+        sprintf(*_out, "\"%s\"=\"%s\"", key, value ? "true" : "false");
+    }
+    void writeNull(const char* key) {
+        sprintf(*_out, "\"%s\"=\"%s\"", key, "null");
+    }
+    
+private:
+    const char* EscapeString(const char* str);
+    
+    string* _out = nullptr;
+    string _stack;
+    string _escapedString;
+};
+
 
 //--------------------------
 

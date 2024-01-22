@@ -41,10 +41,16 @@
 //
 // This is DOM reader/writer.  Building up stl data structures in a DOM
 // to write isn't great memory wise.  May move to a SAX writer.
-// Times to read ui rectangle file on M1 MBP 14".  1/21/24
+// Times to read font atlas file on M1 MBP 14".  1/21/24
+//
+// json11
 // Release - parsed 101 KB of json using 576 KB of memory in 14.011ms
 // Debug   - parsed 101 KB of json using 576 KB of memory in 26.779ms
-// TODO: parser doesn't handle trailing comments
+//
+// simdjson (5x faster), no mem use numbers
+// Release - parsed 101 KB of json in 3.182ms
+//
+// TODO: json11 parser doesn't handle trailing comments
 
 namespace json11 {
 
@@ -53,6 +59,82 @@ using namespace kram;
 
 //---------------------
 
+const char* JsonWriter::EscapeString(const char* str)
+{
+    size_t strLen = strlen(str);
+    
+    // first see if string needs escaped
+    bool needsEscaped = false;
+    for (size_t i = 0; i < strLen; i++) {
+        const char ch = str[i];
+        switch(ch) {
+            case '\\':
+            case '"':
+            case '\b':
+            case '\f':
+            case '\n':
+            case '\r':
+            case '\t':
+                needsEscaped = true;
+                break;
+        }
+        
+        if (needsEscaped)
+            break;
+    }
+    
+    if (!needsEscaped) {
+        return str;
+    }
+    
+    // build the escaped string
+    _escapedString.clear();
+    for (size_t i = 0; i < strLen; i++) {
+        const char ch = str[i];
+        if (ch == '\\') {
+            _escapedString.push_back('\\');
+            _escapedString.push_back('\\');
+        } else if (ch == '"') {
+            _escapedString.push_back('\\');
+            _escapedString.push_back('"');
+        } else if (ch == '\b') {
+            _escapedString.push_back('\\');
+            _escapedString.push_back('b');
+        } else if (ch == '\f') { //?
+            _escapedString.push_back('\\');
+            _escapedString.push_back('f');
+        } else if (ch == '\n') {
+            _escapedString.push_back('\\');
+            _escapedString.push_back('n');
+        } else if (ch == '\r') {
+            _escapedString.push_back('\\');
+            _escapedString.push_back('r');
+        } else if (ch == '\t') {
+            _escapedString.push_back('\\');
+            _escapedString.push_back('t');
+        } else if (static_cast<uint8_t>(ch) <= 0x1f) {
+            char buf[8];
+            snprintf(buf, sizeof buf, "\\u%04x", ch);
+            _escapedString.append(buf);
+        } else if (static_cast<uint8_t>(ch) == 0xe2 &&
+                   static_cast<uint8_t>(str[i+1]) == 0x80 &&
+                   static_cast<uint8_t>(str[i+2]) == 0xa8) {
+            _escapedString.append("\\u2028"); // line separator
+            i += 2;
+        } else if (static_cast<uint8_t>(ch) == 0xe2 &&
+                   static_cast<uint8_t>(str[i+1]) == 0x80 &&
+                   static_cast<uint8_t>(str[i+2]) == 0xa9) {
+            _escapedString.append("\\u2029"); // paragraph separator
+            i += 2;
+        } else {
+            _escapedString.push_back(ch);
+        }
+    }
+    
+    return _escapedString.c_str();
+}
+    
+/*
 void JsonWriter::writeText(const char* text) {
     *_out += text;
 }
@@ -86,7 +168,7 @@ void JsonWriter::writeString(const Json& value) {
     for (size_t i = 0, iEnd = value.count(); i < iEnd; i++) {
         const char ch = str[i];
         if (ch == '\\') {
-            writeText("\\\\"); // this is 2x \
+            writeText("\\\\"); // this is 2x
         } else if (ch == '"') {
             writeString("\\\"");
         } else if (ch == '\b') {
@@ -170,6 +252,7 @@ void JsonWriter::write(const Json &root, string& out) {
     _out = &out;
     write(root);
 }
+*/
 
 //-----------------------------
 
