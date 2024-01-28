@@ -133,7 +133,138 @@ const char* JsonWriter::escapedString(const char* str)
     
     return _escapedString.c_str();
 }
+  
+void JsonWriter::pushObject(const char* key) {
+    if (key[0])
+    {
+        KASSERT(isObject());
+        writeCommaAndNewline();
+        int indent = _stack.size();
+        sprintf(*_out, "%*s\"%s\":{\n", indent, "", key);
+    }
+    else
+    {
+        _out->push_back('{');
+        _out->push_back('\n');
+    }
+    _stack.push_back('}');
+    _isFirst.push_back(false);
+}
+void JsonWriter::pushArray(const char* key) {
+    if (key[0])
+    {
+        KASSERT(isObject());
+        writeCommaAndNewline();
+        int indent = _stack.size();
+        sprintf(*_out, "%*s\"%s\":[\n", indent, "", key);
+    }
+    else
+    {
+        _out->push_back('[');
+        _out->push_back('\n');
+    }
+    _stack.push_back(']');
+    _isFirst.push_back(false);
+}
+
+void JsonWriter::pop() {
+    KASSERT(_stack.empty());
+    char c = _stack.back();
     
+    _out->push_back(c);
+    _out->push_back('\n');
+    
+    _stack.pop_back();
+    _isFirst.pop_back();
+}
+void JsonWriter::popObject() {
+    KASSERT(_stack.empty());
+    char c = _stack.back();
+    KASSERT(c == '}');
+    pop();
+}
+void JsonWriter::popArray() {
+    KASSERT(_stack.empty());
+    char c = _stack.back();
+    KASSERT(c == ']');
+    pop();
+}
+
+void JsonWriter::writeString(const char* key, const char* value) {
+    KASSERT(isObject());
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s\"%s\":\"%s\"", indent, "", key, escapedString(value));
+}
+void JsonWriter::writeDouble(const char* key, double value) {
+    KASSERT(isObject());
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s\"%s\":%f", indent, "", key, value);
+}
+void JsonWriter::writeInt32(const char* key, int32_t value) {
+    KASSERT(isObject());
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s\"%s\":\"%d\"", indent, "", key, value);
+    
+}
+void JsonWriter::writeBool(const char* key, bool value) {
+    KASSERT(isObject());
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s\"%s\":%s", indent, "", key, value ? "true" : "false");
+}
+void JsonWriter::writeNull(const char* key) {
+    KASSERT(isObject());
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s\"%s\":%s", indent, "", key, "null");
+}
+
+void JsonWriter::writeString(const char* value) {
+    KASSERT(isArray());
+    // only if in array
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s\"%s\"", indent, "", escapedString(value));
+}
+void JsonWriter::writeDouble(double value) {
+    KASSERT(isArray());
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s%f", indent, "", value);
+}
+void JsonWriter::writeInt32(int32_t value) {
+    KASSERT(isArray());
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s\"%d\"", indent, "", value);
+}
+void JsonWriter::writeBool(bool value) {
+    KASSERT(isArray());
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s%s", indent, "", value ? "true" : "false");
+}
+void JsonWriter::writeNull() {
+    KASSERT(isArray());
+    writeCommaAndNewline();
+    int indent = _stack.size();
+    append_sprintf(*_out, "%*s%s", indent, "", "null");
+}
+
+void JsonWriter::writeCommaAndNewline() {
+    bool isFirst = _isFirst.back();
+    if (!isFirst)
+        _out->push_back(',');
+    _out->push_back('\n');
+    
+    // vector<bool> is special
+    _isFirst[_isFirst.size()-1] = true;
+}
+
+
 /*
 void JsonWriter::writeText(const char* text) {
     *_out += text;
@@ -448,16 +579,17 @@ bool Json::iterate(const Json*& it) const {
 
 //-------------------
 
-Json::JsonValue::JsonValue(const char* v, uint32_t count, bool allocated) : sval(v) {
-    if (allocated) {
-        // need to allocate memory here
-        sval = new char[count+1];
-        memcpy((void*)sval, v, count+1);
-    }
-}
+//Json::JsonValue::JsonValue(const char* v, uint32_t count) : sval(v) {
+//    if (allocated) {
+//        // need to allocate memory here
+//        sval = new char[count+1];
+//        memcpy((void*)sval, v, count+1);
+//    }
+//}
 
+/* This is more complex, and uneeded for writer
 Json::JsonValue::JsonValue(const Json::array& values, Type t) : aval(nullptr) {
-    /* This is more complex
+    
     assert(_data.isWriting());
     
     Json** next = &aval;
@@ -477,9 +609,9 @@ Json::JsonValue::JsonValue(const Json::array& values, Type t) : aval(nullptr) {
     }
     
     *next = nullptr;
-    */
+    
 }
-
+     */
 /////////////////////////////////
 // Parsing
 
@@ -759,10 +891,6 @@ void JsonReader::parse_string_location(uint32_t& count) {
     }
 }
 
-// This is not used in parsing, but will need to convert strings
-//   that are aliased and unescape them.
-
-
 
 // Parse a double.
 double JsonReader::parse_number() {
@@ -797,7 +925,6 @@ double JsonReader::parse_number() {
         // TODO:: switch to from_chars, int but not fp supported
         from_chars(str + start_pos, str + i, value);
 #else
-        // this is locale dependent, other bad stuff
         value = (double)StringToInt64(str + start_pos);
 #endif
         return value;
@@ -832,6 +959,7 @@ double JsonReader::parse_number() {
     }
 
 #if USE_CHARCONV
+    // this stupid call, macOS doesn't even implement
     from_chars(str + start_pos, str + i, value);
 #else
     value = strtod(str + start_pos, nullptr);
@@ -935,7 +1063,7 @@ void JsonReader::parse_json(int depth, Json& parent, ImmutableString key) {
         uint32_t strCount = 0;
         parse_string_location(strCount);
         Json* json = _data->allocateJson();
-        parent.addString(json, &str[strStart], strCount, Json::FlagsAliasedEncoded, key);
+        parent.addString(json, &str[strStart], strCount, key);
         return;
     }
 
@@ -1043,10 +1171,9 @@ void Json::addJson(Json* json)
     _count++;
 }
 
-void Json::addString(Json* json, const char* str, uint32_t len, Flags flags, ImmutableString key)
+void Json::addString(Json* json, const char* str, uint32_t len, ImmutableString key)
 {
-    new (json) Json(str, len, false);
-    json->_flags = flags;
+    new (json) Json(str, len);
     if (key) json->setKey(key);
     addJson(json);
 }
@@ -1085,21 +1212,21 @@ void Json::addObject(Json* json, ImmutableString key) {
 
 //------------------------
 
-Json::Json(const Json::array &values, Json::Type t)
-    : _type(t), _count(values.size()), _value(values) {
-    assert(t == TypeObject || t == TypeArray);
-}
+//Json::Json(const Json::array &values, Json::Type t)
+//    : _type(t), _count(values.size()), _value(values) {
+//    assert(t == TypeObject || t == TypeArray);
+//}
 
-Json::~Json() {
-    switch(_type) {
-        case TypeString:
-            if (_flags == FlagsAllocatedUnencoded) {
-                delete [] _value.sval;
-                //_data.trackMemory(-_count);
-                _value.sval = nullptr;
-                _count = 0;
-            }
-            break;
+//Json::~Json() {
+//    switch(_type) {
+//        case TypeString:
+//            if (_flags == FlagsAllocatedUnencoded) {
+//                delete [] _value.sval;
+//                //_data.trackMemory(-_count);
+//                _value.sval = nullptr;
+//                _count = 0;
+//            }
+//            break;
             
 //        case TypeArray:
 //        case TypeObject:
@@ -1108,9 +1235,9 @@ Json::~Json() {
 //            _value.aval = nullptr;
 //            _count = 0;
 //            break;
-        default: break;
-    }
-}
+//        default: break;
+//    }
+//}
 
 void Json::trackMemory(int32_t size)
 {
@@ -1160,16 +1287,16 @@ const char* Json::string_value(string& str) const {
     if (!is_string())
         return "";
     
-    if (_flags == FlagsAliasedEncoded) {
+    //if (_flags == FlagsAliasedEncoded) {
         // This string length is the encoded length, so decoded should be shorter
         if (!decode_string(_value.sval, _count, str)) {
             return "";
         }
         return str.c_str();
-    }
+    //}
     
     // already not-encoded, so can return.  When written this goes through encode.
-    return _value.sval;
+    //return _value.sval;
 }
 
 

@@ -93,6 +93,7 @@ private:
 };
 */
 
+// This code is part of kram, not json11.  Will move out.
 // Write json nodes out to a string.  String data is encoded.
 // This is way simpler than building up stl DOM to then write it out.
 // And keys go out in the order added.
@@ -100,96 +101,36 @@ class JsonWriter final {
 public:
     JsonWriter(string* str) : _out(str) {}
     
-    void pushObject(const char* key = "") {
-        if (key[0])
-        {
-            sprintf(*_out, "{\"%s\":\n", key);
-        }
-        else
-        {
-            _out->push_back('{');
-            _out->push_back('\n');
-        }
-        _stack.push_back('}');
-        _isFirst.push_back(false);
-    }
-    void pushArray(const char* key = "") {
-        if (key[0])
-            sprintf(*_out, "[\"%s\":\n", key);
-        else
-        {
-            _out->push_back('[');
-            _out->push_back('\n');
-        }
-        _stack.push_back(']');
-        _isFirst.push_back(false);
-    }
+    void pushObject(const char* key = "");
+    void popObject();
     
-    // can call pop() or variants to check pairing
-    void pop() {
-        KASSERT(_stack.empty());
-        char c = _stack.back();
-        
-        _out->push_back(c);
-        _out->push_back('\n');
-        
-        _stack.pop_back();
-        _isFirst.pop_back();
-    }
-    void popObject() {
-        KASSERT(_stack.empty());
-        char c = _stack.back();
-        KASSERT(c == '}');
-        pop();
-    }
-    void popArray() {
-        KASSERT(_stack.empty());
-        char c = _stack.back();
-        KASSERT(c == ']');
-        pop();
-    }
+    void pushArray(const char* key = "");
+    void popArray();
     
-    void writeString(const char* key, const char* value) {
-        writeCommaAndNewline();
-        int indent = _stack.size();
-        append_sprintf(*_out, "%*s\"%s\":\"%s\"", indent, "", key, escapedString(value));
-    }
-    void writeDouble(const char* key, double value) {
-        writeCommaAndNewline();
-        int indent = _stack.size();
-        append_sprintf(*_out, "%*s\"%s\":\"%f\"", indent, "", key, value);
-    }
-    void writeInt32(const char* key, int32_t value) {
-        writeCommaAndNewline();
-        int indent = _stack.size();
-        append_sprintf(*_out, "%*s\"%s\":\"%d\"", indent, "", key, value);
-        
-    }
-    void writeBool(const char* key, bool value) {
-        writeCommaAndNewline();
-        int indent = _stack.size();
-        append_sprintf(*_out, "%*s\"%s\":\"%s\"", indent, "", key, value ? "true" : "false");
-    }
-    void writeNull(const char* key) {
-        writeCommaAndNewline();
-        int indent = _stack.size();
-        append_sprintf(*_out, "%*s\"%s\":\"%s\"", indent, "", key, "null");
-    }
+    // keys for adding to object
+    void writeString(const char* key, const char* value);
+    void writeDouble(const char* key, double value);
+    void writeInt32(const char* key, int32_t value);
+    void writeBool(const char* key, bool value);
+    void writeNull(const char* key);
+    
+    // These are keyless for adding to an array
+    void writeString(const char* value);
+    void writeDouble(double value);
+    void writeInt32(int32_t value);
+    void writeBool(bool value);
+    void writeNull();
     
 private:
-    void writeCommaAndNewline()
-    {
-        bool isFirst = _isFirst.back();
-        if (!isFirst)
-            _out->push_back(',');
-        _out->push_back('\n');
-        
-        // vector<bool> is special
-        _isFirst[_isFirst.size()-1] = true;
-    }
+    bool isArray() const { return _stack.back() == ']'; }
+    bool isObject() const { return _stack.back() == '}'; }
+   
+    void pop();
+    
+    void writeCommaAndNewline();
     const char* escapedString(const char* str);
     
-    vector<bool> _isFirst;
+    vector<bool> _isFirst; // could store counts
     string* _out = nullptr;
     string _stack;
     string _escapedString;
@@ -302,59 +243,16 @@ public:
     };
     
     // Flags for additional data on a type
-    enum Flags : uint8_t {
-        FlagsNone = 0,
-        FlagsAliasedEncoded, // needs decode on read
-        FlagsAllocatedUnencoded, // needs encode on write
-    };
+//    enum Flags : uint8_t {
+//        FlagsNone = 0,
+//        FlagsAliasedEncoded, // needs decode on read
+//        FlagsAllocatedUnencoded, // needs encode on write
+//    };
     
-    // Array/object can pass in for writer, but converted to linked nodes
-    using array = vector<Json>;
-    
-    // Constructors for the various types of JSON value.
-    Json() noexcept                  {}
-    Json(nullptr_t) noexcept         {}
-    Json(double value)               : _type(TypeNumber), _value(value) {}
-    Json(int value)                  : Json((double)value) {}
-    Json(bool value)                 : _type(TypeBoolean), _value(value) {}
-    
-    Json(const string& value)        : Json(value.c_str(), value.size())  {}
-    Json(const char* value, uint32_t count_, bool allocated = true)
-        : _type(TypeString), _flags(allocated ? FlagsAllocatedUnencoded : FlagsAliasedEncoded), _count(count_),
-          _value(value, count_, allocated)
-    { 
-        // if (allocated) trackMemory(_count);
-    }
+    // Only public for use by sNullValue
+    Json() noexcept {}
+    //~Json();
 
-    // This prevents Json(some_pointer) from accidentally producing a bool. Use
-    // Json(bool(some_pointer)) if that behavior is desired.
-    Json(void *) = delete;
-    
-    // has to recursively copy the entire tree of nodes, TODO:
-    Json(const array& values, Type type = TypeArray);
-    
-    ~Json();
-    
-    /* Don't know if these can work
-    // Implicit constructor: anything with a to_json() function.
-    template <class T, class = decltype(&T::to_json)>
-    Json(const T & t) : Json(t.to_json()) {}
-
-    // Implicit constructor: map-like objects (map, unordered_map, etc)
-    // TODO: revisit, but flatten objects to arrays
-//    template <class M, typename enable_if<
-//        is_constructible<string, decltype(declval<M>().begin()->first)>::value
-//        && is_constructible<Json, decltype(declval<M>().begin()->second)>::value,
-//            int>::type = 0>
-//    Json(const M & m) : Json(object(m.begin(), m.end())) {}
-
-    // Implicit constructor: vector-like objects (list, vector, set, etc)
-    template <class V, typename enable_if<
-        is_constructible<Json, decltype(*declval<V>().begin())>::value,
-            int>::type = 0>
-    Json(const V & v) : Json(array(v.begin(), v.end())) {}
-    */
-    
     // Accessors
     Type type() const { return _type; }
     
@@ -386,7 +284,7 @@ public:
     // distinguish between integer and non-integer numbers - number_value() and int_value()
     // can both be applied to a NUMBER-typed object.
     double number_value() const { return is_number() ? _value.dval : 0.0; }
-    float double_value() const { return number_value(); }
+    double double_value() const { return number_value(); }
     float float_value() const { return (float)number_value(); }
     int int_value() const { return (int)number_value(); }
     
@@ -395,36 +293,29 @@ public:
     // Return the enclosed string if this is a string, empty string otherwise
     const char* string_value(string& str) const;
 
-    // TODO: do we really need these comparisons?, typically just doing a key search
-    // only have to implement 2 operators
-    //bool operator== (const Json &rhs) const;
-    //bool operator<  (const Json &rhs) const;
-    //bool operator!= (const Json &rhs) const { return !(*this == rhs); }
-//    bool operator<= (const Json &rhs) const { return !(rhs < *this); }
-//    bool operator>  (const Json &rhs) const { return  (rhs < *this); }
-//    bool operator>= (const Json &rhs) const { return !(*this < rhs); }
-
-    // Return true if this is a JSON object and, for each item in types, has a field of
-    // the given type. If not, return false and set err to a descriptive message.
-    // typedef std::initializer_list<pair<string, Type>> shape;
-    // bool has_shape(const shape & types, string & err) const;
-
     // quickly find a node using immutable string
-    const Json & find(ImmutableString key) const;
-
-    // useful for deleting allocated string values in block allocated nodes
-    // so it does a placement delete
-    // void deleteJsonTree();
-   
+    const Json& find(ImmutableString key) const;
+    
 private:
     friend class JsonReader;
     
     // Doesn't seem to work with namespaced class
     void createRoot();
 
-    // TODO: make need to expose to build up a json hierarchy for dumping
+    // Constructors for the various types of JSON value.
+    Json(nullptr_t) noexcept         {}
+    Json(double value)               : _type(TypeNumber), _value(value) {}
+    Json(bool value)                 : _type(TypeBoolean), _value(value) {}
+    
+    // only works for aliased string
+    Json(const char* value, uint32_t count_)
+        : _type(TypeString), _count(count_), _value(value)
+    {
+    }
+    
+    // Only for JsonReader
     void addJson(Json* json);
-    void addString(Json* json, const char* str, uint32_t len, Flags flags, ImmutableString key = nullptr);
+    void addString(Json* json, const char* str, uint32_t len, ImmutableString key = nullptr);
     void addNull(Json* json, ImmutableString key = nullptr);
     void addBoolean(Json* json, bool b, ImmutableString key = nullptr);
     void addNumber(Json* json, double number, ImmutableString key = nullptr);
@@ -443,12 +334,10 @@ private:
     // 2B, but needs lookup table then
     //uint16_t _key = 0;
     uint16_t _padding = 0;
+    uint8_t  _padding1 = 0;
     
-    // 1B - really 3 bits
+    // 1B - really 3 bits (could pack into ptr, but check immutable align)
     Type _type = TypeNull;
-    
-    // 1B - really 1-2 bits
-    Flags _flags = FlagsNone;
     
     // 4B - count used by array/object, also by string
     uint32_t _count = 0;
@@ -458,8 +347,8 @@ private:
         JsonValue() : aval(nullptr) { }
         JsonValue(double v) : dval(v) {}
         JsonValue(bool v) : bval(v) {}
-        JsonValue(const char* v, uint32_t count, bool allocate);
-        JsonValue(const Json::array& value, Type t = TypeArray);
+        JsonValue(const char* v) : sval(v) {}
+        //JsonValue(const Json::array& value, Type t = TypeArray);
         
         // allocated strings deleted by Json dtor which knows type
         // the rest are all just block allocated
