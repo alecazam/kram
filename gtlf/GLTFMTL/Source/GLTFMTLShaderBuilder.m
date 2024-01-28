@@ -68,7 +68,7 @@
     pipelineDescriptor.vertexDescriptor = vertexDescriptor;
     
     pipelineDescriptor.colorAttachments[0].pixelFormat = colorPixelFormat;
-    pipelineDescriptor.sampleCount = sampleCount;
+    pipelineDescriptor.rasterSampleCount = sampleCount;
 
     if (submesh.material.alphaMode == GLTFAlphaModeBlend) {
         pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
