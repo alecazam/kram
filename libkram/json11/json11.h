@@ -241,18 +241,10 @@ public:
         TypeArray,
         TypeObject
     };
-    
-    // Flags for additional data on a type
-//    enum Flags : uint8_t {
-//        FlagsNone = 0,
-//        FlagsAliasedEncoded, // needs decode on read
-//        FlagsAllocatedUnencoded, // needs encode on write
-//    };
-    
+        
     // Only public for use by sNullValue
     Json() noexcept {}
-    //~Json();
-
+   
     // Accessors
     Type type() const { return _type; }
     
@@ -334,6 +326,8 @@ private:
     // 2B, but needs lookup table then
     //uint16_t _key = 0;
     uint16_t _padding = 0;
+    
+    // 1B
     uint8_t  _padding1 = 0;
     
     // 1B - really 3 bits (could pack into ptr, but check immutable align)
@@ -348,19 +342,10 @@ private:
         JsonValue(double v) : dval(v) {}
         JsonValue(bool v) : bval(v) {}
         JsonValue(const char* v) : sval(v) {}
-        //JsonValue(const Json::array& value, Type t = TypeArray);
-        
-        // allocated strings deleted by Json dtor which knows type
-        // the rest are all just block allocated
         
         double     dval;
         bool       bval;
-        
-        // 2 string forms - aliased to mmap (terminated with ", not-escaped)
-        // not-escaped and allocated which is null terminated
         const char* sval;
-        
-        //uint32_t aval;
         Json* aval; // aliased children, chained with _next to form tree
     } _value;
     

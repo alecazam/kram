@@ -26,11 +26,6 @@
 #include <cstdio>
 #include <limits>
 
-// This sucks that clang C++17 in 2023 doesn't have float conversion impl
-#if USE_CHARCONV
-#include <charconv> // for from_chars
-#endif
-
 // not including this in KramConfig.h - used for pool
 #include "BlockedLinearAllocator.h"
 
@@ -919,14 +914,7 @@ double JsonReader::parse_number() {
 
     if (str[i] != '.' && str[i] != 'e' && str[i] != 'E'
             && (i - start_pos) <= static_cast<size_t>(numeric_limits<int>::digits10)) {
-        
-        
-#if USE_CHARCONV
-        // TODO:: switch to from_chars, int but not fp supported
-        from_chars(str + start_pos, str + i, value);
-#else
         value = (double)StringToInt64(str + start_pos);
-#endif
         return value;
     }
 
@@ -958,12 +946,7 @@ double JsonReader::parse_number() {
             i++;
     }
 
-#if USE_CHARCONV
-    // this stupid call, macOS doesn't even implement
-    from_chars(str + start_pos, str + i, value);
-#else
     value = strtod(str + start_pos, nullptr);
-#endif
     return value;
 }
 
@@ -1154,7 +1137,7 @@ void JsonReader::parse_json(int depth, Json& parent, ImmutableString key) {
 
 void Json::createRoot()
 {
-    _type = TypeArray; // TODO: should this have unique type?, basically just retrieve aval[0]
+    _type = TypeArray;
 }
 
 void Json::addJson(Json* json)
@@ -1212,33 +1195,6 @@ void Json::addObject(Json* json, ImmutableString key) {
 
 //------------------------
 
-//Json::Json(const Json::array &values, Json::Type t)
-//    : _type(t), _count(values.size()), _value(values) {
-//    assert(t == TypeObject || t == TypeArray);
-//}
-
-//Json::~Json() {
-//    switch(_type) {
-//        case TypeString:
-//            if (_flags == FlagsAllocatedUnencoded) {
-//                delete [] _value.sval;
-//                //_data.trackMemory(-_count);
-//                _value.sval = nullptr;
-//                _count = 0;
-//            }
-//            break;
-            
-//        case TypeArray:
-//        case TypeObject:
-//            // TODO: this has to free tree if there are allocated strings
-//            // but that would only be during writes?
-//            _value.aval = nullptr;
-//            _count = 0;
-//            break;
-//        default: break;
-//    }
-//}
-
 void Json::trackMemory(int32_t size)
 {
     //_data->trackMemory(size);
@@ -1287,6 +1243,9 @@ const char* Json::string_value(string& str) const {
     if (!is_string())
         return "";
     
+    // TODO: revist to see if can just return _value.sval
+    // could skip the decode if not encoded.
+    
     //if (_flags == FlagsAliasedEncoded) {
         // This string length is the encoded length, so decoded should be shorter
         if (!decode_string(_value.sval, _count, str)) {
@@ -1299,50 +1258,5 @@ const char* Json::string_value(string& str) const {
     //return _value.sval;
 }
 
-
-// revisit this later
-// Documented in json11.h
-//Json::array Json::parse_multi(const char* in,
-//                               size_t &parser_stop_pos,
-//                               string &err) {
-//    JsonReader parser { in, strlen(in), 0, err, false };
-//    parser_stop_pos = 0;
-//    Json::array json_vec;
-//    while (parser.i != parser.strSize && !parser.failed) {
-//        json_vec.push_back(parser.parse_json(0));
-//        if (parser.failed)
-//            break;
-//
-//        // Check for another object
-//        parser.consume_garbage();
-//        if (parser.failed)
-//            break;
-//        parser_stop_pos = parser.i;
-//    }
-//    return json_vec;
-//}
-
-/////////////////////////////////
-// Shape-checking
-
-/*
-bool Json::has_shape(const shape & types, string & err) const {
-    if (!is_object()) {
-        err = "expected JSON object, got " + dump();
-        return false;
-    }
-
-    const auto& obj_items = object_items();
-    for (auto & item : types) {
-        const auto it = obj_items.find(item.first);
-        if (it == obj_items.cend() || it->second.type() != item.second) {
-            err = "bad type for " + item.first + " in " + dump();
-            return false;
-        }
-    }
-
-    return true;
-}
-*/
 
 } // namespace json11
