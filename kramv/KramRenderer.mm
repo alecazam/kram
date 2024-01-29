@@ -626,7 +626,7 @@ struct ViewFramebufferData {
     MTLRenderPipelineDescriptor* pipelineStateDescriptor =
         [[MTLRenderPipelineDescriptor alloc] init];
     pipelineStateDescriptor.label = fsNameNS;
-    pipelineStateDescriptor.sampleCount = _viewFramebuffer.sampleCount;
+    pipelineStateDescriptor.rasterSampleCount = _viewFramebuffer.sampleCount;
     pipelineStateDescriptor.vertexDescriptor = _mtlVertexDescriptor;
     pipelineStateDescriptor.colorAttachments[0].pixelFormat =
         _viewFramebuffer.colorPixelFormat;
