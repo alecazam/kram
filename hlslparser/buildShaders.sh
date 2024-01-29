@@ -7,26 +7,21 @@ mkdir -p out/win
 mkdir -p out/android
 mkdir -p out/ios
 
-# mkdir -p out/ios
-
-# for glslc testing
-#mkdir -p out/android2
-
-
 # display commands
-# set -x
+set -x
 
-# TODO: consider putting in path
 # note bash can't expand tilda, so using HOME instead
 # This only works if running from terminal, and not from Xcode
 #  so back to hardcoding the path.
-vulkanSDK="${HOME}/devref/vulkansdk/1.3.239.0/macOS/bin/"
+vulkanSDK="${HOME}/devref/vulkansdk/1.3.275.0/macOS/bin/"
 #vulkanSDK=""
 
 projectDir="${HOME}/devref/kram/hlslparser/"
 
 srcDir=${projectDir}
 srcDir+="shaders/"
+
+includeDir=${srcDir}
 
 dstDir=${projectDir}
 dstDir+="out/"
@@ -35,7 +30,7 @@ dstDir+="out/"
 #dstDirOut+="out/"
 
 # this only pulls the release build, so testing debug won't update
-appHlslparser=../build/hlslparser/Build/Products/Release/hlslparser
+appHlslparser=${projectDir}build/hlslparser/Build/Products/Release/hlslparser
 
 appDxc=${vulkanSDK}
 appGlslc=${vulkanSDK}
@@ -46,11 +41,15 @@ appSpirvCross=${vulkanSDK}
 appDxc+="dxc"
 appGlslc+="glslc"
 appMetalMac="xcrun -sdk macosx metal"
+# sdk doesn't seem to need to be iphoneos
 appMetaliOS="xcrun -sdk macosx metal"
 
 # reflect/transpile spv
 appSpirvReflect+="spirv-reflect"
 appSpirvCross+="spirv-cross"
+
+# this has to be installed from online installer, this is v1.1
+appMetalShaderConverter="metal-shaderconverter"
 
 # TODO: also use the metal tools on Win to build
 # and already have vulkan sdk
@@ -63,9 +62,9 @@ parserOptions=""
 # preserve comments
 parserOptions+="-g -line "
 
+# build the metal shaders - mac
 pushd out/mac
 
-# build the metal shaders
 echo gen MSL
 ${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.metal
 ${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.metal
@@ -73,9 +72,9 @@ ${appHlslparser} ${parserOptions} -i ${srcDir}Compute.hlsl -o Compute.metal
 
 popd > /dev/null
 
+# build the metal shaders - ios
 pushd out/ios
 
-# build the metal shaders
 echo gen MSL
 ${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.metal
 ${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.metal
@@ -83,9 +82,19 @@ ${appHlslparser} ${parserOptions} -i ${srcDir}Compute.hlsl -o Compute.metal
 
 popd > /dev/null
 
+# build the hlsl shaders - android
 pushd out/android
 
-# build the hlsl shaders
+echo gen HLSL
+${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.hlsl
+${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.hlsl
+${appHlslparser} ${parserOptions} -i ${srcDir}Compute.hlsl -o Compute.hlsl
+
+popd > /dev/null
+
+# build the hlsl shaders - win
+pushd out/win
+
 echo gen HLSL
 ${appHlslparser} ${parserOptions} -i ${srcDir}Skinning.hlsl -o Skinning.hlsl
 ${appHlslparser} ${parserOptions} -i ${srcDir}Sample.hlsl -o Sample.hlsl
@@ -96,7 +105,7 @@ popd > /dev/null
 
 #-------------------------------
 
-# TODO: metal3.0 on M1 macOS13/iOS16
+# DONE: metal3.0 on M1 macOS13/iOS16
 # record sources into code for gpu capture (don't ship this), debug mode
 
 # O2 + size opt
@@ -107,23 +116,22 @@ testMetal=1
 if [[ $testMetal -eq 1 ]]; then
     # Metal is C++14
     metalMacOptions="-frecord-sources -g "
-    metalMacOptions+="-std=macos-metal2.4 "
+    metalMacOptions+="-std=metal3.0 "
 
     # see if HLSL compiles to MSL (requires macOS Vulkan install)
     
     echo compile mac to metallib
-    ${appMetalMac} ${metalMacOptions} -I ${srcDir} -o ${dstDir}mac/GameShaders.metallib   ${dstDir}mac/Skinning.metal ${dstDir}mac/Sample.metal ${dstDir}mac/Compute.metal
+    ${appMetalMac} ${metalMacOptions} -I ${includeDir} -o ${dstDir}mac/GameShaders.metallib   ${dstDir}mac/Skinning.metal ${dstDir}mac/Sample.metal ${dstDir}mac/Compute.metal
 
 
     metaliOSOptions="-frecord-sources -g "
-    metaliOSOptions+="-std=ios-metal2.4 "
+    metaliOSOptions+="-std=metal3.0 "
 
     echo compile iOS to metallib
-    ${appMetaliOS} ${metaliOSOptions} -I ${srcDir} -o ${dstDir}ios/GameShaders.metallib   ${dstDir}ios/Skinning.metal ${dstDir}ios/Sample.metal ${dstDir}ios/Compute.metal
+    ${appMetaliOS} ${metaliOSOptions} -I ${includeDir} -o ${dstDir}ios/GameShaders.metallib   ${dstDir}ios/Skinning.metal ${dstDir}ios/Sample.metal ${dstDir}ios/Compute.metal
 fi
 
 
-pushd out/android
 
 #-------------------------------
 
@@ -175,9 +183,41 @@ csargs+="-T cs_6_2 "
 # dxc only loads DXIL.dll on Windows
 #  https://www.wihlidal.com/blog/pipeline/2018-09-16-dxil-signing-post-compile/
 # no idea what format the refl file from dxil is?
-#echo gen DXIL with dxc
-#${appDxc} ${vsargs} -E SkinningVS -Fo win/Skinning.vert.dxil -Fc win/Skinning.vert.dxil.txt -Fre win/Skinning.vert.refl Skinning.hlsl
-#${appDxc} ${psargs} -E SkinningPS -Fo win/Skinning.frag.dxil -Fc win/Skinning.frag.dxil.txt -Fre win/Skinning.frag.refl Skinning.hlsl
+
+if [[ $testMetal -eq 1 ]]; then
+
+    pushd out/win
+
+    # echo gen DXIL with dxc
+    
+    # TODO: how to link metallib to single metallib?
+    # can this build to AIR, then build that into metallib?
+
+    # Note this isn't a win file
+    mscArgsVS="--minimum-gpu-family=Metal3 --vertex-stage-in --positionInvariance"
+    # --enable-gs-ts-emulation  --vertex-input-layout-file=<string>
+    
+    mscArgsPS="--minimum-gpu-family=Metal3"
+
+    mscArgsMac="--deployment-os=macOS --minimum-os-build-version=13.0.0"
+    mscArgsiOS="--deployment-os=iOS --minimum-os-build-version=16.0.0"
+
+    # build vert
+    ${appDxc} ${vsargs} -I ${includeDir} -E SkinningVS -Fo Skinning.vert.dxil -Fc Skinning.vert.dxil.txt -Fre Skinning.vert.refl Skinning.hlsl
+    
+    ${appMetalShaderConverter} ${mscArgsMac} ${mscArgsVS} Skinning.vert.dxil -o Skinning.vert.mac.metallib
+    ${appMetalShaderConverter} ${mscArgsiOS} ${mscArgsVS} Skinning.vert.dxil -o Skinning.vert.ios.metallib
+    
+    # build frag
+    ${appDxc} ${psargs} -I ${includeDir} -E SkinningPS -Fo Skinning.frag.dxil -Fc Skinning.frag.dxil.txt -Fre Skinning.frag.refl Skinning.hlsl
+    
+    ${appMetalShaderConverter} ${mscArgsMac} ${mscArgsPS} Skinning.frag.dxil -o Skinning.frag.mac.metallib
+    ${appMetalShaderConverter} ${mscArgsiOS} ${mscArgsPS} Skinning.frag.dxil -o Skinning.frag.ios.metallib
+    
+    popd > /dev/null
+fi
+
+# TODO: add other shaders, but also switch to for loop?
 
 
 # Optimization is also delegated to SPIRV-Tools.
@@ -186,15 +226,18 @@ csargs+="-T cs_6_2 "
 # -Os is a special set of options.  Can run custom spirv optimizations via
 # -Oconfig=--loop-unroll,--scalar-replacement=300,--eliminate-dead-code-aggressive
 
-# 1.0,1.1,1.2 default to spv1.1,1.3,1.5
-echo gen SPIRV 1.2 with dxc
-${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningVS -Fo Skinning.vert.spv -Fc Skinning.vert.spv.txt Skinning.hlsl
-${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SkinningPS -Fo Skinning.frag.spv -Fc Skinning.frag.spv.txt Skinning.hlsl
+# this outputs spv for android, then transpiles it to ios
+pushd out/android
 
-${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.2 -E SampleVS -Fo Sample.vert.spv -Fc Sample.vert.spv.txt Sample.hlsl
-${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.2 -E SamplePS -Fo Sample.frag.spv -Fc Sample.frag.spv.txt Sample.hlsl
+echo gen SPIRV 1.3 with dxc
 
-${appDxc} ${csargs} -spirv -fspv-target-env=vulkan1.2 -E ComputeCS -Fo Compute.comp.spv -Fc Compute.comp.spv.txt Compute.hlsl
+${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.3 -I ${includeDir} -E SkinningVS -Fo Skinning.vert.spv -Fc Skinning.vert.spv.txt Skinning.hlsl
+${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.3 -I ${includeDir} -E SkinningPS -Fo Skinning.frag.spv -Fc Skinning.frag.spv.txt Skinning.hlsl
+
+${appDxc} ${vsargs} -spirv -fspv-target-env=vulkan1.3 -I ${includeDir} -E SampleVS -Fo Sample.vert.spv -Fc Sample.vert.spv.txt Sample.hlsl
+${appDxc} ${psargs} -spirv -fspv-target-env=vulkan1.3 -I ${includeDir} -E SamplePS -Fo Sample.frag.spv -Fc Sample.frag.spv.txt Sample.hlsl
+
+${appDxc} ${csargs} -spirv -fspv-target-env=vulkan1.3 -I ${includeDir} -E ComputeCS -Fo Compute.comp.spv -Fc Compute.comp.spv.txt Compute.hlsl
 
 # -Fre not supported with spirv, so just use spirv-reflect
 # either yaml or random format, why can't this just output json?
@@ -204,22 +247,34 @@ ${appSpirvReflect} -y Sample.vert.spv > Sample.vert.refl
 ${appSpirvReflect} -y Sample.frag.spv > Sample.frag.refl
 ${appSpirvReflect} -y Compute.comp.spv > Compute.comp.refl
 
+popd > /dev/null
+
+# This needs spv from android for now to transpile
 if [[ $testMetal -eq 1 ]]; then
+
+    pushd out/ios
+
     #metaliOSOptions="-frecord-sources -g "
     #metaliOSOptions+="-std=ios-metal2.4 "
 
     # transpile android spirv to ios MSL for comparsion to what hlslparser MSL produces
     #  would never use this, would use hlslparser path directly or gen spirv
     #  specific for this target
-    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Skinning.vert.spv --output ios/Skinning.vert.metal
-    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Skinning.frag.spv --output ios/Skinning.frag.metal
-    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Sample.vert.spv --output ios/Sample.vert.metal
-    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Sample.frag.spv --output ios/Sample.frag.metal
-    ${appSpirvCross} --msl --msl-version 20400 --msl-ios Compute.comp.spv --output ios/Compute.comp.metal
+    spvDir=${dstDir}/android/
+    
+    ${appSpirvCross} --msl --msl-version 30000 --msl-ios ${spvDir}Skinning.vert.spv --output Skinning.vert.metal
+    ${appSpirvCross} --msl --msl-version 30000 --msl-ios ${spvDir}Skinning.frag.spv --output Skinning.frag.metal
+    ${appSpirvCross} --msl --msl-version 30000 --msl-ios ${spvDir}Sample.vert.spv --output Sample.vert.metal
+    ${appSpirvCross} --msl --msl-version 30000 --msl-ios ${spvDir}Sample.frag.spv --output Sample.frag.metal
+    ${appSpirvCross} --msl --msl-version 30000 --msl-ios ${spvDir}Compute.comp.spv --output Compute.comp.metal
 
+    # do includes survive transpile, why does this need -I ?s
     # compile to make sure code is valid
-    ${appMetaliOS} ${metaliOSOptions} -o ${dstDir}ios/GameShadersTranspile.metallib -I ${srcDir} ${dstDir}ios/Skinning.vert.metal ${dstDir}ios/Skinning.frag.metal ${dstDir}ios/Sample.vert.metal ${dstDir}ios/Sample.frag.metal ${dstDir}ios/Compute.comp.metal
+    ${appMetaliOS} ${metaliOSOptions} -o GameShadersTranspile.metallib -I ${includeDir} Skinning.vert.metal Skinning.frag.metal Sample.vert.metal Sample.frag.metal Compute.comp.metal
+    
+    popd > /dev/null
 fi
+
 
 # DONE: need to group files into library/module
 # also create a readable spv file, so can look through that
@@ -263,4 +318,3 @@ fi
 # -Fc <file>              Output assembly code listing file
 
 # this prints cwd if not redirected
-popd > /dev/null

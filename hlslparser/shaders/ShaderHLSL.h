@@ -73,6 +73,8 @@ typedef uint64_t2 ulong2;
 typedef uint64_t3 ulong3;
 typedef uint64_t4 ulong4;
 
+// TODO: should matrices be added for long/short?
+
 //typedef float64_t double;
 typedef float64_t2 double2;
 typedef float64_t3 double3;
