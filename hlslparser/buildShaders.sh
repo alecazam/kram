@@ -194,13 +194,13 @@ if [[ $testMetal -eq 1 ]]; then
     # can this build to AIR, then build that into metallib?
 
     # Note this isn't a win file
-    mscArgsVS="--minimum-gpu-family=Metal3 --vertex-stage-in --positionInvariance"
+    mscArgsVS="--vertex-stage-in --positionInvariance "
     # --enable-gs-ts-emulation  --vertex-input-layout-file=<string>
     
-    mscArgsPS="--minimum-gpu-family=Metal3"
+    mscArgsPS=" "
 
-    mscArgsMac="--deployment-os=macOS --minimum-os-build-version=13.0.0"
-    mscArgsiOS="--deployment-os=iOS --minimum-os-build-version=16.0.0"
+    mscArgsMac="--minimum-gpu-family=Metal3 --deployment-os=macOS --minimum-os-build-version=13.0.0 "
+    mscArgsiOS="--minimum-gpu-family=Metal3 --deployment-os=iOS --minimum-os-build-version=16.0.0 "
 
     # build vert
     ${appDxc} ${vsargs} -I ${includeDir} -E SkinningVS -Fo Skinning.vert.dxil -Fc Skinning.vert.dxil.txt -Fre Skinning.vert.refl Skinning.hlsl
