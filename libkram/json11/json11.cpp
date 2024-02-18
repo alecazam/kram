@@ -217,6 +217,17 @@ void JsonWriter::writeNull(const char* key) {
     append_sprintf(*_out, "%*s\"%s\":%s", indent, "", key, "null");
 }
 
+// can write out json in parallel and combine
+void JsonWriter::writeJson(const JsonWriter& json)
+{
+    KASSERT(_stack.empty());
+    KASSERT(this != &json);
+    
+    // TODO: indent won't be correct on this
+    // so caller may want to set indent
+    _out->append(*json._out);
+}
+
 void JsonWriter::writeString(const char* value) {
     KASSERT(isArray());
     // only if in array

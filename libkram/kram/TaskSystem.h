@@ -34,8 +34,8 @@ using mymutex = std::recursive_mutex;
 using mylock = std::unique_lock<mymutex>;
 using mycondition = std::condition_variable_any;
 
-#define mydeque std::deque
-#define myfunction std::function
+#define mydeque deque
+#define myfunction function
 
 class notification_queue {
     mydeque<myfunction<void()>> _q;

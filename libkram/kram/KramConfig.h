@@ -169,7 +169,6 @@
 // This needs debug support that native stl already has.
 // EASTL only seems to define that for Visual Studio natvis, and not lldb
 #define USE_EASTL COMPILE_EASTL
-#define USE_FASTL COMPILE_FASTL
 
 #if USE_EASTL
 
@@ -199,6 +198,7 @@
 
 
 /* This library just doesn't work, but was an interesting idea
+#define USE_FASTL COMPILE_FASTL
 #elif USE_FASTL
 
 #define NAMESPACE_STL fastl
