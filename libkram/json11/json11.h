@@ -121,6 +121,9 @@ public:
     void writeBool(bool value);
     void writeNull();
     
+    // can write out json in parallel and combine
+    void writeJson(const JsonWriter& json);
+    
 private:
     bool isArray() const { return _stack.back() == ']'; }
     bool isObject() const { return _stack.back() == '}'; }
