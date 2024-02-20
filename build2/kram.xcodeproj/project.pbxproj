@@ -1987,7 +1987,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../libkram/eastl/include",
+					"$(PROJECT_DIR)/../libkram/kram",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -2002,11 +2005,11 @@
 					"-DCOMPILE_COMP=1",
 					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
-					"-DCOMPILE_FASTL=0",
+					"-ftime-trace",
 				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/kram";
+				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
 		};
@@ -2074,7 +2077,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../libkram/eastl/include",
+					"$(PROJECT_DIR)/../libkram/kram",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -2089,11 +2095,11 @@
 					"-DCOMPILE_COMP=1",
 					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
-					"-DCOMPILE_FASTL=0",
+					"-ftime-trace",
 				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/kram";
+				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Release;
 		};
