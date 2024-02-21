@@ -61,7 +61,7 @@ public struct FilePicker<LabelView: View>: View {
                 labelViewContent()
             }
         )
-        .keyboardShortcut("o") // open with cmd+O
+        .keyboardShortcut("O") // open with cmd+O
         .disabled(isPresented)
         .onChange(of: isPresented, perform: { presented in
             // binding changed from false to true

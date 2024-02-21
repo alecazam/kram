@@ -375,12 +375,27 @@ struct kram_profileApp: App {
                 // runs under Safari embedded WKWebView.
                 // Link("Perfetto", destination: URL(string: ORIGIN)!)
                 
+                // About hideSidebar
+                // https://github.com/google/perfetto/issues/716
+                
                 // TODO: really only need to load this once, url doesn't chang w/selection
-                MyWKWebView(webView:webView, request: URLRequest(url:URL(string: ORIGIN)!), selection:selection, firstRequest:firstRequest)
+                MyWKWebView(webView:webView, request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!), selection:selection, firstRequest:firstRequest)
                 
             }
             .navigationTitle(selection != nil ? shortFilename(selection!) : "")
         }
+        /* TODO: This adds a competing File menu, want to add to existing one
+            Also may need to move Open button out of the picker.  It has a shortcut
+            But want macOS system menus to convey the shortcut to user.
+         
+        // https://forums.developer.apple.com/forums/thread/668139
+        .commands {
+            CommandMenu("File")
+            {
+                Button("Open") {} // .keyboardShortcut("o") { }
+            }
+        }
+        */
     }
     
     // https://stackoverflow.com/questions/49882933/pass-jsonobject-from-swift4-to-wkwebview-javascript-function
