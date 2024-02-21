@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		705F68CD2B820AD100437FAA /* kram_profileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68CC2B820AD100437FAA /* kram_profileApp.swift */; };
-		705F68CF2B820AD100437FAA /* FileList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68CE2B820AD100437FAA /* FileList.swift */; };
 		705F68D12B820AD200437FAA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 705F68D02B820AD200437FAA /* Assets.xcassets */; };
 		705F68D42B820AD200437FAA /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 705F68D32B820AD200437FAA /* Preview Assets.xcassets */; };
 		705F68DC2B83E80400437FAA /* FilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68DB2B83E80400437FAA /* FilePicker.swift */; };
@@ -17,11 +16,11 @@
 /* Begin PBXFileReference section */
 		705F68C92B820AD100437FAA /* kram-profile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "kram-profile.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		705F68CC2B820AD100437FAA /* kram_profileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = kram_profileApp.swift; sourceTree = "<group>"; };
-		705F68CE2B820AD100437FAA /* FileList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileList.swift; sourceTree = "<group>"; };
 		705F68D02B820AD200437FAA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		705F68D32B820AD200437FAA /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		705F68D52B820AD200437FAA /* kram_profile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = kram_profile.entitlements; sourceTree = "<group>"; };
 		705F68DB2B83E80400437FAA /* FilePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePicker.swift; sourceTree = "<group>"; };
+		705F68DD2B86AB2000437FAA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,8 +53,8 @@
 		705F68CB2B820AD100437FAA /* kram-profile */ = {
 			isa = PBXGroup;
 			children = (
+				705F68DD2B86AB2000437FAA /* Info.plist */,
 				705F68CC2B820AD100437FAA /* kram_profileApp.swift */,
-				705F68CE2B820AD100437FAA /* FileList.swift */,
 				705F68DB2B83E80400437FAA /* FilePicker.swift */,
 				705F68D02B820AD200437FAA /* Assets.xcassets */,
 				705F68D52B820AD200437FAA /* kram_profile.entitlements */,
@@ -143,7 +142,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				705F68DC2B83E80400437FAA /* FilePicker.swift in Sources */,
-				705F68CF2B820AD100437FAA /* FileList.swift in Sources */,
 				705F68CD2B820AD100437FAA /* kram_profileApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -281,6 +279,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"kram-profile/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "kram-profile/Info.plist";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -306,6 +305,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"kram-profile/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "kram-profile/Info.plist";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

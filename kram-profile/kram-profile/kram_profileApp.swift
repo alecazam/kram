@@ -1,12 +1,10 @@
-//
-//  kram_profileApp.swift
-//  kram-profile
-//
-//  Created by Alec on 2/18/24.
-//
+// kram - Copyright 2020-2024 by Alec Miller. - MIT License
+// The license and copyright notice shall be included
+// in all copies or substantial portions of the Software.
 
 import SwiftUI
 import WebKit
+import UniformTypeIdentifiers
 
 // https://github.com/gualtierofrigerio/WkWebViewJavascript/blob/master/WkWebViewJavascript/WebViewHandler.swift
 
@@ -327,6 +325,28 @@ struct kram_profileApp: App {
         return url.lastPathComponent
     }
     
+    /* Flutter uses this to jump to a time range
+    _postMessage({
+          'perfetto': {
+            // Pass the values to Perfetto in seconds.
+            'timeStart': timeRange.start!.inMicroseconds / 1000000,
+            'timeEnd': timeRange.end!.inMicroseconds / 1000000,
+     
+            // The time range should take up 80% of the visible window.
+            'viewPercentage': 0.8,
+          },
+        });
+    */
+    
+    // TODO: have files ending in -vma.trace, .trace, and .json
+    // also archives in the zip file.
+    var fileTypes: [UTType] = [
+        // .plainText, .zip
+        .json, // clang build files
+        UTType(tag:"trace", tagClass: .filenameExtension, conformingTo:.json)!,
+        UTType(tag:"vmatrace", tagClass: .filenameExtension, conformingTo:.json)!
+    ]
+        
     var body: some Scene {
         WindowGroup {
             // Don't really like this behavior, want a panel to come up and not
@@ -336,12 +356,10 @@ struct kram_profileApp: App {
             
             NavigationSplitView {
                 VStack {
-                    // TODO: have files ending in -vma.trace, .trace, and .json
-                    // also archives in the zip file.
                     
-                    // TODO: turn Open button into a menu, FilePicker already tied to Cmd+O
+                    // TODO: turn Open button into a menu, FilePicker button already tied to Cmd+O
                     
-                    FilePicker(types: [/*.plainText*/ .json /*, .zip */], title: "Open") { urls in
+                    FilePicker(types:fileTypes, title: "Open") { urls in
                         // TODO: not allowing multiselect for now
                         // but can pick dir or archive
                         // Do a filtered search under that
