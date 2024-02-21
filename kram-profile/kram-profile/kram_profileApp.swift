@@ -367,13 +367,16 @@ struct kram_profileApp: App {
                         // track if picked again which files
                         // changed.
                         
-                        //self.filenames = urls
                         if urls.count == 1 {
-                            let filesNew = listFilesFromURL(urls[0])
-                            
+                            let url = urls[0]
+                            let filesNew = listFilesFromURL(url)
+                    
                             // for now wipe the old list
                             if filesNew.count > 0 {
                                 files = filesNew
+                                
+                                // if single file opened, then load it immediately
+                                if files[0].url.isFileURL { selection = files[0].id }
                             }
                         }
                         
