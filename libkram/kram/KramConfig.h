@@ -152,9 +152,10 @@
 #define COMPILE_EASTL 0
 #endif
 
-#ifndef COMPILE_FASTL
-#define COMPILE_FASTL 0
-#endif
+// eliminate this
+//#ifndef COMPILE_FASTL
+//#define COMPILE_FASTL 0
+//#endif
 
 // basis transcoder only (read not writes)
 #ifndef COMPILE_BASIS

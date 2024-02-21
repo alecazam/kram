@@ -343,8 +343,8 @@ struct kram_profileApp: App {
     var fileTypes: [UTType] = [
         // .plainText, .zip
         .json, // clang build files
-        UTType(tag:"trace", tagClass: .filenameExtension, conformingTo:.json)!,
-        UTType(tag:"vmatrace", tagClass: .filenameExtension, conformingTo:.json)!
+        UTType(filenameExtension:"trace", conformingTo:.data)!,
+        UTType(filenameExtension:"vmatrace", conformingTo:.data)!
     ]
         
     var body: some Scene {
