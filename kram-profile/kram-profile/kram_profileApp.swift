@@ -71,6 +71,15 @@ struct MyWKWebView : NSViewRepresentable {
 // http://ui.perfetto.dev/#!/?url=http://127.0.0.1:9001/{fname}
 // Then the http server serves up that file to the browser and sets Allow-Origin header.
 
+// https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem
+//https://stackoverflow.com/questions/30106476/using-javascripts-atob-to-decode-base64-doesnt-properly-decode-utf-8-strings
+// https://gist.github.com/chromy/170c11ce30d9084957d7f3aa065e89f8
+// need to post this JavaScript
+
+// https://stackoverflow.com/questions/32113933/how-do-i-pass-a-swift-object-to-javascript-wkwebview-swift
+
+// https://stackoverflow.com/questions/37820666/how-can-i-send-data-from-swift-to-javascript-and-display-them-in-my-web-view
+
 // has to be https to work for some reason, but all data is previewed locally
 var ORIGIN = "https://ui.perfetto.dev"
 
@@ -106,27 +115,16 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
     
     
     // https://stackoverflow.com/questions/62035494/how-to-call-postmessage-in-wkwebview-to-js
-    /* need to PostMessage a json object with the folloinwg
-     {
-     'perfetto': {
-     buffer: ArrayBuffer; // content of the file
-     title: string;
-     fileName?: string;   // Optional
-     url?: string;        // Optional
-     }
-     }
-     */
-    
-    //open func evaluateJavaScript(_ javaScriptString: String, completionHandler: ((Any?, Error?) -> Void)? = nil)
-    //
-    //open func evaluateJavaScript(_ javaScriptString: String) async throws -> Any
-    
     struct PerfettoFile : Codable {
         var buffer: String // really ArrayBuffer, but will get replaced
         var title: String
         
+        // About keepApiOpen
+        // https://github.com/flutter/devtools/blob/master/packages/devtools_app/lib/src/screens/performance/panes/timeline_events/perfetto/_perfetto_web.dart#L174
+        var keepApiOpen: Bool
         // optional fields
         //var fileName: String?
+        // url cannot be file://, has to be http served
         //var url: String?
     }
     
@@ -135,18 +133,18 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
     }
     
     do {
-        // Data converted to an Array[UInt8] which isn't quite same
-        // as an ArrayBuffer.  Can ArrayBuffer be serialized.  Does
-        // it have a count or what is it exactly.  See if Perfetto
-        // can take a String in the packet instead.
-        
         let fileContent = try Data(contentsOf: fileURL)
+        
+        // TODO: here need to fixup clang json, this neesd SOURCE replaced with
+        // the short filename version of the detail (full filename)
+        
         
         let fileContentBase64 = fileContent.base64EncodedString()
         
-        // perfetto says they don't take file:// urls
+        
         let file = PerfettoFile(buffer: "",
-                                title: fileURL.standardizedFileURL.lastPathComponent)
+                                title: fileURL.lastPathComponent,
+                                keepApiOpen: true)
         let perfetto = Perfetto(perfetto: file)
         
         var perfettoEncode = ""
@@ -160,9 +158,6 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
             perfettoEncode = perfettoEncode.replacingOccurrences(of: "\u{2028}", with: "\\u2028")
                 .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
         }
-        
-        // https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem
-        //https://stackoverflow.com/questions/30106476/using-javascripts-atob-to-decode-base64-doesnt-properly-decode-utf-8-strings
         
         let json = """
         
@@ -184,7 +179,7 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
         
         // convert base64 back
         obj.perfetto.buffer = base64ToBytes(fileData).buffer;
-        
+    
         // How to set this command, it's only available onTraceLoad()
         // but calls through to a sidebar object on the ctx
         //window.postMessage('dev.perfetto.CoreCommands#ToggleLeftSidebar','\(ORIGIN)')
@@ -215,94 +210,7 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
         """
       */
         
-        /*
-        // Data or String instead of ArrayBuffer, Data seems more appropo
-        var fileContent = try String(contentsOf: fileURL)
-        //let fileContent = try Data(contentsOf: fileURL) // use for binary
-        
-        // code does show a way to respond to ArrayBuffer
-        //let encoder = JSONEncoder()
-        //let data = try encoder.encode(fileContent)
-        // var json = String(data: data, encoding: .utf8)!
-        
-        let file = PerfettoFile(buffer: "",
-                                title: fileURL.standardizedFileURL.lastPathComponent)
-        let perfetto = Perfetto(perfetto: file)
-        
-        let encoder = JSONEncoder()
-        //encoder.outputFormatting = .prettyPrinted
-       
-        let data = try encoder.encode([perfetto])
-        let dataEncodedString = String(decoding: data, as: UTF8.self)
-        let dataEscaped = String(dataEncodedString.dropLast().dropFirst())
-
-        // This is to avoid JSON.stringify
-        // var json = String(data: data, encoding: .utf8)!
-         
-        // someone was doing this before
-        //json = json.replacingOccurrences(of: "\n", with: "\\\n")
-        
-       
-        //print(json)
-
-        // https://gist.github.com/chromy/170c11ce30d9084957d7f3aa065e89f8
-        // need to post this JavaScript
-        
-        // https://stackoverflow.com/questions/32113933/how-do-i-pass-a-swift-object-to-javascript-wkwebview-swift
-        
-        
-        // There is this too, added to the URL to reopen it
-        // const reopenUrl = new URL(location.href);
-        // reopenUrl.hash = `#reopen=${traceUrl}`;
-        
-        // doesn't have error w/Data but doesn't do anything
-        //json = "window.postMessage(" + json
-        //json += ", \"" + ORIGIN + "\")"
-    
-        //json = json = "window.postMessage(" + json
-        //json += ", \"" + ORIGIN + "\")"
-        
-        // This encodes to Data
-        
-        // someone was doing this before
-        //var fileContentString = String(data: fileContent, encoding: .utf8)!
-        
-        // https://gist.github.com/pwightman/64c57076b89c5d7f8e8c
-        // Because JSON is not a subset of JavaScript, the LINE_SEPARATOR and PARAGRAPH_SEPARATOR unicode
-                // characters embedded in (valid) JSON will cause the webview's JavaScript parser to error. So we
-                // must encode them first. See here: http://timelessrepo.com/json-isnt-a-javascript-subset
-                // Also here: http://media.giphy.com/media/wloGlwOXKijy8/giphy.gif
-        fileContent = fileContent.replacingOccurrences(of: "\n", with: "\\\n")
-        
-        fileContent = fileContent
-                .replacingOccurrences(of: "\u{2028}", with: "\\u2028")
-                .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
-                
-        // now escape the string
-        //let encoder = JSONEncoder()
-        let fileContentData = try encoder.encode([fileContent])
-        let encodedString = String(decoding: fileContentData, as: UTF8.self)
-        let fileContentEscaped = String(encodedString.dropLast().dropFirst())
-
-        // this is a string
-        var json = ""
-        json += "var fileData = " + fileContentEscaped + ";"
-       
-        // convert from string -> Uint8Array -> ArrayBuffer
-        json += "var perfetto = " + dataEscaped + ";"
-        json += "var enc = new TextEncoder();"
-        json += "perfetto.buffer = enc.encode(fileData).buffer;"
-        json += "window.postMessage(JSON.parse(perfetto), \"" + ORIGIN + "\");"
-    
-        //json = "window.postMessage(JSON.parse(" + json
-        //json += "), \"" + ORIGIN + "\")"
-        
-        // https://stackoverflow.com/questions/37820666/how-can-i-send-data-from-swift-to-javascript-and-display-them-in-my-web-view
-        // just make sure the JSON string doesn't contain unescaped newline characters. evaluateJavaScript won't work unless the newline characters are escaped.  Ugh!
-        // Also, in NSJSONSerialization don't use the .prettyPrinted option, use [] as per above, or it also won't work
-        
- */
-        print(json)
+        // print(json)
         
         webView.evaluateJavaScript(json) { (result, error) in
             if error != nil {
