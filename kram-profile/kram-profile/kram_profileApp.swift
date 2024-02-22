@@ -52,8 +52,16 @@ struct MyWKWebView : NSViewRepresentable {
         // really need to ping until ui is loaded
         //sleep(2)
         
-        if selection != nil {
-            loadFile(webView, selection!)
+        if let sel = selection {
+            loadFile(webView, sel)
+        
+            // now based on the type, set a reasonable range of time
+            // don't really want start/end, since we don't know start
+            // works for Flutter, but not for this app.  Also would
+            // have to parse timeStart/End from file.  May want that for
+            // sorting anyways.
+            //
+            // showTimeRange(webView, filenameToTimeRange(sel))
         }
     }
 }
@@ -105,6 +113,85 @@ extension String {
     }
 }
 
+    
+// What if the start time in the file isn't 0.0 based for the start
+struct TimeRange {
+    var timeStart: Double = 0.0
+    var timeEnd: Double   = 1.0
+        
+    // The time range should take up 80% of the visible window.
+    var viewPercentage: Double = 0.8
+}
+
+func filenameToTimeRange(_ filename: String) -> TimeRange {
+    let url = URL(string: filename)!
+    
+    var duration = 1.0
+    
+    if url.pathExtension == "json" { // build
+        duration = 1.0
+    }
+    else if url.pathExtension == "vmatrace" { // memory
+        duration = 64.0
+    }
+    else if url.pathExtension == "trace" { // profile
+        duration = 0.1
+    }
+    
+    return TimeRange(timeStart:0.0, timeEnd:duration)
+}
+
+// Flutter uses this to jump to a time range
+func showTimeRange(_ webView: WKWebView, _ timeRange: TimeRange) /*async*/ {
+
+    do {
+        struct PerfettoTimeRange: Codable {
+            // Pass the values to Perfetto in seconds.
+            var timeStart: Double // in seconds
+            var timeEnd: Double
+                
+            // The time range should take up 80% of the visible window.
+            var viewPercentage: Double
+        }
+        
+        struct Perfetto: Codable {
+            var perfetto: PerfettoTimeRange
+        }
+        
+        let perfetto = Perfetto(perfetto:PerfettoTimeRange(timeStart: timeRange.timeStart, timeEnd: timeRange.timeEnd, viewPercentage:timeRange.viewPercentage))
+        
+        var perfettoEncode = ""
+        
+        if true {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(perfetto)
+            let encodedString = String(decoding: data, as: UTF8.self)
+            // TODO: this is droppping {} ?
+            perfettoEncode = String(encodedString.dropLast().dropFirst())
+            perfettoEncode = perfettoEncode.replacingOccurrences(of: "\u{2028}", with: "\\u2028")
+                .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
+        }
+        
+        let json = """
+            // convert from string -> Uint8Array -> ArrayBuffer
+            var obj = JSON.parse('{\(perfettoEncode)}');
+            window.postMessage(obj,'\(ORIGIN)');
+        """
+        
+        webView.evaluateJavaScript(json) { (result, error) in
+            if error != nil {
+                print("\(error)! \(result)")
+            }
+            else {
+                print("\(result)")
+            }
+        }
+    }
+    catch {
+        
+    }
+}
+
 func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
     
     let fileURL = URL(string: path)!
@@ -113,20 +200,21 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
     
     
     // https://stackoverflow.com/questions/62035494/how-to-call-postmessage-in-wkwebview-to-js
-    struct PerfettoFile : Codable {
+    struct PerfettoFile: Codable {
         var buffer: String // really ArrayBuffer, but will get replaced
         var title: String
         
         // About keepApiOpen
         // https://github.com/flutter/devtools/blob/master/packages/devtools_app/lib/src/screens/performance/panes/timeline_events/perfetto/_perfetto_web.dart#L174
         var keepApiOpen: Bool
+        
         // optional fields
         //var fileName: String?
-        // url cannot be file://, has to be http served
+        // url cannot be file://, has to be http served.  Can we set fileName?
         //var url: String?
     }
     
-    struct Perfetto : Codable {
+    struct Perfetto: Codable {
         var perfetto: PerfettoFile
     }
     
@@ -135,16 +223,12 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
         
         // TODO: here need to fixup clang json, this neesd SOURCE replaced with
         // the short filename version of the detail (full filename)
-        
-        
+    
         let fileContentBase64 = fileContent.base64EncodedString()
-        
-        
-        let file = PerfettoFile(buffer: "",
-                                title: fileURL.lastPathComponent,
-                                keepApiOpen: true)
-        let perfetto = Perfetto(perfetto: file)
-        
+    
+        let perfetto = Perfetto(perfetto: PerfettoFile(buffer: "",
+                                                       title: fileURL.lastPathComponent,
+                                                       keepApiOpen: true))
         var perfettoEncode = ""
         
         if true {
@@ -325,18 +409,7 @@ struct kram_profileApp: App {
         return url.lastPathComponent
     }
     
-    /* Flutter uses this to jump to a time range
-    _postMessage({
-          'perfetto': {
-            // Pass the values to Perfetto in seconds.
-            'timeStart': timeRange.start!.inMicroseconds / 1000000,
-            'timeEnd': timeRange.end!.inMicroseconds / 1000000,
-     
-            // The time range should take up 80% of the visible window.
-            'viewPercentage': 0.8,
-          },
-        });
-    */
+    
     
     // TODO: have files ending in -vma.trace, .trace, and .json
     // also archives in the zip file.
@@ -417,6 +490,34 @@ struct kram_profileApp: App {
             }
         }
         */
+        // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
+        .commands {
+                    CommandGroup(replacing: .appInfo) {
+                        Button("About kram-profile") {
+                            NSApplication.shared.orderFrontStandardAboutPanel(
+                                options: [
+                                    NSApplication.AboutPanelOptionKey.credits: NSAttributedString(
+                                        string: 
+"""
+A tool to help profile mem, perf, and builds.
+© 2020-2024 Alec Miller
+""",
+                                        
+                                        attributes: [
+                                            NSAttributedString.Key.font: NSFont.boldSystemFont(
+                                                ofSize: NSFont.smallSystemFontSize)
+                                        ]
+                                    ),
+                                    NSApplication.AboutPanelOptionKey(
+                                        rawValue: "kram-profile"
+                                    ): "© 2020-2024 Alec Miller"
+                                ]
+                            )
+                        }
+                    }
+                }
+    
+        
     }
     
     // https://stackoverflow.com/questions/49882933/pass-jsonobject-from-swift4-to-wkwebview-javascript-function

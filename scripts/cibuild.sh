@@ -81,6 +81,11 @@ if [[ $buildType == macos ]]; then
 	xcodebuild install -sdk macosx -project hlslparser.xcodeproj -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
 	popd
 
+    # build kram-profile to bin directory
+    pushd kram-profile
+    xcodebuild install -sdk macosx -project kram-profile.xcodeproj -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    popd
+    
 elif [[ $buildType == windows ]]; then
 	mkdir -p build
 
