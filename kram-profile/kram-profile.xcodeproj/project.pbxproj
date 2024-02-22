@@ -11,6 +11,9 @@
 		705F68D12B820AD200437FAA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 705F68D02B820AD200437FAA /* Assets.xcassets */; };
 		705F68D42B820AD200437FAA /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 705F68D32B820AD200437FAA /* Preview Assets.xcassets */; };
 		705F68DC2B83E80400437FAA /* FilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68DB2B83E80400437FAA /* FilePicker.swift */; };
+		705F68E12B87EB8000437FAA /* AnyDecodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68DE2B87EB8000437FAA /* AnyDecodable.swift */; };
+		705F68E22B87EB8000437FAA /* AnyCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68DF2B87EB8000437FAA /* AnyCodable.swift */; };
+		705F68E32B87EB8000437FAA /* AnyEncodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68E02B87EB8000437FAA /* AnyEncodable.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,6 +24,9 @@
 		705F68D52B820AD200437FAA /* kram_profile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = kram_profile.entitlements; sourceTree = "<group>"; };
 		705F68DB2B83E80400437FAA /* FilePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePicker.swift; sourceTree = "<group>"; };
 		705F68DD2B86AB2000437FAA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		705F68DE2B87EB8000437FAA /* AnyDecodable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyDecodable.swift; sourceTree = "<group>"; };
+		705F68DF2B87EB8000437FAA /* AnyCodable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
+		705F68E02B87EB8000437FAA /* AnyEncodable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyEncodable.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +63,9 @@
 				705F68CC2B820AD100437FAA /* kram_profileApp.swift */,
 				705F68DB2B83E80400437FAA /* FilePicker.swift */,
 				705F68D02B820AD200437FAA /* Assets.xcassets */,
+				705F68DF2B87EB8000437FAA /* AnyCodable.swift */,
+				705F68DE2B87EB8000437FAA /* AnyDecodable.swift */,
+				705F68E02B87EB8000437FAA /* AnyEncodable.swift */,
 				705F68D52B820AD200437FAA /* kram_profile.entitlements */,
 				705F68D22B820AD200437FAA /* Preview Content */,
 			);
@@ -141,6 +150,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				705F68E12B87EB8000437FAA /* AnyDecodable.swift in Sources */,
+				705F68E32B87EB8000437FAA /* AnyEncodable.swift in Sources */,
+				705F68E22B87EB8000437FAA /* AnyCodable.swift in Sources */,
 				705F68DC2B83E80400437FAA /* FilePicker.swift in Sources */,
 				705F68CD2B820AD100437FAA /* kram_profileApp.swift in Sources */,
 			);

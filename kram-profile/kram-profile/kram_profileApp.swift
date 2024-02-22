@@ -123,19 +123,34 @@ struct TimeRange {
     var viewPercentage: Double = 0.8
 }
 
-func filenameToTimeRange(_ filename: String) -> TimeRange {
+enum FileType {
+    case Build
+    case Memory
+    case Perf
+}
+
+func filenameToType(_ filename: String) -> FileType {
     let url = URL(string: filename)!
-    
-    var duration = 1.0
-    
+
     if url.pathExtension == "json" { // build
-        duration = 1.0
+        return .Build
     }
     else if url.pathExtension == "vmatrace" { // memory
-        duration = 64.0
+        return .Memory
     }
     else if url.pathExtension == "trace" { // profile
-        duration = 0.1
+        return .Perf
+    }
+    return .Build
+}
+
+func filenameToTimeRange(_ filename: String) -> TimeRange {
+    var duration = 1.0
+    
+    switch filenameToType(filename) {
+        case .Build: duration = 1.0
+        case .Memory: duration = 64.0
+        case .Perf: duration = 0.1 // 100ms
     }
     
     return TimeRange(timeStart:0.0, timeEnd:duration)
@@ -188,8 +203,29 @@ func showTimeRange(_ webView: WKWebView, _ timeRange: TimeRange) /*async*/ {
         }
     }
     catch {
-        
+        print(error)
     }
+}
+
+// This is more of an opaque object, so how to parse with Json utils
+//struct CatapultArgs: Codable {
+//    var detail: String?
+//}
+
+struct CatapultEvent: Codable {
+    var cat: String?
+    var pid: Int?
+    var tid: Int?
+    var ph: String?
+    var ts: Int?
+    var dur: Int?
+    var name: String?
+    var args: [String : AnyCodable]?
+}
+
+struct CatapultProfile: Codable {
+    var traceEvents: [CatapultEvent]?
+    var beginningOfTime: Int?
 }
 
 func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
@@ -219,13 +255,58 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
     }
     
     do {
-        let fileContent = try Data(contentsOf: fileURL)
+        // use this for binary data, but need to fixup some json before it's sent
+        // TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
         
-        // TODO: here need to fixup clang json, this neesd SOURCE replaced with
-        // the short filename version of the detail (full filename)
-    
-        let fileContentBase64 = fileContent.base64EncodedString()
-    
+        // TODO: this works, but can't fixup the json on either end as easily.
+        
+        var fileContentBase64 = ""
+        
+        let type = filenameToType(fileURL.absoluteString)
+        
+        if type != FileType.Build {
+            let fileContent = try Data(contentsOf: fileURL)
+            fileContentBase64 = fileContent.base64EncodedString()
+        }
+        else {
+            // replace Source with actual file name on Clang.json files
+            // That's just for the parse phase, probably need for optimization
+            // phase too.  The optimized function names need demangled - ugh.
+            
+            let fileContent = try String(contentsOf: fileURL)
+            let json = fileContent.data(using: .utf8)!
+            
+            let decoder = JSONDecoder()
+            var catapultProfile = try decoder.decode(CatapultProfile.self, from: json)
+            
+            // trying to change the objects, but it's not applying
+            if catapultProfile.traceEvents != nil { // an array
+                for i in 0..<catapultProfile.traceEvents!.count {
+                    let event = catapultProfile.traceEvents![i]
+                    if event.name == "Source" || event.name == "OptModule" {
+                        let detail = event.args!["detail"]!.value as! String
+                        let url = URL(string:detail)!
+                        
+                        // stupid immutable arrays.  Makes this code untempable
+                        catapultProfile.traceEvents![i].name = url.lastPathComponent
+                    }
+                    else if event.name == "InstantiateFunction" || event.name == "InstantiateClass" || event.name == "OptFunction" {
+                        let detail = event.args!["detail"]!.value as! String
+                        
+                        catapultProfile.traceEvents![i].name = detail
+                    }
+                }
+            }
+            
+            // print(catapultProfile)
+            
+            let encoder = JSONEncoder()
+            let fileContentFixed = try encoder.encode(catapultProfile)
+            
+            //print(fileContentFixed)
+            fileContentBase64 = fileContentFixed.base64EncodedString()
+        }
+        
         let perfetto = Perfetto(perfetto: PerfettoFile(buffer: "",
                                                        title: fileURL.lastPathComponent,
                                                        keepApiOpen: true))
@@ -261,10 +342,6 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
         
         // convert base64 back
         obj.perfetto.buffer = base64ToBytes(fileData).buffer;
-    
-        // How to set this command, it's only available onTraceLoad()
-        // but calls through to a sidebar object on the ctx
-        //window.postMessage('dev.perfetto.CoreCommands#ToggleLeftSidebar','\(ORIGIN)')
     
         window.postMessage(obj,'\(ORIGIN)');
     """
@@ -305,10 +382,8 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
 
         
     } catch {
-     // handle error
+      print(error)
     }
-    
-    
 }
 
 func initWebView() -> WKWebView {
@@ -347,7 +422,8 @@ struct kram_profileApp: App {
             // filter out some by name, so don't have to open files
             if filename == "build-description.json" ||
                 filename == "build-request.json" ||
-                filename == "manifest.json"
+                filename == "manifest.json" ||
+                filename.hasSuffix("diagnostic-filename-map.json")
             {
                 return false
             }
