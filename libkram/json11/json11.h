@@ -139,6 +139,36 @@ private:
     string _escapedString;
 };
 
+class JsonArrayScope {
+public:
+    JsonArrayScope(JsonWriter& json_, const char* key = "") : json( &json_ ) {
+        json->pushArray(key);
+    }
+    ~JsonArrayScope() {
+        close();
+    }
+    void close() {
+        if (json) { json->popArray(); json = nullptr; }
+    }
+private:
+    JsonWriter* json = nullptr;
+};
+
+class JsonObjectScope {
+public:
+    JsonObjectScope(JsonWriter& json_, const char* key = "") : json( &json_ ) {
+        json->pushObject(key);
+    }
+    ~JsonObjectScope() {
+        close();
+    }
+    void close() {
+        if (json) { json->popObject(); json = nullptr; }
+    }
+private:
+    JsonWriter* json = nullptr;
+};
+
 
 //--------------------------
 
