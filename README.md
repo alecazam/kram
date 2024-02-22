@@ -1,13 +1,18 @@
+The suite of kram tools below.  I hope these improve your game, app, and art development.
 
-# kram, kram.exe
-C++11 main to libkram to create CLI tool.  Encode/decode/info on PNG/KTX/KTX2/DDS files with LDR/HDR and BC/ASTC/ETC2.  Runs on macOS/win.
-
-# libkram.a, libkram-ios.a, kram.lib
-C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS (ARM), macOS (ARM/Intel), win (Intel).
+# kram-profile
+Display profile traces (f.e. Perfetto) quickly in an application for optimizing memory, builds, and cpu/gpu timings
+https://github.com/alecazam/kram/tree/main/kram-profile
 
 # hslparser
 Parses HLSL syntax and generates readable HLSL/MSL code without transpiling.  DXC is then used to compile to spirv.
 https://github.com/alecazam/kram/tree/main/hlslparser
+
+# libkram.a, libkram-ios.a, kram.lib
+C++11 library from 200 to 800KB in size depending on encoder options.  Compiles for iOS (ARM), macOS (ARM/Intel), win (Intel).
+
+# kram, kram.exe
+C++11 main to libkram to create CLI tool.  Encode/decode/info on PNG/KTX/KTX2/DDS files with LDR/HDR and BC/ASTC/ETC2.  Runs on macOS/win.
 
 # kram-thumb-win.dll
 Windows thumbnailer for DDS/KTX/KTX2.  Go to build or bin folder.  Install with "regsvr32.exe kram-thumb-win.dll".  Uninstall with "regsvr32.exe /u kram-thumb-win.dll"
