@@ -1,11 +1,11 @@
 kram-profile
 ==========
 
-This profiler current wraps SwiftUI atop a WKWebView running the Perfetto TraceViewer.  Directories are searched, and files are open.  Supported files are added to a file list, and then can quickly view these in Perfetto.  The app is multidocument.
+kram-profile wraps SwiftUI atop a WKWebView running the Perfetto TraceViewer.  A dev can open directories or files of traces.  Supported files are added to a list to quickly view these in Perfetto.  The app is multidocument.  Each window is a single instance of Pefertto TraceViewer that is loaded once.   The sandboxed SwiftUI acts as the bridge to the native file system, which the TraceViewer browser sandbox lacks.
 
-Flamegraphs are key to all profiling.  Why look at giant table of numbers when you can see them visually.  This also needs to be a dyanmic graph that you can zoom in and hover over.  Fortunately there are several tools now supporting flamegraphs.
+Flamegraphs are key to all profiling.  Why look at giant table of numbers when you can see them visually.  Flamegraphs also need to be dynamic and display hover tips and details.  Fortunately there are several tools now supporting flamegraphs.  Perfetto is one such tool.
 
-This is also a discussion of profilers and techniques for profiling.
+This is also a discussion of profilers and optimizing.
 
 Supported files
 
@@ -18,17 +18,20 @@ There are pre-built version of kram-profile for macOS 13.0 and higher.
 ----------------
 
 TODO:
-* Fix document support, so can double click and have app open files
-* Support binary Perfetto traces
+* Fix document support, so can double click and have app open files. readFromURL like kramv.
+* Support binary Perfetto traces.  Test with Google sample code.
 * Fixup "Source" tags in clang json to use filename (no extension) from detail field
 * Tie in with the excellent ClangBuildAnalyzer tool
 * Scale specific traces to a single duration.  That way the next file comes in at that scale. 
-* Preserve timeline duration across traces 
+* Move away from Catapult json to own binary format.  Can then translate to json or use the Perfetto SDK to convert to protobufs.
+*
+* Find start/end time of each json files. 
+* Add sort by duration
+* Preserve timeline duration across traces. 
 
 ----------------
 
 #Profilers
-
 
 Cpu Profilers. See for more details
 

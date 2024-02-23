@@ -14,17 +14,75 @@ import UniformTypeIdentifiers
 // This is really just a wrapper to turn WKWebView into something SwiftUI
 // can interop with.  SwiftUI has not browser widget.
 
-struct File: Identifiable, Hashable, Comparable
+func fileModificationDate(url: URL) -> Date? {
+    do {
+        let attr = try FileManager.default.attributesOfItem(atPath: url.path)
+        return attr[FileAttributeKey.modificationDate] as? Date
+    } catch {
+        return nil
+    }
+}
+
+struct File: Identifiable, Hashable, Equatable, Comparable
 {
     var id: String { url.absoluteString }
     var name: String { url.lastPathComponent }
     let url: URL
     
+    var duration: Double?
+    var modStamp: Date?
+    
+    init(url: URL) {
+        self.url = url
+        self.modStamp = fileModificationDate(url:url)
+    }
+    
+    public static func == (lhs: File, rhs: File) -> Bool {
+        return lhs.name == rhs.name
+    }
     static func < (lhs: File, rhs: File) -> Bool {
         return lhs.name < rhs.name
     }
 }
 
+func generateName(file: File) -> String {
+    // need to do lookup to get duration
+    let f = lookupFile(url: file.url)
+    
+    if f.duration != nil {
+        return "\(f.name) " + String(format:"%0.3f", f.duration!) // sec vis to ms for now
+    }
+    else {
+        return f.name
+    }
+}
+
+// Note: if a file is deleted which happens often with builds,
+// then want to identify that and update the list.  At least
+// indicate the item is gone, and await its return.
+
+var fileCache : [URL:File] = [:]
+
+func lookupFile(url: URL) -> File {
+    let file = File(url:url)
+    
+    // This preseves the duration previously parsed and stored
+    
+    if let fileOld = fileCache[file.url] {
+        if fileOld.modStamp! == file.modStamp! {
+            return fileOld
+        }
+    }
+    fileCache[file.url] = file
+    
+    return file
+}
+
+// This one won't be one in the list, though
+func updateFileCache(file: File) {
+    fileCache[file.url] = file
+}
+        
 struct MyWKWebView : NSViewRepresentable {
     // This is set by caller to the url for the request
     let webView: WKWebView
@@ -65,6 +123,8 @@ struct MyWKWebView : NSViewRepresentable {
             // have to parse timeStart/End from file.  May want that for
             // sorting anyways.
             //
+            // Note have duration on some files now, so could pull that
+            // or adjust the timing range across all known durations
             // showTimeRange(webView, filenameToTimeRange(sel))
         }
     }
@@ -236,6 +296,9 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
     
     let fileURL = URL(string: path)!
     
+    // Note may need to modify directly
+    var file = lookupFile(url: fileURL)
+    
     print(path)
     
     
@@ -309,12 +372,36 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
                 }
             }
             
-            // print(catapultProfile)
+            // walk the file and compute the duration if we don't already have ti
+            if file.duration == nil {
+                
+                // TODO: need to honor the unit scale
+                var startTime = Double.infinity
+                var endTime = -Double.infinity
+                
+                for i in 0..<catapultProfile.traceEvents!.count {
+                    let event = catapultProfile.traceEvents![i]
+                
+                    if event.ts != nil && event.dur != nil {
+                        let s = Double(event.ts!)
+                        let d = Double(event.dur!)
+                        
+                        startTime = min(startTime, s)
+                        endTime = max(endTime, s+d)
+                    }
+                }
+                 
+                if startTime <= endTime {
+                    // TODO: for now assume ms
+                    file.duration = (endTime - startTime) * 1e-6
+                    
+                    updateFileCache(file: file)
+                }
+            }
+            
             
             let encoder = JSONEncoder()
             let fileContentFixed = try encoder.encode(catapultProfile)
-            
-            //print(fileContentFixed)
             fileContentBase64 = fileContentFixed.base64EncodedString()
         }
         
@@ -413,6 +500,9 @@ func initWebView() -> WKWebView {
     // here frame is entire screen
     let webView = WKWebView(frame: .zero, configuration: configuration)
     
+    // The page is complaining it's going to lose the data if fwd/back hit
+    webView.allowsBackForwardNavigationGestures = false
+    
     return webView
 }
 
@@ -473,7 +563,7 @@ struct kram_profileApp: App {
             while let fileURL = directoryEnumerator?.nextObject() as? URL {
                 let isSupported = isSupportedFilename(fileURL)
                 if isSupported {
-                    files.append(File(url:fileURL));
+                    files.append(lookupFile(url:fileURL));
                 }
             }
         }
@@ -482,7 +572,7 @@ struct kram_profileApp: App {
         
             let isSupported = isSupportedFilename(url)
             if isSupported {
-                files.append(File(url:url))
+                files.append(lookupFile(url:url))
             }
         }
         
@@ -549,7 +639,13 @@ struct kram_profileApp: App {
                     }
                     
                     List(files, selection:$selection) { file in
-                        Text(file.name)
+                        // compare url to the previous dir
+                        // if it differs, then add divider
+//                        if lastUrl && url.path != lastUrl!.path {
+//                            files.append(Divider())
+//                        }
+                        
+                        Text(generateName(file: file))
                     }
                 }
             }
