@@ -14,11 +14,15 @@ import UniformTypeIdentifiers
 // This is really just a wrapper to turn WKWebView into something SwiftUI
 // can interop with.  SwiftUI has not browser widget.
 
-struct File: Identifiable, Hashable
+struct File: Identifiable, Hashable, Comparable
 {
     var id: String { url.absoluteString }
     var name: String { url.lastPathComponent }
     let url: URL
+    
+    static func < (lhs: File, rhs: File) -> Bool {
+        return lhs.name < rhs.name
+    }
 }
 
 struct MyWKWebView : NSViewRepresentable {
@@ -283,16 +287,23 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
             if catapultProfile.traceEvents != nil { // an array
                 for i in 0..<catapultProfile.traceEvents!.count {
                     let event = catapultProfile.traceEvents![i]
-                    if event.name == "Source" || event.name == "OptModule" {
+                    if event.name == "Source" || 
+                        event.name == "OptModule"
+                    {
+                        // This is a path
                         let detail = event.args!["detail"]!.value as! String
                         let url = URL(string:detail)!
                         
                         // stupid immutable arrays.  Makes this code untempable
                         catapultProfile.traceEvents![i].name = url.lastPathComponent
                     }
-                    else if event.name == "InstantiateFunction" || event.name == "InstantiateClass" || event.name == "OptFunction" {
+                    else if event.name == "InstantiateFunction" || 
+                            event.name == "InstantiateClass" ||
+                            event.name == "OptFunction" ||
+                            event.name == "ParseClass"
+                    {
+                        // This is a name
                         let detail = event.args!["detail"]!.value as! String
-                        
                         catapultProfile.traceEvents![i].name = detail
                     }
                 }
@@ -474,6 +485,9 @@ struct kram_profileApp: App {
                 files.append(File(url:url))
             }
         }
+        
+        // for some reason, their listed out in pretty random order
+        files.sort()
         
         print("found \(files.count) files")
         
