@@ -13,6 +13,7 @@
 		705F68E12B87EB8000437FAA /* AnyDecodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68DE2B87EB8000437FAA /* AnyDecodable.swift */; };
 		705F68E22B87EB8000437FAA /* AnyCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68DF2B87EB8000437FAA /* AnyCodable.swift */; };
 		705F68E32B87EB8000437FAA /* AnyEncodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68E02B87EB8000437FAA /* AnyEncodable.swift */; };
+		705F68E52B89907700437FAA /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 705F68E42B89907700437FAA /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +26,7 @@
 		705F68DE2B87EB8000437FAA /* AnyDecodable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyDecodable.swift; sourceTree = "<group>"; };
 		705F68DF2B87EB8000437FAA /* AnyCodable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
 		705F68E02B87EB8000437FAA /* AnyEncodable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyEncodable.swift; sourceTree = "<group>"; };
+		705F68E42B89907700437FAA /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,6 +66,7 @@
 				705F68DE2B87EB8000437FAA /* AnyDecodable.swift */,
 				705F68E02B87EB8000437FAA /* AnyEncodable.swift */,
 				705F68D52B820AD200437FAA /* kram_profile.entitlements */,
+				705F68E42B89907700437FAA /* README.md */,
 				705F68D22B820AD200437FAA /* Preview Content */,
 			);
 			path = "kram-profile";
@@ -135,6 +138,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				705F68E52B89907700437FAA /* README.md in Resources */,
 				705F68D42B820AD200437FAA /* Preview Assets.xcassets in Resources */,
 				705F68D12B820AD200437FAA /* Assets.xcassets in Resources */,
 			);

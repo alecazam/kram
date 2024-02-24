@@ -72,12 +72,16 @@ struct File: Identifiable, Hashable, Equatable, Comparable
 func generateName(file: File) -> String {
     // need to do lookup to get duration
     let f = lookupFile(url: file.url)
-    
+    return f.name
+}
+
+func generateDuration(file: File) -> String {
+    let f = lookupFile(url: file.url)
     if f.duration != nil {
-        return "\(f.name) " + String(format:"%0.3f", f.duration!) // sec vis to ms for now
+        return String(format:"%0.3f", f.duration!) // sec vis to ms for now
     }
     else {
-        return f.name
+        return ""
     }
 }
 
@@ -308,6 +312,9 @@ struct CatapultEvent: Codable {
 
 struct CatapultProfile: Codable {
     var traceEvents: [CatapultEvent]?
+    
+    // not a part of the Catapult spec, but clang writes this when it zeros
+    // out the startTime
     var beginningOfTime: Int?
 }
 
@@ -344,8 +351,6 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
         // use this for binary data, but need to fixup some json before it's sent
         // TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
         
-        // TODO: this works, but can't fixup the json on either end as easily.
-        
         var fileContentBase64 = ""
         
         let type = filenameToType(fileURL.absoluteString)
@@ -353,11 +358,50 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
         if type != FileType.Build {
             let fileContent = try Data(contentsOf: fileURL)
             fileContentBase64 = fileContent.base64EncodedString()
+            
+            // TODO: for perf traces, compute duration between frame
+            // markers.  Multiple frames in a file, then show max frame duration
+            // instead of the entire file.
+            
+            // walk the file and compute the duration if we don't already have ti
+            if file.duration == nil {
+                let decoder = JSONDecoder()
+                
+                var catapultProfile = try decoder.decode(CatapultProfile.self, from: fileContent)
+                
+                if catapultProfile.traceEvents != nil {
+                    // TODO: need to honor the unit scale
+                    var startTime = Double.infinity
+                    var endTime = -Double.infinity
+                    
+                    for i in 0..<catapultProfile.traceEvents!.count {
+                        let event = catapultProfile.traceEvents![i]
+                        
+                        if event.ts != nil && event.dur != nil {
+                            let s = Double(event.ts!)
+                            let d = Double(event.dur!)
+                            
+                            startTime = min(startTime, s)
+                            endTime = max(endTime, s+d)
+                        }
+                    }
+                    
+                    if startTime <= endTime {
+                        // TODO: for now assume ms
+                        file.duration = (endTime - startTime) * 1e-6
+                        
+                        updateFileCache(file: file)
+                    }
+                }
+            }
         }
         else {
             // replace Source with actual file name on Clang.json files
             // That's just for the parse phase, probably need for optimization
             // phase too.  The optimized function names need demangled - ugh.
+            
+            // Clang has come build data as durations on fake threads
+            // but those are smaller than the full duration.
             
             let fileContent = try String(contentsOf: fileURL)
             let json = fileContent.data(using: .utf8)!
@@ -365,11 +409,13 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
             let decoder = JSONDecoder()
             var catapultProfile = try decoder.decode(CatapultProfile.self, from: json)
             
-            // trying to change the objects, but it's not applying
-            if catapultProfile.traceEvents != nil { // an array
+            if catapultProfile.traceEvents == nil { // an array
+                return
+            }
+            else {
                 for i in 0..<catapultProfile.traceEvents!.count {
                     let event = catapultProfile.traceEvents![i]
-                    if event.name == "Source" || 
+                    if event.name == "Source" ||
                         event.name == "OptModule"
                     {
                         // This is a path
@@ -379,45 +425,45 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
                         // stupid immutable arrays.  Makes this code untempable
                         catapultProfile.traceEvents![i].name = url.lastPathComponent
                     }
-                    else if event.name == "InstantiateFunction" || 
-                            event.name == "InstantiateClass" ||
-                            event.name == "OptFunction" ||
-                            event.name == "ParseClass"
+                    else if event.name == "InstantiateFunction" ||
+                                event.name == "InstantiateClass" ||
+                                event.name == "OptFunction" ||
+                                event.name == "ParseClass"
                     {
                         // This is a name
                         let detail = event.args!["detail"]!.value as! String
                         catapultProfile.traceEvents![i].name = detail
                     }
                 }
-            }
-            
-            // walk the file and compute the duration if we don't already have ti
-            if file.duration == nil {
                 
-                // TODO: need to honor the unit scale
-                var startTime = Double.infinity
-                var endTime = -Double.infinity
                 
-                for i in 0..<catapultProfile.traceEvents!.count {
-                    let event = catapultProfile.traceEvents![i]
-                
-                    if event.ts != nil && event.dur != nil {
-                        let s = Double(event.ts!)
-                        let d = Double(event.dur!)
+                // walk the file and compute the duration if we don't already have ti
+                if file.duration == nil {
+                    
+                    // TODO: need to honor the unit scale
+                    var startTime = Double.infinity
+                    var endTime = -Double.infinity
+                    
+                    for i in 0..<catapultProfile.traceEvents!.count {
+                        let event = catapultProfile.traceEvents![i]
                         
-                        startTime = min(startTime, s)
-                        endTime = max(endTime, s+d)
+                        if event.ts != nil && event.dur != nil {
+                            let s = Double(event.ts!)
+                            let d = Double(event.dur!)
+                            
+                            startTime = min(startTime, s)
+                            endTime = max(endTime, s+d)
+                        }
+                    }
+                    
+                    if startTime <= endTime {
+                        // TODO: for now assume ms
+                        file.duration = (endTime - startTime) * 1e-6
+                        
+                        updateFileCache(file: file)
                     }
                 }
-                 
-                if startTime <= endTime {
-                    // TODO: for now assume ms
-                    file.duration = (endTime - startTime) * 1e-6
-                    
-                    updateFileCache(file: file)
-                }
             }
-            
             
             let encoder = JSONEncoder()
             let fileContentFixed = try encoder.encode(catapultProfile)
@@ -444,7 +490,7 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
         //function bytesToBase64(bytes) {
         //  const binString = String.fromCodePoint(...bytes);
         //  return btoa(binString);
-    
+        
         function base64ToBytes(base64) {
           const binString = atob(base64);
           return Uint8Array.from(binString, (m) => m.codePointAt(0));
@@ -457,18 +503,13 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
         
         // convert base64 back
         obj.perfetto.buffer = base64ToBytes(fileData).buffer;
-    
-        window.postMessage(obj,'\(ORIGIN)');
-    """
-       
-    /*
-    """
-        // this isn't working, to avoid race condition with when perfetto loads
-        // and when the loadFile() passes over the file contents.
-     
+        
+        // Fix race between page load, and loading the file.  Although
+        // page is only loaded once.
+        
+        // https://jsfiddle.net/vrsofx1p/
         function openTrace(obj)
         {
-            // https://jsfiddle.net/vrsofx1p/
             const timer = setInterval(() => window.postMessage('PING', '\(ORIGIN)'), 50);
             
             const onMessageHandler = (evt) => {
@@ -480,11 +521,12 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
                 
                 window.postMessage(obj,'\(ORIGIN)');
             }
+        
+            window.addEventListener('message', onMessageHandler);
         }
         
         openTrace(obj);
         """
-      */
         
         // print(json)
         
@@ -525,12 +567,35 @@ func initWebView() -> WKWebView {
     return webView
 }
 
+/*
+// Install this just for appFromURL, need to be associate this app with traces
+// Instead of these see AppDelegate below.
+struct KramDocument: NSDocument {
+    
+    func open(fromURL:)
+}
+*/
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    // don't rename params in this class. These are the function signature
+    func applicationShouldTerminateAfterLastWindowClosed(_ application: NSApplication) -> Bool {
+        return true
+    }
+    
+    //func application(_ sender: NSApplication, open urls: [URL]) {
+        // TODO: can use this insted of defining Document model
+    //}
+}
+
 @main
 struct kram_profileApp: App {
     @State private var files: [File] = []
     @State private var selection: String?
     @State private var firstRequest = true
    
+    // close app when last windowi s
+    @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
+    
     private var webView = initWebView()
     
     func isSupportedFilename(_ url: URL) -> Bool {
@@ -635,8 +700,12 @@ struct kram_profileApp: App {
 //                            files.append(Divider())
 //                        }
                         
-                        Text(generateName(file: file))
-                            .help(file.shortDirectory)
+                        HStack() {
+                            Text(generateName(file: file))
+                                .help(file.shortDirectory)
+                            Text(generateDuration(file: file))
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
                     }
                 }
             }
