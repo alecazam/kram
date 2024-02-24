@@ -130,6 +130,15 @@ struct MyWKWebView : NSViewRepresentable {
        }
     }
     
+    // two copies of this function
+    func runJavascript(_ webView: WKWebView, _ script: String) {
+        webView.evaluateJavaScript(script) { (result, error) in
+            if error != nil {
+                print("problem running script")
+            }
+        }
+    }
+    
     func updateNSView(_ webView: WKWebView, context: Context) {
         // DONE: skip reloading the request, it doesn't change?
         // TODO: add a reload button for the current selection, since Perfetto can't reload
@@ -143,8 +152,10 @@ struct MyWKWebView : NSViewRepresentable {
         //sleep(2)
         
         if let sel = selection {
-            loadFile(webView, sel)
-        
+            var str = loadFileJS(sel)
+            if str != nil {
+                runJavascript(webView, str!)
+            }
             // now based on the type, set a reasonable range of time
             // don't really want start/end, since we don't know start
             // works for Flutter, but not for this app.  Also would
@@ -153,7 +164,14 @@ struct MyWKWebView : NSViewRepresentable {
             //
             // Note have duration on some files now, so could pull that
             // or adjust the timing range across all known durations
-            // showTimeRange(webView, filenameToTimeRange(sel))
+            
+            if false {
+                str = showTimeRangeJS(filenameToTimeRange(sel))
+                if str != nil {
+                    runJavascript(webView, str!)
+                }
+            }
+            
         }
     }
 }
@@ -249,7 +267,7 @@ func filenameToTimeRange(_ filename: String) -> TimeRange {
 }
 
 // Flutter uses this to jump to a time range
-func showTimeRange(_ webView: WKWebView, _ timeRange: TimeRange) /*async*/ {
+func showTimeRangeJS(_ timeRange: TimeRange) -> String? {
 
     do {
         struct PerfettoTimeRange: Codable {
@@ -279,23 +297,20 @@ func showTimeRange(_ webView: WKWebView, _ timeRange: TimeRange) /*async*/ {
                 .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
         }
         
-        let json = """
+        // TODO: this also needs to wait on page to load
+        let script = """
             // convert from string -> Uint8Array -> ArrayBuffer
             var obj = JSON.parse('{\(perfettoEncode)}');
+        
             window.postMessage(obj,'\(ORIGIN)');
         """
         
-        webView.evaluateJavaScript(json) { (result, error) in
-            if error != nil {
-                print("\(error)! \(result)")
-            }
-            else {
-                print("\(result)")
-            }
-        }
+        //runJavascript(script)
+        return script
     }
     catch {
         print(error)
+        return nil
     }
 }
 
@@ -318,7 +333,7 @@ struct CatapultProfile: Codable {
     var beginningOfTime: Int?
 }
 
-func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
+func loadFileJS(_ path: String) -> String? {
     
     let fileURL = URL(string: path)!
     
@@ -410,7 +425,7 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
             var catapultProfile = try decoder.decode(CatapultProfile.self, from: json)
             
             if catapultProfile.traceEvents == nil { // an array
-                return
+                return nil
             }
             else {
                 for i in 0..<catapultProfile.traceEvents!.count {
@@ -485,7 +500,7 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
                 .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
         }
         
-        let json = """
+        let script = """
         
         //function bytesToBase64(bytes) {
         //  const binString = String.fromCodePoint(...bytes);
@@ -528,20 +543,10 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
         openTrace(obj);
         """
         
-        // print(json)
-        
-        webView.evaluateJavaScript(json) { (result, error) in
-            if error != nil {
-                print("\(error)! \(result)")
-            }
-            else {
-                print("\(result)")
-            }
-        }
-
-        
+        return script
     } catch {
       print(error)
+        return nil
     }
 }
 
@@ -582,9 +587,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
     
-    //func application(_ sender: NSApplication, open urls: [URL]) {
+    // May remove this, using openURL instead. User might drag mulitiple
+    // files onto app, so need to handle that case too...
+    // when double-clicking files in Finder, this is called
+    func application(_ application: NSApplication, open urls: [URL]) {
         // TODO: can use this insted of defining Document model
-    //}
+
+    }
 }
 
 @main
@@ -598,6 +607,21 @@ struct kram_profileApp: App {
     
     private var webView = initWebView()
     
+    func runJavascript(_ script: String) {
+        webView.evaluateJavaScript(script) { (result, error) in
+            if error != nil {
+                print("problem running script")
+            }
+        }
+    }
+            
+    func focusFindTextEdit() {
+        let script = """
+            window.editText.requestFocus();
+        """
+        runJavascript(script)
+    }
+            
     func isSupportedFilename(_ url: URL) -> Bool {
       
         // clang build files use genertic .json format
@@ -625,47 +649,73 @@ struct kram_profileApp: App {
         return false
     }
     
-    func listFilesFromURL(_ url: URL) -> [File]
+    func listFilesFromURLs(_ urls: [URL]) -> [File]
     {
-        print("selected \(url)")
+        //print("selected \(url)")
         
         // wipe them all
+        // TODO: have mode where the url get added
+        // instead of wiping the array out.  Note FileCache
+        // has cached duration data
         var files: [File] = []
-        
-        // now filter a list of all the files under the dir
-        if url.hasDirectoryPath {
-            // list out all matching files
-            // also these [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
-            
-            // This doesn't default to recursive, see what kram does
-            let directoryEnumerator = FileManager.default.enumerator(
-                at: url,
-                includingPropertiesForKeys: nil
-                // options: [.skipsHiddenFiles]
-            )
-            
-            while let fileURL = directoryEnumerator?.nextObject() as? URL {
-                let isSupported = isSupportedFilename(fileURL)
-                if isSupported {
-                    files.append(lookupFile(url:fileURL));
+       
+        for url in urls {
+            // now filter a list of all the files under the dir
+            if url.hasDirectoryPath {
+                // list out all matching files
+                // also these [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+                
+                // This doesn't default to recursive, see what kram does
+                let directoryEnumerator = FileManager.default.enumerator(
+                    at: url,
+                    includingPropertiesForKeys: nil
+                    // options: [.skipsHiddenFiles]
+                )
+                
+                while let fileURL = directoryEnumerator?.nextObject() as? URL {
+                    let isSupported = isSupportedFilename(fileURL)
+                    if isSupported {
+                        files.append(lookupFile(url:fileURL));
+                    }
                 }
             }
-        }
-        else if url.isFileURL {
-            // TODO: list out zip archive
-        
-            let isSupported = isSupportedFilename(url)
-            if isSupported {
-                files.append(lookupFile(url:url))
+            else if url.isFileURL {
+                // TODO: list out zip archive
+                
+                let isSupported = isSupportedFilename(url)
+                if isSupported {
+                    files.append(lookupFile(url:url))
+                }
             }
         }
         
         // for some reason, their listed out in pretty random order
+        // TODO: add different sorts - id, name, size.  id is default
+        // which is the full url
         files.sort()
         
         print("found \(files.count) files")
         
         return files
+    }
+    
+    func openFilesFromURLs(urls: [URL]) {
+        let urls = urls
+        if urls.count >= 1 {
+            let filesNew = listFilesFromURLs(urls)
+            
+            // for now wipe the old list
+            if filesNew.count > 0 {
+                files = filesNew
+                
+                // load first file in the list
+                if files[0].url.isFileURL { selection = files[0].id }
+            }
+        }
+        
+        // Not sure where to set this false, so do it here
+        // this is to avoid reloading the request
+        firstRequest = false
     }
     
     func shortFilename(_ str: String) -> String {
@@ -678,9 +728,45 @@ struct kram_profileApp: App {
         NSWorkspace.shared.activateFileViewerSelecting([url]);
     }
     
+    func openFile() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = fileTypes
+        
+        panel.begin { reponse in
+            if reponse == .OK {
+                openFilesFromURLs(urls: panel.urls)
+            }
+        }
+    }
+    
+    func aboutPanel() {
+        NSApplication.shared.orderFrontStandardAboutPanel(
+            options: [
+                NSApplication.AboutPanelOptionKey.credits: NSAttributedString(
+                    string:
+"""
+A tool to help profile mem, perf, and builds.
+© 2020-2024 Alec Miller
+""",
+                    
+                    attributes: [
+                        NSAttributedString.Key.font: NSFont.boldSystemFont(
+                            ofSize: NSFont.smallSystemFontSize)
+                    ]
+                ),
+                NSApplication.AboutPanelOptionKey(
+                    rawValue: "kram-profile"
+                ): "© 2020-2024 Alec Miller"
+            ]
+        )
+    }
+    
     // DONE: have files ending in .vmatrace, .trace, and .json
     // TODO: archives in the zip file.
-    var fileTypes: [UTType] = [
+    let fileTypes: [UTType] = [
         // .plainText, .zip
         .json, // clang build files
         UTType(filenameExtension:"trace", conformingTo:.data)!,
@@ -694,8 +780,8 @@ struct kram_profileApp: App {
             NavigationSplitView {
                 VStack {
                     List(files, selection:$selection) { file in
-                        // compare url to the previous dir
-                        // if it differs, then add divider
+                        // compare to previous file (use active sort comparator)
+                        // if it differs, then toggle the button bg colors
 //                        if lastUrl && url.path != lastUrl!.path {
 //                            files.append(Divider())
 //                        }
@@ -715,75 +801,42 @@ struct kram_profileApp: App {
                 MyWKWebView(webView:webView, request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!), selection:selection, firstRequest:firstRequest)
                 
             }
+            // TODO: show data, and selected file here
             .navigationTitle(selection != nil ? shortFilename(selection!) : "")
+            .onOpenURL { url in
+                // TODO: this isn't called, find out why?
+                openFilesFromURLs(urls: [url])
+            }
         }
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
         .commands {
             CommandGroup(after: .newItem) {
                 Button("Open File") {
-                    let panel = NSOpenPanel()
-                    panel.allowsMultipleSelection = false
-                    panel.canChooseDirectories = true
-                    panel.canChooseFiles = true
-                    panel.allowedContentTypes = fileTypes
-                    
-                    panel.begin { reponse in
-                        if reponse == .OK {
-                            let urls = panel.urls
-                            if urls.count == 1 {
-                                let url = urls[0]
-                                let filesNew = listFilesFromURL(url)
-                        
-                                // for now wipe the old list
-                                if filesNew.count > 0 {
-                                    files = filesNew
-                                    
-                                    // if single file opened, then load it immediately
-                                    if files[0].url.isFileURL { selection = files[0].id }
-                                }
-                            }
-                            
-                            // Not sure where to set this false, so do it here
-                            // this is to avoid reloading the request
-                            firstRequest = false
-                        }
-                    }
+                    openFile()
                 }
                 .keyboardShortcut("O")
                 
-                Button("Goto File") {
+                Button("Go to File") {
                     if selection != nil {
                         openContainingFolder(selection!);
                     }
                 }
                 .keyboardShortcut("G")
+                
+                // TODO: make it easy to focus the editText in the Pefetto view
+//                Button("Find") {
+//                    if selection != nil {
+//                        focusFindTextEdit();
+//                    }
+//                }
+//                .keyboardShortcut("F")
             }
             CommandGroup(replacing: .appInfo) {
-                    Button("About kram-profile") {
-                        NSApplication.shared.orderFrontStandardAboutPanel(
-                            options: [
-                                NSApplication.AboutPanelOptionKey.credits: NSAttributedString(
-                                    string:
-"""
-A tool to help profile mem, perf, and builds.
-© 2020-2024 Alec Miller
-""",
-                                    
-                                    attributes: [
-                                        NSAttributedString.Key.font: NSFont.boldSystemFont(
-                                            ofSize: NSFont.smallSystemFontSize)
-                                    ]
-                                ),
-                                NSApplication.AboutPanelOptionKey(
-                                    rawValue: "kram-profile"
-                                ): "© 2020-2024 Alec Miller"
-                            ]
-                        )
-                    }
+                Button("About kram-profile") {
+                    aboutPanel()
                 }
             }
-
-        
+        }
     }
     
     // https://stackoverflow.com/questions/49882933/pass-jsonobject-from-swift4-to-wkwebview-javascript-function

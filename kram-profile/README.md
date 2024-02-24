@@ -35,14 +35,13 @@ TODO:
 
 Cpu Profilers. See for more details
 
-* Catapult
-* Perfetto
-* Pefetto Deep Link - https://perfetto.dev/docs/visualization/deep-linking-to-perfetto-ui
-* Flutter (using perfetto) https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.yr4qxyxotyw
+* Catapult - see below
+* Perfetto - see below
+* Flutter (using Perfetto) https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.yr4qxyxotyw
 * Optick - https://github.com/bombomby/optick
 * Tracy - https://github.com/wolfpld/tracy
-* Xcode Instruments
-* AMD Code Analyst
+* Xcode Instruments - see Xcode
+* AMD Code Analyst - see Xcode
 * Intel Vtune
 * ClangBuildAnalyzer - https://github.com/aras-p/ClangBuildAnalyzer
 
@@ -53,7 +52,6 @@ Gpu Profilers. See for more details
 * Nvidia NSight
 * Mali Shader Compiler
 * Pix Profiler
-* 
 
 Catapult
 ---------
@@ -63,6 +61,7 @@ This was the tracing system that Perfetto replaced.  Originally designed for Chr
 Perfetto
 ---------
 * https://ui.perfetto.dev
+* https://perfetto.dev/docs/visualization/deep-linking-to-perfetto-ui
 
 This is a web-based profiling and flame-graph tool.  It's fast on desktop, and continues to evolve.  Only has second and timecode granularity which isn't enough.  For example, performance profiling for games is in milliseconds.  The team is mostly focused on Chrome profiling which apparently is in seconds.  But the visuals are nice, and it now has hover tips with size/name, and also has an Issues list that the devs are responsive to.  Flutter is using this profiler, and kram-profile does too.
 
@@ -86,6 +85,13 @@ A nice build profile aggregator.  Runs through the json timings that Clang gener
 
 Has an incremental system to snapshot and compare modestamps, and only do work on newer files.  This is some great open-source.  Aras optimized Unity builds with this, and that's a huge codebase.  I've used this to optimize kram.
 
+Include What You Use
+---------
+* https://github.com/include-what-you-use/include-what-you-use
+
+Automate the tedium of finding the minimal set of headers for C/C++ with this utility.  A third party added ObjC support, but it hasn't landed.  Seems like on large projects the includes gets out of hand.  So I look forward to trying this out.  
+
+Rewrites the headers, but there are ways to keep it from removing some.  Unclear how this works with cross-platform code.  But maybe it only strips includes within the defines that it sees.  Send the CXXFLAGS used for the build to the exe along with a source file.
 
 # Use Cases
 
@@ -134,13 +140,31 @@ Apple has a very nice SIMD (simd/simd.h) library.  This uses the gcc vector exte
 Optimized debug builds
 -----------
 
-One nice aspect of C++ is that specific files can be optimized.  But to do so, calls become functions instead of inlines.  Setting this up on a SIMD library takes a bit of work, but then callers are running optimized SIMD math even in debug.
+One nice aspect of C++ is that specific files can be optimized.  But to do so, calls outside the .cpp become functions instead of inlines.  But within the .cpp, they get inlined and optimized.  Setting this up on a SIMD library takes a bit of work, but then callers are running optimized math even in debug.
 
-Also Microsoft has various debug build flags that can optimize and optimize force_inline calls.  Need to find out the details for clang.
+Also Microsoft has various debug build flags that can optimize and optimize force_inline calls.  Need to find out the details for clang.  These disable Edit & Continue, but clang in Visual Studio doesn't support it anyways.
 
+* https://learn.microsoft.com/en-us/visualstudio/debugger/how-to-debug-optimized-code?view=vs-2022
 
+* Visual Studio
+* Use /Zo instead of /Od.  Now with Edit&continue.
+* /d2Zi+
+* Use VS2022, it's 64-bit
+* Avoid C++20, it's slower to compile
+* /Ob1 allows inline of  inline, __inline, or __forceinline, and member functions in the class decls.
+* disable STL bounds checking
+* WIN_LEAN_AND_MEAN
+* NOMINMAX
+* use clang-cli
 
+Xcode
+* make sure to deadstrip the release build, or it's huge
+* Cmake uses /Ob1 for RelWithDebInfo
+* use SSE4.2 for Resetta4.2, and make sure to use Neon on arm64
 
+* https://randomascii.wordpress.com/2013/09/11/debugging-optimized-codenew-in-visual-studio-2012/
+
+* https://dirtyhandscoding.github.io/posts/fast-debug-in-visual-c.html
 
 
 
