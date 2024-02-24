@@ -14,6 +14,10 @@ import UniformTypeIdentifiers
 // This is really just a wrapper to turn WKWebView into something SwiftUI
 // can interop with.  SwiftUI has not browser widget.
 
+// TODO: add divider in some sort modes
+// TODO: add sort mode for name, time and incorporating dir or not
+// TODO: fix the js wait on the page to load before doing loadFile
+
 func fileModificationDate(url: URL) -> Date? {
     do {
         let attr = try FileManager.default.attributesOfItem(atPath: url.path)
@@ -23,11 +27,30 @@ func fileModificationDate(url: URL) -> Date? {
     }
 }
 
+func buildShortDirectory(url: URL) -> String {
+    let count = url.pathComponents.count
+    
+    // dir0/dir1/file.ext
+    // -3/-2/-1
+    
+    var str = ""
+    if count >= 3 {
+        str += url.pathComponents[count-3]
+        str += "/"
+    }
+    if count >= 2 {
+        str += url.pathComponents[count-2]
+    }
+    
+    return str
+}
+
 struct File: Identifiable, Hashable, Equatable, Comparable
 {
     var id: String { url.absoluteString }
     var name: String { url.lastPathComponent }
     let url: URL
+    let shortDirectory: String
     
     var duration: Double?
     var modStamp: Date?
@@ -35,13 +58,14 @@ struct File: Identifiable, Hashable, Equatable, Comparable
     init(url: URL) {
         self.url = url
         self.modStamp = fileModificationDate(url:url)
+        self.shortDirectory = buildShortDirectory(url:url)
     }
     
     public static func == (lhs: File, rhs: File) -> Bool {
-        return lhs.name == rhs.name
+        return lhs.id == rhs.id
     }
     static func < (lhs: File, rhs: File) -> Bool {
-        return lhs.name < rhs.name
+        return lhs.id < rhs.id
     }
 }
 
@@ -271,11 +295,6 @@ func showTimeRange(_ webView: WKWebView, _ timeRange: TimeRange) /*async*/ {
     }
 }
 
-// This is more of an opaque object, so how to parse with Json utils
-//struct CatapultArgs: Codable {
-//    var detail: String?
-//}
-
 struct CatapultEvent: Codable {
     var cat: String?
     var pid: Int?
@@ -431,8 +450,6 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
           return Uint8Array.from(binString, (m) => m.codePointAt(0));
         }
         
-        //location.reload();
-                
         var fileData = '\(fileContentBase64)';
         
         // convert from string -> Uint8Array -> ArrayBuffer
@@ -446,7 +463,9 @@ func loadFile(_ webView: WKWebView, _ path: String) /*async*/ {
        
     /*
     """
-        // this isn't working
+        // this isn't working, to avoid race condition with when perfetto loads
+        // and when the loadFile() passes over the file contents.
+     
         function openTrace(obj)
         {
             // https://jsfiddle.net/vrsofx1p/
@@ -589,55 +608,26 @@ struct kram_profileApp: App {
         return url.lastPathComponent
     }
     
+    func openContainingFolder(_ str: String) {
+        let url = URL(string: str)!
+        NSWorkspace.shared.activateFileViewerSelecting([url]);
+    }
     
-    
-    // TODO: have files ending in -vma.trace, .trace, and .json
-    // also archives in the zip file.
+    // DONE: have files ending in .vmatrace, .trace, and .json
+    // TODO: archives in the zip file.
     var fileTypes: [UTType] = [
         // .plainText, .zip
         .json, // clang build files
         UTType(filenameExtension:"trace", conformingTo:.data)!,
         UTType(filenameExtension:"vmatrace", conformingTo:.data)!
     ]
-        
+    
+    // TODO: have
+    
     var body: some Scene {
         WindowGroup {
-            // Don't really like this behavior, want a panel to come up and not
-            // cause the main view to resize.  Also once collapsed, it's unclear
-            // how to get NavigationView back, and app restartes collapsed.
-            // See what I did in other tools.
-            
             NavigationSplitView {
                 VStack {
-                    
-                    // TODO: turn Open button into a menu, FilePicker button already tied to Cmd+O
-                    
-                    FilePicker(types:fileTypes, title: "Open") { urls in
-                        // TODO: not allowing multiselect for now
-                        // but can pick dir or archive
-                        // Do a filtered search under that
-                        // for appropriate files.  And then
-                        // track if picked again which files
-                        // changed.
-                        
-                        if urls.count == 1 {
-                            let url = urls[0]
-                            let filesNew = listFilesFromURL(url)
-                    
-                            // for now wipe the old list
-                            if filesNew.count > 0 {
-                                files = filesNew
-                                
-                                // if single file opened, then load it immediately
-                                if files[0].url.isFileURL { selection = files[0].id }
-                            }
-                        }
-                        
-                        // Not sure where to set this false, so do it here
-                        // this is to avoid reloading the request
-                        firstRequest = false
-                    }
-                    
                     List(files, selection:$selection) { file in
                         // compare url to the previous dir
                         // if it differs, then add divider
@@ -646,63 +636,84 @@ struct kram_profileApp: App {
 //                        }
                         
                         Text(generateName(file: file))
+                            .help(file.shortDirectory)
                     }
                 }
             }
             detail: {
-                // This is a pretty easy way to make Safari open to a link
-                // But really want that embedded into app.   Assuming Perfetto
-                // runs under Safari embedded WKWebView.
-                // Link("Perfetto", destination: URL(string: ORIGIN)!)
-                
                 // About hideSidebar
                 // https://github.com/google/perfetto/issues/716
-                
-                // TODO: really only need to load this once, url doesn't chang w/selection
                 MyWKWebView(webView:webView, request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!), selection:selection, firstRequest:firstRequest)
                 
             }
             .navigationTitle(selection != nil ? shortFilename(selection!) : "")
         }
-        /* TODO: This adds a competing File menu, want to add to existing one
-            Also may need to move Open button out of the picker.  It has a shortcut
-            But want macOS system menus to convey the shortcut to user.
-         
-        // https://forums.developer.apple.com/forums/thread/668139
-        .commands {
-            CommandMenu("File")
-            {
-                Button("Open") {} // .keyboardShortcut("o") { }
-            }
-        }
-        */
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
         .commands {
-                    CommandGroup(replacing: .appInfo) {
-                        Button("About kram-profile") {
-                            NSApplication.shared.orderFrontStandardAboutPanel(
-                                options: [
-                                    NSApplication.AboutPanelOptionKey.credits: NSAttributedString(
-                                        string: 
+            CommandGroup(after: .newItem) {
+                Button("Open File") {
+                    let panel = NSOpenPanel()
+                    panel.allowsMultipleSelection = false
+                    panel.canChooseDirectories = true
+                    panel.canChooseFiles = true
+                    panel.allowedContentTypes = fileTypes
+                    
+                    panel.begin { reponse in
+                        if reponse == .OK {
+                            let urls = panel.urls
+                            if urls.count == 1 {
+                                let url = urls[0]
+                                let filesNew = listFilesFromURL(url)
+                        
+                                // for now wipe the old list
+                                if filesNew.count > 0 {
+                                    files = filesNew
+                                    
+                                    // if single file opened, then load it immediately
+                                    if files[0].url.isFileURL { selection = files[0].id }
+                                }
+                            }
+                            
+                            // Not sure where to set this false, so do it here
+                            // this is to avoid reloading the request
+                            firstRequest = false
+                        }
+                    }
+                }
+                .keyboardShortcut("O")
+                
+                Button("Goto File") {
+                    if selection != nil {
+                        openContainingFolder(selection!);
+                    }
+                }
+                .keyboardShortcut("G")
+            }
+            CommandGroup(replacing: .appInfo) {
+                    Button("About kram-profile") {
+                        NSApplication.shared.orderFrontStandardAboutPanel(
+                            options: [
+                                NSApplication.AboutPanelOptionKey.credits: NSAttributedString(
+                                    string:
 """
 A tool to help profile mem, perf, and builds.
 © 2020-2024 Alec Miller
 """,
-                                        
-                                        attributes: [
-                                            NSAttributedString.Key.font: NSFont.boldSystemFont(
-                                                ofSize: NSFont.smallSystemFontSize)
-                                        ]
-                                    ),
-                                    NSApplication.AboutPanelOptionKey(
-                                        rawValue: "kram-profile"
-                                    ): "© 2020-2024 Alec Miller"
-                                ]
-                            )
-                        }
+                                    
+                                    attributes: [
+                                        NSAttributedString.Key.font: NSFont.boldSystemFont(
+                                            ofSize: NSFont.smallSystemFontSize)
+                                    ]
+                                ),
+                                NSApplication.AboutPanelOptionKey(
+                                    rawValue: "kram-profile"
+                                ): "© 2020-2024 Alec Miller"
+                            ]
+                        )
                     }
                 }
-    
+            }
+
         
     }
     
