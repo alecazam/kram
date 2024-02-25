@@ -86,6 +86,15 @@ func generateDuration(file: File) -> String {
     }
 }
 
+func generateNavigationTitle(_ str: String?) -> String {
+    if str == nil {
+        return ""
+    }
+    
+    let f = lookupFile(url: URL(string:str!)!)
+    return generateDuration(file: f) + " " + generateName(file: f)
+}
+
 // Note: if a file is deleted which happens often with builds,
 // then want to identify that and update the list.  At least
 // indicate the item is gone, and await its return.
@@ -773,6 +782,7 @@ A tool to help profile mem, perf, and builds.
        
     // about hideSideBar
     // https://github.com/google/perfetto/issues/716
+    // Allocating here only works for a single Window, not for WindowGroup
     @State var myWebView = newWebView(request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!))
     
     var body: some Scene {
@@ -792,7 +802,8 @@ A tool to help profile mem, perf, and builds.
                         
                         HStack() {
                             Text(generateDuration(file: file))
-                                .frame(maxWidth: 70) // setting any lower than 70 makes it disappear
+                                .frame(maxWidth: 70)
+                                //.alignment(.trailing)
                                 .font(durationFont)
                             // name gets truncated too soo if it's first
                             // and try to align the text with trailing
@@ -810,15 +821,15 @@ A tool to help profile mem, perf, and builds.
                 // TODO: need the webView for this
                 openFileSelection(myWebView)
             }
-            // TODO: show data, and selected file here
-            .navigationTitle(selection != nil ? shortFilename(selection!) : "")
+            // TODO: show duratoin, and selected file here
+            .navigationTitle(generateNavigationTitle(selection))
             .onOpenURL { url in
                 openFilesFromURLs(urls: [url])
             }
             .dropDestination(for: URL.self) { (items, _) in
                 // This acutally works!
                 openFilesFromURLs(urls: items, mergeFiles: false)
-                                return true
+                return true
             }
         }
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
@@ -839,7 +850,7 @@ A tool to help profile mem, perf, and builds.
                 // TODO: make it easy to focus the editText in the Pefetto view
 //                Button("Find") {
 //                    if selection != nil {
-//                        focusFindTextEdit(webView);
+//                        focusFindTextEdit(myWebView);
 //                    }
 //                }
 //                .keyboardShortcut("F")
