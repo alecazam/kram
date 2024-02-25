@@ -26,7 +26,7 @@ import UniformTypeIdentifiers
 // TODO: support WindowGroup and multiwindow, each needs own webView, problem
 //   is that onOpenURL opens a new window always.
 // DONE: fn+F doesn't honor fullscreen
-// TODO: be nice to focus the search input on cmd+F just to make me happy.  
+// TODO: be nice to focus the search input on cmd+F just to make me happy.
 //  Browser goes to its own search which doesn’t help.
 
 func fileModificationDate(url: URL) -> Date? {
@@ -400,24 +400,36 @@ func loadFileJS(_ path: String) -> String? {
         // use this for binary data, but need to fixup some json before it's sent
         // TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
         
+        // TODO: Perfetto can only read .gz files, and not .zip files.
+        // But could decode zip files here, and send over uncompressed.
+        
         var fileContentBase64 = ""
         
         let type = filenameToType(fileURL.absoluteString)
         
         if type != FileType.Build {
+            // This is how Perfetto guesses as to format.  Why no consistent 4 char magic?
+            // https://cs.android.com/android/platform/superproject/main/+/main:external/perfetto/src/trace_processor/forwarding_trace_parser.cc;drc=30039988b8b71541ce97f9fb200c96ba23da79d7;l=176
+            
             let fileContent = try Data(contentsOf: fileURL)
             fileContentBase64 = fileContent.base64EncodedString()
+            
+            // see if it's binary or json.  If binary, then can't parse duration below
+            // https://forums.swift.org/t/improving-indexing-into-swift-strings/41450/18
+            let jsonDetector = "ewoiZG" // "{\""
+            let firstSixChars = fileContentBase64.prefix(6)
+            let isJson = firstSixChars == jsonDetector
             
             // TODO: for perf traces, compute duration between frame
             // markers.  Multiple frames in a file, then show max frame duration
             // instead of the entire file.
             
             // walk the file and compute the duration if we don't already have it
-            if file.duration == nil {
+            if isJson && file.duration == nil {
                 let decoder = JSONDecoder()
                 let catapultProfile = try decoder.decode(CatapultProfile.self, from: fileContent)
                 
-                if catapultProfile.traceEvents != nil {
+                if catapultProfile.traceEvents == nil {
                     return nil
                 }
                 
