@@ -586,7 +586,10 @@ struct kram_profileApp: App {
             if filename == "build-description.json" ||
                 filename == "build-request.json" ||
                 filename == "manifest.json" ||
-                filename.hasSuffix("diagnostic-filename-map.json")
+                filename.hasSuffix("diagnostic-filename-map.json") ||
+                filename.hasSuffix(".abi.json") ||
+                filename.hasSuffix("-OutputFileMap.json") ||
+                filename.hasSuffix("_const_extract_protocols.json")
             {
                 return false
             }
