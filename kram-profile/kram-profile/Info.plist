@@ -16,7 +16,7 @@
 				<string>vmatrace</string>
 			</array>
 			<key>NSDocumentClass</key>
-			<string>NSDocument</string>
+			<string>KramDocument</string>
 		</dict>
 		<dict>
 			<key>CFBundleTypeName</key>
@@ -30,7 +30,7 @@
 				<string>trace</string>
 			</array>
 			<key>NSDocumentClass</key>
-			<string>NSDocument</string>
+			<string>KramDocument</string>
 		</dict>
 		<dict>
 			<key>CFBundleTypeName</key>
@@ -44,7 +44,7 @@
 				<string>public.json</string>
 			</array>
 			<key>NSDocumentClass</key>
-			<string>NSDocument</string>
+			<string>KramDocument</string>
 		</dict>
 	</array>
 	<key>UTImportedTypeDeclarations</key>

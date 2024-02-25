@@ -522,10 +522,17 @@ func loadFileJS(_ path: String) -> String? {
         // Fix race between page load, and loading the file.  Although
         // page is only loaded once.
         
+        // What if last listener isn't complete, or is doing the postMessage
+        // JS is all running on one thread though?
+        
         // https://jsfiddle.net/vrsofx1p/
         function openTrace(obj)
         {
-            const timer = setInterval(() => window.postMessage('PING', '\(ORIGIN)'), 50);
+            // have already opened and loaded the inwdow
+            const win = window; // .open('\(ORIGIN)');
+            if (!win) { return; }
+        
+            const timer = setInterval(() => win.postMessage('PING', '\(ORIGIN)'), 50);
             
             const onMessageHandler = (evt) => {
                 if (evt.data !== 'PONG') return;
@@ -534,7 +541,8 @@ func loadFileJS(_ path: String) -> String? {
                 window.clearInterval(timer);
                 window.removeEventListener('message', onMessageHandler);
                 
-                window.postMessage(obj,'\(ORIGIN)');
+                // was win, but use window instead
+                win.postMessage(obj,'\(ORIGIN)');
             }
         
             window.addEventListener('message', onMessageHandler);
@@ -572,14 +580,7 @@ func initWebView() -> WKWebView {
     return webView
 }
 
-/*
-// Install this just for appFromURL, need to be associate this app with traces
-// Instead of these see AppDelegate below.
-struct KramDocument: NSDocument {
-    
-    func open(fromURL:)
-}
-*/
+
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     // don't rename params in this class. These are the function signature
@@ -590,18 +591,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // May remove this, using openURL instead. User might drag mulitiple
     // files onto app, so need to handle that case too...
     // when double-clicking files in Finder, this is called
-    func application(_ application: NSApplication, open urls: [URL]) {
-        // TODO: can use this insted of defining Document model
-
-    }
+//    func application(_ application: NSApplication, open urls: [URL]) {
+//        // TODO: can use this insted of defining Document model
+//
+//    }
 }
 
+// Install this just for appFromURL, need to be associate this app with traces
+// Instead of these see AppDelegate below.
+//struct KramDocument: NSDocument {
+//    // when trying to open a file, getting an error that this needed
+//    // readFromData:ofType:error: is a subclass responsibility but has not been overridden.
+//    func read(from data: Data, ofType typeName: String) throws {
+//        // TODO:, but this receives DATA instead of URL?
+//        
+//        return true // if read was success
+//    }
+//}
+
 @main
-struct kram_profileApp: App {
+struct kram_profileApp: App /* DropDelegate */ {
     @State private var files: [File] = []
     @State private var selection: String?
     @State private var firstRequest = true
-   
+    //@State private var dragOver = false
+
     // close app when last windowi s
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     
@@ -621,7 +635,39 @@ struct kram_profileApp: App {
         """
         runJavascript(script)
     }
-            
+           
+    
+    // Here
+    // https://stackoverflow.com/questions/68583357/stumped-on-drag-and-drop-in-swiftui
+    // This doesn't seem to work at all?
+    /*
+    func performDrop(info: DropInfo) -> Bool {
+        
+        if !info.hasItemsConforming(to: droppedFileURLTypes) {
+           return false
+        }
+
+        var urls: [URL] = []
+
+        // This is kind of an annoying api
+        let providers = info.itemProviders(for: droppedFileURLTypes)
+        for provider in providers {
+            for droppedFileURLType in droppedFileURLTypes {
+                provider.loadItem(forTypeIdentifier: droppedFileURLType.identifier, options: nil) { (data, error) in
+                    if let url = data as? String {
+                        // can't filter here, since might be directory
+                        urls.append(URL(string: url)!)
+                    }
+                }
+            }
+        }
+        
+        openFilesFromURLs(urls: urls, mergeFiles: false)
+        return true
+        //return false
+    }
+    */
+    
     func isSupportedFilename(_ url: URL) -> Bool {
       
         // clang build files use genertic .json format
@@ -688,28 +734,41 @@ struct kram_profileApp: App {
                 }
             }
         }
-        
-        // for some reason, their listed out in pretty random order
-        // TODO: add different sorts - id, name, size.  id is default
-        // which is the full url
-        files.sort()
-        
-        print("found \(files.count) files")
-        
+    
         return files
     }
     
-    func openFilesFromURLs(urls: [URL]) {
-        let urls = urls
+    let durationFont = Font
+            .system(size: 12) // not sure what default font size is
+            .monospaced()
+    
+    func openFilesFromURLs(urls: [URL], mergeFiles : Bool = false) {
         if urls.count >= 1 {
             let filesNew = listFilesFromURLs(urls)
             
             // for now wipe the old list
             if filesNew.count > 0 {
-                files = filesNew
+                if mergeFiles {
+                    // TODO: how does this pick which one to keep
+                    files = Array(Set(files + filesNew))
+                }
+                else {
+                    // reset the list
+                    files = filesNew
+                }
+                
+                // for some reason, their listed out in pretty random order
+                // TODO: add different sorts - id, name, size.  id is default
+                // which is the full url
+                files.sort()
+                
+                print("found \(files.count) files")
                 
                 // load first file in the list
-                if files[0].url.isFileURL { selection = files[0].id }
+                // TODO: preserve the original selection if still present
+                if !mergeFiles || selection == nil {
+                    if files[0].url.isFileURL { selection = files[0].id }
+                }
             }
         }
         
@@ -770,10 +829,15 @@ A tool to help profile mem, perf, and builds.
         // .plainText, .zip
         .json, // clang build files
         UTType(filenameExtension:"trace", conformingTo:.data)!,
-        UTType(filenameExtension:"vmatrace", conformingTo:.data)!
+        UTType(filenameExtension:"vmatrace", conformingTo:.data)!,
     ]
     
     // TODO: have
+    let droppedFileURLTypes = [
+        UTType.fileURL, // "public.file-url"
+        // This isn't a url
+        // UTType.folder,  // public.folder
+    ]
     
     var body: some Scene {
         WindowGroup {
@@ -787,10 +851,14 @@ A tool to help profile mem, perf, and builds.
 //                        }
                         
                         HStack() {
+                            Text(generateDuration(file: file))
+                                .frame(maxWidth: 70)
+                                .font(durationFont)
+                            // name gets truncated too soo if it's first
+                            // and try to align the text with trailing
                             Text(generateName(file: file))
                                 .help(file.shortDirectory)
-                            Text(generateDuration(file: file))
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .truncationMode(.tail)
                         }
                     }
                 }
@@ -805,8 +873,56 @@ A tool to help profile mem, perf, and builds.
             .navigationTitle(selection != nil ? shortFilename(selection!) : "")
             .onOpenURL { url in
                 // TODO: this isn't called, find out why?
+                print(url)
+                
                 openFilesFromURLs(urls: [url])
             }
+            .dropDestination(for: URL.self) { (items, _) in
+                // This acutally works!
+                openFilesFromURLs(urls: items, mergeFiles: false)
+                                return true
+            }
+            /*
+             //.onDrop(of:droppedFileURLTypes, delegate:self)
+             // handle drop of files onto app
+             // actually want the url here, so may want to change fileTypes to URL
+             .onDrop(of:droppedFileURLTypes, isTargeted: $dragOver) { providers in
+                // https://stackoverflow.com/questions/60831260/swiftui-drag-and-drop-files
+                var urls: [URL] = []
+                    
+                // TODO: may need to switch to url or file+dirURL
+                    for urlProvider in providers {
+                        for droppedFileURLType in droppedFileURLTypes {
+                            //urlProvider.loadItem(forTypeIdentifier: droppedFileURLType.identifier, options: nil) { (data, error) in
+                            
+                            // This is async
+                           urlProvider.loadDataRepresentation(forTypeIdentifier:
+                                                        droppedFileURLType.identifier, completionHandler: { (data, error) in
+                            if error == nil {
+                
+                                let urlString = String(decoding: data!, as: UTF8.self)
+                                let url = URL(string: urlString)!
+                                
+                                // can't filter here, since might be directory
+                                urls.append(url)
+                            }
+                            else {
+                                // getting case of 7 drops, but only get 6 or less
+                                print(error)
+                            })
+                        }
+                    }
+                }
+               
+            
+                // sometimes gets called with 1-5 files on a drop of 7
+                // This seems to be a Swift bug.  The urls have 7 here, and in the call have 6.
+                openFilesFromURLs(urls: urls, mergeFiles: false)
+                return true
+            }
+             
+            .border(dragOver ? Color.green : Color.clear)
+             */
         }
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
         .commands {
