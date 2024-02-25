@@ -18,6 +18,16 @@ import UniformTypeIdentifiers
 // TODO: add sort mode for name, time and incorporating dir or not
 // TODO: fix the js wait, even with listener, there's still a race
 //    maybe there's some ServiceWorker still loading the previous json?
+// TODO: still getting race condition.  Perfetto is trying to
+//  load the previous file, and we’re sending a new one.
+// TODO: update recent document list
+// TODO: nav title and list item text is set before duration is computed
+//  need some way to update that.
+// TODO: support WindowGroup and multiwindow, each needs own webView, problem
+//   is that onOpenURL opens a new window always.
+// DONE: fn+F doesn't honor fullscreen
+// TODO: be nice to focus the search input on cmd+F just to make me happy.  
+//  Browser goes to its own search which doesn’t help.
 
 func fileModificationDate(url: URL) -> Date? {
     do {
@@ -111,6 +121,8 @@ func lookupFile(url: URL) -> File {
             return fileOld
         }
     }
+    
+    // This wipes the duration, so it can be recomputed
     fileCache[file.url] = file
     
     return file
@@ -145,7 +157,8 @@ func newWebView(request: URLRequest) -> WKWebView {
     return webView
 }
 
-// This is just a glue wrapper to allow WkWebView to interop with SwiftUI
+// This is just an adaptor to allow WkWebView to interop with SwiftUI.
+// It's unclear if WindowGroup can even have this hold state.
 struct MyWKWebView : NSViewRepresentable {
     //let request: URLRequest
     let webView: WKWebView
@@ -316,6 +329,9 @@ struct CatapultEvent: Codable {
     var dur: Int?
     var name: String?
     var args: [String : AnyCodable]?
+    
+    // var tts: Int?
+    // Also can have stack frames
 }
 
 struct CatapultProfile: Codable {
@@ -355,6 +371,31 @@ func loadFileJS(_ path: String) -> String? {
         var perfetto: PerfettoFile
     }
     
+    func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
+        // TODO: need to honor the unit scale (pxSec)
+        var startTime = Int.max
+        var endTime = Int.min
+        
+        for i in 0..<catapultProfile.traceEvents!.count {
+            let event = catapultProfile.traceEvents![i]
+            
+            if event.ts != nil && event.dur != nil {
+                let s = event.ts!
+                let d = event.dur!
+                
+                startTime = min(startTime, s)
+                endTime = max(endTime, s+d)
+            }
+        }
+        
+        if startTime <= endTime {
+            // TODO: for now assume micros
+            file.duration = Double(endTime - startTime) * 1e-6
+            
+            updateFileCache(file: file)
+        }
+    }
+    
     do {
         // use this for binary data, but need to fixup some json before it's sent
         // TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
@@ -371,36 +412,16 @@ func loadFileJS(_ path: String) -> String? {
             // markers.  Multiple frames in a file, then show max frame duration
             // instead of the entire file.
             
-            // walk the file and compute the duration if we don't already have ti
+            // walk the file and compute the duration if we don't already have it
             if file.duration == nil {
                 let decoder = JSONDecoder()
-                
-                var catapultProfile = try decoder.decode(CatapultProfile.self, from: fileContent)
+                let catapultProfile = try decoder.decode(CatapultProfile.self, from: fileContent)
                 
                 if catapultProfile.traceEvents != nil {
-                    // TODO: need to honor the unit scale
-                    var startTime = Double.infinity
-                    var endTime = -Double.infinity
-                    
-                    for i in 0..<catapultProfile.traceEvents!.count {
-                        let event = catapultProfile.traceEvents![i]
-                        
-                        if event.ts != nil && event.dur != nil {
-                            let s = Double(event.ts!)
-                            let d = Double(event.dur!)
-                            
-                            startTime = min(startTime, s)
-                            endTime = max(endTime, s+d)
-                        }
-                    }
-                    
-                    if startTime <= endTime {
-                        // TODO: for now assume ms
-                        file.duration = (endTime - startTime) * 1e-6
-                        
-                        updateFileCache(file: file)
-                    }
+                    return nil
                 }
+                
+                updateDuration(catapultProfile, &file)
             }
         }
         else {
@@ -408,7 +429,7 @@ func loadFileJS(_ path: String) -> String? {
             // That's just for the parse phase, probably need for optimization
             // phase too.  The optimized function names need demangled - ugh.
             
-            // Clang has come build data as durations on fake threads
+            // Clang has some build data as durations on fake threads
             // but those are smaller than the full duration.
             
             let fileContent = try String(contentsOf: fileURL)
@@ -444,32 +465,9 @@ func loadFileJS(_ path: String) -> String? {
                     }
                 }
                 
-                
                 // walk the file and compute the duration if we don't already have ti
                 if file.duration == nil {
-                    
-                    // TODO: need to honor the unit scale
-                    var startTime = Double.infinity
-                    var endTime = -Double.infinity
-                    
-                    for i in 0..<catapultProfile.traceEvents!.count {
-                        let event = catapultProfile.traceEvents![i]
-                        
-                        if event.ts != nil && event.dur != nil {
-                            let s = Double(event.ts!)
-                            let d = Double(event.dur!)
-                            
-                            startTime = min(startTime, s)
-                            endTime = max(endTime, s+d)
-                        }
-                    }
-                    
-                    if startTime <= endTime {
-                        // TODO: for now assume ms
-                        file.duration = (endTime - startTime) * 1e-6
-                        
-                        updateFileCache(file: file)
-                    }
+                    updateDuration(catapultProfile, &file)
                 }
             }
             
@@ -489,7 +487,8 @@ func loadFileJS(_ path: String) -> String? {
             let encodedString = String(decoding: data, as: UTF8.self)
             // TODO: this is droppping {} ?
             perfettoEncode = String(encodedString.dropLast().dropFirst())
-            perfettoEncode = perfettoEncode.replacingOccurrences(of: "\u{2028}", with: "\\u2028")
+            perfettoEncode = perfettoEncode
+                .replacingOccurrences(of: "\u{2028}", with: "\\u2028")
                 .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
         }
         
@@ -554,6 +553,9 @@ func loadFileJS(_ path: String) -> String? {
 
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    // Where to set this
+    var window: NSWindow?
+    
     // don't rename params in this class. These are the function signature
     func applicationShouldTerminateAfterLastWindowClosed(_ application: NSApplication) -> Bool {
         return true
@@ -660,7 +662,7 @@ struct kram_profileApp: App {
         .system(size: 12) // not sure what default font size is
         .monospaced()
     
-    func openFilesFromURLs(urls: [URL], mergeFiles : Bool = false) {
+    func openFilesFromURLs(urls: [URL], mergeFiles : Bool = true) {
         if urls.count >= 1 {
             let filesNew = listFilesFromURLs(urls)
             
@@ -682,16 +684,25 @@ struct kram_profileApp: App {
                 
                 print("found \(files.count) files")
                 
-                // load first file in the list
-                // TODO: preserve the original selection if still present
-                if !mergeFiles || selection == nil {
+                // preserve the original selection if still present
+                if selection != nil {
+                    var found = false
+                    for file in files {
+                        if file.id == selection {
+                            found = true
+                            break;
+                        }
+                    }
+                    
+                    // load first file in the list
+                    if !found {
+                        selection = files[0].id
+                    }
+                }
+                else {
+                    // load first file in the list
                     selection = files[0].id
                 }
-                
-                // Not sure where to set this false, so do it here
-                // this is to avoid reloading the request.  This is to stop
-                // WebView from reloading page.
-                //firstRequest = false
             }
         }
     }
@@ -726,7 +737,7 @@ struct kram_profileApp: App {
             // This should only reload if selection previously loaded
             // to a valid file, or if modstamp changed on current selection
             
-            var str = loadFileJS(sel)
+            let str = loadFileJS(sel)
             if str != nil {
                 runJavascript(webView, str!)
             }
@@ -737,15 +748,15 @@ struct kram_profileApp: App {
             // have to parse timeStart/End from file.  May want that for
             // sorting anyways.
             //
-            // Note have duration on some files now, so could pull that
+            // Note have duration on files now, so could pull that
             // or adjust the timing range across all known durations
             
-            if false {
-                str = showTimeRangeJS(filenameToTimeRange(sel))
-                if str != nil {
-                    runJavascript(webView, str!)
-                }
-            }
+//            if false {
+//                str = showTimeRangeJS(filenameToTimeRange(sel))
+//                if str != nil {
+//                    runJavascript(webView, str!)
+//                }
+//            }
         }
     }
     
@@ -818,8 +829,7 @@ A tool to help profile mem, perf, and builds.
                 MyWKWebView(webView: myWebView)
             }
             .onChange(of: selection) { newState in
-                // TODO: need the webView for this
-                openFileSelection(myWebView)
+               openFileSelection(myWebView)
             }
             // TODO: show duratoin, and selected file here
             .navigationTitle(generateNavigationTitle(selection))
@@ -828,7 +838,7 @@ A tool to help profile mem, perf, and builds.
             }
             .dropDestination(for: URL.self) { (items, _) in
                 // This acutally works!
-                openFilesFromURLs(urls: items, mergeFiles: false)
+                openFilesFromURLs(urls: items)
                 return true
             }
         }
@@ -855,6 +865,14 @@ A tool to help profile mem, perf, and builds.
 //                }
 //                .keyboardShortcut("F")
             }
+            CommandGroup(after: .toolbar) {
+                // must call through NSWindow
+                Button("Toggle Fullscreen") {
+                    // This crashes, since window isn't set in AppDelegate.
+                    // But ena
+                    appDelegate.window?.toggleFullScreen(nil)
+                }
+            }
             CommandGroup(replacing: .appInfo) {
                 Button("About kram-profile") {
                     aboutPanel()
@@ -862,12 +880,5 @@ A tool to help profile mem, perf, and builds.
             }
         }
     }
-    
-    // https://stackoverflow.com/questions/49882933/pass-jsonobject-from-swift4-to-wkwebview-javascript-function
-    
-    // all need a list of files, and File open dialog
-    // For a user folder, find all clang.json files, .trace files, and vma.json files
-    // and then need to send the selected one over to MyWKWebView so it can open
-    // the data from posting a message to the page.
 }
 
