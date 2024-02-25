@@ -401,11 +401,17 @@ func loadFileJS(_ path: String) -> String? {
         // TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
         
         // TODO: Perfetto can only read .gz files, and not .zip files.
-        // But could decode zip files here, and send over uncompressed.
+        // But could decode zip files here, and send over gz compressed.
+        // TODO: add gz compression to all file data.  Use libCompression
+        // but it only has zlib compression.
+        
         
         var fileContentBase64 = ""
         
         let type = filenameToType(fileURL.absoluteString)
+        
+        // perfetto only supports gzip, comments indicate zip is possible but only with refactor
+        let doCompress = true
         
         if type != FileType.Build {
             // This is how Perfetto guesses as to format.  Why no consistent 4 char magic?
@@ -420,6 +426,12 @@ func loadFileJS(_ path: String) -> String? {
             let firstSixChars = fileContentBase64.prefix(6)
             let isJson = firstSixChars == jsonDetector
             
+            // this is gzip format, not a zip archive
+            if doCompress {
+                let compressedData: Data! = fileContent.gzip()
+                fileContentBase64 = compressedData.base64EncodedString()
+            }
+        
             // TODO: for perf traces, compute duration between frame
             // markers.  Multiple frames in a file, then show max frame duration
             // instead of the entire file.
@@ -485,7 +497,15 @@ func loadFileJS(_ path: String) -> String? {
             
             let encoder = JSONEncoder()
             let fileContentFixed = try encoder.encode(catapultProfile)
-            fileContentBase64 = fileContentFixed.base64EncodedString()
+            
+            // gzip compress the data before sending it over
+            if doCompress {
+                let compressedData: Data! = fileContentFixed.gzip()
+                fileContentBase64 = compressedData.base64EncodedString()
+            }
+            else {
+                fileContentBase64 = fileContentFixed.base64EncodedString()
+            }
         }
         
         let perfetto = Perfetto(perfetto: PerfettoFile(buffer: "",
