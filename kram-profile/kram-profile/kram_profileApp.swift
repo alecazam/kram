@@ -111,30 +111,53 @@ func lookupFile(url: URL) -> File {
 func updateFileCache(file: File) {
     fileCache[file.url] = file
 }
-        
-struct MyWKWebView : NSViewRepresentable {
-    // This is set by caller to the url for the request
-    let webView: WKWebView
-    let request: URLRequest
-    let firstRequest: Bool
+  
+
+func newWebView(request: URLRequest) -> WKWebView {
+    // set preference to run javascript on the view, can then do PostMessage
+    let preferences = WKPreferences()
+    //preferences.javaScriptEnabled = true
+    //preferences.allowGPUOptimizedContents = true
     
+    let webpagePreferences = WKWebpagePreferences()
+    webpagePreferences.allowsContentJavaScript = true
+    
+    let configuration = WKWebViewConfiguration()
+    configuration.preferences = preferences
+    configuration.defaultWebpagePreferences = webpagePreferences
+    
+    // here frame is entire screen
+    let webView = WKWebView(frame: .zero, configuration: configuration)
+    
+    // The page is complaining it's going to lose the data if fwd/back hit
+    webView.allowsBackForwardNavigationGestures = false
+   
+    webView.load(request)
+    return webView
+}
+
+// This is just a glue wrapper to allow WkWebView to interop with SwiftUI
+struct MyWKWebView : NSViewRepresentable {
+    //let request: URLRequest
+    let webView: WKWebView
+    
+    // This is set by caller to the url for the request
     func makeNSView(context: Context) -> WKWebView {
         // TODO: hook this up, but need WKScriptMessageHandler protocl
-        //configuration.userContentController.addScriptMessageHandler(..., name: "postMessageListener")
+        //configuration.userContentController.addScriptMessageHandler(..., name: "postMessageListener"
         return webView
     }
     
+    // can get data back from web view
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
        if message.name == "postMessageListener" {
            // Manage your Data
        }
     }
     
+    // This is called to refresh the view
     func updateNSView(_ webView: WKWebView, context: Context) {
-        // The first selection loads, but then subsequent do not
-        if firstRequest {
-            webView.load(request)
-        }
+        
     }
 }
 
@@ -519,27 +542,7 @@ func loadFileJS(_ path: String) -> String? {
     }
 }
 
-func initWebView() -> WKWebView {
-    // set preference to run javascript on the view, can then do PostMessage
-    let preferences = WKPreferences()
-    //preferences.javaScriptEnabled = true
-    //preferences.allowGPUOptimizedContents = true
-    
-    let webpagePreferences = WKWebpagePreferences()
-    webpagePreferences.allowsContentJavaScript = true
-    
-    let configuration = WKWebViewConfiguration()
-    configuration.preferences = preferences
-    configuration.defaultWebpagePreferences = webpagePreferences
-    
-    // here frame is entire screen
-    let webView = WKWebView(frame: .zero, configuration: configuration)
-    
-    // The page is complaining it's going to lose the data if fwd/back hit
-    webView.allowsBackForwardNavigationGestures = false
-    
-    return webView
-}
+
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     // don't rename params in this class. These are the function signature
@@ -553,15 +556,10 @@ struct kram_profileApp: App {
     @State private var files: [File] = []
     @State private var selection: String?
     
-    // only load Perfetto page once
-    @State private var firstRequest = true
-    
     // close app when last window is
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     
-    private var webView = initWebView()
-    
-    func runJavascript(_ script: String) {
+    func runJavascript(_ webView: WKWebView, _ script: String) {
         webView.evaluateJavaScript(script) { (result, error) in
             if error != nil {
                 print("problem running script")
@@ -569,11 +567,11 @@ struct kram_profileApp: App {
         }
     }
             
-    func focusFindTextEdit() {
+    func focusFindTextEdit(_ webView: WKWebView) {
         let script = """
             window.editText.requestFocus();
         """
-        runJavascript(script)
+        runJavascript(webView, script)
     }
     
     func isSupportedFilename(_ url: URL) -> Bool {
@@ -684,7 +682,7 @@ struct kram_profileApp: App {
                 // Not sure where to set this false, so do it here
                 // this is to avoid reloading the request.  This is to stop
                 // WebView from reloading page.
-                firstRequest = false
+                //firstRequest = false
             }
         }
     }
@@ -713,7 +711,7 @@ struct kram_profileApp: App {
         }
     }
     
-    func openFileSelection() {
+    func openFileSelection(_ webView: WKWebView) {
         if let sel = selection {
             
             // This should only reload if selection previously loaded
@@ -721,7 +719,7 @@ struct kram_profileApp: App {
             
             var str = loadFileJS(sel)
             if str != nil {
-                runJavascript(str!)
+                runJavascript(webView, str!)
             }
             
             // now based on the type, set a reasonable range of time
@@ -736,7 +734,7 @@ struct kram_profileApp: App {
             if false {
                 str = showTimeRangeJS(filenameToTimeRange(sel))
                 if str != nil {
-                    runJavascript(str!)
+                    runJavascript(webView, str!)
                 }
             }
         }
@@ -773,8 +771,16 @@ A tool to help profile mem, perf, and builds.
         UTType(filenameExtension:"vmatrace", conformingTo:.data)!,
     ]
        
+    // about hideSideBar
+    // https://github.com/google/perfetto/issues/716
+    @State var myWebView = newWebView(request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!))
+    
     var body: some Scene {
-        WindowGroup {
+        
+        // WindowGroup brings up old windows which isn't really what I want
+        
+        Window("Main", id: "main") {
+        //WindowGroup {
             NavigationSplitView {
                 VStack {
                     List(files, selection:$selection) { file in
@@ -798,12 +804,11 @@ A tool to help profile mem, perf, and builds.
                 }
             }
             detail: {
-                // About hideSidebar
-                // https://github.com/google/perfetto/issues/716
-                MyWKWebView(webView:webView, request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!), firstRequest:firstRequest)
+                MyWKWebView(webView: myWebView)
             }
             .onChange(of: selection) { newState in
-                openFileSelection()
+                // TODO: need the webView for this
+                openFileSelection(myWebView)
             }
             // TODO: show data, and selected file here
             .navigationTitle(selection != nil ? shortFilename(selection!) : "")
@@ -834,7 +839,7 @@ A tool to help profile mem, perf, and builds.
                 // TODO: make it easy to focus the editText in the Pefetto view
 //                Button("Find") {
 //                    if selection != nil {
-//                        focusFindTextEdit();
+//                        focusFindTextEdit(webView);
 //                    }
 //                }
 //                .keyboardShortcut("F")
