@@ -14,9 +14,10 @@ import UniformTypeIdentifiers
 // This is really just a wrapper to turn WKWebView into something SwiftUI
 // can interop with.  SwiftUI has not browser widget.
 
-// TODO: add divider in some sort modes
+// TODO: add bg list color depending on sort
 // TODO: add sort mode for name, time and incorporating dir or not
-// TODO: fix the js wait on the page to load before doing loadFile
+// TODO: fix the js wait, even with listener, there's still a race
+//    maybe there's some ServiceWorker still loading the previous json?
 
 func fileModificationDate(url: URL) -> Date? {
     do {
@@ -115,7 +116,6 @@ struct MyWKWebView : NSViewRepresentable {
     // This is set by caller to the url for the request
     let webView: WKWebView
     let request: URLRequest
-    let selection: String?
     let firstRequest: Bool
     
     func makeNSView(context: Context) -> WKWebView {
@@ -130,48 +130,10 @@ struct MyWKWebView : NSViewRepresentable {
        }
     }
     
-    // two copies of this function
-    func runJavascript(_ webView: WKWebView, _ script: String) {
-        webView.evaluateJavaScript(script) { (result, error) in
-            if error != nil {
-                print("problem running script")
-            }
-        }
-    }
-    
     func updateNSView(_ webView: WKWebView, context: Context) {
-        // DONE: skip reloading the request, it doesn't change?
-        // TODO: add a reload button for the current selection, since Perfetto can't reload
-        
         // The first selection loads, but then subsequent do not
         if firstRequest {
             webView.load(request)
-        }
-        
-        // really need to ping until ui is loaded
-        //sleep(2)
-        
-        if let sel = selection {
-            var str = loadFileJS(sel)
-            if str != nil {
-                runJavascript(webView, str!)
-            }
-            // now based on the type, set a reasonable range of time
-            // don't really want start/end, since we don't know start
-            // works for Flutter, but not for this app.  Also would
-            // have to parse timeStart/End from file.  May want that for
-            // sorting anyways.
-            //
-            // Note have duration on some files now, so could pull that
-            // or adjust the timing range across all known durations
-            
-            if false {
-                str = showTimeRangeJS(filenameToTimeRange(sel))
-                if str != nil {
-                    runJavascript(webView, str!)
-                }
-            }
-            
         }
     }
 }
@@ -305,7 +267,6 @@ func showTimeRangeJS(_ timeRange: TimeRange) -> String? {
             window.postMessage(obj,'\(ORIGIN)');
         """
         
-        //runJavascript(script)
         return script
     }
     catch {
@@ -580,43 +541,22 @@ func initWebView() -> WKWebView {
     return webView
 }
 
-
-
 class AppDelegate: NSObject, NSApplicationDelegate {
     // don't rename params in this class. These are the function signature
     func applicationShouldTerminateAfterLastWindowClosed(_ application: NSApplication) -> Bool {
         return true
     }
-    
-    // May remove this, using openURL instead. User might drag mulitiple
-    // files onto app, so need to handle that case too...
-    // when double-clicking files in Finder, this is called
-//    func application(_ application: NSApplication, open urls: [URL]) {
-//        // TODO: can use this insted of defining Document model
-//
-//    }
 }
 
-// Install this just for appFromURL, need to be associate this app with traces
-// Instead of these see AppDelegate below.
-//struct KramDocument: NSDocument {
-//    // when trying to open a file, getting an error that this needed
-//    // readFromData:ofType:error: is a subclass responsibility but has not been overridden.
-//    func read(from data: Data, ofType typeName: String) throws {
-//        // TODO:, but this receives DATA instead of URL?
-//        
-//        return true // if read was success
-//    }
-//}
-
 @main
-struct kram_profileApp: App /* DropDelegate */ {
+struct kram_profileApp: App {
     @State private var files: [File] = []
     @State private var selection: String?
+    
+    // only load Perfetto page once
     @State private var firstRequest = true
-    //@State private var dragOver = false
-
-    // close app when last windowi s
+    
+    // close app when last window is
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     
     private var webView = initWebView()
@@ -635,38 +575,6 @@ struct kram_profileApp: App /* DropDelegate */ {
         """
         runJavascript(script)
     }
-           
-    
-    // Here
-    // https://stackoverflow.com/questions/68583357/stumped-on-drag-and-drop-in-swiftui
-    // This doesn't seem to work at all?
-    /*
-    func performDrop(info: DropInfo) -> Bool {
-        
-        if !info.hasItemsConforming(to: droppedFileURLTypes) {
-           return false
-        }
-
-        var urls: [URL] = []
-
-        // This is kind of an annoying api
-        let providers = info.itemProviders(for: droppedFileURLTypes)
-        for provider in providers {
-            for droppedFileURLType in droppedFileURLTypes {
-                provider.loadItem(forTypeIdentifier: droppedFileURLType.identifier, options: nil) { (data, error) in
-                    if let url = data as? String {
-                        // can't filter here, since might be directory
-                        urls.append(URL(string: url)!)
-                    }
-                }
-            }
-        }
-        
-        openFilesFromURLs(urls: urls, mergeFiles: false)
-        return true
-        //return false
-    }
-    */
     
     func isSupportedFilename(_ url: URL) -> Bool {
       
@@ -739,8 +647,8 @@ struct kram_profileApp: App /* DropDelegate */ {
     }
     
     let durationFont = Font
-            .system(size: 12) // not sure what default font size is
-            .monospaced()
+        .system(size: 12) // not sure what default font size is
+        .monospaced()
     
     func openFilesFromURLs(urls: [URL], mergeFiles : Bool = false) {
         if urls.count >= 1 {
@@ -767,14 +675,15 @@ struct kram_profileApp: App /* DropDelegate */ {
                 // load first file in the list
                 // TODO: preserve the original selection if still present
                 if !mergeFiles || selection == nil {
-                    if files[0].url.isFileURL { selection = files[0].id }
+                    selection = files[0].id
                 }
+                
+                // Not sure where to set this false, so do it here
+                // this is to avoid reloading the request.  This is to stop
+                // WebView from reloading page.
+                firstRequest = false
             }
         }
-        
-        // Not sure where to set this false, so do it here
-        // this is to avoid reloading the request
-        firstRequest = false
     }
     
     func shortFilename(_ str: String) -> String {
@@ -797,6 +706,35 @@ struct kram_profileApp: App /* DropDelegate */ {
         panel.begin { reponse in
             if reponse == .OK {
                 openFilesFromURLs(urls: panel.urls)
+            }
+        }
+    }
+    
+    func openFileSelection() {
+        if let sel = selection {
+            
+            // This should only reload if selection previously loaded
+            // to a valid file, or if modstamp changed on current selection
+            
+            var str = loadFileJS(sel)
+            if str != nil {
+                runJavascript(str!)
+            }
+            
+            // now based on the type, set a reasonable range of time
+            // don't really want start/end, since we don't know start
+            // works for Flutter, but not for this app.  Also would
+            // have to parse timeStart/End from file.  May want that for
+            // sorting anyways.
+            //
+            // Note have duration on some files now, so could pull that
+            // or adjust the timing range across all known durations
+            
+            if false {
+                str = showTimeRangeJS(filenameToTimeRange(sel))
+                if str != nil {
+                    runJavascript(str!)
+                }
             }
         }
     }
@@ -831,14 +769,7 @@ A tool to help profile mem, perf, and builds.
         UTType(filenameExtension:"trace", conformingTo:.data)!,
         UTType(filenameExtension:"vmatrace", conformingTo:.data)!,
     ]
-    
-    // TODO: have
-    let droppedFileURLTypes = [
-        UTType.fileURL, // "public.file-url"
-        // This isn't a url
-        // UTType.folder,  // public.folder
-    ]
-    
+       
     var body: some Scene {
         WindowGroup {
             NavigationSplitView {
@@ -852,7 +783,7 @@ A tool to help profile mem, perf, and builds.
                         
                         HStack() {
                             Text(generateDuration(file: file))
-                                .frame(maxWidth: 70)
+                                .frame(maxWidth: 70) // setting any lower than 70 makes it disappear
                                 .font(durationFont)
                             // name gets truncated too soo if it's first
                             // and try to align the text with trailing
@@ -866,15 +797,14 @@ A tool to help profile mem, perf, and builds.
             detail: {
                 // About hideSidebar
                 // https://github.com/google/perfetto/issues/716
-                MyWKWebView(webView:webView, request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!), selection:selection, firstRequest:firstRequest)
-                
+                MyWKWebView(webView:webView, request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!), firstRequest:firstRequest)
+            }
+            .onChange(of: selection) { newState in
+                openFileSelection()
             }
             // TODO: show data, and selected file here
             .navigationTitle(selection != nil ? shortFilename(selection!) : "")
             .onOpenURL { url in
-                // TODO: this isn't called, find out why?
-                print(url)
-                
                 openFilesFromURLs(urls: [url])
             }
             .dropDestination(for: URL.self) { (items, _) in
@@ -882,47 +812,6 @@ A tool to help profile mem, perf, and builds.
                 openFilesFromURLs(urls: items, mergeFiles: false)
                                 return true
             }
-            /*
-             //.onDrop(of:droppedFileURLTypes, delegate:self)
-             // handle drop of files onto app
-             // actually want the url here, so may want to change fileTypes to URL
-             .onDrop(of:droppedFileURLTypes, isTargeted: $dragOver) { providers in
-                // https://stackoverflow.com/questions/60831260/swiftui-drag-and-drop-files
-                var urls: [URL] = []
-                    
-                // TODO: may need to switch to url or file+dirURL
-                    for urlProvider in providers {
-                        for droppedFileURLType in droppedFileURLTypes {
-                            //urlProvider.loadItem(forTypeIdentifier: droppedFileURLType.identifier, options: nil) { (data, error) in
-                            
-                            // This is async
-                           urlProvider.loadDataRepresentation(forTypeIdentifier:
-                                                        droppedFileURLType.identifier, completionHandler: { (data, error) in
-                            if error == nil {
-                
-                                let urlString = String(decoding: data!, as: UTF8.self)
-                                let url = URL(string: urlString)!
-                                
-                                // can't filter here, since might be directory
-                                urls.append(url)
-                            }
-                            else {
-                                // getting case of 7 drops, but only get 6 or less
-                                print(error)
-                            })
-                        }
-                    }
-                }
-               
-            
-                // sometimes gets called with 1-5 files on a drop of 7
-                // This seems to be a Swift bug.  The urls have 7 here, and in the call have 6.
-                openFilesFromURLs(urls: urls, mergeFiles: false)
-                return true
-            }
-             
-            .border(dragOver ? Color.green : Color.clear)
-             */
         }
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
         .commands {
