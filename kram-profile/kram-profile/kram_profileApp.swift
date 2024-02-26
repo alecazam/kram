@@ -28,6 +28,13 @@ import UniformTypeIdentifiers
 // DONE: fn+F doesn't honor fullscreen
 // TODO: be nice to focus the search input on cmd+F just to make me happy.
 //  Browser goes to its own search which doesn’t help.
+// TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
+// TODO: Perfetto can only read .gz files, and not .zip files.
+// But could decode zip files here, and send over gz compressed.
+// Would need to idenfity zip archive > 1 file vs. zip single file.
+// DONE: add gz compression to all file data.  Use libCompression
+// but it only has zlib compression.  Use DataCompression which
+// messages zlib deflate to gzip.
 
 func fileModificationDate(url: URL) -> Date? {
     do {
@@ -165,7 +172,7 @@ struct MyWKWebView : NSViewRepresentable {
     
     // This is set by caller to the url for the request
     func makeNSView(context: Context) -> WKWebView {
-        // TODO: hook this up, but need WKScriptMessageHandler protocl
+        // TODO: hook this up, but need WKScriptMessageHandler protocol
         //configuration.userContentController.addScriptMessageHandler(..., name: "postMessageListener"
         return webView
     }
@@ -298,18 +305,40 @@ func showTimeRangeJS(_ timeRange: TimeRange) -> String? {
             let encoder = JSONEncoder()
             let data = try encoder.encode(perfetto)
             let encodedString = String(decoding: data, as: UTF8.self)
-            // TODO: this is droppping {} ?
+            // TODO: is this droppping {} ?, added back below
             perfettoEncode = String(encodedString.dropLast().dropFirst())
             perfettoEncode = perfettoEncode.replacingOccurrences(of: "\u{2028}", with: "\\u2028")
                 .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
         }
         
-        // TODO: this also needs to wait on page to load
         let script = """
             // convert from string -> Uint8Array -> ArrayBuffer
             var obj = JSON.parse('{\(perfettoEncode)}');
         
-            window.postMessage(obj,'\(ORIGIN)');
+            // https://jsfiddle.net/vrsofx1p/
+            function waitForUI(obj)
+            {
+                // have already opened and loaded the inwdow
+                const win = window; // .open('\(ORIGIN)');
+                if (!win) { return; }
+            
+                const timer = setInterval(() => win.postMessage('PING', '\(ORIGIN)'), 50);
+                
+                const onMessageHandler = (evt) => {
+                    if (evt.data !== 'PONG') return;
+                    
+                    // We got a PONG, the UI is ready.
+                    window.clearInterval(timer);
+                    window.removeEventListener('message', onMessageHandler);
+                    
+                    // was win, but use window instead
+                    win.postMessage(obj,'\(ORIGIN)');
+                }
+            
+                window.addEventListener('message', onMessageHandler);
+            }
+                
+            waitForUI(obj);
         """
         
         return script
@@ -398,14 +427,6 @@ func loadFileJS(_ path: String) -> String? {
     
     do {
         // use this for binary data, but need to fixup some json before it's sent
-        // TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
-        
-        // TODO: Perfetto can only read .gz files, and not .zip files.
-        // But could decode zip files here, and send over gz compressed.
-        // TODO: add gz compression to all file data.  Use libCompression
-        // but it only has zlib compression.
-        
-        
         var fileContentBase64 = ""
         
         let type = filenameToType(fileURL.absoluteString)
@@ -550,7 +571,7 @@ func loadFileJS(_ path: String) -> String? {
         // JS is all running on one thread though?
         
         // https://jsfiddle.net/vrsofx1p/
-        function openTrace(obj)
+        function waitForUI(obj)
         {
             // have already opened and loaded the inwdow
             const win = window; // .open('\(ORIGIN)');
@@ -572,7 +593,7 @@ func loadFileJS(_ path: String) -> String? {
             window.addEventListener('message', onMessageHandler);
         }
         
-        openTrace(obj);
+        waitForUI(obj);
         """
         
         return script
@@ -769,7 +790,7 @@ struct kram_profileApp: App {
             // This should only reload if selection previously loaded
             // to a valid file, or if modstamp changed on current selection
             
-            let str = loadFileJS(sel)
+            var str = loadFileJS(sel)
             if str != nil {
                 runJavascript(webView, str!)
             }
@@ -783,12 +804,12 @@ struct kram_profileApp: App {
             // Note have duration on files now, so could pull that
             // or adjust the timing range across all known durations
             
-//            if false {
-//                str = showTimeRangeJS(filenameToTimeRange(sel))
-//                if str != nil {
-//                    runJavascript(webView, str!)
-//                }
-//            }
+            if false {
+                str = showTimeRangeJS(filenameToTimeRange(sel))
+                if str != nil {
+                    runJavascript(webView, str!)
+                }
+            }
         }
     }
     
