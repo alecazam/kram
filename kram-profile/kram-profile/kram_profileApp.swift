@@ -18,6 +18,7 @@ import UniformTypeIdentifiers
 // TODO: add sort mode for name, time and incorporating dir or not
 // TODO: fix the js wait, even with listener, there's still a race
 //    maybe there's some ServiceWorker still loading the previous json?
+//    Perfetto is using a ServiceWorker, Safari uses those now, and ping/pong unware.
 // TODO: still getting race condition.  Perfetto is trying to
 //  load the previous file, and we’re sending a new one.
 // TODO: update recent document list
@@ -29,12 +30,36 @@ import UniformTypeIdentifiers
 // TODO: be nice to focus the search input on cmd+F just to make me happy.
 //  Browser goes to its own search which doesn’t help.
 // TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
-// TODO: Perfetto can only read .gz files, and not .zip files.
-// But could decode zip files here, and send over gz compressed.
-// Would need to idenfity zip archive > 1 file vs. zip single file.
+// DONE: Perfetto can only read .gz files, and not .zip files.
+//   But could decode zip files here, and send over gz compressed.
+//   Would need to idenfity zip archive > 1 file vs. zip single file.
 // DONE: add gz compression to all file data.  Use libCompression
-// but it only has zlib compression.  Use DataCompression which
-// messages zlib deflate to gzip.
+//   but it only has zlib compression.  Use DataCompression which
+//   messages zlib deflate to gzip.
+// TODO: switch font to inter, bundle that with the app?
+//   .environment(\.font, Font.custom("CustomFont", size: 14))
+// TODO: for perf traces, compute duration between frame
+//   markers.  Multiple frames in a file, then show max frame duration
+//   instead of the entire file.
+
+
+// See here about Navigation API
+// https://developer.apple.com/videos/play/wwdc2022/10054/
+
+// This is how open_trace_in_ui.py tells the browser to open a file
+// http://ui.perfetto.dev/#!/?url=http://127.0.0.1:9001/{fname}
+// Then the http server serves up that file to the browser and sets Allow-Origin header.
+
+// https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem
+//https://stackoverflow.com/questions/30106476/using-javascripts-atob-to-decode-base64-doesnt-properly-decode-utf-8-strings
+// https://gist.github.com/chromy/170c11ce30d9084957d7f3aa065e89f8
+// need to post this JavaScript
+
+// https://stackoverflow.com/questions/32113933/how-do-i-pass-a-swift-object-to-javascript-wkwebview-swift
+
+// https://stackoverflow.com/questions/37820666/how-can-i-send-data-from-swift-to-javascript-and-display-them-in-my-web-view
+
+
 
 func fileModificationDate(url: URL) -> Date? {
     do {
@@ -115,6 +140,7 @@ func generateNavigationTitle(_ str: String?) -> String {
 // Note: if a file is deleted which happens often with builds,
 // then want to identify that and update the list.  At least
 // indicate the item is gone, and await its return.
+// Does macOS have a FileWatcher?
 
 var fileCache : [URL:File] = [:]
 
@@ -172,8 +198,6 @@ struct MyWKWebView : NSViewRepresentable {
     
     // This is set by caller to the url for the request
     func makeNSView(context: Context) -> WKWebView {
-        // TODO: hook this up, but need WKScriptMessageHandler protocol
-        //configuration.userContentController.addScriptMessageHandler(..., name: "postMessageListener"
         return webView
     }
     
@@ -193,22 +217,6 @@ struct MyWKWebView : NSViewRepresentable {
 //#Preview {
 //    MyWKWebView()
 //}
-
-// See here about Navigation API
-// https://developer.apple.com/videos/play/wwdc2022/10054/
-
-// This is how open_trace_in_ui.py tells the browser to open a file
-// http://ui.perfetto.dev/#!/?url=http://127.0.0.1:9001/{fname}
-// Then the http server serves up that file to the browser and sets Allow-Origin header.
-
-// https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem
-//https://stackoverflow.com/questions/30106476/using-javascripts-atob-to-decode-base64-doesnt-properly-decode-utf-8-strings
-// https://gist.github.com/chromy/170c11ce30d9084957d7f3aa065e89f8
-// need to post this JavaScript
-
-// https://stackoverflow.com/questions/32113933/how-do-i-pass-a-swift-object-to-javascript-wkwebview-swift
-
-// https://stackoverflow.com/questions/37820666/how-can-i-send-data-from-swift-to-javascript-and-display-them-in-my-web-view
 
 // has to be https to work for some reason, but all data is previewed locally
 var ORIGIN = "https://ui.perfetto.dev"
@@ -305,7 +313,6 @@ func showTimeRangeJS(_ timeRange: TimeRange) -> String? {
             let encoder = JSONEncoder()
             let data = try encoder.encode(perfetto)
             let encodedString = String(decoding: data, as: UTF8.self)
-            // TODO: is this droppping {} ?, added back below
             perfettoEncode = String(encodedString.dropLast().dropFirst())
             perfettoEncode = perfettoEncode.replacingOccurrences(of: "\u{2028}", with: "\\u2028")
                 .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
@@ -359,7 +366,8 @@ struct CatapultEvent: Codable {
     var name: String?
     var args: [String : AnyCodable]?
     
-    // var tts: Int?
+    // var tts: Int? - thread clock timestamp
+    // var cname: String? - color name from table
     // Also can have stack frames
 }
 
@@ -401,7 +409,6 @@ func loadFileJS(_ path: String) -> String? {
     }
     
     func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
-        // TODO: need to honor the unit scale (pxSec)
         var startTime = Int.max
         var endTime = Int.min
         
@@ -418,7 +425,7 @@ func loadFileJS(_ path: String) -> String? {
         }
         
         if startTime <= endTime {
-            // TODO: for now assume micros
+            // for now assume micros
             file.duration = Double(endTime - startTime) * 1e-6
             
             updateFileCache(file: file)
@@ -453,10 +460,6 @@ func loadFileJS(_ path: String) -> String? {
                 fileContentBase64 = compressedData.base64EncodedString()
             }
         
-            // TODO: for perf traces, compute duration between frame
-            // markers.  Multiple frames in a file, then show max frame duration
-            // instead of the entire file.
-            
             // walk the file and compute the duration if we don't already have it
             if isJson && file.duration == nil {
                 let decoder = JSONDecoder()
@@ -538,7 +541,6 @@ func loadFileJS(_ path: String) -> String? {
             let encoder = JSONEncoder()
             let data = try encoder.encode(perfetto)
             let encodedString = String(decoding: data, as: UTF8.self)
-            // TODO: this is droppping {} ?
             perfettoEncode = String(encodedString.dropLast().dropFirst())
             perfettoEncode = perfettoEncode
                 .replacingOccurrences(of: "\u{2028}", with: "\\u2028")
@@ -670,12 +672,6 @@ struct kram_profileApp: App {
     
     func listFilesFromURLs(_ urls: [URL]) -> [File]
     {
-        //print("selected \(url)")
-        
-        // wipe them all
-        // TODO: have mode where the url get added
-        // instead of wiping the array out.  Note FileCache
-        // has cached duration data
         var files: [File] = []
        
         for url in urls {
@@ -699,8 +695,6 @@ struct kram_profileApp: App {
                 }
             }
             else if url.isFileURL {
-                // TODO: list out zip archive
-                
                 let isSupported = isSupportedFilename(url)
                 if isSupported {
                     files.append(lookupFile(url:url))
@@ -711,8 +705,11 @@ struct kram_profileApp: App {
         return files
     }
     
-    let durationFont = Font
-        .system(size: 12) // not sure what default font size is
+    // What is used when Inter isn't installed.  Can this be bundled?
+    let customFont = Font.custom("Inter Variable", size: 14)
+                
+    let durationFont =
+        Font.custom("Inter Variable", size: 14)
         .monospaced()
     
     func openFilesFromURLs(urls: [URL], mergeFiles : Bool = true) {
@@ -722,7 +719,6 @@ struct kram_profileApp: App {
             // for now wipe the old list
             if filesNew.count > 0 {
                 if mergeFiles {
-                    // TODO: how does this pick which one to keep
                     files = Array(Set(files + filesNew))
                 }
                 else {
@@ -824,8 +820,8 @@ A tool to help profile mem, perf, and builds.
 """,
                     
                     attributes: [
-                        NSAttributedString.Key.font: NSFont.boldSystemFont(
-                            ofSize: NSFont.smallSystemFontSize)
+                        // TODO: fix font
+                        NSAttributedString.Key.font: NSFont.boldSystemFont(ofSize: NSFont.smallSystemFontSize)
                     ]
                 ),
                 NSApplication.AboutPanelOptionKey(
@@ -838,7 +834,7 @@ A tool to help profile mem, perf, and builds.
     // DONE: have files ending in .vmatrace, .trace, and .json
     // TODO: archives in the zip file.
     let fileTypes: [UTType] = [
-        // .plainText, .zip
+        // TODO: .zip
         .json, // clang build files
         UTType(filenameExtension:"trace", conformingTo:.data)!,
         UTType(filenameExtension:"vmatrace", conformingTo:.data)!,
@@ -853,7 +849,7 @@ A tool to help profile mem, perf, and builds.
         
         // WindowGroup brings up old windows which isn't really what I want
         
-        Window("Main", id: "main") {
+        Window("Main", id: "main"){
         //WindowGroup {
             NavigationSplitView {
                 VStack {
@@ -884,7 +880,6 @@ A tool to help profile mem, perf, and builds.
             .onChange(of: selection) { newState in
                openFileSelection(myWebView)
             }
-            // TODO: show duratoin, and selected file here
             .navigationTitle(generateNavigationTitle(selection))
             .onOpenURL { url in
                 openFilesFromURLs(urls: [url])
@@ -895,6 +890,7 @@ A tool to help profile mem, perf, and builds.
                 return true
             }
         }
+        .environment(\.font, customFont)
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
         .commands {
             CommandGroup(after: .newItem) {
