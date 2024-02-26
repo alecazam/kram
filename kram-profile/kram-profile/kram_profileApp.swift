@@ -890,7 +890,8 @@ A tool to help profile mem, perf, and builds.
                 return true
             }
         }
-        .environment(\.font, customFont)
+        // This is causing an error on GitHub CI build, but not when building locally
+        //.environment(\.font, customFont)
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
         .commands {
             CommandGroup(after: .newItem) {
