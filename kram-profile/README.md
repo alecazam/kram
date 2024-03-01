@@ -17,17 +17,18 @@ There are pre-built version of kram-profile for macOS 13.0 and higher.
 
 ----------------
 
-TODO:
-* Fix document support, so can double click and have app open files. readFromURL like kramv.
-* Support binary Perfetto traces.  Test with Google sample code.
-* Fixup "Source" tags in clang json to use filename (no extension) from detail field
+TODO: (x are done)
+* x Fix document support, so can double click and have app open files. readFromURL like kramv.
+* x Support binary Perfetto traces.  Test with Google sample code.
+* x Fixup "Source" tags in clang json to use filename (no extension) from detail field
+* x Find start/end time of each json files. 
+* x Support gzip trace files
+* Add frame type for perf traces for vsync ticker (binary format prob has it)
+* Add zip archive support, can drop archive of 1+ traces
 * Tie in with the excellent ClangBuildAnalyzer tool
 * Scale specific traces to a single duration.  That way the next file comes in at that scale. 
 * Move away from Catapult json to own binary format.  Can then translate to json or use the Perfetto SDK to convert to protobufs.
-*
-* Find start/end time of each json files. 
 * Add sort by duration
-* Preserve timeline duration across traces. 
 
 ----------------
 
