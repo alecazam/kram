@@ -36,12 +36,26 @@
 			<key>CFBundleTypeName</key>
 			<string>json</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSHandlerRank</key>
 			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>public.json</string>
+			</array>
+			<key>NSDocumentClass</key>
+			<string>KramDocument</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>gz</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.gnu.gnu-zip-archive</string>
 			</array>
 			<key>NSDocumentClass</key>
 			<string>KramDocument</string>

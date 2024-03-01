@@ -36,12 +36,14 @@ import UniformTypeIdentifiers
 // DONE: add gz compression to all file data.  Use libCompression
 //   but it only has zlib compression.  Use DataCompression which
 //   messages zlib deflate to gzip.
-// TODO: switch font to inter, bundle that with the app?
+// TODO: switch font to Inter, bundle that with the app?
 //   .environment(\.font, Font.custom("CustomFont", size: 14))
 // TODO: for perf traces, compute duration between frame
 //   markers.  Multiple frames in a file, then show max frame duration
 //   instead of the entire file.
-
+// TODO track when files change or get deleted, update the list item then
+//   can disable list items that are deleted in case they return (can still pick if current)
+//   https://developer.apple.com/documentation/coreservices/file_system_events?language=objc
 
 // See here about Navigation API
 // https://developer.apple.com/videos/play/wwdc2022/10054/
@@ -97,6 +99,7 @@ struct File: Identifiable, Hashable, Equatable, Comparable
     
     var duration: Double?
     var modStamp: Date?
+    var loadStamp: Date?
     
     init(url: URL) {
         self.url = url
@@ -107,8 +110,11 @@ struct File: Identifiable, Hashable, Equatable, Comparable
     public static func == (lhs: File, rhs: File) -> Bool {
         return lhs.id == rhs.id
     }
-    static func < (lhs: File, rhs: File) -> Bool {
+    public static func < (lhs: File, rhs: File) -> Bool {
         return lhs.id < rhs.id
+    }
+    public func isReloadNeeded() -> Bool {
+        return modStamp != loadStamp
     }
 }
 
@@ -256,6 +262,9 @@ struct TimeRange {
 }
 
 enum FileType {
+    case Archive // zip of 1+ files, can't enforce
+    case Compressed // gzip of 1 file, can't enforce
+    
     case Build
     case Memory
     case Perf
@@ -263,14 +272,22 @@ enum FileType {
 
 func filenameToType(_ filename: String) -> FileType {
     let url = URL(string: filename)!
-
-    if url.pathExtension == "json" { // build
+    let ext = url.pathExtension
+    
+    if ext == "zip" {
+        return .Archive
+    }
+    if ext == "gz" {
+        return .Compressed
+    }
+    
+    if ext == "json" { // build
         return .Build
     }
-    else if url.pathExtension == "vmatrace" { // memory
+    else if ext == "vmatrace" { // memory
         return .Memory
     }
-    else if url.pathExtension == "trace" { // profile
+    else if ext == "trace" { // profile
         return .Perf
     }
     return .Build
@@ -280,6 +297,8 @@ func filenameToTimeRange(_ filename: String) -> TimeRange {
     var duration = 1.0
     
     switch filenameToType(filename) {
+        case .Archive: fallthrough
+        case .Compressed: fallthrough
         case .Build: duration = 1.0
         case .Memory: duration = 64.0
         case .Perf: duration = 0.1 // 100ms
@@ -438,38 +457,66 @@ func loadFileJS(_ path: String) -> String? {
         
         let type = filenameToType(fileURL.absoluteString)
         
-        // perfetto only supports gzip, comments indicate zip is possible but only with refactor
-        let doCompress = true
+        let isFileGzip = type == .Compressed
+        //let isFileZip = type == .Archive
         
-        if type != FileType.Build {
+        // Note: json.gz and json.zip build files are not marked as Build
+        // but need to rewrite them.
+        var isBuildFile = type == FileType.Build
+        
+        let filename = fileURL.lastPathComponent
+        
+        if filename.hasSuffix("json.gz") || filename.hasSuffix("json.zip") {
+            isBuildFile = true
+        }
+        
+        var fileContent = try Data(contentsOf: fileURL)
+        
+        // decompress archive from zip, since Perfetto can't yet decompress zip
+        if type == .Archive {
+            // unzlib is for a zlib file and not a zip archive,
+            // so need new call.  Have this in kram as C++ helper.
+            // This is unzlib() to avoid confusion.
+            //if guard let unzippedContent = fileContent.unzlib() else {
+                return nil
+            //}
+            //fileContent = unzippedContent
+        }
+        
+        if !isBuildFile {
+            // perfetto only supports gzip, comments indicate zip is possible but only with refactor
+            // don't recompress gzip, note can't do timing if not decompressed
+            let doCompress = !isFileGzip
+            
             // This is how Perfetto guesses as to format.  Why no consistent 4 char magic?
             // https://cs.android.com/android/platform/superproject/main/+/main:external/perfetto/src/trace_processor/forwarding_trace_parser.cc;drc=30039988b8b71541ce97f9fb200c96ba23da79d7;l=176
             
-            let fileContent = try Data(contentsOf: fileURL)
             fileContentBase64 = fileContent.base64EncodedString()
             
-            // see if it's binary or json.  If binary, then can't parse duration below
-            // https://forums.swift.org/t/improving-indexing-into-swift-strings/41450/18
-            let jsonDetector = "ewoiZG" // "{\""
-            let firstSixChars = fileContentBase64.prefix(6)
-            let isJson = firstSixChars == jsonDetector
-            
-            // this is gzip format, not a zip archive
-            if doCompress {
-                let compressedData: Data! = fileContent.gzip()
-                fileContentBase64 = compressedData.base64EncodedString()
-            }
-        
-            // walk the file and compute the duration if we don't already have it
-            if isJson && file.duration == nil {
-                let decoder = JSONDecoder()
-                let catapultProfile = try decoder.decode(CatapultProfile.self, from: fileContent)
+            if !isFileGzip {
+                // see if it's binary or json.  If binary, then can't parse duration below
+                // https://forums.swift.org/t/improving-indexing-into-swift-strings/41450/18
+                let jsonDetector = "ewoiZG" // "{\""
+                let firstSixChars = fileContentBase64.prefix(6)
+                let isJson = firstSixChars == jsonDetector
                 
-                if catapultProfile.traceEvents == nil {
-                    return nil
+                // convert to gzip format, so send less data across to Safari
+                if doCompress {
+                    guard let compressedData: Data = fileContent.gzip() else { return nil }
+                    fileContentBase64 = compressedData.base64EncodedString()
                 }
                 
-                updateDuration(catapultProfile, &file)
+                // walk the file and compute the duration if we don't already have it
+                if isJson && file.duration == nil {
+                    let decoder = JSONDecoder()
+                    let catapultProfile = try decoder.decode(CatapultProfile.self, from: fileContent)
+                    
+                    if catapultProfile.traceEvents == nil {
+                        return nil
+                    }
+                    
+                    updateDuration(catapultProfile, &file)
+                }
             }
         }
         else {
@@ -479,9 +526,23 @@ func loadFileJS(_ path: String) -> String? {
             
             // Clang has some build data as durations on fake threads
             // but those are smaller than the full duration.
+            let doCompress = true
             
-            let fileContent = try String(contentsOf: fileURL)
-            let json = fileContent.data(using: .utf8)!
+            var json : Data
+            
+            if type == .Compressed {
+                guard let unzippedContent = fileContent.gunzip() else {
+                    return nil
+                }
+                json = unzippedContent
+            }
+            else if type == .Archive {
+                // this has already been decoded to json
+                json = fileContent
+            }
+            else {
+                json = fileContent
+            }
             
             let decoder = JSONDecoder()
             var catapultProfile = try decoder.decode(CatapultProfile.self, from: json)
@@ -524,7 +585,7 @@ func loadFileJS(_ path: String) -> String? {
             
             // gzip compress the data before sending it over
             if doCompress {
-                let compressedData: Data! = fileContentFixed.gzip()
+                guard let compressedData = fileContentFixed.gzip() else { return nil }
                 fileContentBase64 = compressedData.base64EncodedString()
             }
             else {
@@ -641,9 +702,20 @@ struct kram_profileApp: App {
     }
     
     func isSupportedFilename(_ url: URL) -> Bool {
-      
-        // clang build files use genertic .json format
-        if url.pathExtension == "json" {
+        let ext = url.pathExtension
+        
+        // what ext does trace.zip, or trace.gz come in as ?
+        // should this limit compressed files to the names supported below - json, trace, vmatrace?
+        
+        if ext == "gz" {
+            return true
+        }
+//        if ext == "zip" {
+//            return true
+//        }
+            
+        // clang build files use generic .json format
+        if ext == "json" {
             let filename = url.lastPathComponent
             
             // filter out some by name, so don't have to open files
@@ -660,11 +732,11 @@ struct kram_profileApp: App {
             return true
         }
         // profiling
-        if url.pathExtension == "trace" {
+        if ext == "trace" {
             return true
         }
         // memory
-        if url.pathExtension == "vmatrace" {
+        if ext == "vmatrace" {
             return true
         }
         return false
@@ -712,7 +784,10 @@ struct kram_profileApp: App {
         Font.custom("Inter Variable", size: 14)
         .monospaced()
     
-    func openFilesFromURLs(urls: [URL], mergeFiles : Bool = true) {
+    func openFilesFromURLs(urls: [URL]) {
+        // turning this off for now
+        let mergeFiles = false
+        
         if urls.count >= 1 {
             let filesNew = listFilesFromURLs(urls)
             
@@ -764,6 +839,12 @@ struct kram_profileApp: App {
     func openContainingFolder(_ str: String) {
         let url = URL(string: str)!
         NSWorkspace.shared.activateFileViewerSelecting([url]);
+    }
+    
+    func isReloadEnabled(_ selection: String?) -> Bool {
+        guard let sel = selection else { return false }
+        let file = lookupFile(url:URL(string: sel)!)
+        return file.isReloadNeeded()
     }
     
     func openFile() {
@@ -833,10 +914,21 @@ A tool to help profile mem, perf, and builds.
     
     // DONE: have files ending in .vmatrace, .trace, and .json
     // TODO: archives in the zip file.
+    
     let fileTypes: [UTType] = [
-        // TODO: .zip
+        // single-file zip, not dealing with archives yet, but have C++ code to
+        // This is what macOS generates when doing "compress file".  But could be archive.
+        // These are 12x smaller often times.  Decompression lib only handles zlib.
+        // TODO: need zip archive util to extract the 1+ files, can still use libCompression to decompress
+        // .zip,
+       
+        // Perfetto can only open gzip and not zip yet
+        // These are 12x smaller often times
+        .gzip,
+              
+        // A mix of json or binary format files
         .json, // clang build files
-        UTType(filenameExtension:"trace", conformingTo:.data)!,
+        UTType(filenameExtension:"trace", conformingTo:.data)!, // conformingTo: .json didn't work
         UTType(filenameExtension:"vmatrace", conformingTo:.data)!,
     ]
        
@@ -900,12 +992,21 @@ A tool to help profile mem, perf, and builds.
                 }
                 .keyboardShortcut("O")
                 
+                // Really want to go to .h selected in flamegraph, but that would violate sandbox.
+                // This just goes to the trace json file somewhere in DerviceData which is less useful.
+                // For selected file can only put on clipboard.
                 Button("Go to File") {
                     if selection != nil {
                         openContainingFolder(selection!);
                     }
                 }
                 .keyboardShortcut("G")
+                
+                Button("Reload File") {
+                    openFileSelection(myWebView)
+                }
+                .keyboardShortcut("R")
+                .disabled(!isReloadEnabled(selection))
                 
                 // TODO: make it easy to focus the editText in the Pefetto view
 //                Button("Find") {

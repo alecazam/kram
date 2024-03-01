@@ -12,6 +12,7 @@
 ///                Apache License, Version 2.0
 ///
 ///  Copyright 2016, Markus Wanke
+///  https://github.com/mw99/DataCompression?tab=readme-ov-file
 ///
 ///  Licensed under the Apache License, Version 2.0 (the "License");
 ///  you may not use this file except in compliance with the License.
@@ -93,7 +94,7 @@ public extension Data
     /// Compresses the data using the deflate algorithm and makes it comply to the zlib format.
     /// - returns: deflated data in zlib format [RFC-1950](https://tools.ietf.org/html/rfc1950)
     /// - note: Fixed at compression level 5 (best trade off between speed and time)
-    func zip() -> Data?
+    func zlib() -> Data?
     {
         let header = Data([0x78, 0x5e])
         
@@ -113,7 +114,7 @@ public extension Data
     /// Decompresses the data using the zlib deflate algorithm. Self is expected to be a zlib deflate
     /// stream according to [RFC-1950](https://tools.ietf.org/html/rfc1950).
     /// - returns: uncompressed data
-    func unzip(skipCheckSumValidation: Bool = true) -> Data?
+    func unzlib(skipCheckSumValidation: Bool = true) -> Data?
     {
         // 2 byte header + 4 byte adler32 checksum
         let overhead = 6
