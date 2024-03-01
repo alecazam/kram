@@ -113,6 +113,11 @@ struct File: Identifiable, Hashable, Equatable, Comparable
     public static func < (lhs: File, rhs: File) -> Bool {
         return lhs.id < rhs.id
     }
+    
+    // call this when the file is loaded
+    public mutating func setLoadStamp()  {
+        loadStamp = modStamp
+    }
     public func isReloadNeeded() -> Bool {
         return modStamp != loadStamp
     }
@@ -870,6 +875,10 @@ struct kram_profileApp: App {
             var str = loadFileJS(sel)
             if str != nil {
                 runJavascript(webView, str!)
+                
+                var file = lookupFile(url: URL(string: sel)!)
+                file.setLoadStamp()
+                updateFileCache(file: file)
             }
             
             // now based on the type, set a reasonable range of time
