@@ -275,6 +275,19 @@ import std.regex;
 #include <unordered_map>
 #include <vector>
 
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+#include <chrono>
+#include <random>
+
+#include <cstdlib>
+//#include <exception>
+#include <type_traits>
+#include <typeinfo>
+#include <utility>
+#include <filesystem>
+#include <variant>
 
 #endif
 

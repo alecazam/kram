@@ -419,7 +419,7 @@ withCurrentSearchString:(NSString *)searchString
 }
 
 // this isn't filtered by the document types specified, NSDocumentController?
-// added public.folder instead, this would nedd to call readFromURL
+// added public.folder instead, this would need to call readFromURL
 - (IBAction)openDocument:(id)sender
 {
     // need to implement, or default NSOpenPanel can't specify a directory
@@ -494,7 +494,7 @@ withCurrentSearchString:(NSString *)searchString
 
     // want to embed the git tag here
     options[@"Copyright"] =
-        [NSString stringWithUTF8String:"kram ©2020-2023 by Alec Miller"];
+        [NSString stringWithUTF8String:"kram ©2020-2024 by Alec Miller"];
 
     // add a link to kram website, skip the Visit text
     NSMutableAttributedString* str = [[NSMutableAttributedString alloc]
