@@ -15,6 +15,7 @@
 		705F68E32B87EB8000437FAA /* AnyEncodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68E02B87EB8000437FAA /* AnyEncodable.swift */; };
 		705F68E52B89907700437FAA /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 705F68E42B89907700437FAA /* README.md */; };
 		705F68E72B8BEB7100437FAA /* DataCompression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68E62B8BEB7000437FAA /* DataCompression.swift */; };
+		705F68E92B9451CC00437FAA /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68E82B9451CC00437FAA /* Log.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +30,7 @@
 		705F68E02B87EB8000437FAA /* AnyEncodable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyEncodable.swift; sourceTree = "<group>"; };
 		705F68E42B89907700437FAA /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		705F68E62B8BEB7000437FAA /* DataCompression.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataCompression.swift; sourceTree = "<group>"; };
+		705F68E82B9451CC00437FAA /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +70,7 @@
 				705F68DE2B87EB8000437FAA /* AnyDecodable.swift */,
 				705F68E02B87EB8000437FAA /* AnyEncodable.swift */,
 				705F68E62B8BEB7000437FAA /* DataCompression.swift */,
+				705F68E82B9451CC00437FAA /* Log.swift */,
 				705F68D52B820AD200437FAA /* kram_profile.entitlements */,
 				705F68E42B89907700437FAA /* README.md */,
 				705F68D22B820AD200437FAA /* Preview Content */,
@@ -156,6 +159,7 @@
 			files = (
 				705F68E12B87EB8000437FAA /* AnyDecodable.swift in Sources */,
 				705F68E32B87EB8000437FAA /* AnyEncodable.swift in Sources */,
+				705F68E92B9451CC00437FAA /* Log.swift in Sources */,
 				705F68E22B87EB8000437FAA /* AnyCodable.swift in Sources */,
 				705F68CD2B820AD100437FAA /* kram_profileApp.swift in Sources */,
 				705F68E72B8BEB7100437FAA /* DataCompression.swift in Sources */,

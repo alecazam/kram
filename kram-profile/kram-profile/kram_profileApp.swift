@@ -14,7 +14,7 @@ import UniformTypeIdentifiers
 // This is really just a wrapper to turn WKWebView into something SwiftUI
 // can interop with.  SwiftUI has not browser widget.
 
-// TODO: add bg list color depending on sort
+// DONE: add bg list color depending on sort
 // TODO: add sort mode for name, time and incorporating dir or not
 // TODO: fix the js wait, even with listener, there's still a race
 //    maybe there's some ServiceWorker still loading the previous json?
@@ -22,6 +22,7 @@ import UniformTypeIdentifiers
 // TODO: still getting race condition.  Perfetto is trying to
 //  load the previous file, and we’re sending a new one.
 // TODO: update recent document list
+// TODO: have a way to reload dropped folder (not just subfiles)
 // TODO: nav title and list item text is set before duration is computed
 //  need some way to update that.
 // TODO: support WindowGroup and multiwindow, each needs own webView, problem
@@ -74,6 +75,8 @@ import UniformTypeIdentifiers
 
 // Dealing with available and Swift and SwiftUI.  Ugh.
 // https://www.swiftyplace.com/blog/swift-available#:~:text=Conditional%20Handling%20with%20if%20%23available&text=If%20the%20device%20is%20running%20an%20earlier%20version%20of%20iOS,a%20fallback%20for%20earlier%20versions.
+
+private let log = Log("kram-profile")
 
 
 func fileModificationDate(url: URL) -> Date? {
@@ -291,7 +294,7 @@ extension String {
 
     
 extension View {
-    public func possiblySearchable<S>(text: Binding<String>, isPresented: Binding<Bool>, placement: SearchFieldPlacement = .automatic, prompt: S) -> some View where S : StringProtocol {
+    public func searchableOptional<S>(text: Binding<String>, isPresented: Binding<Bool>, placement: SearchFieldPlacement = .automatic, prompt: S) -> some View where S : StringProtocol {
         if #available(macOS 14.0, *) {
             return self.searchable(text: text, isPresented: isPresented, placement:
                         .sidebar, prompt: prompt)
@@ -300,6 +303,18 @@ extension View {
             return self
         }
     }
+    
+    /*
+    // This one is hard to wrap, since KeyPress.result is macOS 14.0 only
+    public func onKeyPressOptional(_ key: KeyEquivalent, action: @escaping () -> KeyPress.Result) -> some View {
+        if #available(macOS 14.0, *) {
+            return onKeyPress(.upArrow, action: action)
+        }
+        else {
+            return self
+        }
+    }
+    */
 }
 
 // What if the start time in the file isn't 0.0 based for the start
@@ -420,7 +435,7 @@ func showTimeRangeJS(_ timeRange: TimeRange) -> String? {
         return script
     }
     catch {
-        print(error)
+        log.error(error.localizedDescription)
         return nil
     }
 }
@@ -455,8 +470,7 @@ func loadFileJS(_ path: String) -> String? {
     // Note may need to modify directly
     var file = lookupFile(url: fileURL)
     
-    // print(path)
-    
+    log.debug(path)
     
     // https://stackoverflow.com/questions/62035494/how-to-call-postmessage-in-wkwebview-to-js
     struct PerfettoFile: Codable {
@@ -711,7 +725,7 @@ func loadFileJS(_ path: String) -> String? {
         
         return script
     } catch {
-      print(error)
+        log.error(error.localizedDescription)
         return nil
     }
 }
@@ -739,7 +753,7 @@ struct kram_profileApp: App {
     func runJavascript(_ webView: WKWebView, _ script: String) {
         webView.evaluateJavaScript(script) { (result, error) in
             if error != nil {
-                print("problem running script")
+                log.error("problem running script")
             }
         }
     }
@@ -849,7 +863,7 @@ struct kram_profileApp: App {
                 // which is the full url
                 files.sort()
                 
-                print("found \(files.count) files")
+                log.debug("found \(files.count) files")
                 
                 // preserve the original selection if still present
                 if selection != nil {
@@ -1134,7 +1148,25 @@ A tool to help profile mem, perf, and builds.
                 //.focusable()
                 //.focused($focusedField, equals: .webView)
             }
-            .possiblySearchable(text: $searchText, isPresented: $searchIsActive, placement: .sidebar, prompt: "Filter")
+            .searchableOptional(text: $searchText, isPresented: $searchIsActive, placement: .sidebar, prompt: "Filter")
+            
+            /* this wrapper doesn't work
+            // need these macOS 14 calls to advance the list when list is closed
+            .onKeyPressOptional(.upArrow, action: {
+                if focusedField == .webView {
+                    //$selection = selectFile(selection, false)
+                    return .handled
+                }
+                return .ignored
+            })
+            .onKeyPressOptional(.upArrow, action: {
+                if focusedField == .webView {
+                    //$selection = selectFile(selection, false)
+                    return .handled
+                }
+                return .ignored
+            })
+            */
             
             .onChange(of: selection /*, initial: true*/) { newState in
                 openFileSelection(myWebView)
