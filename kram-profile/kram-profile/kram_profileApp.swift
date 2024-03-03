@@ -41,6 +41,11 @@ import UniformTypeIdentifiers
 // TODO: for perf traces, compute duration between frame
 //   markers.  Multiple frames in a file, then show max frame duration
 //   instead of the entire file.
+// TODO: can't type ahead search in the list while the webview is loading (f.e. e will advance)
+//    but arrow keys work to move to next
+// TODO: can't overide "delete" key doing a back in the WKWebView history
+//    Perfetto warns that content will be lost
+// TODO: list view type ahead search doesn't work unless name is the first Text entry
 // TODO track when files change or get deleted, update the list item then
 //   can disable list items that are deleted in case they return (can still pick if current)
 //   https://developer.apple.com/documentation/coreservices/file_system_events?language=objc
@@ -62,6 +67,10 @@ import UniformTypeIdentifiers
 // https://stackoverflow.com/questions/32113933/how-do-i-pass-a-swift-object-to-javascript-wkwebview-swift
 
 // https://stackoverflow.com/questions/37820666/how-can-i-send-data-from-swift-to-javascript-and-display-them-in-my-web-view
+
+// Dealing with available and Swift and SwiftUI.  Ugh.
+// https://www.swiftyplace.com/blog/swift-available#:~:text=Conditional%20Handling%20with%20if%20%23available&text=If%20the%20device%20is%20running%20an%20earlier%20version%20of%20iOS,a%20fallback%20for%20earlier%20versions.
+
 
 func fileModificationDate(url: URL) -> Date? {
     do {
@@ -101,9 +110,6 @@ struct File: Identifiable, Hashable, Equatable, Comparable
     var duration: Double?
     var modStamp: Date?
     var loadStamp: Date?
-    
-    // alter the list color based on comparison
-    var colorizeBackground = false
     
     init(url: URL) {
         self.url = url
@@ -279,6 +285,18 @@ extension String {
 }
 
     
+extension View {
+    public func possiblySearchable<S>(text: Binding<String>, isPresented: Binding<Bool>, placement: SearchFieldPlacement = .automatic, prompt: S) -> some View where S : StringProtocol {
+        if #available(macOS 14.0, *) {
+            return self.searchable(text: text, isPresented: isPresented, placement:
+                        .sidebar, prompt: prompt)
+        }
+        else {
+            return self
+        }
+    }
+}
+
 // What if the start time in the file isn't 0.0 based for the start
 struct TimeRange {
     var timeStart: Double = 0.0
@@ -847,24 +865,6 @@ struct kram_profileApp: App {
                     // load first file in the list
                     selection = files[0].id
                 }
-                
-                // update the colorize setting
-                // this is to avoid dividers and give context about per dir sorting
-                files[0].colorizeBackground = false
-                updateFileCache(file:files[0])
-                
-                for i in 1..<files.count {
-                    let file = files[i]
-                    
-                    var colorizeBackground = false
-                    if file.url.path != files[i-1].url.path {
-                        colorizeBackground = true
-                    }
-                    // change the struct and update the cache
-                    files[i].colorizeBackground = colorizeBackground
-                    updateFileCache(file:files[i])
-                }
-                
             }
         }
     }
@@ -1008,7 +1008,6 @@ A tool to help profile mem, perf, and builds.
     @State private var searchText: String = ""
     @State private var searchIsActive = false
     var searchResults: [File] {
-        //print(searchText)
         if searchText.isEmpty {
             return files
         }
@@ -1032,13 +1031,52 @@ A tool to help profile mem, perf, and builds.
         }
     }
 
+    /* These are also macOS 14, using Extension form
+    
+    @ViewBuilder func MyNavigationSplitView() -> some View {
+        if #available(macOS 14.0, *) {
+            NavigationSplitView()
+            .searchable(text: $searchText, isPresented: $searchIsActive, placement:
+                    .sidebar, prompt: "Filter")
+            
+            .onKeyPress(.upArrow, action: {
+                // don't change focus, just advance the selection
+                if focusedField == .webView {
+                    //$selection = selectFile(selection, false)
+                    return .handled
+                }
+                return .ignored
+            })
+            .onKeyPress(.downArrow, action: {
+                if focusedField == .webView {
+                    //$selection = selectFile(selection, false)
+                    return .handled
+                }
+                return .ignored
+            })
+            .onKeyPress(.delete, action: {
+                // block this so WKWebView doesn't page back
+                if focusedField == .webView {
+                    // Unlcar if this should be 0 or 1
+                    myWebView.go(to: myWebView.backForwardList.item(at:0)!)
+                }
+                return .handled
+            })
+            
+        }
+        else {
+            NavigationSplitView()
+        }
+    }
+    */
+    
     var body: some Scene {
         
         // WindowGroup brings up old windows which isn't really what I want
     
-        Window("Main", id: "main"){
+        Window("Main", id: "main") {
         //WindowGroup {
-            NavigationSplitView {
+            NavigationSplitView() {
                 VStack {
                     List(searchResults, selection:$selection) { file in
                         // compare to previous file (use active sort comparator)
@@ -1063,10 +1101,9 @@ A tool to help profile mem, perf, and builds.
                                 .font(durationFont)
                             
                         }
-                        // This messes up color highlighting, and is all black
-                        //.listRowBackground(file.colorizeBackground ? Color.pink : Color.black)
+                        .listRowSeparatorTint(.red)
+                        
                     }
-                    
                     //.focused($focusedField, equals: .listView)
                 }
                 //.focusable(false)
@@ -1076,46 +1113,9 @@ A tool to help profile mem, perf, and builds.
                 //.focusable()
                 //.focused($focusedField, equals: .webView)
             }
-            // This searchText seems to ignore focus tab
-            .searchable(text: $searchText, isPresented: $searchIsActive, placement: .sidebar, prompt: "Filter")
+            .possiblySearchable(text: $searchText, isPresented: $searchIsActive, placement: .sidebar, prompt: "Filter")
             
-            // Need to do this, but don't know how.
-            // Other than to bump the version.  This is also more @ViewBuilder
-            // extension function syntax.
-            
-            /* These don't really work anyways
-            //if #available(macOS 14.0, *) {
-                .onKeyPress(.upArrow, action: {
-                    // don't change focus, just advance the selection
-                    if focusedField == .webView {
-                        //$selection = selectFile(selection, false)
-                        return .handled
-                    }
-                    return .ignored
-                })
-                .onKeyPress(.downArrow, action: {
-                    if focusedField == .webView {
-                        //$selection = selectFile(selection, false)
-                        return .handled
-                    }
-                    return .ignored
-                })
-                .onKeyPress(.delete, action: {
-                    // block this so WKWebView doesn't page back
-                    if focusedField == .webView {
-                        // Unlcar if this should be 0 or 1
-                        myWebView.go(to: myWebView.backForwardList.item(at:0)!)
-                    }
-                    return .handled
-                })
-//            }
-//            else {
-//                self
-//            }
-//
-             */
-            
-            .onChange(of: selection) { newState in
+            .onChange(of: selection /*, initial: true*/) { newState in
                 openFileSelection(myWebView)
                 focusedField = .webView
             }
