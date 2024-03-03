@@ -44,6 +44,8 @@ import UniformTypeIdentifiers
 // TODO track when files change or get deleted, update the list item then
 //   can disable list items that are deleted in case they return (can still pick if current)
 //   https://developer.apple.com/documentation/coreservices/file_system_events?language=objc
+// TODO: here's how to sign builds for GitHub Actions
+// https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
 
 // See here about Navigation API
 // https://developer.apple.com/videos/play/wwdc2022/10054/
@@ -60,8 +62,6 @@ import UniformTypeIdentifiers
 // https://stackoverflow.com/questions/32113933/how-do-i-pass-a-swift-object-to-javascript-wkwebview-swift
 
 // https://stackoverflow.com/questions/37820666/how-can-i-send-data-from-swift-to-javascript-and-display-them-in-my-web-view
-
-
 
 func fileModificationDate(url: URL) -> Date? {
     do {
@@ -90,6 +90,7 @@ func buildShortDirectory(url: URL) -> String {
     return str
 }
 
+// TODO: may want to make a class.
 struct File: Identifiable, Hashable, Equatable, Comparable
 {
     var id: String { url.absoluteString }
@@ -100,6 +101,9 @@ struct File: Identifiable, Hashable, Equatable, Comparable
     var duration: Double?
     var modStamp: Date?
     var loadStamp: Date?
+    
+    // alter the list color based on comparison
+    var colorizeBackground = false
     
     init(url: URL) {
         self.url = url
@@ -223,8 +227,26 @@ struct MyWKWebView : NSViewRepresentable {
     func updateNSView(_ webView: WKWebView, context: Context) {
         
     }
+    
+    // Here's sample code to do a screenshot, can this use actual dimensions
+    // https://nshipster.com/wkwebview/
+//    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!)
+//    {
+//        var snapshotConfiguration = WKSnapshotConfiguration()
+//        snapshotConfiguration.snapshotWidth = 1440
+//
+//        webView.takeSnapshot(with: snapshotConfiguration) { (image, error) in
+//            guard let image = image, error == nil else {
+//                return
+//            }
+//
+//            // TODO: save out the image
+//        }
+//    }
+    
 }
 
+// TODO: fix the previewz
 //#Preview {
 //    MyWKWebView()
 //}
@@ -698,14 +720,7 @@ struct kram_profileApp: App {
             }
         }
     }
-            
-    func focusFindTextEdit(_ webView: WKWebView) {
-        let script = """
-            window.editText.requestFocus();
-        """
-        runJavascript(webView, script)
-    }
-    
+     
     func isSupportedFilename(_ url: URL) -> Bool {
         let ext = url.pathExtension
         
@@ -832,6 +847,24 @@ struct kram_profileApp: App {
                     // load first file in the list
                     selection = files[0].id
                 }
+                
+                // update the colorize setting
+                // this is to avoid dividers and give context about per dir sorting
+                files[0].colorizeBackground = false
+                updateFileCache(file:files[0])
+                
+                for i in 1..<files.count {
+                    let file = files[i]
+                    
+                    var colorizeBackground = false
+                    if file.url.path != files[i-1].url.path {
+                        colorizeBackground = true
+                    }
+                    // change the struct and update the cache
+                    files[i].colorizeBackground = colorizeBackground
+                    updateFileCache(file:files[i])
+                }
+                
             }
         }
     }
@@ -940,21 +973,74 @@ A tool to help profile mem, perf, and builds.
         UTType(filenameExtension:"trace", conformingTo:.data)!, // conformingTo: .json didn't work
         UTType(filenameExtension:"vmatrace", conformingTo:.data)!,
     ]
-       
+    
+    func selectFile(_ selection: String?, _ advanceList: Bool) -> String? {
+        guard let sel = selection else { return nil }
+        if files.count == 1 { return selection }
+        
+        var index = 0
+        for i in 0..<files.count {
+            let file = files[i]
+            if file.id == sel {
+                index = i
+                break
+            }
+        }
+        
+        index = (index + files.count + (advanceList == true ? 1:-1)) % files.count
+        return files[index].id
+    }
+    
     // about hideSideBar
     // https://github.com/google/perfetto/issues/716
     // Allocating here only works for a single Window, not for WindowGroup
     @State var myWebView = newWebView(request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!))
     
+    enum Field: Hashable {
+        case webView
+        //case listView
+    }
+    @FocusState private var focusedField: Field?
+
+    // https://developer.apple.com/documentation/swiftui/adding-a-search-interface-to-your-app
+    // can filter list items off this
+    // Rename to filterText, ...
+    @State private var searchText: String = ""
+    @State private var searchIsActive = false
+    var searchResults: [File] {
+        //print(searchText)
+        if searchText.isEmpty {
+            return files
+        }
+        else if searchText.count == 1 {
+            // Some items with k in the rest of the name will be filtered
+            // but will appear with more characters
+            let lowercaseSearchText = searchText.lowercased()
+            let uppercaseSearchText = searchText.uppercased()
+            
+            return files.filter {
+                $0.name.starts(with: uppercaseSearchText) ||
+                $0.name.starts(with: lowercaseSearchText)
+            }
+        }
+        else {
+            // TODO: should be case insensitive
+            return files.filter {
+                // Here use the name, or else the directory will have say "kram" in it
+                $0.name.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
+
     var body: some Scene {
         
         // WindowGroup brings up old windows which isn't really what I want
-        
+    
         Window("Main", id: "main"){
         //WindowGroup {
             NavigationSplitView {
                 VStack {
-                    List(files, selection:$selection) { file in
+                    List(searchResults, selection:$selection) { file in
                         // compare to previous file (use active sort comparator)
                         // if it differs, then toggle the button bg colors
 //                        if lastUrl && url.path != lastUrl!.path {
@@ -962,32 +1048,86 @@ A tool to help profile mem, perf, and builds.
 //                        }
                         
                         HStack() {
-                            Text(generateDuration(file: file))
-                                .frame(maxWidth: 70)
-                                //.alignment(.trailing)
-                                .font(durationFont)
+                            // If number is first, then that's all SwiftUI
+                            // uses for typeahead search.
+                            
                             // name gets truncated too soo if it's first
                             // and try to align the text with trailing
                             Text(generateName(file: file))
                                 .help(file.shortDirectory)
                                 .truncationMode(.tail)
+                            
+                            Text(generateDuration(file: file))
+                                .frame(maxWidth: 70)
+                                //.alignment(.trailing)
+                                .font(durationFont)
+                            
                         }
+                        // This messes up color highlighting, and is all black
+                        //.listRowBackground(file.colorizeBackground ? Color.pink : Color.black)
                     }
+                    
+                    //.focused($focusedField, equals: .listView)
                 }
+                //.focusable(false)
             }
             detail: {
                 MyWKWebView(webView: myWebView)
+                //.focusable()
+                //.focused($focusedField, equals: .webView)
             }
+            // This searchText seems to ignore focus tab
+            .searchable(text: $searchText, isPresented: $searchIsActive, placement: .sidebar, prompt: "Filter")
+            
+            // Need to do this, but don't know how.
+            // Other than to bump the version.  This is also more @ViewBuilder
+            // extension function syntax.
+            
+            /* These don't really work anyways
+            //if #available(macOS 14.0, *) {
+                .onKeyPress(.upArrow, action: {
+                    // don't change focus, just advance the selection
+                    if focusedField == .webView {
+                        //$selection = selectFile(selection, false)
+                        return .handled
+                    }
+                    return .ignored
+                })
+                .onKeyPress(.downArrow, action: {
+                    if focusedField == .webView {
+                        //$selection = selectFile(selection, false)
+                        return .handled
+                    }
+                    return .ignored
+                })
+                .onKeyPress(.delete, action: {
+                    // block this so WKWebView doesn't page back
+                    if focusedField == .webView {
+                        // Unlcar if this should be 0 or 1
+                        myWebView.go(to: myWebView.backForwardList.item(at:0)!)
+                    }
+                    return .handled
+                })
+//            }
+//            else {
+//                self
+//            }
+//
+             */
+            
             .onChange(of: selection) { newState in
-               openFileSelection(myWebView)
+                openFileSelection(myWebView)
+                focusedField = .webView
             }
             .navigationTitle(generateNavigationTitle(selection))
             .onOpenURL { url in
                 openFilesFromURLs(urls: [url])
+                focusedField = .webView
             }
             .dropDestination(for: URL.self) { (items, _) in
                 // This acutally works!
                 openFilesFromURLs(urls: items)
+                focusedField = .webView
                 return true
             }
         }
@@ -1017,20 +1157,33 @@ A tool to help profile mem, perf, and builds.
                 .keyboardShortcut("R")
                 .disabled(!isReloadEnabled(selection))
                 
-                // TODO: make it easy to focus the editText in the Pefetto view
-//                Button("Find") {
-//                    if selection != nil {
-//                        focusFindTextEdit(myWebView);
-//                    }
-//                }
-//                .keyboardShortcut("F")
+            
+                // TODO: these may need to be attached to detail view
+                // The list view eats them, and doesn't fwd onto the web view
+                
+                // Can see the commands.  Wish I could remap this.
+                // https://github.com/google/perfetto/blob/98921c2a0c99fa8e97f5e6c369cc3e16473c695e/ui/src/frontend/app.ts#L718
+                // Perfetto Command
+                Button("Search") {
+                    // Don't need to do anything
+                }
+                .keyboardShortcut("S")
+                .disabled(selection != nil)
+                          
+                // Perfetto command
+                Button("Parse Command") {
+                    // don't need to do anything
+                }
+                .keyboardShortcut("P", modifiers:[.shift, .command])
+                .disabled(selection != nil) // what if selection didn't load
             }
             CommandGroup(after: .toolbar) {
-                // must call through NSWindow
+                // TODO: this automatically inserts the fn+F menu item
+                // which is then redundant with this menu item that lack the shortcut
                 Button("Toggle Fullscreen") {
-                    // This crashes, since window isn't set in AppDelegate.
-                    // But ena
-                    appDelegate.window?.toggleFullScreen(nil)
+                    Task { @MainActor in
+                        NSApplication.shared.windows.last?.toggleFullScreen(nil)
+                    }
                 }
             }
             CommandGroup(replacing: .appInfo) {

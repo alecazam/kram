@@ -62,48 +62,6 @@
 		</dict>
 	</array>
 	<key>UTImportedTypeDeclarations</key>
-	<array>
-		<dict>
-			<key>UTTypeDescription</key>
-			<string></string>
-			<key>UTTypeIcons</key>
-			<dict/>
-			<key>UTTypeIdentifier</key>
-			<string></string>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
-				<array/>
-			</dict>
-		</dict>
-		<dict>
-			<key>UTTypeDescription</key>
-			<string></string>
-			<key>UTTypeIcons</key>
-			<dict/>
-			<key>UTTypeIdentifier</key>
-			<string></string>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
-				<array/>
-			</dict>
-		</dict>
-		<dict>
-			<key>UTTypeDescription</key>
-			<string></string>
-			<key>UTTypeIcons</key>
-			<dict/>
-			<key>UTTypeIdentifier</key>
-			<string></string>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
-				<array>
-					<string>\</string>
-				</array>
-			</dict>
-		</dict>
-	</array>
+	<array/>
 </dict>
 </plist>
