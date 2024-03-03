@@ -1075,6 +1075,24 @@ A tool to help profile mem, perf, and builds.
     }
     */
     
+    // TODO: do this when building the searchResults
+    // can do O(N) then and mark which items need separator
+    func isSeparatorVisible(_ file: File, _ searchResults: [File]) -> Bool {
+        
+        // TODO: faster way to find index of file
+        // probably worth caching up these
+        for i in 0..<searchResults.count-1 {
+            if file == searchResults[i] {
+                let nextFile = searchResults[i+1]
+                if file.url.deletingLastPathComponent().path != nextFile.url.deletingLastPathComponent().path {
+                    return true
+                }
+            }
+        }
+        
+        return false
+    }
+    
     var body: some Scene {
         
         // WindowGroup brings up old windows which isn't really what I want
@@ -1084,21 +1102,18 @@ A tool to help profile mem, perf, and builds.
             NavigationSplitView() {
                 VStack {
                     List(searchResults, selection:$selection) { file in
-                        // compare to previous file (use active sort comparator)
-                        // if it differs, then toggle the button bg colors
-//                        if lastUrl && url.path != lastUrl!.path {
-//                            files.append(Divider())
-//                        }
-                        
                         HStack() {
                             // If number is first, then that's all SwiftUI
-                            // uses for typeahead search.
+                            // uses for typeahead list search.  Seems to
+                            // be no control over that.
                             
-                            // name gets truncated too soo if it's first
-                            // and try to align the text with trailing
+                            // name gets truncated too soon if it's first
+                            // and try to align the text with trailing.
+                            
                             Text(generateName(file: file))
                                 .help(file.shortDirectory)
                                 .truncationMode(.tail)
+                                
                             
                             Text(generateDuration(file: file))
                                 .frame(maxWidth: 70)
@@ -1106,7 +1121,8 @@ A tool to help profile mem, perf, and builds.
                                 .font(durationFont)
                             
                         }
-                        .listRowSeparatorTint(.red)
+                        .listRowSeparator(isSeparatorVisible(file, searchResults) ? .visible : .hidden)
+                        .listRowSeparatorTint(.white)
                         
                     }
                     //.focused($focusedField, equals: .listView)
