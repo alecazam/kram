@@ -267,6 +267,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "-ftime-trace";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = "macosx iphoneos";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";
@@ -328,7 +329,10 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = "-DNDEBUG=1";
+				OTHER_CFLAGS = (
+					"-DNDEBUG=1",
+					"-ftime-trace",
+				);
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = "macosx iphoneos";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";

@@ -43,8 +43,12 @@ import UniformTypeIdentifiers
 //   instead of the entire file.
 // TODO: can't type ahead search in the list while the webview is loading (f.e. e will advance)
 //    but arrow keys work to move to next
+// TODO: if list hidden, then can't advance
 // TODO: can't overide "delete" key doing a back in the WKWebView history
 //    Perfetto warns that content will be lost
+// TODO: track duration would be useful (esp. for memory traces)
+//    Would have to modify the thread_name, and process the tid and timings
+//    Better if Perfetto could display this
 // TODO: list view type ahead search doesn't work unless name is the first Text entry
 // TODO track when files change or get deleted, update the list item then
 //   can disable list items that are deleted in case they return (can still pick if current)
@@ -171,7 +175,8 @@ func lookupFile(url: URL) -> File {
     // This preseves the duration previously parsed and stored
     
     if let fileOld = fileCache[file.url] {
-        if fileOld.modStamp! == file.modStamp! {
+        if file.modStamp == nil || // means file and/or dir went away, so return fileOld
+            file.modStamp! == fileOld.modStamp! {
             return fileOld
         }
     }
@@ -450,7 +455,7 @@ func loadFileJS(_ path: String) -> String? {
     // Note may need to modify directly
     var file = lookupFile(url: fileURL)
     
-    print(path)
+    // print(path)
     
     
     // https://stackoverflow.com/questions/62035494/how-to-call-postmessage-in-wkwebview-to-js
