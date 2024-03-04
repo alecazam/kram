@@ -1,9 +1,6 @@
-/*
-See LICENSE folder for this sample’s licensing information.
-
-Abstract:
-Consolidates use of os_log to improve log message output.
-*/
+// kram - Copyright 2020-2024 by Alec Miller. - MIT License
+// The license and copyright notice shall be included
+// in all copies or substantial portions of the Software.
 
 import Foundation
 

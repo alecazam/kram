@@ -44,13 +44,14 @@ import UniformTypeIdentifiers
 //   instead of the entire file.
 // TODO: can't type ahead search in the list while the webview is loading (f.e. e will advance)
 //    but arrow keys work to move to next
-// TODO: if list hidden, then can't advance
+// DONE: if list hidden, then can't advance
 // TODO: can't overide "delete" key doing a back in the WKWebView history
 //    Perfetto warns that content will be lost
 // TODO: track duration would be useful (esp. for memory traces)
 //    Would have to modify the thread_name, and process the tid and timings
 //    Better if Perfetto could display this
 // TODO: list view type ahead search doesn't work unless name is the first Text entry
+// TODO: switch to dark mode
 // TODO track when files change or get deleted, update the list item then
 //   can disable list items that are deleted in case they return (can still pick if current)
 //   https://developer.apple.com/documentation/coreservices/file_system_events?language=objc
@@ -78,6 +79,9 @@ import UniformTypeIdentifiers
 
 private let log = Log("kram-profile")
 
+public func clamp<T>(_ value: T, _ minValue: T, _ maxValue: T) -> T where T : Comparable {
+    return min(max(value, minValue), maxValue)
+}
 
 func fileModificationDate(url: URL) -> Date? {
     do {
@@ -195,6 +199,34 @@ func updateFileCache(file: File) {
     fileCache[file.url] = file
 }
   
+class MyWebView : WKWebView {
+    
+    // This is ugly.
+    override var acceptsFirstResponder: Bool { true }
+    
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        // unclear why all events are going to WebView
+        // so have to return false to not have them filtered
+        
+        // allow all menu shortcuts to keep working
+        if event.modifierFlags.contains(.command) {
+            return false
+        }
+        
+        // allow list to use up/down
+        if event.keyCode == Keycode.upArrow ||
+            event.keyCode == Keycode.downArrow {
+            return false
+        }
+        
+        // delete is still unloading the currently loaded page.  Augh!!!
+        
+        // true means it doesn't bonk, but WKWebView still gets to
+        // respond to the keys.  Ugh.  Stupid system.
+        return true
+   }
+}
+
 
 func newWebView(request: URLRequest) -> WKWebView {
     // set preference to run javascript on the view, can then do PostMessage
@@ -210,7 +242,7 @@ func newWebView(request: URLRequest) -> WKWebView {
     configuration.defaultWebpagePreferences = webpagePreferences
     
     // here frame is entire screen
-    let webView = WKWebView(frame: .zero, configuration: configuration)
+    let webView = MyWebView(frame: .zero, configuration: configuration)
     
     // The page is complaining it's going to lose the data if fwd/back hit
     webView.allowsBackForwardNavigationGestures = false
@@ -221,7 +253,7 @@ func newWebView(request: URLRequest) -> WKWebView {
 
 // This is just an adaptor to allow WkWebView to interop with SwiftUI.
 // It's unclear if WindowGroup can even have this hold state.
-struct MyWKWebView : NSViewRepresentable {
+struct WebView : NSViewRepresentable {
     //let request: URLRequest
     let webView: WKWebView
     
@@ -241,7 +273,7 @@ struct MyWKWebView : NSViewRepresentable {
     func updateNSView(_ webView: WKWebView, context: Context) {
         
     }
-    
+
     // Here's sample code to do a screenshot, can this use actual dimensions
     // https://nshipster.com/wkwebview/
 //    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!)
@@ -730,8 +762,6 @@ func loadFileJS(_ path: String) -> String? {
     }
 }
 
-
-
 class AppDelegate: NSObject, NSApplicationDelegate {
     // Where to set this
     var window: NSWindow?
@@ -993,21 +1023,28 @@ A tool to help profile mem, perf, and builds.
         UTType(filenameExtension:"vmatrace", conformingTo:.data)!,
     ]
     
-    func selectFile(_ selection: String?, _ advanceList: Bool) -> String? {
+    func selectFile(_ selection: String?, _ fileList: [File], _ advanceList: Bool) -> String? {
         guard let sel = selection else { return nil }
-        if files.count == 1 { return selection }
+        if fileList.count == 1 { return selection }
         
         var index = 0
-        for i in 0..<files.count {
-            let file = files[i]
+        for i in 0..<fileList.count {
+            let file = fileList[i]
             if file.id == sel {
                 index = i
                 break
             }
         }
         
-        index = (index + files.count + (advanceList == true ? 1:-1)) % files.count
-        return files[index].id
+        let doClamp = true
+        if doClamp {
+            index = clamp(index + (advanceList == true ? 1:-1), 0, fileList.count-1)
+        }
+        else {
+            // this wraps, but List view needs to scroll to this if not visible
+            index = (index + fileList.count + (advanceList == true ? 1:-1)) % fileList.count
+        }
+        return fileList[index].id
     }
     
     // about hideSideBar
@@ -1017,13 +1054,15 @@ A tool to help profile mem, perf, and builds.
     
     enum Field: Hashable {
         case webView
-        //case listView
+        case listView
     }
     @FocusState private var focusedField: Field?
-
+    @State var keyMonitor: Any?
+        
     // https://developer.apple.com/documentation/swiftui/adding-a-search-interface-to-your-app
     // can filter list items off this
-    // Rename to filterText, ...
+    // TODO: Rename to filterText, ...
+    // Note: this filter needs macOS14
     @State private var searchText: String = ""
     @State private var searchIsActive = false
     var searchResults: [File] {
@@ -1042,52 +1081,12 @@ A tool to help profile mem, perf, and builds.
             }
         }
         else {
-            // TODO: should be case insensitive
             return files.filter {
                 // Here use the name, or else the directory will have say "kram" in it
                 $0.name.localizedCaseInsensitiveContains(searchText)
             }
         }
     }
-
-    /* These are also macOS 14, using Extension form
-    
-    @ViewBuilder func MyNavigationSplitView() -> some View {
-        if #available(macOS 14.0, *) {
-            NavigationSplitView()
-            .searchable(text: $searchText, isPresented: $searchIsActive, placement:
-                    .sidebar, prompt: "Filter")
-            
-            .onKeyPress(.upArrow, action: {
-                // don't change focus, just advance the selection
-                if focusedField == .webView {
-                    //$selection = selectFile(selection, false)
-                    return .handled
-                }
-                return .ignored
-            })
-            .onKeyPress(.downArrow, action: {
-                if focusedField == .webView {
-                    //$selection = selectFile(selection, false)
-                    return .handled
-                }
-                return .ignored
-            })
-            .onKeyPress(.delete, action: {
-                // block this so WKWebView doesn't page back
-                if focusedField == .webView {
-                    // Unlcar if this should be 0 or 1
-                    myWebView.go(to: myWebView.backForwardList.item(at:0)!)
-                }
-                return .handled
-            })
-            
-        }
-        else {
-            NavigationSplitView()
-        }
-    }
-    */
     
     // TODO: do this when building the searchResults
     // can do O(N) then and mark which items need separator
@@ -1127,7 +1126,6 @@ A tool to help profile mem, perf, and builds.
                             Text(generateName(file: file))
                                 .help(file.shortDirectory)
                                 .truncationMode(.tail)
-                                
                             
                             Text(generateDuration(file: file))
                                 .frame(maxWidth: 70)
@@ -1139,48 +1137,89 @@ A tool to help profile mem, perf, and builds.
                         .listRowSeparatorTint(.white)
                         
                     }
-                    //.focused($focusedField, equals: .listView)
+                    .focused($focusedField, equals: .listView)
+                    .focusable()
                 }
-                //.focusable(false)
+                
             }
             detail: {
-                MyWKWebView(webView: myWebView)
-                //.focusable()
-                //.focused($focusedField, equals: .webView)
+                WebView(webView: myWebView)
+                .focused($focusedField, equals: .webView)
+                .focusable()
             }
             .searchableOptional(text: $searchText, isPresented: $searchIsActive, placement: .sidebar, prompt: "Filter")
             
-            /* this wrapper doesn't work
+            /*
+            #if false
+            .onAppear {
+                // https://stackoverflow.com/questions/73252399/swiftui-keyboard-navigation-in-lists-on-macos
+                if keyMonitor != nil {
+                    return
+                }
+                
+                keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+                    
+                    // This is advancing 2 entries, since List also responds
+                    // This gets called 2x after error dialog post, but unclear why.
+                    // Should just be down/up.
+                    
+                    if event.isARepeat {
+                        return event
+                    }
+                    
+                    if focusedField != .listView {
+                        if selection != nil {
+                            if event.keyCode == Keycode.downArrow {
+                                selection = selectFile(selection, searchResults, true)
+                            }
+                            else if event.keyCode == Keycode.upArrow {
+                                selection = selectFile(selection, searchResults, false)
+                            }
+                        }
+                    }
+                    return event
+                }
+            }
+            .onDisappear {
+                if keyMonitor != nil {
+                    NSEvent.removeMonitor(keyMonitor!)
+                    keyMonitor = nil
+                }
+            }
+            #else
+            
             // need these macOS 14 calls to advance the list when list is closed
-            .onKeyPressOptional(.upArrow, action: {
-                if focusedField == .webView {
-                    //$selection = selectFile(selection, false)
+            .onKeyPress(.downArrow, action: {
+                if focusedField != .listView {
+                    selection = selectFile(selection, searchResults, true)
                     return .handled
                 }
                 return .ignored
             })
-            .onKeyPressOptional(.upArrow, action: {
-                if focusedField == .webView {
-                    //$selection = selectFile(selection, false)
+            .onKeyPress(.upArrow, action: {
+                if focusedField != .listView {
+                    selection = selectFile(selection, searchResults, false)
                     return .handled
                 }
                 return .ignored
             })
+        
+            #endif
             */
             
             .onChange(of: selection /*, initial: true*/) { newState in
                 openFileSelection(myWebView)
-                focusedField = .webView
+                //focusedField = .webView
             }
             .navigationTitle(generateNavigationTitle(selection))
             .onOpenURL { url in
                 openFilesFromURLs(urls: [url])
-                focusedField = .webView
+                //focusedField = .webView
             }
             .dropDestination(for: URL.self) { (items, _) in
                 // This acutally works!
                 openFilesFromURLs(urls: items)
-                focusedField = .webView
+                //focusedField = .webView
                 return true
             }
         }
@@ -1189,7 +1228,7 @@ A tool to help profile mem, perf, and builds.
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Open File") {
+                Button("Open...") {
                     openFile()
                 }
                 .keyboardShortcut("O")
@@ -1210,6 +1249,22 @@ A tool to help profile mem, perf, and builds.
                 .keyboardShortcut("R")
                 .disabled(!isReloadEnabled(selection))
                 
+                // These work even if the list view is collapsed
+                Button("Prev File") {
+                    if selection != nil {
+                        selection = selectFile(selection, searchResults, false)
+                    }
+                }
+                .keyboardShortcut("N", modifiers:[.shift, .command])
+                .disabled(selection == nil)
+                
+                Button("Next File") {
+                    if selection != nil {
+                        selection = selectFile(selection, searchResults, true)
+                    }
+                }
+                .keyboardShortcut("N", modifiers:[.command])
+                .disabled(selection == nil)
             
                 // TODO: these may need to be attached to detail view
                 // The list view eats them, and doesn't fwd onto the web view
@@ -1221,23 +1276,14 @@ A tool to help profile mem, perf, and builds.
                     // Don't need to do anything
                 }
                 .keyboardShortcut("S")
-                .disabled(selection != nil)
+                .disabled(selection == nil && focusedField == .webView)
                           
                 // Perfetto command
                 Button("Parse Command") {
                     // don't need to do anything
                 }
                 .keyboardShortcut("P", modifiers:[.shift, .command])
-                .disabled(selection != nil) // what if selection didn't load
-            }
-            CommandGroup(after: .toolbar) {
-                // TODO: this automatically inserts the fn+F menu item
-                // which is then redundant with this menu item that lack the shortcut
-                Button("Toggle Fullscreen") {
-                    Task { @MainActor in
-                        NSApplication.shared.windows.last?.toggleFullScreen(nil)
-                    }
-                }
+                .disabled(selection == nil && focusedField == .webView) // what if selection didn't load
             }
             CommandGroup(replacing: .appInfo) {
                 Button("About kram-profile") {
