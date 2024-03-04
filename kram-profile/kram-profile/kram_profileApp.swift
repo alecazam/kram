@@ -329,7 +329,7 @@ extension View {
     public func searchableOptional<S>(text: Binding<String>, isPresented: Binding<Bool>, placement: SearchFieldPlacement = .automatic, prompt: S) -> some View where S : StringProtocol {
         if #available(macOS 14.0, *) {
             return self.searchable(text: text, isPresented: isPresented, placement:
-                        .sidebar, prompt: prompt)
+                        placement, prompt: prompt)
         }
         else {
             return self
