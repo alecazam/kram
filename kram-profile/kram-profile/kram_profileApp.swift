@@ -126,6 +126,9 @@ struct File: Identifiable, Hashable, Equatable, Comparable
     var modStamp: Date?
     var loadStamp: Date?
     
+    // only available for memory file type right now
+    var threadInfo = ""
+    
     init(url: URL) {
         self.url = url
         self.modStamp = fileModificationDate(url:url)
@@ -164,12 +167,12 @@ func generateDuration(file: File) -> String {
     }
 }
 
-func generateNavigationTitle(_ str: String?) -> String {
-    if str == nil {
+func generateNavigationTitle(_ sel: String?) -> String {
+    if sel == nil {
         return ""
     }
     
-    let f = lookupFile(url: URL(string:str!)!)
+    let f = lookupFile(selection: sel!)
     return generateDuration(file: f) + " " + generateName(file: f)
 }
 
@@ -196,6 +199,10 @@ func lookupFile(url: URL) -> File {
     fileCache[file.url] = file
     
     return file
+}
+
+func lookupFile(selection: String) -> File {
+    return lookupFile(url:URL(string:selection)!)
 }
 
 // This one won't be one in the list, though
@@ -586,7 +593,7 @@ func loadFileJS(_ path: String) -> String? {
         
         var description: String {
             let duration = Double(endTime - startTime) * 1e-6
-            return "\(id) \(threadName) \(duration) \(count)x"
+            return "\(id) '\(threadName)' \(duration)s \so(count)x"
         }
         
     }
@@ -623,10 +630,16 @@ func loadFileJS(_ path: String) -> String? {
             }
         }
         
-        // TODO: could store this in the File object, just append with \n
+        // DONE: could store this in the File object, just append with \n
+        var text = ""
         for threadInfo in threadInfos.values.sorted() {
-            log.info(threadInfo.description)
+            // log.info(threadInfo.description)
+            text += threadInfo.description
+            text += "\n"
         }
+        
+        file.threadInfo = text
+        updateFileCache(file: file)
     }
     
     func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
@@ -1046,7 +1059,7 @@ struct kram_profileApp: App {
     
     func isReloadEnabled(_ selection: String?) -> Bool {
         guard let sel = selection else { return false }
-        let file = lookupFile(url:URL(string: sel)!)
+        let file = lookupFile(selection: sel)
         return file.isReloadNeeded()
     }
     
@@ -1074,7 +1087,7 @@ struct kram_profileApp: App {
             if str != nil {
                 runJavascript(webView, str!)
                 
-                var file = lookupFile(url: URL(string: sel)!)
+                var file = lookupFile(selection: sel)
                 file.setLoadStamp()
                 updateFileCache(file: file)
             }
@@ -1222,12 +1235,20 @@ A tool to help profile mem, perf, and builds.
         return false
     }
     
+    @State private var isShowingPopover = false
+    
+    func getSelectedThreadInfo(_ selection: String?) -> String {
+        if selection == nil {
+            return ""
+        }
+        return lookupFile(selection: selection!).threadInfo
+    }
+    
     var body: some Scene {
         
-        // WindowGroup brings up old windows which isn't really what I want
+        // TODO: WindowGroup brings up old windows which isn't really what I want
     
         Window("Main", id: "main") {
-        //WindowGroup {
             NavigationSplitView() {
                 VStack {
                     List(searchResults, selection:$selection) { file in
@@ -1245,7 +1266,7 @@ A tool to help profile mem, perf, and builds.
                             
                             Text(generateDuration(file: file))
                                 .frame(maxWidth: 70)
-                                //.alignment(.trailing)
+                            //.alignment(.trailing)
                                 .font(durationFont)
                             
                         }
@@ -1259,12 +1280,28 @@ A tool to help profile mem, perf, and builds.
                 
             }
             detail: {
-                WebView(webView: myWebView)
-                .focused($focusedField, equals: .webView)
-                .focusable()
+                VStack {
+                    // This button conveys data Perfetto does not
+                    // It's basically a hud.
+                    Button("Info") {
+                        self.isShowingPopover.toggle()
+                    }
+                    .keyboardShortcut("I", modifiers:.command)
+                    .disabled(selection == nil)
+                    .popover(isPresented: $isShowingPopover) {
+                        Text(getSelectedThreadInfo(selection))
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(16)
+                            .padding()
+                    }
+                    
+                    WebView(webView: myWebView)
+                        .focused($focusedField, equals: .webView)
+                        .focusable()
+                }
             }
             .searchableOptional(text: $searchText, isPresented: $searchIsActive, placement: .sidebar, prompt: "Filter")
-            
+                
             .onChange(of: selection /*, initial: true*/) { newState in
                 openFileSelection(myWebView)
                 //focusedField = .webView

@@ -103,64 +103,82 @@ class Log {
         #endif
     }
     
-    func error(_ message: String, _ function: String = #function, _ line: Int = #line) {
-        let text = formatMessage(message, .error, function, line)
+    private func logToOSLog(_ text: String, _ type: OSLogType) {
+        // TODO: this needs to split the string up, since os_log limits length to
+        // some paltry 1023 chars.
+        os_log("%s", log: log, type: type, text)
+    }
+    
+    func error(_ message: @autoclosure () -> String, _ function: String = #function, _ line: Int = #line) {
+        let text = formatMessage(message(), .error, function, line)
         if Log.prints {
             print(text)
         } else {
-            os_log("%@", log: log, type: .error, text)
+            logToOSLog(text, .error)
         }
     }
     
     // os_log left out warnings, so reuse default type for that
-    func warn(_ message: String, _ function: String = #function, _ line: Int = #line) {
-        let text = formatMessage(message, .default, function, line)
+    func warn(_ message: @autoclosure () -> String, _ function: String = #function, _ line: Int = #line) {
+        let text = formatMessage(message(), .default, function, line)
         if Log.prints {
             print(text)
         } else {
-            os_log("%@", log: log, type: .default, text)
+            logToOSLog(text, .default) // this doesn't get colored yellow like a warning
         }
     }
     
-    func info(_ message: String) {
-        let text = formatMessage(message, .info)
+    func info(_ message: @autoclosure () -> String) {
+        let text = formatMessage(message(), .info)
         if Log.prints {
             print(text)
         } else {
-            os_log("%@", log: log, type: .info, text)
+            logToOSLog(text, .info)
         }
     }
     
-    func debug(_ message: String) {
+    func debug(_ message: @autoclosure () -> String) {
         // debug logs are stripped from release builds
         #if DEBUG
-        let text = formatMessage(message, .debug)
+        let text = formatMessage(message(), .debug)
         if Log.prints {
             print(text)
         } else {
-            os_log("%@", log: log, type: .debug, text)
+            logToOSLog(text, .debug)
         }
         #endif
     }
     
+    private func formatLevel(_ level: OSLogType) -> String {
+        switch level {
+            case .debug:    return ""
+            case .info:     return ""
+            case .default:  return "⚠️"
+            case .error:    return "🛑"
+            default:        return ""
+        }
+    }
+    
     // Customize this printing as desired.
-    private func formatMessage(_ message: String, _ type: OSLogType, _ function: String = "", _ line: Int = 0) -> String {
+    private func formatMessage(_ message: String, _ level: OSLogType, _ function: String = "", _ line: Int = 0) -> String {
         var text = ""
+        
+        let levelText = formatLevel(level)
         
         if Log.prints {
             let timestamp = Log.formatTimestamp()
             
             // These messages never go out to the system console, just the debugger.
-            switch type {
+            switch level {
             case .debug:
-                text += "\(timestamp)D[\(category)] \(message)"
+                text += "\(timestamp)\(levelText)D[\(category)] \(message)"
             case .info:
-                text += "\(timestamp)I[\(category)] \(message)"
+                text += "\(timestamp)\(levelText)I[\(category)] \(message)"
             case .default: // not a keyword
-                text += "\(timestamp)W[\(category)] \(message)"
+                text += "\(timestamp)\(levelText)W[\(category)] \(message)"
                 text += Log.formatLocation(file, line, function)
             case .error:
-                text += "\(timestamp)E[\(category)] \(message)\n"
+                text += "\(timestamp)\(levelText)E[\(category)] \(message)\n"
                 text += Log.formatLocation(file, line, function)
             default:
                 text += message
@@ -168,10 +186,11 @@ class Log {
         } else {
             // Consider reporting the data above to os_log.
             // os_log reports data, time, app, threadId and message to stderr.
+            text += levelText
             text += message
             
             // os_log can't show correct file/line, since it uses addrReturnAddress - ugh
-            switch type {
+            switch level {
                 case .default: fallthrough
                 case .error:
                     text += Log.formatLocation(file, line, function)
@@ -180,7 +199,7 @@ class Log {
             }
         }
         
-        if Log.stacktraces && (type == .error) {
+        if Log.stacktraces && (level == .error) {
             text += "\n"
             
             // Improve this - these are mangled symbols without file/line of where
