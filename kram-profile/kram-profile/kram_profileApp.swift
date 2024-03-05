@@ -670,10 +670,14 @@ func loadFileJS(_ path: String) -> String? {
                 threadInfos[tid]!.threadName = threadName
             }
             else if event.ts != nil && event.dur != nil {
-                let s = event.ts!
-                let d = event.dur!
-                
-                threadInfos[tid]!.combine(s, d)
+                // using Free blocks to mark the end of the heap, so
+                // don't include them in the totals
+                if event.name != "Free" {
+                    let s = event.ts!
+                    let d = event.dur!
+                    
+                    threadInfos[tid]!.combine(s, d)
+                }
             }
         }
         
