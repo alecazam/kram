@@ -50,7 +50,7 @@ import Darwin
 
 class Log {
     // verbose: Whether os_log or print is used to report logs.
-    static var prints = true
+    static var prints = false
     // stacktrace: Whether stack trace is logged on errors.
     static var stacktraces = false
     // timestamp: Show timestamps on all entries when printing statements.
@@ -103,15 +103,6 @@ class Log {
         #endif
     }
     
-    func fault(_ message: String) {
-        let text = formatMessage(message, .fault)
-        if Log.prints {
-            print(text)
-        } else {
-            os_log("%@", log: log, type: .fault, text)
-        }
-    }
-    
     func error(_ message: String, _ function: String = #function, _ line: Int = #line) {
         let text = formatMessage(message, .error, function, line)
         if Log.prints {
@@ -122,8 +113,8 @@ class Log {
     }
     
     // os_log left out warnings, so reuse default type for that
-    func warn(_ message: String) {
-        let text = formatMessage(message, .default)
+    func warn(_ message: String, _ function: String = #function, _ line: Int = #line) {
+        let text = formatMessage(message, .default, function, line)
         if Log.prints {
             print(text)
         } else {
@@ -167,11 +158,9 @@ class Log {
                 text += "\(timestamp)I[\(category)] \(message)"
             case .default: // not a keyword
                 text += "\(timestamp)W[\(category)] \(message)"
+                text += Log.formatLocation(file, line, function)
             case .error:
                 text += "\(timestamp)E[\(category)] \(message)\n"
-                text += Log.formatLocation(file, line, function)
-            case .fault:
-                text += "\(timestamp)F[\(category)] \(message)\n"
                 text += Log.formatLocation(file, line, function)
             default:
                 text += message
@@ -180,9 +169,18 @@ class Log {
             // Consider reporting the data above to os_log.
             // os_log reports data, time, app, threadId and message to stderr.
             text += message
+            
+            // os_log can't show correct file/line, since it uses addrReturnAddress - ugh
+            switch type {
+                case .default: fallthrough
+                case .error:
+                    text += Log.formatLocation(file, line, function)
+                default:
+                    break
+            }
         }
         
-        if Log.stacktraces && (type == .error || type == .fault) {
+        if Log.stacktraces && (type == .error) {
             text += "\n"
             
             // Improve this - these are mangled symbols without file/line of where

@@ -15,28 +15,31 @@ import UniformTypeIdentifiers
 // can interop with.  SwiftUI has not browser widget.
 
 // DONE: add bg list color depending on sort
-// TODO: add sort mode for name, time and incorporating dir or not
-// TODO: fix the js wait, even with listener, there's still a race
-//    maybe there's some ServiceWorker still loading the previous json?
-//    Perfetto is using a ServiceWorker, Safari uses those now, and ping/pong unware.
-// TODO: still getting race condition.  Perfetto is trying to
-//  load the previous file, and we’re sending a new one.
-// TODO: update recent document list
-// TODO: have a way to reload dropped folder (not just subfiles)
-// TODO: nav title and list item text is set before duration is computed
-//  need some way to update that.
-// TODO: support WindowGroup and multiwindow, each needs own webView, problem
-//   is that onOpenURL opens a new window always.
 // DONE: fn+F doesn't honor fullscreen
-// TODO: be nice to focus the search input on cmd+F just to make me happy.
-//  Browser goes to its own search which doesn’t help.
-// TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
 // DONE: Perfetto can only read .gz files, and not .zip files.
 //   But could decode zip files here, and send over gz compressed.
 //   Would need to idenfity zip archive > 1 file vs. zip single file.
 // DONE: add gz compression to all file data.  Use libCompression
 //   but it only has zlib compression.  Use DataCompression which
 //   messages zlib deflate to gzip.
+// DONE: if list hidden, then can't advance
+// DONE: be nice to focus the search input on cmd+F just to make me happy.  (using cmd+S)
+//  Browser goes to its own search which doesn’t help.
+
+
+// TODO: add sort mode for name, time and incorporating dir or not
+// TODO: fix the js wait, even with listener, there's still a race
+//    maybe there's some ServiceWorker still loading the previous json?
+//    Perfetto is using a ServiceWorker, Safari uses those now, and ping/pong unware.
+// TODO: still getting web race condition.  Perfetto is trying to
+//  load the previous file, and we’re sending a new one.
+// TODO: add/update recent document list (need to hold onto dropped/opened folder)
+// TODO: have a way to reload dropped folder (not just subfiles)
+// TODO: nav title and list item text is set before duration is computed
+//  need some way to update that.
+// TODO: support WindowGroup and multiwindow, each needs own webView, problem
+//   is that onOpenURL opens a new window always.
+// TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
 // TODO: switch font to Inter, bundle that with the app?
 //   .environment(\.font, Font.custom("CustomFont", size: 14))
 // TODO: for perf traces, compute duration between frame
@@ -44,7 +47,6 @@ import UniformTypeIdentifiers
 //   instead of the entire file.
 // TODO: can't type ahead search in the list while the webview is loading (f.e. e will advance)
 //    but arrow keys work to move to next
-// DONE: if list hidden, then can't advance
 // TODO: can't overide "delete" key doing a back in the WKWebView history
 //    Perfetto warns that content will be lost
 // TODO: track duration would be useful (esp. for memory traces)
@@ -52,6 +54,8 @@ import UniformTypeIdentifiers
 //    Better if Perfetto could display this
 // TODO: list view type ahead search doesn't work unless name is the first Text entry
 // TODO: switch to dark mode
+// TODO: no simple scrollTo, since this is all React style
+//   There is a ScrollViewReader, but value only usable within.  UITableView has this.
 // TODO track when files change or get deleted, update the list item then
 //   can disable list items that are deleted in case they return (can still pick if current)
 //   https://developer.apple.com/documentation/coreservices/file_system_events?language=objc
@@ -201,9 +205,10 @@ func updateFileCache(file: File) {
   
 class MyWebView : WKWebView {
     
-    // This is ugly.
+    // So that keyboard events are routed
     override var acceptsFirstResponder: Bool { true }
     
+    // This is to prevent bonk
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         // unclear why all events are going to WebView
         // so have to return false to not have them filtered
@@ -224,6 +229,10 @@ class MyWebView : WKWebView {
         // true means it doesn't bonk, but WKWebView still gets to
         // respond to the keys.  Ugh.  Stupid system.
         return true
+        
+        // or this ?
+        // return super.performKeyEquivalent(with: event)
+        
    }
 }
 
@@ -297,7 +306,33 @@ struct WebView : NSViewRepresentable {
 //    MyWKWebView()
 //}
 
-// has to be https to work for some reason, but all data is previewed locally
+/*
+class MyMTKView: MTKView {
+    
+    
+    
+}
+
+// wraps MTKView (NSView) into SwiftUI, so it can be a part of the hierarcy,
+// updateNSView called when app foreground/backgrounded, or the size is changed
+struct MTKViewWrapper: NSViewRepresentable {
+    var mtkView: MyMTKView
+    
+    // TODO: could hand this down without rebuilding wrapper, could be @Published from UserData
+    //var currentPath: String
+    
+    func makeNSView(context: NSViewRepresentableContext<MTKViewWrapper>) -> MyMTKView {
+        return mtkView
+    }
+
+    func updateNSView(_ view: MyMTKView, context: NSViewRepresentableContext<MTKViewWrapper>) {
+        //view.updateUserData(currentPath: currentPath)
+        
+    }
+}
+*/
+
+// https to work for some reason, but all data is previewed locally
 var ORIGIN = "https://ui.perfetto.dev"
 
 // https://gist.github.com/pwightman/64c57076b89c5d7f8e8c
@@ -523,6 +558,77 @@ func loadFileJS(_ path: String) -> String? {
         var perfetto: PerfettoFile
     }
     
+    class ThreadInfo : Hashable, Equatable, Comparable {
+       
+        var id: Int = 0
+        var threadName: String = ""
+        var startTime: Int = Int.max
+        var endTime: Int = Int.min
+        var count: Int = 0
+        
+        // id doesn't implement Hashable
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(id)
+        }
+        
+        public static func == (lhs: ThreadInfo, rhs: ThreadInfo) -> Bool {
+            return lhs.id == rhs.id
+        }
+        public static func < (lhs: ThreadInfo, rhs: ThreadInfo) -> Bool {
+            return lhs.id < rhs.id
+        }
+        
+        func combine(_ s: Int, _ d: Int) {
+            startTime = min(startTime, s)
+            endTime = max(endTime, s+d)
+            count += 1
+        }
+        
+        var description: String {
+            let duration = Double(endTime - startTime) * 1e-6
+            return "\(id) \(threadName) \(duration) \(count)x"
+        }
+        
+    }
+    
+    // parse json trace
+    func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
+        
+        
+        // was using Set<>, but having trouble with lookup
+        var threadInfos: [Int: ThreadInfo] = [:]
+        
+        for i in 0..<catapultProfile.traceEvents!.count {
+            let event = catapultProfile.traceEvents![i]
+            
+            // have to have tid to associate with ThreadInfo
+            guard let tid = event.tid else { continue }
+            
+            if threadInfos[tid] == nil {
+                var info = ThreadInfo()
+                info.id = tid
+                
+                threadInfos[tid] = info
+            }
+            
+            if event.name != nil && event.name! == "thread_name" {
+                let threadName = event.args!["name"]!.value as! String
+                threadInfos[tid]!.threadName = threadName
+            }
+            else if event.ts != nil && event.dur != nil {
+                let s = event.ts!
+                let d = event.dur!
+                
+                threadInfos[tid]!.combine(s, d)
+            }
+        }
+        
+        // TODO: could store this in the File object, just append with \n
+        for threadInfo in threadInfos.values.sorted() {
+            log.info(threadInfo.description)
+        }
+    }
+    
     func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
         var startTime = Int.max
         var endTime = Int.min
@@ -612,6 +718,11 @@ func loadFileJS(_ path: String) -> String? {
                     }
                     
                     updateDuration(catapultProfile, &file)
+                    
+                    // For now, just log the per-thread info
+                    if type == FileType.Memory {
+                        updateThreadInfo(catapultProfile, &file)
+                    }
                 }
             }
         }
@@ -673,6 +784,11 @@ func loadFileJS(_ path: String) -> String? {
                 // walk the file and compute the duration if we don't already have ti
                 if file.duration == nil {
                     updateDuration(catapultProfile, &file)
+                    
+                    // For now, just log the per-thread info
+                    if type == FileType.Memory {
+                        updateThreadInfo(catapultProfile, &file)
+                    }
                 }
             }
             
@@ -1149,64 +1265,6 @@ A tool to help profile mem, perf, and builds.
             }
             .searchableOptional(text: $searchText, isPresented: $searchIsActive, placement: .sidebar, prompt: "Filter")
             
-            /*
-            #if false
-            .onAppear {
-                // https://stackoverflow.com/questions/73252399/swiftui-keyboard-navigation-in-lists-on-macos
-                if keyMonitor != nil {
-                    return
-                }
-                
-                keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
-                    
-                    // This is advancing 2 entries, since List also responds
-                    // This gets called 2x after error dialog post, but unclear why.
-                    // Should just be down/up.
-                    
-                    if event.isARepeat {
-                        return event
-                    }
-                    
-                    if focusedField != .listView {
-                        if selection != nil {
-                            if event.keyCode == Keycode.downArrow {
-                                selection = selectFile(selection, searchResults, true)
-                            }
-                            else if event.keyCode == Keycode.upArrow {
-                                selection = selectFile(selection, searchResults, false)
-                            }
-                        }
-                    }
-                    return event
-                }
-            }
-            .onDisappear {
-                if keyMonitor != nil {
-                    NSEvent.removeMonitor(keyMonitor!)
-                    keyMonitor = nil
-                }
-            }
-            #else
-            
-            // need these macOS 14 calls to advance the list when list is closed
-            .onKeyPress(.downArrow, action: {
-                if focusedField != .listView {
-                    selection = selectFile(selection, searchResults, true)
-                    return .handled
-                }
-                return .ignored
-            })
-            .onKeyPress(.upArrow, action: {
-                if focusedField != .listView {
-                    selection = selectFile(selection, searchResults, false)
-                    return .handled
-                }
-                return .ignored
-            })
-        
-            #endif
-            */
-            
             .onChange(of: selection /*, initial: true*/) { newState in
                 openFileSelection(myWebView)
                 //focusedField = .webView
@@ -1253,6 +1311,9 @@ A tool to help profile mem, perf, and builds.
                 Button("Prev File") {
                     if selection != nil {
                         selection = selectFile(selection, searchResults, false)
+                        
+                        // TODO: no simple scrollTo, since this is all React style
+                        // There is a ScrollViewReader, but valud only usable within
                     }
                 }
                 .keyboardShortcut("N", modifiers:[.shift, .command])
