@@ -81,6 +81,53 @@ import UniformTypeIdentifiers
 // Dealing with available and Swift and SwiftUI.  Ugh.
 // https://www.swiftyplace.com/blog/swift-available#:~:text=Conditional%20Handling%20with%20if%20%23available&text=If%20the%20device%20is%20running%20an%20earlier%20version%20of%20iOS,a%20fallback%20for%20earlier%20versions.
 
+// https://stackoverflow.com/questions/24074479/how-to-create-a-string-with-format
+extension String.StringInterpolation {
+
+    /// Quick formatting for *floating point* values.
+    mutating func appendInterpolation(float: Double, decimals: UInt = 2) {
+        let floatDescription = String(format: "%.\(decimals)f%", float)
+        appendLiteral(floatDescription)
+    }
+
+    /// Quick formatting for *hexadecimal* values.
+    mutating func appendInterpolation(hex: Int) {
+        let hexDescription = String(format: "0x%X", hex)
+        appendLiteral(hexDescription)
+    }
+
+    /// Quick formatting for *percents*.
+    mutating func appendInterpolation(percent: Double, decimals: UInt = 2) {
+        let percentDescription = String(format: "%.\(decimals)f%%", percent * 100)
+        appendLiteral(percentDescription)
+    }
+
+    /// Formats the *elapsed time* since the specified start time.
+    mutating func appendInterpolation(timeSince startTime: TimeInterval, decimals: UInt = 2) {
+        let elapsedTime = CACurrentMediaTime() - startTime
+        let elapsedTimeDescription = String(format: "%.\(decimals)fs", elapsedTime)
+        appendLiteral(elapsedTimeDescription)
+    }
+}
+
+/* usage
+ let number = 1.2345
+ "Float: \(float: number)" // "Float: 1.23"
+ "Float: \(float: number, decimals: 1)" // "Float: 1.2"
+
+ let integer = 255
+ "Hex: \(hex: integer)" // "Hex: 0xFF"
+
+ let rate = 0.15
+ "Percent: \(percent: rate)" // "Percent: 15.00%"
+ "Percent: \(percent: rate, decimals: 0)" // "Percent: 15%"
+
+ let startTime = CACurrentMediaTime()
+ Thread.sleep(forTimeInterval: 2.8)
+ "∆t was \(timeSince: startTime)" // "∆t was 2.80s"
+ "∆t was \(timeSince: startTime, decimals: 0)" // "∆t was 3s"
+ */
+
 private let log = Log("kram-profile")
 
 public func clamp<T>(_ value: T, _ minValue: T, _ maxValue: T) -> T where T : Comparable {
@@ -593,7 +640,7 @@ func loadFileJS(_ path: String) -> String? {
         
         var description: String {
             let duration = Double(endTime - startTime) * 1e-6
-            return "\(id) '\(threadName)' \(duration)s \(count)x"
+            return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(count)x"
         }
         
     }
@@ -712,8 +759,9 @@ func loadFileJS(_ path: String) -> String? {
                 // see if it's binary or json.  If binary, then can't parse duration below
                 // https://forums.swift.org/t/improving-indexing-into-swift-strings/41450/18
                 let jsonDetector = "ewoiZG" // "{\""
-                let firstSixChars = fileContentBase64.prefix(6)
-                let isJson = firstSixChars == jsonDetector
+                let jsonDetector2 = "eyJ0cm" // utf16?
+                let firstTwoChars = fileContentBase64.prefix(6)
+                let isJson = firstTwoChars == jsonDetector || firstTwoChars == jsonDetector2
                 
                 // convert to gzip format, so send less data across to Safari
                 if doCompress {
@@ -1289,10 +1337,12 @@ A tool to help profile mem, perf, and builds.
                     .keyboardShortcut("I", modifiers:.command)
                     .disabled(selection == nil)
                     .popover(isPresented: $isShowingPopover) {
-                        Text(getSelectedThreadInfo(selection))
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(16)
-                            .padding()
+                        ScrollView() {
+                            Text(getSelectedThreadInfo(selection))
+                                .multilineTextAlignment(.leading)
+                                //.lineLimit(16)
+                                .padding()
+                        }
                     }
                     
                     WebView(webView: myWebView)
