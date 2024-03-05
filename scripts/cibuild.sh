@@ -2,6 +2,9 @@
 
 # note: zsh works on  osx, but not on Win git bash, so using bash
 
+# here is a post about grouping output using echo
+# https://github.com/orgs/community/discussions/25314
+    
 #-----------------------------------------------
 
 # write out the git tag as a version.h file in a 
@@ -52,7 +55,8 @@ fi
 # can't just use cmake .. on osx, cmake gets confused about metal files since language not recognized
 # but Xcode knows how to build these.  I don't want to setup special rule for metal files right now.
 if [[ $buildType == macos ]]; then
-
+    echo "::group::kram-mac"
+    
 	# not using CMake anymore on mac/iOS.  Using custom workspace and projects.
 	#cmake .. -G Xcode
 	# build the release build
@@ -66,31 +70,49 @@ if [[ $buildType == macos ]]; then
 	# build libraries
 	# see here about destination arg
 	# https://github.com/appcelerator/titanium_mobile/pull/13098
-	xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios -configuration Release -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-	xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram -configuration Release -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-	
+    echo "::group::kram-ios"
+    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios -configuration Release -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    echo "::endgroup::"
+ 
+    echo "::group::kram"
+    xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram -configuration Release -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    echo "::endgroup::"
+ 
 	# install apps so they are signed
 	# can't specify empty INSTALL_PATH, or xcodebuild succeeds but copies nothing to bin
-	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramc -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    echo "::group::kramc"
+    xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramc -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    echo "::endgroup::"
+      
+    echo "::group::kramv"
 	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramv -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
-
+    echo "::endgroup::"
+    
 	popd
 
 	# build hlslparser to bin directory
 	pushd hlslparser
-	xcodebuild install -sdk macosx -project hlslparser.xcodeproj -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    echo "::group::hlsl-parser"
+    xcodebuild install -sdk macosx -project hlslparser.xcodeproj -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    echo "::endgroup::"
 	popd
 
     # build kram-profile to bin directory
     pushd kram-profile
+    echo "::group::kram-profiler"
     xcodebuild install -sdk macosx -project kram-profile.xcodeproj -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    echo "::endgroup::"
     popd
     
+    echo "::endgroup::"
+    
 elif [[ $buildType == windows ]]; then
-	mkdir -p build
+    echo "::group::kram-win"
+    mkdir -p build
 
 	pushd build
 
+    
 	# DONE: update to VS2022 and use clang
 	cmake .. -G "Visual Studio 17 2022" -T ClangCL -A x64
 
@@ -98,10 +120,11 @@ elif [[ $buildType == windows ]]; then
 	cmake --build . --config Release
 
 	# copy it to bin directory
-	cmake --install . --config Release
+    cmake --install . --config Release
 
-	popd
-
+    popd
+    echo "::endgroup::"
+    
 	# mingW doesn't like running this Win style command line
 	# see here for another method https://github.com/microsoft/setup-msbuild
 	# just added the parser to cmake
@@ -112,11 +135,13 @@ elif [[ $buildType == windows ]]; then
 	#popd
 	
 elif [[ $buildType == linux ]]; then
-	mkdir -p build
+    echo "::group::kram-linux"
+
+    mkdir -p build
 
 	pushd build
 
-	cmake .. 
+    cmake ..
 
 	# build the release build
 	cmake --build . --config Release
@@ -124,11 +149,15 @@ elif [[ $buildType == linux ]]; then
 	# copy it to bin directory
 	cmake --install . --config Release
 
-	popd
+    popd
+    echo "::endgroup::"
+
 fi
 
 
 #---------------------------------
+
+echo "::group::archive"
 
 pushd bin
 
@@ -143,5 +172,7 @@ if [[ $buildType == windows ]]; then
 else 
 	zip -r "kram-${buildType}.zip" .
 fi
-
+    
 popd
+
+echo "::endgroup::"
