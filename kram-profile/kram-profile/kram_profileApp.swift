@@ -618,6 +618,7 @@ func loadFileJS(_ path: String) -> String? {
         var threadName: String = ""
         var startTime: Int = Int.max
         var endTime: Int = Int.min
+        var endTimeFree: Int = Int.min
         var count: Int = 0
         
         // id doesn't implement Hashable
@@ -632,15 +633,45 @@ func loadFileJS(_ path: String) -> String? {
             return lhs.id < rhs.id
         }
         
-        func combine(_ s: Int, _ d: Int) {
-            startTime = min(startTime, s)
-            endTime = max(endTime, s+d)
+        func combine(_ s: Int, _ d: Int, _ name: String?) {
+            let isFreeBlock = name != nil && name! == "Free"
+            let e = s+d
+            
+            if isFreeBlock {
+                endTimeFree = max(endTimeFree, e)
+                
+                // If all free block, this doesn't work
+                // so update start/endTime assuming first block isn't Free
+                if startTime > endTime {
+                    startTime = min(startTime, s)
+                    endTime = max(endTime, e)
+                }
+            }
+            else {
+                startTime = min(startTime, s)
+                endTime = max(endTime, e)
+            }
+            
             count += 1
         }
         
         var description: String {
             let duration = Double(endTime - startTime) * 1e-6
-            return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(count)x"
+            
+            // TODO: could display freeDuration (heap size)
+            var freeDuration = duration
+            if endTimeFree != Int.min {
+                freeDuration = Double(endTimeFree - startTime) * 1e-6
+            }
+            let percentage = freeDuration > 0.0 ? ((duration / freeDuration) * 100.0) : 0.0
+            
+            // only disply percentage if needed
+            if percentage > 99.9 {
+                return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(count)x"
+            }
+            else {
+                return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(float:percentage, decimals:0)% \(count)x"
+            }
         }
         
     }
@@ -670,14 +701,11 @@ func loadFileJS(_ path: String) -> String? {
                 threadInfos[tid]!.threadName = threadName
             }
             else if event.ts != nil && event.dur != nil {
-                // using Free blocks to mark the end of the heap, so
-                // don't include them in the totals
-                if event.name != "Free" {
-                    let s = event.ts!
-                    let d = event.dur!
+                let s = event.ts!
+                let d = event.dur!
                     
-                    threadInfos[tid]!.combine(s, d)
-                }
+                threadInfos[tid]!.combine(s, d, event.name)
+
             }
         }
         

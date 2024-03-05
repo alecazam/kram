@@ -3,6 +3,7 @@
 # note: zsh works on  osx, but not on Win git bash, so using bash
 
 # here is a post about grouping output using echo
+# these cannot be nested
 # https://github.com/orgs/community/discussions/25314
     
 #-----------------------------------------------
@@ -55,8 +56,6 @@ fi
 # can't just use cmake .. on osx, cmake gets confused about metal files since language not recognized
 # but Xcode knows how to build these.  I don't want to setup special rule for metal files right now.
 if [[ $buildType == macos ]]; then
-    echo "::group::kram-mac"
-    
 	# not using CMake anymore on mac/iOS.  Using custom workspace and projects.
 	#cmake .. -G Xcode
 	# build the release build
@@ -103,16 +102,14 @@ if [[ $buildType == macos ]]; then
     xcodebuild install -sdk macosx -project kram-profile.xcodeproj -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
     popd
-    
-    echo "::endgroup::"
-    
+
 elif [[ $buildType == windows ]]; then
+    # this builds kram.exe and thumbnailer
     echo "::group::kram-win"
     mkdir -p build
 
 	pushd build
 
-    
 	# DONE: update to VS2022 and use clang
 	cmake .. -G "Visual Studio 17 2022" -T ClangCL -A x64
 
