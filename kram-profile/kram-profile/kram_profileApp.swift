@@ -593,7 +593,7 @@ func loadFileJS(_ path: String) -> String? {
         
         var description: String {
             let duration = Double(endTime - startTime) * 1e-6
-            return "\(id) '\(threadName)' \(duration)s \so(count)x"
+            return "\(id) '\(threadName)' \(duration)s \(count)x"
         }
         
     }
