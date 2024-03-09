@@ -26,14 +26,40 @@ import UniformTypeIdentifiers
 // DONE: be nice to focus the search input on cmd+F just to make me happy.  (using cmd+S)
 //  Browser goes to its own search which doesn’t help.
 
+// TODO: sort thread by size - repack the memory graph largest to smallest by reordering each track
+//   then can focus on the bigger values.
+// TODO: Sort by name and convert to count - can then see common counts
+//   so keep the json loaded in Swift.  Can json be cloned and modded?
 
-// TODO: add sort mode for name, time and incorporating dir or not
+// TODO: option to colesce to count and name with sort
+
+// TODO: filter files by mem, perf, build
+// TODO: import zip, and run cba on contents, mmap and decompress each
+//  can use incremental mode?
+// TODO: can't mmap web link, but can load zip off server with timings
+
+// TODO: add/update recent document list (need to hold onto dropped/opened folder)
+
+// TODO: add compressed format, build up Pefetto json or binary from this
+//  have vrious durtion forms.
+//  could have ascii form of below.
+//  flags to identify optional param
+// n nid name // nid is repacked 0..table
+// t tid name // tid is repacked to 0... table
+// s opt(tid nid color) dur opt(time), opt means uses prior tid/nid/color of that tid
+//  (defaults if none).  May need to buffer per thread, top of buffer explicit
+//  then merge with the other buffers, compare last tid data written.
+// s = 1 + 3 + 3 + 8 + 8 + 4 = 29B
+// smin = 1 + 8B
+
+// TODO: block drop onto the WKWebView
+
+// TODO: add list sort mode for name, time and incorporating dir or not
 // TODO: fix the js wait, even with listener, there's still a race
 //    maybe there's some ServiceWorker still loading the previous json?
 //    Perfetto is using a ServiceWorker, Safari uses those now, and ping/pong unware.
 // TODO: still getting web race condition.  Perfetto is trying to
 //  load the previous file, and we’re sending a new one.
-// TODO: add/update recent document list (need to hold onto dropped/opened folder)
 // TODO: have a way to reload dropped folder (not just subfiles)
 // TODO: nav title and list item text is set before duration is computed
 //  need some way to update that.
@@ -256,7 +282,7 @@ func lookupFile(selection: String) -> File {
 func updateFileCache(file: File) {
     fileCache[file.url] = file
 }
-  
+
 class MyWebView : WKWebView {
     
     // So that keyboard events are routed
@@ -287,7 +313,28 @@ class MyWebView : WKWebView {
         // or this ?
         // return super.performKeyEquivalent(with: event)
         
+        
    }
+    
+    /* still not working
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        //let myWebView = superview as! MyWebView
+        //if let dropDelegate = myWebView.dropDelegate {
+        //    return dropDelegate.webView(myWebView, performDragOperation: sender)
+        //}
+        return false
+    }
+    
+    // really want to shim drop
+    func shimDrag() {
+        // https://stackoverflow.com/questions/25096910/receiving-nsdraggingdestination-messages-with-a-wkwebview
+        
+        // Override the performDragOperation: method implemented on WKView so that we may get drop notification.
+        let originalMethod = class_getInstanceMethod(object_getClass(subviews[0]), #selector(NSDraggingDestination.performDragOperation(_:)))
+        let overridingMethod = class_getInstanceMethod(object_getClass(self), #selector(NSDraggingDestination.performDragOperation(_:)))
+            method_exchangeImplementations(originalMethod!, overridingMethod!)
+    }
+    */
 }
 
 
@@ -306,6 +353,7 @@ func newWebView(request: URLRequest) -> WKWebView {
     
     // here frame is entire screen
     let webView = MyWebView(frame: .zero, configuration: configuration)
+    webView.shimDrag()
     
     // The page is complaining it's going to lose the data if fwd/back hit
     webView.allowsBackForwardNavigationGestures = false
@@ -498,6 +546,7 @@ func showTimeRangeJS(_ timeRange: TimeRange) -> String? {
 
     do {
         struct PerfettoTimeRange: Codable {
+            // Note: can use Decimal for BigInt style
             // Pass the values to Perfetto in seconds.
             var timeStart: Double // in seconds
             var timeEnd: Double
@@ -613,7 +662,7 @@ func loadFileJS(_ path: String) -> String? {
     }
     
     class ThreadInfo : Hashable, Equatable, Comparable {
-       
+        
         var id: Int = 0
         var threadName: String = ""
         var startTime: Int = Int.max
@@ -676,10 +725,67 @@ func loadFileJS(_ path: String) -> String? {
         
     }
     
+    func sortByName(_ catapultProfile: inout CatapultProfile) {
+        
+        var threads: [Int: [Int]] = [:]
+        
+        // first sort each thread by
+        for i in 0..<catapultProfile.traceEvents!.count {
+            let event = catapultProfile.traceEvents![i]
+            
+            guard let tid = event.tid else { continue }
+            if event.ts == nil || event.dur == nil { continue }
+            
+            if event.name != nil && (event.name! == "thread_name" || event.name! == "process_name") {
+                continue
+            }
+            
+            if threads[tid] == nil {
+                threads[tid] = []
+            }
+            // just store the even index
+            threads[tid]!.append(i)
+        }
+        
+        for var thread in threads.values {
+            // TODO: want to buble the top allocators by count or mem
+            // to the front of the list.  Once have names sorted
+            // then can group totals
+            
+            // sort each thread by name then dur
+            thread = thread.sorted {
+                let lval = catapultProfile.traceEvents![$0]
+                let rval = catapultProfile.traceEvents![$1]
+                
+                let lname = lval.name ?? ""
+                let rname = lval.name ?? ""
+                
+                if lname < rname {
+                    return true
+                }
+                return lval.dur! < rval.dur!
+            }
+                          
+            // rewrite the start of the events
+            // Note this 0's them out, but could preserve min startTime
+            var startTime = 0
+            for i in thread {
+                catapultProfile.traceEvents![i].ts = startTime
+                startTime += catapultProfile.traceEvents![i].dur!
+            }
+            
+            // combine nodes, and store a count into the name
+            // easier to mke a new array, and replace the other
+            //var combineIndex = 0
+           // for i in 1..<catapultProfile.traceEvents![i]
+            
+        }
+        
+        // have option to consolidate and rename, but must remove nodes
+    }
+
     // parse json trace
     func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
-        
-        
         // was using Set<>, but having trouble with lookup
         var threadInfos: [Int: ThreadInfo] = [:]
         
@@ -690,7 +796,7 @@ func loadFileJS(_ path: String) -> String? {
             guard let tid = event.tid else { continue }
             
             if threadInfos[tid] == nil {
-                var info = ThreadInfo()
+                let info = ThreadInfo()
                 info.id = tid
                 
                 threadInfos[tid] = info
@@ -705,7 +811,6 @@ func loadFileJS(_ path: String) -> String? {
                 let d = event.dur!
                     
                 threadInfos[tid]!.combine(s, d, event.name)
-
             }
         }
         
@@ -854,7 +959,8 @@ func loadFileJS(_ path: String) -> String? {
                 for i in 0..<catapultProfile.traceEvents!.count {
                     let event = catapultProfile.traceEvents![i]
                     if event.name == "Source" ||
-                        event.name == "OptModule"
+                        event.name == "OptModule" ||
+                        event.name == "DebugType" // these take a while
                     {
                         // This is a path
                         let detail = event.args!["detail"]!.value as! String
@@ -956,13 +1062,33 @@ func loadFileJS(_ path: String) -> String? {
                 
                 // was win, but use window instead
                 win.postMessage(obj,'\(ORIGIN)');
+        
+                    // ugh, document doesnt 'work either
+                    if (false) {
+                        // tried adding to various parts above.  Need to install
+                        // after the page is open, but this doesn't override the default
+                        // turn off drop handling, or it won't fixup json or appear in list
+                        // This doesn't work
+                        window.addEventListener('drop', function(e) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        });
+                        window.addEventListener('dragover', function(e) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        });
+                    }
             }
         
             window.addEventListener('message', onMessageHandler);
+        
+            
         }
         
         waitForUI(obj);
         """
+        
+       
         
         return script
     } catch {
