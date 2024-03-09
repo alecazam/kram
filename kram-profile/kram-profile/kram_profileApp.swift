@@ -959,8 +959,7 @@ func loadFileJS(_ path: String) -> String? {
                 for i in 0..<catapultProfile.traceEvents!.count {
                     let event = catapultProfile.traceEvents![i]
                     if event.name == "Source" ||
-                        event.name == "OptModule" ||
-                        event.name == "DebugType" // these take a while
+                        event.name == "OptModule"
                     {
                         // This is a path
                         let detail = event.args!["detail"]!.value as! String
@@ -972,7 +971,8 @@ func loadFileJS(_ path: String) -> String? {
                     else if event.name == "InstantiateFunction" ||
                                 event.name == "InstantiateClass" ||
                                 event.name == "OptFunction" ||
-                                event.name == "ParseClass"
+                                event.name == "ParseClass" ||
+                                event.name == "DebugType" // these take a while
                     {
                         // This is a name
                         let detail = event.args!["detail"]!.value as! String
