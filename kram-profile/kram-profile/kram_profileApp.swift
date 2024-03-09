@@ -353,7 +353,7 @@ func newWebView(request: URLRequest) -> WKWebView {
     
     // here frame is entire screen
     let webView = MyWebView(frame: .zero, configuration: configuration)
-    webView.shimDrag()
+    //webView.shimDrag()
     
     // The page is complaining it's going to lose the data if fwd/back hit
     webView.allowsBackForwardNavigationGestures = false
