@@ -6,6 +6,10 @@ import SwiftUI
 import WebKit
 import UniformTypeIdentifiers
 
+//import CoreData
+//import SwiftData
+
+
 // https://github.com/gualtierofrigerio/WkWebViewJavascript/blob/master/WkWebViewJavascript/WebViewHandler.swift
 
 // https://levelup.gitconnected.com/how-to-use-wkwebview-on-mac-with-swiftui-10266989ed11
@@ -44,13 +48,26 @@ import UniformTypeIdentifiers
 //  have vrious durtion forms.
 //  could have ascii form of below.
 //  flags to identify optional param
-// n nid name // nid is repacked 0..table
-// t tid name // tid is repacked to 0... table
-// s opt(tid nid color) dur opt(time), opt means uses prior tid/nid/color of that tid
+// 4B leader
+// n len nid name  // nid is repacked 0..table
+// t len tid name  // tid is repacked to 0... table
+// s len sid name  // symbols
+// i tid tmin tmax count // have this written at end of file for each thread
+// f fid nid line nid (file line func)
+// r rid len sid sid sid sid
+// s opt(tid nid fid color) dur opt(time), opt means uses prior tid/nid/color of that tid
 //  (defaults if none).  May need to buffer per thread, top of buffer explicit
 //  then merge with the other buffers, compare last tid data written.
 // s = 1 + 3 + 3 + 8 + 8 + 4 = 29B
 // smin = 1 + 8B
+// need a way to tag file/line, and count into the dump
+
+// timings can delta encoded, but with ts/dur a parent scope writes after.
+// they aren't ordered by startTime.  Also missing any unclosed scoping.
+// compared to -t +t sequences.  Note -0 = 0, so 0 is an open scope (check <=0 )
+
+// 4-bit, 12-bit, 16-bit, variable, pad to 4B
+
 
 // TODO: block drop onto the WKWebView
 
@@ -106,6 +123,58 @@ import UniformTypeIdentifiers
 
 // Dealing with available and Swift and SwiftUI.  Ugh.
 // https://www.swiftyplace.com/blog/swift-available#:~:text=Conditional%20Handling%20with%20if%20%23available&text=If%20the%20device%20is%20running%20an%20earlier%20version%20of%20iOS,a%20fallback%20for%20earlier%20versions.
+
+// Video about Combine
+// https://www.youtube.com/watch?v=TshpcKZmma8
+
+class FileSearcher: ObservableObject {
+//    enum SortOption {
+//        case name, duration
+//    }
+    
+    @Published var searchIsActive = false
+    @Published var searchText = ""
+    
+    var files: [File] = []
+        
+    @Published var filesSearched: [File] = []
+    //@Published var sortOption = SortOption.duration // name
+    
+    // duplicate code, but init() doesn't have self defined
+    func updateFilesSearched(_ sortByDuration: Bool = false) {
+        // may not want to sort everytime, or the list will change as duration is updated
+        // really want to do this off a button, and then set files to that
+        let sortedResults = files.sorted {
+            if !sortByDuration || $0.duration == $1.duration {
+                return $0.id < $1.id
+            }
+            return $0.duration < $1.duration
+        }
+        
+        if searchText.isEmpty || sortedResults.count <= 1  {
+            filesSearched = sortedResults
+        }
+        else if searchText.count == 1 {
+            let lowercaseSearchText = searchText.lowercased()
+            let uppercaseSearchText = searchText.uppercased()
+
+            filesSearched = sortedResults.filter {
+                $0.name.starts(with: uppercaseSearchText) ||
+                $0.name.starts(with: lowercaseSearchText)
+            }
+        }
+        else {
+            // is search text multistring?
+            $searchText.map { searchText in
+                sortedResults.filter { file in
+                    // Here use the name, or else the directory will have say "kram" in it and filter will trigger for all files "kr"
+                    file.name.localizedCaseInsensitiveContains(searchText)
+                }
+            }
+            .assign(to: &$filesSearched)
+        }
+    }
+}
 
 // https://stackoverflow.com/questions/24074479/how-to-create-a-string-with-format
 extension String.StringInterpolation {
@@ -195,7 +264,7 @@ struct File: Identifiable, Hashable, Equatable, Comparable
     let url: URL
     let shortDirectory: String
     
-    var duration: Double?
+    var duration = 0.0
     var modStamp: Date?
     var loadStamp: Date?
     
@@ -232,8 +301,9 @@ func generateName(file: File) -> String {
 
 func generateDuration(file: File) -> String {
     let f = lookupFile(url: file.url)
-    if f.duration != nil {
-        return String(format:"%0.3f", f.duration!) // sec vis to ms for now
+    if f.duration != 0.0 {
+        // TODO: may want to add s/mb based on file type
+        return String(format:"%0.3f", f.duration) // sec vis to ms for now
     }
     else {
         return ""
@@ -472,7 +542,14 @@ extension View {
             return self
         }
     }
-    
+    public func disableAlternatingRowBackgrondsOptional() -> some View {
+        if #available(macOS 14.0, *) {
+            return self.alternatingRowBackgrounds(.disabled) // skip the row coloring
+        }
+        else {
+            return self
+        }
+    }
     /*
     // This one is hard to wrap, since KeyPress.result is macOS 14.0 only
     public func onKeyPressOptional(_ key: KeyEquivalent, action: @escaping () -> KeyPress.Result) -> some View {
@@ -907,7 +984,7 @@ func loadFileJS(_ path: String) -> String? {
                 }
                 
                 // walk the file and compute the duration if we don't already have it
-                if isJson && file.duration == nil {
+                if isJson && file.duration == 0.0 {
                     let decoder = JSONDecoder()
                     let catapultProfile = try decoder.decode(CatapultProfile.self, from: fileContent)
                     
@@ -981,7 +1058,7 @@ func loadFileJS(_ path: String) -> String? {
                 }
                 
                 // walk the file and compute the duration if we don't already have ti
-                if file.duration == nil {
+                if file.duration == 0.0 {
                     updateDuration(catapultProfile, &file)
                     
                     // For now, just log the per-thread info
@@ -1109,7 +1186,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 @main
 struct kram_profileApp: App {
-    @State private var files: [File] = []
+    //@State private var files: [File] = []
+    
+    // @State private var files: [File] = []
     @State private var selection: String?
     
     // close app when last window is
@@ -1206,7 +1285,7 @@ struct kram_profileApp: App {
         Font.custom("Inter Variable", size: 14)
         .monospaced()
     
-    func openFilesFromURLs(urls: [URL]) {
+    func openFileFromURLs(urls: [URL]) {
         // turning this off for now
         let mergeFiles = false
         
@@ -1216,24 +1295,21 @@ struct kram_profileApp: App {
             // for now wipe the old list
             if filesNew.count > 0 {
                 if mergeFiles {
-                    files = Array(Set(files + filesNew))
+                    fileSearcher.files = Array(Set(fileSearcher.files + filesNew))
                 }
                 else {
                     // reset the list
-                    files = filesNew
+                    fileSearcher.files = filesNew
                 }
                 
-                // for some reason, their listed out in pretty random order
-                // TODO: add different sorts - id, name, size.  id is default
-                // which is the full url
-                files.sort()
+                fileSearcher.updateFilesSearched()
                 
-                log.debug("found \(files.count) files")
+                log.debug("found \(fileSearcher.files.count) files")
                 
                 // preserve the original selection if still present
                 if selection != nil {
                     var found = false
-                    for file in files {
+                    for file in fileSearcher.files {
                         if file.id == selection {
                             found = true
                             break;
@@ -1242,12 +1318,12 @@ struct kram_profileApp: App {
                     
                     // load first file in the list
                     if !found {
-                        selection = files[0].id
+                        selection = fileSearcher.files[0].id
                     }
                 }
                 else {
                     // load first file in the list
-                    selection = files[0].id
+                    selection = fileSearcher.files[0].id
                 }
             }
         }
@@ -1278,7 +1354,7 @@ struct kram_profileApp: App {
         
         panel.begin { reponse in
             if reponse == .OK {
-                openFilesFromURLs(urls: panel.urls)
+                openFileFromURLs(urls: panel.urls)
             }
         }
     }
@@ -1387,41 +1463,101 @@ A tool to help profile mem, perf, and builds.
     // Allocating here only works for a single Window, not for WindowGroup
     @State var myWebView = newWebView(request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!))
     
+    // Focus state says which panel has keyboard routing
     enum Field: Hashable {
         case webView
         case listView
     }
     @FocusState private var focusedField: Field?
-    @State var keyMonitor: Any?
         
+    // Description of CoreData/SwiftData and how it works
+    // https://davedelong.com/blog/2021/04/03/core-data-and-swiftui/
+    // CoreData/SwiftData types
+    //@FetchRequest(sortDescriptors:
+    //    [SortDescriptor(\.name, order: .reverse),
+    //     SortDescriptor(\.duration, order: .reverse),], animation: .default)
+    //
+    //private var videos: FetchedResults<File>
+    //private var videos: NSFetchedResultsController<File>
+
+    // Can also use to sort by multiple value
+//    @State private var sortOrderName = [
+//        KeyPathComparator(\File.name) // might need to sort by id (full url)
+//    ]
+//
+//    @State private var sortOrderDuration = [
+//        KeyPathComparator(\File.duration)
+//    ]
+//    
+//    @State private var sortOrderCurrent = [
+//        KeyPathComparator(\File.name) // might need to sort by id (full url)
+//    ]
+   
+    // List sort picker
+    // https://xavier7t.com/swiftui-list-with-sort-options
+    
+    
+//    var sortedFiles: [Task] {
+//        switch sortOption {
+//        case .name:
+//            return tasks.sorted { $0.name < $1.name }
+//        case .dueDate:
+//            return tasks.sorted { $0.dueDate < $1.dueDate }
+//        }
+//    }
+    
     // https://developer.apple.com/documentation/swiftui/adding-a-search-interface-to-your-app
     // can filter list items off this
-    // TODO: Rename to filterText, ...
+    // TODO: Rename var to filterText, ...
     // Note: this filter needs macOS14
-    @State private var searchText: String = ""
-    @State private var searchIsActive = false
-    var searchResults: [File] {
-        if searchText.isEmpty {
-            return files
+    //@State private var searchText: String = ""
+    @StateObject var fileSearcher = FileSearcher()
+    // this is a var that executes code when called?
+//    private var searchResults: [File] {
+//        var results = fileSearcher.filesSearched
+//        
+        /*
+        if fileSearcher.searchText.isEmpty {
+            results = fileSearcher.files
         }
-        else if searchText.count == 1 {
-            // Some items with k in the rest of the name will be filtered
-            // but will appear with more characters
-            let lowercaseSearchText = searchText.lowercased()
-            let uppercaseSearchText = searchText.uppercased()
-            
-            return files.filter {
-                $0.name.starts(with: uppercaseSearchText) ||
-                $0.name.starts(with: lowercaseSearchText)
-            }
-        }
+//        else if fileSearcher.searchText.count == 1 {
+//            // Some items with k in the rest of the name will be filtered
+//            // but will appear with more characters
+//            let lowercaseSearchText = searchText.lowercased()
+//            let uppercaseSearchText = searchText.uppercased()
+//            
+//            results = oo.files.filter {
+//                $0.name.starts(with: uppercaseSearchText) ||
+//                $0.name.starts(with: lowercaseSearchText)
+//            }
+//        }
         else {
-            return files.filter {
-                // Here use the name, or else the directory will have say "kram" in it
-                $0.name.localizedCaseInsensitiveContains(searchText)
-            }
+//            results = files.filter {
+//                // Here use the name, or else the directory will have say "kram" in it and filter will trigger for all files "kr"
+//                $0.name.localizedCaseInsensitiveContains(searchText)
+//            }
+            results = fileSearcher.filesSearched
         }
-    }
+        
+        // This sort isn't reflected in list
+//        if sortOption == .duration {
+//            results.sort(by: {
+//                if $0.duration == $1.duration {
+//                    return $0.id < $1.id
+//                }
+//                return $0.duration > $1.duration
+//            })
+//        }
+        
+        //results.sort(using: sortOrderCurrent)
+         */
+//        return results
+//    }
+    
+    // https://stackoverflow.com/questions/70652964/how-to-search-a-table-using-swiftui-on-macos
+   
+   
+
     
     // TODO: do this when building the searchResults
     // can do O(N) then and mark which items need separator
@@ -1450,14 +1586,91 @@ A tool to help profile mem, perf, and builds.
         return lookupFile(selection: selection!).threadInfo
     }
     
+    func isMemoryFileType(_ selection: String?) -> Bool {
+        if selection == nil {
+            return false
+        }
+        // TODO: store type with name, then can have icon too
+        return filenameToType(selection!) == .Memory
+    }
+    
+    // iOS can go compact reduces to 1 column
+    // can add as a subheading of the text then
+//    private var isCompact: Bool {
+//        horizontalSizeClass == .compact
+//      }
+    
+    // here's about inheriting from CoreData, @FetchRquest, NSManagedObject, @NSManaged, etc.
+    // so it's retained, and not dealing with silly Swift struct getting destroyed.
+    // and using a class.
+    // https://useyourloaf.com/blog/swiftui-tables-quick-guide/
+    
+    // Comparators aren't same as KeyPathComparator, ugh
+    // https://useyourloaf.com/blog/custom-sort-comparators/
+    
     var body: some Scene {
         
         // TODO: WindowGroup brings up old windows which isn't really what I want
     
         Window("Main", id: "main") {
             NavigationSplitView() {
+                #if false
+                // https://www.swiftyplace.com/blog/chy7hvne
+                Table(fileSearcher.filesSearched, selection:$selection, sortOrder:$sortOrderCurrent) {
+                    
+                    // This displays the sort caret
+                    TableColumn("name", value:\.name)
+                    
+                    // This doesn't not display the caret
+//                    TableColumn("name" /*, comparator: $sortOrderName */) { searchResult in
+//                        Text(generateName(file: searchResult))
+//                        .help(searchResult.shortDirectory)
+//                        .truncationMode(.tail)
+//                    }
+                    //.width(min: 20, ideal: 180, max: 180)
+                    .width(170)
+                    
+                    // This has to format Double
+                    TableColumn("range" /*, comparator: $sortOrderDuration*/) { searchResult in
+                        Text(generateDuration(file: searchResult))
+                            .frame(maxWidth: 60, alignment: .trailing)
+                
+                    }
+                    // last column will take up remaining space, but that's dumb
+                    // then it can be resizes to too much space
+                    //.width(min: 20, ideal: 60, max: 70)
+                    .width(60)
+                }
+                .navigationSplitViewColumnWidth(min: 40, ideal: 260, max: 260)
+                .tableStyle(.inset) // more space
+                // macOS 14
+                .disableAlternatingRowBackgrondsOptional()// skip the row coloring
+                
+                // can customize each row
+                //rows: {
+                // }
+                // This is macOS14 too
+//                .onChange(of: sortOrder, initial:false) { newOrder, cond in
+//                    //self.searchResults.sort(using: newOrder)
+//                }
+//                .onChange(of: sortOrderCurrent) { newOrder in
+//                    //self.searchResults.sort(using: newOrder)
+//                    sortOrderCurrent = newOrder
+//                }
+                //.help(file.shortDirectory)
+                .focused($focusedField, equals: .listView)
+                .focusable()
+                
+                #else
                 VStack {
-                    List(searchResults, selection:$selection) { file in
+                    // Poor mans table
+                    // spaces needed, or it's right against left edge
+//                    Picker("   Sort By", selection: $fileSearcher.sortOption) {
+//                        Text("Name").tag(FileSearcher.SortOption.name)
+//                        Text("Range").tag(FileSearcher.SortOption.duration)
+//                    }.pickerStyle(SegmentedPickerStyle())
+                    
+                    List(fileSearcher.filesSearched, selection:$selection) { file in
                         HStack() {
                             // If number is first, then that's all SwiftUI
                             // uses for typeahead list search.  Seems to
@@ -1469,46 +1682,64 @@ A tool to help profile mem, perf, and builds.
                             Text(generateName(file: file))
                                 .help(file.shortDirectory)
                                 .truncationMode(.tail)
-                            
+                                
                             Text(generateDuration(file: file))
                                 .frame(maxWidth: 70)
                             //.alignment(.trailing)
                                 .font(durationFont)
-                            
                         }
-                        .listRowSeparator(isSeparatorVisible(file, searchResults) ? .visible : .hidden)
-                        .listRowSeparatorTint(.white)
                         
+// everytime a duration is updated, need to resort the list
+// need icon to indicate if file is stale or deleted too
+//                        .onChange(of: sortOption) { newSort in
+//                            // This sort isn't reflected in list
+//                            if newSort == .duration {
+//                                self.searchResults.sort(by: {
+//                                    if $0.duration == $1.duration {
+//                                        return $0.id < $1.id
+//                                    }
+//                                    return $0.duration > $1.duration
+//                                })
+//                            }
+//                        }
+                        .listRowSeparator(isSeparatorVisible(file, fileSearcher.filesSearched) ? .visible : .hidden)
+                        .listRowSeparatorTint(.white)
                     }
                     .focused($focusedField, equals: .listView)
                     .focusable()
                 }
-                
+                #endif
             }
             detail: {
                 VStack {
                     // This button conveys data Perfetto does not
                     // It's basically a hud.
-                    Button("Info") {
-                        self.isShowingPopover.toggle()
-                    }
-                    .keyboardShortcut("I", modifiers:.command)
-                    .disabled(selection == nil)
-                    .popover(isPresented: $isShowingPopover) {
-                        ScrollView() {
-                            Text(getSelectedThreadInfo(selection))
-                                .multilineTextAlignment(.leading)
-                                //.lineLimit(16)
-                                .padding()
+                    HStack {
+                        // only display if FileType.Memory
+                        if isMemoryFileType(selection) {
+                            Button("Info") {
+                                self.isShowingPopover.toggle()
+                            }
+                            .keyboardShortcut("I", modifiers:.command)
+                            .disabled(selection == nil)
+                            .popover(isPresented: $isShowingPopover) {
+                                ScrollView() {
+                                    Text(getSelectedThreadInfo(selection))
+                                        .multilineTextAlignment(.leading)
+                                    //.lineLimit(16)
+                                        .padding()
+                                }
+                            }
                         }
                     }
-                    
                     WebView(webView: myWebView)
                         .focused($focusedField, equals: .webView)
                         .focusable()
                 }
             }
-            .searchableOptional(text: $searchText, isPresented: $searchIsActive, placement: .sidebar, prompt: "Filter")
+            
+            // This only seems to display with List, not with Table.  Or it's under Table
+            .searchableOptional(text: $fileSearcher.searchText, isPresented: $fileSearcher.searchIsActive, placement: .sidebar, prompt: "Filter")
                 
             .onChange(of: selection /*, initial: true*/) { newState in
                 openFileSelection(myWebView)
@@ -1516,12 +1747,12 @@ A tool to help profile mem, perf, and builds.
             }
             .navigationTitle(generateNavigationTitle(selection))
             .onOpenURL { url in
-                openFilesFromURLs(urls: [url])
+                openFileFromURLs(urls: [url])
                 //focusedField = .webView
             }
             .dropDestination(for: URL.self) { (items, _) in
                 // This acutally works!
-                openFilesFromURLs(urls: items)
+                openFileFromURLs(urls: items)
                 //focusedField = .webView
                 return true
             }
@@ -1546,6 +1777,12 @@ A tool to help profile mem, perf, and builds.
                 }
                 .keyboardShortcut("G")
                 
+                Button("Sort Range") {
+                    fileSearcher.updateFilesSearched(true)
+                }
+                .keyboardShortcut("T")
+                //.disabled()
+                
                 Button("Reload File") {
                     openFileSelection(myWebView)
                 }
@@ -1555,7 +1792,7 @@ A tool to help profile mem, perf, and builds.
                 // These work even if the list view is collapsed
                 Button("Prev File") {
                     if selection != nil {
-                        selection = selectFile(selection, searchResults, false)
+                        selection = selectFile(selection, fileSearcher.filesSearched, false)
                         
                         // TODO: no simple scrollTo, since this is all React style
                         // There is a ScrollViewReader, but valud only usable within
@@ -1566,12 +1803,12 @@ A tool to help profile mem, perf, and builds.
                 
                 Button("Next File") {
                     if selection != nil {
-                        selection = selectFile(selection, searchResults, true)
+                        selection = selectFile(selection, fileSearcher.filesSearched, true)
                     }
                 }
                 .keyboardShortcut("N", modifiers:[.command])
                 .disabled(selection == nil)
-            
+                
                 // TODO: these may need to be attached to detail view
                 // The list view eats them, and doesn't fwd onto the web view
                 
