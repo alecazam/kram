@@ -147,11 +147,20 @@ class FileSearcher: ObservableObject {
         // may not want to sort everytime, or the list will change as duration is updated
         // really want to do this off a button, and then set files to that
         let sortedResults = files.sorted {
-            if !sortByDuration || $0.duration == $1.duration {
+            if !sortByDuration {
                 return $0.id < $1.id
             }
-            // TODO: may want to also search by last
-            return $0.duration > $1.duration
+            else {
+                // keep the groupings, just sort the duration within
+                if $0.parentFolders != $1.parentFolders {
+                    return $0.parentFolders < $1.parentFolders
+                }
+                if $0.duration == $1.duration {
+                    return $0.id < $1.id
+                }
+                // TODO: may want to also search by last
+                return $0.duration > $1.duration
+            }
         }
         
         if searchText.isEmpty || sortedResults.count <= 1  {
@@ -232,33 +241,6 @@ public func clamp<T>(_ value: T, _ minValue: T, _ maxValue: T) -> T where T : Co
     return min(max(value, minValue), maxValue)
 }
 
-func fileModificationDate(url: URL) -> Date? {
-    do {
-        let attr = try FileManager.default.attributesOfItem(atPath: url.path)
-        return attr[FileAttributeKey.modificationDate] as? Date
-    } catch {
-        return nil
-    }
-}
-
-func buildShortDirectory(url: URL) -> String {
-    let count = url.pathComponents.count
-    
-    // dir0/dir1/file.ext
-    // -3/-2/-1
-    
-    var str = ""
-    if count >= 3 {
-        str += url.pathComponents[count-3]
-        str += "/"
-    }
-    if count >= 2 {
-        str += url.pathComponents[count-2]
-    }
-    
-    return str
-}
-
 // DONE: may want to make a class.
 class File: Identifiable, /*Hashable, */ Equatable, Comparable
 {
@@ -266,6 +248,7 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     var name: String { url.lastPathComponent }
     let url: URL
     let shortDirectory: String
+    let parentFolders: String
     
     var duration = 0.0
     var modStamp: Date?
@@ -276,8 +259,9 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     
     init(url: URL) {
         self.url = url
-        self.modStamp = fileModificationDate(url:url)
-        self.shortDirectory = buildShortDirectory(url:url)
+        self.modStamp = File.fileModificationDate(url:url)
+        self.shortDirectory = File.buildShortDirectory(url:url)
+        self.parentFolders = url.deletingLastPathComponent().absoluteString
     }
     
     public static func == (lhs: File, rhs: File) -> Bool {
@@ -294,8 +278,36 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     public func isReloadNeeded() -> Bool {
         return modStamp != loadStamp
     }
+    
+    private static func fileModificationDate(url: URL) -> Date? {
+        do {
+            let attr = try FileManager.default.attributesOfItem(atPath: url.path)
+            return attr[FileAttributeKey.modificationDate] as? Date
+        } catch {
+            return nil
+        }
+    }
+
+    private static func buildShortDirectory(url: URL) -> String {
+        let count = url.pathComponents.count
+        
+        // dir0/dir1/file.ext
+        // -3/-2/-1
+        
+        var str = ""
+        if count >= 3 {
+            str += url.pathComponents[count-3]
+            str += "/"
+        }
+        if count >= 2 {
+            str += url.pathComponents[count-2]
+        }
+        
+        return str
+    }
 }
 
+// TODO: now that it's a class, can probably elimiante that lookuFile calls
 func generateName(file: File) -> String {
     // need to do lookup to get duration
     let f = lookupFile(url: file.url)
@@ -635,10 +647,11 @@ func buildTimeRangeJson(_ timeRange:TimeRange) -> String? {
     // Sending down nanos seems to work provided the number has n suffix
     // TODO: Perfetto seems to only honor this the first time it's sent.
     
-    // This one doesn't go thorugh JSON.oarse()
+    // This one doesn't go thorugh JSON.parse()
     // timeStart: Time.fromSeconds(\(timeRange.timeStart)),
     // timeEnd: Time.fromSeconds(\(timeRange.timeEnd)),
     
+    // The postMessage if using Json.stringify can't handle the BigInt
     let script = """
         var objTime = {
             perfetto:{
@@ -779,7 +792,7 @@ class ThreadInfo : Hashable, Equatable, Comparable {
         }
         let percentage = freeDuration > 0.0 ? ((duration / freeDuration) * 100.0) : 0.0
         
-        // only disply percentage if needed
+        // only display percentage if needed
         if percentage > 99.9 {
             return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(count)x"
         }
@@ -790,7 +803,8 @@ class ThreadInfo : Hashable, Equatable, Comparable {
     
 }
 
-func sortByName(_ catapultProfile: inout CatapultProfile) {
+// TODO: Hook this up, build more efficient array of thread events
+func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
     
     var threads: [Int: [Int]] = [:]
     
@@ -1301,12 +1315,8 @@ struct kram_profileApp: App {
     }
     
     // What is used when Inter isn't installed.  Can this be bundled?
-    let customFont = Font.custom("Inter Variable", size: 14)
+    //let customFont = Font.custom("Inter Variable", size: 14)
                 
-    let durationFont =
-        Font.custom("Inter Variable", size: 14)
-        .monospaced()
-    
     func openFileFromURLs(urls: [URL]) {
         
         if urls.count >= 1 {
@@ -1353,10 +1363,10 @@ struct kram_profileApp: App {
         }
     }
     
-    func shortFilename(_ str: String) -> String {
-        let url = URL(string: str)!
-        return url.lastPathComponent
-    }
+//    func shortFilename(_ str: String) -> String {
+//        let url = URL(string: str)!
+//        return url.lastPathComponent
+//    }
     
     func openContainingFolder(_ str: String) {
         let url = URL(string: str)!
@@ -1614,7 +1624,6 @@ A tool to help profile mem, perf, and builds.
                             Text(generateDuration(file: file))
                                 .frame(maxWidth: 70)
                             //.alignment(.trailing)
-                                .font(durationFont)
                         }
                         .listRowSeparator(isSeparatorVisible(file, fileSearcher.filesSearched) ? .visible : .hidden)
                         .listRowSeparatorTint(.white)
