@@ -609,8 +609,9 @@ func filenameToTimeRange(_ filename: String) -> TimeRange {
     var duration = 1.0
     
     switch filenameToType(filename) {
+        // TODO: need underlying type of these archives
         case .Archive: fallthrough
-        case .Compressed: fallthrough
+        case .Compressed: duration = 0.0
             
         
         case .Build: duration = 1.0
@@ -621,88 +622,85 @@ func filenameToTimeRange(_ filename: String) -> TimeRange {
     return TimeRange(timeStart:0.0, timeEnd:duration)
 }
 
-// Flutter uses this to jump to a time range
-func showTimeRangeJS(_ timeRange: TimeRange) -> String? {
-
-    do {
-        struct PerfettoTimeRange: Codable {
-            // Note: can use Decimal for BigInt style
-            // Pass the values to Perfetto in seconds.
-            var timeStart: Int // in nanos
-            var timeEnd: Int
-                
-            // The time range should take up 80% of the visible window.
-            var viewPercentage: Double
-        }
-        
-        // /master/packages/devtools_app/lib/src/screens/performance/panes/timeline_events/perfetto/_perfetto_web.dart#L179
-        // Dart DateTime class, then microseconds call returns int, didn't find inMicroseconds
-        // find TimeRange
-        // 'timeStart': timeRange.start!.inMicroseconds / 1000000,
-        // 'timeEnd': timeRange.end!.inMicroseconds / 1000000,
-        
-        
-        struct Perfetto: Codable {
-            var perfetto: PerfettoTimeRange
-        }
-        
-        // TODO: tried Double as seconds, Int/Decimal (BitInt) and none of these work
-//        func toNanos(_ timeSeconds: Double) -> Decimal {
-//            return Decimal(timeSeconds * 1e9)
-//        }
-        
-        let perfetto = Perfetto(perfetto:PerfettoTimeRange(
-            timeStart: Int(timeRange.timeStart),
-            timeEnd: min(1, Int(timeRange.timeEnd)),
-            viewPercentage:timeRange.viewPercentage))
-        
-        var perfettoEncode = ""
-        
-        if true {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(perfetto)
-            let encodedString = String(decoding: data, as: UTF8.self)
-            perfettoEncode = String(encodedString.dropLast().dropFirst())
-            perfettoEncode = perfettoEncode.replacingOccurrences(of: "\u{2028}", with: "\\u2028")
-                .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
-        }
-        
-        let script = """
-            // convert from string -> Uint8Array -> ArrayBuffer
-            var obj = JSON.parse('{\(perfettoEncode)}');
-        
-            // https://jsfiddle.net/vrsofx1p/
-            function waitForUI(obj)
-            {
-                // have already opened and loaded the inwdow
-                const win = window; // .open('\(ORIGIN)');
-                if (!win) { return; }
-            
-                const timer = setInterval(() => win.postMessage('PING', '\(ORIGIN)'), 50);
-                
-                const onMessageHandler = (evt) => {
-                    if (evt.data !== 'PONG') return;
-                    
-                    // We got a PONG, the UI is ready.
-                    window.clearInterval(timer);
-                    window.removeEventListener('message', onMessageHandler);
-                    
-                    // was win, but use window instead
-                    win.postMessage(obj,'\(ORIGIN)');
-                }
-            
-                window.addEventListener('message', onMessageHandler);
-            }
-                
-            waitForUI(obj);
-        """
-        
-        return script
-    }
-    catch {
-        log.error(error.localizedDescription)
+func buildTimeRangeJson(_ timeRange:TimeRange) -> String? {
+    if timeRange.timeEnd == 0.0 {
         return nil
     }
+    
+    // This is in nanos
+    let timeStartInt = Int(timeRange.timeStart * 1e9)
+    let timeEndInt = Int(timeRange.timeEnd * 1e9)
+    
+    // Time is not found, it's in ui/src/base/time.ts
+    // Sending down nanos seems to work provided the number has n suffix
+    // TODO: Perfetto seems to only honor this the first time it's sent.
+    
+    // This one doesn't go thorugh JSON.oarse()
+    // timeStart: Time.fromSeconds(\(timeRange.timeStart)),
+    // timeEnd: Time.fromSeconds(\(timeRange.timeEnd)),
+    
+    let script = """
+        var objTime = {
+            perfetto:{
+                timeStart:\(timeStartInt)n,
+                timeEnd:\(timeEndInt)n,
+                viewPercentage:\(timeRange.viewPercentage)
+            }};
+        """
+    
+    return script
+}
+
+// Flutter uses this to jump to a time range
+func showTimeRangeJS(objTimeScript: String) -> String? {
+
+   
+    // https://github.com/flutter/devtools/blob/master/packages/devtools_app/lib/src/screens/performance/panes/timeline_events/perfetto/_perfetto_web.dart#L174
+    
+
+    /*
+     
+     // The |time| type represents trace time in the same units and domain as trace
+     // processor (i.e. typically boot time in nanoseconds, but most of the UI should
+     // be completely agnostic to this).
+     export type time = Brand<bigint, 'time'>;
+     
+     https://github.com/google/perfetto/blob/45fe47bfe4111454ba7063b9b4d438369090d6ba/ui/src/common/actions.ts#L97
+     export interface PostedScrollToRange {
+       timeStart: time;
+       timeEnd: time; // ugh?
+       viewPercentage?: number;
+     }
+
+     // https://github.com/flutter/devtools/blob/8bf64b754a4677b66d22fe6f1212bd72d1e789b8/packages/devtools_app/lib/src/screens/performance/panes/flutter_frames/flutter_frame_model.dart#L29
+    
+     */
+    
+    let script = """
+       
+        // https://jsfiddle.net/vrsofx1p/
+        function waitForUI(objTime)
+        {
+            const timer = setInterval(() => window.postMessage('PING', '\(ORIGIN)'), 50);
+            
+            const onMessageHandler = (evt) => {
+                if (evt.data !== 'PONG') return;
+                
+                // We got a PONG, the UI is ready.
+                window.clearInterval(timer);
+                window.removeEventListener('message', onMessageHandler);
+                
+                // was win, but use window instead
+                window.postMessage(objTime, '\(ORIGIN)');
+            }
+        
+            window.addEventListener('message', onMessageHandler);
+        }
+            
+        waitForUI(objTime);
+    """
+    
+    return objTimeScript + script
 }
 
 struct CatapultEvent: Codable {
@@ -728,6 +726,196 @@ struct CatapultProfile: Codable {
     var beginningOfTime: Int?
 }
 
+class ThreadInfo : Hashable, Equatable, Comparable {
+    
+    var id: Int = 0
+    var threadName: String = ""
+    var startTime: Int = Int.max
+    var endTime: Int = Int.min
+    var endTimeFree: Int = Int.min
+    var count: Int = 0
+    
+    // id doesn't implement Hashable
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    public static func == (lhs: ThreadInfo, rhs: ThreadInfo) -> Bool {
+        return lhs.id == rhs.id
+    }
+    public static func < (lhs: ThreadInfo, rhs: ThreadInfo) -> Bool {
+        return lhs.id < rhs.id
+    }
+    
+    func combine(_ s: Int, _ d: Int, _ name: String?) {
+        let isFreeBlock = name != nil && name! == "Free"
+        let e = s+d
+        
+        if isFreeBlock {
+            endTimeFree = max(endTimeFree, e)
+            
+            // If all free block, this doesn't work
+            // so update start/endTime assuming first block isn't Free
+            if startTime > endTime {
+                startTime = min(startTime, s)
+                endTime = max(endTime, e)
+            }
+        }
+        else {
+            startTime = min(startTime, s)
+            endTime = max(endTime, e)
+        }
+        
+        count += 1
+    }
+    
+    var description: String {
+        let duration = Double(endTime - startTime) * 1e-6
+        
+        // TODO: could display freeDuration (heap size)
+        var freeDuration = duration
+        if endTimeFree != Int.min {
+            freeDuration = Double(endTimeFree - startTime) * 1e-6
+        }
+        let percentage = freeDuration > 0.0 ? ((duration / freeDuration) * 100.0) : 0.0
+        
+        // only disply percentage if needed
+        if percentage > 99.9 {
+            return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(count)x"
+        }
+        else {
+            return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(float:percentage, decimals:0)% \(count)x"
+        }
+    }
+    
+}
+
+func sortByName(_ catapultProfile: inout CatapultProfile) {
+    
+    var threads: [Int: [Int]] = [:]
+    
+    // first sort each thread by
+    for i in 0..<catapultProfile.traceEvents!.count {
+        let event = catapultProfile.traceEvents![i]
+        
+        guard let tid = event.tid else { continue }
+        if event.ts == nil || event.dur == nil { continue }
+        
+        if event.name != nil && (event.name! == "thread_name" || event.name! == "process_name") {
+            continue
+        }
+        
+        if threads[tid] == nil {
+            threads[tid] = []
+        }
+        // just store the even index
+        threads[tid]!.append(i)
+    }
+    
+    for var thread in threads.values {
+        // TODO: want to buble the top allocators by count or mem
+        // to the front of the list.  Once have names sorted
+        // then can group totals
+        
+        // sort each thread by name then dur
+        thread = thread.sorted {
+            let lval = catapultProfile.traceEvents![$0]
+            let rval = catapultProfile.traceEvents![$1]
+            
+            let lname = lval.name ?? ""
+            let rname = lval.name ?? ""
+            
+            if lname < rname {
+                return true
+            }
+            return lval.dur! < rval.dur!
+        }
+        
+        // rewrite the start of the events
+        // Note this 0's them out, but could preserve min startTime
+        var startTime = 0
+        for i in thread {
+            catapultProfile.traceEvents![i].ts = startTime
+            startTime += catapultProfile.traceEvents![i].dur!
+        }
+        
+        // combine nodes, and store a count into the name
+        // easier to mke a new array, and replace the other
+        //var combineIndex = 0
+        // for i in 1..<catapultProfile.traceEvents![i]
+        
+    }
+    
+    // have option to consolidate and rename, but must remove nodes
+}
+
+// parse json trace
+func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
+    // was using Set<>, but having trouble with lookup
+    var threadInfos: [Int: ThreadInfo] = [:]
+    
+    for i in 0..<catapultProfile.traceEvents!.count {
+        let event = catapultProfile.traceEvents![i]
+        
+        // have to have tid to associate with ThreadInfo
+        guard let tid = event.tid else { continue }
+        
+        if threadInfos[tid] == nil {
+            let info = ThreadInfo()
+            info.id = tid
+            
+            threadInfos[tid] = info
+        }
+        
+        if event.name != nil && event.name! == "thread_name" {
+            let threadName = event.args!["name"]!.value as! String
+            threadInfos[tid]!.threadName = threadName
+        }
+        else if event.ts != nil && event.dur != nil {
+            let s = event.ts!
+            let d = event.dur!
+            
+            threadInfos[tid]!.combine(s, d, event.name)
+        }
+    }
+    
+    // DONE: could store this in the File object, just append with \n
+    var text = ""
+    for threadInfo in threadInfos.values.sorted() {
+        // log.info(threadInfo.description)
+        text += threadInfo.description
+        text += "\n"
+    }
+    
+    file.threadInfo = text
+    updateFileCache(file: file)
+}
+
+func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
+    var startTime = Int.max
+    var endTime = Int.min
+    
+    for i in 0..<catapultProfile.traceEvents!.count {
+        let event = catapultProfile.traceEvents![i]
+        
+        if event.ts != nil && event.dur != nil {
+            let s = event.ts!
+            let d = event.dur!
+            
+            startTime = min(startTime, s)
+            endTime = max(endTime, s+d)
+        }
+    }
+    
+    if startTime <= endTime {
+        // for now assume micros
+        file.duration = Double(endTime - startTime) * 1e-6
+        
+        updateFileCache(file: file)
+    }
+}
+
+
 func loadFileJS(_ path: String) -> String? {
     
     let fileURL = URL(string: path)!
@@ -736,214 +924,6 @@ func loadFileJS(_ path: String) -> String? {
     var file = lookupFile(url: fileURL)
     
     log.debug(path)
-    
-    // https://stackoverflow.com/questions/62035494/how-to-call-postmessage-in-wkwebview-to-js
-    struct PerfettoFile: Codable {
-        var buffer: String // really ArrayBuffer, but will get replaced
-        var title: String
-        
-        // About keepApiOpen
-        // https://github.com/flutter/devtools/blob/master/packages/devtools_app/lib/src/screens/performance/panes/timeline_events/perfetto/_perfetto_web.dart#L174
-        var keepApiOpen: Bool
-        
-        // optional fields
-        //var fileName: String?
-        // url cannot be file://, has to be http served.  Can we set fileName?
-        //var url: String?
-    }
-    
-    struct Perfetto: Codable {
-        var perfetto: PerfettoFile
-    }
-    
-    class ThreadInfo : Hashable, Equatable, Comparable {
-        
-        var id: Int = 0
-        var threadName: String = ""
-        var startTime: Int = Int.max
-        var endTime: Int = Int.min
-        var endTimeFree: Int = Int.min
-        var count: Int = 0
-        
-        // id doesn't implement Hashable
-        func hash(into hasher: inout Hasher) {
-            hasher.combine(id)
-        }
-        
-        public static func == (lhs: ThreadInfo, rhs: ThreadInfo) -> Bool {
-            return lhs.id == rhs.id
-        }
-        public static func < (lhs: ThreadInfo, rhs: ThreadInfo) -> Bool {
-            return lhs.id < rhs.id
-        }
-        
-        func combine(_ s: Int, _ d: Int, _ name: String?) {
-            let isFreeBlock = name != nil && name! == "Free"
-            let e = s+d
-            
-            if isFreeBlock {
-                endTimeFree = max(endTimeFree, e)
-                
-                // If all free block, this doesn't work
-                // so update start/endTime assuming first block isn't Free
-                if startTime > endTime {
-                    startTime = min(startTime, s)
-                    endTime = max(endTime, e)
-                }
-            }
-            else {
-                startTime = min(startTime, s)
-                endTime = max(endTime, e)
-            }
-            
-            count += 1
-        }
-        
-        var description: String {
-            let duration = Double(endTime - startTime) * 1e-6
-            
-            // TODO: could display freeDuration (heap size)
-            var freeDuration = duration
-            if endTimeFree != Int.min {
-                freeDuration = Double(endTimeFree - startTime) * 1e-6
-            }
-            let percentage = freeDuration > 0.0 ? ((duration / freeDuration) * 100.0) : 0.0
-            
-            // only disply percentage if needed
-            if percentage > 99.9 {
-                return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(count)x"
-            }
-            else {
-                return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(float:percentage, decimals:0)% \(count)x"
-            }
-        }
-        
-    }
-    
-    func sortByName(_ catapultProfile: inout CatapultProfile) {
-        
-        var threads: [Int: [Int]] = [:]
-        
-        // first sort each thread by
-        for i in 0..<catapultProfile.traceEvents!.count {
-            let event = catapultProfile.traceEvents![i]
-            
-            guard let tid = event.tid else { continue }
-            if event.ts == nil || event.dur == nil { continue }
-            
-            if event.name != nil && (event.name! == "thread_name" || event.name! == "process_name") {
-                continue
-            }
-            
-            if threads[tid] == nil {
-                threads[tid] = []
-            }
-            // just store the even index
-            threads[tid]!.append(i)
-        }
-        
-        for var thread in threads.values {
-            // TODO: want to buble the top allocators by count or mem
-            // to the front of the list.  Once have names sorted
-            // then can group totals
-            
-            // sort each thread by name then dur
-            thread = thread.sorted {
-                let lval = catapultProfile.traceEvents![$0]
-                let rval = catapultProfile.traceEvents![$1]
-                
-                let lname = lval.name ?? ""
-                let rname = lval.name ?? ""
-                
-                if lname < rname {
-                    return true
-                }
-                return lval.dur! < rval.dur!
-            }
-                          
-            // rewrite the start of the events
-            // Note this 0's them out, but could preserve min startTime
-            var startTime = 0
-            for i in thread {
-                catapultProfile.traceEvents![i].ts = startTime
-                startTime += catapultProfile.traceEvents![i].dur!
-            }
-            
-            // combine nodes, and store a count into the name
-            // easier to mke a new array, and replace the other
-            //var combineIndex = 0
-           // for i in 1..<catapultProfile.traceEvents![i]
-            
-        }
-        
-        // have option to consolidate and rename, but must remove nodes
-    }
-
-    // parse json trace
-    func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
-        // was using Set<>, but having trouble with lookup
-        var threadInfos: [Int: ThreadInfo] = [:]
-        
-        for i in 0..<catapultProfile.traceEvents!.count {
-            let event = catapultProfile.traceEvents![i]
-            
-            // have to have tid to associate with ThreadInfo
-            guard let tid = event.tid else { continue }
-            
-            if threadInfos[tid] == nil {
-                let info = ThreadInfo()
-                info.id = tid
-                
-                threadInfos[tid] = info
-            }
-            
-            if event.name != nil && event.name! == "thread_name" {
-                let threadName = event.args!["name"]!.value as! String
-                threadInfos[tid]!.threadName = threadName
-            }
-            else if event.ts != nil && event.dur != nil {
-                let s = event.ts!
-                let d = event.dur!
-                    
-                threadInfos[tid]!.combine(s, d, event.name)
-            }
-        }
-        
-        // DONE: could store this in the File object, just append with \n
-        var text = ""
-        for threadInfo in threadInfos.values.sorted() {
-            // log.info(threadInfo.description)
-            text += threadInfo.description
-            text += "\n"
-        }
-        
-        file.threadInfo = text
-        updateFileCache(file: file)
-    }
-    
-    func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
-        var startTime = Int.max
-        var endTime = Int.min
-        
-        for i in 0..<catapultProfile.traceEvents!.count {
-            let event = catapultProfile.traceEvents![i]
-            
-            if event.ts != nil && event.dur != nil {
-                let s = event.ts!
-                let d = event.dur!
-                
-                startTime = min(startTime, s)
-                endTime = max(endTime, s+d)
-            }
-        }
-        
-        if startTime <= endTime {
-            // for now assume micros
-            file.duration = Double(endTime - startTime) * 1e-6
-            
-            updateFileCache(file: file)
-        }
-    }
     
     do {
         // use this for binary data, but need to fixup some json before it's sent
@@ -964,7 +944,7 @@ func loadFileJS(_ path: String) -> String? {
             isBuildFile = true
         }
         
-        var fileContent = try Data(contentsOf: fileURL)
+        let fileContent = try Data(contentsOf: fileURL)
         
         // decompress archive from zip, since Perfetto can't yet decompress zip
         if type == .Archive {
@@ -972,7 +952,7 @@ func loadFileJS(_ path: String) -> String? {
             // so need new call.  Have this in kram as C++ helper.
             // This is unzlib() to avoid confusion.
             //if guard let unzippedContent = fileContent.unzlib() else {
-                return nil
+            return nil
             //}
             //fileContent = unzippedContent
         }
@@ -1099,8 +1079,39 @@ func loadFileJS(_ path: String) -> String? {
             }
         }
         
+        return generateLoadFileJS(fileContentBase64: fileContentBase64, title:fileURL.lastPathComponent)
+    }
+    catch {
+        log.error(error.localizedDescription)
+        return nil
+    }
+}
+
+func generateLoadFileJS(fileContentBase64: String, title: String) -> String?
+{
+    do {
+        // https://stackoverflow.com/questions/62035494/how-to-call-postmessage-in-wkwebview-to-js
+        struct PerfettoFile: Codable {
+            var buffer: String // really ArrayBuffer, but will get replaced
+            var title: String
+            
+            // About keepApiOpen
+            // https://github.com/flutter/devtools/blob/master/packages/devtools_app/lib/src/screens/performance/panes/timeline_events/perfetto/_perfetto_web.dart#L174
+            var keepApiOpen: Bool
+            
+            // optional fields
+            //var fileName: String?
+            // url cannot be file://, has to be http served.  Can we set fileName?
+            //var url: String?
+        }
+        
+        struct Perfetto: Codable {
+            var perfetto: PerfettoFile
+        }
+        
+        // really the url is the only part that needs encoded
         let perfetto = Perfetto(perfetto: PerfettoFile(buffer: "",
-                                                       title: fileURL.lastPathComponent,
+                                                       title: title,
                                                        keepApiOpen: true))
         var perfettoEncode = ""
         
@@ -1142,11 +1153,7 @@ func loadFileJS(_ path: String) -> String? {
         // https://jsfiddle.net/vrsofx1p/
         function waitForUI(obj)
         {
-            // have already opened and loaded the inwdow
-            const win = window; // .open('\(ORIGIN)');
-            if (!win) { return; }
-        
-            const timer = setInterval(() => win.postMessage('PING', '\(ORIGIN)'), 50);
+            const timer = setInterval(() => window.postMessage('PING', '\(ORIGIN)'), 50);
             
             const onMessageHandler = (evt) => {
                 if (evt.data !== 'PONG') return;
@@ -1155,38 +1162,35 @@ func loadFileJS(_ path: String) -> String? {
                 window.clearInterval(timer);
                 window.removeEventListener('message', onMessageHandler);
                 
-                // was win, but use window instead
-                win.postMessage(obj,'\(ORIGIN)');
-        
-                    // ugh, document doesnt 'work either
-                    if (false) {
-                        // tried adding to various parts above.  Need to install
-                        // after the page is open, but this doesn't override the default
-                        // turn off drop handling, or it won't fixup json or appear in list
-                        // This doesn't work
-                        window.addEventListener('drop', function(e) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        });
-                        window.addEventListener('dragover', function(e) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        });
-                    }
+                window.postMessage(obj, '\(ORIGIN)');
             }
         
             window.addEventListener('message', onMessageHandler);
-        
-            
         }
         
         waitForUI(obj);
         """
         
-       
+// This was trying to block the native drop handler
+//                    // ugh, document does notwork either
+//                    if (false) {
+//                        // tried adding to various parts above.  Need to install
+//                        // after the page is open, but this doesn't override the default
+//                        // turn off drop handling, or it won't fixup json or appear in list
+//                        // This doesn't work
+//                        window.addEventListener('drop', function(e) {
+//                          e.preventDefault();
+//                          e.stopPropagation();
+//                        });
+//                        window.addEventListener('dragover', function(e) {
+//                          e.preventDefault();
+//                          e.stopPropagation();
+//                        });
+//                    }
         
         return script
-    } catch {
+    }
+    catch {
         log.error(error.localizedDescription)
         return nil
     }
@@ -1385,26 +1389,24 @@ struct kram_profileApp: App {
             // This should only reload if selection previously loaded
             // to a valid file, or if modstamp changed on current selection
             
+            // TODO: fix this
+            let objTimeScript: String? = nil // buildTimeRangeJson(filenameToTimeRange(sel))
+            
             var str = loadFileJS(sel)
             if str != nil {
                 runJavascript(webView, str!)
                 
-                var file = lookupFile(selection: sel)
+                let file = lookupFile(selection: sel)
                 file.setLoadStamp()
                 updateFileCache(file: file)
             }
             
-            // now based on the type, set a reasonable range of time
-            // don't really want start/end, since we don't know start
-            // works for Flutter, but not for this app.  Also would
-            // have to parse timeStart/End from file.  May want that for
-            // sorting anyways.
-            //
-            // Note have duration on files now, so could pull that
-            // or adjust the timing range across all known durations
-            
-            if false {
-                str = showTimeRangeJS(filenameToTimeRange(sel))
+            // Want to be able to lock the scale of the
+            // trace, so that when moving across traces the range is consistent.
+            // Otherwise, small traces get expanded to look huge.
+            // This only works the first time a file loads.
+            if objTimeScript != nil {
+                str = showTimeRangeJS(objTimeScript: objTimeScript!)
                 if str != nil {
                     runJavascript(webView, str!)
                 }
