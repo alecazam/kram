@@ -6,10 +6,6 @@ import SwiftUI
 import WebKit
 import UniformTypeIdentifiers
 
-//import CoreData
-//import SwiftData
-
-
 // https://github.com/gualtierofrigerio/WkWebViewJavascript/blob/master/WkWebViewJavascript/WebViewHandler.swift
 
 // https://levelup.gitconnected.com/how-to-use-wkwebview-on-mac-with-swiftui-10266989ed11
@@ -37,7 +33,7 @@ import UniformTypeIdentifiers
 
 // TODO: option to colesce to count and name with sort
 
-// TODO: filter files by mem, perf, build
+// DONE: sort files by range
 // TODO: import zip, and run cba on contents, mmap and decompress each
 //  can use incremental mode?
 // TODO: can't mmap web link, but can load zip off server with timings
@@ -69,9 +65,11 @@ import UniformTypeIdentifiers
 // 4-bit, 12-bit, 16-bit, variable, pad to 4B
 
 
-// TODO: block drop onto the WKWebView
+// TODO: can't block drop onto the WKWebView
+// TODO: can't overide "delete" key doing a back in the WKWebView history
+//    Perfetto warns that content will be lost
 
-// TODO: add list sort mode for name, time and incorporating dir or not
+// DONE: add list sort mode for name, range
 // TODO: fix the js wait, even with listener, there's still a race
 //    maybe there's some ServiceWorker still loading the previous json?
 //    Perfetto is using a ServiceWorker, Safari uses those now, and ping/pong unware.
@@ -90,9 +88,7 @@ import UniformTypeIdentifiers
 //   instead of the entire file.
 // TODO: can't type ahead search in the list while the webview is loading (f.e. e will advance)
 //    but arrow keys work to move to next
-// TODO: can't overide "delete" key doing a back in the WKWebView history
-//    Perfetto warns that content will be lost
-// TODO: track duration would be useful (esp. for memory traces)
+// DONE: track duration would be useful (esp. for memory traces)
 //    Would have to modify the thread_name, and process the tid and timings
 //    Better if Perfetto could display this
 // TODO: list view type ahead search doesn't work unless name is the first Text entry
@@ -127,18 +123,24 @@ import UniformTypeIdentifiers
 // Video about Combine
 // https://www.youtube.com/watch?v=TshpcKZmma8
 
+// Description of CoreData/SwiftData and how it works
+// https://davedelong.com/blog/2021/04/03/core-data-and-swiftui/
+//
+// List sort picker
+// https://xavier7t.com/swiftui-list-with-sort-options
+//
+// https://stackoverflow.com/questions/70652964/how-to-search-a-table-using-swiftui-on-macos
+//
+// https://developer.apple.com/documentation/swiftui/adding-a-search-interface-to-your-app
+// can filter list items off this
+
 class FileSearcher: ObservableObject {
-//    enum SortOption {
-//        case name, duration
-//    }
-    
     @Published var searchIsActive = false
     @Published var searchText = ""
     
     var files: [File] = []
         
     @Published var filesSearched: [File] = []
-    //@Published var sortOption = SortOption.duration // name
     
     // duplicate code, but init() doesn't have self defined
     func updateFilesSearched(_ sortByDuration: Bool = false) {
@@ -148,7 +150,8 @@ class FileSearcher: ObservableObject {
             if !sortByDuration || $0.duration == $1.duration {
                 return $0.id < $1.id
             }
-            return $0.duration < $1.duration
+            // TODO: may want to also search by last
+            return $0.duration > $1.duration
         }
         
         if searchText.isEmpty || sortedResults.count <= 1  {
@@ -256,8 +259,8 @@ func buildShortDirectory(url: URL) -> String {
     return str
 }
 
-// TODO: may want to make a class.
-struct File: Identifiable, Hashable, Equatable, Comparable
+// DONE: may want to make a class.
+class File: Identifiable, /*Hashable, */ Equatable, Comparable
 {
     var id: String { url.absoluteString }
     var name: String { url.lastPathComponent }
@@ -285,7 +288,7 @@ struct File: Identifiable, Hashable, Equatable, Comparable
     }
     
     // call this when the file is loaded
-    public mutating func setLoadStamp()  {
+    public func setLoadStamp()  {
         loadStamp = modStamp
     }
     public func isReloadNeeded() -> Bool {
@@ -374,17 +377,14 @@ class MyWebView : WKWebView {
             return false
         }
         
-        // delete is still unloading the currently loaded page.  Augh!!!
+        // TODO: delete is still unloading the currently loaded page.  Augh!!!
         
         // true means it doesn't bonk, but WKWebView still gets to
         // respond to the keys.  Ugh.  Stupid system.
-        return true
+        // return true
         
-        // or this ?
-        // return super.performKeyEquivalent(with: event)
-        
-        
-   }
+        return super.performKeyEquivalent(with: event)
+    }
     
     /* still not working
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
@@ -487,6 +487,7 @@ class MyMTKView: MTKView {
 
 // wraps MTKView (NSView) into SwiftUI, so it can be a part of the hierarcy,
 // updateNSView called when app foreground/backgrounded, or the size is changed
+// also look at Tracy server
 struct MTKViewWrapper: NSViewRepresentable {
     var mtkView: MyMTKView
     
@@ -610,6 +611,8 @@ func filenameToTimeRange(_ filename: String) -> TimeRange {
     switch filenameToType(filename) {
         case .Archive: fallthrough
         case .Compressed: fallthrough
+            
+        
         case .Build: duration = 1.0
         case .Memory: duration = 64.0
         case .Perf: duration = 0.1 // 100ms
@@ -625,18 +628,33 @@ func showTimeRangeJS(_ timeRange: TimeRange) -> String? {
         struct PerfettoTimeRange: Codable {
             // Note: can use Decimal for BigInt style
             // Pass the values to Perfetto in seconds.
-            var timeStart: Double // in seconds
-            var timeEnd: Double
+            var timeStart: Int // in nanos
+            var timeEnd: Int
                 
             // The time range should take up 80% of the visible window.
             var viewPercentage: Double
         }
         
+        // /master/packages/devtools_app/lib/src/screens/performance/panes/timeline_events/perfetto/_perfetto_web.dart#L179
+        // Dart DateTime class, then microseconds call returns int, didn't find inMicroseconds
+        // find TimeRange
+        // 'timeStart': timeRange.start!.inMicroseconds / 1000000,
+        // 'timeEnd': timeRange.end!.inMicroseconds / 1000000,
+        
+        
         struct Perfetto: Codable {
             var perfetto: PerfettoTimeRange
         }
         
-        let perfetto = Perfetto(perfetto:PerfettoTimeRange(timeStart: timeRange.timeStart, timeEnd: timeRange.timeEnd, viewPercentage:timeRange.viewPercentage))
+        // TODO: tried Double as seconds, Int/Decimal (BitInt) and none of these work
+//        func toNanos(_ timeSeconds: Double) -> Decimal {
+//            return Decimal(timeSeconds * 1e9)
+//        }
+        
+        let perfetto = Perfetto(perfetto:PerfettoTimeRange(
+            timeStart: Int(timeRange.timeStart),
+            timeEnd: min(1, Int(timeRange.timeEnd)),
+            viewPercentage:timeRange.viewPercentage))
         
         var perfettoEncode = ""
         
@@ -1286,21 +1304,23 @@ struct kram_profileApp: App {
         .monospaced()
     
     func openFileFromURLs(urls: [URL]) {
-        // turning this off for now
-        let mergeFiles = false
         
         if urls.count >= 1 {
             let filesNew = listFilesFromURLs(urls)
             
             // for now wipe the old list
             if filesNew.count > 0 {
-                if mergeFiles {
-                    fileSearcher.files = Array(Set(fileSearcher.files + filesNew))
-                }
-                else {
+                // turning this off for now, File must impl Hashable
+//                let mergeFiles = false
+//                
+//                if mergeFiles {
+//                    fileSearcher.files = Array(Set(fileSearcher.files + filesNew))
+//                }
+//                else 
+                //{
                     // reset the list
                     fileSearcher.files = filesNew
-                }
+                //}
                 
                 fileSearcher.updateFilesSearched()
                 
@@ -1469,96 +1489,9 @@ A tool to help profile mem, perf, and builds.
         case listView
     }
     @FocusState private var focusedField: Field?
-        
-    // Description of CoreData/SwiftData and how it works
-    // https://davedelong.com/blog/2021/04/03/core-data-and-swiftui/
-    // CoreData/SwiftData types
-    //@FetchRequest(sortDescriptors:
-    //    [SortDescriptor(\.name, order: .reverse),
-    //     SortDescriptor(\.duration, order: .reverse),], animation: .default)
-    //
-    //private var videos: FetchedResults<File>
-    //private var videos: NSFetchedResultsController<File>
 
-    // Can also use to sort by multiple value
-//    @State private var sortOrderName = [
-//        KeyPathComparator(\File.name) // might need to sort by id (full url)
-//    ]
-//
-//    @State private var sortOrderDuration = [
-//        KeyPathComparator(\File.duration)
-//    ]
-//    
-//    @State private var sortOrderCurrent = [
-//        KeyPathComparator(\File.name) // might need to sort by id (full url)
-//    ]
-   
-    // List sort picker
-    // https://xavier7t.com/swiftui-list-with-sort-options
-    
-    
-//    var sortedFiles: [Task] {
-//        switch sortOption {
-//        case .name:
-//            return tasks.sorted { $0.name < $1.name }
-//        case .dueDate:
-//            return tasks.sorted { $0.dueDate < $1.dueDate }
-//        }
-//    }
-    
-    // https://developer.apple.com/documentation/swiftui/adding-a-search-interface-to-your-app
-    // can filter list items off this
-    // TODO: Rename var to filterText, ...
-    // Note: this filter needs macOS14
-    //@State private var searchText: String = ""
     @StateObject var fileSearcher = FileSearcher()
-    // this is a var that executes code when called?
-//    private var searchResults: [File] {
-//        var results = fileSearcher.filesSearched
-//        
-        /*
-        if fileSearcher.searchText.isEmpty {
-            results = fileSearcher.files
-        }
-//        else if fileSearcher.searchText.count == 1 {
-//            // Some items with k in the rest of the name will be filtered
-//            // but will appear with more characters
-//            let lowercaseSearchText = searchText.lowercased()
-//            let uppercaseSearchText = searchText.uppercased()
-//            
-//            results = oo.files.filter {
-//                $0.name.starts(with: uppercaseSearchText) ||
-//                $0.name.starts(with: lowercaseSearchText)
-//            }
-//        }
-        else {
-//            results = files.filter {
-//                // Here use the name, or else the directory will have say "kram" in it and filter will trigger for all files "kr"
-//                $0.name.localizedCaseInsensitiveContains(searchText)
-//            }
-            results = fileSearcher.filesSearched
-        }
-        
-        // This sort isn't reflected in list
-//        if sortOption == .duration {
-//            results.sort(by: {
-//                if $0.duration == $1.duration {
-//                    return $0.id < $1.id
-//                }
-//                return $0.duration > $1.duration
-//            })
-//        }
-        
-        //results.sort(using: sortOrderCurrent)
-         */
-//        return results
-//    }
-    
-    // https://stackoverflow.com/questions/70652964/how-to-search-a-table-using-swiftui-on-macos
-   
-   
 
-    
     // TODO: do this when building the searchResults
     // can do O(N) then and mark which items need separator
     func isSeparatorVisible(_ file: File, _ searchResults: [File]) -> Bool {
@@ -1663,13 +1596,6 @@ A tool to help profile mem, perf, and builds.
                 
                 #else
                 VStack {
-                    // Poor mans table
-                    // spaces needed, or it's right against left edge
-//                    Picker("   Sort By", selection: $fileSearcher.sortOption) {
-//                        Text("Name").tag(FileSearcher.SortOption.name)
-//                        Text("Range").tag(FileSearcher.SortOption.duration)
-//                    }.pickerStyle(SegmentedPickerStyle())
-                    
                     List(fileSearcher.filesSearched, selection:$selection) { file in
                         HStack() {
                             // If number is first, then that's all SwiftUI
@@ -1688,20 +1614,6 @@ A tool to help profile mem, perf, and builds.
                             //.alignment(.trailing)
                                 .font(durationFont)
                         }
-                        
-// everytime a duration is updated, need to resort the list
-// need icon to indicate if file is stale or deleted too
-//                        .onChange(of: sortOption) { newSort in
-//                            // This sort isn't reflected in list
-//                            if newSort == .duration {
-//                                self.searchResults.sort(by: {
-//                                    if $0.duration == $1.duration {
-//                                        return $0.id < $1.id
-//                                    }
-//                                    return $0.duration > $1.duration
-//                                })
-//                            }
-//                        }
                         .listRowSeparator(isSeparatorVisible(file, fileSearcher.filesSearched) ? .visible : .hidden)
                         .listRowSeparatorTint(.white)
                     }
@@ -1765,7 +1677,7 @@ A tool to help profile mem, perf, and builds.
                 Button("Open...") {
                     openFile()
                 }
-                .keyboardShortcut("O")
+                .keyboardShortcut("O", modifiers:[.command])
                 
                 // Really want to go to .h selected in flamegraph, but that would violate sandbox.
                 // This just goes to the trace json file somewhere in DerviceData which is less useful.
@@ -1775,18 +1687,22 @@ A tool to help profile mem, perf, and builds.
                         openContainingFolder(selection!);
                     }
                 }
-                .keyboardShortcut("G")
+                .keyboardShortcut("G", modifiers:[.command])
+                
+                Button("Sort Name") {
+                    fileSearcher.updateFilesSearched(false)
+                }
+                .keyboardShortcut("T", modifiers:[.shift, .command])
                 
                 Button("Sort Range") {
                     fileSearcher.updateFilesSearched(true)
                 }
-                .keyboardShortcut("T")
-                //.disabled()
+                .keyboardShortcut("T", modifiers:[.command])
                 
                 Button("Reload File") {
                     openFileSelection(myWebView)
                 }
-                .keyboardShortcut("R")
+                .keyboardShortcut("R", modifiers:[.command])
                 .disabled(!isReloadEnabled(selection))
                 
                 // These work even if the list view is collapsed
@@ -1818,7 +1734,7 @@ A tool to help profile mem, perf, and builds.
                 Button("Search") {
                     // Don't need to do anything
                 }
-                .keyboardShortcut("S")
+                .keyboardShortcut("S", modifiers:[.command])
                 .disabled(selection == nil && focusedField == .webView)
                           
                 // Perfetto command

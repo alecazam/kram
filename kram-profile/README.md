@@ -41,10 +41,29 @@ Cpu Profilers. See for more details
 * Flutter (using Perfetto) https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.yr4qxyxotyw
 * Optick - https://github.com/bombomby/optick
 * Tracy - https://github.com/wolfpld/tracy
+
+* ClangBuildAnalyzer - https://github.com/aras-p/ClangBuildAnalyzer
+* Microprofile 
+* Microprofile 2
+* Microprofiler
+* EasyProfiler
+* VerySleepy
+* LukeStackwalker
+* geiger
+* Palanteer
+* Intel IACA
+* Coz
+* heaptrack
+* hotspot
+* dprofiler
+* spall
+
+* Commercial
+* Telemetry - httpd://www.radgametools.com/telemeetry.htm
+* Superluminal -
 * Xcode Instruments - see Xcode
 * AMD Code Analyst - see Xcode
-* Intel Vtune
-* ClangBuildAnalyzer - https://github.com/aras-p/ClangBuildAnalyzer
+* Intel Vtune -
 
 Gpu Profilers. See for more details
 
