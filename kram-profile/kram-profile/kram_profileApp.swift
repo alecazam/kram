@@ -241,7 +241,21 @@ public func clamp<T>(_ value: T, _ minValue: T, _ maxValue: T) -> T where T : Co
     return min(max(value, minValue), maxValue)
 }
 
-// DONE: may want to make a class.
+//-------------
+
+enum ContainerType {
+    case Archive // zip of 1+ files, can't enforce
+    case Compressed // gzip of 1 file, can't enforce
+    case File
+}
+
+enum FileType {
+    case Build
+    case Memory
+    case Perf
+    case Unknown
+}
+
 class File: Identifiable, /*Hashable, */ Equatable, Comparable
 {
     var id: String { url.absoluteString }
@@ -249,6 +263,8 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     let url: URL
     let shortDirectory: String
     let parentFolders: String
+    let containerType: ContainerType
+    let fileType: FileType
     
     var duration = 0.0
     var modStamp: Date?
@@ -262,6 +278,8 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
         self.modStamp = File.fileModificationDate(url:url)
         self.shortDirectory = File.buildShortDirectory(url:url)
         self.parentFolders = url.deletingLastPathComponent().absoluteString
+        self.containerType = File.filenameToContainerType(url)
+        self.fileType = File.filenameToFileType(url)
     }
     
     public static func == (lhs: File, rhs: File) -> Bool {
@@ -305,16 +323,44 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
         
         return str
     }
+    
+    private static func filenameToContainerType(_ url: URL) -> ContainerType {
+        let ext = url.pathExtension
+        
+        if ext == "zip" {
+            return .Archive
+        }
+        if ext == "gz" { // could be a tarball archive, but don't support that
+            return .Compressed
+        }
+        return .File
+    }
+
+    public static func filenameToFileType(_ url: URL) -> FileType {
+        let ext = url.pathExtension
+        
+        if File.filenameToContainerType(url) != .File {
+            // strip the .gz/.zip
+            return filenameToFileType(url.deletingPathExtension())
+        }
+        
+        if ext == "json" || ext == "buildtrace" { // build
+            return .Build
+        }
+        else if ext == "memtrace" { // memory
+            return .Memory
+        }
+        // TODO: eliminate trace
+        else if ext == "trace" || ext == "perftrace" { // profile
+            return .Perf
+        }
+        return .Unknown
+    }
 }
 
 // TODO: now that it's a class, can probably elimiante that lookuFile calls
-func generateName(file: File) -> String {
-    // need to do lookup to get duration
-    let f = lookupFile(url: file.url)
-    return f.name
-}
-
 func generateDuration(file: File) -> String {
+    // need for duration
     let f = lookupFile(url: file.url)
     if f.duration != 0.0 {
         // TODO: may want to add s/mb based on file type
@@ -331,9 +377,10 @@ func generateNavigationTitle(_ sel: String?) -> String {
     }
     
     let f = lookupFile(selection: sel!)
-    return generateDuration(file: f) + " " + generateName(file: f)
+    return generateDuration(file: f) + " " + f.name
 }
 
+//-------------
 // Note: if a file is deleted which happens often with builds,
 // then want to identify that and update the list.  At least
 // indicate the item is gone, and await its return.
@@ -367,6 +414,8 @@ func lookupFile(selection: String) -> File {
 func updateFileCache(file: File) {
     fileCache[file.url] = file
 }
+
+//-------------
 
 class MyWebView : WKWebView {
     
@@ -437,7 +486,8 @@ func newWebView(request: URLRequest) -> WKWebView {
     let webView = MyWebView(frame: .zero, configuration: configuration)
     //webView.shimDrag()
     
-    // The page is complaining it's going to lose the data if fwd/back hit
+    // The page is complaining it's going to lose the data.  This disables swipe fwd/back.
+    // Still occuring because this doesn't disable the "delete" key which goes back in history
     webView.allowsBackForwardNavigationGestures = false
    
     webView.load(request)
@@ -489,6 +539,8 @@ struct WebView : NSViewRepresentable {
 //#Preview {
 //    MyWKWebView()
 //}
+
+//-------------
 
 /*
 class MyMTKView: MTKView {
@@ -555,14 +607,7 @@ extension View {
             return self
         }
     }
-    public func disableAlternatingRowBackgrondsOptional() -> some View {
-        if #available(macOS 14.0, *) {
-            return self.alternatingRowBackgrounds(.disabled) // skip the row coloring
-        }
-        else {
-            return self
-        }
-    }
+  
     /*
     // This one is hard to wrap, since KeyPress.result is macOS 14.0 only
     public func onKeyPressOptional(_ key: KeyEquivalent, action: @escaping () -> KeyPress.Result) -> some View {
@@ -585,50 +630,16 @@ struct TimeRange {
     var viewPercentage: Double = 0.8
 }
 
-enum FileType {
-    case Archive // zip of 1+ files, can't enforce
-    case Compressed // gzip of 1 file, can't enforce
-    
-    case Build
-    case Memory
-    case Perf
-}
 
-func filenameToType(_ filename: String) -> FileType {
-    let url = URL(string: filename)!
-    let ext = url.pathExtension
-    
-    if ext == "zip" {
-        return .Archive
-    }
-    if ext == "gz" {
-        return .Compressed
-    }
-    
-    if ext == "json" { // build
-        return .Build
-    }
-    else if ext == "vmatrace" { // memory
-        return .Memory
-    }
-    else if ext == "trace" { // profile
-        return .Perf
-    }
-    return .Build
-}
 
 func filenameToTimeRange(_ filename: String) -> TimeRange {
     var duration = 1.0
     
-    switch filenameToType(filename) {
-        // TODO: need underlying type of these archives
-        case .Archive: fallthrough
-        case .Compressed: duration = 0.0
-            
-        
+    switch File.filenameToFileType(URL(string: filename)!) {
         case .Build: duration = 1.0
         case .Memory: duration = 64.0
         case .Perf: duration = 0.1 // 100ms
+        case .Unknown: duration = 1.0
     }
     
     return TimeRange(timeStart:0.0, timeEnd:duration)
@@ -943,31 +954,22 @@ func loadFileJS(_ path: String) -> String? {
         // use this for binary data, but need to fixup some json before it's sent
         var fileContentBase64 = ""
         
-        let type = filenameToType(fileURL.absoluteString)
-        
-        let isFileGzip = type == .Compressed
+        let isFileGzip = file.containerType == .Compressed
         //let isFileZip = type == .Archive
         
         // Note: json.gz and json.zip build files are not marked as Build
         // but need to rewrite them.
-        var isBuildFile = type == FileType.Build
+        var isBuildFile = file.fileType == .Build
         
-        let filename = fileURL.lastPathComponent
-        
-        if filename.hasSuffix("json.gz") || filename.hasSuffix("json.zip") {
-            isBuildFile = true
-        }
+        //let filename = fileURL.lastPathComponent
         
         let fileContent = try Data(contentsOf: fileURL)
         
         // decompress archive from zip, since Perfetto can't yet decompress zip
-        if type == .Archive {
-            // unzlib is for a zlib file and not a zip archive,
-            // so need new call.  Have this in kram as C++ helper.
-            // This is unzlib() to avoid confusion.
-            //if guard let unzippedContent = fileContent.unzlib() else {
+        // Note this will typically be fileType unknown, but have to flatten
+        // content within to the list.  This just means part of a zip archive.
+        if file.containerType == .Archive {
             return nil
-            //}
             //fileContent = unzippedContent
         }
         
@@ -1007,7 +1009,7 @@ func loadFileJS(_ path: String) -> String? {
                     updateDuration(catapultProfile, &file)
                     
                     // For now, just log the per-thread info
-                    if type == FileType.Memory {
+                    if file.fileType == .Memory {
                         updateThreadInfo(catapultProfile, &file)
                     }
                 }
@@ -1024,13 +1026,13 @@ func loadFileJS(_ path: String) -> String? {
             
             var json : Data
             
-            if type == .Compressed {
+            if file.containerType == .Compressed {
                 guard let unzippedContent = fileContent.gunzip() else {
                     return nil
                 }
                 json = unzippedContent
             }
-            else if type == .Archive {
+            else if file.containerType == .Archive {
                 // this has already been decoded to json
                 json = fileContent
             }
@@ -1074,7 +1076,7 @@ func loadFileJS(_ path: String) -> String? {
                     updateDuration(catapultProfile, &file)
                     
                     // For now, just log the per-thread info
-                    if type == FileType.Memory {
+                    if file.fileType == .Memory {
                         updateThreadInfo(catapultProfile, &file)
                     }
                 }
@@ -1535,8 +1537,7 @@ A tool to help profile mem, perf, and builds.
         if selection == nil {
             return false
         }
-        // TODO: store type with name, then can have icon too
-        return filenameToType(selection!) == .Memory
+        return lookupFile(selection: selection!).fileType == .Memory
     }
     
     // iOS can go compact reduces to 1 column
@@ -1559,54 +1560,6 @@ A tool to help profile mem, perf, and builds.
     
         Window("Main", id: "main") {
             NavigationSplitView() {
-                #if false
-                // https://www.swiftyplace.com/blog/chy7hvne
-                Table(fileSearcher.filesSearched, selection:$selection, sortOrder:$sortOrderCurrent) {
-                    
-                    // This displays the sort caret
-                    TableColumn("name", value:\.name)
-                    
-                    // This doesn't not display the caret
-//                    TableColumn("name" /*, comparator: $sortOrderName */) { searchResult in
-//                        Text(generateName(file: searchResult))
-//                        .help(searchResult.shortDirectory)
-//                        .truncationMode(.tail)
-//                    }
-                    //.width(min: 20, ideal: 180, max: 180)
-                    .width(170)
-                    
-                    // This has to format Double
-                    TableColumn("range" /*, comparator: $sortOrderDuration*/) { searchResult in
-                        Text(generateDuration(file: searchResult))
-                            .frame(maxWidth: 60, alignment: .trailing)
-                
-                    }
-                    // last column will take up remaining space, but that's dumb
-                    // then it can be resizes to too much space
-                    //.width(min: 20, ideal: 60, max: 70)
-                    .width(60)
-                }
-                .navigationSplitViewColumnWidth(min: 40, ideal: 260, max: 260)
-                .tableStyle(.inset) // more space
-                // macOS 14
-                .disableAlternatingRowBackgrondsOptional()// skip the row coloring
-                
-                // can customize each row
-                //rows: {
-                // }
-                // This is macOS14 too
-//                .onChange(of: sortOrder, initial:false) { newOrder, cond in
-//                    //self.searchResults.sort(using: newOrder)
-//                }
-//                .onChange(of: sortOrderCurrent) { newOrder in
-//                    //self.searchResults.sort(using: newOrder)
-//                    sortOrderCurrent = newOrder
-//                }
-                //.help(file.shortDirectory)
-                .focused($focusedField, equals: .listView)
-                .focusable()
-                
-                #else
                 VStack {
                     List(fileSearcher.filesSearched, selection:$selection) { file in
                         HStack() {
@@ -1617,7 +1570,7 @@ A tool to help profile mem, perf, and builds.
                             // name gets truncated too soon if it's first
                             // and try to align the text with trailing.
                             
-                            Text(generateName(file: file))
+                            Text(file.name)
                                 .help(file.shortDirectory)
                                 .truncationMode(.tail)
                                 
@@ -1631,7 +1584,6 @@ A tool to help profile mem, perf, and builds.
                     .focused($focusedField, equals: .listView)
                     .focusable()
                 }
-                #endif
             }
             detail: {
                 VStack {

@@ -6,14 +6,14 @@
 	<array>
 		<dict>
 			<key>CFBundleTypeName</key>
-			<string>vmatrace</string>
+			<string>memtrace</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSHandlerRank</key>
 			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>vmatrace</string>
+				<string>memtrace</string>
 			</array>
 			<key>NSDocumentClass</key>
 			<string>KramDocument</string>
@@ -60,8 +60,78 @@
 			<key>NSDocumentClass</key>
 			<string>KramDocument</string>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>perftrace</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>perftrace</string>
+			</array>
+			<key>NSDocumentClass</key>
+			<string>KramDocument</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>buildtrace</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>buildtrace</string>
+			</array>
+			<key>NSDocumentClass</key>
+			<string>KramDoument</string>
+		</dict>
 	</array>
 	<key>UTImportedTypeDeclarations</key>
-	<array/>
+	<array>
+		<dict>
+			<key>UTTypeDescription</key>
+			<string></string>
+			<key>UTTypeIcons</key>
+			<dict/>
+			<key>UTTypeIdentifier</key>
+			<string></string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array/>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeDescription</key>
+			<string></string>
+			<key>UTTypeIcons</key>
+			<dict/>
+			<key>UTTypeIdentifier</key>
+			<string></string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array/>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeDescription</key>
+			<string></string>
+			<key>UTTypeIcons</key>
+			<dict/>
+			<key>UTTypeIdentifier</key>
+			<string></string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>\</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>
