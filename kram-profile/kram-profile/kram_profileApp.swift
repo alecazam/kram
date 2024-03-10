@@ -26,25 +26,34 @@ import UniformTypeIdentifiers
 // DONE: be nice to focus the search input on cmd+F just to make me happy.  (using cmd+S)
 //  Browser goes to its own search which doesn’t help.
 
+// Memory traces
 // TODO: sort thread by size - repack the memory graph largest to smallest by reordering each track
 //   then can focus on the bigger values.
 // TODO: Sort by name and convert to count - can then see common counts
 //   so keep the json loaded in Swift.  Can json be cloned and modded?
-
 // TODO: option to colesce to count and name with sort
+
+// TODO: across all files, many of the strings are the same.  Could replace all strings
+// with an index, compress, and zip archive with the index table.  buid, perf, mem strings
+// filenames are also redundant.  Just need to use @[F|S|B]hex, and then do lookup before CBA final report.
+// Can rebuild references on JS side to send less data.  JS can then alias strings.
 
 // DONE: sort files by range
 // TODO: import zip, and run cba on contents, mmap and decompress each
 //  can use incremental mode?
 // TODO: can't mmap web link, but can load zip off server with timings
-
 // TODO: add/update recent document list (need to hold onto dropped/opened folder)
+// TODO: save/load the duration and modstamps for File.
 
+// TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
 // TODO: add compressed format, build up Pefetto json or binary from this
-//  have vrious durtion forms.
+//  may need one for mmap, other for super compact deltas
+//  can still alias strings from mmap
+//
+//  have various duration forms.
 //  could have ascii form of below.
 //  flags to identify optional param
-// 4B leader
+// 4B magic
 // n len nid name  // nid is repacked 0..table
 // t len tid name  // tid is repacked to 0... table
 // s len sid name  // symbols
@@ -64,38 +73,46 @@ import UniformTypeIdentifiers
 
 // 4-bit, 12-bit, 16-bit, variable, pad to 4B
 
+// DONE: have a way to reload dropped folder
+// TODO: track parent archives, folder, and loose drop files
+// and when reload is hit, then reload all of that rebuild the list
+// and then reload the selected file
+// TODO: need mmapHelper and zipHelper to deal with archives
+// also FileHelper, since may not be able to mmap.
 
+// TODO: fix duration update modding the List item and nav title after it updates
+// Currently select list, it updates, then duration is calcualated.
+//   there is a objectWillChange.send() Could maybe send that from The File
+// https://www.hackingwithswift.com/forums/swiftui/update-content-of-existing-row-of-list/3029
+
+// WKWebView
 // TODO: can't block drop onto the WKWebView
 // TODO: can't overide "delete" key doing a back in the WKWebView history
 //    Perfetto warns that content will be lost
 
-// DONE: add list sort mode for name, range
+// Perfetto Bugs
 // TODO: fix the js wait, even with listener, there's still a race
 //    maybe there's some ServiceWorker still loading the previous json?
 //    Perfetto is using a ServiceWorker, Safari uses those now, and ping/pong unware.
-// TODO: still getting web race condition.  Perfetto is trying to
-//  load the previous file, and we’re sending a new one.
-// TODO: have a way to reload dropped folder (not just subfiles)
-// TODO: nav title and list item text is set before duration is computed
-//  need some way to update that.
+// TODO: switch to Perfetto dark mode
+
+// Multi-window
 // TODO: support WindowGroup and multiwindow, each needs own webView, problem
 //   is that onOpenURL opens a new window always.
-// TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
+// TODO: look in to hosting remotery web and/or tracy server, see if Remotery as flamechart render
+//   but these don't review traces offline, and are live profilers
+// TODO: add Metal capture and imgui backend to Tracy
+// TODO: add Metal capture to Remotery
+
+
 // TODO: switch font to Inter, bundle that with the app?
 //   .environment(\.font, Font.custom("CustomFont", size: 14))
 // TODO: for perf traces, compute duration between frame
 //   markers.  Multiple frames in a file, then show max frame duration
 //   instead of the entire file.
-// TODO: can't type ahead search in the list while the webview is loading (f.e. e will advance)
-//    but arrow keys work to move to next
-// DONE: track duration would be useful (esp. for memory traces)
-//    Would have to modify the thread_name, and process the tid and timings
-//    Better if Perfetto could display this
-// TODO: list view type ahead search doesn't work unless name is the first Text entry
-// TODO: switch to dark mode
 // TODO: no simple scrollTo, since this is all React style
 //   There is a ScrollViewReader, but value only usable within.  UITableView has this.
-// TODO track when files change or get deleted, update the list item then
+// TODO: track when files change or get deleted, update the list item then
 //   can disable list items that are deleted in case they return (can still pick if current)
 //   https://developer.apple.com/documentation/coreservices/file_system_events?language=objc
 // TODO: here's how to sign builds for GitHub Actions
@@ -246,7 +263,8 @@ public func clamp<T>(_ value: T, _ minValue: T, _ maxValue: T) -> T where T : Co
 enum ContainerType {
     case Archive // zip of 1+ files, can't enforce
     case Compressed // gzip of 1 file, can't enforce
-    case File
+    case Folder // from a folder drop
+    case File // means file was dropped or opened directly
 }
 
 enum FileType {
@@ -265,7 +283,7 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     let parentFolders: String
     let containerType: ContainerType
     let fileType: FileType
-    
+
     var duration = 0.0
     var modStamp: Date?
     var loadStamp: Date?
@@ -306,6 +324,7 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
         }
     }
 
+    // show some of dir file is in, TODO: 2 levels not enough
     private static func buildShortDirectory(url: URL) -> String {
         let count = url.pathComponents.count
         
@@ -324,7 +343,7 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
         return str
     }
     
-    private static func filenameToContainerType(_ url: URL) -> ContainerType {
+    public static func filenameToContainerType(_ url: URL) -> ContainerType {
         let ext = url.pathExtension
         
         if ext == "zip" {
@@ -386,6 +405,10 @@ func generateNavigationTitle(_ sel: String?) -> String {
 // indicate the item is gone, and await its return.
 // Does macOS have a FileWatcher?
 
+// Holds supported files dropped or opened from Finder, reload reparses this
+var droppedFileCache : [URL] = []
+
+// Flattened list of supported files from folders and archives
 var fileCache : [URL:File] = [:]
 
 func lookupFile(url: URL) -> File {
@@ -959,7 +982,7 @@ func loadFileJS(_ path: String) -> String? {
         
         // Note: json.gz and json.zip build files are not marked as Build
         // but need to rewrite them.
-        var isBuildFile = file.fileType == .Build
+        let isBuildFile = file.fileType == .Build
         
         //let filename = fileURL.lastPathComponent
         
@@ -1244,7 +1267,7 @@ struct kram_profileApp: App {
         let ext = url.pathExtension
         
         // what ext does trace.zip, or trace.gz come in as ?
-        // should this limit compressed files to the names supported below - json, trace, vmatrace?
+        // should this limit compressed files to the names supported below - json, trace, memtrace?
         
         if ext == "gz" {
             return true
@@ -1253,8 +1276,8 @@ struct kram_profileApp: App {
 //            return true
 //        }
             
-        // clang build files use generic .json format
-        if ext == "json" {
+        // clang build files use generic .json ext
+        if ext == "json" || ext == "buildtrace" {
             let filename = url.lastPathComponent
             
             // filter out some by name, so don't have to open files
@@ -1270,15 +1293,27 @@ struct kram_profileApp: App {
             }
             return true
         }
+        
         // profiling
-        if ext == "trace" {
+        if ext == "perftrace" || ext == "trace" {
             return true
         }
+        
         // memory
-        if ext == "vmatrace" {
+        if ext == "memtrace" {
             return true
         }
+        
         return false
+    }
+    
+    func listFilesFromArchive(_ url: URL) -> [File] {
+        // TODO:
+        // also add zip to supported format
+        // flatten archive and add archive to list
+        // need to mmap the archive, point content files to archive loc
+        
+        return []
     }
     
     func listFilesFromURLs(_ urls: [URL]) -> [File]
@@ -1291,7 +1326,7 @@ struct kram_profileApp: App {
                 // list out all matching files
                 // also these [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
                 
-                // This doesn't default to recursive, see what kram does
+                // recurse into directory
                 let directoryEnumerator = FileManager.default.enumerator(
                     at: url,
                     includingPropertiesForKeys: nil
@@ -1301,14 +1336,26 @@ struct kram_profileApp: App {
                 while let fileURL = directoryEnumerator?.nextObject() as? URL {
                     let isSupported = isSupportedFilename(fileURL)
                     if isSupported {
-                        files.append(lookupFile(url:fileURL));
+                        let isArchive  = File.filenameToContainerType(url) == .Archive
+                        if isArchive {
+                           files += listFilesFromArchive(fileURL)
+                        }
+                        else {
+                            files.append(lookupFile(url:fileURL));
+                        }
                     }
                 }
             }
             else if url.isFileURL {
                 let isSupported = isSupportedFilename(url)
                 if isSupported {
-                    files.append(lookupFile(url:url))
+                    let isArchive = File.filenameToContainerType(url) == .Archive
+                    if isArchive {
+                        files += listFilesFromArchive(url)
+                    }
+                    else {
+                        files.append(lookupFile(url:url))
+                    }
                 }
             }
         }
@@ -1320,6 +1367,12 @@ struct kram_profileApp: App {
     //let customFont = Font.custom("Inter Variable", size: 14)
                 
     func openFileFromURLs(urls: [URL]) {
+        droppedFileCache = urls
+        reopenFileFromURLs()
+    }
+    
+    func reopenFileFromURLs() {
+        let urls = droppedFileCache
         
         if urls.count >= 1 {
             let filesNew = listFilesFromURLs(urls)
@@ -1365,21 +1418,16 @@ struct kram_profileApp: App {
         }
     }
     
-//    func shortFilename(_ str: String) -> String {
-//        let url = URL(string: str)!
-//        return url.lastPathComponent
-//    }
-    
     func openContainingFolder(_ str: String) {
         let url = URL(string: str)!
         NSWorkspace.shared.activateFileViewerSelecting([url]);
     }
     
-    func isReloadEnabled(_ selection: String?) -> Bool {
-        guard let sel = selection else { return false }
-        let file = lookupFile(selection: sel)
-        return file.isReloadNeeded()
-    }
+//    func isReloadEnabled(_ selection: String?) -> Bool {
+//        guard let sel = selection else { return false }
+//        let file = lookupFile(selection: sel)
+//        return file.isReloadNeeded()
+//    }
     
     func openFile() {
         let panel = NSOpenPanel()
@@ -1448,11 +1496,10 @@ A tool to help profile mem, perf, and builds.
         )
     }
     
-    // DONE: have files ending in .vmatrace, .trace, and .json
+    // DONE: have files ending in .memtrace, .trace, and .json
     // TODO: archives in the zip file.
     
     let fileTypes: [UTType] = [
-        // single-file zip, not dealing with archives yet, but have C++ code to
         // This is what macOS generates when doing "compress file".  But could be archive.
         // These are 12x smaller often times.  Decompression lib only handles zlib.
         // TODO: need zip archive util to extract the 1+ files, can still use libCompression to decompress
@@ -1465,7 +1512,9 @@ A tool to help profile mem, perf, and builds.
         // A mix of json or binary format files
         .json, // clang build files
         UTType(filenameExtension:"trace", conformingTo:.data)!, // conformingTo: .json didn't work
-        UTType(filenameExtension:"vmatrace", conformingTo:.data)!,
+        UTType(filenameExtension:"memtrace", conformingTo:.data)!,
+        UTType(filenameExtension:"perftrace", conformingTo:.data)!,
+        UTType(filenameExtension:"buildtrace", conformingTo:.data)!,
     ]
     
     func selectFile(_ selection: String?, _ fileList: [File], _ advanceList: Bool) -> String? {
@@ -1554,6 +1603,21 @@ A tool to help profile mem, perf, and builds.
     // Comparators aren't same as KeyPathComparator, ugh
     // https://useyourloaf.com/blog/custom-sort-comparators/
     
+    let buildIcon = Image(systemName: "c.square") // compile
+    let perfIcon = Image(systemName: "p.square")
+    let memoryIcon = Image(systemName: "m.square")
+    let unknownIcon = Image(systemName: "questionmark.app")
+    
+    // https://www.hackingwithswift.com/example-code/uikit/how-to-use-system-icons-in-your-app
+    func generateIcon(_ file: File) -> Image {
+        switch file.fileType {
+            case .Build: return buildIcon
+            case .Memory: return memoryIcon
+            case .Perf: return perfIcon
+            case .Unknown: return unknownIcon
+        }
+    }
+    
     var body: some Scene {
         
         // TODO: WindowGroup brings up old windows which isn't really what I want
@@ -1563,20 +1627,21 @@ A tool to help profile mem, perf, and builds.
                 VStack {
                     List(fileSearcher.filesSearched, selection:$selection) { file in
                         HStack() {
-                            // If number is first, then that's all SwiftUI
+                            // If number ir icon is first, then that's all SwiftUI
                             // uses for typeahead list search.  Seems to
                             // be no control over that.
+                            generateIcon(file)
                             
                             // name gets truncated too soon if it's first
                             // and try to align the text with trailing.
-                            
                             Text(file.name)
                                 .help(file.shortDirectory)
                                 .truncationMode(.tail)
-                                
+                            
+                            // TODO: how to fix align to right of nav panel?
                             Text(generateDuration(file: file))
-                                .frame(maxWidth: 70)
-                            //.alignment(.trailing)
+                                //.frame(maxWidth: 70)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
                         }
                         .listRowSeparator(isSeparatorVisible(file, fileSearcher.filesSearched) ? .visible : .hidden)
                         .listRowSeparatorTint(.white)
@@ -1662,11 +1727,18 @@ A tool to help profile mem, perf, and builds.
                 }
                 .keyboardShortcut("T", modifiers:[.command])
                 
-                Button("Reload File") {
+                Button("Reload") {
+                    // TODO: This loses the order if sorted by duration
+                    // but easy enough to resort
+                    
+                    // this reloads the entier file list
+                    reopenFileFromURLs()
+                    
+                    // this tries to reload the selection
                     openFileSelection(myWebView)
                 }
                 .keyboardShortcut("R", modifiers:[.command])
-                .disabled(!isReloadEnabled(selection))
+                .disabled(selection == nil) // !isReloadEnabled(selection))
                 
                 // These work even if the list view is collapsed
                 Button("Prev File") {
@@ -1674,7 +1746,7 @@ A tool to help profile mem, perf, and builds.
                         selection = selectFile(selection, fileSearcher.filesSearched, false)
                         
                         // TODO: no simple scrollTo, since this is all React style
-                        // There is a ScrollViewReader, but valud only usable within
+                        // There is a ScrollViewReader, but valid only usable within
                     }
                 }
                 .keyboardShortcut("N", modifiers:[.shift, .command])
