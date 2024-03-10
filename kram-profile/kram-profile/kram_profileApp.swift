@@ -33,17 +33,21 @@ import UniformTypeIdentifiers
 //   so keep the json loaded in Swift.  Can json be cloned and modded?
 // TODO: option to colesce to count and name with sort
 
+// Build traces
+// TODO: parse totals from build traces, what CBA is doing
+// TODO: present total time, and % of total in the nav panel
+
 // TODO: across all files, many of the strings are the same.  Could replace all strings
 // with an index, compress, and zip archive with the index table.  buid, perf, mem strings
 // filenames are also redundant.  Just need to use @[F|S|B]hex, and then do lookup before CBA final report.
 // Can rebuild references on JS side to send less data.  JS can then alias strings.
 
-// DONE: sort files by range
 // TODO: import zip, and run cba on contents, mmap and decompress each
 //  can use incremental mode?
 // TODO: can't mmap web link, but can load zip off server with timings
-// TODO: add/update recent document list (need to hold onto dropped/opened folder)
-// TODO: save/load the duration and modstamps for File.
+// DONE: add/update recent document list (need to hold onto dropped/opened folder)
+// TODO: save/load the duration and modstamps for File, and any other metadata (totals per section)
+// TODO: add jump to source, but path would need to be correct (sandbox block?)
 
 // TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
 // TODO: add compressed format, build up Pefetto json or binary from this
@@ -978,23 +982,26 @@ func loadFileJS(_ path: String) -> String? {
         var fileContentBase64 = ""
         
         let isFileGzip = file.containerType == .Compressed
-        //let isFileZip = type == .Archive
-        
-        // Note: json.gz and json.zip build files are not marked as Build
-        // but need to rewrite them.
-        let isBuildFile = file.fileType == .Build
-        
-        //let filename = fileURL.lastPathComponent
-        
-        let fileContent = try Data(contentsOf: fileURL)
         
         // decompress archive from zip, since Perfetto can't yet decompress zip
         // Note this will typically be fileType unknown, but have to flatten
         // content within to the list.  This just means part of a zip archive.
+        var fileContent: Data
+        
         if file.containerType == .Archive {
             return nil
-            //fileContent = unzippedContent
+            
+            // this will point to a section of an mmaped zip archive
+            // fileContent = unzippedContent
         }
+        else {
+            // This uses mmap if safe.  Does not count towars memory totals, since can be paged out
+            fileContent = try Data(contentsOf: fileURL, options: [.mappedIfSafe])
+        }
+        
+        // Note: json.gz and json.zip build files are not marked as Build
+        // but need to rewrite them.
+        let isBuildFile = file.fileType == .Build
         
         if !isBuildFile {
             // perfetto only supports gzip, comments indicate zip is possible but only with refactor
@@ -1072,7 +1079,7 @@ func loadFileJS(_ path: String) -> String? {
             else {
                 for i in 0..<catapultProfile.traceEvents!.count {
                     let event = catapultProfile.traceEvents![i]
-                    if event.name == "Source" ||
+                    if  event.name == "Source" ||
                         event.name == "OptModule"
                     {
                         // This is a path
@@ -1083,10 +1090,12 @@ func loadFileJS(_ path: String) -> String? {
                         catapultProfile.traceEvents![i].name = url.lastPathComponent
                     }
                     else if event.name == "InstantiateFunction" ||
-                                event.name == "InstantiateClass" ||
-                                event.name == "OptFunction" ||
-                                event.name == "ParseClass" ||
-                                event.name == "DebugType" // these take a while
+                            event.name == "InstantiateClass" ||
+                            event.name == "OptFunction" ||
+                            event.name == "ParseClass" ||
+                            event.name == "DebugType" || // these take a while
+                            event.name == "CodeGen Function" ||
+                            event.name == "RunPass"
                     {
                         // This is a name
                         let detail = event.args!["detail"]!.value as! String
@@ -1369,6 +1378,16 @@ struct kram_profileApp: App {
     func openFileFromURLs(urls: [URL]) {
         droppedFileCache = urls
         reopenFileFromURLs()
+        
+        // update the document list
+        let documentController = NSDocumentController.shared
+        if urls.count >= 1 {
+            for url in urls {
+                if url.hasDirectoryPath || isSupportedFilename(url) {
+                    documentController.noteNewRecentDocumentURL(url)
+                }
+            }
+        }
     }
     
     func reopenFileFromURLs() {
@@ -1618,6 +1637,19 @@ A tool to help profile mem, perf, and builds.
         }
     }
     
+    func recentDocumentsMenu() -> some View {
+        let documentController = NSDocumentController.shared
+        let urls = documentController.recentDocumentURLs
+        
+        return Menu("Recent Documents…") {
+            ForEach(0..<urls.count, id: \.self) { i in
+                Button(urls[i].lastPathComponent) {
+                    openFileFromURLs(urls: [urls[i]])
+                }
+            }
+        }
+    }
+    
     var body: some Scene {
         
         // TODO: WindowGroup brings up old windows which isn't really what I want
@@ -1637,11 +1669,10 @@ A tool to help profile mem, perf, and builds.
                             Text(file.name)
                                 .help(file.shortDirectory)
                                 .truncationMode(.tail)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            // TODO: how to fix align to right of nav panel?
                             Text(generateDuration(file: file))
-                                //.frame(maxWidth: 70)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .frame(maxWidth: 70, alignment: .trailing)
                         }
                         .listRowSeparator(isSeparatorVisible(file, fileSearcher.filesSearched) ? .visible : .hidden)
                         .listRowSeparatorTint(.white)
@@ -1671,6 +1702,8 @@ A tool to help profile mem, perf, and builds.
                                 }
                             }
                         }
+                        
+                        // add other buttons
                     }
                     WebView(webView: myWebView)
                         .focused($focusedField, equals: .webView)
@@ -1702,10 +1735,12 @@ A tool to help profile mem, perf, and builds.
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Open...") {
+                Button("Open…") {
                     openFile()
                 }
                 .keyboardShortcut("O", modifiers:[.command])
+                
+                recentDocumentsMenu()
                 
                 // Really want to go to .h selected in flamegraph, but that would violate sandbox.
                 // This just goes to the trace json file somewhere in DerviceData which is less useful.
@@ -1716,17 +1751,7 @@ A tool to help profile mem, perf, and builds.
                     }
                 }
                 .keyboardShortcut("G", modifiers:[.command])
-                
-                Button("Sort Name") {
-                    fileSearcher.updateFilesSearched(false)
-                }
-                .keyboardShortcut("T", modifiers:[.shift, .command])
-                
-                Button("Sort Range") {
-                    fileSearcher.updateFilesSearched(true)
-                }
-                .keyboardShortcut("T", modifiers:[.command])
-                
+            
                 Button("Reload") {
                     // TODO: This loses the order if sorted by duration
                     // but easy enough to resort
@@ -1759,6 +1784,20 @@ A tool to help profile mem, perf, and builds.
                 }
                 .keyboardShortcut("N", modifiers:[.command])
                 .disabled(selection == nil)
+                
+                Divider()
+                
+                Button("Sort Name") {
+                    fileSearcher.updateFilesSearched(false)
+                }
+                .keyboardShortcut("T", modifiers:[.shift, .command])
+                
+                Button("Sort Range") {
+                    fileSearcher.updateFilesSearched(true)
+                }
+                .keyboardShortcut("T", modifiers:[.command])
+                
+                Divider()
                 
                 // TODO: these may need to be attached to detail view
                 // The list view eats them, and doesn't fwd onto the web view
