@@ -237,7 +237,7 @@ class Log {
     }
     
     private static func timeFromStart() -> Double {
-        return abs(Log.timestamp() - Log.timestampStart)
+        return max(0.0, Log.timestamp() - Log.timestampStart)
     }
     
     private static func timeAbsolute() -> String {

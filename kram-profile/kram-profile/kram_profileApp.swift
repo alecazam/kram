@@ -37,11 +37,6 @@ import UniformTypeIdentifiers
 // TODO: parse totals from build traces, what CBA is doing
 // TODO: present total time, and % of total in the nav panel
 
-// TODO: across all files, many of the strings are the same.  Could replace all strings
-// with an index, compress, and zip archive with the index table.  buid, perf, mem strings
-// filenames are also redundant.  Just need to use @[F|S|B]hex, and then do lookup before CBA final report.
-// Can rebuild references on JS side to send less data.  JS can then alias strings.
-
 // TODO: import zip, and run cba on contents, mmap and decompress each
 //  can use incremental mode?
 // TODO: can't mmap web link, but can load zip off server with timings
@@ -49,6 +44,12 @@ import UniformTypeIdentifiers
 // TODO: save/load the duration and modstamps for File, and any other metadata (totals per section)
 // TODO: add jump to source, but path would need to be correct (sandbox block?)
 
+// TODO: across all files, many of the strings are the same.  Could replace all strings
+// with an index, compress, and zip archive with the index table.  buid, perf, mem strings
+// filenames are also redundant.  Just need to use @[F|S|B]num, and then do lookup before CBA final report.
+// table if global would need to use same index across all files.
+// Can rebuild references on JS side to send less data.  JS can then alias strings ftw.
+// Just add special ph type that is ignored by web to specify the alias.
 // TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
 // TODO: add compressed format, build up Pefetto json or binary from this
 //  may need one for mmap, other for super compact deltas
@@ -78,11 +79,13 @@ import UniformTypeIdentifiers
 // 4-bit, 12-bit, 16-bit, variable, pad to 4B
 
 // DONE: have a way to reload dropped folder
-// TODO: track parent archives, folder, and loose drop files
+// DONE: track parent archives, folder, and loose drop files
 // and when reload is hit, then reload all of that rebuild the list
 // and then reload the selected file
-// TODO: need mmapHelper and zipHelper to deal with archives
-// also FileHelper, since may not be able to mmap.
+// TODO: zipHelper to deal with archives, can use Swift Data to mmap content if needed
+//   mmap the zip, list out the files and locations, and then defalte the content somewhere
+//   only then can data be handed off toe Pefertto or CBA.  And CBA needs all files.
+//   Maybe extend CBA to read a zip file.  Can just use ZipHelper.
 
 // TODO: fix duration update modding the List item and nav title after it updates
 // Currently select list, it updates, then duration is calcualated.
@@ -160,11 +163,14 @@ class FileSearcher: ObservableObject {
     @Published var searchText = ""
     
     var files: [File] = []
-        
-    @Published var filesSearched: [File] = []
+    
+    // I made this plublished so sort would also cause update to filesSearched
+    // but the search field keeps re-focusing
+    // @Published var filesSorted: [File] = []
+    var filesSorted: [File] = []
     
     // duplicate code, but init() doesn't have self defined
-    func updateFilesSearched(_ sortByDuration: Bool = false) {
+    func updateFilesSorted(_ sortByDuration: Bool = false) {
         // may not want to sort everytime, or the list will change as duration is updated
         // really want to do this off a button, and then set files to that
         let sortedResults = files.sorted {
@@ -184,27 +190,33 @@ class FileSearcher: ObservableObject {
             }
         }
         
-        if searchText.isEmpty || sortedResults.count <= 1  {
-            filesSearched = sortedResults
+        filesSorted = sortedResults
+        
+        // TODO: important or filesSearched isn't updated in the list when
+        // the sort occurs.  This is causing filter to re-focus since
+        // it thinks the searchText which is also Published changed.
+        objectWillChange.send()
+    }
+       
+    var filesSearched: [File] {
+        
+        if searchText.isEmpty || filesSorted.count <= 1  {
+            return filesSorted
         }
         else if searchText.count == 1 {
             let lowercaseSearchText = searchText.lowercased()
             let uppercaseSearchText = searchText.uppercased()
 
-            filesSearched = sortedResults.filter {
+            return filesSorted.filter {
                 $0.name.starts(with: uppercaseSearchText) ||
                 $0.name.starts(with: lowercaseSearchText)
             }
         }
         else {
             // is search text multistring?
-            $searchText.map { searchText in
-                sortedResults.filter { file in
-                    // Here use the name, or else the directory will have say "kram" in it and filter will trigger for all files "kr"
-                    file.name.localizedCaseInsensitiveContains(searchText)
-                }
+            return filesSorted.filter {
+                $0.name.localizedCaseInsensitiveContains(searchText)
             }
-            .assign(to: &$filesSearched)
         }
     }
 }
@@ -454,6 +466,10 @@ class MyWebView : WKWebView {
         // unclear why all events are going to WebView
         // so have to return false to not have them filtered
         
+        if event.keyCode == Keycode.tab {
+            return false
+        }
+        
         // allow all menu shortcuts to keep working
         if event.modifierFlags.contains(.command) {
             return false
@@ -471,7 +487,7 @@ class MyWebView : WKWebView {
         // respond to the keys.  Ugh.  Stupid system.
         // return true
         
-        return super.performKeyEquivalent(with: event)
+        return true // super.performKeyEquivalent(with: event)
     }
     
     /* still not working
@@ -1410,7 +1426,7 @@ struct kram_profileApp: App {
                     fileSearcher.files = filesNew
                 //}
                 
-                fileSearcher.updateFilesSearched()
+                fileSearcher.updateFilesSorted()
                 
                 log.debug("found \(fileSearcher.files.count) files")
                 
@@ -1437,6 +1453,8 @@ struct kram_profileApp: App {
         }
     }
     
+    // This isn't so valuable to open a file, but opening a referenced header from build
+    // would be.
     func openContainingFolder(_ str: String) {
         let url = URL(string: str)!
         NSWorkspace.shared.activateFileViewerSelecting([url]);
@@ -1540,6 +1558,8 @@ A tool to help profile mem, perf, and builds.
         guard let sel = selection else { return nil }
         if fileList.count == 1 { return selection }
         
+        // TOOD: fix this for search, where the selected item may no longer be
+        // in the list, find element in the list bounding it
         var index = 0
         for i in 0..<fileList.count {
             let file = fileList[i]
@@ -1712,8 +1732,13 @@ A tool to help profile mem, perf, and builds.
             }
             
             // This only seems to display with List, not with Table.  Or it's under Table
-            .searchableOptional(text: $fileSearcher.searchText, isPresented: $fileSearcher.searchIsActive, placement: .sidebar, prompt: "Filter")
-                
+            // This also keeps stealing focus back to itself.  Ugh.  Can't even tab out.
+            // Also this interferes with type search in the list and arrows when focused.
+            // Can select a list item with cursor, but then focus is set back to search.
+//            .searchableOptional(text: $fileSearcher.searchText, isPresented: $fileSearcher.searchIsActive,
+//                                placement: .sidebar,
+//                                prompt: "Filter")
+            
             .onChange(of: selection /*, initial: true*/) { newState in
                 openFileSelection(myWebView)
                 //focusedField = .webView
@@ -1788,12 +1813,12 @@ A tool to help profile mem, perf, and builds.
                 Divider()
                 
                 Button("Sort Name") {
-                    fileSearcher.updateFilesSearched(false)
+                    fileSearcher.updateFilesSorted(false)
                 }
                 .keyboardShortcut("T", modifiers:[.shift, .command])
                 
                 Button("Sort Range") {
-                    fileSearcher.updateFilesSearched(true)
+                    fileSearcher.updateFilesSorted(true)
                 }
                 .keyboardShortcut("T", modifiers:[.command])
                 
