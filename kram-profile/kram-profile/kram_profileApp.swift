@@ -1765,6 +1765,7 @@ A tool to help profile mem, perf, and builds.
         //.environment(\.font, customFont)
         // https://nilcoalescing.com/blog/CustomiseAboutPanelOnMacOSInSwiftUI/
         .commands {
+            // These are in Edit menu
             CommandGroup(after: .newItem) {
                 Button("Open…") {
                     openFile()
@@ -1849,6 +1850,19 @@ A tool to help profile mem, perf, and builds.
                 .keyboardShortcut("P", modifiers:[.shift, .command])
                 .disabled(selection == nil && focusedField == .webView) // what if selection didn't load
             }
+            
+            // only way to get non-empty View menu, and for fn+F to automagically add (fn+f)
+            // https://forums.developer.apple.com/forums/thread/740591
+            
+            CommandGroup(after: .toolbar) {
+                // must call through NSWindow
+                Button("See Below") {
+                    // Window isn't set in AppDelegate, so menu item is skipped.
+                    // But add fn+F menu item into app.  Suo many stupid hacks.
+                    appDelegate.window?.toggleFullScreen(nil)
+                }
+            }
+            
             CommandGroup(replacing: .appInfo) {
                 Button("About kram-profile") {
                     aboutPanel()
