@@ -9,7 +9,7 @@ import UniformTypeIdentifiers
 // https://github.com/gualtierofrigerio/WkWebViewJavascript/blob/master/WkWebViewJavascript/WebViewHandler.swift
 
 // https://levelup.gitconnected.com/how-to-use-wkwebview-on-mac-with-swiftui-10266989ed11
-// Signing & Capabilites set App Sanbox (allow outgoing connections)
+// Signing & Capabilites set App Sandbox (allow outgoing connections)
 
 // This is really just a wrapper to turn WKWebView into something SwiftUI
 // can interop with.  SwiftUI has not browser widget.
@@ -78,6 +78,9 @@ import UniformTypeIdentifiers
 
 // 4-bit, 12-bit, 16-bit, variable, pad to 4B
 
+// TODO: recent documents list doesn't survive relaunch, but only when app is rebuilt
+// but still kind of annoying for development
+
 // DONE: have a way to reload dropped folder
 // DONE: track parent archives, folder, and loose drop files
 // and when reload is hit, then reload all of that rebuild the list
@@ -94,7 +97,7 @@ import UniformTypeIdentifiers
 
 // WKWebView
 // TODO: can't block drop onto the WKWebView
-// TODO: can't overide "delete" key doing a back in the WKWebView history
+// TODO: can't overide "delete" or "shift+Delete" key doing a back/fwd in the WKWebView history
 //    Perfetto warns that content will be lost
 
 // Perfetto Bugs
@@ -106,10 +109,10 @@ import UniformTypeIdentifiers
 // Multi-window
 // TODO: support WindowGroup and multiwindow, each needs own webView, problem
 //   is that onOpenURL opens a new window always.
-// TODO: look in to hosting remotery web and/or tracy server, see if Remotery as flamechart render
+// TODO: look in to hosting Remotery web and/or Tracy server, Tracy is imgui
 //   but these don't review traces offline, and are live profilers
 // TODO: add Metal capture and imgui backend to Tracy
-// TODO: add Metal capture to Remotery
+// TODO: add Metal capture to Remotery (this isn't a flamegraph)
 
 
 // TODO: switch font to Inter, bundle that with the app?
@@ -461,33 +464,38 @@ class MyWebView : WKWebView {
     // So that keyboard events are routed
     override var acceptsFirstResponder: Bool { true }
     
-    // This is to prevent bonk
+        // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/HandlingKeyEvents/HandlingKeyEvents.html
+    
+// https://nshipster.com/wkwebview/
+    
+    func isKeyHandled(_ event: NSEvent) -> Bool {
+    
+        // can't block delete or shift+delete
+        // so the WKWebView goes back/foward through it's 1 page history.
+        // that loses all context for the user.
+        
+        // prevent super annoying bonk/NSBeep
+        // if don't check modifier flags (can't check isEmpty since 256 is often set
+        // then the cmd+S stops working
+        if !(event.modifierFlags.contains(.command) ||
+             event.modifierFlags.contains(.control) ||
+             event.modifierFlags.contains(.option)) {
+            // wasd
+            if event.keyCode == Keycode.w || event.keyCode == Keycode.a || event.keyCode == Keycode.s || event.keyCode == Keycode.d {
+                return true
+            }
+        }
+        return false
+    }
+    
+    // Apple doesn't want this to be overridden by user, but key handling
+    // just doesn't work atop the WKWebView without this.  KeyUp/KeyDown
+    // overrides don't matter, since we need the WKWebView to forward them
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        // unclear why all events are going to WebView
-        // so have to return false to not have them filtered
-        
-        if event.keyCode == Keycode.tab {
-            return false
+        if !isKeyHandled(event) {
+            return super.performKeyEquivalent(with: event)
         }
-        
-        // allow all menu shortcuts to keep working
-        if event.modifierFlags.contains(.command) {
-            return false
-        }
-        
-        // allow list to use up/down
-        if event.keyCode == Keycode.upArrow ||
-            event.keyCode == Keycode.downArrow {
-            return false
-        }
-        
-        // TODO: delete is still unloading the currently loaded page.  Augh!!!
-        
-        // true means it doesn't bonk, but WKWebView still gets to
-        // respond to the keys.  Ugh.  Stupid system.
-        // return true
-        
-        return true // super.performKeyEquivalent(with: event)
+        return true
     }
     
     /* still not working
@@ -1735,9 +1743,7 @@ A tool to help profile mem, perf, and builds.
             // This also keeps stealing focus back to itself.  Ugh.  Can't even tab out.
             // Also this interferes with type search in the list and arrows when focused.
             // Can select a list item with cursor, but then focus is set back to search.
-//            .searchableOptional(text: $fileSearcher.searchText, isPresented: $fileSearcher.searchIsActive,
-//                                placement: .sidebar,
-//                                prompt: "Filter")
+            // .searchableOptional(text: $fileSearcher.searchText, isPresented: $fileSearcher.searchIsActive, placement: .sidebar, prompt: "Filter")
             
             .onChange(of: selection /*, initial: true*/) { newState in
                 openFileSelection(myWebView)
