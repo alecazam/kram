@@ -1420,14 +1420,19 @@ bool Data::loadFileFromArchive()
         findPossibleNormalMapFromAlbedoFilename(filename, normalFilenames);
      
         for (const auto& name: normalFilenames) {
-            hasNormal = zip.extractRaw(name.c_str(), &imageNormalData,
-                                        imageNormalDataLength);
+            const auto* normalEntry = zip.zipEntry(name.c_str());
+            
+            hasNormal = normalEntry != nullptr;
             if (hasNormal) {
                 normalFilename = name;
                 
-                bool isNormalUncompressed = entry->compressedSize == entry->uncompressedSize;
+                bool isNormalUncompressed = normalEntry->compressedSize == entry->uncompressedSize;
                 
-                if (!isNormalUncompressed) {
+                if (isNormalUncompressed) {
+                    zip.extractRaw(name.c_str(), &imageNormalData,
+                                   imageNormalDataLength);
+                }
+                else {
                     // need to decompress first
                     if (!zip.extract(filename, bufferForNormal)) {
                         return false;
