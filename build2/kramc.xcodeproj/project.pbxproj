@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		705F68F82BA2DD2000437FAA /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 705F68F72BA2DD1100437FAA /* libcompression.tbd */; };
 		706EF28326D18251001C950E /* libkram.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF28226D18251001C950E /* libkram.a */; };
 		706EF28526D1825D001C950E /* libate.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF28426D18257001C950E /* libate.tbd */; };
 		706EF28726D18290001C950E /* KramMain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EF28026D18223001C950E /* KramMain.cpp */; };
@@ -26,6 +27,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		705F68F72BA2DD1100437FAA /* libcompression.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcompression.tbd; path = usr/lib/libcompression.tbd; sourceTree = SDKROOT; };
 		706EF27226D18082001C950E /* kram */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = kram; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EF28026D18223001C950E /* KramMain.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramMain.cpp; sourceTree = "<group>"; };
 		706EF28226D18251001C950E /* libkram.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libkram.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -41,6 +43,7 @@
 				706EF28326D18251001C950E /* libkram.a in Frameworks */,
 				706EF28B26D182CB001C950E /* Foundation.framework in Frameworks */,
 				706EF28526D1825D001C950E /* libate.tbd in Frameworks */,
+				705F68F82BA2DD2000437FAA /* libcompression.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -76,6 +79,7 @@
 		706EF28126D18251001C950E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				705F68F72BA2DD1100437FAA /* libcompression.tbd */,
 				706EF28A26D182CB001C950E /* Foundation.framework */,
 				706EF28426D18257001C950E /* libate.tbd */,
 				706EF28226D18251001C950E /* libkram.a */,

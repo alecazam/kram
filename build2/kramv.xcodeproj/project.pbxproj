@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		705F68FA2BA2DD4800437FAA /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 705F68F92BA2DD3E00437FAA /* libcompression.tbd */; };
+		705F68FB2BA2DD5900437FAA /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 705F68F92BA2DD3E00437FAA /* libcompression.tbd */; };
+		705F68FC2BA2DD6200437FAA /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 705F68F92BA2DD3E00437FAA /* libcompression.tbd */; };
 		706EF23926D17A81001C950E /* KramViewerMain.mm in Sources */ = {isa = PBXBuildFile; fileRef = 706EF22C26D17A81001C950E /* KramViewerMain.mm */; };
 		706EF23B26D17A81001C950E /* KramViewerBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EF22F26D17A81001C950E /* KramViewerBase.cpp */; };
 		706EF23C26D17A81001C950E /* KramLoader.mm in Sources */ = {isa = PBXBuildFile; fileRef = 706EF23026D17A81001C950E /* KramLoader.mm */; };
@@ -98,6 +101,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		705F68F92BA2DD3E00437FAA /* libcompression.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcompression.tbd; path = usr/lib/libcompression.tbd; sourceTree = SDKROOT; };
 		706EF20F26D17A26001C950E /* kramv.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = kramv.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EF22A26D17A81001C950E /* KramViewerBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramViewerBase.h; sourceTree = "<group>"; };
 		706EF22B26D17A81001C950E /* kramv.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = kramv.entitlements; sourceTree = "<group>"; };
@@ -165,6 +169,7 @@
 				706EF26726D17DFA001C950E /* libate.tbd in Frameworks */,
 				706EF24F26D17C43001C950E /* Foundation.framework in Frameworks */,
 				70833665271575E50077BCB6 /* GLTF.framework in Frameworks */,
+				705F68FA2BA2DD4800437FAA /* libcompression.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,6 +178,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				70E33EC826E536BF00CBA422 /* QuickLookThumbnailing.framework in Frameworks */,
+				705F68FB2BA2DD5900437FAA /* libcompression.tbd in Frameworks */,
 				70E33ECA26E536BF00CBA422 /* Quartz.framework in Frameworks */,
 				70E33ED826E5377000CBA422 /* libkram.a in Frameworks */,
 				70E33EDD26E537AD00CBA422 /* Accelerate.framework in Frameworks */,
@@ -186,6 +192,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				70E33EF526E548D800CBA422 /* CoreGraphics.framework in Frameworks */,
+				705F68FC2BA2DD6200437FAA /* libcompression.tbd in Frameworks */,
 				70E33EF426E548CF00CBA422 /* libate.tbd in Frameworks */,
 				70E33EF626E548E200CBA422 /* Accelerate.framework in Frameworks */,
 				70E33EF726E553B900CBA422 /* AppKit.framework in Frameworks */,
@@ -242,6 +249,7 @@
 		706EF24726D17BC2001C950E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				705F68F92BA2DD3E00437FAA /* libcompression.tbd */,
 				70B5BFF728F5253F00CD83D8 /* CoreText.framework */,
 				7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */,
 				70833668271575EA0077BCB6 /* GLTFMTL.framework */,

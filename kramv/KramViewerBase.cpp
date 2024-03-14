@@ -1381,11 +1381,33 @@ bool Data::loadFileFromArchive()
     const uint8_t* imageData = nullptr;
     uint64_t imageDataLength = 0;
 
-    // search for main file - can be albedo or normal
-    if (!zip.extractRaw(filename, &imageData, imageDataLength)) {
-        return false;
-    }
+    // DONE: logic is bust below.  Can only use extractRaw
+    // if the file in the archive isn't compressed.  Have Apple
+    // zip that compressed png files.  So then the raw ptr/size
+    // needs deflated.
+    bool isFileUncompressed = entry->compressedSize == entry->uncompressedSize;
+    
+    vector<uint8_t> bufferForImage;
+    
+    if (isFileUncompressed) {
+        // search for main file - can be albedo or normal
+        if (!zip.extractRaw(filename, &imageData, imageDataLength)) {
+            return false;
+        }
 
+    }
+    else {
+        // need to decompress first
+        if (!zip.extract(filename, bufferForImage)) {
+            return false;
+        }
+        
+        imageData = bufferForImage.data();
+        imageDataLength = bufferForImage.size();
+    }
+    
+    vector<uint8_t> bufferForNormal;
+    
     const uint8_t* imageNormalData = nullptr;
     uint64_t imageNormalDataLength = 0;
     
@@ -1402,6 +1424,18 @@ bool Data::loadFileFromArchive()
                                         imageNormalDataLength);
             if (hasNormal) {
                 normalFilename = name;
+                
+                bool isNormalUncompressed = entry->compressedSize == entry->uncompressedSize;
+                
+                if (!isNormalUncompressed) {
+                    // need to decompress first
+                    if (!zip.extract(filename, bufferForNormal)) {
+                        return false;
+                    }
+                    
+                    imageNormalData = bufferForNormal.data();
+                    imageNormalDataLength = bufferForNormal.size();
+                }
                 break;
             }
         }

@@ -1,19 +1,18 @@
 #include "KramZipHelper.h"
 
-// these are no longer a dependency
-//#include "KramMmapHelper.h"
-//#include "KramFileHelper.h"
-
-//#include <sys/mman.h>
-//#include <sys/stat.h>
-//#include <stdio.h>
-//#include <unistd.h>
-
 // // for copy_if on Win#include <algorithm>
 //#include <iterator> // for copy_if on Win
 //#include <vector>
 
 #include "miniz.h"
+
+#ifndef USE_LIBCOMPRESSION
+#define USE_LIBCOMPRESSION (KRAM_MAC || KRAM_IOS)
+#endif
+
+#ifdef USE_LIBCOMPRESSION
+#include <compression.h>
+#endif
 
 namespace kram {
 using namespace NAMESPACE_STL;
@@ -28,13 +27,7 @@ ZipHelper::~ZipHelper()
 }
 
 bool ZipHelper::openForRead(const uint8_t* zipData_, uint64_t zipDataSize)
-{  // const char* filename) {
-    //    mmap = std::make_unique<MmapHelper>();
-    //    if (!mmap->openForRead(filename)) {
-    //        close();
-    //        return false;
-    //    }
-
+{
     zipData = zipData_;
 
     zip = std::make_unique<mz_zip_archive>();
@@ -73,11 +66,6 @@ void ZipHelper::close()
         mz_zip_end(zip.get());
         zip.reset();
     }
-
-    //    if (mmap != nullptr) {
-    //        mmap->close();
-    //        mmap.reset();
-    //    }
 }
 
 void ZipHelper::initZipEntryTables()
@@ -173,7 +161,7 @@ bool ZipHelper::extract(const char* filename, vector<uint8_t>& buffer) const
     }
 
     buffer.resize(entry->uncompressedSize);
-    if (!extract(entry->fileIndex, buffer.data(), buffer.size())) {
+    if (!extract(*entry, buffer.data(), buffer.size())) {
         return false;
     }
 
@@ -182,7 +170,7 @@ bool ZipHelper::extract(const char* filename, vector<uint8_t>& buffer) const
 
 bool ZipHelper::extractPartial(const char* filename, vector<uint8_t>& buffer) const
 {
-    if (buffer.size() == 0) {
+    if (buffer.empty()) {
         assert(false);
         return false;
     }
@@ -207,27 +195,40 @@ bool ZipHelper::extractPartial(const char* filename, vector<uint8_t>& buffer) co
     return success;
 }
 
-bool ZipHelper::extract(int32_t fileIndex, void* buffer, uint64_t bufferSize) const
+bool ZipHelper::extract(const ZipEntry& entry, void* buffer, uint64_t bufferSize) const
 {
-    // TODO: here could use the compression lib with optimized deflate
+    // Some more info on doing deflate on M1
+    // https://aras-p.info/blog/2021/08/09/EXR-libdeflate-is-great/
+    // https://dougallj.wordpress.com/2022/08/20/faster-zlib-deflate-decompression-on-the-apple-m1-and-x86/
 
+    // https://developer.apple.com/documentation/compression/1481000-compression_decode_buffer?language=objc
+    
+    // This call is internal, so caller has already tested failure cases.
+    
+#if USE_LIBCOMPRESSION
+    const uint8_t* data = mz_zip_reader_get_raw_data(zip.get(), entry.fileIndex);
+    if (!data) {
+        return false;
+    }
+    // need to extra data and header
+    
+    uint64_t bytesDecoded = compression_decode_buffer(
+        (uint8_t*)buffer, entry.uncompressedSize,
+        (const uint8_t*)data, entry.compressedSize,
+        NULL, // scratch-buffer that could speed up to pass
+        COMPRESSION_ZLIB);
+    
+    bool success = false;
+    if (bytesDecoded == entry.uncompressedSize)
+    {
+        success = true;
+    }
+#else
+    
     // this pulls pages from mmap, no allocations
     mz_bool success = mz_zip_reader_extract_to_mem(
-        zip.get(), fileIndex, buffer, bufferSize, 0);
-
-    /* TODO: alternative using optimized Apple library libCompression
-     
-       this can do partial compression, so don't check uncompressedSize always
-       f.e. can look at first 64-byte header on KTX files which is much faster.
-     
-     uint64_t a = compression_decode_buffer((uint8_t*)dstBuffer, header.uncompressedSize,
-                                         (const uint8_t*)data, header.compressedSize,
-                                         NULL, COMPRESSION_ALGORITHM_ZLIB);
-
-    if (a != header.uncompressedSize)
-    {
-    }
-    */
+        zip.get(), entry.fileIndex, buffer, bufferSize, 0);
+#endif
 
     return success;
 }
@@ -253,7 +254,11 @@ bool ZipHelper::extractRaw(const char* filename, const uint8_t** bufferData, uin
     }
 
     *bufferData = data;
-    bufferDataSize = stat.m_uncomp_size;
+    
+    // This isn't correct, need to return comp_size.
+    // Caller may need the uncompressed size though to decompress fully into.
+    //bufferDataSize = stat.m_uncomp_size;
+    bufferDataSize = stat.m_comp_size;
 
     return true;
 }

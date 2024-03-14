@@ -1,11 +1,10 @@
 #pragma once
 
-//#include <memory>
 #include <stdint.h>
+
+//#include <memory>
 //#include <vector>
 //#include <unordered_map>
-
-//#include "Images/HashHelper.h"
 
 // from miniz
 // had to change miniz from anonymous struct typedef, or can't fwd declare
@@ -55,7 +54,7 @@ struct ZipHelper {
     const ZipEntry* zipEntry(const char* name) const;
 
 private:
-    bool extract(int32_t fileIndex, void* buffer, uint64_t bufferSize) const;
+    bool extract(const ZipEntry& fileIndex, void* buffer, uint64_t bufferSize) const;
 
     void initZipEntryTables();
 
@@ -68,9 +67,6 @@ private:
     vector<ZipEntry> _zipEntrys;
 
     const uint8_t* zipData;  // aliased
-
-    // DONE: eliminated this
-    // unique_ptr<MmapHelper> mmap;
 
     vector<char> allFilenames;
 };
