@@ -17,6 +17,11 @@
 		705F68E72B8BEB7100437FAA /* DataCompression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68E62B8BEB7000437FAA /* DataCompression.swift */; };
 		705F68E92B9451CC00437FAA /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68E82B9451CC00437FAA /* Log.swift */; };
 		705F68EB2B94E33800437FAA /* Keycode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F68EA2B94E33800437FAA /* Keycode.swift */; };
+		705F69052BA2ED1300437FAA /* KramZipHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 705F68FF2BA2ED1200437FAA /* KramZipHelper.cpp */; };
+		705F69062BA2ED1300437FAA /* miniz.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 705F69002BA2ED1200437FAA /* miniz.cpp */; };
+		705F69072BA2ED1300437FAA /* track_event_parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 705F69042BA2ED1200437FAA /* track_event_parser.cpp */; };
+		705F690A2BA3801D00437FAA /* KramZipHelperW.mm in Sources */ = {isa = PBXBuildFile; fileRef = 705F69092BA3801D00437FAA /* KramZipHelperW.mm */; };
+		705F690C2BA3CDEC00437FAA /* File.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F690B2BA3CDEC00437FAA /* File.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +38,15 @@
 		705F68E62B8BEB7000437FAA /* DataCompression.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataCompression.swift; sourceTree = "<group>"; };
 		705F68E82B9451CC00437FAA /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		705F68EA2B94E33800437FAA /* Keycode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keycode.swift; sourceTree = "<group>"; };
+		705F68FE2BA2ED1200437FAA /* KramZipHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramZipHelper.h; sourceTree = "<group>"; };
+		705F68FF2BA2ED1200437FAA /* KramZipHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramZipHelper.cpp; sourceTree = "<group>"; };
+		705F69002BA2ED1200437FAA /* miniz.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = miniz.cpp; sourceTree = "<group>"; };
+		705F69022BA2ED1200437FAA /* miniz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = miniz.h; sourceTree = "<group>"; };
+		705F69032BA2ED1200437FAA /* kram-profile-Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "kram-profile-Bridging-Header.h"; sourceTree = "<group>"; };
+		705F69042BA2ED1200437FAA /* track_event_parser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = track_event_parser.cpp; sourceTree = "<group>"; };
+		705F69082BA3801D00437FAA /* KramZipHelperW.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramZipHelperW.h; sourceTree = "<group>"; };
+		705F69092BA3801D00437FAA /* KramZipHelperW.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = KramZipHelperW.mm; sourceTree = "<group>"; };
+		705F690B2BA3CDEC00437FAA /* File.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = File.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,6 +63,7 @@
 		705F68C02B820AD100437FAA = {
 			isa = PBXGroup;
 			children = (
+				705F68FD2BA2ED1200437FAA /* Source */,
 				705F68CB2B820AD100437FAA /* kram-profile */,
 				705F68CA2B820AD100437FAA /* Products */,
 			);
@@ -67,6 +82,7 @@
 			children = (
 				705F68DD2B86AB2000437FAA /* Info.plist */,
 				705F68CC2B820AD100437FAA /* kram_profileApp.swift */,
+				705F690B2BA3CDEC00437FAA /* File.swift */,
 				705F68EA2B94E33800437FAA /* Keycode.swift */,
 				705F68D02B820AD200437FAA /* Assets.xcassets */,
 				705F68DF2B87EB8000437FAA /* AnyCodable.swift */,
@@ -87,6 +103,21 @@
 				705F68D32B820AD200437FAA /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		705F68FD2BA2ED1200437FAA /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				705F69032BA2ED1200437FAA /* kram-profile-Bridging-Header.h */,
+				705F68FE2BA2ED1200437FAA /* KramZipHelper.h */,
+				705F68FF2BA2ED1200437FAA /* KramZipHelper.cpp */,
+				705F69082BA3801D00437FAA /* KramZipHelperW.h */,
+				705F69092BA3801D00437FAA /* KramZipHelperW.mm */,
+				705F69022BA2ED1200437FAA /* miniz.h */,
+				705F69002BA2ED1200437FAA /* miniz.cpp */,
+				705F69042BA2ED1200437FAA /* track_event_parser.cpp */,
+			);
+			path = Source;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -121,6 +152,7 @@
 				TargetAttributes = {
 					705F68C82B820AD100437FAA = {
 						CreatedOnToolsVersion = 15.2;
+						LastSwiftMigration = 1520;
 					};
 				};
 			};
@@ -161,12 +193,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				705F68E12B87EB8000437FAA /* AnyDecodable.swift in Sources */,
+				705F690C2BA3CDEC00437FAA /* File.swift in Sources */,
 				705F68E32B87EB8000437FAA /* AnyEncodable.swift in Sources */,
 				705F68E92B9451CC00437FAA /* Log.swift in Sources */,
 				705F68EB2B94E33800437FAA /* Keycode.swift in Sources */,
+				705F69062BA2ED1300437FAA /* miniz.cpp in Sources */,
+				705F69052BA2ED1300437FAA /* KramZipHelper.cpp in Sources */,
 				705F68E22B87EB8000437FAA /* AnyCodable.swift in Sources */,
+				705F69072BA2ED1300437FAA /* track_event_parser.cpp in Sources */,
 				705F68CD2B820AD100437FAA /* kram_profileApp.swift in Sources */,
 				705F68E72B8BEB7100437FAA /* DataCompression.swift in Sources */,
+				705F690A2BA3801D00437FAA /* KramZipHelperW.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -178,8 +215,14 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_GCD_PERFORMANCE = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ANALYZER_OSOBJECT_C_STYLE_CAST = YES;
+				CLANG_ANALYZER_SECURITY_FLOATLOOPCOUNTER = YES;
+				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
+				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -232,7 +275,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_OBJC_INTEROP_MODE = objc;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
@@ -243,8 +286,14 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_GCD_PERFORMANCE = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ANALYZER_OSOBJECT_C_STYLE_CAST = YES;
+				CLANG_ANALYZER_SECURITY_FLOATLOOPCOUNTER = YES;
+				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
+				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -291,7 +340,7 @@
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_OBJC_INTEROP_MODE = objc;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -301,6 +350,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "kram-profile/kram_profile.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -309,7 +359,6 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "kram-profile/Info.plist";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -319,6 +368,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.hialec.kram-profile";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Source/kram-profile-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -328,6 +379,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "kram-profile/kram_profile.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -336,7 +388,6 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "kram-profile/Info.plist";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -346,6 +397,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.hialec.kram-profile";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Source/kram-profile-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;

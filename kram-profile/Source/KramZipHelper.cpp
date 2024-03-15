@@ -1,12 +1,13 @@
 #include "KramZipHelper.h"
 
-//#include <algorithm>
+#include <algorithm>
 //#include <iterator> // for copy_if on Win
-//#include <vector>
+#include <vector>
+#include <string>
 
 #include "miniz.h"
 
-// test for perf of this compared to one in miniz also see 
+// test for perf of this compared to one in miniz also see
 // comments about faster algs.
 // libcompress can only encode lvl 5, but here it's only decompress.
 #ifndef USE_LIBCOMPRESSION
@@ -19,6 +20,17 @@
 
 namespace kram {
 using namespace NAMESPACE_STL;
+
+// Copied out of KramLog.cpp
+inline bool endsWithExtension(const char* str, const string& substring)
+{
+    const char* search = strrchr(str, '.');
+    if (search == NULL) {
+        return false;
+    }
+
+    return strcmp(search, substring.c_str()) == 0;
+}
 
 ZipHelper::ZipHelper()
 {
@@ -117,7 +129,7 @@ void ZipHelper::initZipEntryTables()
         zipEntry.uncompressedSize = stat.m_uncomp_size;
         zipEntry.compressedSize = stat.m_comp_size;
         zipEntry.modificationDate = (int32_t)stat.m_time;  // really a time_t
-#undef crc32
+        #undef crc32
         zipEntry.crc32 = stat.m_crc32;
         
         // TODO: stat.m_time, state.m_crc32
@@ -180,12 +192,17 @@ bool ZipHelper::extract(const char* filename, uint8_t* bufferData, uint64_t buff
         return false;
     }
 
+    if (bufferDataSize < entry->uncompressedSize) {
+        return false;
+    }
+    
     if (!extract(*entry, bufferData, bufferDataSize)) {
         return false;
     }
 
     return true;
 }
+
 
 bool ZipHelper::extractPartial(const char* filename, vector<uint8_t>& buffer) const
 {

@@ -114,7 +114,6 @@ import UniformTypeIdentifiers
 // TODO: add Metal capture and imgui backend to Tracy
 // TODO: add Metal capture to Remotery (this isn't a flamegraph)
 
-
 // TODO: switch font to Inter, bundle that with the app?
 //   .environment(\.font, Font.custom("CustomFont", size: 14))
 // TODO: for perf traces, compute duration between frame
@@ -271,191 +270,12 @@ extension String.StringInterpolation {
  "∆t was \(timeSince: startTime, decimals: 0)" // "∆t was 3s"
  */
 
-private let log = Log("kram-profile")
+private let log = Log("kram/App")
 
 public func clamp<T>(_ value: T, _ minValue: T, _ maxValue: T) -> T where T : Comparable {
     return min(max(value, minValue), maxValue)
 }
 
-//-------------
-
-enum ContainerType {
-    case Archive // zip of 1+ files, can't enforce
-    case Compressed // gzip of 1 file, can't enforce
-    case Folder // from a folder drop
-    case File // means file was dropped or opened directly
-}
-
-enum FileType {
-    case Build
-    case Memory
-    case Perf
-    case Unknown
-}
-
-class File: Identifiable, /*Hashable, */ Equatable, Comparable
-{
-    var id: String { url.absoluteString }
-    var name: String { url.lastPathComponent }
-    let url: URL
-    let shortDirectory: String
-    let parentFolders: String
-    let containerType: ContainerType
-    let fileType: FileType
-
-    var duration = 0.0
-    var modStamp: Date?
-    var loadStamp: Date?
-    
-    // only available for memory file type right now
-    var threadInfo = ""
-    
-    init(url: URL) {
-        self.url = url
-        self.modStamp = File.fileModificationDate(url:url)
-        self.shortDirectory = File.buildShortDirectory(url:url)
-        self.parentFolders = url.deletingLastPathComponent().absoluteString
-        self.containerType = File.filenameToContainerType(url)
-        self.fileType = File.filenameToFileType(url)
-    }
-    
-    public static func == (lhs: File, rhs: File) -> Bool {
-        return lhs.id == rhs.id
-    }
-    public static func < (lhs: File, rhs: File) -> Bool {
-        return lhs.id < rhs.id
-    }
-    
-    // call this when the file is loaded
-    public func setLoadStamp()  {
-        loadStamp = modStamp
-    }
-    public func isReloadNeeded() -> Bool {
-        return modStamp != loadStamp
-    }
-    
-    private static func fileModificationDate(url: URL) -> Date? {
-        do {
-            let attr = try FileManager.default.attributesOfItem(atPath: url.path)
-            return attr[FileAttributeKey.modificationDate] as? Date
-        } catch {
-            return nil
-        }
-    }
-
-    // show some of dir file is in, TODO: 2 levels not enough
-    private static func buildShortDirectory(url: URL) -> String {
-        let count = url.pathComponents.count
-        
-        // dir0/dir1/file.ext
-        // -3/-2/-1
-        
-        var str = ""
-        if count >= 3 {
-            str += url.pathComponents[count-3]
-            str += "/"
-        }
-        if count >= 2 {
-            str += url.pathComponents[count-2]
-        }
-        
-        return str
-    }
-    
-    public static func filenameToContainerType(_ url: URL) -> ContainerType {
-        let ext = url.pathExtension
-        
-        if ext == "zip" {
-            return .Archive
-        }
-        if ext == "gz" { // could be a tarball archive, but don't support that
-            return .Compressed
-        }
-        return .File
-    }
-
-    public static func filenameToFileType(_ url: URL) -> FileType {
-        let ext = url.pathExtension
-        
-        if File.filenameToContainerType(url) != .File {
-            // strip the .gz/.zip
-            return filenameToFileType(url.deletingPathExtension())
-        }
-        
-        if ext == "json" || ext == "buildtrace" { // build
-            return .Build
-        }
-        else if ext == "memtrace" { // memory
-            return .Memory
-        }
-        // TODO: eliminate trace
-        else if ext == "trace" || ext == "perftrace" { // profile
-            return .Perf
-        }
-        return .Unknown
-    }
-}
-
-// TODO: now that it's a class, can probably elimiante that lookuFile calls
-func generateDuration(file: File) -> String {
-    // need for duration
-    let f = lookupFile(url: file.url)
-    if f.duration != 0.0 {
-        // TODO: may want to add s/mb based on file type
-        return String(format:"%0.3f", f.duration) // sec vis to ms for now
-    }
-    else {
-        return ""
-    }
-}
-
-func generateNavigationTitle(_ sel: String?) -> String {
-    if sel == nil {
-        return ""
-    }
-    
-    let f = lookupFile(selection: sel!)
-    return generateDuration(file: f) + " " + f.name
-}
-
-//-------------
-// Note: if a file is deleted which happens often with builds,
-// then want to identify that and update the list.  At least
-// indicate the item is gone, and await its return.
-// Does macOS have a FileWatcher?
-
-// Holds supported files dropped or opened from Finder, reload reparses this
-var droppedFileCache : [URL] = []
-
-// Flattened list of supported files from folders and archives
-var fileCache : [URL:File] = [:]
-
-func lookupFile(url: URL) -> File {
-    let file = File(url:url)
-    
-    // This preseves the duration previously parsed and stored
-    
-    if let fileOld = fileCache[file.url] {
-        if file.modStamp == nil || // means file and/or dir went away, so return fileOld
-            file.modStamp! == fileOld.modStamp! {
-            return fileOld
-        }
-    }
-    
-    // This wipes the duration, so it can be recomputed
-    fileCache[file.url] = file
-    
-    return file
-}
-
-func lookupFile(selection: String) -> File {
-    return lookupFile(url:URL(string:selection)!)
-}
-
-// This one won't be one in the list, though
-func updateFileCache(file: File) {
-    fileCache[file.url] = file
-}
 
 //-------------
 
@@ -1010,18 +830,7 @@ func loadFileJS(_ path: String) -> String? {
         // decompress archive from zip, since Perfetto can't yet decompress zip
         // Note this will typically be fileType unknown, but have to flatten
         // content within to the list.  This just means part of a zip archive.
-        var fileContent: Data
-        
-        if file.containerType == .Archive {
-            return nil
-            
-            // this will point to a section of an mmaped zip archive
-            // fileContent = unzippedContent
-        }
-        else {
-            // This uses mmap if safe.  Does not count towars memory totals, since can be paged out
-            fileContent = try Data(contentsOf: fileURL, options: [.mappedIfSafe])
-        }
+        let fileContent = loadFileContent(file)
         
         // Note: json.gz and json.zip build files are not marked as Build
         // but need to rewrite them.
@@ -1111,6 +920,7 @@ func loadFileJS(_ path: String) -> String? {
                         let url = URL(string:detail)!
                         
                         // stupid immutable arrays.  Makes this code untempable
+                        // maybe can use class instead of struct?
                         catapultProfile.traceEvents![i].name = url.lastPathComponent
                     }
                     else if event.name == "InstantiateFunction" ||
@@ -1296,106 +1106,7 @@ struct kram_profileApp: App {
         }
     }
      
-    func isSupportedFilename(_ url: URL) -> Bool {
-        let ext = url.pathExtension
-        
-        // what ext does trace.zip, or trace.gz come in as ?
-        // should this limit compressed files to the names supported below - json, trace, memtrace?
-        
-        if ext == "gz" {
-            return true
-        }
-//        if ext == "zip" {
-//            return true
-//        }
-            
-        // clang build files use generic .json ext
-        if ext == "json" || ext == "buildtrace" {
-            let filename = url.lastPathComponent
-            
-            // filter out some by name, so don't have to open files
-            if filename == "build-description.json" ||
-                filename == "build-request.json" ||
-                filename == "manifest.json" ||
-                filename.hasSuffix("diagnostic-filename-map.json") ||
-                filename.hasSuffix(".abi.json") ||
-                filename.hasSuffix("-OutputFileMap.json") ||
-                filename.hasSuffix("_const_extract_protocols.json")
-            {
-                return false
-            }
-            return true
-        }
-        
-        // profiling
-        if ext == "perftrace" || ext == "trace" {
-            return true
-        }
-        
-        // memory
-        if ext == "memtrace" {
-            return true
-        }
-        
-        return false
-    }
-    
-    func listFilesFromArchive(_ url: URL) -> [File] {
-        // TODO:
-        // also add zip to supported format
-        // flatten archive and add archive to list
-        // need to mmap the archive, point content files to archive loc
-        
-        return []
-    }
-    
-    func listFilesFromURLs(_ urls: [URL]) -> [File]
-    {
-        var files: [File] = []
-       
-        for url in urls {
-            // now filter a list of all the files under the dir
-            if url.hasDirectoryPath {
-                // list out all matching files
-                // also these [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
-                
-                // recurse into directory
-                let directoryEnumerator = FileManager.default.enumerator(
-                    at: url,
-                    includingPropertiesForKeys: nil
-                    // options: [.skipsHiddenFiles]
-                )
-                
-                while let fileURL = directoryEnumerator?.nextObject() as? URL {
-                    let isSupported = isSupportedFilename(fileURL)
-                    if isSupported {
-                        let isArchive  = File.filenameToContainerType(url) == .Archive
-                        if isArchive {
-                           files += listFilesFromArchive(fileURL)
-                        }
-                        else {
-                            files.append(lookupFile(url:fileURL));
-                        }
-                    }
-                }
-            }
-            else if url.isFileURL {
-                let isSupported = isSupportedFilename(url)
-                if isSupported {
-                    let isArchive = File.filenameToContainerType(url) == .Archive
-                    if isArchive {
-                        files += listFilesFromArchive(url)
-                    }
-                    else {
-                        files.append(lookupFile(url:url))
-                    }
-                }
-            }
-        }
-    
-        return files
-    }
-    
+   
     // What is used when Inter isn't installed.  Can this be bundled?
     //let customFont = Font.custom("Inter Variable", size: 14)
                 
@@ -1547,8 +1258,8 @@ A tool to help profile mem, perf, and builds.
     let fileTypes: [UTType] = [
         // This is what macOS generates when doing "compress file".  But could be archive.
         // These are 12x smaller often times.  Decompression lib only handles zlib.
-        // TODO: need zip archive util to extract the 1+ files, can still use libCompression to decompress
-        // .zip,
+        // DONE: need zip archive util to extract the 1+ files, can still use libCompression to decompress
+        .zip,
        
         // Perfetto can only open gzip and not zip yet
         // These are 12x smaller often times
@@ -1591,6 +1302,7 @@ A tool to help profile mem, perf, and builds.
     // about hideSideBar
     // https://github.com/google/perfetto/issues/716
     // Allocating here only works for a single Window, not for WindowGroup
+    // WindowGroup is supposed to make new state, but doesn't.
     @State var myWebView = newWebView(request: URLRequest(url:URL(string: ORIGIN + "/?hideSidebar=true")!))
     
     // Focus state says which panel has keyboard routing
@@ -1683,6 +1395,7 @@ A tool to help profile mem, perf, and builds.
         // TODO: WindowGroup brings up old windows which isn't really what I want
     
         Window("Main", id: "main") {
+        //WindowGroup() {
             NavigationSplitView() {
                 VStack {
                     List(fileSearcher.filesSearched, selection:$selection) { file in
@@ -1858,7 +1571,9 @@ A tool to help profile mem, perf, and builds.
                 // must call through NSWindow
                 Button("See Below") {
                     // Window isn't set in AppDelegate, so menu item is skipped.
-                    // But add fn+F menu item into app.  Suo many stupid hacks.
+                    // But add fn+F menu item into app.  So many stupid hacks.
+                    // Can also go NSApp.windows.first, but not good w/multiple windows.
+                    
                     appDelegate.window?.toggleFullScreen(nil)
                 }
             }

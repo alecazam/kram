@@ -1,9 +1,15 @@
 #pragma once
 
+// TODO: move to KramConfig.h
+#define KRAM_MAC 1
+#define KRAM_IOS 0
+#define NAMESPACE_STL std
+
 #include <stdint.h>
 
-//#include <memory>
-//#include <vector>
+#include <memory>
+#include <vector>
+#include <string>
 
 // from miniz
 // had to change miniz from anonymous struct typedef, or can't fwd declare

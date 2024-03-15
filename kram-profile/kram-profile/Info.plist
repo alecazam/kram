@@ -86,7 +86,21 @@
 				<string>buildtrace</string>
 			</array>
 			<key>NSDocumentClass</key>
-			<string>KramDoument</string>
+			<string>KramDocument</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>zip</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.zip-archive</string>
+			</array>
+			<key>NSDocumentClass</key>
+			<string>KramDocument</string>
 		</dict>
 	</array>
 	<key>UTImportedTypeDeclarations</key>
