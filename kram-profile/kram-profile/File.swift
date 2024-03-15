@@ -270,6 +270,10 @@ func lookupArchive(_ url: URL) -> Archive {
                 let oldEntry = archiveOld.archive!.zipEntry(byName: filename)
                 let newEntry = archive.archive!.zipEntry(byName: filename)
                 
+                if newEntry.filename == nil {
+                    // TODO: handle new archive missing the file
+                }
+                
                 // convert zip modStamp to Data object (only valid to seconds)
                 file.modStamp = Date(timeIntervalSince1970: Double(newEntry.modificationDate)) // TODO: may need to be TimeInterval?
                 
@@ -284,7 +288,7 @@ func lookupArchive(_ url: URL) -> Archive {
                     
                     file.duration = 0.0
                     
-                    // TODO: stil may need to point to new mmap to release the old
+                    // TODO: still may need to point to new mmap to release the old
                     // but don't need to reprocess and build data if crc is same
                     
                     // TODO: may need to release other calcs (f.e. duration, histogram, etc)

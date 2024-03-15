@@ -13,7 +13,7 @@
 #define USE_LIBCOMPRESSION (KRAM_MAC || KRAM_IOS)
 #endif
 
-#ifdef USE_LIBCOMPRESSION
+#if USE_LIBCOMPRESSION
 #include <compression.h>
 #endif
 
