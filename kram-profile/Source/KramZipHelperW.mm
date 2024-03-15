@@ -52,13 +52,13 @@ using namespace kram;
 - (ZipEntryW)zipEntryByName:(nonnull const char*)name {
     // TODO: fix to return a dummy type, since zips can be missing files
     // from one iteration to the next.
-    static ZipEntry nilEntry = {};
-    ZipEntry* entry = _helper.zipEntry(name);
+    static ZipEntryW nilEntry = {};
+    const ZipEntry* entry = _helper.zipEntry(name);
     if (entry) {
         return *(const ZipEntryW*)entry;
     }
     else {
-        return (ZipEntryW&)nilEntry;
+        return nilEntry;
     }
 }
 
