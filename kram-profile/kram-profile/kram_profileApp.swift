@@ -26,6 +26,8 @@ import UniformTypeIdentifiers
 // DONE: be nice to focus the search input on cmd+F just to make me happy.  (using cmd+S)
 //  Browser goes to its own search which doesn’t help.
 
+// TODO: Hitting T to sort, changes the selection.  That shouldn't happen.
+
 // Memory traces
 // TODO: sort thread by size - repack the memory graph largest to smallest by reordering each track
 //   then can focus on the bigger values.
@@ -897,7 +899,7 @@ func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
         // then can group totals
         
         // sort each thread by name then dur
-        thread = thread.sorted {
+        thread.sort {
             let lval = catapultProfile.traceEvents![$0]
             let rval = catapultProfile.traceEvents![$1]
             
@@ -989,6 +991,80 @@ func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
         // for now assume micros
         file.duration = Double(endTime - startTime) * 1e-6
     }
+}
+
+func computeEventParents(_ catapultProfile: CatapultProfile) {
+    // see CBA FindParentChildrenIndices for inspiration here
+    let events = catapultProfile.traceEvents!
+    
+    var sortedIndices: [Int] = []
+    for i in 0..<events.count {
+        sortedIndices.append(i)
+    }
+    
+    sortedIndices.sort {
+        let e0 = events[$0]
+        let e1 = events[$1]
+        
+        // build events do have tid for the totals, but they only have 1 event
+        if e0.tid! != e1.tid! {
+            return e0.tid! < e1.tid!
+        }
+        if e0.ts! != e1.ts! {
+            return e0.ts! < e1.ts!
+        }
+        
+        // sort larger to smaller dur
+        if e0.dur! != e1.dur! {
+            return e0.ts! > e1.ts!
+        }
+        
+        // later events assumed to be parent with "X" events written out when done
+        return $0 > $1
+    }
+    
+    var parentIndices: [Int] = []
+    for _ in 0..<events.count {
+        parentIndices.append(-1)
+    }
+    
+    /*
+    // so now can look at the range of a node vs. next node
+    var root = 0;
+    CatapultEvent evRoot = events[sortedIndices[root]];
+    evRoot->parent.idx = -1;
+    for (int i = 1, n = (int)events.size(); i != n; ++i)
+    {
+        CatapultEvent ev2 = events[sortedIndices[i]];
+        while root != -1 {
+            
+            // add slice if within bounds
+            if ev2.ts >= evRoot.ts && ev2.ts+ev2.dur <= evRoot.ts+evRoot.dur {
+                ev2->parent.idx = root;
+                
+                // here can subtract the time from the parent duration
+                // but do it to temp, and then update duration later
+                
+                //evRoot->children.push_back(EventIndex(i));
+                
+                
+                break;
+            }
+
+            root = evRoot->parent.idx;
+            if (root != -1)
+                evRoot = &events[sortedIndices[root]];
+        }
+        if root == -1 {
+            ev2->parent.idx = -1;
+        }
+        
+        // move the root to the one we found
+        root = i;
+        evRoot = events[sortedIndices[i]];
+    }
+    */
+    
 }
 
 

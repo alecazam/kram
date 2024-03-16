@@ -36,8 +36,5 @@ typedef struct ZipEntryW {
 @end
 
 // This is only needed for OptFunction and backend names
-// Can't prepend extern "C" onto the call.
-extern "C" {
 const char* _Nonnull demangleSymbolName(const char* _Nonnull symbolName_);
-}
 
