@@ -685,7 +685,141 @@ class ThreadInfo : Hashable, Equatable, Comparable {
     
 }
 
-// TODO: Hook this up, build more efficient array of thread events
+// Could also process each build timings in a threaded task.  That what CBA is doing.
+class BuildTiming {
+    var name = ""
+    var count = 0
+    var duration = 0
+    var type = ""
+    
+    func combine(_ duration: Int) {
+        self.duration += duration
+        self.count += 1
+    }
+}
+
+func updateFileBuildTimings(_ catapultProfile: CatapultProfile) -> [String:BuildTiming] {
+    var buildTimings: [String:BuildTiming] = [:]
+    
+    // TODO: would be nice to compute the self times.  This involves
+    // sorting the startTime on a track, then by largest duration on ties
+    // and then subtracting the immediate children.
+    // See what CBA and Perfetto do to establish this.
+    
+    // run through each file, and build a local map of name to size count
+    for i in 0..<catapultProfile.traceEvents!.count {
+        let event = catapultProfile.traceEvents![i]
+        
+        // TODO: may want to mark parsed vs. optimized
+        if  event.name == "Source" || // will be .h
+            event.name == "OptModule" // will be .c/.cpp
+        {
+            // This is a path
+            let sourceFile = event.args!["detail"]!.value as! String
+            
+            if let buildTiming = buildTimings[sourceFile] {
+                buildTiming.combine(event.dur!)
+            }
+            else {
+                let buildTiming = BuildTiming()
+                buildTiming.name = sourceFile
+                buildTiming.combine(event.dur!)
+                buildTiming.type = event.name!
+                
+                buildTimings[sourceFile] = buildTiming
+            }
+        }
+    }
+    
+    return buildTimings
+}
+
+func postBuildTimingsReport(files: [File]) -> String? {
+    let buildTimings = mergeFileBuildTimings(files: files)
+    let buildJsonBase64 = buildPerfettoJsonFromBuildTimings(buildTimings: buildTimings)
+    let buildJS = postLoadFileJS(fileContentBase64: buildJsonBase64, title: "BuildTimings")
+    return buildJS
+}
+
+func mergeFileBuildTimings(files: [File]) -> [String:BuildTiming] {
+    var buildTimings: [String:BuildTiming] = [:]
+    
+    // run through all files, and zip the maps together
+    // then turn that into build events that can be shown.
+    for file in files {
+        // merge and combine duplicates
+        buildTimings.merge(file.buildTimings) { (current, newValue) in
+            current.combine(newValue.duration)
+            return current
+        }
+    }
+    
+    return buildTimings
+}
+
+func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> String {
+    // now convert those timings back into a perfetto displayable report
+    // So just need to buid up the json above into events on tracks
+    var events: [CatapultEvent] = []
+
+    // Also sort or assign a sort_index to the tracks.  Sort biggest to smallest.
+    // Make the threadName for the track be the short filename.
+    
+    for buildTiming in buildTimings {
+        let t = buildTiming.value
+        
+        // TODO: could throw average time in too
+        let shortFilename = URL(string: buildTiming.key)!.lastPathComponent
+        
+        let dur = Double(t.duration) * 1e-6
+        var event = CatapultEvent()
+        event.name = "\(shortFilename) \(t.count)x \(float: dur, decimals:2)s"
+        event.ts = 0 // do we need this, just more data to encode
+        event.dur = t.duration
+        event.ph = "X"
+        event.tid = t.type == "Source" ? 0 : 1
+        events.append(event)
+    }
+    
+    // TODO: sort this by the duration
+    events.sort {
+        if $0.tid! != $1.tid! {
+            return $0.tid! < $1.tid!
+        }
+        
+        // has to be > to work as a single tid
+        if $0.dur != $1.dur! {
+            return $0.dur! > $1.dur!
+        }
+        
+        return $0.name! < $1.name!
+    }
+   
+    // assign thread id, may not need names or tid
+    // since Perfetto will just treat the events as subevents
+    
+    let catapultProfile = CatapultProfile(traceEvents: events)
+    
+    do {
+        // json encode, compress, and then base64 encode that
+        let encoder = JSONEncoder()
+        let fileContentFixed = try encoder.encode(catapultProfile)
+        
+        // gzip compress the data before sending it over
+        guard let compressedData = fileContentFixed.gzip() else { return "" }
+        let fileContentBase64 = compressedData.base64EncodedString()
+        
+        return fileContentBase64
+    }
+    catch {
+        log.error(error.localizedDescription)
+    }
+    
+    return ""
+}
+
+
+// TODO: Hook this up for memory traces, build more efficient array of thread events
 func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
     
     var threads: [Int: [Int]] = [:]
@@ -910,6 +1044,11 @@ func loadFileJS(_ path: String) -> String? {
                 return nil
             }
             else {
+                // Do this before the names are replaced below
+                if file.buildTimings.isEmpty && file.fileType == .Build {
+                    file.buildTimings = updateFileBuildTimings(catapultProfile)
+                }
+                
                 for i in 0..<catapultProfile.traceEvents!.count {
                     let event = catapultProfile.traceEvents![i]
                     if  event.name == "Source" ||
@@ -939,6 +1078,8 @@ func loadFileJS(_ path: String) -> String? {
                 
                 // walk the file and compute the duration if we don't already have ti
                 if file.duration == 0.0 {
+                    
+                    
                     updateDuration(catapultProfile, &file)
                     
                     // For now, just log the per-thread info
@@ -961,7 +1102,7 @@ func loadFileJS(_ path: String) -> String? {
             }
         }
         
-        return generateLoadFileJS(fileContentBase64: fileContentBase64, title:fileURL.lastPathComponent)
+        return postLoadFileJS(fileContentBase64: fileContentBase64, title:fileURL.lastPathComponent)
     }
     catch {
         log.error(error.localizedDescription)
@@ -969,7 +1110,7 @@ func loadFileJS(_ path: String) -> String? {
     }
 }
 
-func generateLoadFileJS(fileContentBase64: String, title: String) -> String?
+func postLoadFileJS(fileContentBase64: String, title: String) -> String?
 {
     do {
         // https://stackoverflow.com/questions/62035494/how-to-call-postmessage-in-wkwebview-to-js
@@ -1576,6 +1717,17 @@ A tool to help profile mem, perf, and builds.
                     
                     appDelegate.window?.toggleFullScreen(nil)
                 }
+                
+                // TODO: only enable if build files are present
+                // eventually don't run this on all, maybe find those related to selection
+                Button("Build Report") {
+                    // should this be on all or just those seached?
+                    let buildJS = postBuildTimingsReport(files: fileSearcher.filesSearched)
+                    if buildJS != nil {
+                        runJavascript(myWebView, buildJS!)
+                    }
+                }
+                .disabled(selection == nil)
             }
             
             CommandGroup(replacing: .appInfo) {

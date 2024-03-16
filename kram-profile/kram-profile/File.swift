@@ -41,6 +41,9 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     var modStamp: Date?
     var loadStamp: Date?
     
+    // This is only updated for Build fileType
+    var buildTimings: [String:BuildTiming] = [:]
+    
     // only available for memory file type right now
     var threadInfo = ""
     
@@ -149,7 +152,13 @@ func generateNavigationTitle(_ sel: String?) -> String {
     }
     
     let f = lookupFile(selection: sel!)
-    return generateDuration(file: f) + " " + f.name
+    var text = generateDuration(file: f) + " " + f.name
+    
+    if let fileArchive = f.archive {
+        text += "in (" + fileArchive.name + ")"
+    }
+    
+    return text
 }
 
 //-------------
@@ -270,7 +279,7 @@ func lookupArchive(_ url: URL) -> Archive {
                 let oldEntry = archiveOld.archive!.zipEntry(byName: filename)
                 let newEntry = archive.archive!.zipEntry(byName: filename)
                 
-                if newEntry.filename == nil {
+                if String(cString:newEntry.filename) == "" {
                     // TODO: handle new archive missing the file
                 }
                 
@@ -291,8 +300,9 @@ func lookupArchive(_ url: URL) -> Archive {
                     // TODO: still may need to point to new mmap to release the old
                     // but don't need to reprocess and build data if crc is same
                     
-                    // TODO: may need to release other calcs (f.e. duration, histogram, etc)
+                    // release other calcs (f.e. duration, histogram, etc)
                     // can point to new archive content here
+                    file.buildTimings.removeAll()
                 }
             }
         }
@@ -424,9 +434,11 @@ func listFilesFromURLs(_ urls: [URL]) -> [File]
             )
             
             while let fileURL = directoryEnumerator?.nextObject() as? URL {
+                if fileURL.hasDirectoryPath { continue }
+                
                 let isSupported = isSupportedFilename(fileURL)
                 if isSupported {
-                    let isArchive  = File.filenameToContainerType(url) == .Archive
+                    let isArchive  = File.filenameToContainerType(fileURL) == .Archive
                     if isArchive {
                        files += listFilesFromArchive(fileURL)
                     }
