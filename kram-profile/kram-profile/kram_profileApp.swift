@@ -765,6 +765,25 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
     // Also sort or assign a sort_index to the tracks.  Sort biggest to smallest.
     // Make the threadName for the track be the short filename.
     
+    // add the thread names, only using 3 threads
+    if true {
+        var event = CatapultEvent()
+        event.name = "thread_name"
+        let names = ["ParseTime", "ParseCount", "OptimizeTime"]
+        for i in 0..<3 {
+            event.args = [:]
+            event.args!["name"] = AnyCodable(names[i])
+            event.tid = i
+            event.ph = "M"
+            
+            // may not need these, but needed for sort below
+            event.ts = 0
+            event.dur = 0
+            
+            events.append(event)
+        }
+    }
+    
     for buildTiming in buildTimings {
         let t = buildTiming.value
         
@@ -777,8 +796,16 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
         event.ts = 0 // do we need this, just more data to encode
         event.dur = t.duration
         event.ph = "X"
-        event.tid = t.type == "Source" ? 0 : 1
+        let isHeader = t.type == "Source"
+        event.tid = isHeader ? 0 : 2
         events.append(event)
+        
+        // add count in seconds, so can view sorted by count below the duration above
+        if isHeader {
+            event.tid = 1
+            event.dur = t.count * 10000 // in 0.1 secs, but high counts dominate the range then
+            events.append(event)
+        }
     }
     
     // TODO: sort this by the duration
@@ -1709,15 +1736,6 @@ A tool to help profile mem, perf, and builds.
             // https://forums.developer.apple.com/forums/thread/740591
             
             CommandGroup(after: .toolbar) {
-                // must call through NSWindow
-                Button("See Below") {
-                    // Window isn't set in AppDelegate, so menu item is skipped.
-                    // But add fn+F menu item into app.  So many stupid hacks.
-                    // Can also go NSApp.windows.first, but not good w/multiple windows.
-                    
-                    appDelegate.window?.toggleFullScreen(nil)
-                }
-                
                 // TODO: only enable if build files are present
                 // eventually don't run this on all, maybe find those related to selection
                 Button("Build Report") {
@@ -1728,6 +1746,15 @@ A tool to help profile mem, perf, and builds.
                     }
                 }
                 .disabled(selection == nil)
+                
+                // must call through NSWindow
+                Button("See Below") {
+                    // Window isn't set in AppDelegate, so menu item is skipped.
+                    // But add fn+F menu item into app.  So many stupid hacks.
+                    // Can also go NSApp.windows.first, but not good w/multiple windows.
+                    
+                    appDelegate.window?.toggleFullScreen(nil)
+                }
             }
             
             CommandGroup(replacing: .appInfo) {
