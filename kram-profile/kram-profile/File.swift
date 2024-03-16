@@ -35,7 +35,7 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     let containerType: ContainerType
     var archive: Archive?
     
-    var duration = 0.0
+    var duration = 0.0 // in seconds
     
     var fileContent: Data?
     var modStamp: Date?
@@ -43,6 +43,8 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     
     // This is only updated for Build fileType
     var buildTimings: [String:BuildTiming] = [:]
+    var totalFrontend = 0 // in micros
+    var totalBackend = 0
     
     // only available for memory file type right now
     var threadInfo = ""
@@ -155,7 +157,7 @@ func generateNavigationTitle(_ sel: String?) -> String {
     var text = generateDuration(file: f) + " " + f.name
     
     if let fileArchive = f.archive {
-        text += "in (" + fileArchive.name + ")"
+        text += " in (" + fileArchive.name + ")"
     }
     
     return text
@@ -193,11 +195,6 @@ func lookupFile(url: URL) -> File {
 
 func lookupFile(selection: String) -> File {
     return lookupFile(url:URL(string:selection)!)
-}
-
-// This one won't be one in the list, though
-func updateFileCache(file: File) {
-    fileCache[file.url] = file
 }
 
 //-------------
@@ -303,6 +300,8 @@ func lookupArchive(_ url: URL) -> Archive {
                     // release other calcs (f.e. duration, histogram, etc)
                     // can point to new archive content here
                     file.buildTimings.removeAll()
+                    file.totalFrontend = 0
+                    file.totalBackend = 0
                 }
             }
         }

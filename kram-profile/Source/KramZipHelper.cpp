@@ -18,6 +18,47 @@
 #include <compression.h>
 #endif
 
+// Throwing this in for now, since it's the only .cpp file
+#if KRAM_MAC || KRAM_IOS
+#include <cxxabi.h> // demangle
+#include <unordered_map>
+#include <mutex>
+#endif
+
+extern "C" const char* _Nonnull demangleSymbolName(const char* _Nonnull symbolName_) {
+    using namespace NAMESPACE_STL;
+    
+    // serialize to multiple threads
+    static mutex sMutex;
+    static unordered_map<string, const char*> sSymbolToDemangleName;
+    lock_guard<mutex> lock(sMutex);
+    
+    string symbolName(symbolName_);
+    auto it = sSymbolToDemangleName.find(symbolName);
+    if (it != sSymbolToDemangleName.end()) {
+        return it->second;
+    }
+    
+    // see CBA if want a generalized demangle for Win/Linux
+    size_t size = 0;
+    int status = 0;
+    char* symbol = abi::__cxa_demangle(symbolName.c_str(), nullptr, &size, &status);
+    const char* result = nullptr;
+    if (status == 0) {
+        
+        sSymbolToDemangleName[symbolName] = symbol;
+        result = symbol;
+        // not freeing the symbols here
+        //free(symbol);
+    }
+    else {
+        // This will do repeated demangle though.  Maybe should add to table?
+        result = symbolName_;
+    }
+    
+    return result;
+}
+
 namespace kram {
 using namespace NAMESPACE_STL;
 

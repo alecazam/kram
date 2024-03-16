@@ -31,18 +31,33 @@ import UniformTypeIdentifiers
 //   then can focus on the bigger values.
 // TODO: Sort by name and convert to count - can then see common counts
 //   so keep the json loaded in Swift.  Can json be cloned and modded?
-// TODO: option to colesce to count and name with sort
+// TODO: option to coalesce to count and name with sort
 
 // Build traces
 // TODO: parse totals from build traces, what CBA is doing
 // TODO: present total time, and % of total in the nav panel
 
-// TODO: import zip, and run cba on contents, mmap and decompress each
-//  can use incremental mode?
-// TODO: can't mmap web link, but can load zip off server with timings
+// Perf traces
+// TODO: ...
+
+// TODO: track kram-profile memory use, jettison Data that isn't needed after have built up timings.
+// can re-decompress from zip mmap.
+
+// TODO: background process to compute duration and buildTimings across all files
+//   how to refresh the list as these are updated.  Use Swift Task?  Or could do on C++ side with TaskSystem.
+
+// DONE: import zip
 // DONE: add/update recent document list (need to hold onto dropped/opened folder)
-// TODO: save/load the duration and modstamps for File, and any other metadata (totals per section)
-// TODO: add jump to source, but path would need to be correct (sandbox block?)
+// DONE: can't mmap web link, but can load zip off server with timings
+
+// TODO: run cba on files, mmap and decompress each can use incremental mode?
+// TODO: save/load the duration and modstamps for File at quit, and any other metadata (totals per section)
+// TODO: add jump to source/header, but path would need to be correct (sandbox block?)
+
+// Build traces
+// TODO: OptFunction needs demangled.  All backend strings are still mangled.
+//  Don’t need the library CBA uses just use api::__cxa_demangle() on macOS.
+//  https://github.com/llvm/llvm-project/issues/459
 
 // TODO: across all files, many of the strings are the same.  Could replace all strings
 // with an index, compress, and zip archive with the index table.  buid, perf, mem strings
@@ -78,14 +93,14 @@ import UniformTypeIdentifiers
 
 // 4-bit, 12-bit, 16-bit, variable, pad to 4B
 
-// TODO: recent documents list doesn't survive relaunch, but only when app is rebuilt
+// DONE: recent documents list doesn't survive relaunch, but only when app is rebuilt
 // but still kind of annoying for development
 
 // DONE: have a way to reload dropped folder
 // DONE: track parent archives, folder, and loose drop files
 // and when reload is hit, then reload all of that rebuild the list
 // and then reload the selected file
-// TODO: zipHelper to deal with archives, can use Swift Data to mmap content if needed
+// DONE: zipHelper to deal with archives, can use Swift Data to mmap content if needed
 //   mmap the zip, list out the files and locations, and then defalte the content somewhere
 //   only then can data be handed off toe Pefertto or CBA.  And CBA needs all files.
 //   Maybe extend CBA to read a zip file.  Can just use ZipHelper.
@@ -706,6 +721,9 @@ func updateFileBuildTimings(_ catapultProfile: CatapultProfile) -> [String:Build
     // and then subtracting the immediate children.
     // See what CBA and Perfetto do to establish this.
     
+    // Would be good to establish this nesting once and store the level
+    // with each event.d
+    
     // run through each file, and build a local map of name to size count
     for i in 0..<catapultProfile.traceEvents!.count {
         let event = catapultProfile.traceEvents![i]
@@ -759,7 +777,7 @@ func mergeFileBuildTimings(files: [File]) -> [String:BuildTiming] {
 
 func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> String {
     // now convert those timings back into a perfetto displayable report
-    // So just need to buid up the json above into events on tracks
+    // So just need to build up the json above into events on tracks
     var events: [CatapultEvent] = []
 
     // Also sort or assign a sort_index to the tracks.  Sort biggest to smallest.
@@ -808,23 +826,27 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
         }
     }
     
-    // TODO: sort this by the duration
     events.sort {
+        // want threadnames first, could just prepend these to array?
+        if $0.ph! != $1.ph! {
+            return $0.ph! < $1.ph!
+        }
+        
+        // then thread id
         if $0.tid! != $1.tid! {
             return $0.tid! < $1.tid!
         }
         
+        // then duration
         // has to be > to work as a single tid
         if $0.dur != $1.dur! {
             return $0.dur! > $1.dur!
         }
         
+        // then name
         return $0.name! < $1.name!
     }
    
-    // assign thread id, may not need names or tid
-    // since Perfetto will just treat the events as subevents
-    
     let catapultProfile = CatapultProfile(traceEvents: events)
     
     do {
@@ -945,7 +967,6 @@ func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
     }
     
     file.threadInfo = text
-    updateFileCache(file: file)
 }
 
 func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
@@ -967,8 +988,6 @@ func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
     if startTime <= endTime {
         // for now assume micros
         file.duration = Double(endTime - startTime) * 1e-6
-        
-        updateFileCache(file: file)
     }
 }
 
@@ -1076,6 +1095,56 @@ func loadFileJS(_ path: String) -> String? {
                     file.buildTimings = updateFileBuildTimings(catapultProfile)
                 }
                 
+                /* These are types CBA is looking at.  It's not looking at any totals
+                   DebugType isn't in this.
+                 
+                if (StrEqual(name, "ExecuteCompiler"))
+                    event.type = BuildEventType::kCompiler;
+                else if (StrEqual(name, "Frontend"))
+                    event.type = BuildEventType::kFrontend;
+                else if (StrEqual(name, "Backend"))
+                    event.type = BuildEventType::kBackend;
+                else if (StrEqual(name, "Source"))
+                    event.type = BuildEventType::kParseFile;
+                else if (StrEqual(name, "ParseTemplate"))
+                    event.type = BuildEventType::kParseTemplate;
+                else if (StrEqual(name, "ParseClass"))
+                    event.type = BuildEventType::kParseClass;
+                else if (StrEqual(name, "InstantiateClass"))
+                    event.type = BuildEventType::kInstantiateClass;
+                else if (StrEqual(name, "InstantiateFunction"))
+                    event.type = BuildEventType::kInstantiateFunction;
+                else if (StrEqual(name, "OptModule"))
+                    event.type = BuildEventType::kOptModule;
+                else if (StrEqual(name, "OptFunction"))
+                    event.type = BuildEventType::kOptFunction;
+                 
+                // here are totals that are in the file
+                // Total ExecuteCompiler = Total Frontend + Total Backend
+                // 2 frontend blocks though,
+                //  1. Source, InstantiateFunction, CodeGenFunction, ...
+                //  2. CodeGenFunction, DebugType, and big gaps
+                //
+                // 1 backend block
+                //   OptModule
+                 
+                "Total ExecuteCompiler" <- important
+                "Total Frontend" <- important <- important
+                "Total InstantiateFunction"
+                "Total CodeGen Function"
+                "Total Backend"
+                "Total CodeGenPasses"
+                "Total OptModule" <- important
+                "Total OptFunction"
+                "Total RunPass"
+                "Total InstantiatePass"
+                "Total Source"
+                "Total ParseClass"
+                "Total DebugType"
+                "Total PerformPendingInstantiations"
+                "Total Optimizer"
+                */
+                
                 for i in 0..<catapultProfile.traceEvents!.count {
                     let event = catapultProfile.traceEvents![i]
                     if  event.name == "Source" ||
@@ -1097,16 +1166,34 @@ func loadFileJS(_ path: String) -> String? {
                             event.name == "CodeGen Function" ||
                             event.name == "RunPass"
                     {
-                        // This is a name
-                        let detail = event.args!["detail"]!.value as! String
-                        catapultProfile.traceEvents![i].name = detail
+                        // backend symbols need demangle
+                        let isDemangleNeeded = event.name == "OptFunction"
+                        
+                        if isDemangleNeeded {
+                            let detail = event.args!["detail"]!.value as! String
+                            let symbolName = String(cString: demangleSymbolName(detail))
+                            
+                            catapultProfile.traceEvents![i].name = symbolName
+                        }
+                        else {
+                            // This is a name
+                            let detail = event.args!["detail"]!.value as! String
+                            catapultProfile.traceEvents![i].name = detail
+                        }
+                    }
+                    
+                    // These aren't renamed but are useful data for report
+                    // and are already calculated.
+                    else if  event.name == "Total Backend" {
+                        file.totalBackend = event.dur!
+                    }
+                    else if  event.name == "Total Ffrontend" {
+                        file.totalFrontend = event.dur!
                     }
                 }
                 
-                // walk the file and compute the duration if we don't already have ti
+                // walk the file and compute the duration if we don't already have it
                 if file.duration == 0.0 {
-                    
-                    
                     updateDuration(catapultProfile, &file)
                     
                     // For now, just log the per-thread info
@@ -1341,7 +1428,7 @@ struct kram_profileApp: App {
     }
     
     // This isn't so valuable to open a file, but opening a referenced header from build
-    // would be.
+    // would be.  But would to respond to/retrieve selection in JS side.
     func openContainingFolder(_ str: String) {
         let url = URL(string: str)!
         NSWorkspace.shared.activateFileViewerSelecting([url]);
@@ -1382,7 +1469,6 @@ struct kram_profileApp: App {
                 
                 let file = lookupFile(selection: sel)
                 file.setLoadStamp()
-                updateFileCache(file: file)
             }
             
             // Want to be able to lock the scale of the
