@@ -243,7 +243,7 @@ class FileSearcher: ObservableObject {
 extension String.StringInterpolation {
 
     /// Quick formatting for *floating point* values.
-    mutating func appendInterpolation(float: Float, decimals: UInt = 2, stripTrailingZeros: Bool = true) {
+    mutating func appendInterpolation(float: Float, decimals: UInt = 2, zero: Bool = true) {
         let floatDescription = String(format:"%.\(decimals)f%", float)
 //        if stripTrailingZeros && decimals > 0 {
 //            // https://stackoverflow.com/questions/29560743/swift-remove-trailing-zeros-from-double
@@ -252,7 +252,7 @@ extension String.StringInterpolation {
         appendLiteral(floatDescription)
     }
     
-    mutating func appendInterpolation(double: Double, decimals: UInt = 2, stripTrailingZeros: Bool = true) {
+    mutating func appendInterpolation(double: Double, decimals: UInt = 2, zero: Bool = true) {
         let floatDescription = String(format:"%.\(decimals)f%", double)
 //        if stripTrailingZeros && decimals > 0 {
 //            // https://stackoverflow.com/questions/29560743/swift-remove-trailing-zeros-from-double
@@ -835,8 +835,11 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
         let shortFilename = URL(string: buildTiming.key)!.lastPathComponent
         
         let dur = Double(t.duration) * 1e-6
+        let durSelf = Double(t.durationSelf) * 1e-6
         var event = CatapultEvent()
-        event.name = "\(shortFilename) \(t.count)x \(double: dur, decimals:2)s"
+        
+        // Need to see this in the name due to multiple sorts
+        
         event.ts = 0 // do we need this, just more data to encode
         event.dur = t.duration
         event.ph = "X"
@@ -844,6 +847,7 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
         
         // add count in seconds, so can view sorted by count below the duration above
         if isHeader {
+            event.name = "\(shortFilename) \(t.count)x \(double: dur, decimals:2, zero: false)s"
             
             // ParseTime
             event.tid = 0
@@ -856,6 +860,8 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
             
             let selfTime = t.durationSelf
             if selfTime > 0 {
+                event.name = "\(shortFilename) \(t.count)x \(double: durSelf, decimals:2, zero: false)s"
+                
                 // ParseSelf
                 event.tid = 2
                 event.dur = t.durationSelf
@@ -863,6 +869,8 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
             }
         }
         else {
+            event.name = "\(shortFilename) \(double: dur, decimals:2, zero: false)s"
+            
             // OptimizeTime
             event.tid = 3
         }
