@@ -1127,7 +1127,9 @@ func computeEventParentsAndDurSub(_ events: inout [CatapultEvent]) {
     var root = 0;
     
     // skip the thread names
+    var buildThreadId = Int.max
     while events[sortedIndices[root]].ph! == "M" {
+        buildThreadId = min(buildThreadId, events[sortedIndices[root]].tid!)
         root += 1
     }
     
@@ -1142,9 +1144,8 @@ func computeEventParentsAndDurSub(_ events: inout [CatapultEvent]) {
         // This only works on a per thread basis, but build events only have a single thread
         // annoying that it's not tid == 0.  So this is the build event specific code.  Would
         // need to run this logic for each unique tid in the events array.
-        // TODO: generalize so can use on perf effects.  Memory doesn't need.
-        let kBuildEventTid = 259
-        if ev2.tid != kBuildEventTid { continue }
+        // TODO: generalize so can use on perf effects.  Memory doesn't need this call.
+        if ev2.tid != buildThreadId { continue }
         
         // walk up the stack of parents, to find one that this event is within
         while root != -1 {
