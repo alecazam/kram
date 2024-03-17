@@ -23,6 +23,7 @@ using namespace kram;
     
     bool isCompressed = entry->uncompressedSize != entry->compressedSize;
     if (isCompressed) {
+        // this allocates memory
         data = [NSMutableData dataWithLength:entry->uncompressedSize];
         _helper.extract(filename, (uint8_t*)data.bytes, data.length);
     }
@@ -30,6 +31,7 @@ using namespace kram;
         const uint8_t* bytes = nullptr;
         uint64_t bytesLength = 0;
         
+        // this aliases the archive
         _helper.extractRaw(filename, &bytes, bytesLength);
         data = [NSData dataWithBytesNoCopy:(void*)bytes length:bytesLength freeWhenDone:NO];
     }
@@ -50,7 +52,7 @@ using namespace kram;
 }
 
 - (ZipEntryW)zipEntryByName:(nonnull const char*)name {
-    // TODO: fix to return a dummy type, since zips can be missing files
+    // DONE: fix to return a dummy type, since zips can be missing files
     // from one iteration to the next.
     static ZipEntryW nilEntry = { "" };
     const ZipEntry* entry = _helper.zipEntry(name);

@@ -244,8 +244,21 @@ class FileSearcher: ObservableObject {
 extension String.StringInterpolation {
 
     /// Quick formatting for *floating point* values.
-    mutating func appendInterpolation(float: Double, decimals: UInt = 2) {
-        let floatDescription = String(format: "%.\(decimals)f%", float)
+    mutating func appendInterpolation(float: Float, decimals: UInt = 2, stripTrailingZeros: Bool = true) {
+        let floatDescription = String(format:"%.\(decimals)f%", float)
+//        if stripTrailingZeros && decimals > 0 {
+//            // https://stackoverflow.com/questions/29560743/swift-remove-trailing-zeros-from-double
+//            floatDescription = floatDescription.replacingOccurrences(of: "^([\\d,]+)$|^([\\d,]+)\\.0*$|^([\\d,]+\\.[0-9]*?)0*$", with: "$1$2$3", options: .regularExpression)
+//        }
+        appendLiteral(floatDescription)
+    }
+    
+    mutating func appendInterpolation(double: Double, decimals: UInt = 2, stripTrailingZeros: Bool = true) {
+        let floatDescription = String(format:"%.\(decimals)f%", double)
+//        if stripTrailingZeros && decimals > 0 {
+//            // https://stackoverflow.com/questions/29560743/swift-remove-trailing-zeros-from-double
+//            floatDescription = floatDescription.replacingOccurrences(of: "^([\\d,]+)$|^([\\d,]+)\\.0*$|^([\\d,]+\\.[0-9]*?)0*$", with: "$1$2$3", options: .regularExpression)
+//        }
         appendLiteral(floatDescription)
     }
 
@@ -628,6 +641,15 @@ struct CatapultEvent: Codable {
     // var tts: Int? - thread clock timestamp
     // var cname: String? - color name from table
     // Also can have stack frames
+    
+    // These are data computed from the events
+    var durSub: Int?
+    var parentIndex: Int?
+    
+    // only encode/decode some of the keys
+    enum CodingKeys: String, CodingKey {
+        case cat, pid, tid, ph, ts, dur, name, args
+    }
 }
 
 struct CatapultProfile: Codable {
@@ -693,10 +715,10 @@ class ThreadInfo : Hashable, Equatable, Comparable {
         
         // only display percentage if needed
         if percentage > 99.9 {
-            return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(count)x"
+            return "\(id) '\(threadName)' \(double: duration, decimals:6)s \(count)x"
         }
         else {
-            return "\(id) '\(threadName)' \(float: duration, decimals:6)s \(float:percentage, decimals:0)% \(count)x"
+            return "\(id) '\(threadName)' \(double: duration, decimals:6)s \(double:percentage, decimals:0)% \(count)x"
         }
     }
     
@@ -707,10 +729,13 @@ class BuildTiming {
     var name = ""
     var count = 0
     var duration = 0
+    var durationSub = 0
+    var durationSelf: Int { return max(0, duration - durationSub) }
     var type = ""
     
-    func combine(_ duration: Int) {
+    func combine(_ duration: Int, _ durationSub: Int) {
         self.duration += duration
+        self.durationSub += durationSub
         self.count += 1
     }
 }
@@ -718,7 +743,7 @@ class BuildTiming {
 func updateFileBuildTimings(_ catapultProfile: CatapultProfile) -> [String:BuildTiming] {
     var buildTimings: [String:BuildTiming] = [:]
     
-    // TODO: would be nice to compute the self times.  This involves
+    // DONE: would be nice to compute the self times.  This involves
     // sorting the startTime on a track, then by largest duration on ties
     // and then subtracting the immediate children.
     // See what CBA and Perfetto do to establish this.
@@ -738,12 +763,12 @@ func updateFileBuildTimings(_ catapultProfile: CatapultProfile) -> [String:Build
             let sourceFile = event.args!["detail"]!.value as! String
             
             if let buildTiming = buildTimings[sourceFile] {
-                buildTiming.combine(event.dur!)
+                buildTiming.combine(event.dur!, event.durSub ?? 0)
             }
             else {
                 let buildTiming = BuildTiming()
                 buildTiming.name = sourceFile
-                buildTiming.combine(event.dur!)
+                buildTiming.combine(event.dur!, event.durSub ?? 0)
                 buildTiming.type = event.name!
                 
                 buildTimings[sourceFile] = buildTiming
@@ -769,7 +794,7 @@ func mergeFileBuildTimings(files: [File]) -> [String:BuildTiming] {
     for file in files {
         // merge and combine duplicates
         buildTimings.merge(file.buildTimings) { (current, newValue) in
-            current.combine(newValue.duration)
+            current.combine(newValue.duration, newValue.durationSub)
             return current
         }
     }
@@ -789,8 +814,8 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
     if true {
         var event = CatapultEvent()
         event.name = "thread_name"
-        let names = ["ParseTime", "ParseCount", "OptimizeTime"]
-        for i in 0..<3 {
+        let names = ["ParseTime", "ParseCount", "ParseSelf", "OptimizeTime"]
+        for i in 0..<names.count {
             event.args = [:]
             event.args!["name"] = AnyCodable(names[i])
             event.tid = i
@@ -812,19 +837,35 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
         
         let dur = Double(t.duration) * 1e-6
         var event = CatapultEvent()
-        event.name = "\(shortFilename) \(t.count)x \(float: dur, decimals:2)s"
+        event.name = "\(shortFilename) \(t.count)x \(double: dur, decimals:2)s"
         event.ts = 0 // do we need this, just more data to encode
         event.dur = t.duration
         event.ph = "X"
         let isHeader = t.type == "Source"
-        event.tid = isHeader ? 0 : 2
-        events.append(event)
         
         // add count in seconds, so can view sorted by count below the duration above
         if isHeader {
+            
+            // ParseTime
+            event.tid = 0
+            events.append(event)
+            
+            // ParseCount
             event.tid = 1
             event.dur = t.count * 10000 // in 0.1 secs, but high counts dominate the range then
             events.append(event)
+            
+            let selfTime = t.durationSelf
+            if selfTime > 0 {
+                // ParseSelf
+                event.tid = 2
+                event.dur = t.durationSelf
+                events.append(event)
+            }
+        }
+        else {
+            // OptimizeTime
+            event.tid = 3
         }
     }
     
@@ -993,9 +1034,16 @@ func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
     }
 }
 
-func computeEventParents(_ catapultProfile: CatapultProfile) {
-    // see CBA FindParentChildrenIndices for inspiration here
-    let events = catapultProfile.traceEvents!
+// After calling this, can compute the self time, and have the parent hierarchy to draw
+// events as a flamegraph.
+func computeEventParentsAndDurSub(_ catapultProfile: inout CatapultProfile) {
+    // see CBA FindParentChildrenIndices for the adaption here
+    // Clang Build Analyzer https://github.com/aras-p/ClangBuildAnalyzer
+    // SPDX-License-Identifier: Unlicense
+    // https://github.com/aras-p/ClangBuildAnalyzer/blob/main/src/Analysis.cpp
+    
+    // copy the events, going to replace this array with more data
+    var events = catapultProfile.traceEvents!
     
     var sortedIndices: [Int] = []
     for i in 0..<events.count {
@@ -1005,6 +1053,15 @@ func computeEventParents(_ catapultProfile: CatapultProfile) {
     sortedIndices.sort {
         let e0 = events[$0]
         let e1 = events[$1]
+        
+        if e0.ph! != e1.ph! {
+            return e0.ph! < e1.ph!
+        }
+        
+        // for thread names, just sort by tid
+        if e0.ph! == "M" {
+            return e0.tid! < e1.tid!
+        }
         
         // build events do have tid for the totals, but they only have 1 event
         if e0.tid! != e1.tid! {
@@ -1023,48 +1080,68 @@ func computeEventParents(_ catapultProfile: CatapultProfile) {
         return $0 > $1
     }
     
-    var parentIndices: [Int] = []
-    for _ in 0..<events.count {
-        parentIndices.append(-1)
-    }
-    
-    /*
     // so now can look at the range of a node vs. next node
     var root = 0;
-    CatapultEvent evRoot = events[sortedIndices[root]];
-    evRoot->parent.idx = -1;
-    for (int i = 1, n = (int)events.size(); i != n; ++i)
-    {
-        CatapultEvent ev2 = events[sortedIndices[i]];
+    
+    // skip the thread names
+    while events[sortedIndices[root]].ph! == "M" {
+        root += 1
+    }
+    
+    var evRootIndex = sortedIndices[root]
+    var evRoot = events[evRootIndex];
+    events[evRootIndex].parentIndex = Int(-1)
+    
+    for i in (root+1)..<events.count {
+        let ev2Index = sortedIndices[i]
+        let ev2 = events[ev2Index]
+        
+        // This only works on a per thread basis, but build events only have a single thread
+        // annoying that it's not tid == 0.  So this is the build event specific code.  Would
+        // need to run this logic for each unique tid in the events array.
+        // TODO: generalize so can use on perf effects.  Memory doesn't need.
+        let kBuildEventTid = 259
+        if ev2.tid != kBuildEventTid { continue }
+        
+        // walk up the stack of parents, to find one that this event is within
         while root != -1 {
             
             // add slice if within bounds
-            if ev2.ts >= evRoot.ts && ev2.ts+ev2.dur <= evRoot.ts+evRoot.dur {
-                ev2->parent.idx = root;
+            if ev2.ts! >= evRoot.ts! && ev2.ts!+ev2.dur! <= evRoot.ts!+evRoot.dur! {
+                events[ev2Index].parentIndex = Int(root)
                 
-                // here can subtract the time from the parent duration
-                // but do it to temp, and then update duration later
+                // Could store children for full hierarchy, but don't need this
+                //evRoot.children.append(evt2Index);
                 
-                //evRoot->children.push_back(EventIndex(i));
+                // All flamegraph really needs is for events to store a level
+                // of how deep they are on a given thread.  Having to make this up is kinda costly.
                 
-                
+                // Can create selfTime by subtracting durations of all children
+                if events[evRootIndex].durSub == nil {
+                    events[evRootIndex].durSub = Int() // 0
+                }
+                events[evRootIndex].durSub! += ev2.dur!
                 break;
             }
 
-            root = evRoot->parent.idx;
-            if (root != -1)
-                evRoot = &events[sortedIndices[root]];
+            // walk up to the next parent
+            root = evRoot.parentIndex!
+            if root != -1 {
+                evRootIndex = sortedIndices[root]
+                evRoot = events[evRootIndex]
+            }
         }
         if root == -1 {
-            ev2->parent.idx = -1;
+            events[ev2Index].parentIndex = -1
         }
         
         // move the root to the one we found
         root = i;
-        evRoot = events[sortedIndices[i]];
+        evRootIndex = sortedIndices[i]
+        evRoot = events[evRootIndex]
     }
-    */
     
+    catapultProfile.traceEvents = events
 }
 
 
@@ -1124,13 +1201,19 @@ func loadFileJS(_ path: String) -> String? {
                     if catapultProfile.traceEvents == nil {
                         return nil
                     }
-                    
+            
                     updateDuration(catapultProfile, &file)
                     
                     // For now, just log the per-thread info
                     if file.fileType == .Memory {
                         updateThreadInfo(catapultProfile, &file)
                     }
+                    
+                    // This mods the catapult profile to store parentIndex and durSub
+                    // the call has build specific code right now
+                    //else if file.fileType == .Perf {
+                    //    computeEventParentsAndDurSub(&catapultProfile)
+                    //}
                 }
             }
         }
@@ -1168,6 +1251,9 @@ func loadFileJS(_ path: String) -> String? {
             else {
                 // Do this before the names are replaced below
                 if file.buildTimings.isEmpty && file.fileType == .Build {
+                    // update the durSub in the events, can then track self time
+                    computeEventParentsAndDurSub(&catapultProfile)
+                    
                     file.buildTimings = updateFileBuildTimings(catapultProfile)
                 }
                 

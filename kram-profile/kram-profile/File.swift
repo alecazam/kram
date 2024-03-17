@@ -167,7 +167,6 @@ func generateNavigationTitle(_ sel: String?) -> String {
 // Note: if a file is deleted which happens often with builds,
 // then want to identify that and update the list.  At least
 // indicate the item is gone, and await its return.
-// Does macOS have a FileWatcher?
 
 // Holds supported files dropped or opened from Finder, reload reparses this
 var droppedFileCache : [URL] = []
@@ -188,6 +187,8 @@ func lookupFile(url: URL) -> File {
     }
     
     // This wipes the duration, so it can be recomputed
+    // TODO: may want to check crc32 if present before wiping all data
+    
     fileCache[file.url] = file
     
     return file
@@ -345,7 +346,7 @@ func isSupportedFilename(_ url: URL) -> Bool {
     let ext = url.pathExtension
     
     // what ext does trace.zip, or trace.gz come in as ?
-    // should this limit compressed files to the names supported below - json, trace, memtrace?
+    // should this limit compressed files to the names supported below
     
     if ext == "gz" {
         return true
