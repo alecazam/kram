@@ -873,6 +873,7 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
             
             // OptimizeTime
             event.tid = 3
+            events.append(event)
         }
     }
     
