@@ -754,7 +754,6 @@ func updateFileBuildTimings(_ events: [CatapultEvent]) -> [String:BuildTiming] {
     for i in 0..<events.count {
         let event = events[i]
         
-        // TODO: may want to mark parsed vs. optimized
         if  event.name == "Source" || // will be .h
             event.name == "OptModule" // will be .c/.cpp
         {
@@ -1127,10 +1126,13 @@ func computeEventParentsAndDurSub(_ events: inout [CatapultEvent]) {
                 // of how deep they are on a given thread.  Having to make this up is kinda costly.
                 
                 // Can create selfTime by subtracting durations of all children
-                if events[evRootIndex].durSub == nil {
-                    events[evRootIndex].durSub = Int() // 0
+                // if the name matches (so Source from Source)
+                if ev2.name == evRoot.name {
+                    if events[evRootIndex].durSub == nil {
+                        events[evRootIndex].durSub = Int() // 0
+                    }
+                    events[evRootIndex].durSub! += ev2.dur!
                 }
-                events[evRootIndex].durSub! += ev2.dur!
                 break;
             }
 
