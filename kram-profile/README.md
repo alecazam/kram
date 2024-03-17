@@ -24,9 +24,9 @@ TODO: (x are done)
 * x Find start/end time of each json files. 
 * x Support gzip trace files
 * x Add sort by range (useful for mem/build traces)
+* x Add zip archive support, can drop archive of 1+ traces
 
 * Add frame type for perf traces for vsync ticker (binary format prob has it)
-* Add zip archive support, can drop archive of 1+ traces
 * Tie in with the excellent ClangBuildAnalyzer tool
 * Scale specific traces to a single duration.  That way the next file comes in at that scale. 
 * Move away from Catapult json to own binary format.  Can then translate to json or use the Perfetto SDK to convert to protobufs.
@@ -61,8 +61,8 @@ Cpu Profilers. See for more details
 * spall
 
 * Commercial
-* Telemetry - httpd://www.radgametools.com/telemeetry.htm
-* Superluminal -
+* Telemetry - httpd://www.radgametools.com/telemetry.htm
+* Superluminal - higher-rate sampling profiler
 * Xcode Instruments - see Xcode
 * AMD Code Analyst - see Xcode
 * Intel Vtune -

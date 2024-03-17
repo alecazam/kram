@@ -24,6 +24,10 @@ enum FileType {
 
 class File: Identifiable, /*Hashable, */ Equatable, Comparable
 {
+    // TODO: archive url relative to archive so not unqique if multiple archives dropped
+    // but currently all lookup is by url, and not url + archive.  Just make sure to
+    // include unique dir when building archives.  zip has max 512 char path.
+    
     var id: String { url.absoluteString }
     var name: String { url.lastPathComponent }
     let url: URL
@@ -82,7 +86,7 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
         }
     }
 
-    // show some of dir file is in, TODO: 2 levels not enough
+    // show some of dir file is in, TODO: 2 levels not enough?
     public static func buildShortDirectory(url: URL) -> String {
         let count = url.pathComponents.count
         
@@ -135,27 +139,20 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     }
 }
 
-// TODO: now that it's a class, can probably elimiante that lookuFile calls
 func generateDuration(file: File) -> String {
-    // need for duration
-    let f = lookupFile(url: file.url)
-    if f.duration != 0.0 {
-        // TODO: may want to add s/mb based on file type
-        return String(format:"%0.3f", f.duration) // sec vis to ms for now
-    }
-    else {
-        return ""
-    }
+    if file.duration == 0.0 { return "" }
+    
+    let unitText = file.fileType == .Memory ? "m" : "s"
+    return "\(double:file.duration, decimals:3)\(unitText)"
 }
 
 func generateNavigationTitle(_ sel: String?) -> String {
-    if sel == nil {
-        return ""
-    }
+    if sel == nil { return "" }
     
     let f = lookupFile(selection: sel!)
     var text = generateDuration(file: f) + " " + f.name
     
+    // add the archive name
     if let fileArchive = f.archive {
         text += " in (" + fileArchive.name + ")"
     }
@@ -407,6 +404,8 @@ func listFilesFromArchive(_ urlArchive: URL) -> [File] {
             continue
         }
             
+        // TODO: archives don't have full paths, so lookup can get confused
+        // if there are multiple archives with same paths.
         let file = lookupFile(url:url)
         if file.archive != archive {
             file.archive = archive

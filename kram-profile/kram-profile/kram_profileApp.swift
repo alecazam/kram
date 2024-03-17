@@ -788,8 +788,25 @@ func updateFileBuildTimings(_ events: [CatapultEvent]) -> [String:BuildTiming] {
     return buildTimings
 }
 
+func findFilesForBuildTimings(files: [File], selection: String) -> [File] {
+    let selectedFile = lookupFile(url:URL(string:selection)!)
+    let isArchive = selectedFile.archive != nil
+    
+    let filteredFiles = files.filter { file in
+        if isArchive {
+            return file.archive != nil && file.archive! == selectedFile.archive!
+        }
+        else {
+            return file.parentFolders == selectedFile.parentFolders
+        }
+    }
+    
+    return filteredFiles;
+}
+
 func postBuildTimingsReport(files: [File]) -> String? {
     let buildTimings = mergeFileBuildTimings(files: files)
+    if buildTimings.isEmpty { return nil }
     let buildJsonBase64 = buildPerfettoJsonFromBuildTimings(buildTimings: buildTimings)
     let buildJS = postLoadFileJS(fileContentBase64: buildJsonBase64, title: "BuildTimings")
     return buildJS
@@ -1413,8 +1430,6 @@ func loadFileJS(_ path: String) -> String? {
             
             // Clang has some build totals as durations on fake threads
             // but those are smaller than the full duration.
-            let doCompress = true
-            
             var json : Data
             
             if file.containerType == .Compressed {
@@ -1435,6 +1450,10 @@ func loadFileJS(_ path: String) -> String? {
             // have already processed the build files in an async task
             let decoder = JSONDecoder()
             var catapultProfile = try decoder.decode(CatapultProfile.self, from: json)
+            
+            if catapultProfile.traceEvents == nil {
+                return nil
+            }
             
             // demangle the OptFunction name
             for i in 0..<catapultProfile.traceEvents!.count {
@@ -1481,13 +1500,8 @@ func loadFileJS(_ path: String) -> String? {
             let fileContentFixed = try encoder.encode(catapultProfile)
             
             // gzip compress the data before sending it over
-            if doCompress {
-                guard let compressedData = fileContentFixed.gzip() else { return nil }
-                fileContentBase64 = compressedData.base64EncodedString()
-            }
-            else {
-                fileContentBase64 = fileContentFixed.base64EncodedString()
-            }
+            guard let compressedData = fileContentFixed.gzip() else { return nil }
+            fileContentBase64 = compressedData.base64EncodedString()
         }
         
         return postLoadFileJS(fileContentBase64: fileContentBase64, title:fileURL.lastPathComponent)
@@ -1685,7 +1699,7 @@ struct kram_profileApp: App {
                 // preserve the original selection if still present
                 if selection != nil {
                     var found = false
-                    for file in fileSearcher.files {
+                    for file in fileSearcher.filesSorted {
                         if file.id == selection {
                             found = true
                             break;
@@ -1694,12 +1708,12 @@ struct kram_profileApp: App {
                     
                     // load first file in the list
                     if !found {
-                        selection = fileSearcher.files[0].id
+                        selection = fileSearcher.filesSorted[0].id
                     }
                 }
                 else {
                     // load first file in the list
-                    selection = fileSearcher.files[0].id
+                    selection = fileSearcher.filesSorted[0].id
                 }
             }
         }
@@ -2097,15 +2111,24 @@ A tool to help profile mem, perf, and builds.
             
             CommandGroup(after: .toolbar) {
                 // TODO: only enable if build files are present
-                // eventually don't run this on all, maybe find those related to selection
-                Button("Build Report") {
-                    // should this be on all or just those seached?
-                    let buildJS = postBuildTimingsReport(files: fileSearcher.filesSearched)
+                Button("Build Report All") {
+                    let buildFiles = fileSearcher.files
+                    let buildJS = postBuildTimingsReport(files: buildFiles)
                     if buildJS != nil {
                         runJavascript(myWebView, buildJS!)
                     }
                 }
                 .disabled(selection == nil)
+                
+                Button("Build Report Selected") {
+                    let buildFiles = findFilesForBuildTimings(files: fileSearcher.files, selection: selection!)
+                    let buildJS = postBuildTimingsReport(files: buildFiles)
+                    if buildJS != nil {
+                        runJavascript(myWebView, buildJS!)
+                    }
+                }
+                .disabled(selection == nil)
+                
                 
                 // must call through NSWindow
                 Button("See Below") {
