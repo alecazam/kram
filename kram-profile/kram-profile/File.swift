@@ -22,7 +22,7 @@ enum FileType {
     case Unknown
 }
 
-class File: Identifiable, /*Hashable, */ Equatable, Comparable
+class File: Identifiable, Hashable, Equatable, Comparable
 {
     // TODO: archive url relative to archive so not unqique if multiple archives dropped
     // but currently all lookup is by url, and not url + archive.  Just make sure to
@@ -67,6 +67,11 @@ class File: Identifiable, /*Hashable, */ Equatable, Comparable
     }
     public static func < (lhs: File, rhs: File) -> Bool {
         return lhs.id < rhs.id
+    }
+    
+    // Hashable
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
     
     // call this when the file is loaded

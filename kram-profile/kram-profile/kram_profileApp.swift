@@ -1678,16 +1678,16 @@ struct kram_profileApp: App {
             // for now wipe the old list
             if filesNew.count > 0 {
                 // turning this off for now, File must impl Hashable
-//                let mergeFiles = false
-//                
-//                if mergeFiles {
-//                    fileSearcher.files = Array(Set(fileSearcher.files + filesNew))
-//                }
-//                else 
-                //{
+                let mergeFiles = NSEvent.modifierFlags.contains(.option);
+
+                if mergeFiles {
+                    fileSearcher.files = Array(Set(fileSearcher.files + filesNew))
+                }
+                else
+                {
                     // reset the list
                     fileSearcher.files = filesNew
-                //}
+                }
                 
                 fileSearcher.updateFilesSorted()
                 
