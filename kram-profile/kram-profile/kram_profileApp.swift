@@ -36,17 +36,16 @@ import UniformTypeIdentifiers
 // TODO: option to coalesce to count and name with sort
 
 // Build traces
+// DONE: build hierarchy and self times
+// DONE: background process to compute buildTimings across all files
 // TODO: parse totals from build traces, what CBA is doing
 // TODO: present total time, and % of total in the nav panel
 
 // Perf traces
-// TODO: ...
+// TODO: build per-thread hierarchy and self times
 
 // TODO: track kram-profile memory use, jettison Data that isn't needed after have built up timings.
 // can re-decompress from zip mmap.
-
-// TODO: background process to compute duration and buildTimings across all files
-//   how to refresh the list as these are updated.  Use Swift Task?  Or could do on C++ side with TaskSystem.
 
 // DONE: import zip
 // DONE: add/update recent document list (need to hold onto dropped/opened folder)
@@ -57,7 +56,7 @@ import UniformTypeIdentifiers
 // TODO: add jump to source/header, but path would need to be correct (sandbox block?)
 
 // Build traces
-// TODO: OptFunction needs demangled.  All backend strings are still mangled.
+// DONE: OptFunction needs demangled.  All backend strings are still mangled.
 //  Don’t need the library CBA uses just use api::__cxa_demangle() on macOS.
 //  https://github.com/llvm/llvm-project/issues/459
 
@@ -740,7 +739,7 @@ class BuildTiming {
     }
 }
 
-func updateFileBuildTimings(_ catapultProfile: CatapultProfile) -> [String:BuildTiming] {
+func updateFileBuildTimings(_ events: [CatapultEvent]) -> [String:BuildTiming] {
     var buildTimings: [String:BuildTiming] = [:]
     
     // DONE: would be nice to compute the self times.  This involves
@@ -752,8 +751,8 @@ func updateFileBuildTimings(_ catapultProfile: CatapultProfile) -> [String:Build
     // with each event.d
     
     // run through each file, and build a local map of name to size count
-    for i in 0..<catapultProfile.traceEvents!.count {
-        let event = catapultProfile.traceEvents![i]
+    for i in 0..<events.count {
+        let event = events[i]
         
         // TODO: may want to mark parsed vs. optimized
         if  event.name == "Source" || // will be .h
@@ -1012,12 +1011,12 @@ func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
     file.threadInfo = text
 }
 
-func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
+func updateDuration(_ events: [CatapultEvent]) -> Double {
     var startTime = Int.max
     var endTime = Int.min
     
-    for i in 0..<catapultProfile.traceEvents!.count {
-        let event = catapultProfile.traceEvents![i]
+    for i in 0..<events.count {
+        let event = events[i]
         
         if event.ts != nil && event.dur != nil {
             let s = event.ts!
@@ -1028,22 +1027,24 @@ func updateDuration(_ catapultProfile: CatapultProfile, _ file: inout File) {
         }
     }
     
+    var duration = 0.0
     if startTime <= endTime {
         // for now assume micros
-        file.duration = Double(endTime - startTime) * 1e-6
+        duration = Double(endTime - startTime) * 1e-6
     }
+    return duration
 }
 
 // After calling this, can compute the self time, and have the parent hierarchy to draw
 // events as a flamegraph.
-func computeEventParentsAndDurSub(_ catapultProfile: inout CatapultProfile) {
+func computeEventParentsAndDurSub(_ events: inout [CatapultEvent]) {
     // see CBA FindParentChildrenIndices for the adaption here
     // Clang Build Analyzer https://github.com/aras-p/ClangBuildAnalyzer
     // SPDX-License-Identifier: Unlicense
     // https://github.com/aras-p/ClangBuildAnalyzer/blob/main/src/Analysis.cpp
     
     // copy the events, going to replace this array with more data
-    var events = catapultProfile.traceEvents!
+    //var events = catapultProfile.traceEvents!
     
     var sortedIndices: [Int] = []
     for i in 0..<events.count {
@@ -1141,9 +1142,145 @@ func computeEventParentsAndDurSub(_ catapultProfile: inout CatapultProfile) {
         evRoot = events[evRootIndex]
     }
     
-    catapultProfile.traceEvents = events
+    //catapultProfile.traceEvents = events
 }
 
+// Fire this off any time the list changes and there
+// are build events in it.  This will update the data within,
+// so that the user doesn't have to visit every file manually.
+
+func updateBuildTimingsTask(_ files: [File]) {
+    let _ = Task(priority: .medium, operation: {
+        for file in files {
+            if file.fileType == .Build {
+                do {
+                    try updateBuildTimingTask(file)
+                }
+                catch {
+                    log.error(error.localizedDescription)
+                }
+            }
+        }
+    })
+}
+    
+func updateBuildTimingTask(_ file: File) throws {
+    assert(file.fileType == .Build)
+    
+    // only checking this, and not duration == 0
+    if !file.buildTimings.isEmpty { return }
+    
+    let fileContent = loadFileContent(file)
+   
+    var json : Data
+    
+    if file.containerType == .Compressed {
+        guard let unzippedContent = fileContent.gunzip() else {
+            return
+        }
+        json = unzippedContent
+    }
+    else if file.containerType == .Archive {
+        // this has already been extracted and decrypted
+        json = fileContent
+    }
+    else {
+        json = fileContent
+    }
+    
+    let decoder = JSONDecoder()
+    let catapultProfile = try decoder.decode(CatapultProfile.self, from: json)
+    if catapultProfile.traceEvents == nil { // an array
+        return
+    }
+
+    var events = catapultProfile.traceEvents!
+    
+    // demangle the OptFunction name
+    for i in 0..<events.count {
+        let event = events[i]
+        if event.name == "OptFunction" {
+            let detail = event.args!["detail"]!.value as! String
+            let symbolName = String(cString: demangleSymbolName(detail))
+            
+            events[i].args!["detail"] = AnyCodable(symbolName)
+        }
+    }
+    
+    // walk the file and compute the duration if we don't already have it
+    if file.duration == 0.0 {
+        file.duration = updateDuration(events)
+    }
+    
+    // Do this before the names are replaced below
+    if file.buildTimings.isEmpty {
+        // useful totals to track, many more in the files
+        for i in 0..<events.count {
+            let event = events[i]
+            if event.name == "Total Backend" {
+                file.totalBackend = event.dur!
+            }
+            else if event.name == "Total Frontend" {
+                file.totalFrontend = event.dur!
+            }
+        }
+        
+        // update the durSub in the events, can then track self time
+        computeEventParentsAndDurSub(&events)
+        
+        file.buildTimings = updateFileBuildTimings(events)
+    }
+    
+    /* These are types CBA is looking at.  It's not looking at any totals
+     DebugType isn't in this.
+     
+     if (StrEqual(name, "ExecuteCompiler"))
+     event.type = BuildEventType::kCompiler;
+     else if (StrEqual(name, "Frontend"))
+     event.type = BuildEventType::kFrontend;
+     else if (StrEqual(name, "Backend"))
+     event.type = BuildEventType::kBackend;
+     else if (StrEqual(name, "Source"))
+     event.type = BuildEventType::kParseFile;
+     else if (StrEqual(name, "ParseTemplate"))
+     event.type = BuildEventType::kParseTemplate;
+     else if (StrEqual(name, "ParseClass"))
+     event.type = BuildEventType::kParseClass;
+     else if (StrEqual(name, "InstantiateClass"))
+     event.type = BuildEventType::kInstantiateClass;
+     else if (StrEqual(name, "InstantiateFunction"))
+     event.type = BuildEventType::kInstantiateFunction;
+     else if (StrEqual(name, "OptModule"))
+     event.type = BuildEventType::kOptModule;
+     else if (StrEqual(name, "OptFunction"))
+     event.type = BuildEventType::kOptFunction;
+     
+     // here are totals that are in the file
+     // Total ExecuteCompiler = Total Frontend + Total Backend
+     // 2 frontend blocks though,
+     //  1. Source, InstantiateFunction, CodeGenFunction, ...
+     //  2. CodeGenFunction, DebugType, and big gaps
+     //
+     // 1 backend block
+     //   OptModule
+     
+     "Total ExecuteCompiler" <- important
+     "Total Frontend" <- important <- important
+     "Total InstantiateFunction"
+     "Total CodeGen Function"
+     "Total Backend"
+     "Total CodeGenPasses"
+     "Total OptModule" <- important
+     "Total OptFunction"
+     "Total RunPass"
+     "Total InstantiatePass"
+     "Total Source"
+     "Total ParseClass"
+     "Total DebugType"
+     "Total PerformPendingInstantiations"
+     "Total Optimizer"
+     */
+}
 
 func loadFileJS(_ path: String) -> String? {
     
@@ -1165,8 +1302,6 @@ func loadFileJS(_ path: String) -> String? {
         // content within to the list.  This just means part of a zip archive.
         let fileContent = loadFileContent(file)
         
-        // Note: json.gz and json.zip build files are not marked as Build
-        // but need to rewrite them.
         let isBuildFile = file.fileType == .Build
         
         if !isBuildFile {
@@ -1202,7 +1337,7 @@ func loadFileJS(_ path: String) -> String? {
                         return nil
                     }
             
-                    updateDuration(catapultProfile, &file)
+                    file.duration = updateDuration(catapultProfile.traceEvents!)
                     
                     // For now, just log the per-thread info
                     if file.fileType == .Memory {
@@ -1218,11 +1353,10 @@ func loadFileJS(_ path: String) -> String? {
             }
         }
         else {
-            // replace Source with actual file name on Clang.json files
-            // That's just for the parse phase, probably need for optimization
-            // phase too.  The optimized function names need demangled - ugh.
+            // The data for these is being generated in an async task
+            // So that the build report can be generated.
             
-            // Clang has some build data as durations on fake threads
+            // Clang has some build totals as durations on fake threads
             // but those are smaller than the full duration.
             let doCompress = true
             
@@ -1235,133 +1369,56 @@ func loadFileJS(_ path: String) -> String? {
                 json = unzippedContent
             }
             else if file.containerType == .Archive {
-                // this has already been decoded to json
+                // this has already been extracted and decrypted
                 json = fileContent
             }
             else {
                 json = fileContent
             }
             
+            // here having to ungzip and decode just to display the content
+            // have already processed the build files in an async task
             let decoder = JSONDecoder()
             var catapultProfile = try decoder.decode(CatapultProfile.self, from: json)
             
-            if catapultProfile.traceEvents == nil { // an array
-                return nil
+            // demangle the OptFunction name
+            for i in 0..<catapultProfile.traceEvents!.count {
+                let event = catapultProfile.traceEvents![i]
+                if event.name == "OptFunction" {
+                    let detail = event.args!["detail"]!.value as! String
+                    let symbolName = String(cString: demangleSymbolName(detail))
+                    
+                    catapultProfile.traceEvents![i].args!["detail"] = AnyCodable(symbolName)
+                }
             }
-            else {
-                // Do this before the names are replaced below
-                if file.buildTimings.isEmpty && file.fileType == .Build {
-                    // update the durSub in the events, can then track self time
-                    computeEventParentsAndDurSub(&catapultProfile)
+            
+            // Replace Source with actual file name on Clang.json files
+            // That's just for the parse phase, probably need for optimization
+            // phase too.
+            for i in 0..<catapultProfile.traceEvents!.count {
+                let event = catapultProfile.traceEvents![i]
+                if  event.name == "Source" ||
+                    event.name == "OptModule"
+                {
+                    // This is a path
+                    let detail = event.args!["detail"]!.value as! String
+                    let url = URL(string:detail)!
                     
-                    file.buildTimings = updateFileBuildTimings(catapultProfile)
+                    // stupid immutable struct.  Makes this code untempable
+                    // maybe can use class instead of struct?
+                    catapultProfile.traceEvents![i].name = url.lastPathComponent
                 }
-                
-                /* These are types CBA is looking at.  It's not looking at any totals
-                   DebugType isn't in this.
-                 
-                if (StrEqual(name, "ExecuteCompiler"))
-                    event.type = BuildEventType::kCompiler;
-                else if (StrEqual(name, "Frontend"))
-                    event.type = BuildEventType::kFrontend;
-                else if (StrEqual(name, "Backend"))
-                    event.type = BuildEventType::kBackend;
-                else if (StrEqual(name, "Source"))
-                    event.type = BuildEventType::kParseFile;
-                else if (StrEqual(name, "ParseTemplate"))
-                    event.type = BuildEventType::kParseTemplate;
-                else if (StrEqual(name, "ParseClass"))
-                    event.type = BuildEventType::kParseClass;
-                else if (StrEqual(name, "InstantiateClass"))
-                    event.type = BuildEventType::kInstantiateClass;
-                else if (StrEqual(name, "InstantiateFunction"))
-                    event.type = BuildEventType::kInstantiateFunction;
-                else if (StrEqual(name, "OptModule"))
-                    event.type = BuildEventType::kOptModule;
-                else if (StrEqual(name, "OptFunction"))
-                    event.type = BuildEventType::kOptFunction;
-                 
-                // here are totals that are in the file
-                // Total ExecuteCompiler = Total Frontend + Total Backend
-                // 2 frontend blocks though,
-                //  1. Source, InstantiateFunction, CodeGenFunction, ...
-                //  2. CodeGenFunction, DebugType, and big gaps
-                //
-                // 1 backend block
-                //   OptModule
-                 
-                "Total ExecuteCompiler" <- important
-                "Total Frontend" <- important <- important
-                "Total InstantiateFunction"
-                "Total CodeGen Function"
-                "Total Backend"
-                "Total CodeGenPasses"
-                "Total OptModule" <- important
-                "Total OptFunction"
-                "Total RunPass"
-                "Total InstantiatePass"
-                "Total Source"
-                "Total ParseClass"
-                "Total DebugType"
-                "Total PerformPendingInstantiations"
-                "Total Optimizer"
-                */
-                
-                for i in 0..<catapultProfile.traceEvents!.count {
-                    let event = catapultProfile.traceEvents![i]
-                    if  event.name == "Source" ||
-                        event.name == "OptModule"
-                    {
-                        // This is a path
-                        let detail = event.args!["detail"]!.value as! String
-                        let url = URL(string:detail)!
-                        
-                        // stupid immutable arrays.  Makes this code untempable
-                        // maybe can use class instead of struct?
-                        catapultProfile.traceEvents![i].name = url.lastPathComponent
-                    }
-                    else if event.name == "InstantiateFunction" ||
-                            event.name == "InstantiateClass" ||
-                            event.name == "OptFunction" ||
-                            event.name == "ParseClass" ||
-                            event.name == "DebugType" || // these take a while
-                            event.name == "CodeGen Function" ||
-                            event.name == "RunPass"
-                    {
-                        // backend symbols need demangle
-                        let isDemangleNeeded = event.name == "OptFunction"
-                        
-                        if isDemangleNeeded {
-                            let detail = event.args!["detail"]!.value as! String
-                            let symbolName = String(cString: demangleSymbolName(detail))
-                            
-                            catapultProfile.traceEvents![i].name = symbolName
-                        }
-                        else {
-                            // This is a name
-                            let detail = event.args!["detail"]!.value as! String
-                            catapultProfile.traceEvents![i].name = detail
-                        }
-                    }
-                    
-                    // These aren't renamed but are useful data for report
-                    // and are already calculated.
-                    else if  event.name == "Total Backend" {
-                        file.totalBackend = event.dur!
-                    }
-                    else if  event.name == "Total Ffrontend" {
-                        file.totalFrontend = event.dur!
-                    }
-                }
-                
-                // walk the file and compute the duration if we don't already have it
-                if file.duration == 0.0 {
-                    updateDuration(catapultProfile, &file)
-                    
-                    // For now, just log the per-thread info
-                    if file.fileType == .Memory {
-                        updateThreadInfo(catapultProfile, &file)
-                    }
+                else if event.name == "InstantiateFunction" ||
+                        event.name == "InstantiateClass" ||
+                        event.name == "OptFunction" ||
+                        event.name == "ParseClass" ||
+                        event.name == "DebugType" || // these take a while
+                        event.name == "CodeGen Function" ||
+                        event.name == "RunPass"
+                {
+                    // This is a symbol name
+                    let detail = event.args!["detail"]!.value as! String
+                    catapultProfile.traceEvents![i].name = detail
                 }
             }
             
@@ -1564,6 +1621,10 @@ struct kram_profileApp: App {
                 
                 fileSearcher.updateFilesSorted()
                 
+                // task to update any build timings
+                // this saves having to manually visit every file
+                updateBuildTimingsTask(fileSearcher.files)
+                
                 log.debug("found \(fileSearcher.files.count) files")
                 
                 // preserve the original selection if still present
@@ -1668,13 +1729,9 @@ A tool to help profile mem, perf, and builds.
         )
     }
     
-    // DONE: have files ending in .memtrace, .trace, and .json
-    // TODO: archives in the zip file.
-    
     let fileTypes: [UTType] = [
         // This is what macOS generates when doing "compress file".  But could be archive.
         // These are 12x smaller often times.  Decompression lib only handles zlib.
-        // DONE: need zip archive util to extract the 1+ files, can still use libCompression to decompress
         .zip,
        
         // Perfetto can only open gzip and not zip yet
