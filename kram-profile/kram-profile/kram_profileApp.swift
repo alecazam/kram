@@ -724,7 +724,7 @@ class ThreadInfo : Hashable, Equatable, Comparable {
 }
 
 // Could also process each build timings in a threaded task.  That what CBA is doing.
-class BuildTiming {
+class BuildTiming: NSCopying {
     var name = ""
     var count = 0
     var duration = 0
@@ -737,6 +737,17 @@ class BuildTiming {
         self.durationSub += durationSub
         self.count += 1
     }
+    
+    // This is annoying in Swift
+    func copy(with zone: NSZone? = nil) -> Any {
+        let copy = BuildTiming()
+        copy.name = name
+        copy.count = count
+        copy.duration = duration
+        copy.durationSub = durationSub
+        copy.type = type
+        return copy
+      }
 }
 
 func updateFileBuildTimings(_ events: [CatapultEvent]) -> [String:BuildTiming] {
@@ -791,10 +802,16 @@ func mergeFileBuildTimings(files: [File]) -> [String:BuildTiming] {
     // then turn that into build events that can be shown.
     for file in files {
         // merge and combine duplicates
-        buildTimings.merge(file.buildTimings) { (current, newValue) in
-            current.combine(newValue.duration, newValue.durationSub)
-            return current
+        for buildTiming in file.buildTimings {
+            if buildTimings[buildTiming.key] == nil {
+                buildTimings[buildTiming.key] = (buildTiming.value.copy() as! BuildTiming)
+            }
+            else {
+                let v = buildTiming.value
+                buildTimings[buildTiming.key]!.combine(v.duration, v.durationSub)
+            }
         }
+        // buildTimings.merge didn't work, combine src values
     }
     
     return buildTimings
@@ -1152,16 +1169,40 @@ func computeEventParentsAndDurSub(_ events: inout [CatapultEvent]) {
         evRootIndex = sortedIndices[i]
         evRoot = events[evRootIndex]
     }
-    
-    //catapultProfile.traceEvents = events
 }
 
 // Fire this off any time the list changes and there
 // are build events in it.  This will update the data within,
 // so that the user doesn't have to visit every file manually.
 
+// TODO: move to timer class
+var kTickToSeconds = 0.0
+
+func updateTimebase() {
+    if kTickToSeconds != 0.0 { return }
+    
+    var machTimebase = mach_timebase_info(numer: 0, denom: 0)
+    mach_timebase_info(&machTimebase)
+    kTickToSeconds = 1e-9 * Double(machTimebase.numer) / Double(machTimebase.denom) // 125/3
+}
+
 func updateBuildTimingsTask(_ files: [File]) {
+    // Can use counter for progress.  Could add up size instead of just count.
+    var counter = 0
+    for file in files {
+        if !file.buildTimings.isEmpty { return }
+        
+        counter += 1
+    }
+    
+    if counter == 0 { return }
+    
+    
+    updateTimebase()
+    
     let _ = Task(priority: .medium, operation: {
+        var time = -Double(mach_absolute_time()) * kTickToSeconds
+        
         for file in files {
             if file.fileType == .Build {
                 do {
@@ -1172,6 +1213,9 @@ func updateBuildTimingsTask(_ files: [File]) {
                 }
             }
         }
+        
+        time += Double(mach_absolute_time()) * kTickToSeconds
+        log.info("finished updating build timings in \(double:time, decimals:3)s")
     })
 }
     
