@@ -55,6 +55,9 @@ import UniformTypeIdentifiers
 // TODO: save/load the duration and modstamps for File at quit, and any other metadata (totals per section)
 // TODO: add jump to source/header, but path would need to be correct (sandbox block?)
 
+// TODO: look into fast crc32 ops on M1
+// https://dougallj.wordpress.com/2022/05/22/faster-crc32-on-the-apple-m1/
+
 // Build traces
 // DONE: OptFunction needs demangled.  All backend strings are still mangled.
 //  Don’t need the library CBA uses just use api::__cxa_demangle() on macOS.
@@ -542,6 +545,8 @@ func filenameToTimeRange(_ filename: String) -> TimeRange {
         case .Unknown: duration = 1.0
     }
     
+    duration = 10.0
+    
     return TimeRange(timeStart:0.0, timeEnd:duration)
 }
 
@@ -566,6 +571,7 @@ func buildTimeRangeJson(_ timeRange:TimeRange) -> String? {
     let script = """
         var objTime = {
             perfetto:{
+                keepApiOpen: true,
                 timeStart:\(timeStartInt)n,
                 timeEnd:\(timeEndInt)n,
                 viewPercentage:\(timeRange.viewPercentage)

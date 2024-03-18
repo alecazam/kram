@@ -132,6 +132,25 @@ class File: Identifiable, Hashable, Equatable, Comparable
         return modStamp != loadStamp
     }
     
+    public func eraseFileContent() {
+        loadStamp = nil
+        fileContent = nil
+    }
+    
+    public func eraseCaches() {
+        duration = 0.0
+        
+        if fileType == .Build {
+            // for build fileType
+            buildTimings.removeAll()
+            buildStats = nil
+        }
+        else if fileType == .Memory {
+            // for memory fileType
+            threadInfo.removeAll()
+        }
+    }
+    
     public static func fileModificationDate(url: URL) -> Date? {
         do {
             let attr = try FileManager.default.attributesOfItem(atPath: url.path)
@@ -241,6 +260,11 @@ func lookupFile(url: URL) -> File {
     // This wipes the duration, so it can be recomputed
     // TODO: may want to check crc32 if present before wiping all data
     
+    if file.archive == nil {
+        file.eraseFileContent()
+        file.eraseCaches()
+    }
+    
     fileCache[file.url] = file
     
     return file
@@ -342,8 +366,7 @@ func lookupArchive(_ url: URL) -> Archive {
                 if !isNewEntryMissing && (oldEntry.crc32 == newEntry.crc32) {
                     
                     // erase fileContent since it may alias mmap going away
-                    file.loadStamp = nil
-                    file.fileContent = nil
+                    file.eraseFileContent()
                     
                     // keep any caches
                 }
@@ -352,17 +375,8 @@ func lookupArchive(_ url: URL) -> Archive {
                     file.loadStamp = nil
                     file.fileContent = nil
                     
-                    file.duration = 0.0
-                    
-                    if file.fileType == .Build {
-                        // for build fileType
-                        file.buildTimings.removeAll()
-                        file.buildStats = nil
-                    }
-                    else if file.fileType == .Memory {
-                        // for memory fileType
-                        file.threadInfo.removeAll()
-                    }
+                    file.eraseFileContent()
+                    file.eraseCaches()
                 }
             }
         }
