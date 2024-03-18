@@ -133,8 +133,11 @@ class File: Identifiable, Hashable, Equatable, Comparable
     }
     
     public func eraseFileContent() {
-        loadStamp = nil
+        // fileContent should get reloaded
         fileContent = nil
+        
+        // Perfetto should reload the fileContent
+        loadStamp = nil
     }
     
     public func eraseCaches() {
@@ -245,7 +248,7 @@ var droppedFileCache : [URL] = []
 // Flattened list of supported files from folders and archives
 var fileCache : [URL:File] = [:]
 
-func lookupFile(url: URL) -> File {
+func updateFile(url: URL) -> File {
     let file = File(url:url)
     
     // This preseves the duration previously parsed and stored
@@ -267,6 +270,14 @@ func lookupFile(url: URL) -> File {
     
     fileCache[file.url] = file
     
+    return file
+}
+
+func lookupFile(url: URL) -> File {
+    let file = File(url:url)
+    if let fileOld = fileCache[file.url] {
+        return fileOld
+    }
     return file
 }
 
@@ -483,7 +494,7 @@ func listFilesFromArchive(_ urlArchive: URL) -> [File] {
             
         // TODO: archives don't have full paths, so lookup can get confused
         // if there are multiple archives with same paths.
-        let file = lookupFile(url:url)
+        let file = updateFile(url:url)
         if file.archive != archive {
             file.archive = archive
         }
@@ -519,7 +530,7 @@ func listFilesFromURLs(_ urls: [URL]) -> [File]
                        files += listFilesFromArchive(fileURL)
                     }
                     else {
-                        files.append(lookupFile(url:fileURL));
+                        files.append(updateFile(url:fileURL));
                     }
                 }
             }
@@ -532,7 +543,7 @@ func listFilesFromURLs(_ urls: [URL]) -> [File]
                     files += listFilesFromArchive(url)
                 }
                 else {
-                    files.append(lookupFile(url:url))
+                    files.append(updateFile(url:url))
                 }
             }
         }

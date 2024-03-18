@@ -1049,7 +1049,7 @@ func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
 }
 
 // these are per thread min/max for memory reports
-func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
+func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: File) {
     // was using Set<>, but having trouble with lookup
     var threadInfos: [Int: ThreadInfo] = [:]
     
@@ -1562,14 +1562,7 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
     return totalEvents
 }
 
-func loadFileJS(_ path: String) -> String? {
-    
-    let fileURL = URL(string: path)!
-    
-    // Note may need to modify directly
-    var file = lookupFile(url: fileURL)
-    
-    log.debug(path)
+func loadFileJS(_ file: File) -> String? {
     
     do {
         // use this for binary data, but need to fixup some json before it's sent
@@ -1621,7 +1614,7 @@ func loadFileJS(_ path: String) -> String? {
                     
                     // For now, just log the per-thread info
                     if file.fileType == .Memory {
-                        updateThreadInfo(catapultProfile, &file)
+                        updateThreadInfo(catapultProfile, file)
                     }
                     
                     // This mods the catapult profile to store parentIndex and durSub
@@ -1723,7 +1716,7 @@ func loadFileJS(_ path: String) -> String? {
             fileContentBase64 = compressedData.base64EncodedString()
         }
         
-        return postLoadFileJS(fileContentBase64: fileContentBase64, title:fileURL.lastPathComponent)
+        return postLoadFileJS(fileContentBase64: fileContentBase64, title:file.name)
     }
     catch {
         log.error(error.localizedDescription)
@@ -1968,17 +1961,19 @@ struct kram_profileApp: App {
     func openFileSelection(_ webView: WKWebView) {
         if let sel = selection {
             
+            let file = lookupFile(selection: sel)
+            
             // This should only reload if selection previously loaded
             // to a valid file, or if modstamp changed on current selection
             
             // TODO: fix this
             let objTimeScript: String? = nil // buildTimeRangeJson(filenameToTimeRange(sel))
             
-            var str = loadFileJS(sel)
+            var str = loadFileJS(file)
             if str != nil {
                 runJavascript(webView, str!)
                 
-                let file = lookupFile(selection: sel)
+                // This means Perfetto UI loaded the fileContent, not that fileContent was loaded
                 file.setLoadStamp()
             }
             
