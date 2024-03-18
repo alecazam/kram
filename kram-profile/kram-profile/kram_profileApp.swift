@@ -1484,12 +1484,14 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
     event.ts = stats.frontendStart + stats.totalSource
     totalEvents.append(event)
     
-    event = makeDurEvent(tid, "Total InstantiateClass", stats.totalInstantiateClass, total)
-    event.ts = stats.frontendStart + stats.totalSource
-    totalEvents.append(event)
-    
+    // put this first, or else InstantiateClass isn't ordered properly
+    // Perfetto must not be sorting the events properly.  So order this one first
     event = makeDurEvent(tid, "Total CodeGen Function", stats.totalCodeGenFunction, total)
     event.ts = stats.frontendStart + stats.totalSource + stats.totalInstantiateFunction
+    totalEvents.append(event)
+    
+    event = makeDurEvent(tid, "Total InstantiateClass", stats.totalInstantiateClass, total)
+    event.ts = stats.frontendStart + stats.totalSource
     totalEvents.append(event)
     
     // backend
