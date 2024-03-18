@@ -842,7 +842,9 @@ func postBuildTimingsReport(files: [File]) -> String? {
 func mergeFileBuildStats(files: [File]) -> BuildStats {
     let buildStats = BuildStats()
     for file in files {
-        buildStats.combine(file.buildStats)
+        if file.buildStats != nil {
+            buildStats.combine(file.buildStats!)
+        }
     }
     
     buildStats.frontendStart = 0

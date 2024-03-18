@@ -98,7 +98,7 @@ class File: Identifiable, Hashable, Equatable, Comparable
     
     // This is only updated for Build fileType
     var buildTimings: [String:BuildTiming] = [:]
-    var buildStats: BuildStats!
+    var buildStats: BuildStats?
     
     // only available for memory file type right now
     var threadInfo = ""
