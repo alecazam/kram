@@ -22,9 +22,60 @@ enum FileType {
     case Unknown
 }
 
+class BuildStats {
+    var frontendStart = Int.max
+    var backendStart = Int.max
+
+    var totalExecuteCompiler = 0
+    
+    var totalFrontend = 0
+    var totalSource = 0
+    var totalInstantiateFunction = 0
+    var totalInstantiateClass = 0
+    var totalCodeGenFunction = 0
+    
+    var totalBackend = 0
+    var totalOptimizer = 0
+    var totalCodeGenPasses = 0
+    var totalOptFunction = 0
+    
+    func combine(_ rhs: BuildStats) {
+        totalExecuteCompiler += rhs.totalExecuteCompiler
+        
+        totalFrontend += rhs.totalFrontend
+        totalSource += rhs.totalSource
+        totalInstantiateFunction += rhs.totalInstantiateFunction
+        totalInstantiateClass += rhs.totalInstantiateClass
+        totalCodeGenFunction += rhs.totalCodeGenFunction
+        
+        totalBackend += rhs.totalBackend
+        totalOptimizer += rhs.totalOptimizer
+        totalCodeGenPasses += rhs.totalCodeGenPasses
+        totalOptFunction += rhs.totalOptFunction
+    }
+    
+    func divideBy(_ s: Int) {
+        frontendStart /= s
+        backendStart /= s
+
+        totalExecuteCompiler /= s
+        
+        totalFrontend /= s
+        totalSource /= s
+        totalInstantiateFunction /= s
+        totalInstantiateClass /= s
+        totalCodeGenFunction /= s
+        
+        totalBackend /= s
+        totalOptimizer /= s
+        totalCodeGenPasses /= s
+        totalOptFunction /= s
+    }
+}
+
 class File: Identifiable, Hashable, Equatable, Comparable
 {
-    // TODO: archive url relative to archive so not unqique if multiple archives dropped
+    // TODO: archive url relative to archive so not unique if multiple archives dropped
     // but currently all lookup is by url, and not url + archive.  Just make sure to
     // include unique dir when building archives.  zip has max 512 char path.
     
@@ -47,8 +98,7 @@ class File: Identifiable, Hashable, Equatable, Comparable
     
     // This is only updated for Build fileType
     var buildTimings: [String:BuildTiming] = [:]
-    var totalFrontend = 0 // in micros
-    var totalBackend = 0
+    var buildStats: BuildStats!
     
     // only available for memory file type right now
     var threadInfo = ""
@@ -269,42 +319,50 @@ func lookupArchive(_ url: URL) -> Archive {
         for file in fileCache.values {
             if file.archive == archiveOld {
                 
-                // update the archive
-                file.archive = archive
-                // Only need to release content if hash differs
-                // TODO: file may be gone in the new archive
+                // Only need to release caches if hash differs
                 let filename = file.url.absoluteString
                
-                
                 let oldEntry = archiveOld.archive!.zipEntry(byName: filename)
                 let newEntry = archive.archive!.zipEntry(byName: filename)
                 
-                if String(cString:newEntry.filename) == "" {
+                let isNewEntryMissing = String(cString:newEntry.filename) == ""
+                
+                if isNewEntryMissing {
                     // TODO: handle new archive missing the file
-                }
-                
-                // convert zip modStamp to Data object (only valid to seconds)
-                file.modStamp = Date(timeIntervalSince1970: Double(newEntry.modificationDate)) // TODO: may need to be TimeInterval?
-                
-                if oldEntry.crc32 == newEntry.crc32 {
-                    file.loadStamp = file.modStamp
+                    // need to release file
                 }
                 else {
-                    file.loadStamp = nil
+                    // update the archive
+                    file.archive = archive
                     
+                    // convert zip modStamp to Data object (only valid to seconds)
+                    file.modStamp = Date(timeIntervalSince1970: Double(newEntry.modificationDate))
+                }
+                
+                if !isNewEntryMissing && (oldEntry.crc32 == newEntry.crc32) {
+                    
+                    // erase fileContent since it may alias mmap going away
+                    file.loadStamp = nil
+                    file.fileContent = nil
+                    
+                    // keep any caches
+                }
+                else {
                     // erase fileContent
+                    file.loadStamp = nil
                     file.fileContent = nil
                     
                     file.duration = 0.0
                     
-                    // TODO: still may need to point to new mmap to release the old
-                    // but don't need to reprocess and build data if crc is same
-                    
-                    // release other calcs (f.e. duration, histogram, etc)
-                    // can point to new archive content here
-                    file.buildTimings.removeAll()
-                    file.totalFrontend = 0
-                    file.totalBackend = 0
+                    if file.fileType == .Build {
+                        // for build fileType
+                        file.buildTimings.removeAll()
+                        file.buildStats = nil
+                    }
+                    else if file.fileType == .Memory {
+                        // for memory fileType
+                        file.threadInfo.removeAll()
+                    }
                 }
             }
         }

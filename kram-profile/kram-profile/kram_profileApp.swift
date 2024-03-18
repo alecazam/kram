@@ -645,6 +645,25 @@ struct CatapultEvent: Codable {
     var durSub: Int?
     var parentIndex: Int?
     
+    // can't have setters on a Struct, only init
+    init(_ tid: Int, _ name: String, _ dur: Int) {
+        self.ts = 0
+        self.tid = tid
+        self.dur = dur
+        self.name = name
+        self.ph = "X"
+    }
+    
+    init(tid: Int, threadName: String) {
+        self.ts = 0
+        self.dur = 0
+        self.name = "thread_name"
+        self.ph = "M"
+        self.tid = tid
+        self.args = [:]
+        self.args!["name"] = AnyCodable(threadName)
+    }
+
     // only encode/decode some of the keys
     enum CodingKeys: String, CodingKey {
         case cat, pid, tid, ph, ts, dur, name, args
@@ -807,11 +826,29 @@ func findFilesForBuildTimings(files: [File], selection: String) -> [File] {
 func postBuildTimingsReport(files: [File]) -> String? {
     let buildTimings = mergeFileBuildTimings(files: files)
     if buildTimings.isEmpty { return nil }
-    let buildJsonBase64 = buildPerfettoJsonFromBuildTimings(buildTimings: buildTimings)
+    let buildStats = mergeFileBuildStats(files:files)
+    
+    let buildJsonBase64 = generateBuildReport(buildTimings: buildTimings, buildStats: buildStats)
     let buildJS = postLoadFileJS(fileContentBase64: buildJsonBase64, title: "BuildTimings")
     return buildJS
 }
 
+func mergeFileBuildStats(files: [File]) -> BuildStats {
+    let buildStats = BuildStats()
+    for file in files {
+        buildStats.combine(file.buildStats)
+    }
+    
+    buildStats.frontendStart = 0
+    buildStats.backendStart = buildStats.totalFrontend
+    
+    // This will scale way beyond the graph, so make it an average
+    // But will have lost the totals doing this.  Could embed them in string.
+    buildStats.divideBy(10)
+    
+    return buildStats
+}
+    
 func mergeFileBuildTimings(files: [File]) -> [String:BuildTiming] {
     var buildTimings: [String:BuildTiming] = [:]
     
@@ -834,7 +871,7 @@ func mergeFileBuildTimings(files: [File]) -> [String:BuildTiming] {
     return buildTimings
 }
 
-func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> String {
+func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildStats) -> String {
     // now convert those timings back into a perfetto displayable report
     // So just need to build up the json above into events on tracks
     var events: [CatapultEvent] = []
@@ -844,19 +881,9 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
     
     // add the thread names, only using 3 threads
     if true {
-        var event = CatapultEvent()
-        event.name = "thread_name"
         let names = ["ParseTime", "ParseCount", "ParseSelf", "OptimizeTime"]
         for i in 0..<names.count {
-            event.args = [:]
-            event.args!["name"] = AnyCodable(names[i])
-            event.tid = i
-            event.ph = "M"
-            
-            // may not need these, but needed for sort below
-            event.ts = 0
-            event.dur = 0
-            
+            let event = CatapultEvent(tid: i+1, threadName: names[i])
             events.append(event)
         }
     }
@@ -869,13 +896,10 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
         
         let dur = Double(t.duration) * 1e-6
         let durSelf = Double(t.durationSelf) * 1e-6
-        var event = CatapultEvent()
+        var event = CatapultEvent(0, "", t.duration)
         
         // Need to see this in the name due to multiple sorts
         
-        event.ts = 0 // do we need this, just more data to encode
-        event.dur = t.duration
-        event.ph = "X"
         let isHeader = t.type == "Source"
         
         // add count in seconds, so can view sorted by count below the duration above
@@ -883,11 +907,11 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
             event.name = "\(shortFilename) \(t.count)x \(double: dur, decimals:2, zero: false)s"
             
             // ParseTime
-            event.tid = 0
+            event.tid = 1
             events.append(event)
             
             // ParseCount
-            event.tid = 1
+            event.tid = 2
             event.dur = t.count * 10000 // in 0.1 secs, but high counts dominate the range then
             events.append(event)
             
@@ -896,7 +920,7 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
                 event.name = "\(shortFilename) \(t.count)x \(double: durSelf, decimals:2, zero: false)s"
                 
                 // ParseSelf
-                event.tid = 2
+                event.tid = 3
                 event.dur = t.durationSelf
                 events.append(event)
             }
@@ -905,7 +929,7 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
             event.name = "\(shortFilename) \(double: dur, decimals:2, zero: false)s"
             
             // OptimizeTime
-            event.tid = 3
+            event.tid = 4
             events.append(event)
         }
     }
@@ -931,6 +955,10 @@ func buildPerfettoJsonFromBuildTimings(buildTimings: [String:BuildTiming]) -> St
         return $0.name! < $1.name!
     }
    
+    // add in the summary of % spent across the build
+    let totalTrackEvents = convertStatsToTotalTrack(buildStats)
+    events += totalTrackEvents
+    
     let catapultProfile = CatapultProfile(traceEvents: events)
     
     do {
@@ -1244,7 +1272,7 @@ func updateBuildTimingTask(_ file: File) throws {
     if !file.buildTimings.isEmpty { return }
     
     let fileContent = loadFileContent(file)
-   
+    
     var json : Data
     
     if file.containerType == .Compressed {
@@ -1266,7 +1294,7 @@ func updateBuildTimingTask(_ file: File) throws {
     if catapultProfile.traceEvents == nil { // an array
         return
     }
-
+    
     var events = catapultProfile.traceEvents!
     
     // demangle the OptFunction name
@@ -1287,72 +1315,221 @@ func updateBuildTimingTask(_ file: File) throws {
     
     // Do this before the names are replaced below
     if file.buildTimings.isEmpty {
-        // useful totals to track, many more in the files
-        for i in 0..<events.count {
-            let event = events[i]
-            if event.name == "Total Backend" {
-                file.totalBackend = event.dur!
-            }
-            else if event.name == "Total Frontend" {
-                file.totalFrontend = event.dur!
-            }
-        }
+        file.buildStats = generateStatsForTotalTrack(events)
         
         // update the durSub in the events, can then track self time
         computeEventParentsAndDurSub(&events)
         
         file.buildTimings = updateFileBuildTimings(events)
     }
+}
+
+
+/* These are types CBA is looking at.  It's not looking at any totals
+ DebugType isn't in this.
+ 
+ if (StrEqual(name, "ExecuteCompiler"))
+ event.type = BuildEventType::kCompiler;
+ else if (StrEqual(name, "Frontend"))
+ event.type = BuildEventType::kFrontend;
+ else if (StrEqual(name, "Backend"))
+ event.type = BuildEventType::kBackend;
+ else if (StrEqual(name, "Source"))
+ event.type = BuildEventType::kParseFile;
+ else if (StrEqual(name, "ParseTemplate"))
+ event.type = BuildEventType::kParseTemplate;
+ else if (StrEqual(name, "ParseClass"))
+ event.type = BuildEventType::kParseClass;
+ else if (StrEqual(name, "InstantiateClass"))
+ event.type = BuildEventType::kInstantiateClass;
+ else if (StrEqual(name, "InstantiateFunction"))
+ event.type = BuildEventType::kInstantiateFunction;
+ else if (StrEqual(name, "OptModule"))
+ event.type = BuildEventType::kOptModule;
+ else if (StrEqual(name, "OptFunction"))
+ event.type = BuildEventType::kOptFunction;
+ 
+ // here are totals that are in the file
+ // Total ExecuteCompiler = Total Frontend + Total Backend
+ // 2 frontend blocks though,
+ //  1. Source, InstantiateFunction, CodeGenFunction, ...
+ //  2. CodeGenFunction, DebugType, and big gaps
+ //
+ // 1 backend block
+ //   OptModule
+ 
+ "Total ExecuteCompiler" <- important (total of frontend + backend)
+ 
+ //----------
+ // frontend
+ "Total Frontend" <- total
+ 
+ "Total Source" <- parsing
+ "Total ParseClass"
+ "Total InstantiateClass"
+ 
+ "Total PerformPendingInstantiations"
+ "Total InstantiateFunction"
+ "InstantiateClass"
+ "Total InstantiatePass"
+ 
+ "CodeGen Function"
+ "Debug Type"
+ 
+ //----------
+ // backend
+ "Total Backend" <- total, usually all OptModule
+ "Total Optimizer"
+ "Total CodeGenPasses"
+ "Total OptModule" <- important, time to optimize source file
+ "Total OptFunction"
+ "Total RunPass"
+ 
+ */
+
+// add a single track with hierarchical totals
+func generateStatsForTotalTrack(_ events: [CatapultEvent]) -> BuildStats {
+    let stats = BuildStats()
     
-    /* These are types CBA is looking at.  It's not looking at any totals
-     DebugType isn't in this.
-     
-     if (StrEqual(name, "ExecuteCompiler"))
-     event.type = BuildEventType::kCompiler;
-     else if (StrEqual(name, "Frontend"))
-     event.type = BuildEventType::kFrontend;
-     else if (StrEqual(name, "Backend"))
-     event.type = BuildEventType::kBackend;
-     else if (StrEqual(name, "Source"))
-     event.type = BuildEventType::kParseFile;
-     else if (StrEqual(name, "ParseTemplate"))
-     event.type = BuildEventType::kParseTemplate;
-     else if (StrEqual(name, "ParseClass"))
-     event.type = BuildEventType::kParseClass;
-     else if (StrEqual(name, "InstantiateClass"))
-     event.type = BuildEventType::kInstantiateClass;
-     else if (StrEqual(name, "InstantiateFunction"))
-     event.type = BuildEventType::kInstantiateFunction;
-     else if (StrEqual(name, "OptModule"))
-     event.type = BuildEventType::kOptModule;
-     else if (StrEqual(name, "OptFunction"))
-     event.type = BuildEventType::kOptFunction;
-     
-     // here are totals that are in the file
-     // Total ExecuteCompiler = Total Frontend + Total Backend
-     // 2 frontend blocks though,
-     //  1. Source, InstantiateFunction, CodeGenFunction, ...
-     //  2. CodeGenFunction, DebugType, and big gaps
-     //
-     // 1 backend block
-     //   OptModule
-     
-     "Total ExecuteCompiler" <- important
-     "Total Frontend" <- important <- important
-     "Total InstantiateFunction"
-     "Total CodeGen Function"
-     "Total Backend"
-     "Total CodeGenPasses"
-     "Total OptModule" <- important
-     "Total OptFunction"
-     "Total RunPass"
-     "Total InstantiatePass"
-     "Total Source"
-     "Total ParseClass"
-     "Total DebugType"
-     "Total PerformPendingInstantiations"
-     "Total Optimizer"
+    // useful totals to track, many more in the files
+    for i in 0..<events.count {
+        let event = events[i]
+        
+        // total
+        if event.name == "Total ExecuteCompiler" {
+            stats.totalExecuteCompiler = event.dur!
+        }
+        
+        // frontend
+        else if event.name == "Total Frontend" {
+            stats.totalFrontend = event.dur!
+        }
+        else if event.name == "Frontend" {
+            stats.frontendStart = min(stats.frontendStart, event.ts!)
+        }
+        
+        else if event.name == "Total Source" {
+            stats.totalSource = event.dur!
+        }
+        else if event.name == "Total InstantiateFunction" {
+            stats.totalInstantiateFunction = event.dur!
+        }
+        else if event.name == "Total InstantiateClass" {
+            stats.totalInstantiateClass = event.dur!
+        }
+        else if event.name == "Total CodeGen Function" {
+            stats.totalCodeGenFunction = event.dur!
+        }
+        
+        // backend
+        else if event.name == "Total Backend" {
+            stats.totalBackend = event.dur!
+        }
+        else if event.name == "Backend" {
+            stats.backendStart = min(stats.backendStart, event.ts!)
+        }
+        else if event.name == "Total Optimizer" {
+            stats.totalOptimizer = event.dur!
+        }
+        else if event.name == "Total CodeGenPasses" {
+            stats.totalCodeGenPasses = event.dur!
+        }
+        else if event.name == "Total OptFunction" {
+            stats.totalOptFunction = event.dur!
+        }
+    }
+    
+    // fix these up in case they're missing
+    if stats.frontendStart == Int.max {
+        stats.frontendStart = 0
+    }
+    
+    stats.backendStart = max(stats.backendStart, stats.frontendStart + stats.totalFrontend)
+    
+    return stats
+}
+
+func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
+    
+    var totalEvents: [CatapultEvent] = []
+    
+    // This is really ugly, having these be a struct
+    
+    let tid = 0
+    let trackEvent = CatapultEvent(tid: tid, threadName: "Build Totals")
+    totalEvents.append(trackEvent)
+    
+    // This is a struct, so can modify copy and add
+    var event: CatapultEvent
+    
+    func makeDurEvent(_ tid: Int, _ name: String, _ dur: Int, _ total: Int) -> CatapultEvent {
+        let percent = 100.0 * Double(dur) / Double(total)
+        return CatapultEvent(tid, "\(name) \(double:percent, decimals:0)%", dur)
+    }
+    let total = stats.totalExecuteCompiler
+    
+    event = makeDurEvent(tid, "Total ExecuteCompiler", stats.totalExecuteCompiler, total)
+    totalEvents.append(event)
+    
+    event = makeDurEvent(tid, "Total Frontend", stats.totalFrontend, total)
+    event.ts = stats.frontendStart
+    totalEvents.append(event)
+    
+    // sub-areas of frontend
+    event = makeDurEvent(tid, "Total Source", stats.totalSource, total)
+    event.ts = stats.frontendStart
+    totalEvents.append(event)
+    
+    event = makeDurEvent(tid, "Total InstantiateFunction", stats.totalInstantiateFunction, total)
+    event.ts = stats.frontendStart + stats.totalSource
+    totalEvents.append(event)
+    
+    event = makeDurEvent(tid, "Total InstantiateClass", stats.totalInstantiateClass, total)
+    event.ts = stats.frontendStart + stats.totalSource
+    totalEvents.append(event)
+    
+    event = makeDurEvent(tid, "Total CodeGen Function", stats.totalCodeGenFunction, total)
+    event.ts = stats.frontendStart + stats.totalSource + stats.totalInstantiateFunction
+    totalEvents.append(event)
+    
+    // backend
+    event = makeDurEvent(tid, "Total Backend", stats.totalBackend, total)
+    event.ts = stats.backendStart
+    totalEvents.append(event)
+    
+    event = makeDurEvent(tid, "Total Optimizer", stats.totalOptimizer, total)
+    event.ts = stats.backendStart
+    totalEvents.append(event)
+    
+    // event = makeDurEvent(tid, "Total OptModule", stats.totalOptModule, total)
+    // event.ts = stats.backendStart + stats.totalOptimizer
+    // totalEvents.append(event)
+    
+    event = makeDurEvent(tid, "Total CodeGenPasses", stats.totalCodeGenPasses, total)
+    event.ts = stats.backendStart + stats.totalOptimizer
+    totalEvents.append(event)
+    
+    event = makeDurEvent(tid, "Total OptFunction", stats.totalOptFunction, total)
+    event.ts = stats.backendStart + stats.totalOptimizer
+    totalEvents.append(event)
+    
+    /*
+    "Total ExecuteCompiler"
+    "Total Frontend"
+      "Total Source"
+      "Total InstantiateFunction"
+        "Total InstantiateClass"
+      "Total Codegen Function"
+
+
+    "Total Backend"
+      "Total Optimizer"
+      "Total CodeGenPasses"
+        "Total OptModule"
+          "Total OptFunction"
      */
+    
+    return totalEvents
 }
 
 func loadFileJS(_ path: String) -> String? {
@@ -1473,7 +1650,7 @@ func loadFileJS(_ path: String) -> String? {
             for i in 0..<catapultProfile.traceEvents!.count {
                 let event = catapultProfile.traceEvents![i]
                 if  event.name == "Source" ||
-                    event.name == "OptModule"
+                        event.name == "OptModule"
                 {
                     // This is a path
                     let detail = event.args!["detail"]!.value as! String
@@ -1484,17 +1661,28 @@ func loadFileJS(_ path: String) -> String? {
                     catapultProfile.traceEvents![i].name = url.lastPathComponent
                 }
                 else if event.name == "InstantiateFunction" ||
-                        event.name == "InstantiateClass" ||
-                        event.name == "OptFunction" ||
-                        event.name == "ParseClass" ||
-                        event.name == "DebugType" || // these take a while
-                        event.name == "CodeGen Function" ||
-                        event.name == "RunPass"
+                            event.name == "InstantiateClass" ||
+                            event.name == "OptFunction" ||
+                            event.name == "ParseClass" ||
+                            event.name == "DebugType" || // these take a while
+                            event.name == "CodeGen Function" ||
+                            event.name == "RunPass"
                 {
                     // This is a symbol name
                     let detail = event.args!["detail"]!.value as! String
                     catapultProfile.traceEvents![i].name = detail
                 }
+                
+                // knock out the pid.  There are "M" events setting the process_name
+                // Otherwise, display will collapse pid sections since totalTrack has no pid
+                catapultProfile.traceEvents![i].pid = nil
+            }
+            
+            if file.buildStats != nil {
+                let totalEvents = convertStatsToTotalTrack(file.buildStats!)
+                
+                // combine these onto the end, could remove the individual tracks storing these
+                catapultProfile.traceEvents! += totalEvents
             }
             
             let encoder = JSONEncoder()
