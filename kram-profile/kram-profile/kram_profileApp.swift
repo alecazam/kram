@@ -985,21 +985,21 @@ func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
     
     var threads: [Int: [Int]] = [:]
     
-    // first sort each thread by
+    // first sort each thread
     for i in 0..<catapultProfile.traceEvents!.count {
         let event = catapultProfile.traceEvents![i]
         
         guard let tid = event.tid else { continue }
         if event.ts == nil || event.dur == nil { continue }
         
-        if event.name != nil && (event.name! == "thread_name" || event.name! == "process_name") {
+        if event.ph! == "M" && event.name != nil && (event.name! == "thread_name" || event.name! == "process_name") {
             continue
         }
         
         if threads[tid] == nil {
             threads[tid] = []
         }
-        // just store the even index
+        // just store the event index
         threads[tid]!.append(i)
     }
     
@@ -1040,7 +1040,7 @@ func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
     // have option to consolidate and rename, but must remove nodes
 }
 
-// parse json trace
+// these are per thread min/max for memory reports
 func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
     // was using Set<>, but having trouble with lookup
     var threadInfos: [Int: ThreadInfo] = [:]
@@ -1049,7 +1049,8 @@ func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
         let event = catapultProfile.traceEvents![i]
         
         // have to have tid to associate with ThreadInfo
-        guard let tid = event.tid else { continue }
+        guard let tid = event.tid, 
+              let phase = event.ph else { continue }
         
         if threadInfos[tid] == nil {
             let info = ThreadInfo()
@@ -1058,15 +1059,19 @@ func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: inout File) {
             threadInfos[tid] = info
         }
         
-        if event.name != nil && event.name! == "thread_name" {
-            let threadName = event.args!["name"]!.value as! String
-            threadInfos[tid]!.threadName = threadName
+        if phase == "M" {
+            if event.name != nil && event.name! == "thread_name" {
+                let threadName = event.args!["name"]!.value as! String
+                threadInfos[tid]!.threadName = threadName
+            }
         }
-        else if event.ts != nil && event.dur != nil {
-            let s = event.ts!
-            let d = event.dur!
-            
-            threadInfos[tid]!.combine(s, d, event.name)
+        else if phase == "X" {
+            if event.ts != nil && event.dur != nil {
+                let s = event.ts!
+                let d = event.dur!
+                
+                threadInfos[tid]!.combine(s, d, event.name)
+            }
         }
     }
     
@@ -1088,7 +1093,7 @@ func updateDuration(_ events: [CatapultEvent]) -> Double {
     for i in 0..<events.count {
         let event = events[i]
         
-        if event.ts != nil && event.dur != nil {
+        if event.ph != nil && event.ph! == "X" && event.ts != nil && event.dur != nil {
             let s = event.ts!
             let d = event.dur!
             
@@ -1453,7 +1458,7 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
     
     var totalEvents: [CatapultEvent] = []
     
-    // This is really ugly, having these be a struct
+    // This is really ugly, change to using class?
     
     let tid = 0
     let trackEvent = CatapultEvent(tid: tid, threadName: "Build Totals")
@@ -1496,8 +1501,17 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
     event.ts = stats.frontendStart + stats.totalSource
     totalEvents.append(event)
     
-    event = makeDurEvent(tid, "Total CodeGen Function", stats.totalCodeGenFunction, total)
-    event.ts = stats.frontendStart + stats.totalSource + stats.totalInstantiateFunction
+    
+    // This total can exceed when backend start, so clamp it too
+    let tsCodeGenFunction = stats.frontendStart + stats.totalSource + stats.totalInstantiateFunction
+    
+    var totalCodeGenFunction = stats.totalCodeGenFunction
+    if tsCodeGenFunction + totalCodeGenFunction > stats.backendStart {
+        totalCodeGenFunction = stats.backendStart - tsCodeGenFunction
+    }
+    
+    event = makeDurEvent(tid, "Total CodeGen Function", totalCodeGenFunction, total)
+    event.ts = tsCodeGenFunction
     totalEvents.append(event)
     
     // backend
