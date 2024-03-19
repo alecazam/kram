@@ -51,6 +51,11 @@ import UniformTypeIdentifiers
 // DONE: add/update recent document list (need to hold onto dropped/opened folder)
 // DONE: can't mmap web link, but can load zip off server with timings
 
+// DONE: drop anything in the build report < 1% in one sub-track
+// Could display on subtract but would have to fit under the parent timing (but should).
+// Could stop when remaining total child time < parent.
+// This stops the long tail.  So just total the results, and start setting ts once reached.
+
 // TODO: run cba on files, mmap and decompress each can use incremental mode?
 // TODO: save/load the duration and modstamps for File at quit, and any other metadata (totals per section)
 // TODO: add jump to source/header, but path would need to be correct (sandbox block?)
@@ -277,11 +282,12 @@ extension String.StringInterpolation {
     }
 
     /// Formats the *elapsed time* since the specified start time.
-    mutating func appendInterpolation(timeSince startTime: TimeInterval, decimals: UInt = 2) {
-        let elapsedTime = CACurrentMediaTime() - startTime
-        let elapsedTimeDescription = String(format: "%.\(decimals)fs", elapsedTime)
-        appendLiteral(elapsedTimeDescription)
-    }
+// don't use logging for profiling
+//    mutating func appendInterpolation(timeSince startTime: TimeInterval, decimals: UInt = 2) {
+//        let elapsedTime = CACurrentMediaTime() - startTime
+//        let elapsedTimeDescription = String(format: "%.\(decimals)fs", elapsedTime)
+//        appendLiteral(elapsedTimeDescription)
+//    }
 }
 
 /* usage
@@ -896,6 +902,23 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildSt
         }
     }
     
+    var parseTiming = 0
+    var optimizeTiming = 0
+    
+    for t in buildTimings.values {
+        let isHeader = t.type == "Source"
+        
+        if isHeader {
+            parseTiming += t.duration
+        }
+        else {
+            optimizeTiming += t.duration
+        }
+    }
+    
+    let parseTimingInv = 1.0 / Double(parseTiming)
+    let optimizeTimingInv = 1.0 / Double(optimizeTiming)
+    
     for buildTiming in buildTimings {
         let t = buildTiming.value
         
@@ -912,6 +935,10 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildSt
         
         // add count in seconds, so can view sorted by count below the duration above
         if isHeader {
+            // for now skip small contributions
+            let percent = Double(t.duration) * parseTimingInv
+            if percent < 0.01 { continue }
+            
             event.name = "\(shortFilename) \(t.count)x \(double: dur, decimals:2, zero: false)s"
             
             // ParseTime
@@ -934,6 +961,10 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildSt
             }
         }
         else {
+            // for now skip small contributions
+            let percent = Double(t.duration) * optimizeTimingInv
+            if percent < 0.01 { continue }
+            
             event.name = "\(shortFilename) \(double: dur, decimals:2, zero: false)s"
             
             // OptimizeTime
