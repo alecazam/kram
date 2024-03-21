@@ -1346,9 +1346,11 @@ func updateBuildTimingTask(_ file: File) throws {
         let event = events[i]
         if event.name == "OptFunction" {
             let detail = event.args!["detail"]!.value as! String
-            let symbolName = String(cString: demangleSymbolName(detail))
-            
-            events[i].args!["detail"] = AnyCodable(symbolName)
+            if let demangledName = demangleSymbolName(detail) {
+                let symbolName = String(cString: demangledName)
+                
+                events[i].args!["detail"] = AnyCodable(symbolName)
+            }
         }
     }
     
@@ -1692,9 +1694,11 @@ func loadFileJS(_ file: File) -> String? {
                 let event = catapultProfile.traceEvents![i]
                 if event.name == "OptFunction" {
                     let detail = event.args!["detail"]!.value as! String
-                    let symbolName = String(cString: demangleSymbolName(detail))
-                    
-                    catapultProfile.traceEvents![i].args!["detail"] = AnyCodable(symbolName)
+                    if let demangledName = demangleSymbolName(detail) {
+                        let symbolName = String(cString: demangledName)
+                        
+                        catapultProfile.traceEvents![i].args!["detail"] = AnyCodable(symbolName)
+                    }
                 }
             }
             

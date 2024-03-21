@@ -25,7 +25,7 @@
 #include <mutex>
 #endif
 
-extern "C" const char* _Nonnull demangleSymbolName(const char* _Nonnull symbolName_) {
+extern "C" const char* _Nullable demangleSymbolName(const char* _Nonnull symbolName_) {
     using namespace NAMESPACE_STL;
     
     // serialize to multiple threads
@@ -53,7 +53,13 @@ extern "C" const char* _Nonnull demangleSymbolName(const char* _Nonnull symbolNa
     }
     else {
         // This will do repeated demangle though.  Maybe should add to table?
-        result = symbolName_;
+        // Swift fails when returning back the string it marshalled back to stuff back
+        // into String(cstring: ...).   Ugh.  So return empty string.
+        // status = -2 on most of the mangled Win clang-cli symbols.  Nice one
+        // Microsoft.
+        //result = symbolName_;
+        
+        result = nullptr;
     }
     
     return result;

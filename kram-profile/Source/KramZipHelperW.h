@@ -36,5 +36,5 @@ typedef struct ZipEntryW {
 @end
 
 // This is only needed for OptFunction and backend names
-const char* _Nonnull demangleSymbolName(const char* _Nonnull symbolName_);
+const char* _Nullable demangleSymbolName(const char* _Nonnull symbolName_);
 
