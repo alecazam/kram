@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Unlicense
 #pragma once
 
-#include "BuildEvents.h"
-#include <stdio.h>
+#include <string>
 
-void DoAnalysis(const BuildEvents& events, BuildNames& names, FILE* out);
+#include "BuildEvents.h"
+
+void DoAnalysis(const BuildEvents& events, BuildNames& names, std::string& out);

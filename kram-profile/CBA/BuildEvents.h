@@ -9,11 +9,11 @@
 #include <utility>
 
 
-#ifdef _MSC_VER
-#define ftello64 _ftelli64
-#elif defined(__APPLE__)
-#define ftello64 ftello
-#endif
+//#ifdef _MSC_VER
+//#define ftello64 _ftelli64
+//#elif defined(__APPLE__)
+//#define ftello64 ftello
+//#endif
 
 
 enum class BuildEventType
@@ -35,6 +35,8 @@ struct DetailIndex
 {
     int idx;
     explicit DetailIndex(int d = 0) : idx(d) {}
+    
+    // TODO: C++20 can autogen most of these from like <=> operator
     bool operator==(DetailIndex rhs) const { return idx == rhs.idx; }
     bool operator!=(DetailIndex rhs) const { return idx != rhs.idx; }
     bool operator<(DetailIndex rhs) const { return idx < rhs.idx; }
@@ -47,6 +49,8 @@ struct EventIndex
 {
     int idx;
     explicit EventIndex(int e = -1) : idx(e) {}
+    
+    // TODO: C++20 can autogen most of these from like <=> operator
     bool operator==(EventIndex rhs) const { return idx == rhs.idx; }
     bool operator!=(EventIndex rhs) const { return idx != rhs.idx; }
     bool operator<(EventIndex rhs) const { return idx < rhs.idx; }

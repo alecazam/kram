@@ -25,9 +25,56 @@
 #include <mutex>
 #endif
 
+using namespace NAMESPACE_STL;
+
+// copied out of KramLog.cpp
+static int32_t append_vsprintf(string& str, const char* format, va_list args)
+{
+    // for KLOGE("group", "%s", "text")
+    if (strcmp(format, "%s") == 0) {
+        const char* firstArg = va_arg(args, const char*);
+        str += firstArg;
+        return (int32_t)strlen(firstArg);
+    }
+
+    // This is important for the case where ##VAR_ARGS only leaves the format.
+    // In this case "text" must be a compile time constant string to avoid security warning needed for above.
+    // for KLOGE("group", "text")
+    if (strrchr(format, '%') == nullptr) {
+        str += format;
+        return (int32_t)strlen(format);
+    }
+
+    // format once to get length (without NULL at end)
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+    int32_t len = vsnprintf(NULL, 0, format, argsCopy);
+    va_end(argsCopy);
+
+    if (len > 0) {
+        size_t existingLen = str.length();
+
+        // resize and format again into string
+        str.resize(existingLen + len, 0);
+
+        vsnprintf((char*)str.c_str() + existingLen, len + 1, format, args);
+    }
+
+    return len;
+}
+
+int32_t append_sprintf(string& str, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int32_t len = append_vsprintf(str, format, args);
+    va_end(args);
+
+    return len;
+}
+
+
 extern "C" const char* _Nullable demangleSymbolName(const char* _Nonnull symbolName_) {
-    using namespace NAMESPACE_STL;
-    
     // serialize to multiple threads
     static mutex sMutex;
     static unordered_map<string, const char*> sSymbolToDemangleName;

@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Unlicense
 #include "BuildEvents.h"
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
+// This is for windows.h
+//#ifndef NOMINMAX
+//#define NOMINMAX
+//#endif
 
 #include "Arena.h"
 //#include "Colors.h"
@@ -390,7 +391,7 @@ struct BuildEventsParser
             else
                 detailString = detailPtr;
 
-            /* don't *do this
+            /* don't do this
             // don't report the clang trace .json file, instead get the object file at the same location if it's there
             if (utils::EndsWith(detailString, ".json"))
             {
@@ -414,6 +415,7 @@ struct BuildEventsParser
             */
             
             // Use the built in call
+            // clang needs to fix this, since Win clang symbols don't demangle using macOS demangle
             if (event.type == BuildEventType::kOptFunction)
             {
                 const char* demangledName = demangleSymbolName(detailString.c_str());

@@ -11,8 +11,10 @@ namespace utils
 
     [[nodiscard]] bool IsHeader(std::string_view path);
 
+    /*
     void Lowercase(std::string& path);
 
     [[nodiscard]] bool BeginsWith(const std::string& str, const std::string& prefix);
     [[nodiscard]] bool EndsWith(const std::string_view& str, const std::string& suffix);
+    */
 }

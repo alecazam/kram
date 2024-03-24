@@ -2,5 +2,5 @@
 
 // TODO: move to header
 @interface CBA : NSObject
-+ (void)RunCBA:(NSArray<NSData*> *)files filenames:(NSArray<NSString*> *)filenames;
++ (NSString* _Nonnull)RunCBA:(NSArray<NSData*> * _Nonnull)files filenames:(NSArray<NSString*> * _Nonnull)filenames;
 @end

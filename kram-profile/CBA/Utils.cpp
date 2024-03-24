@@ -6,6 +6,8 @@
 #include <string.h>
 
 inline char ToLower(char c) { return (c >= 'A' && c <= 'Z') ? (c + 'a' - 'A') : c; }
+
+/*
 inline char ToUpper(char c) { return (c >= 'a' && c <= 'z') ? (c - ('a' - 'A')) : c; }
 
 void utils::Lowercase(std::string& path)
@@ -43,6 +45,7 @@ bool utils::EndsWith(const std::string_view& str, const std::string& suffix)
     }
     return true;
 }
+*/
 
 
 bool utils::IsHeader(std::string_view path)
