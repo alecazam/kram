@@ -22,6 +22,12 @@
 		705F69072BA2ED1300437FAA /* track_event_parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 705F69042BA2ED1200437FAA /* track_event_parser.cpp */; };
 		705F690A2BA3801D00437FAA /* KramZipHelperW.mm in Sources */ = {isa = PBXBuildFile; fileRef = 705F69092BA3801D00437FAA /* KramZipHelperW.mm */; };
 		705F690C2BA3CDEC00437FAA /* File.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F690B2BA3CDEC00437FAA /* File.swift */; };
+		7061C76F2BAFB715003EC937 /* Utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7061C7672BAFB715003EC937 /* Utils.cpp */; };
+		7061C7702BAFB715003EC937 /* Analysis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7061C7682BAFB715003EC937 /* Analysis.cpp */; };
+		7061C7712BAFB715003EC937 /* Arena.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7061C7692BAFB715003EC937 /* Arena.cpp */; };
+		7061C7722BAFB715003EC937 /* CBA.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7061C76B2BAFB715003EC937 /* CBA.mm */; };
+		7061C7732BAFB715003EC937 /* BuildEvents.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7061C76C2BAFB715003EC937 /* BuildEvents.cpp */; };
+		7061C7762BAFC323003EC937 /* simdjson.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7061C7742BAFC323003EC937 /* simdjson.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +53,18 @@
 		705F69082BA3801D00437FAA /* KramZipHelperW.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramZipHelperW.h; sourceTree = "<group>"; };
 		705F69092BA3801D00437FAA /* KramZipHelperW.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = KramZipHelperW.mm; sourceTree = "<group>"; };
 		705F690B2BA3CDEC00437FAA /* File.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = File.swift; sourceTree = "<group>"; };
+		7061C7662BAFB715003EC937 /* Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Utils.h; sourceTree = "<group>"; };
+		7061C7672BAFB715003EC937 /* Utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Utils.cpp; sourceTree = "<group>"; };
+		7061C7682BAFB715003EC937 /* Analysis.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Analysis.cpp; sourceTree = "<group>"; };
+		7061C7692BAFB715003EC937 /* Arena.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Arena.cpp; sourceTree = "<group>"; };
+		7061C76A2BAFB715003EC937 /* BuildEvents.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BuildEvents.h; sourceTree = "<group>"; };
+		7061C76B2BAFB715003EC937 /* CBA.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CBA.mm; sourceTree = "<group>"; };
+		7061C76C2BAFB715003EC937 /* BuildEvents.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BuildEvents.cpp; sourceTree = "<group>"; };
+		7061C76D2BAFB715003EC937 /* Arena.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Arena.h; sourceTree = "<group>"; };
+		7061C76E2BAFB715003EC937 /* Analysis.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Analysis.h; sourceTree = "<group>"; };
+		7061C7742BAFC323003EC937 /* simdjson.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = simdjson.cpp; sourceTree = "<group>"; };
+		7061C7752BAFC323003EC937 /* simdjson.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = simdjson.h; sourceTree = "<group>"; };
+		7061C7772BAFD82E003EC937 /* CBA.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CBA.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +81,7 @@
 		705F68C02B820AD100437FAA = {
 			isa = PBXGroup;
 			children = (
+				7061C7652BAFB715003EC937 /* CBA */,
 				705F68FD2BA2ED1200437FAA /* Source */,
 				705F68CB2B820AD100437FAA /* kram-profile */,
 				705F68CA2B820AD100437FAA /* Products */,
@@ -118,6 +137,25 @@
 				705F69042BA2ED1200437FAA /* track_event_parser.cpp */,
 			);
 			path = Source;
+			sourceTree = "<group>";
+		};
+		7061C7652BAFB715003EC937 /* CBA */ = {
+			isa = PBXGroup;
+			children = (
+				7061C7662BAFB715003EC937 /* Utils.h */,
+				7061C7672BAFB715003EC937 /* Utils.cpp */,
+				7061C76D2BAFB715003EC937 /* Arena.h */,
+				7061C7692BAFB715003EC937 /* Arena.cpp */,
+				7061C76E2BAFB715003EC937 /* Analysis.h */,
+				7061C7682BAFB715003EC937 /* Analysis.cpp */,
+				7061C76A2BAFB715003EC937 /* BuildEvents.h */,
+				7061C76C2BAFB715003EC937 /* BuildEvents.cpp */,
+				7061C7772BAFD82E003EC937 /* CBA.h */,
+				7061C76B2BAFB715003EC937 /* CBA.mm */,
+				7061C7742BAFC323003EC937 /* simdjson.cpp */,
+				7061C7752BAFC323003EC937 /* simdjson.h */,
+			);
+			path = CBA;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -194,16 +232,22 @@
 			files = (
 				705F68E12B87EB8000437FAA /* AnyDecodable.swift in Sources */,
 				705F690C2BA3CDEC00437FAA /* File.swift in Sources */,
+				7061C7712BAFB715003EC937 /* Arena.cpp in Sources */,
 				705F68E32B87EB8000437FAA /* AnyEncodable.swift in Sources */,
 				705F68E92B9451CC00437FAA /* Log.swift in Sources */,
 				705F68EB2B94E33800437FAA /* Keycode.swift in Sources */,
 				705F69062BA2ED1300437FAA /* miniz.cpp in Sources */,
 				705F69052BA2ED1300437FAA /* KramZipHelper.cpp in Sources */,
 				705F68E22B87EB8000437FAA /* AnyCodable.swift in Sources */,
+				7061C7732BAFB715003EC937 /* BuildEvents.cpp in Sources */,
+				7061C7762BAFC323003EC937 /* simdjson.cpp in Sources */,
 				705F69072BA2ED1300437FAA /* track_event_parser.cpp in Sources */,
+				7061C76F2BAFB715003EC937 /* Utils.cpp in Sources */,
 				705F68CD2B820AD100437FAA /* kram_profileApp.swift in Sources */,
 				705F68E72B8BEB7100437FAA /* DataCompression.swift in Sources */,
 				705F690A2BA3801D00437FAA /* KramZipHelperW.mm in Sources */,
+				7061C7722BAFB715003EC937 /* CBA.mm in Sources */,
+				7061C7702BAFB715003EC937 /* Analysis.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

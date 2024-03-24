@@ -2378,6 +2378,29 @@ A tool to help profile mem, perf, and builds.
                 }
                 .disabled(selection == nil)
                 
+                Button("Build Report CBA") {
+                    let buildFiles = findFilesForBuildTimings(files: fileSearcher.files, selection: selection!)
+                    
+                    if buildFiles.isEmpty { return }
+                    
+                    var fileDatas: [Data] = []
+                    var filenames: [String] = []
+                    
+                    for file in buildFiles {
+                        if file.fileContent == nil  {
+                            continue
+                        }
+                        
+                        fileDatas.append(file.fileContent!)
+                        filenames.append(file.url.absoluteString)
+                    }
+                    // Extract the fileContent and names.  This avoids CBA needing to do IO.
+                    // But CBA is reparsing all of the json in C++ to build up it's tables.
+                    // Also demangling names, but I have that disabled.
+                    CBA.run(fileDatas, filenames: filenames)
+                }
+                .disabled(selection == nil)
+                
                 
                 // must call through NSWindow
                 Button("See Below") {
