@@ -387,10 +387,28 @@ struct BuildEventsParser
                 // do various cleanups/nice-ifications of the detail name:
                 // make paths shorter (i.e. relative to project) where possible
                 detailString = utils::GetNicePath(detailPtr);
+                
+                // switch json to .o or .obj (or .cpp)
+                if (utils::EndsWith(detailString, ".json"))
+                {
+                    detailString = std::string(detailString.substr(0, detailString.length()-4)) + "o";
+                }
             }
             else
+            {
                 detailString = detailPtr;
-
+                
+                // Use the kram demangle
+                // clang needs to fix this, since Win clang symbols don't demangle using macOS demangle
+                if (event.type == BuildEventType::kOptFunction)
+                {
+                    const char* demangledName = demangleSymbolName(detailString.c_str());
+                    if (demangledName != nullptr)
+                        detailString = demangledName;
+                }
+            }
+            
+            
             /* don't do this
             // don't report the clang trace .json file, instead get the object file at the same location if it's there
             if (utils::EndsWith(detailString, ".json"))
@@ -413,15 +431,6 @@ struct BuildEventsParser
             if (event.type == BuildEventType::kOptFunction)
                 detailString = llvm::demangle(detailString);
             */
-            
-            // Use the built in call
-            // clang needs to fix this, since Win clang symbols don't demangle using macOS demangle
-            if (event.type == BuildEventType::kOptFunction)
-            {
-                const char* demangledName = demangleSymbolName(detailString.c_str());
-                if (demangledName != nullptr)
-                    detailString = demangledName;
-            }
             
             event.detailIndex = NameToIndex(detailString.c_str(), nameToIndexLocal);
         }
