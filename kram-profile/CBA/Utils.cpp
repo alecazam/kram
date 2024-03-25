@@ -30,7 +30,8 @@ bool utils::BeginsWith(const std::string& str, const std::string& prefix)
     }
     return true;
 }
-
+*/
+ 
 bool utils::EndsWith(const std::string_view& str, const std::string& suffix)
 {
     if (str.size() < suffix.size())
@@ -45,8 +46,6 @@ bool utils::EndsWith(const std::string_view& str, const std::string& suffix)
     }
     return true;
 }
-*/
-
 
 bool utils::IsHeader(std::string_view path)
 {

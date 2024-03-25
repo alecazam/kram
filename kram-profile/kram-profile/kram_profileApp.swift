@@ -2407,8 +2407,10 @@ A tool to help profile mem, perf, and builds.
                     }
                     // Extract the fileContent and names.  This avoids CBA needing to do IO.
                     // But CBA is reparsing all of the json in C++ to build up its tables.
-                    // Also demangling names again..
-                    let cbaReport = CBA.run(fileDatas, filenames: filenames)
+                    // Also demangling names again.
+                    let cba = CBA()
+                    cba.parseAll(fileDatas, filenames: filenames)
+                    let cbaReport = cba.analyze()
                     
                     // Can't use log here, since it's not setup to chop up long
                     // strings by newlines yet.  Print doesn't go to console
