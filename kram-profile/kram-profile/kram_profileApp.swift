@@ -114,6 +114,12 @@ import UniformTypeIdentifiers
 //   only then can data be handed off toe Pefertto or CBA.  And CBA needs all files.
 //   Maybe extend CBA to read a zip file.  Can just use ZipHelper.
 
+// TODO: use refreshable on the list to allow await on an async tasks
+// so could refresh the durations off that.
+// TODO: passing children field to the List ctor creates a hierarchical list.
+// so could have dropped file, archive, folder in the list to collapse the view
+// Each file array would be a child.  Parent would be clearer then.
+
 // TODO: fix duration update modding the List item and nav title after it updates
 // Currently select list, it updates, then duration is calcualated.
 //   there is a objectWillChange.send() Could maybe send that from The File
@@ -1261,21 +1267,53 @@ func computeEventParentsAndDurSub(_ events: inout [CatapultEvent]) {
     }
 }
 
+
+class Timer {
+    private static var kTickToSeconds = updateTimebase()
+    private var time: Double = -Timer.getTime()
+    
+    deinit {
+        stop()
+    }
+    
+    func timeElapsed() -> Double {
+        return time
+    }
+    
+    func restart() {
+        if time > 0.0 {
+            time = -Timer.getTime()
+        }
+    }
+    
+    func start() {
+        if time > 0.0 {
+            time -= Timer.getTime()
+        }
+    }
+    
+    func stop() {
+        if time < 0.0 {
+            time += Timer.getTime()
+        }
+    }
+    
+    private static func getTime() -> Double {
+        return Double(mach_absolute_time()) * kTickToSeconds
+    }
+    
+    private static func updateTimebase() -> Double {
+        var machTimebase = mach_timebase_info(numer: 0, denom: 0)
+        mach_timebase_info(&machTimebase)
+        
+        // AS = 125/3, Intel = 1/1
+        return 1e-9 * Double(machTimebase.numer) / Double(machTimebase.denom)
+    }
+}
+
 // Fire this off any time the list changes and there
 // are build events in it.  This will update the data within,
 // so that the user doesn't have to visit every file manually.
-
-// TODO: move to timer class
-var kTickToSeconds = 0.0
-
-func updateTimebase() {
-    if kTickToSeconds != 0.0 { return }
-    
-    var machTimebase = mach_timebase_info(numer: 0, denom: 0)
-    mach_timebase_info(&machTimebase)
-    kTickToSeconds = 1e-9 * Double(machTimebase.numer) / Double(machTimebase.denom) // 125/3
-}
-
 func updateBuildTimingsTask(_ files: [File]) {
     // Can use counter for progress.  Could add up size instead of just count.
     var counter = 0
@@ -1287,11 +1325,8 @@ func updateBuildTimingsTask(_ files: [File]) {
     
     if counter == 0 { return }
     
-    
-    updateTimebase()
-    
     let _ = Task(priority: .medium, operation: {
-        var time = -Double(mach_absolute_time()) * kTickToSeconds
+        let timer = Timer()
         
         for file in files {
             if file.fileType == .Build {
@@ -1304,8 +1339,8 @@ func updateBuildTimingsTask(_ files: [File]) {
             }
         }
         
-        time += Double(mach_absolute_time()) * kTickToSeconds
-        log.info("finished updating build timings in \(double:time, decimals:3)s")
+        timer.stop()
+        log.info("finished updating build timings in \(double:timer.timeElapsed(), decimals:3)s")
     })
 }
 
@@ -2407,10 +2442,20 @@ A tool to help profile mem, perf, and builds.
                     }
                     // Extract the fileContent and names.  This avoids CBA needing to do IO.
                     // But CBA is reparsing all of the json in C++ to build up its tables.
-                    // Also demangling names again.
+                    // Also demangling names again.  And unlike the build report which is
+                    // cached per file, this is doing all on main thread.
+                    
+                    let timer = Timer()
+                    
+                    // TODO: call parse from the buildTimings task.  Then it's done in
+                    // background.  A new  should use the same unique filename.  Then
+                    // this needs to analyze only specific files that were parsed.
                     let cba = CBA()
                     cba.parseAll(fileDatas, filenames: filenames)
                     let cbaReport = cba.analyze()
+                    
+                    timer.stop()
+                    log.info("finished updating CBA timings in \(double:timer.timeElapsed(), decimals:3)s")
                     
                     // Can't use log here, since it's not setup to chop up long
                     // strings by newlines yet.  Print doesn't go to console
