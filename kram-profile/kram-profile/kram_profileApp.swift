@@ -40,6 +40,11 @@ import UniformTypeIdentifiers
 // DONE: background process to compute buildTimings across all files
 // TODO: parse totals from build traces, what CBA is doing
 // TODO: present total time, and % of total in the nav panel
+// TODO: add a total time, and show that in the nav panel, and % of total
+//   then know for a summary what the total time spend compiling is.
+// TODO: duration isn't updating properly when doing Reload on loose files
+// TODO: add children of each archive, so those show in the list and can collapse
+// TODO: add refreshable
 
 // Perf traces
 // TODO: build per-thread hierarchy and self times
@@ -61,6 +66,7 @@ import UniformTypeIdentifiers
 // TODO: add jump to source/header, but path would need to be correct (sandbox block?)
 
 // TODO: look into fast crc32 ops on M1
+//  can use this on loose fils as a hash, and also compare to zip files
 // https://dougallj.wordpress.com/2022/05/22/faster-crc32-on-the-apple-m1/
 
 // Build traces
@@ -1545,23 +1551,25 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
     
     func makeDurEvent(_ tid: Int, _ name: String, _ dur: Int, _ total: Int) -> CatapultEvent {
         let percent = 100.0 * Double(dur) / Double(total)
-        return CatapultEvent(tid, "\(name) \(double:percent, decimals:0)%", dur)
+        return CatapultEvent(tid, "\(double:percent, decimals:0)% \(name)", dur)
     }
     let total = stats.totalExecuteCompiler
     
-    event = makeDurEvent(tid, "Total ExecuteCompiler", stats.totalExecuteCompiler, total)
+    // Removed Total from all these strings
+    
+    event = makeDurEvent(tid, "ExecuteCompiler", stats.totalExecuteCompiler, total)
     totalEvents.append(event)
     
-    event = makeDurEvent(tid, "Total Frontend", stats.totalFrontend, total)
+    event = makeDurEvent(tid, "Frontend", stats.totalFrontend, total)
     event.ts = stats.frontendStart
     totalEvents.append(event)
     
     // sub-areas of frontend
-    event = makeDurEvent(tid, "Total Source", stats.totalSource, total)
+    event = makeDurEvent(tid, "Source", stats.totalSource, total)
     event.ts = stats.frontendStart
     totalEvents.append(event)
     
-    event = makeDurEvent(tid, "Total InstantiateFunction", stats.totalInstantiateFunction, total)
+    event = makeDurEvent(tid, "InstantiateFunction", stats.totalInstantiateFunction, total)
     event.ts = stats.frontendStart + stats.totalSource
     totalEvents.append(event)
     
@@ -1573,7 +1581,7 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
     
     // This overlaps with some Source, and some InstantiateFunction, so it's sort of double
     // counted, so clamp it for now so Perfetto doesn't freak out and get the event order wrong.
-    event = makeDurEvent(tid, "Total InstantiateClass", totalInstantiateClass, total)
+    event = makeDurEvent(tid, "InstantiateClass", totalInstantiateClass, total)
     event.ts = stats.frontendStart + stats.totalSource
     totalEvents.append(event)
     
@@ -1586,28 +1594,28 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
         totalCodeGenFunction = stats.backendStart - tsCodeGenFunction
     }
     
-    event = makeDurEvent(tid, "Total CodeGen Function", totalCodeGenFunction, total)
+    event = makeDurEvent(tid, "CodeGen Function", totalCodeGenFunction, total)
     event.ts = tsCodeGenFunction
     totalEvents.append(event)
     
     // backend
-    event = makeDurEvent(tid, "Total Backend", stats.totalBackend, total)
+    event = makeDurEvent(tid, "Backend", stats.totalBackend, total)
     event.ts = stats.backendStart
     totalEvents.append(event)
     
-    event = makeDurEvent(tid, "Total Optimizer", stats.totalOptimizer, total)
+    event = makeDurEvent(tid, "Optimizer", stats.totalOptimizer, total)
     event.ts = stats.backendStart
     totalEvents.append(event)
     
-    // event = makeDurEvent(tid, "Total OptModule", stats.totalOptModule, total)
+    // event = makeDurEvent(tid, "OptModule", stats.totalOptModule, total)
     // event.ts = stats.backendStart + stats.totalOptimizer
     // totalEvents.append(event)
     
-    event = makeDurEvent(tid, "Total CodeGenPasses", stats.totalCodeGenPasses, total)
+    event = makeDurEvent(tid, "CodeGenPasses", stats.totalCodeGenPasses, total)
     event.ts = stats.backendStart + stats.totalOptimizer
     totalEvents.append(event)
     
-    event = makeDurEvent(tid, "Total OptFunction", stats.totalOptFunction, total)
+    event = makeDurEvent(tid, "OptFunction", stats.totalOptFunction, total)
     event.ts = stats.backendStart + stats.totalOptimizer
     totalEvents.append(event)
     
@@ -1754,15 +1762,25 @@ func loadFileJS(_ file: File) -> String? {
                     catapultProfile.traceEvents![i].name = url.lastPathComponent
                 }
                 else if event.name == "InstantiateFunction" ||
-                            event.name == "InstantiateClass" ||
+                            event.name == "CodeGen Function" ||
                             event.name == "OptFunction" ||
+                            event.name == "InstantiateClass" ||
                             event.name == "ParseClass" ||
                             event.name == "DebugType" || // these take a while
-                            event.name == "CodeGen Function" ||
                             event.name == "RunPass"
                 {
+                    // Note: instantiationFunction/Class are nested
+                    // so really only want to track times on the top call.
+                    
                     // This is a symbol name
-                    let detail = event.args!["detail"]!.value as! String
+                    var detail = event.args!["detail"]!.value as! String
+                    
+                    // replace namespaces in the detail
+                    let namespaces = ["std::", "kram::", "eastl::"]
+                    for namespace in namespaces {
+                        detail = detail.replacing(namespace, with:"")
+                    }
+                    
                     catapultProfile.traceEvents![i].name = detail
                 }
                 
@@ -2288,7 +2306,7 @@ A tool to help profile mem, perf, and builds.
                 openFileSelection(myWebView)
                 //focusedField = .webView
             }
-            .navigationTitle(generateNavigationTitle(selection))
+            .navigationTitle(generateNavigationTitle(selection, fileSearcher.files))
             .onOpenURL { url in
                 openFileFromURLs(urls: [url])
                 //focusedField = .webView
@@ -2448,11 +2466,11 @@ A tool to help profile mem, perf, and builds.
                     let timer = Timer()
                     
                     // TODO: call parse from the buildTimings task.  Then it's done in
-                    // background.  A new  should use the same unique filename.  Then
-                    // this needs to analyze only specific files that were parsed.
+                    // background and cached.  A new file  should use the same unique filename.
+                    // This this needs to analyze only specific files passed to analyze.
                     let cba = CBA()
                     cba.parseAll(fileDatas, filenames: filenames)
-                    let cbaReport = cba.analyze()
+                    let cbaReport = cba.analyzeAll()
                     
                     timer.stop()
                     log.info("finished updating CBA timings in \(double:timer.timeElapsed(), decimals:3)s")

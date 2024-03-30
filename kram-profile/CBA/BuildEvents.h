@@ -36,13 +36,17 @@ struct DetailIndex
     int idx;
     explicit DetailIndex(int d = 0) : idx(d) {}
     
-    // TODO: C++20 can autogen most of these from like <=> operator
+#if __cplusplus >= 202002L
+    // C++20 can autogen most of these from like <=> operator
+    auto operator<=>(const DetailIndex& rhs) const = default;
+#else
     bool operator==(DetailIndex rhs) const { return idx == rhs.idx; }
     bool operator!=(DetailIndex rhs) const { return idx != rhs.idx; }
     bool operator<(DetailIndex rhs) const { return idx < rhs.idx; }
     bool operator>(DetailIndex rhs) const { return idx > rhs.idx; }
     bool operator<=(DetailIndex rhs) const { return idx <= rhs.idx; }
     bool operator>=(DetailIndex rhs) const { return idx >= rhs.idx; }
+#endif
 };
 
 struct EventIndex
@@ -50,13 +54,17 @@ struct EventIndex
     int idx;
     explicit EventIndex(int e = -1) : idx(e) {}
     
-    // TODO: C++20 can autogen most of these from like <=> operator
+#if __cplusplus >= 202002L
+    // C++20 can autogen most of these from like <=> operator
+    auto operator<=>(const EventIndex& rhs) const = default;
+#else
     bool operator==(EventIndex rhs) const { return idx == rhs.idx; }
     bool operator!=(EventIndex rhs) const { return idx != rhs.idx; }
     bool operator<(EventIndex rhs) const { return idx < rhs.idx; }
     bool operator>(EventIndex rhs) const { return idx > rhs.idx; }
     bool operator<=(EventIndex rhs) const { return idx <= rhs.idx; }
     bool operator>=(EventIndex rhs) const { return idx >= rhs.idx; }
+#endif
 };
 
 namespace std

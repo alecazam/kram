@@ -223,11 +223,40 @@ func generateDuration(file: File) -> String {
     return "\(double:file.duration, decimals:3)\(unitText)"
 }
 
-func generateNavigationTitle(_ sel: String?) -> String {
+func generateTotalDuration(_ file: File, _ buildFiles: [File]) -> String {
+    if buildFiles.isEmpty { return "" }
+    
+    // add up duration of all files related to selection
+    var totalDuration = 0.0
+    for buildFile in buildFiles {
+        totalDuration += buildFile.duration
+    }
+    
+    if totalDuration == 0.0 { return "" }
+    var text = "/ \(double:totalDuration, decimals:3)s "
+    
+    // only show percent if high enough
+    let totalPercent = file.duration * 100.0 / totalDuration
+    if totalPercent >= 1 {
+        text += "\(double:totalPercent, decimals:0)% "
+    }
+    return text
+}
+
+func generateNavigationTitle(_ sel: String?, _ files: [File]) -> String {
     if sel == nil { return "" }
     
     let f = lookupFile(selection: sel!)
-    var text = generateDuration(file: f) + " " + f.name
+    var text = generateDuration(file: f) + " "
+    
+    // total the durations matching the selection
+    if f.fileType == .Build {
+        let buildFiles = findFilesForBuildTimings(files: files, selection: sel!)
+        text += generateTotalDuration(f, buildFiles)
+    }
+    
+    // add the shortened filename
+    text += f.name
     
     // add the archive name
     if let fileArchive = f.archive {

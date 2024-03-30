@@ -62,13 +62,22 @@
 }
 
 
-- (NSString* _Nonnull)analyze {
+- (NSString* _Nonnull)analyzeAll {
     // Run the analysis on data from the parser.
     std::string out;
     DoAnalysis(GetBuildEvents(*parser), GetBuildNames(*parser), out);
     
     return [NSString stringWithUTF8String:out.c_str()];
 }
+
+- (NSString* _Nonnull)analyze:(NSArray<NSString*> * _Nonnull)filenames {
+    // Run the analysis on data from the parser.
+    std::string out;
+    DoAnalysis(GetBuildEvents(*parser), GetBuildNames(*parser), out);
+    
+    return [NSString stringWithUTF8String:out.c_str()];
+}
+
 
 
 
