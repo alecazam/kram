@@ -98,6 +98,7 @@ class File: Identifiable, Hashable, Equatable, Comparable
     
     // This is only updated for Build fileType
     var buildTimings: [String:BuildTiming] = [:]
+    var buildFunctionTimings = BuildFunctionTimings()
     var buildStats: BuildStats?
     
     // only available for memory file type right now
@@ -146,6 +147,7 @@ class File: Identifiable, Hashable, Equatable, Comparable
         if fileType == .Build {
             // for build fileType
             buildTimings.removeAll()
+            buildFunctionTimings.reset()
             buildStats = nil
         }
         else if fileType == .Memory {

@@ -38,13 +38,13 @@ import UniformTypeIdentifiers
 // Build traces
 // DONE: build hierarchy and self times
 // DONE: background process to compute buildTimings across all files
-// TODO: parse totals from build traces, what CBA is doing
-// TODO: present total time, and % of total in the nav panel
-// TODO: add a total time, and show that in the nav panel, and % of total
+// DONE: add a total time, and show that in the nav panel, and % of total
 //   then know for a summary what the total time spend compiling is.
-// TODO: duration isn't updating properly when doing Reload on loose files
+// TODO: parse instantiateFunction totals from build traces, what CBA is doing
+//   avoid InstatiateClass since it's a child
+// TODO: parse optFunction totals from build traces, what CBA is doing
+// TODO: duration isn't updating properly when doing Reload on loose files, but thought this fixed
 // TODO: add children of each archive, so those show in the list and can collapse
-// TODO: add refreshable
 
 // Perf traces
 // TODO: build per-thread hierarchy and self times
@@ -67,6 +67,7 @@ import UniformTypeIdentifiers
 
 // TODO: look into fast crc32 ops on M1
 //  can use this on loose fils as a hash, and also compare to zip files
+//  already have a crc32 in the zip lib
 // https://dougallj.wordpress.com/2022/05/22/faster-crc32-on-the-apple-m1/
 
 // Build traces
@@ -80,7 +81,7 @@ import UniformTypeIdentifiers
 // table if global would need to use same index across all files.
 // Can rebuild references on JS side to send less data.  JS can then alias strings ftw.
 // Just add special ph type that is ignored by web to specify the alias.
-// TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The Catapult json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
+// TODO: work on sending a more efficient form.  Could use Perfetto SDK to write to prototbuf.  The perfetto json format is overly verbose.  Need some thread and scope strings, some open/close timings that reference a scope string and thread.
 // TODO: add compressed format, build up Pefetto json or binary from this
 //  may need one for mmap, other for super compact deltas
 //  can still alias strings from mmap
@@ -651,7 +652,8 @@ func showTimeRangeJS(objTimeScript: String) -> String? {
     return objTimeScript + script
 }
 
-struct CatapultEvent: Codable {
+// These are really json events from perfetto profile.
+struct PerfettoEvent: Codable {
     var cat: String?
     var pid: Int?
     var tid: Int?
@@ -694,10 +696,10 @@ struct CatapultEvent: Codable {
     }
 }
 
-struct CatapultProfile: Codable {
-    var traceEvents: [CatapultEvent]?
+struct PerfettoProfile: Codable {
+    var traceEvents: [PerfettoEvent]?
     
-    // not a part of the Catapult spec, but clang writes this when it zeros
+    // not a part of the perfetto spec, but clang writes this when it zeros
     // out the startTime
     var beginningOfTime: Int?
 }
@@ -766,19 +768,108 @@ class ThreadInfo : Hashable, Equatable, Comparable {
     
 }
 
+class BuildFunctionTiming {
+    var count = 0
+    var duration = 0
+    
+    func combine(_ duration: Int) {
+        self.duration += duration
+        self.count += 1
+    }
+    func combine(_ timing: BuildFunctionTiming) {
+        self.duration += timing.duration
+        self.count += timing.count
+    }
+}
+
+class BuildFunctionTimings {
+    var optFunctions: [String:BuildFunctionTiming] = [:]
+    var instantiateFunctions: [String:BuildFunctionTiming] = [:]
+    
+    func combine(_ event: PerfettoEvent) {
+        if event.name == "OptFunction" {
+            let detail = event.args!["detail"]!.value as! String
+            let dur = event.dur!
+            
+            // With classes need to create a new one to combine into
+            if let f = optFunctions[detail] {
+                f.combine(dur)
+            }
+            else {
+                let f = BuildFunctionTiming()
+                f.combine(dur)
+                optFunctions[detail] = f
+            }
+        }
+        else if event.name == "InstantiateFunction" {
+            let detail = event.args!["detail"]!.value as! String
+            let dur = event.dur!
+            
+            if let f = instantiateFunctions[detail] {
+                f.combine(dur)
+            }
+            else {
+                let f = BuildFunctionTiming()
+                f.combine(dur)
+                instantiateFunctions[detail] = f
+            }
+        }
+    }
+    
+    func combine(_ timings: BuildFunctionTimings) {
+        for pair in timings.optFunctions {
+            let detail = pair.key
+            let timing = pair.value
+            
+            if let f = optFunctions[detail] {
+                f.combine(timing)
+            }
+            else {
+                let f = BuildFunctionTiming()
+                f.combine(timing)
+                optFunctions[detail] = f
+            }
+        }
+        for pair in timings.instantiateFunctions {
+            let detail = pair.key
+            let timing = pair.value
+            
+            if let f = instantiateFunctions[detail] {
+                f.combine(timing)
+            }
+            else {
+                let f = BuildFunctionTiming()
+                f.combine(timing)
+                instantiateFunctions[detail] = f
+            }
+        }
+    }
+    
+    func reset() {
+        optFunctions.removeAll()
+        instantiateFunctions.removeAll()
+    }
+}
+
 // Could also process each build timings in a threaded task.  That what CBA is doing.
 class BuildTiming: NSCopying {
-    var name = ""
+    var name = "" // duped with key of map
+    var type = ""
     var count = 0
     var duration = 0
     var durationSub = 0
     var durationSelf: Int { return max(0, duration - durationSub) }
-    var type = ""
     
     func combine(_ duration: Int, _ durationSub: Int) {
         self.duration += duration
         self.durationSub += durationSub
         self.count += 1
+    }
+    
+    func combine(_ timing: BuildTiming) {
+        self.duration += timing.duration
+        self.durationSub += timing.durationSub
+        self.count += timing.count
     }
     
     // This is annoying in Swift
@@ -793,7 +884,7 @@ class BuildTiming: NSCopying {
       }
 }
 
-func updateFileBuildTimings(_ events: [CatapultEvent]) -> [String:BuildTiming] {
+func updateFileBuildTimings(_ events: [PerfettoEvent]) -> [String:BuildTiming] {
     var buildTimings: [String:BuildTiming] = [:]
     
     // DONE: would be nice to compute the self times.  This involves
@@ -802,7 +893,7 @@ func updateFileBuildTimings(_ events: [CatapultEvent]) -> [String:BuildTiming] {
     // See what CBA and Perfetto do to establish this.
     
     // Would be good to establish this nesting once and store the level
-    // with each event.d
+    // with each event.
     
     // run through each file, and build a local map of name to size count
     for i in 0..<events.count {
@@ -852,7 +943,14 @@ func postBuildTimingsReport(files: [File]) -> String? {
     if buildTimings.isEmpty { return nil }
     let buildStats = mergeFileBuildStats(files:files)
     
-    let buildJsonBase64 = generateBuildReport(buildTimings: buildTimings, buildStats: buildStats)
+    // merge the function stats
+    // TODO: could to more to highlight and crunch template strings
+    let buildFunctionTimings = BuildFunctionTimings()
+    for file in files {
+        buildFunctionTimings.combine(file.buildFunctionTimings)
+    }
+    
+    let buildJsonBase64 = generateBuildReport(buildTimings: buildTimings, buildFunctionTimings: buildFunctionTimings, buildStats: buildStats)
     let buildJS = postLoadFileJS(fileContentBase64: buildJsonBase64, title: "BuildTimings")
     return buildJS
 }
@@ -883,12 +981,13 @@ func mergeFileBuildTimings(files: [File]) -> [String:BuildTiming] {
     for file in files {
         // merge and combine duplicates
         for buildTiming in file.buildTimings {
-            if buildTimings[buildTiming.key] == nil {
-                buildTimings[buildTiming.key] = (buildTiming.value.copy() as! BuildTiming)
+            let v = buildTiming.value
+            if let bt = buildTimings[buildTiming.key] {
+                bt.combine(v.duration, v.durationSub)
             }
             else {
-                let v = buildTiming.value
-                buildTimings[buildTiming.key]!.combine(v.duration, v.durationSub)
+                // need to copy to setup name/type
+                buildTimings[buildTiming.key] = (v.copy() as! BuildTiming)
             }
         }
         // buildTimings.merge didn't work, combine src values
@@ -897,39 +996,43 @@ func mergeFileBuildTimings(files: [File]) -> [String:BuildTiming] {
     return buildTimings
 }
 
-func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildStats) -> String {
+func generateBuildReport(buildTimings: [String:BuildTiming], buildFunctionTimings: BuildFunctionTimings, buildStats: BuildStats) -> String {
     // now convert those timings back into a perfetto displayable report
     // So just need to build up the json above into events on tracks
-    var events: [CatapultEvent] = []
+    var events: [PerfettoEvent] = []
 
     // Also sort or assign a sort_index to the tracks.  Sort biggest to smallest.
     // Make the threadName for the track be the short filename.
     
     // add the thread names, only using 3 threads
     if true {
-        let names = ["ParseTime", "ParseCount", "ParseSelf", "OptimizeTime"]
+        let names = ["ParseTime", "ParseCount", "ParseSelf", "OptimizeTime", "InstFunc", "OptimizeFunc"]
         for i in 0..<names.count {
-            let event = CatapultEvent(tid: i+1, threadName: names[i])
+            let event = PerfettoEvent(tid: i+1, threadName: names[i])
             events.append(event)
         }
     }
     
+    // total the parse and optimization timings
     var parseTiming = 0
     var optimizeTiming = 0
     
     for t in buildTimings.values {
         let isHeader = t.type == "Source"
+        let isOptimize = t.type == "OptFunction"
         
         if isHeader {
             parseTiming += t.duration
         }
-        else {
+        else if isOptimize {
             optimizeTiming += t.duration
         }
     }
     
     let parseTimingInv = 1.0 / Double(parseTiming)
     let optimizeTimingInv = 1.0 / Double(optimizeTiming)
+    
+    var event = PerfettoEvent(0, "", 0)
     
     for buildTiming in buildTimings {
         let t = buildTiming.value
@@ -939,11 +1042,12 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildSt
         
         let dur = Double(t.duration) * 1e-6
         let durSelf = Double(t.durationSelf) * 1e-6
-        var event = CatapultEvent(0, "", t.duration)
+        event.dur = t.duration
         
         // Need to see this in the name due to multiple sorts
         
         let isHeader = t.type == "Source"
+        let isOptimize = t.type == "OptFunction"
         
         // add count in seconds, so can view sorted by count below the duration above
         if isHeader {
@@ -972,7 +1076,7 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildSt
                 events.append(event)
             }
         }
-        else {
+        else if isOptimize {
             // for now skip small contributions
             let percent = Double(t.duration) * optimizeTimingInv
             if percent < 0.01 { continue }
@@ -983,6 +1087,52 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildSt
             event.tid = 4
             events.append(event)
         }
+    }
+    
+    let doFunctionTimings = true
+    if doFunctionTimings {
+        // compute inverse timings
+        var timing = 0
+        for time in buildFunctionTimings.instantiateFunctions.values {
+            timing += time.duration
+        }
+        let timingInv = 1.0 / Double(timing)
+        event.tid = 5
+        
+        // dump the highest ones
+        for tPair in buildFunctionTimings.instantiateFunctions {
+            let duration = tPair.value.duration
+            let percent = Double(duration) * timingInv
+            if percent < 0.01 { continue }
+            
+            let dur = Double(duration) * 1e-6
+            event.name = "\(tPair.key) \(double: dur, decimals:2, zero: false)s \(tPair.value.count)x"
+            event.dur = duration
+            events.append(event)
+        }
+    }
+    
+    if doFunctionTimings {
+        // compute inverse timings
+        var timing = 0
+        for time in buildFunctionTimings.optFunctions.values {
+            timing += time.duration
+        }
+        let timingInv = 1.0 / Double(timing)
+        event.tid = 6
+        
+        // dump the highest ones
+        for tPair in buildFunctionTimings.optFunctions {
+            let duration = tPair.value.duration
+            let percent = Double(duration) * timingInv
+            if percent < 0.01 { continue }
+            
+            let dur = Double(duration) * 1e-6
+            event.name = "\(tPair.key) \(double: dur, decimals:2, zero: false)s \(tPair.value.count)x"
+            event.dur = duration
+            events.append(event)
+        }
+        
     }
     
     events.sort {
@@ -1010,12 +1160,12 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildSt
     let totalTrackEvents = convertStatsToTotalTrack(buildStats)
     events += totalTrackEvents
     
-    let catapultProfile = CatapultProfile(traceEvents: events)
+    let perfettoProfile = PerfettoProfile(traceEvents: events)
     
     do {
         // json encode, compress, and then base64 encode that
         let encoder = JSONEncoder()
-        let fileContentFixed = try encoder.encode(catapultProfile)
+        let fileContentFixed = try encoder.encode(perfettoProfile)
         
         // gzip compress the data before sending it over
         guard let compressedData = fileContentFixed.gzip() else { return "" }
@@ -1032,13 +1182,13 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildStats: BuildSt
 
 
 // TODO: Hook this up for memory traces, build more efficient array of thread events
-func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
+func sortThreadsByName(_ perfettoProfile: inout PerfettoProfile) {
     
     var threads: [Int: [Int]] = [:]
     
     // first sort each thread
-    for i in 0..<catapultProfile.traceEvents!.count {
-        let event = catapultProfile.traceEvents![i]
+    for i in 0..<perfettoProfile.traceEvents!.count {
+        let event = perfettoProfile.traceEvents![i]
         
         guard let tid = event.tid else { continue }
         if event.ts == nil || event.dur == nil { continue }
@@ -1061,8 +1211,8 @@ func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
         
         // sort each thread by name then dur
         thread.sort {
-            let lval = catapultProfile.traceEvents![$0]
-            let rval = catapultProfile.traceEvents![$1]
+            let lval = perfettoProfile.traceEvents![$0]
+            let rval = perfettoProfile.traceEvents![$1]
             
             let lname = lval.name ?? ""
             let rname = lval.name ?? ""
@@ -1077,14 +1227,14 @@ func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
         // Note this 0's them out, but could preserve min startTime
         var startTime = 0
         for i in thread {
-            catapultProfile.traceEvents![i].ts = startTime
-            startTime += catapultProfile.traceEvents![i].dur!
+            perfettoProfile.traceEvents![i].ts = startTime
+            startTime += perfettoProfile.traceEvents![i].dur!
         }
         
         // combine nodes, and store a count into the name
         // easier to mke a new array, and replace the other
         //var combineIndex = 0
-        // for i in 1..<catapultProfile.traceEvents![i]
+        // for i in 1..<perfettoProfile.traceEvents![i]
         
     }
     
@@ -1092,12 +1242,12 @@ func sortThreadsByName(_ catapultProfile: inout CatapultProfile) {
 }
 
 // these are per thread min/max for memory reports
-func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: File) {
+func updateThreadInfo(_ perfettoProfile: PerfettoProfile, _ file: File) {
     // was using Set<>, but having trouble with lookup
     var threadInfos: [Int: ThreadInfo] = [:]
     
-    for i in 0..<catapultProfile.traceEvents!.count {
-        let event = catapultProfile.traceEvents![i]
+    for i in 0..<perfettoProfile.traceEvents!.count {
+        let event = perfettoProfile.traceEvents![i]
         
         // have to have tid to associate with ThreadInfo
         guard let tid = event.tid, 
@@ -1137,7 +1287,7 @@ func updateThreadInfo(_ catapultProfile: CatapultProfile, _ file: File) {
     file.threadInfo = text
 }
 
-func updateDuration(_ events: [CatapultEvent]) -> Double {
+func updateDuration(_ events: [PerfettoEvent]) -> Double {
     var startTime = Int.max
     var endTime = Int.min
     
@@ -1163,14 +1313,14 @@ func updateDuration(_ events: [CatapultEvent]) -> Double {
 
 // After calling this, can compute the self time, and have the parent hierarchy to draw
 // events as a flamegraph.
-func computeEventParentsAndDurSub(_ events: inout [CatapultEvent]) {
+func computeEventParentsAndDurSub(_ events: inout [PerfettoEvent]) {
     // see CBA FindParentChildrenIndices for the adaption here
     // Clang Build Analyzer https://github.com/aras-p/ClangBuildAnalyzer
     // SPDX-License-Identifier: Unlicense
     // https://github.com/aras-p/ClangBuildAnalyzer/blob/main/src/Analysis.cpp
     
     // copy the events, going to replace this array with more data
-    //var events = catapultProfile.traceEvents!
+    //var events = perfettoProfile.traceEvents!
     
     var sortedIndices: [Int] = []
     for i in 0..<events.count {
@@ -1375,21 +1525,52 @@ func updateBuildTimingTask(_ file: File) throws {
     }
     
     let decoder = JSONDecoder()
-    let catapultProfile = try decoder.decode(CatapultProfile.self, from: json)
-    if catapultProfile.traceEvents == nil { // an array
+    let perfettoProfile = try decoder.decode(PerfettoProfile.self, from: json)
+    if perfettoProfile.traceEvents == nil { // an array
         return
     }
     
-    var events = catapultProfile.traceEvents!
+    var events = perfettoProfile.traceEvents!
     
     // demangle the OptFunction name
     for i in 0..<events.count {
         let event = events[i]
-        if event.name == "OptFunction" {
+        if event.name == "OptFunction"  {
             let detail = event.args!["detail"]!.value as! String
+            
+            // demangle worked
             if let demangledName = demangleSymbolName(detail) {
-                let symbolName = String(cString: demangledName)
+                var symbolName = String(cString: demangledName)
                 
+                // remove namespaces for readability
+                replaceFunctionNamespaces(&symbolName)
+                
+                if symbolName != detail {
+                    events[i].args!["detail"] = AnyCodable(symbolName)
+                }
+            }
+            else {
+                // couldn't demangle, so this probably won't work
+                var symbolName = detail
+                
+                // remove namespaces for readability
+                replaceFunctionNamespaces(&symbolName)
+                
+                if symbolName != detail {
+                    events[i].args!["detail"] = AnyCodable(symbolName)
+                }
+            }
+        }
+        else if event.name == "InstantiateFunction" {
+            // This is already demangled by clang before recorded
+            // so only need to replace the namespace
+            let detail = event.args!["detail"]!.value as! String
+            
+            var symbolName = detail
+            
+            replaceFunctionNamespaces(&symbolName)
+            
+            if symbolName != detail {
                 events[i].args!["detail"] = AnyCodable(symbolName)
             }
         }
@@ -1400,7 +1581,7 @@ func updateBuildTimingTask(_ file: File) throws {
         file.duration = updateDuration(events)
     }
     
-    // Do this before the names are replaced below
+    // this empty test is at the top too
     if file.buildTimings.isEmpty {
         file.buildStats = generateStatsForTotalTrack(events)
         
@@ -1409,8 +1590,30 @@ func updateBuildTimingTask(_ file: File) throws {
         
         file.buildTimings = updateFileBuildTimings(events)
     }
+    
+    // losing the events at the end of this call, they should
+    // each be unique, so don't really need a map.  But could be
+    // non-unique if strip out the template types.
+    for i in 0..<events.count {
+        let event = events[i]
+        
+        // TODO: may want to strip template args for more consolidation
+        // like that would say which templates are over instantiated
+        
+        // InstantiateFunction has deep nesting, OptFunction may not be
+        if event.parentIndex == nil || event.parentIndex! < 0 { continue }
+        let parentEvent = events[event.parentIndex!]
+        
+        if event.name == "OptFunction"  {
+            if parentEvent.name == "OptFunction" { continue }
+            file.buildFunctionTimings.combine(event)
+        }
+        else if event.name == "InstantiateFunction"  {
+            if parentEvent.name == "InstantiateFunction" { continue }
+            file.buildFunctionTimings.combine(event)
+        }
+    }
 }
-
 
 /* These are types CBA is looking at.  It's not looking at any totals
  DebugType isn't in this.
@@ -1475,7 +1678,7 @@ func updateBuildTimingTask(_ file: File) throws {
  */
 
 // add a single track with hierarchical totals
-func generateStatsForTotalTrack(_ events: [CatapultEvent]) -> BuildStats {
+func generateStatsForTotalTrack(_ events: [PerfettoEvent]) -> BuildStats {
     let stats = BuildStats()
     
     // useful totals to track, many more in the files
@@ -1536,22 +1739,22 @@ func generateStatsForTotalTrack(_ events: [CatapultEvent]) -> BuildStats {
     return stats
 }
 
-func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
+func convertStatsToTotalTrack(_ stats: BuildStats) -> [PerfettoEvent] {
     
-    var totalEvents: [CatapultEvent] = []
+    var totalEvents: [PerfettoEvent] = []
     
     // This is really ugly, change to using class?
     
     let tid = 0
-    let trackEvent = CatapultEvent(tid: tid, threadName: "Build Totals")
+    let trackEvent = PerfettoEvent(tid: tid, threadName: "Build Totals")
     totalEvents.append(trackEvent)
     
     // This is a struct, so can modify copy and add
-    var event: CatapultEvent
+    var event: PerfettoEvent
     
-    func makeDurEvent(_ tid: Int, _ name: String, _ dur: Int, _ total: Int) -> CatapultEvent {
+    func makeDurEvent(_ tid: Int, _ name: String, _ dur: Int, _ total: Int) -> PerfettoEvent {
         let percent = 100.0 * Double(dur) / Double(total)
-        return CatapultEvent(tid, "\(double:percent, decimals:0)% \(name)", dur)
+        return PerfettoEvent(tid, "\(double:percent, decimals:0)% \(name)", dur)
     }
     let total = stats.totalExecuteCompiler
     
@@ -1638,6 +1841,14 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [CatapultEvent] {
     return totalEvents
 }
 
+func replaceFunctionNamespaces(_ detail: inout String) {
+    // replace namespaces in the detail
+    let namespaces = ["std::", "kram::", "eastl::"]
+    for namespace in namespaces {
+        detail = detail.replacing(namespace, with:"")
+    }
+}
+
 func loadFileJS(_ file: File) -> String? {
     
     do {
@@ -1680,23 +1891,23 @@ func loadFileJS(_ file: File) -> String? {
                 // walk the file and compute the duration if we don't already have it
                 if isJson && file.duration == 0.0 {
                     let decoder = JSONDecoder()
-                    let catapultProfile = try decoder.decode(CatapultProfile.self, from: fileContent)
+                    let perfettoProfile = try decoder.decode(PerfettoProfile.self, from: fileContent)
                     
-                    if catapultProfile.traceEvents == nil {
+                    if perfettoProfile.traceEvents == nil {
                         return nil
                     }
             
-                    file.duration = updateDuration(catapultProfile.traceEvents!)
+                    file.duration = updateDuration(perfettoProfile.traceEvents!)
                     
                     // For now, just log the per-thread info
                     if file.fileType == .Memory {
-                        updateThreadInfo(catapultProfile, file)
+                        updateThreadInfo(perfettoProfile, file)
                     }
                     
-                    // This mods the catapult profile to store parentIndex and durSub
+                    // This mods the perfetto profile to store parentIndex and durSub
                     // the call has build specific code right now
                     //else if file.fileType == .Perf {
-                    //    computeEventParentsAndDurSub(&catapultProfile)
+                    //    computeEventParentsAndDurSub(&perfettoProfile)
                     //}
                 }
             }
@@ -1726,21 +1937,23 @@ func loadFileJS(_ file: File) -> String? {
             // here having to ungzip and decode just to display the content
             // have already processed the build files in an async task
             let decoder = JSONDecoder()
-            var catapultProfile = try decoder.decode(CatapultProfile.self, from: json)
+            var perfettoProfile = try decoder.decode(PerfettoProfile.self, from: json)
             
-            if catapultProfile.traceEvents == nil {
+            if perfettoProfile.traceEvents == nil {
                 return nil
             }
             
             // demangle the OptFunction name
-            for i in 0..<catapultProfile.traceEvents!.count {
-                let event = catapultProfile.traceEvents![i]
+            // This is the only name not demangled
+            // https://github.com/llvm/llvm-project/issues/45901
+            for i in 0..<perfettoProfile.traceEvents!.count {
+                let event = perfettoProfile.traceEvents![i]
                 if event.name == "OptFunction" {
                     let detail = event.args!["detail"]!.value as! String
                     if let demangledName = demangleSymbolName(detail) {
                         let symbolName = String(cString: demangledName)
                         
-                        catapultProfile.traceEvents![i].args!["detail"] = AnyCodable(symbolName)
+                        perfettoProfile.traceEvents![i].args!["detail"] = AnyCodable(symbolName)
                     }
                 }
             }
@@ -1748,8 +1961,8 @@ func loadFileJS(_ file: File) -> String? {
             // Replace Source with actual file name on Clang.json files
             // That's just for the parse phase, probably need for optimization
             // phase too.
-            for i in 0..<catapultProfile.traceEvents!.count {
-                let event = catapultProfile.traceEvents![i]
+            for i in 0..<perfettoProfile.traceEvents!.count {
+                let event = perfettoProfile.traceEvents![i]
                 if  event.name == "Source" ||
                         event.name == "OptModule"
                 {
@@ -1759,7 +1972,7 @@ func loadFileJS(_ file: File) -> String? {
                     
                     // stupid immutable struct.  Makes this code untempable
                     // maybe can use class instead of struct?
-                    catapultProfile.traceEvents![i].name = url.lastPathComponent
+                    perfettoProfile.traceEvents![i].name = url.lastPathComponent
                 }
                 else if event.name == "InstantiateFunction" ||
                             event.name == "CodeGen Function" ||
@@ -1776,28 +1989,25 @@ func loadFileJS(_ file: File) -> String? {
                     var detail = event.args!["detail"]!.value as! String
                     
                     // replace namespaces in the detail
-                    let namespaces = ["std::", "kram::", "eastl::"]
-                    for namespace in namespaces {
-                        detail = detail.replacing(namespace, with:"")
-                    }
+                    replaceFunctionNamespaces(&detail)
                     
-                    catapultProfile.traceEvents![i].name = detail
+                    perfettoProfile.traceEvents![i].name = detail
                 }
                 
                 // knock out the pid.  There are "M" events setting the process_name
                 // Otherwise, display will collapse pid sections since totalTrack has no pid
-                catapultProfile.traceEvents![i].pid = nil
+                perfettoProfile.traceEvents![i].pid = nil
             }
             
             if file.buildStats != nil {
                 let totalEvents = convertStatsToTotalTrack(file.buildStats!)
                 
                 // combine these onto the end, could remove the individual tracks storing these
-                catapultProfile.traceEvents! += totalEvents
+                perfettoProfile.traceEvents! += totalEvents
             }
             
             let encoder = JSONEncoder()
-            let fileContentFixed = try encoder.encode(catapultProfile)
+            let fileContentFixed = try encoder.encode(perfettoProfile)
             
             // gzip compress the data before sending it over
             guard let compressedData = fileContentFixed.gzip() else { return nil }
