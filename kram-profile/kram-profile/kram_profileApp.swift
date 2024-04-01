@@ -40,10 +40,10 @@ import UniformTypeIdentifiers
 // DONE: background process to compute buildTimings across all files
 // DONE: add a total time, and show that in the nav panel, and % of total
 //   then know for a summary what the total time spend compiling is.
-// TODO: parse instantiateFunction totals from build traces, what CBA is doing
+// DONE: parse instantiateFunction totals from build traces, what CBA is doing
 //   avoid InstatiateClass since it's a child
-// TODO: parse optFunction totals from build traces, what CBA is doing
-// TODO: duration isn't updating properly when doing Reload on loose files, but thought this fixed
+// DONE: parse optFunction totals from build traces, what CBA is doing
+// TODO: duration may not updating properly when doing Reload on loose files, but thought this fixed
 // TODO: add children of each archive, so those show in the list and can collapse
 
 // Perf traces
@@ -816,10 +816,20 @@ class BuildFunctionTimings {
         }
     }
     
-    func combine(_ timings: BuildFunctionTimings) {
+    func combine(_ timings: BuildFunctionTimings, _ collapseNames: Bool = false) {
         for pair in timings.optFunctions {
-            let detail = pair.key
+            var detail = pair.key
             let timing = pair.value
+            
+            // go out to CBA to collapse the names
+            if collapseNames {
+                // skip non-templates
+                if detail.firstIndex(of: "<") == nil { continue }
+                
+                if let newDetail = collapseFunctionName(detail) {
+                    detail = String(cString: newDetail)
+                }
+            }
             
             if let f = optFunctions[detail] {
                 f.combine(timing)
@@ -831,8 +841,18 @@ class BuildFunctionTimings {
             }
         }
         for pair in timings.instantiateFunctions {
-            let detail = pair.key
+            var detail = pair.key
             let timing = pair.value
+            
+            // go out to CBA to collapse the names
+            if collapseNames {
+                // skip non-templates
+                if detail.firstIndex(of: "<") == nil { continue }
+                    
+                if let newDetail = collapseFunctionName(detail) {
+                    detail = String(cString: newDetail)
+                }
+            }
             
             if let f = instantiateFunctions[detail] {
                 f.combine(timing)
@@ -950,7 +970,16 @@ func postBuildTimingsReport(files: [File]) -> String? {
         buildFunctionTimings.combine(file.buildFunctionTimings)
     }
     
-    let buildJsonBase64 = generateBuildReport(buildTimings: buildTimings, buildFunctionTimings: buildFunctionTimings, buildStats: buildStats)
+    // Compute more consolidation by collapsing names
+    let buildTemplateFunctionTimings = BuildFunctionTimings()
+    buildTemplateFunctionTimings.combine(buildFunctionTimings, true)
+    
+    let buildJsonBase64 = generateBuildReport(
+        buildTimings: buildTimings,
+        buildFunctionTimings: buildFunctionTimings,
+        buildTemplateFunctionTimings: buildTemplateFunctionTimings,
+        buildStats: buildStats)
+    
     let buildJS = postLoadFileJS(fileContentBase64: buildJsonBase64, title: "BuildTimings")
     return buildJS
 }
@@ -996,7 +1025,11 @@ func mergeFileBuildTimings(files: [File]) -> [String:BuildTiming] {
     return buildTimings
 }
 
-func generateBuildReport(buildTimings: [String:BuildTiming], buildFunctionTimings: BuildFunctionTimings, buildStats: BuildStats) -> String {
+func generateBuildReport(buildTimings: [String:BuildTiming], 
+                         buildFunctionTimings: BuildFunctionTimings,
+                         buildTemplateFunctionTimings: BuildFunctionTimings,
+                         buildStats: BuildStats) -> String
+{
     // now convert those timings back into a perfetto displayable report
     // So just need to build up the json above into events on tracks
     var events: [PerfettoEvent] = []
@@ -1006,7 +1039,11 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildFunctionTiming
     
     // add the thread names, only using 3 threads
     if true {
-        let names = ["ParseTime", "ParseCount", "ParseSelf", "OptimizeTime", "InstFunc", "OptimizeFunc"]
+        let names = ["ParseTime", "ParseCount", "ParseSelf", 
+                     "OptimizeTime",
+                     "InstFunc", "OptimizeFunc",
+                     "InstTplFunc", "OptimizeTplFunc"
+        ]
         for i in 0..<names.count {
             let event = PerfettoEvent(tid: i+1, threadName: names[i])
             events.append(event)
@@ -1089,18 +1126,16 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildFunctionTiming
         }
     }
     
-    let doFunctionTimings = true
-    if doFunctionTimings {
+    func printTimings(_ functions: [String:BuildFunctionTiming], _ event: inout PerfettoEvent, _ events: inout [PerfettoEvent]) {
         // compute inverse timings
         var timing = 0
-        for time in buildFunctionTimings.instantiateFunctions.values {
+        for time in functions.values {
             timing += time.duration
         }
         let timingInv = 1.0 / Double(timing)
-        event.tid = 5
         
-        // dump the highest ones
-        for tPair in buildFunctionTimings.instantiateFunctions {
+        // dump the highest duration
+        for tPair in functions{
             let duration = tPair.value.duration
             let percent = Double(duration) * timingInv
             if percent < 0.01 { continue }
@@ -1112,27 +1147,20 @@ func generateBuildReport(buildTimings: [String:BuildTiming], buildFunctionTiming
         }
     }
     
+    // TODO: may also need to dump the highest counts
+    let doFunctionTimings = true
     if doFunctionTimings {
-        // compute inverse timings
-        var timing = 0
-        for time in buildFunctionTimings.optFunctions.values {
-            timing += time.duration
-        }
-        let timingInv = 1.0 / Double(timing)
+        event.tid = 5
+        printTimings(buildFunctionTimings.instantiateFunctions, &event, &events)
+        
         event.tid = 6
+        printTimings(buildFunctionTimings.optFunctions, &event, &events)
         
-        // dump the highest ones
-        for tPair in buildFunctionTimings.optFunctions {
-            let duration = tPair.value.duration
-            let percent = Double(duration) * timingInv
-            if percent < 0.01 { continue }
-            
-            let dur = Double(duration) * 1e-6
-            event.name = "\(tPair.key) \(double: dur, decimals:2, zero: false)s \(tPair.value.count)x"
-            event.dur = duration
-            events.append(event)
-        }
+        event.tid = 7
+        printTimings(buildTemplateFunctionTimings.instantiateFunctions, &event, &events)
         
+        event.tid = 8
+        printTimings(buildTemplateFunctionTimings.optFunctions, &event, &events)
     }
     
     events.sort {

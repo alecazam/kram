@@ -73,6 +73,72 @@ int32_t append_sprintf(string& str, const char* format, ...)
     return len;
 }
 
+// This is extracted from CBA Analysis.cpp
+extern "C" const char* _Nullable collapseFunctionName(const char* _Nonnull name_) {
+    // Adapted from code in Analysis.  Really the only call needed from CBA.
+    // serialize to multiple threads
+    static mutex sMutex;
+    static unordered_map<string, string> sMap;
+    lock_guard<mutex> lock(sMutex);
+    
+    string elt(name_);
+    auto it = sMap.find(elt);
+    if (it != sMap.end()) {
+        return it->second.c_str();
+    }
+    
+    // Parsing op<, op<<, op>, and op>> seems hard.  Just skip'm all
+    if (strstr(name_, "operator") != nullptr)
+        return nullptr;
+
+    std::string retval;
+    retval.reserve(elt.size());
+    auto b_range = elt.begin();
+    auto e_range = elt.begin();
+    while (b_range != elt.end())
+    {
+       e_range = std::find(b_range, elt.end(), '<');
+        if (e_range == elt.end())
+            break;
+        ++e_range;
+        retval.append(b_range, e_range);
+        retval.append("$");
+        b_range = e_range;
+        int open_count = 1;
+        // find the matching close angle bracket
+        for (; b_range != elt.end(); ++b_range)
+        {
+            if (*b_range == '<')
+            {
+                ++open_count;
+                continue;
+            }
+            if (*b_range == '>')
+            {
+                if (--open_count == 0)
+                {
+                    break;
+                }
+                continue;
+            }
+        }
+        // b_range is now pointing at a close angle, or it is at the end of the string
+    }
+    if (b_range > e_range)
+    {
+       // we are in a wacky case where something like op> showed up in a mangled name.
+       // just bail.
+       // TODO: this still isn't correct, but it avoids crashes.
+       return nullptr;
+    }
+    // append the footer
+    retval.append(b_range, e_range);
+    
+    // add it to the map
+    sMap[elt] = std::move(retval);
+    
+    return sMap[elt].c_str();
+}
 
 extern "C" const char* _Nullable demangleSymbolName(const char* _Nonnull symbolName_) {
     // serialize to multiple threads

@@ -38,3 +38,7 @@ typedef struct ZipEntryW {
 // This is only needed for OptFunction and backend names
 const char* _Nullable demangleSymbolName(const char* _Nonnull symbolName_);
 
+// This is really the only call needed out of CBA
+// Convert templated code to collapsed name so get more correspondence in map.
+const char* _Nullable collapseFunctionName(const char* _Nonnull name_);
+

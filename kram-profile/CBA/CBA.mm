@@ -78,8 +78,5 @@
     return [NSString stringWithUTF8String:out.c_str()];
 }
 
-
-
-
 @end
 

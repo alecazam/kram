@@ -1,6 +1,5 @@
 #import "Foundation/Foundation.h"
 
-// TODO: move to header
 @interface CBA : NSObject
 
 - (_Nonnull instancetype)init;
