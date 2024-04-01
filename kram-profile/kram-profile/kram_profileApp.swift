@@ -1042,7 +1042,7 @@ func generateBuildReport(buildTimings: [String:BuildTiming],
         let names = ["ParseTime", "ParseCount", "ParseSelf", 
                      "OptimizeTime",
                      "InstFunc", "OptimizeFunc",
-                     "InstTplFunc", "OptimizeTplFunc"
+                     "InstTplFunc", "InstTplCount", "OptimizeTplFunc"
         ]
         for i in 0..<names.count {
             let event = PerfettoEvent(tid: i+1, threadName: names[i])
@@ -1126,7 +1126,7 @@ func generateBuildReport(buildTimings: [String:BuildTiming],
         }
     }
     
-    func printTimings(_ functions: [String:BuildFunctionTiming], _ event: inout PerfettoEvent, _ events: inout [PerfettoEvent]) {
+    func printTimings(_ functions: [String:BuildFunctionTiming], _ event: inout PerfettoEvent, _ events: inout [PerfettoEvent], isCount: Bool = false ) {
         // compute inverse timings
         var timing = 0
         for time in functions.values {
@@ -1137,29 +1137,42 @@ func generateBuildReport(buildTimings: [String:BuildTiming],
         // dump the highest duration
         for tPair in functions{
             let duration = tPair.value.duration
+            let count = tPair.value.count
+            
             let percent = Double(duration) * timingInv
             if percent < 0.01 { continue }
             
             let dur = Double(duration) * 1e-6
-            event.name = "\(tPair.key) \(double: dur, decimals:2, zero: false)s \(tPair.value.count)x"
-            event.dur = duration
+            event.name = "\(tPair.key) \(double: dur, decimals:2, zero: false)s \(count)x"
+            if isCount {
+                // in 0.1s per count so they show up
+                event.dur = count * 10000
+            }
+            else {
+                event.dur = duration
+            }
             events.append(event)
         }
     }
     
-    // TODO: may also need to dump the highest counts
     let doFunctionTimings = true
     if doFunctionTimings {
+        // function (templates + regular)
         event.tid = 5
         printTimings(buildFunctionTimings.instantiateFunctions, &event, &events)
         
         event.tid = 6
         printTimings(buildFunctionTimings.optFunctions, &event, &events)
         
+        //------
+        // templates
         event.tid = 7
         printTimings(buildTemplateFunctionTimings.instantiateFunctions, &event, &events)
         
         event.tid = 8
+        printTimings(buildTemplateFunctionTimings.instantiateFunctions, &event, &events, isCount: true)
+        
+        event.tid = 9
         printTimings(buildTemplateFunctionTimings.optFunctions, &event, &events)
     }
     
