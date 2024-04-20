@@ -33,6 +33,7 @@ class BuildStats {
     var totalInstantiateFunction = 0
     var totalInstantiateClass = 0
     var totalCodeGenFunction = 0
+    var totalDebugType = 0
     
     var totalBackend = 0
     var totalOptimizer = 0
@@ -47,6 +48,7 @@ class BuildStats {
         totalInstantiateFunction += rhs.totalInstantiateFunction
         totalInstantiateClass += rhs.totalInstantiateClass
         totalCodeGenFunction += rhs.totalCodeGenFunction
+        totalDebugType += rhs.totalDebugType
         
         totalBackend += rhs.totalBackend
         totalOptimizer += rhs.totalOptimizer
@@ -65,6 +67,7 @@ class BuildStats {
         totalInstantiateFunction /= s
         totalInstantiateClass /= s
         totalCodeGenFunction /= s
+        totalDebugType /= s
         
         totalBackend /= s
         totalOptimizer /= s
@@ -460,9 +463,16 @@ func loadFileContent(_ file: File) -> Data {
 
 func isSupportedFilename(_ url: URL) -> Bool {
     let ext = url.pathExtension
-    
+
     // what ext does trace.zip, or trace.gz come in as ?
     // should this limit compressed files to the names supported below
+    
+    // Apple and Microsoft store resource fork data in "._Filename.trace" files
+    // so need to ignore these in the lists.  These don't occur from CLI zip,
+    // only from using Finder "Compress"
+    if url.lastPathComponent.starts(with: "._") {
+        return false
+    }
     
     if ext == "gz" {
         return true

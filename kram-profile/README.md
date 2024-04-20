@@ -173,7 +173,7 @@ This is a minimal version of Make.  But code must generate the Ninja file.  Cmak
 Unity builds
 -----------
 
-Not to be confused with the Unity game engine.  But unity builds combine several .cpp files into a single .cpp.  This works around problems with slow linkers, and multile template and inline code instantations.  But code and macros from one .cpp spill into the next.  To facilitate this, be careful about undeffing at the bottoms of files.  kram also uses a common namespaces across headers and source files.  This allows "using namespace" in both, and keeps the sources compartmentalized.
+Not to be confused with the Unity game engine.  But unity builds combine several .cpp files into a single .cpp.  This works around problems with slow linkers, and multiple template and inline code instantations.  But code and macros from one .cpp spill into the next.  To avoid this, be careful about undeffing at the bottoms of files.  kram also uses a common namespaces across headers and source files.  This allows "using namespace" in both, and keeps the namespaces compartmentalized.
 
 Precompiled headers (PCH)
 -----------
@@ -184,39 +184,67 @@ pch spread headers into files.  So the build can break if some don't use it, or 
 
 There are broken examples of setting up pch for Makefiles all over the internet.  Maybe cmake has a valid setup, but the jist is below for gcc/clang.  Make sure to verify the parse time is gone in kram-profile by looking at the clang build profiles.
 
-    # gen the .d file, written to tmp and only replaces if it changes
-    cppFlags = ... -MMD -MP (or -MD)
+Clang has options to generate a pch .o file.  This must be linked separately into the library.  This is something MSVC pch support for a long time.  gcc doesn't support this.  See the link below, and the pchObj in the makefile example below.
 
+Advanced clang pch usage
+https://maskray.me/blog/2023-07-16-precompiled-headers
+
+
+    # gen the .d file, written to tmp and only replaces if it changes
+    cppFlags = ... 
+    
+    cppDepFlags = -MMD -MP (or -MD)
+
+    # header must be unique to build (f.e. defines, etc)
+    cppBuild = $(platform)($config)
+    
     # setup the files involved, only get 1 pch per DLL/App since
     pchSrc = Precompile.h
-    pchHdr = Precompile-$(platform)($config).h
+    pchHdrSrc = Precompile-$(cppBuild).h
     pchDeps = $(pchHdr).d
-    pchObj = $(pchHdr).gch
+    pchHdr = $(pchHdrSrc).pch
+    pchObj = $(pchHdr).o
     pchIncludesDirs = -Idir1 -Idir2
-            
+    
+    # this does code gen, templates, and debuginfo into the h.pch.o file
+    pchFlags = -fpch-codegen -fpch-instantiate-templates -fpch-debuginfo
+             
     # important - only copy the hdr if it changes, don't want full rebuild every time
-    $(pchHdr): $(pchSrc)
-        $cp $< $@
+    # linux (cp -u), win (xcopy), macOS (shell compare then cp)
+    $(pchHdrSrc): $(pchSrc)
+        cp $< $@
         
     # this will output the .d and .gch file
-    $(pchObj): $(pchHdr)
-        clang++ -x c++header $(cppFlags) -c $< -o $@ -$(pchIncludesDirs)
+    $(pchHdr): $(pchHdrSrc)
+        clang++ -x c++header $(cppFlags) $(cppDepFlags) $(pchFlags) $(pchIncludesDirs) -c $< -o $@ 
         
     # this makes sure that the pch is rebuilt if hdrs within pchHdr changee
     # the - sign ignores the deps file on the first run where it does not exist.
     $(pchDeps): ;
     -include $(pchDeps)
     
+    # optional code to build .o from .pch 
+    # must link this in with the lib/exe, don't use "-x c++" here - it's ast not C++ code
+    #  speeds the build, since code isn't prepended to each .o file, and then linked.
+    $(pchObj): $(pchHdr)
+        clang++ $(cppFlags) -c $< -o $@
+    
     ....
     
-    # force include Precompile.h, 
-    # and then use the pch obj to avoid parsing (appends to top of .o)
-    cppPchFlags = -include $(pchHdr) -include-pch $(pchObj))
+    # prefix Precompile.h.pch to each .o file
+    cppPchFlags = -include-pch $(pchHdr)
    
     # now build the files
     *.cpp: ... $(pchHdr)
-        clang++ $(cppFlags) -c $< -o $@ $(cppPchFlags)
+        clang++ $(cppFlags) $(cppPchFlags) -c $< -o $@ 
 
+    # link the pchObj into the lib or ese
+    allObjs = *.o $(pchObj)
+
+    $(libOrExe): $(allObjs)
+        clang++ $< -o $@
+        
+        
 SIMD
 -----------
 

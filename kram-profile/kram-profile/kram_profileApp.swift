@@ -1522,10 +1522,34 @@ func updateBuildTimingsTask(_ files: [File]) {
     
     if counter == 0 { return }
     
+    #if false
+    
+    
+        let backgroundTaskGroup = await withTaskGroup(of: Void.self) { group in
+            for file in files {
+                if file.fileType == .Build {
+                    _ = group.addTaskUnlessCancelled {
+                        guard Task.isCancelled == false else { return }
+                              
+                        do {
+                            try await updateBuildTimingTask(file)
+                        }
+                        catch {
+                            log.error(error.localizedDescription)
+                        }
+                        
+                    }
+                }
+            }
+        }
+    
+    #else
+    
     let _ = Task(priority: .medium, operation: {
         let timer = Timer()
         
         for file in files {
+                     
             if file.fileType == .Build {
                 do {
                     try updateBuildTimingTask(file)
@@ -1539,9 +1563,10 @@ func updateBuildTimingsTask(_ files: [File]) {
         timer.stop()
         log.info("finished updating build timings in \(double:timer.timeElapsed(), decimals:3)s")
     })
+    #endif
 }
 
-func updateBuildTimingTask(_ file: File) throws {
+func updateBuildTimingTask(_ file: File) /*async */ throws {
     assert(file.fileType == .Build)
     
     // only checking this, and not duration == 0
@@ -1751,6 +1776,9 @@ func generateStatsForTotalTrack(_ events: [PerfettoEvent]) -> BuildStats {
         else if event.name == "Total CodeGen Function" {
             stats.totalCodeGenFunction = event.dur!
         }
+        else if event.name == "Total DebugType" {
+            stats.totalDebugType = event.dur!
+        }
         
         // backend
         else if event.name == "Total Backend" {
@@ -1829,7 +1857,6 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [PerfettoEvent] {
     event.ts = stats.frontendStart + stats.totalSource
     totalEvents.append(event)
     
-    
     // This total can exceed when backend start, so clamp it too
     let tsCodeGenFunction = stats.frontendStart + stats.totalSource + stats.totalInstantiateFunction
     
@@ -1840,6 +1867,19 @@ func convertStatsToTotalTrack(_ stats: BuildStats) -> [PerfettoEvent] {
     
     event = makeDurEvent(tid, "CodeGen Function", totalCodeGenFunction, total)
     event.ts = tsCodeGenFunction
+    totalEvents.append(event)
+    
+    
+    // can gen a lot of debug types, and clamp to backend
+    let tsDebugType = tsCodeGenFunction + totalCodeGenFunction
+     
+    var totalDebugType = stats.totalDebugType
+    if totalDebugType + totalDebugType > stats.backendStart {
+        totalDebugType = stats.backendStart - tsDebugType
+    }
+     
+    event = makeDurEvent(tid, "Debug", totalDebugType, total)
+    event.ts = tsDebugType
     totalEvents.append(event)
     
     // backend
