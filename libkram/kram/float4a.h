@@ -42,13 +42,6 @@ inline float32x4_t _mm_rsqrthp_ps(const float32x4_t& a)
     return _mm_mul_ps(est, stepA);
 }
 
-// sqrt
-inline float32x4_t _mm_sqrthp_ps(const float32x4_t& a)
-{
-    // sqrt(a) = a * rsqrt(a)
-    return _mm_mul_ps(_mm_rsqrthp_ps(a), a);
-}
-
 // recip
 inline float32x4_t _mm_rcphp_ps(const float32x4_t& a)
 {
@@ -67,8 +60,6 @@ inline float32x4_t _mm_rcphp_ps(const float32x4_t& a)
 #define float32x4_t __m128
 
 #define _mm_fixzero_ps(a, b) _mm_and_ps(a, _mm_cmpneq_ps(b, _mm_setzero_ps()))
-#define _mm_sqrthp_ss(a) _mm_sqrt_ss(a)
-#define _mm_sqrthp_ps(a) _mm_sqrt_ps(a)
 
 inline float32x4_t _mm_rsqrthp_ps(const float32x4_t& a)
 {
@@ -355,7 +346,7 @@ inline float4 rsqrt(const float4& vv)
 }
 inline float4 sqrt(const float4& vv)
 {
-    return float4(_mm_sqrthp_ps(vv.reg));
+    return float4(_mm_sqrt_ps(vv.reg));
 }
 
 inline float dot(const float4& lhs, const float4& rhs)

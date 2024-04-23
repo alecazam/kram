@@ -174,14 +174,18 @@ void JsonWriter::pop() {
 }
 void JsonWriter::popObject() {
     KASSERT(_stack.empty());
+#if KRAM_DEBUG
     char c = _stack.back();
     KASSERT(c == '}');
+#endif
     pop();
 }
 void JsonWriter::popArray() {
     KASSERT(_stack.empty());
+#if KRAM_DEBUG
     char c = _stack.back();
     KASSERT(c == ']');
+#endif
     pop();
 }
 

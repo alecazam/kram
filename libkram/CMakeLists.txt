@@ -226,7 +226,7 @@ if (BUILD_MAC)
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
 
         # avx1 (ignored by universal?)
-        XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx"
+        XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx2"
         
         # turn off exceptions/rtti
         XCODE_ATTRIBUTE_GCC_ENABLE_CPP_EXCEPTIONS NO
@@ -236,7 +236,8 @@ if (BUILD_MAC)
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
     )
 
-    target_compile_options(${myTargetLib} PRIVATE -W -Wall)
+    # Enable all warnings, and also enable f16c sims op
+    target_compile_options(${myTargetLib} PRIVATE -W -Wall -mf16c)
 
     # TODO: switch to pch setup (KramConfig.pch)
     # this is already done by pch for libkram, but other projects need the force include inherited
@@ -247,6 +248,7 @@ elseif (BUILD_WIN)
     
     # TODO: switch to add_target_definitions
     # TODO: turn on C++17
+    # TODO: switch to clang
 
     # to turn off exceptions/rtti use /GR and /EHsc replacement
     string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -257,7 +259,7 @@ elseif (BUILD_WIN)
     target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
        
     # all warnings, AVX, and multiprocess compiles, clang needs mf16c or -mavx2
-    target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX -mf16c /MP)
+    target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX2 -mf16c /MP)
     
     # fix STL (don't use -D here, will remove)
     target_compile_definitions(${myTargetLib} PRIVATE _ITERATOR_DEBUG_LEVEL=0 _HAS_EXCEPTIONS=0)

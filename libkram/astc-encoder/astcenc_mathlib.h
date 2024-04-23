@@ -27,46 +27,6 @@
 #include <cstdint>
 #include <cmath>
 
-#ifndef ASTCENC_POPCNT
-  #if defined(__POPCNT__)
-    #define ASTCENC_POPCNT 1
-  #else
-    #define ASTCENC_POPCNT 0
-  #endif
-#endif
-
-#ifndef ASTCENC_F16C
-  #if defined(__F16C__)
-    #define ASTCENC_F16C 1
-  #else
-    #define ASTCENC_F16C 0
-  #endif
-#endif
-
-#ifndef ASTCENC_SSE
-  #if defined(__SSE4_2__)
-    #define ASTCENC_SSE 42
-  #elif defined(__SSE4_1__)
-    #define ASTCENC_SSE 41
-  #elif defined(__SSE3__)
-    #define ASTCENC_SSE 30
-  #elif defined(__SSE2__)
-    #define ASTCENC_SSE 20
-  #else
-    #define ASTCENC_SSE 0
-  #endif
-#endif
-
-#ifndef ASTCENC_AVX
-  #if defined(__AVX2__)
-    #define ASTCENC_AVX 2
-  #elif defined(__AVX__)
-    #define ASTCENC_AVX 1
-  #else
-    #define ASTCENC_AVX 0
-  #endif
-#endif
-
 #ifndef ASTCENC_NEON
   #if defined(__aarch64__)
     #define ASTCENC_NEON 1
@@ -75,14 +35,66 @@
   #endif
 #endif
 
-#if ASTCENC_AVX
-  #define ASTCENC_VECALIGN 32
-#else
-  #define ASTCENC_VECALIGN 16
-#endif
+#if ASTCENC_NEON
 
-#if ASTCENC_SSE != 0 || ASTCENC_AVX != 0 || ASTCENC_POPCNT != 0
-	#include <immintrin.h>
+    #define ASTCENC_POPCNT 0
+    #define ASTCENC_F16C 0
+    #define ASTCENC_SSE 0
+    #define ASTCENC_AVX 0
+    #define ASTCENC_VECALIGN 16
+
+#else
+
+    #ifndef ASTCENC_SSE
+      #if defined(__SSE4_2__)
+        #define ASTCENC_SSE 42
+      #elif defined(__SSE4_1__)
+        #define ASTCENC_SSE 41
+      #elif defined(__SSE3__)
+        #define ASTCENC_SSE 30
+      #elif defined(__SSE2__)
+        #define ASTCENC_SSE 20
+      #else
+        #define ASTCENC_SSE 0
+      #endif
+    #endif
+
+    #ifndef ASTCENC_AVX
+      #if defined(__AVX2__)
+        #define ASTCENC_AVX 2
+      #elif defined(__AVX__)
+        #define ASTCENC_AVX 1
+      #else
+        #define ASTCENC_AVX 0
+      #endif
+    #endif
+
+    #ifndef ASTCENC_POPCNT
+      #if defined(__POPCNT__)
+        #define ASTCENC_POPCNT 1
+      #else
+        #define ASTCENC_POPCNT 0
+      #endif
+    #endif
+
+    #ifndef ASTCENC_F16C
+      // must set -mf16c only on x86_64 build, avx not enough on clang
+      #if defined(__F16C__)
+        #define ASTCENC_F16C 1
+      #else
+        #define ASTCENC_F16C 0
+      #endif
+    #endif
+
+    //#if ASTCENC_AVX
+    //  #define ASTCENC_VECALIGN 32
+    //#else
+      #define ASTCENC_VECALIGN 16
+    //#endif
+
+    #if ASTCENC_SSE != 0 || ASTCENC_AVX != 0 || ASTCENC_POPCNT != 0
+        #include <immintrin.h>
+    #endif
 #endif
 
 /* ============================================================================
@@ -417,15 +429,6 @@ void rand_init(uint64_t state[2]);
 uint64_t rand(uint64_t state[2]);
 
 }
-
-/* ============================================================================
-  Softfloat library with fp32 and fp16 conversion functionality.
-============================================================================ */
-#if (ASTCENC_F16C == 0) && (ASTCENC_NEON == 0)
-	/* narrowing float->float conversions */
-	uint16_t float_to_sf16(float val);
-	float sf16_to_float(uint16_t val);
-#endif
 
 /*********************************
   Vector library

@@ -49,7 +49,7 @@
 		706EEFB226D1595D001C950E /* KramLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2826D1583F001C950E /* KramLog.cpp */; };
 		706EEFB326D1595D001C950E /* KramSDFMipper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2B26D1583F001C950E /* KramSDFMipper.cpp */; };
 		706EEFB426D1595D001C950E /* KramMmapHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2C26D1583F001C950E /* KramMmapHelper.cpp */; };
-		706EEFB526D1595D001C950E /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2F26D1583F001C950E /* float4a.cpp */; };
+		706EEFB526D1595D001C950E /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2F26D1583F001C950E /* float4a.cpp */; settings = {COMPILER_FLAGS = "-mf16c"; }; };
 		706EEFB626D1595D001C950E /* Kram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE3526D1583F001C950E /* Kram.cpp */; };
 		706EEFB726D1595D001C950E /* squish.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE3D26D1583F001C950E /* squish.cpp */; };
 		706EEFB826D1595D001C950E /* colourset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE3E26D1583F001C950E /* colourset.cpp */; };
@@ -302,7 +302,7 @@
 		70871DDE27DDDBCD00D0B9E1 /* astcenc_vecmathlib_sse_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871DB127DDDBCC00D0B9E1 /* astcenc_vecmathlib_sse_4.h */; };
 		70871DDF27DDDBCD00D0B9E1 /* astcenc_mathlib_softfloat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB227DDDBCC00D0B9E1 /* astcenc_mathlib_softfloat.cpp */; };
 		70871DE027DDDBCD00D0B9E1 /* astcenc_mathlib_softfloat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB227DDDBCC00D0B9E1 /* astcenc_mathlib_softfloat.cpp */; };
-		70871DE127DDDBCD00D0B9E1 /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB327DDDBCC00D0B9E1 /* astcenc_mathlib.cpp */; };
+		70871DE127DDDBCD00D0B9E1 /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB327DDDBCC00D0B9E1 /* astcenc_mathlib.cpp */; settings = {COMPILER_FLAGS = "-mf16c"; }; };
 		70871DE227DDDBCD00D0B9E1 /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB327DDDBCC00D0B9E1 /* astcenc_mathlib.cpp */; };
 		70871DE327DDDBCD00D0B9E1 /* astcenc_decompress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB427DDDBCC00D0B9E1 /* astcenc_decompress_symbolic.cpp */; };
 		70871DE427DDDBCD00D0B9E1 /* astcenc_decompress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB427DDDBCC00D0B9E1 /* astcenc_decompress_symbolic.cpp */; };
@@ -2108,9 +2108,20 @@
 			buildSettings = {
 				CLANG_WARN_OBJC_EXPLICIT_OWNERSHIP_TYPE = YES;
 				CLANG_WARN_OBJC_REPEATED_USE_OF_WEAK = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
+				OTHER_CFLAGS = (
+					"-DCOMPILE_ASTCENC=1",
+					"-DCOMPILE_ATE=1",
+					"-DCOMPILE_ETCENC=1",
+					"-DCOMPILE_SQUISH=1",
+					"-DCOMPILE_BCENC=1",
+					"-DCOMPILE_COMP=1",
+					"-DCOMPILE_BASIS=0",
+					"-DCOMPILE_EASTL=0",
+					"-ftime-trace",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = "";
@@ -2122,9 +2133,21 @@
 			buildSettings = {
 				CLANG_WARN_OBJC_EXPLICIT_OWNERSHIP_TYPE = YES;
 				CLANG_WARN_OBJC_REPEATED_USE_OF_WEAK = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
+				OTHER_CFLAGS = (
+					"-DNDEBUG=1",
+					"-DCOMPILE_ASTCENC=1",
+					"-DCOMPILE_ATE=1",
+					"-DCOMPILE_ETCENC=1",
+					"-DCOMPILE_SQUISH=1",
+					"-DCOMPILE_BCENC=1",
+					"-DCOMPILE_COMP=1",
+					"-DCOMPILE_BASIS=0",
+					"-DCOMPILE_EASTL=0",
+					"-ftime-trace",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = "";

@@ -941,65 +941,23 @@ ASTCENC_SIMD_INLINE vfloat4 int_to_float(vint4 a)
 /**
  * @brief Return a float16 value for a float vector, using round-to-nearest.
  */
-ASTCENC_SIMD_INLINE vint4 float_to_float16(vfloat4 a)
-{
-#if ASTCENC_F16C >= 1
-	__m128i packedf16 = _mm_cvtps_ph(a.m, 0);
-	__m128i f16 = _mm_cvtepu16_epi32(packedf16);
-	return vint4(f16);
-#else
-	return vint4(
-		float_to_sf16(a.lane<0>()),
-		float_to_sf16(a.lane<1>()),
-		float_to_sf16(a.lane<2>()),
-		float_to_sf16(a.lane<3>()));
-#endif
-}
+vint4 float_to_float16(vfloat4 a);
 
 /**
  * @brief Return a float16 value for a float scalar, using round-to-nearest.
  */
-static inline uint16_t float_to_float16(float a)
-{
-#if ASTCENC_F16C >= 1
-	__m128i f16 = _mm_cvtps_ph(_mm_set1_ps(a), 0);
-	return  static_cast<uint16_t>(_mm_cvtsi128_si32(f16));
-#else
-	return float_to_sf16(a);
-#endif
-}
+uint16_t float_to_float16(float a);
 
 /**
  * @brief Return a float value for a float16 vector.
  */
-ASTCENC_SIMD_INLINE vfloat4 float16_to_float(vint4 a)
-{
-#if ASTCENC_F16C >= 1
-	__m128i packed = _mm_packs_epi32(a.m, a.m);
-	__m128 f32 = _mm_cvtph_ps(packed);
-	return vfloat4(f32);
-#else
-	return vfloat4(
-		sf16_to_float(a.lane<0>()),
-		sf16_to_float(a.lane<1>()),
-		sf16_to_float(a.lane<2>()),
-		sf16_to_float(a.lane<3>()));
-#endif
-}
+vfloat4 float16_to_float(vint4 a);
+
 
 /**
  * @brief Return a float value for a float16 scalar.
  */
-ASTCENC_SIMD_INLINE float float16_to_float(uint16_t a)
-{
-#if ASTCENC_F16C >= 1
-	__m128i packed = _mm_set1_epi16(a);
-	__m128 f32 = _mm_cvtph_ps(packed);
-	return _mm_cvtss_f32(f32);
-#else
-	return sf16_to_float(a);
-#endif
-}
+float float16_to_float(uint16_t a);
 
 /**
  * @brief Return a float value as an integer bit pattern (i.e. no conversion).
@@ -1008,7 +966,7 @@ ASTCENC_SIMD_INLINE float float16_to_float(uint16_t a)
  * some bit hackery based on knowledge they are IEEE 754 layout, and then
  * convert them back again. This is the first half of that flip.
  */
-ASTCENC_SIMD_INLINE vint4 float_as_int(vfloat4 a)
+vint4 float_as_int(vfloat4 a)
 {
 	return vint4(_mm_castps_si128(a.m));
 }
