@@ -18,7 +18,8 @@
 /**
  * @brief Soft-float library for IEEE-754.
  */
-#if (ASTCENC_F16C == 0) && (ASTCENC_NEON == 0)
+// Chopped out
+#if 0 // (ASTCENC_F16C == 0) && (ASTCENC_NEON == 0)
 
 #include "astcenc_mathlib.h"
 
