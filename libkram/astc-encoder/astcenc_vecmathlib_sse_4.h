@@ -966,7 +966,7 @@ float float16_to_float(uint16_t a);
  * some bit hackery based on knowledge they are IEEE 754 layout, and then
  * convert them back again. This is the first half of that flip.
  */
-vint4 float_as_int(vfloat4 a)
+ASTCENC_SIMD_INLINE vint4 float_as_int(vfloat4 a)
 {
 	return vint4(_mm_castps_si128(a.m));
 }
