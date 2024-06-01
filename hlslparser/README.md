@@ -14,12 +14,13 @@ https://github.com/unknownworlds/hlslparser
 
 ---------------------------------
 
-Paths to turn HLSL and SPV 
+Paths to turn HLSL and SPV into MSL
 
 * HLSL2021 > hlslparser > HLSL2021 > dxc > SPV  
 * HLSL2021 > hlslparser > MSL    > metal > AIR(metallib)
 *
 * Reflection: spv > spv-reflect -> refl
+*             HLSL2021 > dxc -> ?
 *
 * Transpiling MSL: HLSL2021 > dxc   > SPV > spirv-cross > MSL
 * Transpiling MSL: HLSL2021 > glslc > SPV > spirv-cross > MSL (fails on simple HLSL)
@@ -27,6 +28,9 @@ Paths to turn HLSL and SPV
 * Variant generation 
 * HLSL2021 + defines > preprocess > HLSL2021
 * HLSL2021 + specialization > hlslparser
+*
+* Note this has no shader sources in gpu capture, nor AIR files to accumulate
+* HLSL2021 -> dxc -> DXIL -> metal-shaderconverter -> metallib
 
 ---------------------------------
 
@@ -104,6 +108,12 @@ Overview
 |spirv-opt | spv optimizer |
 |spirv-cross | transpile spv to MSL, HLSL, and GLSL, but codegen has 100's of temp vars, no comments, can target specific MSL/HLSL models |
 |spirv-reflect | gens reflection data from spv file |
+|metal-shaderconverter | compile dxil to metallib |
+
+https://github.com/microsoft/DirectXShaderCompiler
+https://github.com/KhronosGroup/SPIRV-Cross
+https://developer.apple.com/metal/shader-converter/
+https://github.com/google/shaderc
 
 Dealing with Half
 ---
@@ -131,10 +141,10 @@ HLSL2021 6.2 includes full half and int support.   So that is the compilation ta
 
 * Adreno also doesn't support half storage, so this limits SSBO and UBO usage.   
 
-* macOS on M1 - Rosetta2 lacks AVX and f16c cpu support, so translated x64 apps crash. Build Apple Silicon to fix this.
+* macOS on M1 - Rosetta2 lacks AVX and f16c cpu support, so translated x64 apps crash. Build Apple Silicon to fix this.  Win on ARM emulation (Qcom X Elite) also has the same limitations.  Neon is 16 128-bit registers where AVX needs 16 256-bit registers.
 
 * Android missing cpu arm64+f16 support from Redmi Note 8 and other chips.
-  vcvt_f32_f16 is still present without this.
+  vcvt_f32_f16 is still present without this.  Do math in fp32x4, then converter to fp16x4.
   
 Dealing with Double
 ---
