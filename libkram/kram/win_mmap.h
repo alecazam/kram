@@ -83,13 +83,13 @@ static void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t
     if (flags & MAP_PRIVATE)
         dwDesiredAccess |= FILE_MAP_COPY;
     void *ret = MapViewOfFile(h, dwDesiredAccess, DWORD_HI(offset), DWORD_LO(offset), length);
+   
+    // can free the file mapping, mmap will hold it
+    CloseHandle(h);
+    
     if (ret == NULL) {
-        CloseHandle(h);
         ret = MAP_FAILED;
     }
-    
-    // TODO: can CreateFileMapping handle be closed here?  View will keep file open.
-    // even if the file handle (fd) is closed.  That would prevent handle leak?
     
     return ret;
 }
@@ -97,9 +97,6 @@ static void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t
 static void munmap(void *addr, size_t length)
 {
     UnmapViewOfFile(addr);
-    
-    // Is this a TODO?
-    /* ruh-ro, we leaked handle from CreateFileMapping() ... */
 }
 
 #undef DWORD_HI
