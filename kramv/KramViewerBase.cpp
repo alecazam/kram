@@ -2095,6 +2095,34 @@ void Data::setLoadedText(string& text)
     }
 }
 
+void Data::setFailedText(const string& filename, string& text)
+{
+    text = "Failed ";
+
+    // This doesn't advance with failure
+    //string filename = _showSettings->lastFilename;
+    
+    text += toFilenameShort(filename.c_str());
+
+    // archives and file systems have folders, split that off
+    string folderName;
+    const char* slashPos = strrchr(filename.c_str(), '/');
+    if (slashPos != nullptr) {
+        folderName = filename.substr(0, slashPos - filename.c_str());
+    }
+
+    if (!folderName.empty()) {
+        text += " in folder ";
+        text += folderName;
+    }
+
+    if (!_archiveName.empty()) {
+        text += " from archive ";
+        text += _archiveName;
+    }
+
+}
+
 void Data::initActions()
 {
     // Don't reorder without also matching actionPtrs below

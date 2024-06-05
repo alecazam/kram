@@ -17,7 +17,7 @@
 #include "zstd.h"
 
 #ifndef USE_LIBCOMPRESSION
-#define USE_LIBCOMPRESSION (KRAM_MAC || KRAM_IOS)
+#define USE_LIBCOMPRESSION 0 // (KRAM_MAC || KRAM_IOS)
 #endif
 
 #if USE_LIBCOMPRESSION

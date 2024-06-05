@@ -485,7 +485,8 @@ struct Data {
     const Action* actionFromKey(uint32_t keyCodes) const;
 
     void setLoadedText(string& text);
-
+    void setFailedText(const string& filename, string& text);
+    
     void initActions();
     vector<Action>& actions() { return _actions; }
     void initDisabledButtons();

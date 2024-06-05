@@ -1579,8 +1579,8 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
         setErrorLogCapture(false);
         
         string finalErrorText;
-        append_sprintf(finalErrorText, "Could not load from file:\n %s\n",
-                       filename);
+        // this does have previous filename set
+        _data.setFailedText(file.name.c_str(), finalErrorText);
         finalErrorText += errorText;
         
         [self setHudText:finalErrorText.c_str()];

@@ -9,8 +9,9 @@
 // test for perf of this compared to one in miniz also see 
 // comments about faster algs.
 // libcompress can only encode lvl 5, but here it's only decompress.
+// This is failing on various ktx2 files in the mac archive
 #ifndef USE_LIBCOMPRESSION
-#define USE_LIBCOMPRESSION (KRAM_MAC || KRAM_IOS)
+#define USE_LIBCOMPRESSION 0 // (KRAM_MAC || KRAM_IOS)
 #endif
 
 #if USE_LIBCOMPRESSION
