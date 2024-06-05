@@ -16,6 +16,15 @@
 // for zstd decompress
 #include "zstd.h"
 
+// Don't trust this see use in Kram.cpp with lodepng
+#ifndef USE_LIBCOMPRESSION
+#define USE_LIBCOMPRESSION 0 // (KRAM_MAC || KRAM_IOS)
+#endif
+
+#if USE_LIBCOMPRESSION
+#include <compression.h>
+#endif
+
 namespace kram {
 
 // These are props added into the KTX file props data.
@@ -1869,13 +1878,24 @@ bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* 
 
             case KTX2SupercompressionZlib: {
                 // can use miniz or libCompression
+#if USE_LIBCOMPRESSION
+                // TODO: see if this is faster
+                char scratchBuffer[compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)];
+                
+                size_t dstDataSizeMiniz = compression_decode_buffer(
+                    (uint8_t*)dstData, dstDataSize,
+                    (const uint8_t*)srcData, srcDataSize,
+                    scratchBuffer, // scratch-buffer that could speed up to pass
+                    COMPRESSION_ZLIB);
+#else
                 mz_ulong dstDataSizeMiniz = 0;
                 if (mz_uncompress(dstData, &dstDataSizeMiniz,
                                   srcData, srcDataSize) != MZ_OK) {
                     KLOGE("kram", "decode mip zlib failed");
                     return false;
                 }
-                if (dstDataSizeMiniz != dstDataSize) {
+#endif
+              if (dstDataSizeMiniz != dstDataSize) {
                     KLOGE("kram", "decode mip zlib size not expected");
                     return false;
                 }

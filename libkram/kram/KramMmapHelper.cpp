@@ -4,7 +4,9 @@
 
 #include "KramMmapHelper.h"
 
-// here's how to mmmap data, but NSData may have another way
+// here's how to mmmap data, but NSData has another way
+// +dataWithContentsOfURL:options:error: and NSDataReadingMappedIfSafe or NSDataReadingMappedAlways."
+
 #include <stdio.h>
 #include <sys/stat.h>
 
@@ -12,8 +14,6 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #elif KRAM_WIN
-// portable mmap implementation, but only using on Win
-// TODO: this indicates that it leaks a CreateFileMapping handle, since it wanted to keep same mmap/munmap api
 #include "win_mmap.h"
 #endif
 
@@ -49,6 +49,8 @@ bool MmapHelper::open(const char *filename)
     }
     length = sb.st_size;
 
+    // Only offset needs padded to pagesize, but here offset is always 0
+    
     // Stop padding out to page size, or do but then don't add to length, or will walk too far in memory
     // all remaining page data will be zero, but still want length to reflect actual length of file
     // need Windows equilvent of getpagesize() call before putting this back.  This was to use

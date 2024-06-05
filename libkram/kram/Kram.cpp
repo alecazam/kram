@@ -27,6 +27,16 @@
 #include "lodepng.h"
 #include "miniz.h"
 
+// This doesn't work returns 121 for a 16K decode
+// Just open the src directory
+#ifndef USE_LIBCOMPRESSION
+#define USE_LIBCOMPRESSION 0 // (KRAM_MAC || KRAM_IOS)
+#endif
+
+#if USE_LIBCOMPRESSION
+#include <compression.h>
+#endif
+
 // one .cpp must supply these new overrides
 #if USE_EASTL
 void* __cdecl operator new[](size_t size, const char* name, int flags, unsigned debugFlags, const char* file, int line)
@@ -52,9 +62,7 @@ namespace kram {
 
 using namespace NAMESPACE_STL;
 
-// lodepng iccp decode is failing when setting this for some reason, find out why
-// Must set it with LODEPNG_NO_COMPILE_ZLIB in lodepng.h if true
-static bool useMiniZ = false;
+static bool useMiniZ = true;
 
 template <typename T>
 void releaseVector(vector<T>& v)
@@ -412,12 +420,36 @@ unsigned LodepngDecompressUsingMiniz(
     const LodePNGDecompressSettings* settings)
 {
     // mz_ulong doesn't line up with size_t on Windows, but does on macOS
-    mz_ulong dstDataSizeUL = *dstDataSize;
-
-    int result = mz_uncompress(*dstData, &dstDataSizeUL,
+    KASSERT(*dstDataSize != 0);
+    
+#if USE_LIBCOMPRESSION
+    // This call can't be replaced since lodepng doesn't pass size
+    // And it doesn't take a nullable dstData?
+    char scratchBuffer[compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)];
+    size_t bytesDecoded = compression_decode_buffer(
+         (uint8_t*)*dstData, *dstDataSize,
+         (const uint8_t*)srcData, srcDataSize,
+        scratchBuffer, // scratch-buffer that could speed up to pass
+         COMPRESSION_ZLIB);
+    
+    int result = MZ_OK;
+    if (bytesDecoded != *dstDataSize) {
+        result = MZ_DATA_ERROR;
+        *dstDataSize = 0;
+    }
+#else
+    // This works.
+    mz_ulong bytesDecoded = *dstDataSize;
+    int result = mz_uncompress(*dstData, &bytesDecoded,
                                srcData, srcDataSize);
-
-    *dstDataSize = dstDataSizeUL;
+    
+    if (result != MZ_OK || bytesDecoded != *dstDataSize) {
+        *dstDataSize = 0;
+    }
+    else {
+        *dstDataSize = bytesDecoded;
+    }
+#endif
 
     return result;
 }
@@ -428,14 +460,17 @@ unsigned LodepngCompressUsingMiniz(
     const unsigned char* srcData, size_t srcDataSize,
     const LodePNGCompressSettings* settings)
 {
+    // TODO: no setting for compression level in settings?
+    // TODO: libCompression can only encode zlib to quality 5
+    
     // mz_ulong doesn't line up with size_t on Windows, but does on macOS
     mz_ulong dstDataSizeUL = *dstDataSize;
 
-    int result = mz_compress(*dstData, &dstDataSizeUL,
-                               srcData, srcDataSize);
+    int result = mz_compress2(*dstData, &dstDataSizeUL,
+                               srcData, srcDataSize, MZ_DEFAULT_COMPRESSION);
 
     *dstDataSize = dstDataSizeUL;
-
+    
     return result;
 }
 

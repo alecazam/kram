@@ -9,8 +9,9 @@
 // test for perf of this compared to one in miniz also see 
 // comments about faster algs.
 // libcompress can only encode lvl 5, but here it's only decompress.
+// Don't trust this.
 #ifndef USE_LIBCOMPRESSION
-#define USE_LIBCOMPRESSION (KRAM_MAC || KRAM_IOS)
+#define USE_LIBCOMPRESSION 0 // (KRAM_MAC || KRAM_IOS)
 #endif
 
 #if USE_LIBCOMPRESSION
@@ -229,12 +230,13 @@ bool ZipHelper::extract(const ZipEntry& entry, void* buffer, uint64_t bufferSize
     if (!data) {
         return false;
     }
-    // need to extra data and header
+    // need to extract data and header
+    char scratchBuffer[compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)];
     
     uint64_t bytesDecoded = compression_decode_buffer(
         (uint8_t*)buffer, entry.uncompressedSize,
         (const uint8_t*)data, entry.compressedSize,
-        NULL, // scratch-buffer that could speed up to pass
+        scratchBuffer, // scratch-buffer that could speed up to pass
         COMPRESSION_ZLIB);
     
     bool success = false;

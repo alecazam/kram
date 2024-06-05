@@ -30,6 +30,7 @@
 #define MAP_ANON      0x20
 #define MAP_FAILED    ((void *) -1)
 
+// off_t is 32-bit, which isn't great
 using myoff_t = int64_t;
 
 // TODO: find out which path this takes, want 64-bit mmsp

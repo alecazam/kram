@@ -362,7 +362,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
     // enough to upload 4k x 4k @ 4 bytes no mips, careful with array and cube
     // that get too big
 
-    // allocate system memory for bufffer, can memcopy to this
+    // allocate system memory for buffer, can memcpy to this
     posix_memalign((void **)&_data, getpagesize(), dataSize);
 
     // allocate memory for circular staging buffer, only need to memcpy to this
@@ -429,7 +429,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
         }];
     }
     
-    // mipgen after possible initial blit above
+    // mipgen possible after initial blit above
     if (_mipgenTextures.count > 0) {
         for (id<MTLTexture> texture in _mipgenTextures) {
             // autogen mips will include srgb conversions, so toggling srgb on/off
@@ -437,7 +437,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
             [blitEncoder generateMipmapsForTexture:texture];
         }
 
-        // reset the arra
+        // reset the array
         [_mipgenTextures removeAllObjects];
     }
 }
@@ -497,7 +497,7 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
     // upload mip levels
 
     // TODO: about aligning to 4k for base + length
-    // http://metalkit.org/2017/05/26/working-with-memory-in-metal-part-2.html
+    // http://metalkit.org/working-with-memory-in-metal/
 
     uint32_t w = image.width;
     uint32_t h = image.height;

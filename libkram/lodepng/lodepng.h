@@ -37,8 +37,9 @@ extern const char* LODEPNG_VERSION_STRING;
 // don't need io
 #define LODEPNG_NO_COMPILE_DISK
 
-// using miniz now, but this was failing using miniz so switched off
-//#define LODEPNG_NO_COMPILE_ZLIB
+// using miniz or libCompression now, but this was failing using miniz so switched off
+// This disables the code that inits the array for zlib_decompress.
+// #define LODEPNG_NO_COMPILE_ZLIB
 
 // was not doing png encodes, but to strip blocks now need to
 #define LODEPNG_COMPILE_ENCODER
