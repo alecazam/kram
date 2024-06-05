@@ -30,16 +30,19 @@
 #define MAP_ANON      0x20
 #define MAP_FAILED    ((void *) -1)
 
-// TODO: find out which path this takes, want 64-bit mmsp
-#ifdef __USE_FILE_OFFSET64
-# define DWORD_HI(x) ((x) >> (uint64_t)32)
-# define DWORD_LO(x) ((x) & (uint64_t)0xffffffff)
-#else
-# define DWORD_HI(x) (0)
-# define DWORD_LO(x) (x)
-#endif
+using myoff_t = int64_t;
 
-static void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset)
+// TODO: find out which path this takes, want 64-bit mmsp
+//#ifdef __USE_FILE_OFFSET64
+#define DWORD_HI(x) ((x) >> (myoff_t)32)
+#define DWORD_LO(x) ((x) & (myoff_t)0xffffffff)
+//#else
+//#define DWORD_HI(x) (0)
+//#define DWORD_LO(x) (x)
+//#endif
+
+
+static void *mmap(void *start, size_t length, int prot, int flags, int fd, myoff_t offset)
 {
     if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC))
         return MAP_FAILED;
