@@ -16,9 +16,8 @@
 // for zstd decompress
 #include "zstd.h"
 
-// Don't trust this see use in Kram.cpp with lodepng
 #ifndef USE_LIBCOMPRESSION
-#define USE_LIBCOMPRESSION 0 // (KRAM_MAC || KRAM_IOS)
+#define USE_LIBCOMPRESSION (KRAM_MAC || KRAM_IOS)
 #endif
 
 #if USE_LIBCOMPRESSION

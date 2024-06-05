@@ -27,8 +27,6 @@
 #include "lodepng.h"
 #include "miniz.h"
 
-// This doesn't work returns 121 for a 16K decode
-// Just open the src directory
 #ifndef USE_LIBCOMPRESSION
 #define USE_LIBCOMPRESSION 0 // (KRAM_MAC || KRAM_IOS)
 #endif
@@ -62,7 +60,11 @@ namespace kram {
 
 using namespace NAMESPACE_STL;
 
-static bool useMiniZ = true;
+// This fails with libCompression (see inter-a.png)
+// and with miniZ for the ICCP block (see inter-a.png)
+// lodepng passes 16K to the custom zlib decompress, but
+// the data read isn't that big.
+static bool useMiniZ = false;
 
 template <typename T>
 void releaseVector(vector<T>& v)
@@ -423,12 +425,16 @@ unsigned LodepngDecompressUsingMiniz(
     KASSERT(*dstDataSize != 0);
     
 #if USE_LIBCOMPRESSION
-    // This call can't be replaced since lodepng doesn't pass size
-    // And it doesn't take a nullable dstData?
+    // this returns 121 dstSize instead of 16448 on 126 srcSize.  
+    // Open src dir to see this.  Have to advance by 2 to fix this.
+    if (srcDataSize <= 2) {
+        return MZ_DATA_ERROR;
+    }
+    
     char scratchBuffer[compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)];
     size_t bytesDecoded = compression_decode_buffer(
          (uint8_t*)*dstData, *dstDataSize,
-         (const uint8_t*)srcData, srcDataSize,
+         (const uint8_t*)srcData + 2, srcDataSize - 2,
         scratchBuffer, // scratch-buffer that could speed up to pass
          COMPRESSION_ZLIB);
     
