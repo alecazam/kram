@@ -982,7 +982,8 @@ bool Data::listFilesInArchive(int32_t urlIndex)
     
     // filter out unsupported extensions
     vector<string> extensions = {
-        ".ktx", ".ktx2", ".png", ".dds" // textures
+        ".ktx", ".ktx2", ".png",  // textures
+        ".dds", ".DDS" // allow caps for dds
 #if USE_GLTF
         // TODO: can't support these until have a loader from memory block
         // GLTFAsset requires a URL.

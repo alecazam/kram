@@ -86,7 +86,8 @@ bool isKTX2Filename(const char* filename)
 bool isDDSFilename(const char* filename)
 {
     // should really look at first 4 bytes of data
-    return endsWithExtension(filename, ".dds");
+    return endsWithExtension(filename, ".dds") ||
+           endsWithExtension(filename, ".DDS"); // allow uppercase
 }
 bool isPNGFilename(const char* filename)
 {
