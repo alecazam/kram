@@ -124,6 +124,9 @@
 // handling file io separately
 #define MINIZ_NO_STDIO
 
+// These defines annoying conflict with everything (f.e. compress)
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+
 #endif
 
 
@@ -291,7 +294,7 @@ enum
 struct mz_internal_state;
 
 /* Compression/decompression stream struct. */
-typedef struct mz_stream_s
+typedef struct mz_stream
 {
     const unsigned char *next_in; /* pointer to next byte to read */
     unsigned int avail_in;        /* number of bytes available at next_in */
@@ -521,7 +524,7 @@ typedef int mz_bool;
 #endif /* #ifdef MINIZ_NO_STDIO */
 
 #ifdef MINIZ_NO_TIME
-typedef struct mz_dummy_time_t_tag
+typedef struct mz_dummy_time_t
 {
     int m_dummy;
 } mz_dummy_time_t;
@@ -707,7 +710,7 @@ typedef enum {
 } tdefl_flush;
 
 /* tdefl's compression state structure. */
-typedef struct
+typedef struct tdefl_compressor
 {
     tdefl_put_buf_func_ptr m_pPut_buf_func;
     void *m_pPut_buf_user;
@@ -808,8 +811,8 @@ size_t tinfl_decompress_mem_to_mem(void *pOut_buf, size_t out_buf_len, const voi
 typedef int (*tinfl_put_buf_func_ptr)(const void *pBuf, int len, void *pUser);
 int tinfl_decompress_mem_to_callback(const void *pIn_buf, size_t *pIn_buf_size, tinfl_put_buf_func_ptr pPut_buf_func, void *pPut_buf_user, int flags);
 
-struct tinfl_decompressor_tag;
-typedef struct tinfl_decompressor_tag tinfl_decompressor;
+//struct tinfl_decompressor_tag;
+typedef struct tinfl_decompressor tinfl_decompressor;
 
 #ifndef MINIZ_NO_MALLOC
 /* Allocate the tinfl_decompressor structure in C so that */
@@ -823,7 +826,7 @@ void tinfl_decompressor_free(tinfl_decompressor *pDecomp);
 #define TINFL_LZ_DICT_SIZE 32768
 
 /* Return status. */
-typedef enum {
+typedef enum tinfl_status {
     /* This flags indicates the inflator needs 1 or more input bytes to make forward progress, but the caller is indicating that no more are available. The compressed data */
     /* is probably corrupted. If you call the inflator again with more bytes it'll try to continue processing the input but this is a BAD sign (either the data is corrupted or you called it incorrectly). */
     /* If you call it again with no input you'll just get TINFL_STATUS_FAILED_CANNOT_MAKE_PROGRESS again. */
@@ -880,7 +883,7 @@ enum
     TINFL_FAST_LOOKUP_SIZE = 1 << TINFL_FAST_LOOKUP_BITS
 };
 
-typedef struct
+typedef struct tinfl_huff_table
 {
     mz_uint8 m_code_size[TINFL_MAX_HUFF_SYMBOLS_0];
     mz_int16 m_look_up[TINFL_FAST_LOOKUP_SIZE], m_tree[TINFL_MAX_HUFF_SYMBOLS_0 * 2];
@@ -900,14 +903,14 @@ typedef mz_uint32 tinfl_bit_buf_t;
 #define TINFL_BITBUF_SIZE (32)
 #endif
 
-struct tinfl_decompressor_tag
+typedef struct tinfl_decompressor
 {
     mz_uint32 m_state, m_num_bits, m_zhdr0, m_zhdr1, m_z_adler32, m_final, m_type, m_check_adler32, m_dist, m_counter, m_num_extra, m_table_sizes[TINFL_MAX_HUFF_TABLES];
     tinfl_bit_buf_t m_bit_buf;
     size_t m_dist_from_out_buf_start;
     tinfl_huff_table m_tables[TINFL_MAX_HUFF_TABLES];
     mz_uint8 m_raw_header[4], m_len_codes[TINFL_MAX_HUFF_SYMBOLS_0 + TINFL_MAX_HUFF_SYMBOLS_1 + 137];
-};
+} tinfl_decompressor;
 
 #ifdef __cplusplus
 }
@@ -932,7 +935,7 @@ enum
     MZ_ZIP_MAX_ARCHIVE_FILE_COMMENT_SIZE = 512
 };
 
-typedef struct
+typedef struct mz_zip_archive_file_stat
 {
     /* Central directory file index. */
     mz_uint32 m_file_index;
@@ -992,8 +995,8 @@ typedef size_t (*mz_file_read_func)(void *pOpaque, mz_uint64 file_ofs, void *pBu
 typedef size_t (*mz_file_write_func)(void *pOpaque, mz_uint64 file_ofs, const void *pBuf, size_t n);
 typedef mz_bool (*mz_file_needs_keepalive)(void *pOpaque);
 
-struct mz_zip_internal_state_tag;
-typedef struct mz_zip_internal_state_tag mz_zip_internal_state;
+//struct mz_zip_internal_state_tag;
+typedef struct mz_zip_internal_state mz_zip_internal_state;
 
 typedef enum {
     MZ_ZIP_MODE_INVALID = 0,
@@ -1088,7 +1091,7 @@ typedef struct mz_zip_archive
 
 } mz_zip_archive;
 
-typedef struct
+typedef struct mz_zip_reader_extract_iter_state
 {
     mz_zip_archive *pZip;
     mz_uint flags;
@@ -1109,7 +1112,7 @@ typedef struct
 } mz_zip_reader_extract_iter_state;
 
 // this is purely for looking at struct in debugger
-typedef struct {
+typedef struct mz_local_file_header {
     mz_uint32 local_file_signature; // 0x04034b50 read as LE number
     mz_uint16 version;
     mz_uint16 bit_flags;

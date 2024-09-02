@@ -348,7 +348,7 @@ mz_ulong mz_compressBound(mz_ulong source_len)
     return mz_deflateBound(NULL, source_len);
 }
 
-typedef struct
+typedef struct inflate_state
 {
     tinfl_decompressor m_decomp;
     mz_uint m_dict_ofs, m_dict_avail, m_first_call, m_has_flushed;
@@ -3201,7 +3201,7 @@ typedef struct
     mz_uint m_element_size;
 } mz_zip_array;
 
-struct mz_zip_internal_state_tag
+typedef struct mz_zip_internal_state
 {
     mz_zip_array m_central_dir;
     mz_zip_array m_central_dir_offsets;
@@ -3223,7 +3223,7 @@ struct mz_zip_internal_state_tag
     void *m_pMem;
     size_t m_mem_size;
     size_t m_mem_capacity;
-};
+} mz_zip_internal_state;
 
 #define MZ_ZIP_ARRAY_SET_ELEMENT_SIZE(array_ptr, element_size) (array_ptr)->m_element_size = element_size
 

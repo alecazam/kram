@@ -1884,7 +1884,7 @@ bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* 
                 size_t dstDataSizeMiniz = compression_decode_buffer(
                     (uint8_t*)dstData, dstDataSize,
                     (const uint8_t*)srcData, srcDataSize,
-                    scratchBuffer, // scratch-buffer that could speed up to pass
+                    scratchBuffer,
                     COMPRESSION_ZLIB);
 #else
                 mz_ulong dstDataSizeMiniz = 0;

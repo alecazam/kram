@@ -1800,22 +1800,22 @@ MEM_STATIC size_t BIT_initDStream(BIT_DStream_t* bitD, const void* srcBuffer, si
         switch(srcSize)
         {
         case 7: bitD->bitContainer += (size_t)(((const BYTE*)(srcBuffer))[6]) << (sizeof(bitD->bitContainer)*8 - 16);
-                /* fall-through */
+                [[fallthrough]]; /* fall-through */
 
         case 6: bitD->bitContainer += (size_t)(((const BYTE*)(srcBuffer))[5]) << (sizeof(bitD->bitContainer)*8 - 24);
-                /* fall-through */
+                [[fallthrough]]; /* fall-through */
 
         case 5: bitD->bitContainer += (size_t)(((const BYTE*)(srcBuffer))[4]) << (sizeof(bitD->bitContainer)*8 - 32);
-                /* fall-through */
+                [[fallthrough]]; /* fall-through */
 
         case 4: bitD->bitContainer += (size_t)(((const BYTE*)(srcBuffer))[3]) << 24;
-                /* fall-through */
+                [[fallthrough]]; /* fall-through */
 
         case 3: bitD->bitContainer += (size_t)(((const BYTE*)(srcBuffer))[2]) << 16;
-                /* fall-through */
+                [[fallthrough]]; /* fall-through */
 
         case 2: bitD->bitContainer += (size_t)(((const BYTE*)(srcBuffer))[1]) <<  8;
-                /* fall-through */
+                [[fallthrough]]; /* fall-through */
 
         default: break;
         }
@@ -10218,13 +10218,13 @@ HUF_compress1X_usingCTable_internal_body(void* dst, size_t dstSize,
     {
         case 3 : HUF_encodeSymbol(&bitC, ip[n+ 2], CTable);
                  HUF_FLUSHBITS_2(&bitC);
-		 /* fall-through */
+            [[fallthrough]]; /* fall-through */
         case 2 : HUF_encodeSymbol(&bitC, ip[n+ 1], CTable);
                  HUF_FLUSHBITS_1(&bitC);
-		 /* fall-through */
+            [[fallthrough]]; /* fall-through */
         case 1 : HUF_encodeSymbol(&bitC, ip[n+ 0], CTable);
                  HUF_FLUSHBITS(&bitC);
-		 /* fall-through */
+            [[fallthrough]]; /* fall-through */
         case 0 : /* fall-through */
         default: break;
     }
@@ -11918,8 +11918,8 @@ MEM_STATIC int ZSTD_disableLiteralsCompression(const ZSTD_CCtx_params* cctxParam
     case ZSTD_lcm_uncompressed:
         return 1;
     default:
-        assert(0 /* impossible: pre-validated */);
-        /* fall-through */
+        //assert(0 /* impossible: pre-validated */);
+        //[[fallthrough]]; /* fall-through */
     case ZSTD_lcm_auto:
         return (cctxParams->cParams.strategy == ZSTD_fast) && (cctxParams->cParams.targetLength > 0);
     }
@@ -19991,7 +19991,7 @@ static size_t ZSTD_compressStream_generic(ZSTD_CStream* zcs,
                 zcs->outBuffFlushedSize = 0;
                 zcs->streamStage = zcss_flush; /* pass-through to flush stage */
             }
-	    /* fall-through */
+                [[fallthrough]]; /* fall-through */
         case zcss_flush:
             DEBUGLOG(5, "flush stage");
             assert(zcs->appliedParams.outBufferMode == ZSTD_bm_buffered);
@@ -32478,8 +32478,8 @@ static ZSTD_DDict const* ZSTD_getDDict(ZSTD_DCtx* dctx)
 {
     switch (dctx->dictUses) {
     default:
-        assert(0 /* Impossible */);
-        /* fall-through */
+        //assert(0 /* Impossible */);
+        //[[fallthrough]]; /* fall-through */
     case ZSTD_dont_use:
         ZSTD_clearDict(dctx);
         return NULL;
@@ -33370,7 +33370,7 @@ size_t ZSTD_decompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output, ZSTD_inB
             zds->legacyVersion = 0;
             zds->hostageByte = 0;
             zds->expectedOutBuffer = *output;
-            /* fall-through */
+            [[fallthrough]]; /* fall-through */
 
         case zdss_loadHeader :
             DEBUGLOG(5, "stage zdss_loadHeader (srcSize : %u)", (U32)(iend - ip));
@@ -33508,7 +33508,7 @@ size_t ZSTD_decompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output, ZSTD_inB
                         zds->outBuffSize = neededOutBuffSize;
             }   }   }
             zds->streamStage = zdss_read;
-            /* fall-through */
+            [[fallthrough]]; /* fall-through */
 
         case zdss_read:
             DEBUGLOG(5, "stage zdss_read");
@@ -33527,7 +33527,7 @@ size_t ZSTD_decompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output, ZSTD_inB
             }   }
             if (ip==iend) { someMoreWork = 0; break; }   /* no more input */
             zds->streamStage = zdss_load;
-            /* fall-through */
+            [[fallthrough]]; /* fall-through */
 
         case zdss_load:
             {   size_t const neededInSize = ZSTD_nextSrcSizeToDecompress(zds);
@@ -33729,7 +33729,7 @@ size_t ZSTD_decodeLiteralsBlock(ZSTD_DCtx* dctx,
         case set_repeat:
             DEBUGLOG(5, "set_repeat flag : re-using stats from previous compressed literals block");
             RETURN_ERROR_IF(dctx->litEntropy==0, dictionary_corrupted, "");
-            /* fall-through */
+            [[fallthrough]]; /* fall-through */
 
         case set_compressed:
             RETURN_ERROR_IF(srcSize < 5, corruption_detected, "srcSize >= MIN_CBLOCK_SIZE == 3; here we need up to 5 for case 3");

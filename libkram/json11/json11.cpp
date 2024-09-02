@@ -28,17 +28,19 @@
 
 // not including this in KramConfig.h - used for pool
 #include "BlockedLinearAllocator.h"
+#include "KramZipStream.h"
+
 
 // Heavily modifed by Alec Miller 10/1/23
 // This codebase was frozen by DropBox with very little effort put into it.
 // And I liked the readability of the code.  Optimized with ImmutableStrings
 // and a BlockedLinearAllocator.
 //
-// This is DOM reader/writer.  Building up stl data structures in a DOM
-// to write isn't great memory wise.  May move to a SAX writer.
+// json11 is DOM reader/writer.  Building up stl data structures in a DOM
+// to write isn't great memory wise.  Moved to custom SAX writer.
 // Times to read font atlas file on M1 MBP 14".  1/21/24
 //
-// json11
+// json11 reader
 // Release - parsed 101 KB of json using 576 KB of memory in 14.011ms
 // Debug   - parsed 101 KB of json using 576 KB of memory in 26.779ms
 //
@@ -128,19 +130,18 @@ const char* JsonWriter::escapedString(const char* str)
     
     return _escapedString.c_str();
 }
-  
+
 void JsonWriter::pushObject(const char* key) {
     if (key[0])
     {
         KASSERT(isObject());
         writeCommaAndNewline();
         int indent = _stack.size();
-        sprintf(*_out, "%*s\"%s\":{\n", indent, "", key);
+        writeFormat("%*s\"%s\":{\n", indent, "", key);
     }
     else
     {
-        _out->push_back('{');
-        _out->push_back('\n');
+        writeFormat("{\n");
     }
     _stack.push_back('}');
     _isFirst.push_back(false);
@@ -151,12 +152,11 @@ void JsonWriter::pushArray(const char* key) {
         KASSERT(isObject());
         writeCommaAndNewline();
         int indent = _stack.size();
-        sprintf(*_out, "%*s\"%s\":[\n", indent, "", key);
+        writeFormat("%*s\"%s\":[\n", indent, "", key);
     }
     else
     {
-        _out->push_back('[');
-        _out->push_back('\n');
+        writeFormat("[\n");
     }
     _stack.push_back(']');
     _isFirst.push_back(false);
@@ -166,8 +166,7 @@ void JsonWriter::pop() {
     KASSERT(_stack.empty());
     char c = _stack.back();
     
-    _out->push_back(c);
-    _out->push_back('\n');
+    writeFormat("%c\n", c);
     
     _stack.pop_back();
     _isFirst.pop_back();
@@ -193,43 +192,42 @@ void JsonWriter::writeString(const char* key, const char* value) {
     KASSERT(isObject());
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s\"%s\":\"%s\"", indent, "", key, escapedString(value));
+    writeFormat("%*s\"%s\":\"%s\"", indent, "", key, escapedString(value));
 }
 void JsonWriter::writeDouble(const char* key, double value) {
     KASSERT(isObject());
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s\"%s\":%f", indent, "", key, value);
+    writeFormat("%*s\"%s\":%f", indent, "", key, value);
 }
 void JsonWriter::writeInt32(const char* key, int32_t value) {
     KASSERT(isObject());
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s\"%s\":\"%d\"", indent, "", key, value);
+    writeFormat("%*s\"%s\":\"%d\"", indent, "", key, value);
     
 }
 void JsonWriter::writeBool(const char* key, bool value) {
     KASSERT(isObject());
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s\"%s\":%s", indent, "", key, value ? "true" : "false");
+    writeFormat("%*s\"%s\":%s", indent, "", key, value ? "true" : "false");
 }
 void JsonWriter::writeNull(const char* key) {
     KASSERT(isObject());
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s\"%s\":%s", indent, "", key, "null");
+    writeFormat("%*s\"%s\":%s", indent, "", key, "null");
 }
 
 // can write out json in parallel and combine
-void JsonWriter::writeJson(const JsonWriter& json)
-{
+void JsonWriter::writeJson(const JsonWriter& json) {
     KASSERT(_stack.empty());
     KASSERT(this != &json);
     
     // TODO: indent won't be correct on this
     // so caller may want to set indent
-    _out->append(*json._out);
+    writeFormat("%s", json._out->c_str());
 }
 
 void JsonWriter::writeString(const char* value) {
@@ -237,42 +235,73 @@ void JsonWriter::writeString(const char* value) {
     // only if in array
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s\"%s\"", indent, "", escapedString(value));
+    writeFormat("%*s\"%s\"", indent, "", escapedString(value));
 }
 void JsonWriter::writeDouble(double value) {
     KASSERT(isArray());
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s%f", indent, "", value);
+    writeFormat("%*s%f", indent, "", value);
 }
 void JsonWriter::writeInt32(int32_t value) {
     KASSERT(isArray());
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s\"%d\"", indent, "", value);
+    writeFormat("%*s\"%d\"", indent, "", value);
 }
 void JsonWriter::writeBool(bool value) {
     KASSERT(isArray());
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s%s", indent, "", value ? "true" : "false");
+    writeFormat("%*s%s", indent, "", value ? "true" : "false");
 }
 void JsonWriter::writeNull() {
     KASSERT(isArray());
     writeCommaAndNewline();
     int indent = _stack.size();
-    append_sprintf(*_out, "%*s%s", indent, "", "null");
+    writeFormat("%*s%s", indent, "", "null");
 }
 
 void JsonWriter::writeCommaAndNewline() {
     bool isFirst = _isFirst.back();
     if (!isFirst)
-        _out->push_back(',');
-    _out->push_back('\n');
+        writeFormat(",\n");
+    else
+        writeFormat("\n");
     
     // vector<bool> is special
     _isFirst[_isFirst.size()-1] = true;
 }
+
+void JsonWriter::writeFormat(const char* fmt, ...) {
+    // append to the string, string may grow
+    va_list args;
+    va_start(args, fmt);
+    append_vsprintf(*_out, fmt, args);
+    va_end(args);
+    
+    // when string reach certain length, flush to compressed file and/or buffer
+    if (_stream && _out->size() >= _stream->compressLimit())
+    {
+        // flush the output to a compression stream
+        _stream->compress(Slice((uint8_t*)_out->data(), _out->size())); // losing const
+        
+        // reset the buffer
+        _out->clear();
+    }
+}
+
+JsonWriter::~JsonWriter()
+{
+    if (_stream)  {
+        if (!_out->empty()) {
+            _stream->compress(Slice((uint8_t*)_out->data(), _out->size())); // losing const
+        }
+    }
+}
+
+    
+
 
 
 /*

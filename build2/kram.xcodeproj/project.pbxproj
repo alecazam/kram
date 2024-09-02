@@ -7,22 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		704738BC289F6AEE00C77A9F /* unordered_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B1289F6AEE00C77A9F /* unordered_map.h */; };
-		704738BD289F6AEE00C77A9F /* unordered_map.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B1289F6AEE00C77A9F /* unordered_map.h */; };
-		704738BE289F6AEE00C77A9F /* falgorithm.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B2289F6AEE00C77A9F /* falgorithm.h */; };
-		704738BF289F6AEE00C77A9F /* falgorithm.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B2289F6AEE00C77A9F /* falgorithm.h */; };
-		704738C0289F6AEE00C77A9F /* map.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B3289F6AEE00C77A9F /* map.h */; };
-		704738C1289F6AEE00C77A9F /* map.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B3289F6AEE00C77A9F /* map.h */; };
-		704738C2289F6AEE00C77A9F /* pair.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B4289F6AEE00C77A9F /* pair.h */; };
-		704738C3289F6AEE00C77A9F /* pair.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B4289F6AEE00C77A9F /* pair.h */; };
-		704738C6289F6AEE00C77A9F /* unordered_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B6289F6AEE00C77A9F /* unordered_set.h */; };
-		704738C7289F6AEE00C77A9F /* unordered_set.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B6289F6AEE00C77A9F /* unordered_set.h */; };
-		704738C8289F6AEE00C77A9F /* vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B7289F6AEE00C77A9F /* vector.h */; };
-		704738C9289F6AEE00C77A9F /* vector.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B7289F6AEE00C77A9F /* vector.h */; };
-		704738CA289F6AEE00C77A9F /* set.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B8289F6AEE00C77A9F /* set.h */; };
-		704738CB289F6AEE00C77A9F /* set.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B8289F6AEE00C77A9F /* set.h */; };
-		704738CC289F6AEE00C77A9F /* fstring.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B9289F6AEE00C77A9F /* fstring.h */; };
-		704738CD289F6AEE00C77A9F /* fstring.h in Headers */ = {isa = PBXBuildFile; fileRef = 704738B9289F6AEE00C77A9F /* fstring.h */; };
 		706EEF7F26D1595D001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAA26D1583E001C950E /* EtcBlock4x4Encoding_RGB8.cpp */; };
 		706EEF8026D1595D001C950E /* EtcImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAC26D1583E001C950E /* EtcImage.cpp */; };
 		706EEF8126D1595D001C950E /* EtcDifferentialTrys.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAF26D1583E001C950E /* EtcDifferentialTrys.cpp */; };
@@ -392,6 +376,10 @@
 		70A7BD3127092A1200DBCCF7 /* hdr_encode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A7BD2E27092A1200DBCCF7 /* hdr_encode.cpp */; };
 		70A7BD3227092A1200DBCCF7 /* hdr_encode.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */; };
 		70A7BD3327092A1200DBCCF7 /* hdr_encode.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */; };
+		70B563A72C857B360089A64F /* KramZipStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B563A52C857B360089A64F /* KramZipStream.cpp */; };
+		70B563A82C857B360089A64F /* KramZipStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B563A52C857B360089A64F /* KramZipStream.cpp */; };
+		70B563A92C857B360089A64F /* KramZipStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B563A62C857B360089A64F /* KramZipStream.h */; };
+		70B563AA2C857B360089A64F /* KramZipStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B563A62C857B360089A64F /* KramZipStream.h */; };
 		70C6398D289FB234006E7422 /* KramPrefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 70C6398C289FB234006E7422 /* KramPrefix.pch */; };
 		70C6398E289FB234006E7422 /* KramPrefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 70C6398C289FB234006E7422 /* KramPrefix.pch */; };
 		70CDB65027A1382700A546C1 /* KramDDSHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 70CDB64E27A1382600A546C1 /* KramDDSHelper.h */; };
@@ -421,14 +409,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		704738B1289F6AEE00C77A9F /* unordered_map.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unordered_map.h; sourceTree = "<group>"; };
-		704738B2289F6AEE00C77A9F /* falgorithm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = falgorithm.h; sourceTree = "<group>"; };
-		704738B3289F6AEE00C77A9F /* map.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = map.h; sourceTree = "<group>"; };
-		704738B4289F6AEE00C77A9F /* pair.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pair.h; sourceTree = "<group>"; };
-		704738B6289F6AEE00C77A9F /* unordered_set.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unordered_set.h; sourceTree = "<group>"; };
-		704738B7289F6AEE00C77A9F /* vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vector.h; sourceTree = "<group>"; };
-		704738B8289F6AEE00C77A9F /* set.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = set.h; sourceTree = "<group>"; };
-		704738B9289F6AEE00C77A9F /* fstring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fstring.h; sourceTree = "<group>"; };
 		706ECDDE26D1577A001C950E /* libkram.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libkram.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EEDAA26D1583E001C950E /* EtcBlock4x4Encoding_RGB8.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EtcBlock4x4Encoding_RGB8.cpp; sourceTree = "<group>"; };
 		706EEDAB26D1583E001C950E /* EtcErrorMetric.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EtcErrorMetric.h; sourceTree = "<group>"; };
@@ -760,6 +740,8 @@
 		709B8D4D28D7C15F0081BD1F /* KramFmt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramFmt.h; sourceTree = "<group>"; };
 		70A7BD2E27092A1200DBCCF7 /* hdr_encode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hdr_encode.cpp; sourceTree = "<group>"; };
 		70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hdr_encode.h; sourceTree = "<group>"; };
+		70B563A52C857B360089A64F /* KramZipStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramZipStream.cpp; sourceTree = "<group>"; };
+		70B563A62C857B360089A64F /* KramZipStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramZipStream.h; sourceTree = "<group>"; };
 		70C6398C289FB234006E7422 /* KramPrefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramPrefix.pch; sourceTree = "<group>"; };
 		70CDB64E27A1382600A546C1 /* KramDDSHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramDDSHelper.h; sourceTree = "<group>"; };
 		70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramDDSHelper.cpp; sourceTree = "<group>"; };
@@ -795,21 +777,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		704738AF289F6AEE00C77A9F /* fastl */ = {
-			isa = PBXGroup;
-			children = (
-				704738B2289F6AEE00C77A9F /* falgorithm.h */,
-				704738B3289F6AEE00C77A9F /* map.h */,
-				704738B4289F6AEE00C77A9F /* pair.h */,
-				704738B1289F6AEE00C77A9F /* unordered_map.h */,
-				704738B6289F6AEE00C77A9F /* unordered_set.h */,
-				704738B7289F6AEE00C77A9F /* vector.h */,
-				704738B8289F6AEE00C77A9F /* set.h */,
-				704738B9289F6AEE00C77A9F /* fstring.h */,
-			);
-			path = fastl;
-			sourceTree = "<group>";
-		};
 		706ECDD526D1577A001C950E = {
 			isa = PBXGroup;
 			children = (
@@ -834,7 +801,6 @@
 				70D222F32ADAF78300B9EA23 /* allocate */,
 				708A6A882708CE4700BA5410 /* compressonator */,
 				706EFC3E26D3473F001C950E /* eastl */,
-				704738AF289F6AEE00C77A9F /* fastl */,
 				709B8D1B28D7BCAD0081BD1F /* fmt */,
 				706EEDA926D1583E001C950E /* etc2comp */,
 				706EEDC926D1583E001C950E /* bc7enc */,
@@ -1024,6 +990,8 @@
 			children = (
 				70CDB64E27A1382600A546C1 /* KramDDSHelper.h */,
 				70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */,
+				70B563A62C857B360089A64F /* KramZipStream.h */,
+				70B563A52C857B360089A64F /* KramZipStream.cpp */,
 				706EEE1926D1583F001C950E /* KramZipHelper.h */,
 				706EEE1E26D1583F001C950E /* KramZipHelper.cpp */,
 				706EEE2326D1583F001C950E /* KramConfig.h */,
@@ -1422,7 +1390,6 @@
 				706EEFD826D15984001C950E /* EtcMath.h in Headers */,
 				706EEFD926D15984001C950E /* EtcIndividualTrys.h in Headers */,
 				706EEFDA26D15984001C950E /* EtcBlock4x4EncodingBits.h in Headers */,
-				704738BE289F6AEE00C77A9F /* falgorithm.h in Headers */,
 				706EEFDB26D15984001C950E /* EtcBlock4x4Encoding_RGB8A1.h in Headers */,
 				706EEFDC26D15984001C950E /* EtcBlock4x4.h in Headers */,
 				707789E72881BA81008A51BC /* rgbcx.h in Headers */,
@@ -1448,7 +1415,6 @@
 				706EEFF526D15985001C950E /* basisu_containers_impl.h in Headers */,
 				707789EB2881BA81008A51BC /* utils.h in Headers */,
 				706EEFF626D15985001C950E /* basisu_transcoder_internal.h in Headers */,
-				704738C0289F6AEE00C77A9F /* map.h in Headers */,
 				70871DF927DDDBCD00D0B9E1 /* astcenc_vecmathlib_avx2_8.h in Headers */,
 				70871DFB27DDDBCD00D0B9E1 /* astcenc_vecmathlib_none_4.h in Headers */,
 				706EEFF726D15985001C950E /* basisu_global_selector_cb.h in Headers */,
@@ -1459,13 +1425,12 @@
 				706EEFFB26D15985001C950E /* basisu_file_headers.h in Headers */,
 				706EEFFC26D15985001C950E /* miniz.h in Headers */,
 				706EEFFD26D15985001C950E /* hedistance.h in Headers */,
-				704738BC289F6AEE00C77A9F /* unordered_map.h in Headers */,
-				704738C2289F6AEE00C77A9F /* pair.h in Headers */,
 				706EEFFE26D15985001C950E /* stb_rect_pack.h in Headers */,
 				706EEFFF26D15985001C950E /* KramZipHelper.h in Headers */,
 				706EF00026D15985001C950E /* KramSDFMipper.h in Headers */,
 				706EF00126D15985001C950E /* sse2neon.h in Headers */,
 				70D222E62AD22BED00B9EA23 /* BlockedLinearAllocator.h in Headers */,
+				70B563A92C857B360089A64F /* KramZipStream.h in Headers */,
 				70871DF127DDDBCD00D0B9E1 /* astcenc_mathlib.h in Headers */,
 				709B8D3128D7BCAD0081BD1F /* ranges.h in Headers */,
 				706EF00226D15985001C950E /* KramConfig.h in Headers */,
@@ -1479,7 +1444,6 @@
 				707789D92881BA81008A51BC /* bc7decomp.h in Headers */,
 				706EF00826D15985001C950E /* Kram.h in Headers */,
 				70D222E02AD2132300B9EA23 /* ImmutableString.h in Headers */,
-				704738C8289F6AEE00C77A9F /* vector.h in Headers */,
 				70D222EB2ADAF25E00B9EA23 /* simdjson.h in Headers */,
 				70871DED27DDDBCD00D0B9E1 /* astcenc_diagnostic_trace.h in Headers */,
 				707789DB2881BA81008A51BC /* ert.h in Headers */,
@@ -1488,7 +1452,6 @@
 				707789DF2881BA81008A51BC /* rgbcx_table4.h in Headers */,
 				70871DF727DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EF00B26D15985001C950E /* KramTimer.h in Headers */,
-				704738C6289F6AEE00C77A9F /* unordered_set.h in Headers */,
 				706EF00C26D15985001C950E /* KramMmapHelper.h in Headers */,
 				706EF00D26D15985001C950E /* float4a.h in Headers */,
 				706EF00E26D15985001C950E /* KramFileHelper.h in Headers */,
@@ -1506,7 +1469,6 @@
 				706EF01526D15985001C950E /* singlecolourfit.h in Headers */,
 				706EF01626D15985001C950E /* maths.h in Headers */,
 				707789F32881BCE2008A51BC /* rdo_bc_encoder.h in Headers */,
-				704738CA289F6AEE00C77A9F /* set.h in Headers */,
 				70D222D82AC800AC00B9EA23 /* json11.h in Headers */,
 				706EF01726D15985001C950E /* colourset.h in Headers */,
 				708A6AA42708CE4700BA5410 /* bc6h_utils.h in Headers */,
@@ -1515,7 +1477,6 @@
 				706EF01A26D15985001C950E /* zstd.h in Headers */,
 				70871DF327DDDBCD00D0B9E1 /* astcenc_internal.h in Headers */,
 				709B8D2F28D7BCAD0081BD1F /* format-inl.h in Headers */,
-				704738CC289F6AEE00C77A9F /* fstring.h in Headers */,
 				709B8D2D28D7BCAD0081BD1F /* ostream.h in Headers */,
 				706EF01B26D15985001C950E /* lodepng.h in Headers */,
 				709B8D4928D7BCAD0081BD1F /* format.h in Headers */,
@@ -1542,7 +1503,6 @@
 				706EF15226D166C5001C950E /* EtcMath.h in Headers */,
 				706EF15326D166C5001C950E /* EtcIndividualTrys.h in Headers */,
 				706EF15426D166C5001C950E /* EtcBlock4x4EncodingBits.h in Headers */,
-				704738BF289F6AEE00C77A9F /* falgorithm.h in Headers */,
 				706EF15526D166C5001C950E /* EtcBlock4x4Encoding_RGB8A1.h in Headers */,
 				706EF15626D166C5001C950E /* EtcBlock4x4.h in Headers */,
 				707789E82881BA81008A51BC /* rgbcx.h in Headers */,
@@ -1568,7 +1528,6 @@
 				706EF16F26D166C5001C950E /* basisu_containers_impl.h in Headers */,
 				707789EC2881BA81008A51BC /* utils.h in Headers */,
 				706EF17026D166C5001C950E /* basisu_transcoder_internal.h in Headers */,
-				704738C1289F6AEE00C77A9F /* map.h in Headers */,
 				70871DFA27DDDBCD00D0B9E1 /* astcenc_vecmathlib_avx2_8.h in Headers */,
 				70871DFC27DDDBCD00D0B9E1 /* astcenc_vecmathlib_none_4.h in Headers */,
 				706EF17126D166C5001C950E /* basisu_global_selector_cb.h in Headers */,
@@ -1579,13 +1538,12 @@
 				706EF17526D166C5001C950E /* basisu_file_headers.h in Headers */,
 				706EF17626D166C5001C950E /* miniz.h in Headers */,
 				706EF17726D166C5001C950E /* hedistance.h in Headers */,
-				704738BD289F6AEE00C77A9F /* unordered_map.h in Headers */,
-				704738C3289F6AEE00C77A9F /* pair.h in Headers */,
 				706EF17826D166C5001C950E /* stb_rect_pack.h in Headers */,
 				706EF17926D166C5001C950E /* KramZipHelper.h in Headers */,
 				706EF17A26D166C5001C950E /* KramSDFMipper.h in Headers */,
 				706EF17B26D166C5001C950E /* sse2neon.h in Headers */,
 				70D222E72AD22BED00B9EA23 /* BlockedLinearAllocator.h in Headers */,
+				70B563AA2C857B360089A64F /* KramZipStream.h in Headers */,
 				70871DF227DDDBCD00D0B9E1 /* astcenc_mathlib.h in Headers */,
 				709B8D3228D7BCAD0081BD1F /* ranges.h in Headers */,
 				706EF17C26D166C5001C950E /* KramConfig.h in Headers */,
@@ -1599,7 +1557,6 @@
 				707789DA2881BA81008A51BC /* bc7decomp.h in Headers */,
 				706EF18226D166C5001C950E /* Kram.h in Headers */,
 				70D222E12AD2132300B9EA23 /* ImmutableString.h in Headers */,
-				704738C9289F6AEE00C77A9F /* vector.h in Headers */,
 				70D222EC2ADAF25E00B9EA23 /* simdjson.h in Headers */,
 				70871DEE27DDDBCD00D0B9E1 /* astcenc_diagnostic_trace.h in Headers */,
 				707789DC2881BA81008A51BC /* ert.h in Headers */,
@@ -1608,7 +1565,6 @@
 				707789E02881BA81008A51BC /* rgbcx_table4.h in Headers */,
 				70871DF827DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EF18526D166C5001C950E /* KramTimer.h in Headers */,
-				704738C7289F6AEE00C77A9F /* unordered_set.h in Headers */,
 				706EF18626D166C5001C950E /* KramMmapHelper.h in Headers */,
 				706EF18726D166C5001C950E /* float4a.h in Headers */,
 				706EF18826D166C5001C950E /* KramFileHelper.h in Headers */,
@@ -1626,7 +1582,6 @@
 				706EF18F26D166C5001C950E /* singlecolourfit.h in Headers */,
 				706EF19026D166C5001C950E /* maths.h in Headers */,
 				707789F42881BCE2008A51BC /* rdo_bc_encoder.h in Headers */,
-				704738CB289F6AEE00C77A9F /* set.h in Headers */,
 				70D222D92AC800AC00B9EA23 /* json11.h in Headers */,
 				706EF19126D166C5001C950E /* colourset.h in Headers */,
 				708A6AA52708CE4700BA5410 /* bc6h_utils.h in Headers */,
@@ -1635,7 +1590,6 @@
 				706EF19426D166C5001C950E /* zstd.h in Headers */,
 				70871DF427DDDBCD00D0B9E1 /* astcenc_internal.h in Headers */,
 				709B8D3028D7BCAD0081BD1F /* format-inl.h in Headers */,
-				704738CD289F6AEE00C77A9F /* fstring.h in Headers */,
 				709B8D2E28D7BCAD0081BD1F /* ostream.h in Headers */,
 				706EF19526D166C5001C950E /* lodepng.h in Headers */,
 				709B8D4A28D7BCAD0081BD1F /* format.h in Headers */,
@@ -1801,6 +1755,7 @@
 				706EEFBD26D1595D001C950E /* colourblock.cpp in Sources */,
 				706EEFBE26D1595E001C950E /* colourfit.cpp in Sources */,
 				70871DFF27DDDBCD00D0B9E1 /* astcenc_pick_best_endpoint_format.cpp in Sources */,
+				70B563A72C857B360089A64F /* KramZipStream.cpp in Sources */,
 				70871E0927DDDBCD00D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */,
 				70871DCF27DDDBCD00D0B9E1 /* astcenc_symbolic_physical.cpp in Sources */,
 				70D222DA2AC800AC00B9EA23 /* json11.cpp in Sources */,
@@ -1900,6 +1855,7 @@
 				70871E0027DDDBCD00D0B9E1 /* astcenc_pick_best_endpoint_format.cpp in Sources */,
 				70871E0A27DDDBCD00D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */,
 				70871DD027DDDBCD00D0B9E1 /* astcenc_symbolic_physical.cpp in Sources */,
+				70B563A82C857B360089A64F /* KramZipStream.cpp in Sources */,
 				706EFF7A26D34740001C950E /* allocator_eastl.cpp in Sources */,
 				706EF1D626D166C5001C950E /* maths.cpp in Sources */,
 				706EF1D726D166C5001C950E /* singlecolourfit.cpp in Sources */,
@@ -1939,6 +1895,7 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_IMPLICIT_FALLTHROUGH = YES_ERROR;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
@@ -2035,6 +1992,7 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_IMPLICIT_FALLTHROUGH = YES_ERROR;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;

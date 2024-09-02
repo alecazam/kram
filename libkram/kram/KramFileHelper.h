@@ -15,12 +15,13 @@ namespace kram {
 using namespace NAMESPACE_STL;
 
 // Use this to help open/close files, since dtor is scoped, or caller can close()
-// Also allows write to temp file, then rename over the destination file.  This
-// avoids leaving unfinished files around when
+// Also allows write to temp file, then rename over the destination file.
+// This avoids leaving unfinished files around.
 class FileHelper {
 public:
     ~FileHelper();
-
+    bool isOpen() const { return _fp != nullptr; }
+    
     bool isDirectory(const char* filename) const;
     
     bool exists(const char* filename) const;
@@ -53,6 +54,8 @@ public:
     static uint64_t modificationTimestamp(const char* filename);
 
     static size_t pagesize();
+    
+    const string& filename() const { return _filename; }
 
 private:
     FILE* _fp = nullptr;

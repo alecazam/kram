@@ -37,11 +37,17 @@
 
 #if ASTCENC_NEON
 
-    #define ASTCENC_POPCNT 0
-    #define ASTCENC_F16C 0
+    // Intel simd ops
     #define ASTCENC_SSE 0
     #define ASTCENC_AVX 0
+
+    // Keep alignment at 16B
     #define ASTCENC_VECALIGN 16
+
+    // These have equivalents in Neon
+    #define ASTCENC_POPCNT 0
+    #define ASTCENC_F16C 0
+
 
 #else
 
@@ -69,6 +75,7 @@
       #endif
     #endif
 
+    // must set -fpopcount
     #ifndef ASTCENC_POPCNT
       #if defined(__POPCNT__)
         #define ASTCENC_POPCNT 1
@@ -77,8 +84,8 @@
       #endif
     #endif
 
+    // must set -mf16c only on x86_64 build, avx not enough on clang
     #ifndef ASTCENC_F16C
-      // must set -mf16c only on x86_64 build, avx not enough on clang
       #if defined(__F16C__)
         #define ASTCENC_F16C 1
       #else

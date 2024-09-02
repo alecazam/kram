@@ -4,14 +4,17 @@
 //#include <iterator> // for copy_if on Win
 #include <vector>
 #include <string>
+#include <unordered_map>
+#include <mutex>
 
 #include "miniz.h"
 
 // test for perf of this compared to one in miniz also see
 // comments about faster algs.
 // libcompress can only encode lvl 5, but here it's only decompress.
+// This seems to fail when used for kramv zip archives, so disable fo now
 #ifndef USE_LIBCOMPRESSION
-#define USE_LIBCOMPRESSION (KRAM_MAC || KRAM_IOS)
+#define USE_LIBCOMPRESSION 0 // (KRAM_MAC || KRAM_IOS)
 #endif
 
 #if USE_LIBCOMPRESSION
@@ -21,8 +24,6 @@
 // Throwing this in for now, since it's the only .cpp file
 #if KRAM_MAC || KRAM_IOS
 #include <cxxabi.h> // demangle
-#include <unordered_map>
-#include <mutex>
 #endif
 
 using namespace NAMESPACE_STL;
@@ -407,11 +408,12 @@ bool ZipHelper::extract(const ZipEntry& entry, void* buffer, uint64_t bufferSize
         return false;
     }
     // need to extra data and header
+    char scratchBuffer[compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)];
     
     uint64_t bytesDecoded = compression_decode_buffer(
         (uint8_t*)buffer, entry.uncompressedSize,
         (const uint8_t*)data, entry.compressedSize,
-        NULL, // scratch-buffer that could speed up to pass
+        scratchBuffer,
         COMPRESSION_ZLIB);
     
     bool success = false;

@@ -5,6 +5,9 @@
 #pragma once
 
 #include <cassert>
+
+// TODO: fix for other platforms
+#include <sys/cdefs.h>
 //#include <string>
 
 // #include "KramConfig.h"

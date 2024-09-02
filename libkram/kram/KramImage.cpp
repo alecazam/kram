@@ -2411,10 +2411,13 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     switch (count) {
                         case 4:
                             dst[count * i + 3] = src[i].a;
+                            [[fallthrough]];
                         case 3:
                             dst[count * i + 2] = src[i].b;
+                            [[fallthrough]];
                         case 2:
                             dst[count * i + 1] = src[i].g;
+                            [[fallthrough]];
                         case 1:
                             dst[count * i + 0] = src[i].r;
                     }
@@ -2440,10 +2443,13 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     switch (count) {
                         case 4:
                             dst[count * i + 3] = src16.w;
+                            [[fallthrough]];
                         case 3:
                             dst[count * i + 2] = src16.z;
+                            [[fallthrough]];
                         case 2:
                             dst[count * i + 1] = src16.y;
+                            [[fallthrough]];
                         case 1:
                             dst[count * i + 0] = src16.x;
                     }
@@ -2464,10 +2470,13 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
                     switch (count) {
                         case 4:
                             dst[count * i + 3] = src[i].w;
+                            [[fallthrough]];
                         case 3:
                             dst[count * i + 2] = src[i].z;
+                            [[fallthrough]];
                         case 2:
                             dst[count * i + 1] = src[i].y;
+                            [[fallthrough]];
                         case 1:
                             dst[count * i + 0] = src[i].x;
                     }

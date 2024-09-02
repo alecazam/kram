@@ -436,7 +436,7 @@ unsigned LodepngDecompressUsingMiniz(
     size_t bytesDecoded = compression_decode_buffer(
          (uint8_t*)*dstData, *dstDataSize,
          (const uint8_t*)srcData + 2, srcDataSize - 2,
-        scratchBuffer, // scratch-buffer that could speed up to pass
+        scratchBuffer, 
          COMPRESSION_ZLIB);
     
     int result = MZ_OK;

@@ -72,6 +72,7 @@ float lerpf(float a, float b, int i, int denom) {
     case 3:
         denom *= 5;
         i *= 5;    // fall through to case 15
+        [[fallthrough]];
     case 7:
         weights = g_aWeights3;
         break;

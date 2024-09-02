@@ -236,7 +236,7 @@ bool ZipHelper::extract(const ZipEntry& entry, void* buffer, uint64_t bufferSize
     uint64_t bytesDecoded = compression_decode_buffer(
         (uint8_t*)buffer, entry.uncompressedSize,
         (const uint8_t*)data, entry.compressedSize,
-        scratchBuffer, // scratch-buffer that could speed up to pass
+        scratchBuffer, 
         COMPRESSION_ZLIB);
     
     bool success = false;

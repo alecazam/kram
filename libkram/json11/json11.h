@@ -54,6 +54,10 @@
 
 #include "ImmutableString.h"
 
+namespace kram {
+class ICompressedStream;
+}
+
 namespace json11 {
 
 using namespace NAMESPACE_STL;
@@ -64,7 +68,7 @@ class JsonReaderData;
 
 //--------------------------
 
-/* Don't want to maintain this form.  Use SAX not DOM for writer.
+/* Don't want to maintain this form from json11.  Use SAX not DOM for writer.
 // Write json nodes out to a string.  String data is encoded.
 class JsonWriter final {
 public:
@@ -99,7 +103,12 @@ private:
 // And keys go out in the order added.
 class JsonWriter final {
 public:
+    // This writes into a buffer
     JsonWriter(string* str) : _out(str) {}
+    
+    // This writes into a small buffer, and then into a compressed stream
+    JsonWriter(string* str, ICompressedStream* stream) : _out(str), _stream(stream) {}
+    ~JsonWriter();
     
     void pushObject(const char* key = "");
     void popObject();
@@ -125,6 +134,8 @@ public:
     void writeJson(const JsonWriter& json);
     
 private:
+    void writeFormat(const char* fmt, ...) __printflike(2, 3);
+    
     bool isArray() const { return _stack.back() == ']'; }
     bool isObject() const { return _stack.back() == '}'; }
    
@@ -137,6 +148,7 @@ private:
     string* _out = nullptr;
     string _stack;
     string _escapedString;
+    ICompressedStream* _stream = nullptr;
 };
 
 class JsonArrayScope {

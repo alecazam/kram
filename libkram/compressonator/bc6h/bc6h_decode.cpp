@@ -210,6 +210,7 @@ int lerp(int a, int b, int i, int denom) {
     case 3:
         denom *= 5;
         i *= 5;    // fall through to case 15
+        [[fallthrough]];
     case 15:
         weights = g_aWeights4;
         break;
