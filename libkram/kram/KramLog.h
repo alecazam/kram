@@ -6,8 +6,12 @@
 
 #include <cassert>
 
-// TODO: fix for other platforms
+// This has __printflike on macOS/Linux
+#if KRAM_WIN
+// TODO: fix for Win
+#else
 #include <sys/cdefs.h>
+#endif
 //#include <string>
 
 // #include "KramConfig.h"
