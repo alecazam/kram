@@ -40,7 +40,7 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
 #define KVERIFY(x) KASSERT(x)
 #else
 #define KASSERT(x)
-#define KVERIFY(x) (x)
+#define KVERIFY(x) (void)(x)
 #endif
 
 // save code space, since file/func aren't output for debug/info
