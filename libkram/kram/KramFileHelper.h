@@ -29,7 +29,7 @@ public:
     bool open(const char* filename, const char* access);
 
     // this file is auto-deleted by close(), is that okay with renameFile use?
-    bool openTemporaryFile(const char* suffix, const char* access);
+    bool openTemporaryFile(const char* prefix, const char* suffix, const char* access);
 
     // mainly for tmp files, file can be closed, but this does rename of tmp file.
     // may fail if tmp file and dst are different volumes.

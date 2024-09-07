@@ -65,7 +65,7 @@ static FILE* fopen_mkdir(const char* path, const char* mode)
 FileHelper::~FileHelper() { close(); }
 
 // no current extension
-bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
+bool FileHelper::openTemporaryFile(const char* prefix, const char* suffix, const char* access)
 {
     close();
 
@@ -82,7 +82,7 @@ bool FileHelper::openTemporaryFile(const char* suffix, const char* access)
     int keep = 0;
 
     // Note: can't pass . either, always opened as rw
-    _fp = tmpfileplus("/tmp/", "kramimage-", suffix, &pathname, keep);
+    _fp = tmpfileplus("/tmp/", prefix, suffix, &pathname, keep);
     if (!_fp) {
         return false;
     }
@@ -139,8 +139,10 @@ size_t FileHelper::pagesize()
 
 bool FileHelper::copyTemporaryFileTo(const char* dstFilename)
 {
-    if (!_fp) return false;
-    if (_filename.empty()) return false;
+    if (!_fp) 
+        return false;
+    if (_filename.empty()) 
+        return false;
 
     // since we're not closing, need to flush output
     fflush(_fp);

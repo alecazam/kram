@@ -266,7 +266,7 @@ std::thread::native_handle_type getCurrentThread()
 // Of course, Windows has to make portability difficult.
 // And Mac non-standardly, doesn't even pass thread to call.
 //   This requires it to be set from thread itself.
-constexpr const uint32_t kMaxThreadName = 32;
+// Also linux (and Android?) limited to 15chars.
 
 #if KRAM_WIN
 
@@ -274,8 +274,10 @@ constexpr const uint32_t kMaxThreadName = 32;
 // Can just set in manifest file.
 // SetConsoleOutputCP(CP_UTF8);
 
-void setThreadName(std::thread::native_handle_type handle, const char* threadName)
+void setCurrentThreadName(const char* threadName)
 {
+    std::thread::native_handle_type handle = getCurrentThread();
+    
     // TODO: use std::wstring_convert();
     // std::codecvt_utf8_utf16
     
@@ -291,22 +293,12 @@ void setThreadName(std::thread::native_handle_type handle, const char* threadNam
     ::SetThreadDescription(handle, str.c_str());
 }
 
-void setCurrentThreadName(const char* threadName)
-{
-    setThreadName(getCurrentThread(), threadName);
-}
-
-void setThreadName(std::thread& thread, const char* threadName)
-{
-    setThreadName(thread.native_handle(), threadName);
-}
-
-void getCurrentThreadName(char name[kMaxThreadName])
+void getThreadName(std::thread::native_handle_type threadHandle, char name[kMaxThreadName])
 {
     name[0] = 0;
     
     wchar_t* threadNameW = nullptr;
-    HRESULT hr = ::GetThreadDescription(getCurrentThread(), &threadNameW);
+    HRESULT hr = ::GetThreadDescription(threadHandle, &threadNameW);
     if (SUCCEEDED(hr)) {
         // convert name back
         uint32_t len = wcslen(threadNameW);
@@ -321,59 +313,38 @@ void getCurrentThreadName(char name[kMaxThreadName])
     }
 }
 
-#elif KRAM_MAC || KRAM_IOS
-
-void setThreadName(std::thread::native_handle_type macroUnusedArg(handle), const char* threadName)
-{
-    // This can only set on self
-    int val = pthread_setname_np(threadName);
-    if (val != 0)
-        KLOGW("Thread", "Could not set thread name");
-}
-
-void setCurrentThreadName(const char* threadName)
-{
-    setThreadName(getCurrentThread(), threadName);
-}
-
-// This doesn't exist on macOS. What a pain.  Doesn't line up with getter calls.
-// Means can't set threadName externally without telling thread to wake and set itself.
-//void setThreadName(std::thread& thread, const char* threadName)
-//{
-//    auto handle = thread.native_handle();
-//    setThreadName(handle, threadName);
-//}
-
-void getCurrentThreadName(char name[kMaxThreadName])
-{
-    pthread_getname_np(getCurrentThread(), name, kMaxThreadName);
-}
 #else
 
-// 15 char name limit on Linux/Android, how modern!
-void setThreadName(std::thread::native_handle_type handle, const char* threadName)
+void setCurrentThreadName(const char* threadName)
 {
-    int val = pthread_setname_np(handle, threadName);
+    #if KRAM_MAC || KRAM_IOS
+    // can only set thread from thread on macOS, sucks
+    int val = pthread_setname_np(threadName);
+    #else
+    // 15 char name limit on Linux/Android, how modern!
+    int val = pthread_setname_np(getCurrentThread(), threadName);
+    #endif
+    
     if (val != 0)
         KLOGW("Thread", "Could not set thread name");
 }
 
-void setCurrentThreadName(const char* threadName)
+void getThreadName(std::thread::native_handle_type threadHandle, char name[kMaxThreadName])
 {
-    setThreadName(getCurrentThread(), threadName);
-}
-
-void setThreadName(std::thread& thread, const char* threadName)
-{
-    setThreadName(thread.native_handle(), threadName);
-}
-
-void getCurrentThreadName(char name[kMaxThreadName])
-{
-    pthread_getname_np(getCurrentThread(), name, kMaxThreadName);
+    pthread_getname_np(threadHandle, name, kMaxThreadName);
 }
 
 #endif
+
+void getThreadName(std::thread& thread, char name[kMaxThreadName])
+{
+    getThreadName(thread.native_handle(), name);
+}
+
+void getCurrentThreadName(char name[kMaxThreadName])
+{
+    getThreadName(getCurrentThread(), name);
+}
 
 //------------------
 

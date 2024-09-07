@@ -43,12 +43,9 @@
 #include "KramFmt.h"
 #include "KramTimer.h"
 #include "format.h" // really fmt/format.h
+#include "TaskSystem.h"
 
 namespace kram {
-
-// Pulled in from TaskSystem.cpp
-constexpr const uint32_t kMaxThreadName = 32;
-extern void getCurrentThreadName(char name[kMaxThreadName]);
 
 using mymutex = std::recursive_mutex;
 using mylock = std::unique_lock<mymutex>;

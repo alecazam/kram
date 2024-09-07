@@ -1179,7 +1179,21 @@ bool Data::isArchive() const
 bool Data::loadFile()
 {
     if (isArchive()) {
-        return loadFileFromArchive();
+        // This test perf layer and the ZipStream
+        Perf* perf = nullptr; // Perf::instance();
+        
+        // TODO: have to have permision to write file
+        if (perf) {
+            if (!perf->start("/Users/Alec/Library/Containers/com.hialec.kramv/Data/Traces/"
+                             "load.perftrace.gz"))
+                perf = nullptr;
+        }
+        bool success = loadFileFromArchive();
+        
+        if (perf)
+            perf->stop();
+        
+        return success;
     }
     
     // now lookup the filename and data at that entry
@@ -1379,6 +1393,8 @@ bool Data::loadFileFromArchive()
         return false;
     }
     
+    KPERFT("loadFileFromArchive");
+    
     const uint8_t* imageData = nullptr;
     uint64_t imageDataLength = 0;
 
@@ -1391,6 +1407,8 @@ bool Data::loadFileFromArchive()
     vector<uint8_t> bufferForImage;
     
     if (isFileUncompressed) {
+        KPERFT("ZipExtractRaw");
+        
         // search for main file - can be albedo or normal
         if (!zip.extractRaw(filename, &imageData, imageDataLength)) {
             return false;
@@ -1398,6 +1416,8 @@ bool Data::loadFileFromArchive()
 
     }
     else {
+        KPERFT("ZipExtract");
+        
         // need to decompress first
         if (!zip.extract(filename, bufferForImage)) {
             return false;
@@ -1430,10 +1450,14 @@ bool Data::loadFileFromArchive()
                 bool isNormalUncompressed = normalEntry->compressedSize == entry->uncompressedSize;
                 
                 if (isNormalUncompressed) {
+                    KPERFT("ZipExtractRawNormal");
+                    
                     zip.extractRaw(name.c_str(), &imageNormalData,
                                    imageNormalDataLength);
                 }
                 else {
+                    KPERFT("ZipExtractNormal");
+                    
                     // need to decompress first
                     if (!zip.extract(filename, bufferForNormal)) {
                         return false;
@@ -1459,29 +1483,43 @@ bool Data::loadFileFromArchive()
 
     // TODO: do imageDiff here?
     
+    KPERFT_START(1, "KTXOpen");
+    
     if (!imageDataKTX.open(imageData, imageDataLength, image)) {
         return false;
     }
 
-    if (hasNormal && imageNormalDataKTX.open(
-                         imageNormalData, imageNormalDataLength, imageNormal)) {
-        // shaders only pull from albedo + normal on these texture types
-        if (imageNormal.textureType == image.textureType &&
-            (imageNormal.textureType == MyMTLTextureType2D ||
-             imageNormal.textureType == MyMTLTextureType2DArray)) {
-            // hasNormal = true;
-        }
-        else {
-            hasNormal = false;
-        }
+    KPERFT_STOP(1);
+   
+    
+    if (hasNormal) {
+        KPERFT("KTXOpenNormal");
+       
+        if (imageNormalDataKTX.open(
+            imageNormalData, imageNormalDataLength, imageNormal)) {
+                // shaders only pull from albedo + normal on these texture types
+                if (imageNormal.textureType == image.textureType &&
+                    (imageNormal.textureType == MyMTLTextureType2D ||
+                     imageNormal.textureType == MyMTLTextureType2DArray)) {
+                    // hasNormal = true;
+                }
+                else {
+                    hasNormal = false;
+                }
+            }
     }
 
+    
     //---------------------------------
     
+    KPERFT_START(3, "KTXLoad");
+   
     if (!_delegate.loadTextureFromImage(fullFilename.c_str(), (double)timestamp, image, hasNormal ? &imageNormal : nullptr, nullptr, true)) {
         return false;
     }
 
+    KPERFT_STOP(3);
+   
     //---------------------------------
     
    // NSArray<NSURL*>* urls_ = (NSArray<NSURL*>*)_delegate._urls;

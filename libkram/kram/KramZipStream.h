@@ -2,13 +2,14 @@
 
 #include "KramConfig.h"
 
-#include "KramFileHelper.h"
 #include <span>
 
 struct mz_stream;
 
 namespace kram {
 using namespace NAMESPACE_STL;
+
+class FileHelper;
 
 // This can be passed a count
 template<typename T>
@@ -22,7 +23,7 @@ public:
     virtual ~ICompressedStream() {}
     
     // compress and store the data
-    virtual void compress(const Slice& uncompressedData) = 0;
+    virtual void compress(const Slice& uncompressedData, bool finish) = 0;
     
     // when reached then call compress
     virtual uint32_t compressLimit() const = 0;
@@ -36,11 +37,12 @@ public:
     virtual ~ZipStream();
     
     // writes opening header and closing footer
-    bool open();
+    // Can disable compression for testing the src content.
+    bool open(FileHelper* fileHelper, bool isUncompressed = false);
     void close();
     
     // compress and write data to helper
-    virtual void compress(const Slice& uncompressedData) override;
+    virtual void compress(const Slice& uncompressedData, bool finish) override;
     
     // test this for when to call compress
     virtual uint32_t compressLimit() const override {
@@ -48,15 +50,16 @@ public:
     }
     
 private:
-    Slice write(const Slice& in);
+    Slice compressSlice(const Slice& in, bool finish);
     
     vector<uint8_t> _compressed;
     unique_ptr<mz_stream> _stream;
-    FileHelper _fileHelper;
+    FileHelper* _fileHelper = nullptr;
     
     uint32_t _sourceCRC32 = 0;
     size_t _sourceSize = 0;
     uint32_t _compressLimit = 0;
+    bool _isUncompressed = false;
 };
 
 

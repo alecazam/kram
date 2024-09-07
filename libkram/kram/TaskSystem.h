@@ -151,10 +151,23 @@ struct ThreadInfo {
     int affinity = 0; // single core for now
 };
 
+std::thread::native_handle_type getCurrentThread();
+
 // This only works for current thread, but simplifies setting several thread params.
 void setThreadInfo(ThreadInfo& info);
 
-    
+// This is limited to 16 on linux
+// #define TASK_COMM_LEN 16
+constexpr const uint32_t kMaxThreadName = 32;
+
+void setCurrentThreadName(const char* threadName);
+
+void getThreadName(std::thread::native_handle_type threadHandle, char name[kMaxThreadName]);
+
+void getThreadName(std::thread& thread, char name[kMaxThreadName]);
+
+void getCurrentThreadName(char name[kMaxThreadName]);
+
 class task_system {
     NOT_COPYABLE(task_system);
 

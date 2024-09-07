@@ -919,7 +919,7 @@ bool SavePNG(Image& image, const char* filename)
 
 bool SetupTmpFile(FileHelper& tmpFileHelper, const char* suffix)
 {
-    return tmpFileHelper.openTemporaryFile(suffix, "w+b");
+    return tmpFileHelper.openTemporaryFile("kramimage-", suffix, "w+b");
 }
 
 bool SetupSourceImage(const string& srcFilename, Image& sourceImage,

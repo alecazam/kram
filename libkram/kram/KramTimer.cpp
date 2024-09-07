@@ -3,14 +3,15 @@
 // in all copies or substantial portions of the Software.
 
 #include "KramTimer.h"
-
-#if 1
+#include "TaskSystem.h"
 
 #if KRAM_WIN
 #include <windows.h>
 #elif KRAM_MAC || KRAM_IOS
 #include <mach/mach_time.h>
 #endif
+
+#define nl '\n'
 
 namespace kram {
 
@@ -70,54 +71,285 @@ double currentTimestamp()
     return (double)delta * gQueryPeriod;
 }
 
-} // namespace kram
+//-------------------
 
-#else
+// TODO: also look into the Perfetto binary format and library/api.
+// https://perfetto.dev/docs/instrumentation/tracing-sdk
 
-/*
-// see sources here
-// https://codebrowser.dev/llvm/libcxx/src/chrono.cpp.html
-// but steady on macOS uses clock_gettime(CLOCK_MONOTONIC_RAW, &tp)
-//   which should be mach_continuous_time()
-//
-// also see sources here for timers
-// https://opensource.apple.com/source/Libc/Libc-1158.1.2/gen/clock_gettime.c.auto.html
-// mach_continuous_time() vs. mach_absolute_time()
-// https://developer.apple.com/library/archive/qa/qa1398/_index.html
- 
-#if USE_EASTL
-#include "EASTL/chrono.h"
-#else
-#include <chrono>
-#endif
- 
-namespace kram {
+// TODO: escape strings, but it's just more work
+Perf* Perf::_instance = new Perf();
 
-using namespace NAMESPACE_STL;
+thread_local uint32_t gPerfStackDepth = 0;
 
-#if USE_EASTL
-using namespace eastl::chrono;
-#else
-using namespace std::chrono;
-#endif
-
-// high-res  (defaults to steady or system in libcxx)
-//using myclock = high_resolution_clock;
-//using myclock = system_clock;
-using myclock = steady_clock;
-
-static const myclock::time_point gStartTime = myclock::now();
-
-double currentTimestamp()
+PerfScope::PerfScope(const char* name_)
+: name(name_), time(currentTimestamp())
 {
-    auto t = myclock::now();
-    duration<double, std::milli> timeSpan = t - gStartTime;
-    double count = (double)timeSpan.count() * 1e-3;
-    return count;
+    gPerfStackDepth++;
 }
 
-}  // namespace kram
-*/
 
-#endif
+void PerfScope::close()
+{
+    if (time != 0.0) {
+        --gPerfStackDepth;
+        
+        Perf::instance()->addTimer(name, time, currentTimestamp() - time);
+        time = 0.0;
+    }
+}
+
+void addPerfCounter(const char* name, int64_t value)
+{
+    Perf::instance()->addCounter(name, currentTimestamp(), value);
+}
+
+//---------------
+
+bool Perf::start(const char* filename, uint32_t maxStackDepth)
+{
+    mylock lock(_mutex);
+    
+    if (isRunning()) {
+        KLOGW("Perf", "start already called");
+        return true;
+    }
+    
+    _filename = filename;
+    _maxStackDepth = maxStackDepth;
+    
+    // test the compressor
+    bool testZipStream = false;
+    if (testZipStream) {
+        string filename2 = filename;
+        filename2 += ".txt";
+        FileHelper fileHelper;
+        ZipStream stream;
+        if (fileHelper.open(filename2.c_str(), "w+b")) {
+            const char* testStr = 
+R"(id,name
+1,TEST_1
+2,TEST_2
+3,TEST_3
+4,TEST_4
+)";
+            
+            if (stream.open(&fileHelper, false)) {
+                stream.compress(Slice((uint8_t*)testStr, strlen(testStr)), true);
+                stream.close();
+            }
+            fileHelper.close();
+        }
+    }
+    
+    // write json as binary, so win doesn't replace \n with \r\n
+    if (!_fileHelper.openTemporaryFile("perf-", ".perftrace.gz", "w+b")) {
+        KLOGW("Perf", "Could not open oerf temp file");
+        return false;
+    }
+    
+    bool isUncompressed = false; // can test, extension still .gz though
+    if (!_stream.open(&_fileHelper, isUncompressed)) {
+        _fileHelper.close();
+        return false;
+    }
+    
+    // TODO: store _startTime in json starting params, also the
+    _startTime = currentTimestamp();
+    
+    _threadIdToTidMap.clear();
+    _threadNames.clear();
+   
+    string buf;
+    
+    // displya timeUnit must be ns (nanos) or ms (micros), default is ms
+    // "displayTimeUnit": "ns"
+    sprintf(buf, R"({"traceEvents":[%c)", nl);
+    write(buf);
+    
+    // can store file info here, only using one pid
+    uint32_t processId = 0;
+    const char* processName = "kram"; // TODO: add platform, config, use filename instead?
+    sprintf(buf, R"({"name":"process_name","ph":"M","pid":%u,"args":{"name":"%s"}},%c)",
+           processId, processName, nl);
+    write(buf);
+    
+    return true;
+}
+
+void Perf::stop() 
+{
+    mylock lock(_mutex);
+    
+    if (!isRunning()) {
+        KLOGW("Perf", "stop called, but never started");
+        return;
+    }
+    
+    // write end of array and object, and force flush
+    bool forceFlush = true;
+    string buf;
+    sprintf(buf, R"(]}%c)", nl);
+    write(buf, forceFlush);
+    
+    _stream.close();
+    
+    bool success = _fileHelper.copyTemporaryFileTo(_filename.c_str());
+    if (!success) {
+        KLOGW("Perf", "Couldn't move temp file");
+    }
+    
+    _fileHelper.close();
+    
+    // TODO: now open the file in kram-profile by opening it
+    // okay to use system, but it uses a global mutex on macOS
+    // This will be a .gz file, so not sure that kram-profile can respond
+    //
+    // sprintf(buf, "open %s", _filename.c_str());
+    // system(buf.c_str());
+    
+    _startTime = 0.0;
+}
+
+void Perf::write(const string& str, bool forceFlush) 
+{
+    mylock lock(_mutex);
+    
+    _buffer += str;
+    
+    if (forceFlush || _buffer.size() >= _stream.compressLimit()) {
+        _stream.compress(Slice((uint8_t*)_buffer.data(), _buffer.size()), forceFlush);
+        _buffer.clear();
+    }
+}
+
+uint32_t Perf::addThreadIfNeeded() 
+{
+    auto threadId = getCurrentThread();
+    
+    // don't need this, it's already locked by caller
+    //mylock lock(_mutex);
+    
+    auto it = _threadIdToTidMap.find(threadId);
+    if (it != _threadIdToTidMap.end()) {
+        return it->second;
+    }
+    
+    // add the new name and tid
+    char threadName[kMaxThreadName];
+    getThreadName(threadId, threadName);
+    
+    // don't really need to store name if not sorting, just need tid counter
+    uint32_t tid = _threadNames.size();
+    _threadNames.push_back(threadName);
+    
+    _threadIdToTidMap.insert(make_pair(threadId, tid));
+    
+    // this assumes the map is wiped each time
+    string buf;
+    sprintf(buf, R"({"name":"thread_name","ph":"M","tid":%u,"args":{"name":"%s"}},%c)",
+           tid, threadName, nl);
+    write(buf);
+    
+    return tid;
+}
+
+void Perf::addTimer(const char* name, double time, double elapsed)
+{
+    if (!isRunning()) {
+        return;
+    }
+    
+    // About Perfetto ts sorting.  This is now fixed to sort duration.
+    // https://github.com/google/perfetto/issues/878
+    
+    if (_maxStackDepth && gPerfStackDepth >= _maxStackDepth)
+        return;
+    
+    // zero out the time, so times are smaller to store
+    time -= _startTime;
+    
+    // problem with duration is that existing events can overlap the start time
+    bool isClamped = time < 0.0;
+    if (isClamped) {
+        elapsed += time;
+        time = 0.0;
+    }
+    if (elapsed <= 0.0)
+        return;
+    
+    // Catapult timings are suppoed to be in micros.
+    // Convert seconds to micros (as integer), lose nanos.  Note that
+    // Perfetto will convert all values to nanos anyways and lacks a ms format.
+    // Raw means nanos, and Seconds is too small of a fraction.
+    // Also printf does IEEE round to nearest even.
+    uint32_t timeDigits = 0; // or 3 for nanos
+    time *= 1e6;
+    elapsed *= 1e6;
+
+    // TODO: worth aliasing the strings, just replacing one string with another
+    // but less chars for id.
+    
+    // now lock across isRunning, addThread, and write call
+    mylock lock(_mutex);
+    if (!isRunning()) {
+        return;
+    }
+    // This requires a lock, so buffering the events would help
+    // what about sorting the names instead of first-come, first-serve?
+    uint32_t tid = addThreadIfNeeded();
+
+    // write out the event in micros, default is displayed in ms
+    string buf;
+    sprintf(buf, R"({"name":"%s","ph":"X","tid":%d,"ts":%.*f,"dur":%.*f},%c)",
+            name, tid, timeDigits, time, timeDigits, elapsed, nl);
+    write(buf);
+}
+
+// Can also use begin/end but these aren't a atomic
+//  R"({"name":"%s","ph":"B","tid":%d,"ts":%.0f},%c)",
+//  R"({"ph":"E","tid":%d,"ts":%.0f},%c)",
+
+void Perf::addCounter(const char* name, double time, int64_t amount) 
+{
+    if (!isRunning()) {
+        return;
+    }
+    
+    // also reject nested counters off perf stack depth
+    if (_maxStackDepth && gPerfStackDepth >= _maxStackDepth)
+        return;
+    
+    // zero out the time, so times are smaller to store
+    time -= _startTime;
+    
+    // problem with duration is that events can occur outside the start time
+    if (time < 0.0) {
+        return;
+    }
+   
+    // Catapult timings are suppoed to be in micros.
+    // Convert seconds to micros (as integer), lose nanos.  Note that
+    // Perfetto will convert all values to nanos anyways.
+    // Raw means nanos, and Seconds is too small of a fraction.
+    // Also printf does IEEE round to nearest even.
+    // https://github.com/google/perfetto/issues/879
+    
+    time *= 1e6;
+    uint32_t timeDigits = 0; // or 3 for nanos
+    
+    // TODO: worth aliasing the strings?, just replacing one string with another
+    // but less chars for id.
+    
+    // Note: can also have multiple named values passed in args
+    // Note: unclear if Perfetto can handle negative values
+    
+    // write out the event in micros, default is displayed in ms
+    // lld not portable to Win
+    string buf;
+    sprintf(buf, R"({"name":"%s","ph":"C","ts":%.*f,"args":{"v":%lld}},%c)",
+            name, timeDigits, time, amount, nl);
+    write(buf);
+}
+
+} // namespace kram
 

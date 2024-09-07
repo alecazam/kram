@@ -284,7 +284,7 @@ void JsonWriter::writeFormat(const char* fmt, ...) {
     if (_stream && _out->size() >= _stream->compressLimit())
     {
         // flush the output to a compression stream
-        _stream->compress(Slice((uint8_t*)_out->data(), _out->size())); // losing const
+        _stream->compress(Slice((uint8_t*)_out->data(), _out->size()), false); // losing const
         
         // reset the buffer
         _out->clear();
@@ -295,7 +295,7 @@ JsonWriter::~JsonWriter()
 {
     if (_stream)  {
         if (!_out->empty()) {
-            _stream->compress(Slice((uint8_t*)_out->data(), _out->size())); // losing const
+            _stream->compress(Slice((uint8_t*)_out->data(), _out->size()), true); // losing const
         }
     }
 }

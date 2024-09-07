@@ -1,5 +1,6 @@
 #include "KramZipStream.h"
 
+#include "KramFileHelper.h"
 #include "miniz.h"
 
 namespace kram {
@@ -14,24 +15,37 @@ ZipStream::~ZipStream() {
     close();
 }
 
-bool ZipStream::open() {
-    KVERIFY(_fileHelper.isOpen());
+bool ZipStream::open(FileHelper* fileHelper, bool isUncompressed) {
+    _fileHelper = fileHelper;
+    if (!_fileHelper->isOpen()) {
+        return false;
+    }
+    
+    _isUncompressed = isUncompressed;
+    if (_isUncompressed) {
+        return true;
+    }
+    
+    memset(_stream.get(), 0, sizeof(mz_stream));
     
     // https://www.zlib.net/zlib_how.html
     // https://www.ietf.org/rfc/rfc1952.txt
     
     // can also install custom allocators (allocates 256KB buffer otherwise)
-    _stream->zalloc = NULL;
-    _stream->zfree = NULL;
-    _stream->opaque = NULL;
-    
+//    _stream->zalloc = NULL;
+//    _stream->zfree = NULL;
+//    _stream->opaque = NULL;
+//    
     // Just making this double the default mz_stream buffer.
-    // Should be able to get about 2x compression (is there an estimator?).
+    // Should be able to get about 2x compression (there an estimator in miniz).
     // TODO: what if input is bigger than output buffer?
     // The larger this number, the bigger the stall to compress.
     _compressLimit = 2*256*1024;
     
-    KVERIFY(mz_deflateInit(_stream.get(), MZ_DEFAULT_LEVEL) == MZ_OK);
+    // TODO: control level
+    // https://stackoverflow.com/questions/32225133/how-to-use-miniz-to-create-a-compressed-file-that-can-be-decompressd-by-gzip
+    // turning off zlib footer here with WINDOW_BITS
+    KVERIFY(mz_deflateInit2(_stream.get(), MZ_DEFAULT_LEVEL, MZ_DEFLATED, -MZ_DEFAULT_WINDOW_BITS, 9, MZ_DEFAULT_STRATEGY) == MZ_OK);
     
     // These are all optional fields
     enum GzipFlag : uint8_t {
@@ -63,20 +77,22 @@ bool ZipStream::open() {
         0x08, // (compression method - deflate)
         0x00, // flags
               // The time is in Unix format, i.e., seconds since 00:00:00 GMT, Jan.  1, 1970.
-        0x00, 0x00, 0x00, 0x00,  // TODO: timestamp mtime - start of compression or of src file
+        //0x00, 0x00, 0x00, 0x00,  // TODO: timestamp mtime - start of compression or of src file
+        0xAD, 0x38, 0x4D, 0x5E, // stolen from another file
+        
         kGzipCompressionUnknown, // compression id
-        kGzipPlatformMac         // os platform id
+        kGzipPlatformUnix        // os platform id
     };
     
     // Not writing any of the flagged fields.
     
     // clear the data
-    _sourceCRC32 = 0;
+    _sourceCRC32 = MZ_CRC32_INIT; // is 0
     _sourceSize = 0;
     
-    bool success = _fileHelper.write((const uint8_t*)&header, sizeof(header));
+    bool success = _fileHelper->write((const uint8_t*)&header, sizeof(header));
     if (!success) {
-        KLOGE("ZipStream", "Could not write gzip header to %s", _fileHelper.filename().c_str());
+        KLOGE("ZipStream", "Could not write gzip header to %s", _fileHelper->filename().c_str());
     }
     
     return success;
@@ -87,8 +103,20 @@ bool ZipStream::open() {
 }
 
 void ZipStream::close() {
+    // this means it was already closed
+    if (!_fileHelper) {
+        return;
+    }
+    
+    if (_isUncompressed) {
+        return;
+    }
+    
     // do this to end the stream and cleanup
     KVERIFY(mz_deflateEnd(_stream.get()) == MZ_OK);
+    
+    // can also reset and then reuse the stream, instead of end?
+    //mz_deflateReset(_stream.get());
     
     // data is already all written, so just need the footer
     
@@ -100,13 +128,15 @@ void ZipStream::close() {
     // gzip 8B trailer
     // 4b crc checksum of original data (can use mz_crc32())
     // 4b length of data (mod 0xFFFFFFFF), if bigger than 4gb then can only validate bottom 4B of length.
-    bool success = _fileHelper.write((const uint8_t*)&footer, sizeof(footer));
+    bool success = _fileHelper->write((const uint8_t*)&footer, sizeof(footer));
     if (!success) {
-        KLOGE("ZipStream", "Could not write gzip footer to %s", _fileHelper.filename().c_str());
+        KLOGE("ZipStream", "Could not write gzip footer to %s", _fileHelper->filename().c_str());
     }
+    
+    _fileHelper = nullptr;
 }
 
-Slice ZipStream::write(const Slice& in) {
+Slice ZipStream::compressSlice(const Slice& in, bool finish) {
     // If in.size is huge, then don't resize like this.
     // But stream is assumed to take in smaller buffers
     // and know compressed stream is smaller than input size
@@ -120,22 +150,31 @@ Slice ZipStream::write(const Slice& in) {
     _stream->next_out = _compressed.data();
     
     // Hope don't need to do this in a loop
-    KVERIFY(mz_deflate(_stream.get(), MZ_FULL_FLUSH) == MZ_OK);
+    int status = mz_deflate(_stream.get(), finish ? MZ_FINISH : MZ_SYNC_FLUSH);
+    if (finish)
+        KASSERT(status == MZ_STREAM_END);
+    else
+        KASSERT(status == MZ_OK);
     
     // TODO: would be nice to skip crc32 work
     _sourceSize += in.size();
-    mz_crc32(_sourceCRC32, in.data(), in.size());
+    _sourceCRC32 = mz_crc32(_sourceCRC32, in.data(), in.size());
     
     // return the compressed output
     int numBytesCompressed = _compressed.size() - _stream->avail_out;
     return Slice(_compressed.data(), numBytesCompressed);
 }
 
-void ZipStream::compress(const Slice& uncompressedData) {
-    Slice compressedSlice = write(uncompressedData);
+void ZipStream::compress(const Slice& uncompressedData, bool finish) {
+    if (_isUncompressed) {
+        _fileHelper->write(uncompressedData.data(), uncompressedData.size());
+        return;
+    }
+    
+    Slice compressedSlice = compressSlice(uncompressedData, finish);
     
     // This writes out to a fileHelper
-    _fileHelper.write(compressedSlice.data(), compressedSlice.size());
+    _fileHelper->write(compressedSlice.data(), compressedSlice.size());
 }
 
 
