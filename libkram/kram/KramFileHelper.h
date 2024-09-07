@@ -55,6 +55,7 @@ public:
 
     static size_t pagesize();
     
+    // Can retreive if open called (even on failure)
     const string& filename() const { return _filename; }
 
 private:

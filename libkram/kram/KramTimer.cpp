@@ -74,6 +74,8 @@ double currentTimestamp()
 //-------------------
 
 // TODO: also look into the Perfetto binary format and library/api.
+// This needs some daemon to flush data to.  Unclear if can route
+//  existing api and timings over to calls?
 // https://perfetto.dev/docs/instrumentation/tracing-sdk
 
 // TODO: escape strings, but it's just more work
@@ -117,6 +119,7 @@ bool Perf::start(const char* filename, uint32_t maxStackDepth)
     _filename = filename;
     _maxStackDepth = maxStackDepth;
     
+    /*
     // test the compressor
     bool testZipStream = false;
     if (testZipStream) {
@@ -140,6 +143,7 @@ R"(id,name
             fileHelper.close();
         }
     }
+    */
     
     // write json as binary, so win doesn't replace \n with \r\n
     if (!_fileHelper.openTemporaryFile("perf-", ".perftrace.gz", "w+b")) {

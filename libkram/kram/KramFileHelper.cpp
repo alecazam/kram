@@ -127,11 +127,13 @@ size_t FileHelper::pagesize()
 #if KRAM_MAC || KRAM_IOS || KRAM_LINUX
         pagesize = getpagesize();
 #elif KRAM_WIN
+        // win has mostly 4k, then 1MB/2MB large page size
         SYSTEM_INFO systemInfo;
         GetNativeSystemInfo(&systemInfo);
         pagesize = systemInfo.dwPageSize;
 #else
-        pagesize = 4 * 1024;  // how to determine on Win/Linux?
+        // TODO: Android 15 has variable page size (16K and 4K)
+        pagesize = 4 * 1024;  // how to determine on Win/Android?
 #endif
     }
     return pagesize;
@@ -198,6 +200,8 @@ bool FileHelper::open(const char* filename, const char* access)
 {
     close();
 
+    _filename = filename;
+     
     if (strstr(access, "w") != nullptr) {
         _fp = fopen_mkdir(filename, access);
     }
@@ -209,7 +213,6 @@ bool FileHelper::open(const char* filename, const char* access)
         return false;
     }
 
-    _filename = filename;
     return true;
 }
 

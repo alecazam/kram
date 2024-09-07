@@ -6,6 +6,7 @@
 
 #include <cassert>
 
+// These are only here for Perf class
 #include "KramFileHelper.h"
 #include "KramZipStream.h"
 
