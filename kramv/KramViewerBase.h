@@ -118,6 +118,9 @@ public:
     
     bool isPlayAnimations = false;
     
+    // Can get a dump of perf (mostly loading a decode/transcode perf)
+    bool isPerf = false;
+    
     // transparency checkboard under the image
     bool isCheckerboardShown = false;
 
@@ -510,6 +513,8 @@ struct Data {
 
     void doZoomMath(float newZoom, float2& newPan);
 
+    void setPerfDirectory(const char* directory);
+    
 private:
     bool loadFileFromArchive();
 
@@ -563,6 +568,7 @@ public:
     Action* _actionPremul;
     Action* _actionSigned;
     Action* _actionSrgb;
+    Action* _actionPerf;
     
     Action* _actionDiff;
     Action* _actionDebug;

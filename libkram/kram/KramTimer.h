@@ -88,13 +88,20 @@ private:
 // This implements PERF macros, sending timing data to kram-profile, perfetto, and/or Tracy.
 class Perf {
 public:
+    Perf();
+    
+    void setPerfDirectory(const char* directoryName);
+
     bool isRunning() const { return _startTime != 0.0; }
     
-    bool start(const char* filename, uint32_t maxStackDepth = 0);
+    bool start(const char* filename, bool isCompressed = true, uint32_t maxStackDepth = 0);
     void stop();
     
     void addTimer(const char* name, double time, double elapsed);
     void addCounter(const char* name, double time, int64_t value);
+    
+    // This may fail on sandboxed app
+    void openPerftrace();
     
     // singleton getter, but really want to split Perf from macros.
     static Perf* instance() { return _instance; }
@@ -110,6 +117,7 @@ private:
     FileHelper _fileHelper;
     double _startTime = 0.0;
     string _filename;
+    string _perfDirectory;
     
     using mymutex = recursive_mutex;
     using mylock = unique_lock<mymutex>;

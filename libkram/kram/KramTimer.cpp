@@ -9,6 +9,8 @@
 #include <windows.h>
 #elif KRAM_MAC || KRAM_IOS
 #include <mach/mach_time.h>
+#elif KRAM_ANDROID
+#include <trace.h>
 #endif
 
 #define nl '\n'
@@ -87,6 +89,11 @@ PerfScope::PerfScope(const char* name_)
 : name(name_), time(currentTimestamp())
 {
     gPerfStackDepth++;
+    
+#if KRAM_ANDROID
+    // TODO: also ATrace_isEnabled()
+    ATrace_beginSection(name, value);
+#endif
 }
 
 
@@ -94,7 +101,10 @@ void PerfScope::close()
 {
     if (time != 0.0) {
         --gPerfStackDepth;
-        
+
+#if KRAM_ANDROID
+        ATrace_endSection();
+#endif
         Perf::instance()->addTimer(name, time, currentTimestamp() - time);
         time = 0.0;
     }
@@ -102,12 +112,33 @@ void PerfScope::close()
 
 void addPerfCounter(const char* name, int64_t value)
 {
+#if KRAM_ANDROID
+    // only int64_t support
+    ATrace_setCounter(name, value);
+#endif
+    
     Perf::instance()->addCounter(name, currentTimestamp(), value);
 }
 
 //---------------
 
-bool Perf::start(const char* filename, uint32_t maxStackDepth)
+Perf::Perf()
+{
+    // TODO: should set alongsize exe by default
+#if KRAM_WIN
+    setPerfDirectory("C:/Traces/");
+#else
+    // sandboxed apps won't reach this, but unsandboxed exe can
+    setPerfDirectory("/Users/Alec/devref/kram/tests/traces/");
+#endif
+}
+
+void Perf::setPerfDirectory(const char* directoryName)
+{
+    _perfDirectory = directoryName;
+}
+
+bool Perf::start(const char* name, bool isCompressed, uint32_t maxStackDepth)
 {
     mylock lock(_mutex);
     
@@ -116,48 +147,25 @@ bool Perf::start(const char* filename, uint32_t maxStackDepth)
         return true;
     }
     
-    _filename = filename;
+    const char* ext = isCompressed ? ".perftrace.gz" : ".perftrace";
+    sprintf(_filename, "%s%s%s", _perfDirectory.c_str(), name, ext);
+    
     _maxStackDepth = maxStackDepth;
-    
-    /*
-    // test the compressor
-    bool testZipStream = false;
-    if (testZipStream) {
-        string filename2 = filename;
-        filename2 += ".txt";
-        FileHelper fileHelper;
-        ZipStream stream;
-        if (fileHelper.open(filename2.c_str(), "w+b")) {
-            const char* testStr = 
-R"(id,name
-1,TEST_1
-2,TEST_2
-3,TEST_3
-4,TEST_4
-)";
-            
-            if (stream.open(&fileHelper, false)) {
-                stream.compress(Slice((uint8_t*)testStr, strlen(testStr)), true);
-                stream.close();
-            }
-            fileHelper.close();
-        }
-    }
-    */
-    
+   
     // write json as binary, so win doesn't replace \n with \r\n
-    if (!_fileHelper.openTemporaryFile("perf-", ".perftrace.gz", "w+b")) {
+    if (!_fileHelper.openTemporaryFile("perf-", ext, "w+b")) {
         KLOGW("Perf", "Could not open oerf temp file");
         return false;
     }
     
-    bool isUncompressed = false; // can test, extension still .gz though
-    if (!_stream.open(&_fileHelper, isUncompressed)) {
+    if (!_stream.open(&_fileHelper, !isCompressed)) {
         _fileHelper.close();
         return false;
     }
     
-    // TODO: store _startTime in json starting params, also the
+    // Perf is considered running after this, since _startTime is non-zero
+    
+    // TODO: store _startTime in json starting params
     _startTime = currentTimestamp();
     
     _threadIdToTidMap.clear();
@@ -165,14 +173,16 @@ R"(id,name
    
     string buf;
     
-    // displya timeUnit must be ns (nanos) or ms (micros), default is ms
+    // displayTimeUnit must be ns (nanos) or ms (micros), default is ms
     // "displayTimeUnit": "ns"
+    // want ms since it's less data if nanos truncated
     sprintf(buf, R"({"traceEvents":[%c)", nl);
     write(buf);
     
     // can store file info here, only using one pid
     uint32_t processId = 0;
-    const char* processName = "kram"; // TODO: add platform, config, use filename instead?
+    const char* processName = "kram"; // TODO: add platform + config + app?
+    
     sprintf(buf, R"({"name":"process_name","ph":"M","pid":%u,"args":{"name":"%s"}},%c)",
            processId, processName, nl);
     write(buf);
@@ -204,17 +214,25 @@ void Perf::stop()
     
     _fileHelper.close();
     
-    // TODO: now open the file in kram-profile by opening it
-    // okay to use system, but it uses a global mutex on macOS
-    // This will be a .gz file, so not sure that kram-profile can respond
-    //
-    // sprintf(buf, "open %s", _filename.c_str());
-    // system(buf.c_str());
-    
     _startTime = 0.0;
 }
 
-void Perf::write(const string& str, bool forceFlush) 
+void Perf::openPerftrace()
+{
+    mylock lock(_mutex);
+    
+    // DONE: now open the file in kram-profile by opening it
+    // okay to use system, but it uses a global mutex on macOS
+    // Unclear if macOS can send compressed perftrace.gz file without failing
+    // but uncompressed perftrace file might be openable.
+    // Also sandbox and hardened runtime may interfere.
+    
+    string buf;
+    sprintf(buf, "open %s", _filename.c_str());
+    system(buf.c_str());
+}
+
+void Perf::write(const string& str, bool forceFlush)
 {
     mylock lock(_mutex);
     

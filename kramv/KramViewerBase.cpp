@@ -55,21 +55,21 @@ float4 inverseScaleSquared(const float4x4 &m)
     float3 scaleSquared = float3m(length_squared(m.columns[0].xyz),
                                   length_squared(m.columns[1].xyz),
                                   length_squared(m.columns[2].xyz));
-
+    
     // if uniform, then set scaleSquared all to 1
     if (almost_equal_elements(scaleSquared, 1e-5f)) {
         scaleSquared = float3m(1.0f);
     }
-
+    
     // don't divide by 0
     float3 invScaleSquared =
-        recip(simd::max(float3m(0.0001 * 0.0001), scaleSquared));
-
+    recip(simd::max(float3m(0.0001 * 0.0001), scaleSquared));
+    
     // identify determinant here for flipping orientation
     // all shapes with negative determinant need orientation flipped for
     // backfacing and need to be grouned together if rendering with instancing
     float det = determinant(toFloat3x3(m));
-
+    
     return float4m(invScaleSquared, det);
 }
 
@@ -92,7 +92,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     string filenameShort = filename;
     
     const char* ext = strrchr(filename, '.');
-
+    
     const char* dotPosStr = strrchr(filenameShort.c_str(), '.');
     if (dotPosStr == nullptr)
         return;
@@ -101,7 +101,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
     
     // now chop off the extension
     filenameShort = filenameShort.substr(0, dotPos);
-
+    
     const char* searches[] = { "-a", "-d", "_Color", "_baseColor" };
     
     for (uint32_t i = 0; i < ArrayCount(searches); ++i) {
@@ -111,7 +111,7 @@ static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector
             break;
         }
     }
-     
+    
     const char* suffixes[] = { "-n", "_normal", "_Normal" };
     
     string normalFilename;
@@ -141,8 +141,8 @@ inline const char* toFilenameShort(const char* filename) {
 
 static const vector<const char*> supportedModelExt = {
 #if USE_GLTF
-     ".gltf",
-     ".glb",
+    ".gltf",
+    ".glb",
 #endif
 #if USE_USD
     ".gltf",
@@ -176,19 +176,19 @@ int32_t ShowSettings::totalChunks() const
 {
     int32_t one = 1;
     return std::max(one, faceCount) *
-           std::max(one, arrayCount) *
-           std::max(one, sliceCount);
+    std::max(one, arrayCount) *
+    std::max(one, sliceCount);
 }
 
 File::File(const char* name_, int32_t urlIndex_)
-    : name(name_), urlIndex(urlIndex_), nameShort(toFilenameShort(name_))
+: name(name_), urlIndex(urlIndex_), nameShort(toFilenameShort(name_))
 {
 }
 
 const char *ShowSettings::meshNumberName(uint32_t meshNumber_) const
 {
     const char *text = "";
-
+    
     switch (meshNumber_) {
         case 0:
             text = "Plane";
@@ -208,14 +208,14 @@ const char *ShowSettings::meshNumberName(uint32_t meshNumber_) const
         default:
             break;
     }
-
+    
     return text;
 }
 
 const char *ShowSettings::meshNumberText() const
 {
     const char *text = "";
-
+    
     switch (meshNumber) {
         case 0:
             text = "Shape Plane";
@@ -235,14 +235,14 @@ const char *ShowSettings::meshNumberText() const
         default:
             break;
     }
-
+    
     return text;
 }
 
 const char *ShowSettings::shapeChannelText() const
 {
     const char *text = "";
-
+    
     switch (shapeChannel) {
         case ShapeChannelNone:
             text = "Show Off";
@@ -265,21 +265,21 @@ const char *ShowSettings::shapeChannelText() const
         case ShapeChannelFaceNormal:
             text = "Show Faces";
             break;
-        // case ShapeChannelBumpNormal: text = "Show Bumps"; break;
+            // case ShapeChannelBumpNormal: text = "Show Bumps"; break;
         case ShapeChannelMipLevel:
             text = "Show Mip Levels";
             break;
         default:
             break;
     }
-
+    
     return text;
 }
 
 const char *ShowSettings::debugModeText() const
 {
     const char *text = "";
-
+    
     switch (debugMode) {
         case DebugModeNone:
             text = "Debug Off";
@@ -317,7 +317,7 @@ const char *ShowSettings::debugModeText() const
 const char *ShowSettings::lightingModeText() const
 {
     const char *text = "";
-
+    
     switch (lightingMode) {
         case LightingModeDiffuse:
             text = "Light Diffuse";
@@ -337,7 +337,7 @@ const char *ShowSettings::lightingModeText() const
 bool ShowSettings::isEyedropperFromDrawable()
 {
     return meshNumber > 0 || isPreview || isShowingAllLevelsAndMips ||
-           shapeChannel > 0;
+    shapeChannel > 0;
 }
 
 void ShowSettings::advanceMeshNumber(bool decrement)
@@ -350,7 +350,7 @@ void ShowSettings::advanceMeshNumber(bool decrement)
     else {
         number += 1;
     }
-
+    
     meshNumber = number % numEnums;
 }
 
@@ -364,9 +364,9 @@ void ShowSettings::advanceShapeChannel(bool decrement)
     else {
         mode += 1;
     }
-
+    
     shapeChannel = (ShapeChannel)(mode % numEnums);
-
+    
     // skip this channel for now, in ortho it's mostly pure white
     if (shapeChannel == ShapeChannelDepth) {
         advanceShapeChannel(decrement);
@@ -383,7 +383,7 @@ void ShowSettings::advanceLightingMode(bool decrement)
     else {
         number += 1;
     }
-
+    
     lightingMode = (LightingMode)(number % numEnums);
 }
 
@@ -397,37 +397,37 @@ void ShowSettings::advanceDebugMode(bool decrement)
     else {
         mode += 1;
     }
-
+    
     debugMode = (DebugMode)(mode % numEnums);
-
+    
     MyMTLPixelFormat format = (MyMTLPixelFormat)originalFormat;
     bool isHdr = isHdrFormat(format);
-
+    
     // DONE: work on skipping some of these based on image
     bool isAlpha = isAlphaFormat(format);
     bool isColor = isColorFormat(format);
-
+    
     if (debugMode == DebugModeTransparent && (numChannels <= 3 || !isAlpha)) {
         advanceDebugMode(decrement);
     }
-
+    
     // 2 channel textures don't really have color or grayscale pixels
     if (debugMode == DebugModeColor && (numChannels <= 2 || !isColor)) {
         advanceDebugMode(decrement);
     }
-
+    
     if (debugMode == DebugModeGray && numChannels <= 2) {
         advanceDebugMode(decrement);
     }
-
+    
     if (debugMode == DebugModeHDR && !isHdr) {
         advanceDebugMode(decrement);
     }
-
+    
     // for 3 and for channel textures could skip these with more info about image
     // (hasColor) if (_showSettings->debugMode == DebugModeGray && !hasColor)
     // advanceDebugMode(isShiftKeyDown);
-
+    
     bool isNormal = texContentType == TexContentTypeNormal;
     bool isSDF = texContentType == TexContentTypeSDF;
     
@@ -441,7 +441,7 @@ void ShowSettings::advanceDebugMode(bool decrement)
     if (debugMode == DebugModeCircleXY && !(isNormal)) {
         advanceDebugMode(decrement);
     }
-
+    
     // TODO: have a clipping mode against a variable range too, only show pixels
     // within that range to help isolate problem pixels.  Useful for depth, and
     // have auto-range scaling for it and hdr. make sure to ignore 0 or 1 for
@@ -461,7 +461,7 @@ void ShowSettings::updateUVPreviewState()
                 if (uvPreview > 0.0)
                     uvPreview -= uvPreviewStep;
             }
-
+            
             uvPreview = saturate(uvPreview);
         }
     }
@@ -499,7 +499,7 @@ void printChannels(string &tmp, const string &label, float4 c,
     else {
         // unorm data, 8-bit values displayed
         c *= 255.1f;
-
+        
         switch (numChannels) {
             case 1:
                 sprintf(tmp, "%s%.0f\n", label.c_str(), c.r);
@@ -519,7 +519,7 @@ void printChannels(string &tmp, const string &label, float4 c,
 }
 
 string ShowSettings::windowTitleString(const char* filename) const
-{    
+{
     // set title to filename, chop this to just file+ext, not directory
     const char* filenameShort = strrchr(filename, '/');
     if (filenameShort == nullptr) {
@@ -569,9 +569,9 @@ string ShowSettings::windowTitleString(const char* filename) const
 float4x4 matrix4x4_translation(float tx, float ty, float tz)
 {
     float4x4 m = {(float4){1, 0, 0, 0},
-                  (float4){0, 1, 0, 0},
-                  (float4){0, 0, 1, 0},
-                  (float4){tx, ty, tz, 1}};
+        (float4){0, 1, 0, 0},
+        (float4){0, 0, 1, 0},
+        (float4){tx, ty, tz, 1}};
     return m;
 }
 
@@ -582,7 +582,7 @@ float4x4 matrix4x4_rotation(float radians, vector_float3 axis)
     float st = sinf(radians);
     float ci = 1 - ct;
     float x = axis.x, y = axis.y, z = axis.z;
-
+    
     float4x4 m = {
         (float4){ ct + x * x * ci,     y * x * ci + z * st, z * x * ci - y * st, 0},
         (float4){ x * y * ci - z * st,     ct + y * y * ci, z * y * ci + x * st, 0},
@@ -597,7 +597,7 @@ float4x4 perspective_rhs(float fovyRadians, float aspectXtoY, float nearZ, float
     // form tangents
     float tanY = tanf(fovyRadians * 0.5f);
     float tanX = tanY * aspectXtoY;
-
+    
     // currently symmetric
     // all postive values from center
     float4 tangents = { tanY, tanY, tanX, tanX };
@@ -610,17 +610,17 @@ float4x4 perspective_rhs(float fovyRadians, float aspectXtoY, float nearZ, float
     
     float dx = (r - l);
     float dy = (t - b);
-     
+    
     float xs = 2.0f * nearZ / dx;
     float ys = 2.0f * nearZ / dy;
-
+    
     // 0.5x?
     float xoff = (r + l) / dx;
     float yoff = (t + b) / dy;
-
+    
     float m22;
     float m23;
-
+    
     if (isReverseZ) {
         // zs drops out since zs = inf / -inf = 1, 1-1 = 0
         // z' = near / -z
@@ -630,18 +630,18 @@ float4x4 perspective_rhs(float fovyRadians, float aspectXtoY, float nearZ, float
     }
     else {
         float zs = farZ / (nearZ - farZ);
-
+        
         m22 = zs;
         m23 = zs * nearZ;
     }
-     
+    
     float4x4 m = {
         (float4){ xs,       0,   0,  0 },
         (float4){  0,      ys,   0,  0 },
         (float4){  xoff, yoff, m22, -1 },
         (float4){  0,       0, m23,  0 }
     };
-     
+    
     return m;
 }
 
@@ -718,7 +718,7 @@ bool Data::loadAtlasFile(const char* filename)
     
     padded_string json((const char*)mmap.data(), mmap.dataLength());
     auto atlasProps = parser.iterate(json);
-       
+    
     // can we get at memory use numbers to do the parse?
     KLOGI("kramv", "parsed %.0f KB of json in %.3fms",
           (double)mmap.dataLength() / 1024.0,
@@ -735,7 +735,7 @@ bool Data::loadAtlasFile(const char* filename)
         
         uint64_t width = atlasProps["width"].get_uint64().value_unsafe();
         uint64_t height = atlasProps["height"].get_uint64().value_unsafe();
-    
+        
         uint64_t slice = atlasProps["slice"].get_uint64().value_unsafe();
         
         float uPad = 0.0f;
@@ -775,7 +775,7 @@ bool Data::loadAtlasFile(const char* filename)
                 values.clear();
                 for (auto value : regionProps["ruv"])
                     values.push_back(value.get_double().value_unsafe());
-            
+                
                 // Note: could convert pixel and mip0 size to uv.
                 // normalized uv make these easier to draw across all mips
                 x = values[0];
@@ -788,7 +788,7 @@ bool Data::loadAtlasFile(const char* filename)
                 values.clear();
                 for (auto value : regionProps["rpx"])
                     values.push_back(value.get_double().value_unsafe());
-            
+                
                 x = values[0];
                 y = values[1];
                 w = values[2];
@@ -800,7 +800,7 @@ bool Data::loadAtlasFile(const char* filename)
                 w /= width;
                 h /= height;
             }
-                
+            
             const char* verticalProp = "f"; // regionProps["rot"];
             bool isVertical = verticalProp && verticalProp[0] == 't';
             
@@ -861,7 +861,7 @@ bool Data::loadAtlasFile(const char* filename)
         
         int width = atlasProps["width"].int_value();
         int height = atlasProps["height"].int_value();
-    
+        
         int slice = atlasProps["slice"].int_value();
         
         float uPad = 0.0f;
@@ -902,7 +902,7 @@ bool Data::loadAtlasFile(const char* filename)
                 values.clear();
                 for (auto value : regionProps["ruv"])
                     values.push_back(value.number_value());
-            
+                
                 // Note: could convert pixel and mip0 size to uv.
                 // normalized uv make these easier to draw across all mips
                 x = values[0];
@@ -915,7 +915,7 @@ bool Data::loadAtlasFile(const char* filename)
                 values.clear();
                 for (auto value : regionProps["rpx"])
                     values.push_back(value.number_value());
-            
+                
                 x = values[0];
                 y = values[1];
                 w = values[2];
@@ -927,7 +927,7 @@ bool Data::loadAtlasFile(const char* filename)
                 w /= width;
                 h /= height;
             }
-                
+            
             const char* verticalProp = "f"; // regionProps["rot"];
             bool isVertical = verticalProp && verticalProp[0] == 't';
             
@@ -1016,7 +1016,7 @@ bool Data::hasCounterpart(bool increment) {
     
     const File& file = _files[_fileIndex];
     string currentFilename = filenameNoExtension(file.nameShort.c_str());
-   
+    
     uint32_t nextFileIndex = _fileIndex;
     
     size_t numEntries = _files.size();
@@ -1032,7 +1032,7 @@ bool Data::hasCounterpart(bool increment) {
     
     // if short name matches (no ext) then it's a counterpart
     if (currentFilename != nextFilename)
-       return false;
+        return false;
     
     return true;
 }
@@ -1055,7 +1055,7 @@ bool Data::advanceCounterpart(bool increment) {
         nextFileIndex++;
     else
         nextFileIndex += numEntries - 1;  // back 1
-
+    
     nextFileIndex = nextFileIndex % numEntries;
     
     const File& nextFile = _files[nextFileIndex];
@@ -1079,7 +1079,7 @@ bool Data::advanceFile(bool increment) {
         _fileIndex++;
     else
         _fileIndex += numEntries - 1;  // back 1
-
+    
     _fileIndex = _fileIndex % numEntries;
     
     return _delegate.loadFile(true);
@@ -1134,7 +1134,7 @@ const Atlas* Data::findAtlasAtUV(float2 pt)
 {
     if (_showSettings->atlas.empty()) return nullptr;
     if (_showSettings->imageBoundsX == 0) return nullptr;
-   
+    
     const Atlas* atlas = nullptr;
     
     // Note: rects are in uv
@@ -1174,26 +1174,16 @@ bool Data::isArchive() const
     return isSupportedArchiveFilename(filename.c_str());
 }
 
-
+void Data::setPerfDirectory(const char* directory)
+{
+    Perf* perf = Perf::instance();
+    perf->setPerfDirectory(directory);
+}
 
 bool Data::loadFile()
 {
     if (isArchive()) {
-        // This test perf layer and the ZipStream
-        Perf* perf = nullptr; // Perf::instance();
-        
-        // TODO: have to have permision to write file
-        if (perf) {
-            if (!perf->start("/Users/Alec/Library/Containers/com.hialec.kramv/Data/Traces/"
-                             "load.perftrace.gz"))
-                perf = nullptr;
-        }
-        bool success = loadFileFromArchive();
-        
-        if (perf)
-            perf->stop();
-        
-        return success;
+        return loadFileFromArchive();
     }
     
     // now lookup the filename and data at that entry
@@ -1970,7 +1960,7 @@ void Data::updateUIAfterLoad()
     // only allow srgb to be disabled, not toggle on if off at load
     MyMTLPixelFormat format = _showSettings->originalFormat;
     bool isSrgb = isSrgbFormat(format);
-   _actionSrgb->setHidden(!isSrgb);
+    _actionSrgb->setHidden(!isSrgb);
     
     // also need to call after each toggle
     updateUIControlState();
@@ -2019,7 +2009,8 @@ void Data::updateUIControlState()
     auto diffState = toState(_showSettings->isDiff && _showSettings->hasDiffTexture);
     
     auto srgbState = toState(_showSettings->isSRGBShown);
-    
+    auto perfState = toState(_showSettings->isPerf);
+   
     _actionVertical->setHighlight(verticalState);
     
     // TODO: pass boolean, and change in the call
@@ -2062,6 +2053,7 @@ void Data::updateUIControlState()
     _actionChecker->setHighlight(checkerboardState);
     
     _actionSrgb->setHighlight(srgbState);
+    _actionPerf->setHighlight(perfState);
 }
 
 // TODO: convert to C++ actions, and then call into Base holding all this
@@ -2191,6 +2183,7 @@ void Data::initActions()
         Action("F", "Face", Key::F),
         Action("Y", "Array", Key::Y),
         Action("9", "Srgb", Key::Num9),
+        Action("5", "Perf", Key::Num5), // really a debug action
         
         Action("↑", "Prev Item", Key::UpArrow),
         Action("↓", "Next Item", Key::DownArrow),
@@ -2241,6 +2234,7 @@ void Data::initActions()
         &_actionFace,
         &_actionArray,
         &_actionSrgb,
+        &_actionPerf,
        
         &_actionPrevItem,
         &_actionItem,
@@ -2540,6 +2534,29 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
             isChanged = true;
         }
         
+    }
+    else if (action == _actionPerf) {
+        Perf* perf = Perf::instance();
+        
+        bool isCompressed = false;
+        if ((!_showSettings->isPerf) && perf->start("kramv", isCompressed)) {
+            _showSettings->isPerf = true;
+        }
+        else {
+            _showSettings->isPerf = false;
+            
+            if (perf->isRunning()) {
+                perf->stop();
+                
+                // see if this can open to kram-profile
+                if (!isCompressed)
+                    perf->openPerftrace();
+            }
+        }
+        
+        text = "Perf ";
+        text += _showSettings->isPerf ? "On" : "Off";
+        isChanged = true;
     }
     else if (action == _actionPlay) {
         if (!action->isHidden) {
