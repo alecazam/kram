@@ -2547,9 +2547,10 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
             if (perf->isRunning()) {
                 perf->stop();
                 
-                // TODO: Only do this in non-sandboxed builds, it calls system("open file")
-                if (!isCompressed)
-                    perf->openPerftrace();
+                // TODO: Only open in non-sandboxed builds, it calls system("open file")
+                // and this will have quarantine flag set if app not in app store
+                // or notarized, signed, sandboxed for distribution outside of app store
+                perf->openPerftrace();
             }
         }
         
