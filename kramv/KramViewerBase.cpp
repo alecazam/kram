@@ -1437,7 +1437,7 @@ bool Data::loadFileFromArchive()
             if (hasNormal) {
                 normalFilename = name;
                 
-                bool isNormalUncompressed = normalEntry->compressedSize == entry->uncompressedSize;
+                bool isNormalUncompressed = normalEntry->compressedSize == normalEntry->uncompressedSize;
                 
                 if (isNormalUncompressed) {
                     KPERFT("ZipExtractRawNormal");
@@ -1512,7 +1512,6 @@ bool Data::loadFileFromArchive()
    
     //---------------------------------
     
-   // NSArray<NSURL*>* urls_ = (NSArray<NSURL*>*)_delegate._urls;
     string archiveURL = _urls[file.urlIndex];
     _archiveName = toFilenameShort(archiveURL.c_str());
     
@@ -2538,7 +2537,7 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
     else if (action == _actionPerf) {
         Perf* perf = Perf::instance();
         
-        bool isCompressed = false;
+        bool isCompressed = true;
         if ((!_showSettings->isPerf) && perf->start("kramv", isCompressed)) {
             _showSettings->isPerf = true;
         }
