@@ -44,6 +44,12 @@
 #endif
 #define ZSTD_TRACE 0
 
+#if NDEBUG
+#define assert_or_fallthrough() [[fallthrough]]
+#else
+#define assert_or_fallthrough() assert(false)
+#endif
+
 /* Include zstd_deps.h first with all the options we need enabled. */
 #define ZSTD_DEPS_NEED_MALLOC
 #define ZSTD_DEPS_NEED_MATH64
@@ -18551,7 +18557,6 @@ static size_t ZSTD_compress_frameChunk(ZSTD_CCtx* cctx,
     return (size_t)(op-ostart);
 }
 
-
 static size_t ZSTD_writeFrameHeader(void* dst, size_t dstCapacity,
                                     const ZSTD_CCtx_params* params, U64 pledgedSrcSize, U32 dictID)
 {   BYTE* const op = (BYTE*)dst;
@@ -18579,7 +18584,7 @@ static size_t ZSTD_writeFrameHeader(void* dst, size_t dstCapacity,
     if (!singleSegment) op[pos++] = windowLogByte;
     switch(dictIDSizeCode)
     {
-        default:  assert(0); /* impossible */ [[fallthrough]];
+        default:  assert_or_fallthrough(); /* impossible */
         case 0 : break;
         case 1 : op[pos] = (BYTE)(dictID); pos++; break;
         case 2 : MEM_writeLE16(op+pos, (U16)dictID); pos+=2; break;
@@ -18587,7 +18592,7 @@ static size_t ZSTD_writeFrameHeader(void* dst, size_t dstCapacity,
     }
     switch(fcsCode)
     {
-        default:  assert(0); /* impossible */ [[fallthrough]];
+        default:  assert_or_fallthrough(); /* impossible */
         case 0 : if (singleSegment) op[pos++] = (BYTE)(pledgedSrcSize); break;
         case 1 : MEM_writeLE16(op+pos, (U16)(pledgedSrcSize-256)); pos+=2; break;
         case 2 : MEM_writeLE32(op+pos, (U32)(pledgedSrcSize)); pos+=4; break;
@@ -23099,7 +23104,7 @@ ZSTD_VecMask_rotateRight(ZSTD_VecMask mask, U32 const rotation, U32 const totalB
     return mask;
   switch (totalBits) {
     default:
-          assert(0); [[fallthrough]];
+          assert_or_fallthrough();
     case 16:
       return (mask >> rotation) | (U16)(mask << (16 - rotation));
     case 32:
@@ -31936,7 +31941,7 @@ size_t ZSTD_getFrameHeader_advanced(ZSTD_frameHeader* zfhPtr, const void* src, s
         }
         switch(dictIDSizeCode)
         {
-            default: assert(0);  /* impossible */ [[fallthrough]];
+            default: assert_or_fallthrough();  /* impossible */
             case 0 : break;
             case 1 : dictID = ip[pos]; pos++; break;
             case 2 : dictID = MEM_readLE16(ip+pos); pos+=2; break;
@@ -31944,7 +31949,7 @@ size_t ZSTD_getFrameHeader_advanced(ZSTD_frameHeader* zfhPtr, const void* src, s
         }
         switch(fcsID)
         {
-            default: assert(0);  /* impossible */ [[fallthrough]];
+            default: assert_or_fallthrough();  /* impossible */
             case 0 : if (singleSegment) frameContentSize = ip[pos]; break;
             case 1 : frameContentSize = MEM_readLE16(ip+pos)+256; break;
             case 2 : frameContentSize = MEM_readLE32(ip+pos); break;
@@ -32542,7 +32547,7 @@ ZSTD_nextInputType_e ZSTD_nextInputType(ZSTD_DCtx* dctx) {
     switch(dctx->stage)
     {
     default:   /* should not happen */
-            assert(0); [[fallthrough]];
+            assert_or_fallthrough();
     case ZSTDds_getFrameHeaderSize:
     case ZSTDds_decodeFrameHeader:
         return ZSTDnit_frameHeader;

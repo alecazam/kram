@@ -138,6 +138,8 @@ void Perf::setPerfDirectory(const char* directoryName)
     _perfDirectory = directoryName;
 }
 
+static bool useTempFile = false;
+
 bool Perf::start(const char* name, bool isCompressed, uint32_t maxStackDepth)
 {
     mylock lock(_mutex);
@@ -153,9 +155,17 @@ bool Perf::start(const char* name, bool isCompressed, uint32_t maxStackDepth)
     _maxStackDepth = maxStackDepth;
    
     // write json as binary, so win doesn't replace \n with \r\n
-    if (!_fileHelper.openTemporaryFile("perf-", ext, "w+b")) {
-        KLOGW("Perf", "Could not open oerf temp file");
-        return false;
+    if (useTempFile) {
+        if (!_fileHelper.openTemporaryFile("perf-", ext, "w+b")) {
+            KLOGW("Perf", "Could not open perf temp file");
+            return false;
+        }
+    }
+    else {
+        if (!_fileHelper.open(_filename.c_str(), "w+b")) {
+            KLOGW("Perf", "Could not open perf file %s", _filename.c_str());
+            return false;
+        }
     }
     
     if (!_stream.open(&_fileHelper, !isCompressed)) {
@@ -207,9 +217,11 @@ void Perf::stop()
     
     _stream.close();
     
-    bool success = _fileHelper.copyTemporaryFileTo(_filename.c_str());
-    if (!success) {
-        KLOGW("Perf", "Couldn't move temp file");
+    if (useTempFile) {
+        bool success = _fileHelper.copyTemporaryFileTo(_filename.c_str());
+        if (!success) {
+            KLOGW("Perf", "Couldn't move temp file");
+        }
     }
     
     _fileHelper.close();

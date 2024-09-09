@@ -2548,11 +2548,9 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
             if (perf->isRunning()) {
                 perf->stop();
                 
-                // Calling this (using system call) probably
-                // violates app store, hardened runtime, and sandbox
-                // see if this can open to kram-profile
-                //if (!isCompressed)
-                //    perf->openPerftrace();
+                // TODO: Only do this in non-sandboxed builds, it calls system("open file")
+                if (!isCompressed)
+                    perf->openPerftrace();
             }
         }
         

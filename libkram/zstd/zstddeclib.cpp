@@ -40,6 +40,12 @@
 #define ZSTD_STRIP_ERROR_STRINGS
 #define ZSTD_TRACE 0
 
+#if NDEBUG
+#define assert_or_fallthrough() [[fallthrough]]
+#else
+#define assert_or_fallthrough() assert(false)
+#endif
+
 /* Include zstd_deps.h first with all the options we need enabled. */
 #define ZSTD_DEPS_NEED_MALLOC
 /**** start inlining common/zstd_deps.h ****/
@@ -11891,7 +11897,7 @@ size_t ZSTD_getFrameHeader_advanced(ZSTD_frameHeader* zfhPtr, const void* src, s
         }
         switch(dictIDSizeCode)
         {
-            default: assert(0);  /* impossible */ [[fallthrough]];
+            default: assert_or_fallthrough();  /* impossible */
             case 0 : break;
             case 1 : dictID = ip[pos]; pos++; break;
             case 2 : dictID = MEM_readLE16(ip+pos); pos+=2; break;
@@ -11899,7 +11905,7 @@ size_t ZSTD_getFrameHeader_advanced(ZSTD_frameHeader* zfhPtr, const void* src, s
         }
         switch(fcsID)
         {
-            default: assert(0);  /* impossible */ [[fallthrough]];
+            default: assert_or_fallthrough();  /* impossible */
             case 0 : if (singleSegment) frameContentSize = ip[pos]; break;
             case 1 : frameContentSize = MEM_readLE16(ip+pos)+256; break;
             case 2 : frameContentSize = MEM_readLE32(ip+pos); break;
@@ -12497,7 +12503,7 @@ ZSTD_nextInputType_e ZSTD_nextInputType(ZSTD_DCtx* dctx) {
     switch(dctx->stage)
     {
     default:   /* should not happen */
-            assert(0); [[fallthrough]];
+            assert_or_fallthrough();
     case ZSTDds_getFrameHeaderSize:
     case ZSTDds_decodeFrameHeader:
         return ZSTDnit_frameHeader;

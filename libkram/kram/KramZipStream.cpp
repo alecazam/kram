@@ -155,6 +155,7 @@ Slice ZipStream::compressSlice(const Slice& in, bool finish) {
         KASSERT(status == MZ_STREAM_END);
     else
         KASSERT(status == MZ_OK);
+    (void)status;
     
     // TODO: would be nice to skip crc32 work
     _sourceSize += in.size();
