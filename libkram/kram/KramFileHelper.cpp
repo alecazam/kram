@@ -222,7 +222,7 @@ void FileHelper::close()
         return;
     }
 
-    // temp files are auto-deleted on fclose, since they've been "keep" is 0
+    // temp files are auto-deleted on fclose when "keep" is 0
     fclose(_fp);
 
     _isTmpFile = false;

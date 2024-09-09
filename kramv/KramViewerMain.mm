@@ -418,6 +418,34 @@ withCurrentSearchString:(NSString *)searchString
     [view fixupDocumentList];
 }
 
+/* may need to add code for NSSavePanel for perftrace (.gz)
+- (void)exportDocument:(NSString*)name toType:(NSString*)typeUTI
+{
+   NSWindow* window = [[[self windowControllers] objectAtIndex:0] window];
+ 
+   // Build a new name for the file using the current name and
+   // the filename extension associated with the specified UTI.
+   CFStringRef newExtension = UTTypeCopyPreferredTagWithClass((CFStringRef)typeUTI,
+                                   kUTTagClassFilenameExtension);
+   NSString* newName = [[name stringByDeletingPathExtension]
+                       stringByAppendingPathExtension:(NSString*)newExtension];
+   CFRelease(newExtension);
+ 
+   // Set the default name for the file and show the panel.
+   NSSavePanel*    panel = [NSSavePanel savePanel];
+   [panel setNameFieldStringValue:newName];
+   [panel beginSheetModalForWindow:window completionHandler:^(NSInteger result){
+        if (result == NSFileHandlingPanelOKButton)
+        {
+            NSURL*  theFile = [panel URL];
+ 
+            // Write the contents in the new format.
+            
+        }
+    }];
+}
+*/
+
 // this isn't filtered by the document types specified, NSDocumentController?
 // added public.folder instead, this would need to call readFromURL
 - (IBAction)openDocument:(id)sender

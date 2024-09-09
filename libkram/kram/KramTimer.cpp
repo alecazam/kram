@@ -219,6 +219,9 @@ void Perf::stop()
 
 void Perf::openPerftrace()
 {
+    // system call isn't available on iOS
+    // also macOS sandbox prevents open call (could write and then open script).
+#if KRAM_MAC
     mylock lock(_mutex);
     
     // DONE: now open the file in kram-profile by opening it
@@ -230,6 +233,7 @@ void Perf::openPerftrace()
     string buf;
     sprintf(buf, "open %s", _filename.c_str());
     system(buf.c_str());
+#endif
 }
 
 void Perf::write(const string& str, bool forceFlush)
