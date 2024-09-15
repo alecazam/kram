@@ -597,7 +597,7 @@ bool BC6HBlockEncoder::TransformEndPoints(AMD_BC6H_Format &BC6H_data, int iEndPo
 
 void BC6HBlockEncoder::SaveCompressedBlockData( AMD_BC6H_Format &BC6H_data,
         int oEndPoints[MAX_SUBSETS][MAX_END_POINTS][MAX_DIMENSION_BIG],
-        int iIndices[2][MAX_SUBSET_SIZE],
+        int iIndices[MAX_SUBSETS][MAX_SUBSET_SIZE], // did harcode 2 = BC6H_MAX_SUBSET_SIZE, but not what is passed
         int max_subsets,
         int mode) {
     BC6H_data.m_mode    = (unsigned short)mode;

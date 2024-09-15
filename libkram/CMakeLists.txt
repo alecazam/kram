@@ -214,7 +214,7 @@ if (BUILD_MAC)
         XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH "NO"
     )
 
-    # Enable all warnings, and also enable f16c sims op
+    # Enable all warnings, and also enable f16c sims op (only x64 though)
     target_compile_options(${myTargetLib} PRIVATE -W -Wall -mf16c)
 
     # this is already done by pch for libkram, but other projects need the force include inherited

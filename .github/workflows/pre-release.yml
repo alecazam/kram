@@ -21,7 +21,7 @@ jobs:
         uses: lukka/get-cmake@latest
 
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Build and install to bin/
         run: ./scripts/cibuild.sh ${{ matrix.os }}
