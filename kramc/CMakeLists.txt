@@ -73,7 +73,7 @@ if (BUILD_WIN)
     # don't need force with apps, since they only access kram folder files which include KramConfig
     
     # all warnings, AVX1, and multiprocess compiles
-    target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX -f16c /MP /GF /FC)
+    target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX -mf16c /MP /GF /FC)
     
     # fix STL
     target_compile_definitions(${myTargetApp} PRIVATE -D_ITERATOR_DEBUG_LEVEL=0 -D_HAS_EXCEPTIONS=0)

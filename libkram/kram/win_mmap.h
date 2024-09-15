@@ -53,7 +53,7 @@ static void *mmap(void *start, size_t length, int prot, int flags, int fd, myoff
     } else if (flags & MAP_ANON)
         return MAP_FAILED;
 
-    DWORD flProtect;
+    DWORD flProtect = PAGE_READONLY;
     if (prot & PROT_WRITE) {
         if (prot & PROT_EXEC)
             flProtect = PAGE_EXECUTE_READWRITE;
@@ -64,10 +64,9 @@ static void *mmap(void *start, size_t length, int prot, int flags, int fd, myoff
             flProtect = PAGE_EXECUTE_READ;
         else if (prot & PROT_EXEC)
             flProtect = PAGE_EXECUTE;
-    } else
-        flProtect = PAGE_READONLY;
+    } 
 
-    off_t end = length + offset;
+    myoff_t end = length + offset;
     HANDLE mmap_fd, h;
     if (fd == -1)
         mmap_fd = INVALID_HANDLE_VALUE;

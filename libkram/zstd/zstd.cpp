@@ -37082,6 +37082,8 @@ ZDICTLIB_API size_t ZDICT_optimizeTrainFromBuffer_cover(
 /*- Compiler specifics -*/
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
+#pragma clang diagnostic ignored "-Wunused-function"
+//#pragma clang diagnostic ignored "-Wunused-variable"
 #endif
 
 #if defined(_MSC_VER)

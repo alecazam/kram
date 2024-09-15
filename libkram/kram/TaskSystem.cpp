@@ -150,6 +150,7 @@ static const CoreInfo& GetCoreInfo()
     vector<uint8_t> buffer;
     buffer.resize(returnLength);
     rc = GetLogicalProcessorInformation((ProcInfoPtr)buffer.data(), &returnLength);
+    (void)rc; // unused
     
     ProcInfoPtr ptr = nullptr;
     DWORD byteOffset = 0;
@@ -207,6 +208,7 @@ static const CoreInfo& GetCoreInfo()
         ptr++;
     }
     
+    (void)logicalCoreCount; // unused
     
     coreInfo.isHyperthreaded = isHyperthreaded;
     coreInfo.physicalCoreCount = physicalCoreCount;
