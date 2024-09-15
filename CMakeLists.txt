@@ -1,39 +1,44 @@
 cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
-
+  
 #-----------------------------------------------------
 
 # really not using cmake for mac, but this was used in the past so leaving it in
 set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
 
+if (APPLE)
+    message("build for macOS")
+    set(BUILD_MAC TRUE)
+elseif (WIN32)
+    message("build for win x64")
+    set(BUILD_WIN TRUE)
+endif()
+
+#-----------------------------------------------------
+
+# suppress ZERO_CHECK project
+set(CMAKE_SUPPRESS_REGENERATION true)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
+set(CMAKE_CXX_EXTENSIONS NO)
+
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
+    
 #-----------------------------------------------------
 # still building Win using Cmake
 
 if (BUILD_WIN)
-    message("build for win x64")
-    set(BUILD_WIN TRUE)
-    
     # cmake translates project to sln in Win, but to xcode projects on Mac.
     # No way to make xcode workspaces, but could do manually.
     set(myTargetWorkspace kramWorkspace)
 
     project(${myTargetWorkspace} LANGUAGES C CXX)
     
-    #-----------------------------------------------------
-
-	# suppress ZERO_CHECK project
-    set(CMAKE_SUPPRESS_REGENERATION true)
-
     # use clang-cl on Win
     set(CMAKE_CXX_COMPILER "clang-cl")
-
-    set(CMAKE_CXX_STANDARD 20)
-    set(CMAKE_CXX_STANDARD_REQUIRED YES)
-    set(CMAKE_CXX_EXTENSIONS NO)
-
-    set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
-    set(CMAKE_BUILD_TYPE Release)
-    set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
 
     #-----------------------------------------------------
 
@@ -71,32 +76,16 @@ endif()
 # So now just mapintain projects
 
 if (BUILD_MAC)
-    message("build for macOS universal (unmaintained)")
-    set(BUILD_MAC TRUE)
-    
     # cmake translates project to sln in Win, but to xcode projects on Mac.
     # No way to make xcode workspaces, but could do manually.
     set(myTargetWorkspace kramWorkspace)
 
     project(${myTargetWorkspace} LANGUAGES C CXX OBJCXX)
 
-    #-----------------------------------------------------
-
-    # suppress ZERO_CHECK project
-    set(CMAKE_SUPPRESS_REGENERATION true)
-
     # CMAKE_OSX_DEPLOYMENT_TARGET must be set as a CACHE variable, or it will be stripped
     set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Minimum macOS")
     set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)" CACHE STRING "Architecture macOS")
    
-    set(CMAKE_CXX_STANDARD 20)
-    set(CMAKE_CXX_STANDARD_REQUIRED YES)
-    set(CMAKE_CXX_EXTENSIONS NO)
-
-    set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
-    set(CMAKE_BUILD_TYPE Release)
-    set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
-
     #-----------------------------------------------------
 
     # the kram static library libkram which should build on iOS/Android/Mac/Win
