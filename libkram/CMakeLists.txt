@@ -24,7 +24,6 @@ option(BCENC "Compile BCenc Encoder" ON)
 option(COMP "Compile Compressonator Encoder" ON)
 
 option(EASTL "Compile EASTL" OFF)
-option(FASTL "Compile FASTL" OFF)
 
 # convert ON to 1, UGH
 set(COMPILE_ATE 0)
@@ -66,13 +65,6 @@ set(COMPILE_EASTL 0)
 if (EASTL)
     set(COMPILE_EASTL 1)
 endif()
-
-# replace parts of std/stdl with fastl
-set(COMPILE_FASTL 0)
-if (FASTL)
-    set(COMPILE_FASTL 1)
-endif()
-
 
 #-----------------------------------------------------
 # libkram
@@ -131,9 +123,6 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
     "${SOURCE_DIR}/eastl/*.cpp"
     "${SOURCE_DIR}/eastl/*.h"
     
-    "${SOURCE_DIR}/fastl/*.cpp"
-    "${SOURCE_DIR}/fastl/*.h"
-
     "${SOURCE_DIR}/lodepng/lodepng.cpp"
     "${SOURCE_DIR}/lodepng/lodepng.h"
 
@@ -246,9 +235,17 @@ if (BUILD_MAC)
     
 elseif (BUILD_WIN)
     
+   
+    # TODO: turn on C++20
+    # TODO: switch to clang, then switch args, but clang-cl will take MSVC args
+
+    # this is MSVC setting, but needs to be here and on karmc and thumbnail
+    # /std:c++20
+    #
+    # this is setting clang-cl
+    # set(CMAKE_CXX_COMPILER "clang-cl")
+
     # TODO: switch to add_target_definitions
-    # TODO: turn on C++17
-    # TODO: switch to clang
 
     # to turn off exceptions/rtti use /GR and /EHsc replacement
     string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -283,8 +280,7 @@ target_precompile_headers(${myTargetLib} PRIVATE
 target_compile_definitions(${myTargetLib} 
     PUBLIC
     "-DCOMPILE_EASTL=${COMPILE_EASTL}"
-    "-DCOMPILE_FASTL=${COMPILE_FASTL}"
-
+   
     PRIVATE
     "-DCOMPILE_ATE=${COMPILE_ATE}"
     "-DCOMPILE_BCENC=${COMPILE_BCENC}"

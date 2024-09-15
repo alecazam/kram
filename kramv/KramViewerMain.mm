@@ -633,9 +633,9 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     // this is sandbox or root if not sandboxed
     // This is objC call...
     // This has to be in a .mm file to call
-    //std::string traceDir = [NSHomeDirectory() UTF8String];
-    //traceDir += "/Traces/";
-    //_data.setPerfDirectory(traceDir.c_str());
+    std::string traceDir = [NSHomeDirectory() UTF8String];
+    traceDir += "/traces/";
+    _data.setPerfDirectory(traceDir.c_str());
     
     // TODO: see if can only open this
     // KLOGI("Viewer", "AwakeFromNIB");

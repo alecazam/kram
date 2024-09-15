@@ -126,10 +126,10 @@ Perf::Perf()
 {
     // TODO: should set alongsize exe by default
 #if KRAM_WIN
-    setPerfDirectory("C:/Traces/");
+    setPerfDirectory("C:/traces/");
 #else
     // sandboxed apps won't reach this, but unsandboxed exe can
-    setPerfDirectory("/Users/Alec/devref/kram/tests/traces/");
+    setPerfDirectory("/Users/Alec/traces/");
 #endif
 }
 

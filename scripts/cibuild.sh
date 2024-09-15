@@ -66,25 +66,26 @@ if [[ $buildType == macos ]]; then
 	# this dir already exists, so don't have to mkdir
 	pushd build2
 
+    xargs=-showBuildTimingSummary
 	# build libraries
 	# see here about destination arg
 	# https://github.com/appcelerator/titanium_mobile/pull/13098
     echo "::group::kram-ios"
-    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios -configuration Release -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
  
     echo "::group::kram"
-    xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram -configuration Release -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
  
 	# install apps so they are signed
 	# can't specify empty INSTALL_PATH, or xcodebuild succeeds but copies nothing to bin
     echo "::group::kramc"
-    xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramc -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramc -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
       
     echo "::group::kramv"
-	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramv -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramv -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
     
 	popd
@@ -92,14 +93,14 @@ if [[ $buildType == macos ]]; then
 	# build hlslparser to bin directory
 	pushd hlslparser
     echo "::group::hlsl-parser"
-    xcodebuild install -sdk macosx -project hlslparser.xcodeproj -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    xcodebuild install -sdk macosx -project hlslparser.xcodeproj -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
 	popd
 
     # build kram-profile to bin directory
     pushd kram-profile
     echo "::group::kram-profiler"
-    xcodebuild install -sdk macosx -project kram-profile.xcodeproj -configuration Release -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    xcodebuild install -sdk macosx -project kram-profile.xcodeproj -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
     popd
 
