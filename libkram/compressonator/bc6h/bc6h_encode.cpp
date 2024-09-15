@@ -473,7 +473,10 @@ void BC6HBlockEncoder::QuantizeEndPointToF16Prec(float EndPoints[MAX_SUBSETS][MA
     so that indices at fix up points have higher order bit set to 0
 ==================================================================*/
 
-void BC6HBlockEncoder::SwapIndices(int iEndPoints[MAX_SUBSETS][MAX_END_POINTS][MAX_DIMENSION_BIG], int iIndices[3][BC6H_MAX_SUBSET_SIZE], int  entryCount[BC6H_MAX_SUBSETS], int max_subsets, int mode, int shape_pattern) {
+void BC6HBlockEncoder::SwapIndices(int iEndPoints[MAX_SUBSETS][MAX_END_POINTS][MAX_DIMENSION_BIG], int iIndices[MAX_SUBSETS][BC6H_MAX_SUBSET_SIZE],
+  // int  entryCount[BC6H_MAX_SUBSETS], // this is 2 but callers pass array[MAX_SUBSETS]
+  int  entryCount[MAX_SUBSETS], // to keep compiler happy
+  int max_subsets, int mode, int shape_pattern) {
 
     unsigned int uNumIndices    = 1 << ModePartition[mode].IndexPrec;
     unsigned int uHighIndexBit    = uNumIndices >> 1;

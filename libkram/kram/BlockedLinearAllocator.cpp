@@ -9,7 +9,9 @@ namespace kram {
 using namespace NAMESPACE_STL;
 
 BlockedLinearAllocator::BlockedLinearAllocator(uint32_t itemsPerBlock, uint32_t itemSize)
-: _itemsPerBlock(itemsPerBlock), _itemSize(itemSize), _blockSize(itemsPerBlock*itemSize)
+: _itemSize(itemSize),
+  _itemsPerBlock(itemsPerBlock),
+  _blockSize(itemsPerBlock*itemSize)
 {
     
 }
