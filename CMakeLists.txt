@@ -8,10 +8,10 @@ set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
 
 if (APPLE)
-    message("build for macOS")
+    message(STATUS "build for macOS")
     set(BUILD_MAC TRUE)
 elseif (WIN32)
-    message("build for win x64")
+    message(STATUS "build for win x64")
     set(BUILD_WIN TRUE)
 endif()
 
@@ -43,11 +43,7 @@ if (BUILD_WIN)
     # set(CMAKE_CXX_COMPILER "clang-cl")
 
     # want to only use clang across all platforms
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        message(STATUS "Using Clang compiler")
-    else
-        message(STATUS "Using MSVC compiler")
-    endif()
+    message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
     
     #-----------------------------------------------------
 
