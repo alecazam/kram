@@ -1,18 +1,3 @@
-#cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
-
-#-----------------------------------------------------
-
-set(BUILD_MAC FALSE)
-set(BUILD_WIN FALSE)
-
-if (APPLE)
-    message("build for macOS")
-    set(BUILD_MAC TRUE)
-elseif (WIN32)
-    message("build for win x64")
-    set(BUILD_WIN TRUE)
-endif()
-
 #-----------------------------------------------------
 
 # TODO: hook these up to added code below, and pass to as command line settings
@@ -234,17 +219,6 @@ if (BUILD_MAC)
     target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
     
 elseif (BUILD_WIN)
-    
-   
-    # TODO: turn on C++20
-    # TODO: switch to clang, then switch args, but clang-cl will take MSVC args
-
-    # this is MSVC setting, but needs to be here and on karmc and thumbnail
-    # /std:c++20
-    #
-    # this is setting clang-cl
-    # set(CMAKE_CXX_COMPILER "clang-cl")
-
     # TODO: switch to add_target_definitions
 
     # to turn off exceptions/rtti use /GR and /EHsc replacement

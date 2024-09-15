@@ -1,32 +1,9 @@
-#cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
-
-#-----------------------------------------------------
-
-set(BUILD_MAC FALSE)
-set(BUILD_WIN FALSE)
-
-if (APPLE)
-    message("build for macOS")
-    set(BUILD_MAC TRUE)
-elseif (WIN32)
-    message("build for win x64")
-    set(BUILD_WIN TRUE)
-endif()
-
 #-----------------------------------------------------
 # hlslparser 
 
 # now setup the app project
 set(myTargetApp hlslparser)
-
-# not using version in cmake anymore, this is pulled in by KramVersion.h
-if (BUILD_MAC)
-    project(${myTargetApp} LANGUAGES C CXX OBJCXX)
-elseif (BUILD_WIN)
-    project(${myTargetApp} LANGUAGES C CXX)
-endif()
-
-# **** this the executable target ****, for a CLI App
+project(${myTargetApp})
 add_executable(${myTargetApp})
 
 #-----------------------------------------------------
@@ -64,14 +41,18 @@ if (BUILD_MAC)
     
         #-------------------------
         # for now disable signing, and just "sign to run locally"
-        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.ba.hlslparser"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.hialec.hlslparser"
         XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
         XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
     )
 
     target_compile_options(${myTargetApp} PRIVATE -W -Wall)
 
-elseif (BUILD_WIN)
+endif()
+
+#-----------------------------------------------------
+    
+if (BUILD_WIN)
     # When Win rebuilds library, it doesn't relink app to correct code when you
     # build the app target project.  Breakpoints stop working after any library source edit,
     # and you have to rebuild solution to get the correct code to exectute.  Since 2014.  Try this.
