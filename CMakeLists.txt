@@ -7,11 +7,6 @@ set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
 
 #-----------------------------------------------------
-
-# suppress ZERO_CHECK project
-set(CMAKE_SUPPRESS_REGENERATION true)
-
-#-----------------------------------------------------
 # still building Win using Cmake
 
 if (BUILD_WIN)
@@ -25,6 +20,9 @@ if (BUILD_WIN)
     project(${myTargetWorkspace} LANGUAGES C CXX)
     
     #-----------------------------------------------------
+
+	# suppress ZERO_CHECK project
+    set(CMAKE_SUPPRESS_REGENERATION true)
 
     # use clang-cl on Win
     set(CMAKE_CXX_COMPILER "clang-cl")
@@ -83,6 +81,9 @@ if (BUILD_MAC)
     project(${myTargetWorkspace} LANGUAGES C CXX OBJCXX)
 
     #-----------------------------------------------------
+
+    # suppress ZERO_CHECK project
+    set(CMAKE_SUPPRESS_REGENERATION true)
 
     # CMAKE_OSX_DEPLOYMENT_TARGET must be set as a CACHE variable, or it will be stripped
     set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Minimum macOS")
