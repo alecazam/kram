@@ -38,8 +38,10 @@ if (BUILD_WIN)
     project(${myTargetWorkspace} LANGUAGES C CXX)
     
     # use clang-cl on Win, have to set both
-    set(CMAKE_C_COMPILER "clang-cl")
-    set(CMAKE_CXX_COMPILER "clang-cl")
+    # this is suggested way to set, but github already reports clang 17.0.3 with VS extensions
+    #  as the default compiler
+    # set(CMAKE_C_COMPILER "clang-cl")
+    # set(CMAKE_CXX_COMPILER "clang-cl")
 
     #-----------------------------------------------------
 
