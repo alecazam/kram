@@ -30,6 +30,14 @@
  *
  * Note: multithreading is enabled for all platforms apart from Emscripten.
  */
+
+/*- Compiler specifics -*/
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshorten-64-to-32"
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
 #define DEBUGLEVEL 0
 #define MEM_MODULE
 #undef  XXH_NAMESPACE
@@ -37080,11 +37088,11 @@ ZDICTLIB_API size_t ZDICT_optimizeTrainFromBuffer_cover(
  */
 
 /*- Compiler specifics -*/
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wshorten-64-to-32"
-#pragma clang diagnostic ignored "-Wunused-function"
-//#pragma clang diagnostic ignored "-Wunused-variable"
-#endif
+//#ifdef __clang__
+//#pragma clang diagnostic push
+//#pragma clang diagnostic ignored "-Wshorten-64-to-32"
+//#pragma clang diagnostic ignored "-Wunused-function"
+//#endif
 
 #if defined(_MSC_VER)
 #  pragma warning(disable : 4244)
@@ -40934,3 +40942,8 @@ size_t ZDICT_addEntropyTablesFromBuffer(void* dictBuffer, size_t dictContentSize
                                                      params);
 }
 /**** ended inlining dictBuilder/zdict.c ****/
+
+/*- Compiler specifics -*/
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

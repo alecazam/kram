@@ -58,7 +58,7 @@ if (BUILD_WIN)
     add_subdirectory(kram-thumb-win)
     
     # hack hlslparser for win build into kram for now, does not use kram
-    add_subdirectory(hlslparser)
+    # add_subdirectory(hlslparser)
 
     #-----------------------------------------------------
 
