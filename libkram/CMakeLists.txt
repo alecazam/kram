@@ -191,15 +191,13 @@ target_include_directories(${myTargetLib} PRIVATE
 # only add sources to the library
 target_sources(${myTargetLib} PRIVATE ${libSources})
 
+#-----------------------------------------------------
+
 # note: mac build is all done via Xcode workspace/project now, this cmake build is legacy
 if (BUILD_MAC)
     set_target_properties(${myTargetLib} PROPERTIES
-        # Note: match this up with CXX version
-        # c++11 min
         XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
-
-        # avx1 (ignored by universal?)
         XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx2"
         
         # turn off exceptions/rtti
@@ -208,17 +206,24 @@ if (BUILD_MAC)
         
         # can't believe this isn't on by default in CMAKE
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+        
+        #-------------------------
+
+        # set debug style for apps
+        XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+        XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH "NO"
     )
 
     # Enable all warnings, and also enable f16c sims op
     target_compile_options(${myTargetLib} PRIVATE -W -Wall -mf16c)
 
-    # TODO: switch to pch setup (KramConfig.pch)
     # this is already done by pch for libkram, but other projects need the force include inherited
     # force include (public)
     target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
     
-elseif (BUILD_WIN)
+endif()
+
+if (BUILD_WIN)
     # TODO: switch to add_target_definitions
 
     # to turn off exceptions/rtti use /GR and /EHsc replacement
@@ -229,8 +234,9 @@ elseif (BUILD_WIN)
     # force include (public)
     target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
        
-    # all warnings, AVX, and multiprocess compiles, clang needs mf16c or -mavx2
-    target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX2 -mf16c /MP)
+    # all warnings, AVX, and multiprocess compiles,
+    # eliminate duplicate strings, embed full path
+    target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX -mf16c /MP /GF /FC)
     
     # fix STL (don't use -D here, will remove)
     target_compile_definitions(${myTargetLib} PRIVATE _ITERATOR_DEBUG_LEVEL=0 _HAS_EXCEPTIONS=0)
@@ -239,9 +245,9 @@ endif()
 
 # turn on dead-code stripping in release.  Don't set this in debug.
 # does this make sense on lib, or just on apps ?
-if (CMAKE_BUILD_TYPE STREQUAL "RELEASE") 
-    target_compile_options(${myTargetLib} PUBLIC -dead_strip)
-endif()
+#if (CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+#    target_compile_options(${myTargetLib} PUBLIC -dead_strip)
+#endif()
 
 # This will be force include (-include, /FI) on GCC/clang/VS.
 # Can't seem to ref KramPrefix.pch file.  Goes into cmake_pch.hxx file
@@ -249,18 +255,16 @@ target_precompile_headers(${myTargetLib} PRIVATE
     ${SOURCE_DIR}/kram/KramPrefix.h
 )
 
-# public
-# TODO: these should not be in quotes?
-target_compile_definitions(${myTargetLib} 
+# These turns into -D, don't add to the lines
+target_compile_definitions(${myTargetLib}
     PUBLIC
-    "-DCOMPILE_EASTL=${COMPILE_EASTL}"
+    COMPILE_EASTL=${COMPILE_EASTL
    
     PRIVATE
-    "-DCOMPILE_ATE=${COMPILE_ATE}"
-    "-DCOMPILE_BCENC=${COMPILE_BCENC}"
-    "-DCOMPILE_ETCENC=${COMPILE_ETCENC}"
-    "-DCOMPILE_SQUISH=${COMPILE_SQUISH}"
-    "-DCOMPILE_ASTCENC=${COMPILE_ASTCENC}"
-    "-DCOMPILE_COMP=${COMPILE_COMP}"
-   
+    COMPILE_ATE=${COMPILE_ATE}
+    COMPILE_BCENC=${COMPILE_BCENC}
+    COMPILE_ETCENC=${COMPILE_ETCENC}
+    COMPILE_SQUISH=${COMPILE_SQUISH}
+    COMPILE_ASTCENC=${COMPILE_ASTCENC}
+    COMPILE_COMP=${COMPILE_COMP}
 )

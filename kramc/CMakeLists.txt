@@ -15,13 +15,9 @@ if (BUILD_MAC)
         libkram)
 
     set_target_properties(${myTargetApp} PROPERTIES
-         # Note: match this up with CXX version
-        # c++11 min
         XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
-
-        # avx1
-        XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx"
+        XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx2"
         
         # turn off exceptions/rtti
         XCODE_ATTRIBUTE_GCC_ENABLE_CPP_EXCEPTIONS NO
@@ -36,6 +32,9 @@ if (BUILD_MAC)
         XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
         XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH "NO"
     
+        #-------------------------
+        # app specific settings
+       
         # this drops app from 762KB to 174KB with only ATE enabled
         # note about needing -gfull instead of -gused here or debug info messed up:
         # https://gist.github.com/tkersey/39b4fe69e14b859889ffadccb009e397

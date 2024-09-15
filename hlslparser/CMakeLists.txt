@@ -10,15 +10,9 @@ add_executable(${myTargetApp})
     
 if (BUILD_MAC)
     set_target_properties(${myTargetApp} PROPERTIES
-         # Note: match this up with CXX version
-        # c++11 min
         XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
-
-        # removed this in case run on Rosetta.  Not sure if this is Intel/Arm64 build.
-        # this is Intel specific, and no settings for Neon
-        # avx1
-        #XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx"
+        XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx2"
         
         # turn off exceptions/rtti
         XCODE_ATTRIBUTE_GCC_ENABLE_CPP_EXCEPTIONS NO
@@ -33,6 +27,9 @@ if (BUILD_MAC)
         XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
         XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH "NO"
     
+        #-------------------------
+        # app specific settings
+        
         # this drops app from 762KB to 174KB with only ATE enabled
         # note about needing -gfull instead of -gused here or debug info messed up:
         # https://gist.github.com/tkersey/39b4fe69e14b859889ffadccb009e397
@@ -69,7 +66,8 @@ if (BUILD_WIN)
 
     # don't need force with apps, since they only access kram folder files which include KramConfig
     
-    # all warnings, AVX1, and multiprocess compiles
+    # all warnings, AVX, and multiprocess compiles,
+    # eliminate duplicate strings, embed full path
     target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX -mf16c /MP /GF /FC)
     
     # fix STL (don't use -D here, will remove)

@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
 #-----------------------------------------------------
 
 # really not using cmake for mac, but this was used in the past so leaving it in
+# still building Win using Cmake.  macOS uses avx2 and Win uses avx.
 set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
 
@@ -28,8 +29,6 @@ set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
     
 #-----------------------------------------------------
-# still building Win using Cmake
-
 if (BUILD_WIN)
     # cmake translates project to sln in Win, but to xcode projects on Mac.
     # No way to make xcode workspaces, but could do manually.
@@ -43,6 +42,13 @@ if (BUILD_WIN)
     # set(CMAKE_C_COMPILER "clang-cl")
     # set(CMAKE_CXX_COMPILER "clang-cl")
 
+    # want to only use clang across all platforms
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(STATUS "Using Clang compiler")
+    else
+        message(STATUS "Using MSVC compiler")
+    endif()
+    
     #-----------------------------------------------------
 
     # the kram static library libkram which should build on iOS/Android/Mac/Win
@@ -65,7 +71,6 @@ if (BUILD_WIN)
 
     # install doesn't seem to do anything on WIN32, the build elements are not copied
     install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
-    
     install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
     install(TARGETS kram-thumb-win LIBRARY DESTINATION ${BIN_DIR})
     
@@ -105,6 +110,9 @@ if (BUILD_MAC)
     # ps plugin that uses libkram
     add_subdirectory(plugin)
   
+    # hlslparser needs some more work to modernize to a C++ style HLSL syntax
+    add_subdirectory(hlslparser)
+
     #-----------------------------------------------------
 
     # was considering platform-specific builds, but mac/win don't conflict
