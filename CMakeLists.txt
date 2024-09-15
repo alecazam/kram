@@ -71,7 +71,8 @@ if (BUILD_WIN)
     
     # hlslparser is also now in the kram build.  Keep executables up to date.
     # I would use the sln file, but msbuild doesn't like to be called from cibuld.sh
-    install(TARGETS hlslparser RUNTIME DESTINATION ${BIN_DIR})
+    # This builds but has a lot of warnings.  When I resume work, will re-instate.
+    # install(TARGETS hlslparser RUNTIME DESTINATION ${BIN_DIR})
 endif()
 
 #-----------------------------------------------------
