@@ -258,7 +258,7 @@ target_precompile_headers(${myTargetLib} PRIVATE
 # These turns into -D, don't add to the lines
 target_compile_definitions(${myTargetLib}
     PUBLIC
-    COMPILE_EASTL=${COMPILE_EASTL
+    COMPILE_EASTL=${COMPILE_EASTL}
    
     PRIVATE
     COMPILE_ATE=${COMPILE_ATE}
