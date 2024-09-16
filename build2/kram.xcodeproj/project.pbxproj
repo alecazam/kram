@@ -1675,6 +1675,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70871DE127DDDBCD00D0B9E1 /* astcenc_mathlib.cpp in Sources */,
+				706EEFB526D1595D001C950E /* float4a.cpp in Sources */,
 				70871DD727DDDBCD00D0B9E1 /* astcenc_quantization.cpp in Sources */,
 				70D222F52ADAF78300B9EA23 /* dlmalloc.cpp in Sources */,
 				707789E52881BA81008A51BC /* ert.cpp in Sources */,
@@ -1704,7 +1706,6 @@
 				706EEF8A26D1595D001C950E /* EtcBlock4x4Encoding.cpp in Sources */,
 				706EEF8B26D1595D001C950E /* EtcBlock4x4.cpp in Sources */,
 				70871DDB27DDDBCD00D0B9E1 /* astcenc_percentile_tables.cpp in Sources */,
-				70871DE127DDDBCD00D0B9E1 /* astcenc_mathlib.cpp in Sources */,
 				708A6A9A2708CE4700BA5410 /* bc6h_encode.cpp in Sources */,
 				70A7BD3027092A1200DBCCF7 /* hdr_encode.cpp in Sources */,
 				706EFF7726D34740001C950E /* string.cpp in Sources */,
@@ -1739,7 +1740,6 @@
 				709B8D3928D7BCAD0081BD1F /* format.cpp in Sources */,
 				70D222DE2AD2132300B9EA23 /* ImmutableString.cpp in Sources */,
 				70871DCB27DDDBCD00D0B9E1 /* astcenc_image.cpp in Sources */,
-				706EEFB526D1595D001C950E /* float4a.cpp in Sources */,
 				706EFF7326D34740001C950E /* thread_support.cpp in Sources */,
 				706EEFB626D1595D001C950E /* Kram.cpp in Sources */,
 				706EEFB726D1595D001C950E /* squish.cpp in Sources */,
@@ -2116,7 +2116,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
-				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
@@ -2132,7 +2131,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
-				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
