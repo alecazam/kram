@@ -308,8 +308,9 @@ import std.regex;
 #endif
 
 // TODO: move half4 to it's own file, but always include it
-// Apple's files don't have a half4 type.
-namespace simd {
+// x Apple's files don't have a half4 type.
+// They do now as of macOS 15/Xcode 16.  simd::half, 1/2/3/4/8/16
+namespace kram {
 
 // This has spotty support on Android.  They left out hw support
 // for _Float16 on many of the devices.  So there would need this fallback.
@@ -360,7 +361,7 @@ public:
     }
 };
 
-}  // namespace simd
+}  // namespace kram
 
 #if !USE_EASTL
 
@@ -451,10 +452,15 @@ inline float4 saturate(const float4& v)
 
 #endif
 
-float4 toFloat4(const half4& vv);
-half4 toHalf4(const float4& vv);
-
 }  // namespace simd
+
+
+namespace kram {
+
+simd::float4 toFloat4(const half4& vv);
+half4 toHalf4(const simd::float4& vv);
+
+} // namespace kram
 
 //---------------------------------------
 

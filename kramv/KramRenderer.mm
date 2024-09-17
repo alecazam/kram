@@ -2320,7 +2320,7 @@ private:
         };
 
         if (isDrawableBlit) {
-            half4 data16f;
+            kram::half4 data16f;
             [texture getBytes:&data16f bytesPerRow:8 fromRegion:region mipmapLevel:0];
             data = toFloat4(data16f);
         }

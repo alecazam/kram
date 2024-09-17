@@ -6,21 +6,21 @@
 
 // Bury these for now.  They required -mf16c for Intel to be
 // defined, and that's kind of a pain right now.
-namespace simd {
+namespace kram {
 
 
 #if 0 // USE_FLOAT16
 
 // This only works on Apple, and not on Android unless +fp16 arch there.
 // And this is likely not faster than the simd op that does this.
-float4 toFloat4(const half4& vv)
+simd::float4 toFloat4(const half4& vv)
 {
     // https://patchwork.ozlabs.org/project/gcc/patch/559BC75A.1080606@arm.com/
     // https://gcc.gnu.org/onlinedocs/gcc-7.5.0/gcc/Half-Precision.html
     // https://developer.arm.com/documentation/dui0491/i/Using-NEON-Support/Converting-vectors
     return float4m((float)vv.x, (float)vv.y, (float)vv.z, (float)vv.w);
 }
-half4 toHalf4(const float4& vv)
+half4 toHalf4(const simd::float4& vv)
 {
     return half4((_Float16)vv.x, (_Float16)vv.y, (_Float16)vv.z, (_Float16)vv.w);
 }
@@ -30,7 +30,7 @@ half4 toHalf4(const float4& vv)
 
 // using casts instead of vv.reg, so these calls work with Apple SIMD too
 
-float4 toFloat4(const half4& vv)
+simd::float4 toFloat4(const half4& vv)
 {
     // https://patchwork.ozlabs.org/project/gcc/patch/559BC75A.1080606@arm.com/
     // https://gcc.gnu.org/onlinedocs/gcc-7.5.0/gcc/Half-Precision.html
@@ -44,10 +44,10 @@ float4 toFloat4(const half4& vv)
     reg16 = _mm_insert_epi16(reg16, vv[2], 2);
     reg16 = _mm_insert_epi16(reg16, vv[3], 3);
     
-    return float4(_mm_cvtph_ps(reg16));
+    return simd::float4(_mm_cvtph_ps(reg16));
 }
 
-half4 toHalf4(const float4& vv)
+half4 toHalf4(const simd::float4& vv)
 {
     __m128i reg16 = _mm_cvtps_ph(*(const __m128*)&vv, 0);  // 4xfp32-> 4xfp16,  round to nearest-even
     
@@ -67,11 +67,11 @@ half4 toHalf4(const float4& vv)
 // using casts intead of vv.reg, so these calls work with Apple SIMD too
 // Note: could just use the sse2 neon version
 
-float4 toFloat4(const half4& vv)
+simd::float4 toFloat4(const half4& vv)
 {
-    return float4(vcvt_f32_f16(*(const float16x4_t*)&vv));
+    return simd::float4(vcvt_f32_f16(*(const float16x4_t*)&vv));
 }
-half4 toHalf4(const float4& vv)
+half4 toHalf4(const simd::float4& vv)
 {
     return half4(vcvt_f16_f32(*(const float32x4_t*)&vv));
 }
