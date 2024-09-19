@@ -331,7 +331,7 @@ inline float4 max(const float4& lhs, const float4& rhs)
 // do 4 of these at once
 inline float4 recip(const float4& vv)
 {
-    return floar4(1.0f/vv.reg); // _mm_rcphp_ps(vv.reg));
+    return float4(1.0f/vv.reg); // _mm_rcphp_ps(vv.reg));
 }
 inline float4 rsqrt(const float4& vv)
 {
