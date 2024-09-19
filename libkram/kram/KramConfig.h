@@ -304,7 +304,7 @@ import std.regex;
 // to keep astcenc compiling
 #include <immintrin.h>  // AVX1
 #elif USE_NEON
-#include "sse2neon.h"
+#include "sse2neon-arm64.h"
 #endif
 
 // TODO: move half4 to it's own file, but always include it

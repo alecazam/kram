@@ -15,7 +15,7 @@
 
 // this is also defined in KramConfig.h, but this keeps file independent
 #if USE_NEON
-#include "sse2neon.h"
+#include "sse2neon-arm64.h"
 #else
 //#include <smmintrin.h> // SSE4.1, and includes all before it
 #include <immintrin.h>  // AVX
@@ -27,32 +27,33 @@
 namespace simd {
 
 #if USE_NEON
-#define _mm_fixzero_ps(a, b) _mm_and_ps(a, _mm_cmpneq_ps(b, _mm_setzero_ps()))
+//#define _mm_fixzero_ps(a, b) _mm_and_ps(a, _mm_cmpneq_ps(b, _mm_setzero_ps()))
 
+// removing these
 // rqrt (high precision)
-inline float32x4_t _mm_rsqrthp_ps(const float32x4_t& a)
-{
-    float32x4_t est = vrsqrteq_f32(a);
-
-    est = _mm_fixzero_ps(est, a);
-
-    // newton raphson
-    float32x4_t stepA = vrsqrtsq_f32(a, vmulq_f32(est, est));  // xn+1 = xn(3-dxn*dxn)/2
-
-    return _mm_mul_ps(est, stepA);
-}
-
-// recip
-inline float32x4_t _mm_rcphp_ps(const float32x4_t& a)
-{
-    float32x4_t est = vrecpeq_f32(a);
-
-    est = _mm_fixzero_ps(est, a);
-
-    float32x4_t stepA = vrecpsq_f32(est, a);  // xn+1 = xn(2-dxn)
-
-    return _mm_mul_ps(est, stepA);
-}
+//inline float32x4_t _mm_rsqrthp_ps(const float32x4_t& a)
+//{
+//    float32x4_t est = vrsqrteq_f32(a);
+//
+//    est = _mm_fixzero_ps(est, a);
+//
+//    // newton raphson
+//    float32x4_t stepA = vrsqrtsq_f32(a, vmulq_f32(est, est));  // xn+1 = xn(3-dxn*dxn)/2
+//
+//    return _mm_mul_ps(est, stepA);
+//}
+//
+//// recip
+//inline float32x4_t _mm_rcphp_ps(const float32x4_t& a)
+//{
+//    float32x4_t est = vrecpeq_f32(a);
+//
+//    est = _mm_fixzero_ps(est, a);
+//
+//    float32x4_t stepA = vrecpsq_f32(est, a);  // xn+1 = xn(2-dxn)
+//
+//    return _mm_mul_ps(est, stepA);
+//}
 
 #else
 
@@ -61,6 +62,7 @@ inline float32x4_t _mm_rcphp_ps(const float32x4_t& a)
 
 #define _mm_fixzero_ps(a, b) _mm_and_ps(a, _mm_cmpneq_ps(b, _mm_setzero_ps()))
 
+/* eliminating these
 inline float32x4_t _mm_rsqrthp_ps(const float32x4_t& a)
 {
     static const float32x4_t kHalf = _mm_set1_ps(0.5f);
@@ -108,6 +110,7 @@ inline float32x4_t _mm_rcphp_ps(const float32x4_t& a)
 #define _mm_rsqrthp_ss(a) _mm_setx_ps(a, _mm_rsqrthp_ps(a))
 #define _mm_rcphp_ss(a) _mm_setx_ps(a, _mm_rcphp_ps(a))
 
+ */
 #endif
 
 //---------------------------------------------------------------------------------------
@@ -118,28 +121,18 @@ using tSwizzle = uint32_t;
 #define macroSwizzle(x, y, z, w) _MM_SHUFFLE(w, z, y, x)
 
 // replicate a lane into a new vector
+// This can already be done with clang vector types much better.  v.x or v.xxxx
 #define _mm_splatx_ps(v) _mm_shuffle_ps(v, v, macroSwizzle(0, 0, 0, 0))
 #define _mm_splaty_ps(v) _mm_shuffle_ps(v, v, macroSwizzle(1, 1, 1, 1))
 #define _mm_splatz_ps(v) _mm_shuffle_ps(v, v, macroSwizzle(2, 2, 2, 2))
 #define _mm_splatw_ps(v) _mm_shuffle_ps(v, v, macroSwizzle(3, 3, 3, 3))
 
-// dot product app with horizontal adds, without using _mm_hadd_ps()
+// dot product app with horizontal adds
 inline float32x4_t _mm_hadd4_ps(const float32x4_t& r)
 {
-#if 0  // SSE1
-//    // use for hpadd
-//    static const tSwizzle kSwizzleYYZW = macroSwizzle(1, 1, 2, 3);
-//    //static const tSwizzle kSwizzleZYZW = macroSwizzle(2,1,2,3);
-//    static const tSwizzle kSwizzleWZZW = macroSwizzle(3, 2, 2, 3);
-//
-//    float32x4_t t = _mm_add_ps(r, _mm_shuffle_ps(r, r, kSwizzleWZZW));  // xy + wz
-//    t = _mm_add_ss(t, _mm_shuffle_ps(t, t, kSwizzleYYZW));              // x + y
-//    return t;
-#else  // SSE3
     float32x4_t t = _mm_hadd_ps(r, r);  // xy + wz
     t = _mm_hadd_ps(t, t);              // x + y
     return t;
-#endif
 }
 
 static const uint32_t kSignBitsF32x4i = {0x80000000};
@@ -156,7 +149,7 @@ static const float32x4_t kOnesF32x4 = _mm_set1_ps(1.0f);
 
 //---------------------------------------------------------------------------------------
 
-// Note float3 should be it's own type, but it should be float4 in size.
+// Note float3 should be its own type, but it should be float4 in size.
 // float2 is harder since on Neon, it supports a float2 data structure.
 // Needs SSE4.1, but that's most of the processors these days.
 class float4 {
@@ -338,11 +331,11 @@ inline float4 max(const float4& lhs, const float4& rhs)
 // do 4 of these at once
 inline float4 recip(const float4& vv)
 {
-    return float4(_mm_rcphp_ps(vv.reg));
+    return floar4(1.0f/vv.reg); // _mm_rcphp_ps(vv.reg));
 }
 inline float4 rsqrt(const float4& vv)
 {
-    return float4(_mm_rsqrthp_ps(vv.reg));
+    return float4(1.0f/_mm_sqrt_ps(vv.reg)); // _mm_rsqrthp_ps(vv.reg));
 }
 inline float4 sqrt(const float4& vv)
 {

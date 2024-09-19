@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		706706482C9B3BB30008F865 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 706706472C9B3BB30008F865 /* sse2neon-arm64.h */; };
+		706706492C9B3BB30008F865 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 706706472C9B3BB30008F865 /* sse2neon-arm64.h */; };
 		706EEF7F26D1595D001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAA26D1583E001C950E /* EtcBlock4x4Encoding_RGB8.cpp */; };
 		706EEF8026D1595D001C950E /* EtcImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAC26D1583E001C950E /* EtcImage.cpp */; };
 		706EEF8126D1595D001C950E /* EtcDifferentialTrys.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAF26D1583E001C950E /* EtcDifferentialTrys.cpp */; };
@@ -409,6 +411,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		706706472C9B3BB30008F865 /* sse2neon-arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "sse2neon-arm64.h"; sourceTree = "<group>"; };
 		706ECDDE26D1577A001C950E /* libkram.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libkram.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EEDAA26D1583E001C950E /* EtcBlock4x4Encoding_RGB8.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EtcBlock4x4Encoding_RGB8.cpp; sourceTree = "<group>"; };
 		706EEDAB26D1583E001C950E /* EtcErrorMetric.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EtcErrorMetric.h; sourceTree = "<group>"; };
@@ -1021,6 +1024,7 @@
 				706EEE1C26D1583F001C950E /* KramMipper.cpp */,
 				706EEE2D26D1583F001C950E /* win_mmap.h */,
 				706EEE2226D1583F001C950E /* sse2neon.h */,
+				706706472C9B3BB30008F865 /* sse2neon-arm64.h */,
 				706EEE3426D1583F001C950E /* float4a.h */,
 				706EEE2F26D1583F001C950E /* float4a.cpp */,
 				70D222E32AD22BED00B9EA23 /* BlockedLinearAllocator.h */,
@@ -1387,6 +1391,7 @@
 				70871DC927DDDBCD00D0B9E1 /* astcenc_vecmathlib_common_4.h in Headers */,
 				706EEFD626D15984001C950E /* EtcBlock4x4Encoding_R11.h in Headers */,
 				706EEFD726D15984001C950E /* EtcBlock4x4Encoding_RG11.h in Headers */,
+				706706492C9B3BB30008F865 /* sse2neon-arm64.h in Headers */,
 				706EEFD826D15984001C950E /* EtcMath.h in Headers */,
 				706EEFD926D15984001C950E /* EtcIndividualTrys.h in Headers */,
 				706EEFDA26D15984001C950E /* EtcBlock4x4EncodingBits.h in Headers */,
@@ -1500,6 +1505,7 @@
 				70871DCA27DDDBCD00D0B9E1 /* astcenc_vecmathlib_common_4.h in Headers */,
 				706EF15026D166C5001C950E /* EtcBlock4x4Encoding_R11.h in Headers */,
 				706EF15126D166C5001C950E /* EtcBlock4x4Encoding_RG11.h in Headers */,
+				706706482C9B3BB30008F865 /* sse2neon-arm64.h in Headers */,
 				706EF15226D166C5001C950E /* EtcMath.h in Headers */,
 				706EF15326D166C5001C950E /* EtcIndividualTrys.h in Headers */,
 				706EF15426D166C5001C950E /* EtcBlock4x4EncodingBits.h in Headers */,
