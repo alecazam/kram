@@ -39,7 +39,7 @@ using mylock = std::unique_lock<mymutex>;
 
 #include <UniformTypeIdentifiers/UTType.h>
 
-using namespace simd;
+using namespace SIMD_NAMESPACE;
 using namespace kram;
 using namespace NAMESPACE_STL;
 

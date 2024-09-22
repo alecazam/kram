@@ -14,7 +14,7 @@
 namespace kram {
 class Image;
 
-using namespace simd;
+using namespace SIMD_NAMESPACE;
 using namespace NAMESPACE_STL;
 
 // each encoder has it's own set of outputs, can request encoder if overlap

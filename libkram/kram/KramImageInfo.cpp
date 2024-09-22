@@ -13,7 +13,7 @@
 
 namespace kram {
 using namespace NAMESPACE_STL;
-using namespace simd;
+using namespace SIMD_NAMESPACE;
 
 #define isStringEqual(lhs, rhs) (strcmp(lhs, rhs) == 0)
 

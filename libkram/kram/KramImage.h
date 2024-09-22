@@ -15,7 +15,7 @@
 namespace kram {
 
 using namespace NAMESPACE_STL;
-using namespace simd;
+using namespace SIMD_NAMESPACE;
 
 class Mipper;
 class KTXHeader;

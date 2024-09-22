@@ -94,9 +94,6 @@
 #endif
 
 //------------------------
-// TODO: unix
-
-//------------------------
 
 // one of these must be set
 #ifndef USE_SSE
@@ -117,8 +114,13 @@
 #endif
 #endif
 
-// use _Float16/_fp16 vs. other
-#if KRAM_MAC || KRAM_IOS
+// TODO: switch to own simd lib
+#define SIMD_NAMESPACE simd
+
+// use _Float16
+// Android is the last holdout
+// Win and Linux and Apple have support in clang
+#if !__is_identifier(_Float16)
 #define USE_FLOAT16 1
 #else
 #define USE_FLOAT16 0
@@ -151,11 +153,6 @@
 #ifndef COMPILE_EASTL
 #define COMPILE_EASTL 0
 #endif
-
-// eliminate this
-//#ifndef COMPILE_FASTL
-//#define COMPILE_FASTL 0
-//#endif
 
 // basis transcoder only (read not writes)
 #ifndef COMPILE_BASIS
@@ -196,52 +193,6 @@
 
 // std - simpler than using eastl version
 #include <atomic>
-
-
-/* This library just doesn't work, but was an interesting idea
-#define USE_FASTL COMPILE_FASTL
-#elif USE_FASTL
-
-#define NAMESPACE_STL fastl
-
-// these are all vector based
-#include "../fastl/falgorithm.h"
-#include "../fastl/vector.h"
-
-// These don't really work.  They are constantly shifting the key-value pairs on add/revmoe
-#include "../fastl/map.h"
-#include "../fastl/set.h"
-#include "../fastl/unordered_map.h"
-#include "../fastl/unordered_set.h"
-
-// still too many holes in this (rfind, insert, back, pop_back, find_last_of, substr)
-
-#include "../fastl/fstring.h"
-
-// This was to fallback on sso of basic_string
-//#include <string>
-//namespace NAMESPACE_STL
-//{
-//    using string = std::string;
-//}
-
-// std - for missing functionality
-#include <array>
-#include <deque>
-#include <memory> // for unique_ptr/shared_ptr
-//#include <initializer_list>
-#include <iterator>  // for copy_if and back_inserter on Win
-
-// threads
-#include <functional>
-#include <atomic>
-
-// On macOS, mutex, codition_variable, thread pull in system_error which pulls in std::string
-// when then instantiates 5 versions of basic_string into all files
-//#include <mutex>
-//#include <condition_variable>
-//#include <thread>
-*/
 
 #else
 
@@ -362,27 +313,6 @@ public:
 };
 
 }  // namespace kram
-
-#if !USE_EASTL
-
-namespace NAMESPACE_STL {
-
-// scalar ops
-#if USE_FASTL
-template<typename T>
-inline T min(T x, T minValue) { return x < minValue ? x : minValue; }
-template<typename T>
-inline T max(T x, T maxValue) { return x > maxValue ? x : maxValue; }
-#endif
-
-// already defined in C++17
-//template<typename T>
-//inline T clamp(T x, T minValue, T maxValue) { return min(max(x, minValue), maxValue); }
-
-
-}  // namespace std
-
-#endif
 
 #if USE_SIMDLIB
 #include "simd/simd.h"

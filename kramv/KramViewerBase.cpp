@@ -13,7 +13,7 @@
 #endif
 
 namespace kram {
-using namespace simd;
+using namespace SIMD_NAMESPACE;
 using namespace NAMESPACE_STL;
 
 #define ArrayCount(x) (sizeof(x) / sizeof(x[0]))

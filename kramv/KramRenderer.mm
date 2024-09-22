@@ -102,7 +102,7 @@ static mymutex gModelLock;
 static const NSUInteger MaxBuffersInFlight = 3;
 
 using namespace kram;
-using namespace simd;
+using namespace SIMD_NAMESPACE;
 
 // Capture what we need to build the renderPieplines, without needing view
 struct ViewFramebufferData {

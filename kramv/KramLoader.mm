@@ -12,7 +12,7 @@
 
 using namespace kram;
 using namespace NAMESPACE_STL;
-using namespace simd;
+using namespace SIMD_NAMESPACE;
 
 using mymutex = std::recursive_mutex;
 using mylock = std::unique_lock<mymutex>;

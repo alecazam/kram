@@ -2028,9 +2028,13 @@ FORCE_INLINE __m64 _mm_max_pi16(__m64 a, __m64 b)
 FORCE_INLINE __m128 _mm_max_ps(__m128 a, __m128 b)
 {
 #if SSE2NEON_PRECISE_MINMAX
-    float32x4_t _a = vreinterpretq_f32_m128(a);
-    float32x4_t _b = vreinterpretq_f32_m128(b);
-    return vreinterpretq_m128_f32(vbslq_f32(vcgtq_f32(_a, _b), _a, _b));
+    return vreinterpretq_m128_f32(
+        vmaxmq_f32(vreinterpretq_f32_m128(a), vreinterpretq_f32_m128(b)));
+    
+    // no, use single call
+    //float32x4_t _a = vreinterpretq_f32_m128(a);
+    //float32x4_t _b = vreinterpretq_f32_m128(b);
+    //return vreinterpretq_m128_f32(vbslq_f32(vcgtq_f32(_a, _b), _a, _b));
 #else
     return vreinterpretq_m128_f32(
         vmaxq_f32(vreinterpretq_f32_m128(a), vreinterpretq_f32_m128(b)));
@@ -2076,9 +2080,13 @@ FORCE_INLINE __m64 _mm_min_pi16(__m64 a, __m64 b)
 FORCE_INLINE __m128 _mm_min_ps(__m128 a, __m128 b)
 {
 #if SSE2NEON_PRECISE_MINMAX
-    float32x4_t _a = vreinterpretq_f32_m128(a);
-    float32x4_t _b = vreinterpretq_f32_m128(b);
-    return vreinterpretq_m128_f32(vbslq_f32(vcltq_f32(_a, _b), _a, _b));
+    return vreinterpretq_m128_f32(
+        vminmq_f32(vreinterpretq_f32_m128(a), vreinterpretq_f32_m128(b)));
+    
+    // no use single call
+    //float32x4_t _a = vreinterpretq_f32_m128(a);
+    //float32x4_t _b = vreinterpretq_f32_m128(b);
+    //return vreinterpretq_m128_f32(vbslq_f32(vcltq_f32(_a, _b), _a, _b));
 #else
     return vreinterpretq_m128_f32(
         vminq_f32(vreinterpretq_f32_m128(a), vreinterpretq_f32_m128(b)));

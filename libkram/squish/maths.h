@@ -357,7 +357,7 @@ private:
 */
 
 
-using namespace simd;
+using namespace SIMD_NAMESPACE;
 using Vec4 = float4;
 // default ctor for float4(1) sets 1,0,0,0 in simd, but impls like Vec4 expect float4(repeating: x)
 #define VEC4_CONST(x) Vec4(makeVec4(x,x,x,x))
