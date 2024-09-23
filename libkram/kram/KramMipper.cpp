@@ -171,7 +171,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
                                     vector<half4>& halfImage) const
 {
     Color zeroColor = {0, 0, 0, 0};
-    float4 zeroColorf = float4m(0.0, 0.0f, 0.0f, 0.f);  // need a constant for this
+    float4 zeroColorf = float4m(0.0f);  // need a constant for this
     half4 zeroColorh = half4m(zeroColorf);
 
     int32_t w = srcImage.width;

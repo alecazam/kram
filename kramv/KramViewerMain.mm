@@ -977,8 +977,8 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     float ar = _showSettings->imageAspectRatio();
     
     // find the cursor location with respect to the image
-    float4 bottomLeftCorner = float4m(-0.5 * ar, -0.5f, 0.0f, 1.0f);
-    float4 topRightCorner = float4m(0.5 * ar, 0.5f, 0.0f, 1.0f);
+    float4 bottomLeftCorner = float4m(-0.5f * ar, -0.5f, 0.0f, 1.0f);
+    float4 topRightCorner = float4m(0.5f * ar, 0.5f, 0.0f, 1.0f);
 
     float4x4 newMatrix = _data.computeImageTransform(_showSettings->panX,
                                                     _showSettings->panY,
@@ -1312,8 +1312,8 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     // what if zoom moves it outside?
     float ar = _showSettings->imageAspectRatio();
     
-    float4 pt0 = projectionViewModelMatrix * float4m(-0.5 * ar, -0.5f, 0.0f, 1.0f);
-    float4 pt1 = projectionViewModelMatrix * float4m(0.5 * ar, 0.5f, 0.0f, 1.0f);
+    float4 pt0 = projectionViewModelMatrix * float4m(-0.5f * ar, -0.5f, 0.0f, 1.0f);
+    float4 pt1 = projectionViewModelMatrix * float4m(0.5f * ar, 0.5f, 0.0f, 1.0f);
 
     // for perspective
     pt0.xyz /= pt0.w;

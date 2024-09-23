@@ -47,7 +47,7 @@ uint64_t astc::rand(uint64_t state[2])
 	return res;
 }
 
-#if USE_SSE
+#if SIMD_SSE
 
 /* ============================================================================
   Softfloat library with fp32 and fp16 conversion functionality.

@@ -80,7 +80,7 @@ bool isDecodeImageNeeded(MyMTLPixelFormat pixelFormat, MyMTLTextureType type)
 {
     bool needsDecode = false;
 
-#if USE_SSE
+#if SIMD_SSE
     if (isETCFormat(pixelFormat)) {
         needsDecode = true;
     }
@@ -99,7 +99,9 @@ bool decodeImage(const KTXImage &image, KTXImage &imageDecoded)
 {
     KramDecoderParams decoderParams;
     KramDecoder decoder;
-#if USE_SSE
+    
+    // macOS Intel only had BC support, and already have macOS arm64 build
+#if SIMD_SSE
     if (isETCFormat(image.pixelFormat)) {
         if (!decoder.decode(image, imageDecoded, decoderParams)) {
             return NO;

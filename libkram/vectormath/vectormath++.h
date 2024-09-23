@@ -53,13 +53,13 @@
 // AVX-512 16x 64B 512-bit (disabled on p-cores and dropped from e-cores on i9), 4 variants
 // AVX10   32x 32B 256-bit (emulates 512-bit), 3 variants
 //
-// FMA     fp multiply add
-// F16C    2 instructions for fp16 <-> fp32
+// FMA     fp multiply add (clang v14)
+// F16C    2 ops fp16 <-> fp32
 // CRC32   instructions to enable fast crc ops (not using yet, but is in sse2neon.h)
 //
 // max vec size per register
 // 16B      32B
-// char16   char32?
+// char16   char16?
 // short8   short16
 // uint4    uint8
 // float4   float8
@@ -493,8 +493,13 @@ SIMD_CALL float4 max(float4 x, float4 y) {
 }
 
 SIMD_CALL float4 muladd(float4 x, float4 y, float4 t) {
-    // __FMA__, could fallback to x*y + t, but not same characteristics
+    // can't get Xcode to set -mfma with AVX2 set
+#ifdef __FMA__
     return _mm_fmadd_ps(x,y,t);
+#else
+    // fallback with not same characteristics
+    return x * y + t;
+#endif
 }
 
 SIMD_CALL float4 sqrt(float4 x) {

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		702E0DB62CA10BC100B652B7 /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB327DDDBCC00D0B9E1 /* astcenc_mathlib.cpp */; };
 		705F7F072C9FF42700E377B7 /* vectormath++.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7F022C9FF42700E377B7 /* vectormath++.h */; };
 		705F7F082C9FF42700E377B7 /* sse_mathfun.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFC2C9FF42700E377B7 /* sse_mathfun.h */; };
 		705F7F092C9FF42700E377B7 /* float4a.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFA2C9FF42700E377B7 /* float4a.h */; };
@@ -294,7 +295,6 @@
 		70871DDE27DDDBCD00D0B9E1 /* astcenc_vecmathlib_sse_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871DB127DDDBCC00D0B9E1 /* astcenc_vecmathlib_sse_4.h */; };
 		70871DDF27DDDBCD00D0B9E1 /* astcenc_mathlib_softfloat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB227DDDBCC00D0B9E1 /* astcenc_mathlib_softfloat.cpp */; };
 		70871DE027DDDBCD00D0B9E1 /* astcenc_mathlib_softfloat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB227DDDBCC00D0B9E1 /* astcenc_mathlib_softfloat.cpp */; };
-		70871DE127DDDBCD00D0B9E1 /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB327DDDBCC00D0B9E1 /* astcenc_mathlib.cpp */; settings = {COMPILER_FLAGS = "-mf16c"; }; };
 		70871DE227DDDBCD00D0B9E1 /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB327DDDBCC00D0B9E1 /* astcenc_mathlib.cpp */; };
 		70871DE327DDDBCD00D0B9E1 /* astcenc_decompress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB427DDDBCC00D0B9E1 /* astcenc_decompress_symbolic.cpp */; };
 		70871DE427DDDBCD00D0B9E1 /* astcenc_decompress_symbolic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB427DDDBCC00D0B9E1 /* astcenc_decompress_symbolic.cpp */; };
@@ -1699,7 +1699,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70871DE127DDDBCD00D0B9E1 /* astcenc_mathlib.cpp in Sources */,
+				702E0DB62CA10BC100B652B7 /* astcenc_mathlib.cpp in Sources */,
 				70871DD727DDDBCD00D0B9E1 /* astcenc_quantization.cpp in Sources */,
 				70D222F52ADAF78300B9EA23 /* dlmalloc.cpp in Sources */,
 				707789E52881BA81008A51BC /* ert.cpp in Sources */,
@@ -1938,6 +1938,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
@@ -2036,6 +2037,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -2094,7 +2096,6 @@
 			buildSettings = {
 				CLANG_WARN_OBJC_EXPLICIT_OWNERSHIP_TYPE = YES;
 				CLANG_WARN_OBJC_REPEATED_USE_OF_WEAK = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
 				OTHER_CFLAGS = (
@@ -2107,6 +2108,8 @@
 					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
 					"-ftime-trace",
+					"-mfma",
+					"-mf16c",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2119,7 +2122,6 @@
 			buildSettings = {
 				CLANG_WARN_OBJC_EXPLICIT_OWNERSHIP_TYPE = YES;
 				CLANG_WARN_OBJC_REPEATED_USE_OF_WEAK = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
 				OTHER_CFLAGS = (
@@ -2133,6 +2135,8 @@
 					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
 					"-ftime-trace",
+					"-mfma",
+					"-mf16c",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

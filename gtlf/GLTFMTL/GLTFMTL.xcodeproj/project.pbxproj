@@ -243,6 +243,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
@@ -267,7 +268,10 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = "-ftime-trace";
+				OTHER_CFLAGS = (
+					"-ftime-trace",
+					"-mfma",
+				);
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = "macosx iphoneos";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";
@@ -308,6 +312,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
@@ -332,6 +337,7 @@
 				OTHER_CFLAGS = (
 					"-DNDEBUG=1",
 					"-ftime-trace",
+					"-mfma",
 				);
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = "macosx iphoneos";

@@ -196,7 +196,7 @@
 //-------------------------
 // simd
 
-#if KRAM_MAC || KRAM_IOS
+#if 0 // KRAM_MAC || KRAM_IOS
 
 #define USE_SIMDLIB 0
 
