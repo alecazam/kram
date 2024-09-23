@@ -54,7 +54,7 @@ extern int32_t logMessage(const char* group, int32_t logLevel,
 #define KLOGE(group, fmt, ...) logMessage(group, kram::LogLevelError, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 
 // TODO: move to Strings.h
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // when set true, the internal string is cleared
 void setErrorLogCapture(bool enable);

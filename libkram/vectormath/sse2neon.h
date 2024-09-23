@@ -244,12 +244,13 @@ FORCE_INLINE void _sse2neon_smp_mb(void)
 
 /* Architecture-specific build options */
 /* FIXME: #pragma GCC push_options is only available on GCC */
-#if defined(__GNUC__)
-#if defined(__arm__) && __ARM_ARCH == 7
 /* According to ARM C Language Extensions Architecture specification,
  * __ARM_NEON is defined to a value indicating the Advanced SIMD (NEON)
  * architecture supported.
  */
+/*
+ #if defined(__GNUC__)
+#if defined(__arm__) && __ARM_ARCH == 7
 #if !defined(__ARM_NEON) || !defined(__ARM_NEON__)
 #error "You must enable NEON instructions (e.g. -mfpu=neon) to use SSE2NEON."
 #endif
@@ -276,6 +277,7 @@ FORCE_INLINE void _sse2neon_smp_mb(void)
 (you could try setting target explicitly with -march or -mcpu)"
 #endif
 #endif
+*/
 
 #include <arm_neon.h>
 #if (!defined(__aarch64__) && !defined(_M_ARM64)) && (__ARM_ARCH == 8)

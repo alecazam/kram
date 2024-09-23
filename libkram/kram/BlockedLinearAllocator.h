@@ -8,7 +8,7 @@
 
 namespace kram {
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // Can use to allocate tree nodes where length is unknown
 // until the tree is fully parsed.

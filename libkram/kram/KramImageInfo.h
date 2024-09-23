@@ -15,7 +15,7 @@ namespace kram {
 class Image;
 
 using namespace SIMD_NAMESPACE;
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // each encoder has it's own set of outputs, can request encoder if overlap
 enum TexEncoder {

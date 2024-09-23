@@ -16,6 +16,8 @@
 
 #import <GLTF/GLTFEnums.h>
 
+#import <simd/matrix.h>
+
 //@import Foundation;
 //@import simd;
 

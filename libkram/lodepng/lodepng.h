@@ -28,7 +28,7 @@ freely, subject to the following restrictions:
 
 #include <string.h> /*for size_t*/
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 extern const char* LODEPNG_VERSION_STRING;
 

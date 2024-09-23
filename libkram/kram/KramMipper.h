@@ -10,7 +10,7 @@
 //#include "KramConfig.h"
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 using namespace SIMD_NAMESPACE;
 
 // return whether num is pow2

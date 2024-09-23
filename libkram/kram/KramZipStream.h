@@ -7,7 +7,7 @@
 struct mz_stream;
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 class FileHelper;
 

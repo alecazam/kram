@@ -41,7 +41,7 @@ using mylock = std::unique_lock<mymutex>;
 
 using namespace SIMD_NAMESPACE;
 using namespace kram;
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 
 // ktx, ktx2, png, and dds for images
@@ -995,7 +995,7 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
 
     // see that rectangle intersects the view, view is -1 to 1
     // this handles inversion
-    float2 ptOrigin = simd::min(pt0.xy, pt1.xy);
+    float2 ptOrigin = SIMD_NAMESPACE::min(pt0.xy, pt1.xy);
     float2 ptSize = abs(pt0.xy - pt1.xy);
 
     float4 imageRect = float4m(ptOrigin.x, ptOrigin.y, ptSize.x, ptSize.y);
@@ -1319,7 +1319,7 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     pt0.xyz /= pt0.w;
     pt1.xyz /= pt1.w;
 
-    float2 ptOrigin = simd::min(pt0.xy, pt1.xy);
+    float2 ptOrigin = SIMD_NAMESPACE::min(pt0.xy, pt1.xy);
     float2 ptSize = abs(pt0.xy - pt1.xy);
 
     // see that rectangle intersects the view, view is -1 to 1

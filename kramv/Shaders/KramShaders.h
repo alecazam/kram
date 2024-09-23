@@ -8,9 +8,10 @@
 #ifndef __METAL_VERSION__
 #import <Foundation/Foundation.h>
 #else
+#define SIMD_NAMESPACE simd
+#import <simd/simd.h>
 #include <metal_stdlib>
 #endif
-#import <simd/simd.h>
 
 #ifdef __METAL_VERSION__
 #define NS_ENUM(_type, _name) \
@@ -111,10 +112,10 @@ typedef NS_ENUM(int32_t, ShaderLightingMode) {
 // TODO: placement of these elements in the struct breaks transfer
 // of data. This seems to work.  Alignment issues with mixing these differently.
 struct Uniforms {
-    simd::float4x4 projectionViewMatrix;
-    simd::float4x4 modelMatrix;
-    simd::float4 modelMatrixInvScale2;  // to supply inverse, w is determinant
-    simd::float3 cameraPosition;        // world-space
+    SIMD_NAMESPACE::float4x4 projectionViewMatrix;
+    SIMD_NAMESPACE::float4x4 modelMatrix;
+    SIMD_NAMESPACE::float4 modelMatrixInvScale2;  // to supply inverse, w is determinant
+    SIMD_NAMESPACE::float3 cameraPosition;        // world-space
     float uvPreview;
     float uvToShapeRatio;
     
@@ -176,14 +177,14 @@ struct UniformsLevel {
     uint32_t mipLOD;
     uint32_t face;
     uint32_t arrayOrSlice;
-    simd::float2 drawOffset;   // pixel offset to apply
-    simd::float4 textureSize;  // width, height, 1/width, 1/height
+    SIMD_NAMESPACE::float2 drawOffset;   // pixel offset to apply
+    SIMD_NAMESPACE::float4 textureSize;  // width, height, 1/width, 1/height
     uint32_t passNumber; // switch to enum
 };
 
 // This is all tied to a single level sample
 struct UniformsCS {
-    simd::uint2 uv;
+    SIMD_NAMESPACE::int2 uv;
 
     uint32_t arrayOrSlice;
     uint32_t face;
@@ -191,7 +192,7 @@ struct UniformsCS {
 };
 
 struct UniformsDebug {
-    simd::float4 rect;
+    SIMD_NAMESPACE::float4 rect;
 };
     
 #endif

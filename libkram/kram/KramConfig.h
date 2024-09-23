@@ -59,26 +59,6 @@
     4305 // '*=': truncation from 'double' to 'float'
 */
 
-#endif
-
-//------------------------
-#if KRAM_MAC
-
-#if TARGET_CPU_X86_64
-#define USE_SSE 1
-#elif TARGET_CPU_ARM64
-#define USE_NEON 1
-#endif
-
-#endif
-
-#if KRAM_IOS
-#define USE_NEON 1
-#endif
-
-//------------------------
-#if KRAM_WIN
-
 // avoid conflicts with min/max macros, use std instead
 #define NOMINMAX
 
@@ -88,46 +68,11 @@
 #define _CRT_SECURE_NO_WARNINGS 1
 #include <tchar.h>
 
-// For now assume Intel on Win
-#define USE_SSE 1
-
 #endif
 
 //------------------------
 
-// one of these must be set
-#ifndef USE_SSE
-#define USE_SSE 0
-#endif
-#ifndef USE_NEON
-#define USE_NEON 0
-#endif
-
-// clang can compile simd/simd.h code on other platforms
-// this provides vector extensions from gcc that were setup for OpenCL shaders
-#ifndef USE_SIMDLIB
-// TODO: bring over simd for Win
-#if !KRAM_WIN 
-#define USE_SIMDLIB 1
-#else
-#define USE_SIMDLIB 0
-#endif
-#endif
-
-// TODO: switch to own simd lib
-#define SIMD_NAMESPACE simd
-
-// use _Float16
-// Android is the last holdout
-// Win and Linux and Apple have support in clang
-#if !__is_identifier(_Float16)
-#define USE_FLOAT16 1
-#else
-#define USE_FLOAT16 0
-#endif
-
-
-// can override from build system
+// SIMD_WORKSPACE is set
 
 // can't have ATE defined to 1 on other platforms
 #if !(KRAM_MAC || KRAM_IOS)
@@ -170,7 +115,7 @@
 
 #if USE_EASTL
 
-#define NAMESPACE_STL eastl
+#define STL_NAMESPACE eastl
 
 // this probably breaks all STL debugging
 #include <EASTL/algorithm.h>  // for max
@@ -196,18 +141,16 @@
 
 #else
 
-/*
-// seems that Modules have "partial" support in Xcode, whatever that means
-// these imports are taken from MSVC which has a full implementation
- 
-import std.memory;
-import std.threading;
-import std.core;
-import std.filesystem;
-import std.regex;
-*/
 
-#define NAMESPACE_STL std
+// in Xcode 14, C++20 Modules have "partial" support... whatever that means.
+// These imports are taken from MSVC which has a full implementation.
+//import std.memory;
+//import std.threading;
+//import std.core;
+//import std.filesystem;
+//import std.regex;
+
+#define STL_NAMESPACE std
 
 // all std
 #include <algorithm>  // for max
@@ -250,148 +193,31 @@ import std.regex;
 // includes that are usable across all files
 #include "KramLog.h"
 
-// this has every intrinsic header in it
-#if USE_SSE
-// to keep astcenc compiling
-#include <immintrin.h>  // AVX1
-#elif USE_NEON
-#include "sse2neon-arm64.h"
-#endif
+//-------------------------
+// simd
 
-// TODO: move half4 to it's own file, but always include it
-// x Apple's files don't have a half4 type.
-// They do now as of macOS 15/Xcode 16.  simd::half, 1/2/3/4/8/16
-namespace kram {
+#if KRAM_MAC || KRAM_IOS
 
-// This has spotty support on Android.  They left out hw support
-// for _Float16 on many of the devices.  So there would need this fallback.
+#define USE_SIMDLIB 0
 
-#if USE_FLOAT16
-using half = _Float16;
-#else
-// for lack of a better type
-using half = uint16_t;
-#endif
+// This is Apple simd (it's huuuggge!)
+// Also can't use the half4 type until iOS18 + macOS15 minspec, so need fallback.
+#include <simd/simd.h>
 
-// Really just a storage format and wrapper for half, math work done in float4.
-class half4 {
-public:
-#if USE_SSE
-    // for lack of a better type, not __m128i since that's 2x bigger
-    using tType = uint64_t;
-#elif USE_NEON
-    using tType = float16x4_t;
-#endif
-
-    union {
-        tType reg;
-        half v[4];
-        struct {
-            half x, y, z, w;
-        };
-        struct {
-            half r, g, b, a;
-        };
-    };
-
-    half4() {}
-    explicit half4(half val) : x(val), y(val), z(val), w(val) {}  // xyzw = val
-    explicit half4(tType val) { reg = val; }
-    half4(half xx, half yy, half zz, half ww) : x(xx), y(yy), z(zz), w(ww) {}
-    half4(const half4& val) { reg = val.reg; }
-
-    // no real ops here, althought Neon does have sevearal
-    // use of these pull data out of simd registers
-    half& operator[](int32_t index)
-    {
-        return v[index];
-    }
-    const half& operator[](int32_t index) const
-    {
-        return v[index];
-    }
-};
-
-}  // namespace kram
-
-#if USE_SIMDLIB
-#include "simd/simd.h"
-#else
-// emulate float4
+// this is glue code for now
 #include "float4a.h"
-#endif
 
-namespace simd {
 
-#if USE_SIMDLIB
+#else
 
-// functional ctor
-inline float4 float4m(float3 v, float w)
-{
-    return vector4(v, w);
-}
+// this means use vectormath
+#define USE_SIMDLIB 1
 
-inline float2 float2m(float x, float y)
-{
-    return {x, y};
-}
-inline float3 float3m(float x, float y, float z)
-{
-    return {x, y, z};
-}
-inline float4 float4m(float x, float y, float z, float w)
-{
-    return {x, y, z, w};
-}
-
-inline float2 float2m(float x)
-{
-    return x;
-}
-
-inline float3 float3m(float x)
-{
-    return x;
-}
-
-inline float4 float4m(float x)
-{
-    return x;
-}
-
-inline float saturate(float v)
-{
-    return std::clamp(v, 0.0f, 1.0f);
-}
-inline double saturate(double v)
-{
-    return std::clamp(v, 0.0, 1.0);
-}
-inline float2 saturate(const float2& v)
-{
-    return simd_clamp(v, 0.0f, 1.0f);
-}
-inline float3 saturate(const float3& v)
-{
-    return simd_clamp(v, 0.0f, 1.0f);
-}
-inline float4 saturate(const float4& v)
-{
-    return simd_clamp(v, 0.0f, 1.0f);
-}
+// Test out on Win build first.
+#include "vectormath++.h"
 
 #endif
-
-}  // namespace simd
-
-
-namespace kram {
-
-simd::float4 toFloat4(const half4& vv);
-half4 toHalf4(const simd::float4& vv);
-
-} // namespace kram
-
+ 
 //---------------------------------------
 
 // this just strips args
@@ -403,7 +229,7 @@ half4 toHalf4(const simd::float4& vv);
 //---------------------------------------
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // Use this on vectors
 template <typename T>

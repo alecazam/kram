@@ -12,7 +12,7 @@
 
 namespace kram {
 using namespace heman;
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 void SDFMipper::init(ImageData& srcImage, uint8_t sdfThreshold, bool isVerbose_)
 {

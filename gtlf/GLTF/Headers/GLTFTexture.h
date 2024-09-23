@@ -16,6 +16,7 @@
 
 #import <GLTF/GLTFObject.h>
 #import <GLTF/GLTFEnums.h>
+#import <simd/matrix_types.h>
 
 //@import simd;
 

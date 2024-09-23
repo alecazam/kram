@@ -294,7 +294,10 @@
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
-				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/kram";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../libkram/kram",
+					"$(PROJECT_DIR)/../libkram/vectormath",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hialec.kramc;
 				PRODUCT_NAME = kram;
 			};
@@ -316,7 +319,10 @@
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
-				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../libkram/kram";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../libkram/kram",
+					"$(PROJECT_DIR)/../libkram/vectormath",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hialec.kramc;
 				PRODUCT_NAME = kram;
 			};

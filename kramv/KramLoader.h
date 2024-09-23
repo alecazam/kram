@@ -69,7 +69,7 @@ class KTXImageData;
 //#include <string>
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // provide access to lowercase strings
 string toLower(const string &text);

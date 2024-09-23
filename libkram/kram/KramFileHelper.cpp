@@ -29,7 +29,7 @@
 #endif
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 #define nl "\n"
 

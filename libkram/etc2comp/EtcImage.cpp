@@ -267,7 +267,7 @@ namespace Etc
         // alias the output etxture
         m_paucEncodingBits = outputTexture;
         
-        using namespace NAMESPACE_STL;
+        using namespace STL_NAMESPACE;
         
         struct SortedBlock
         {

@@ -4,7 +4,7 @@
 #include "miniz.h"
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 ZipStream::ZipStream() {
     _stream = make_unique<mz_stream>();

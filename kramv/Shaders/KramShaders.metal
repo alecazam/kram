@@ -1629,11 +1629,11 @@ kernel void SampleImageCS(
 {
     // the for-loop is replaced with a collection of threads, each of which
     // calls this function.
-    uint2 uv = uniforms.uv; // tie into texture lookup
+    int2 uv = uniforms.uv; // tie into texture lookup
     // uv >>= uniforms.mipLOD;
     
     // the color is returned to linear rgba32f
-    float4 color = colorMap.read(uv, uniforms.mipLOD);
+    float4 color = colorMap.read((uint2)uv, uniforms.mipLOD);
     result.write(color, index);
 }
 
@@ -1646,13 +1646,13 @@ kernel void SampleImageArrayCS(
 {
     // the for-loop is replaced with a collection of threads, each of which
     // calls this function.
-    uint2 uv = uniforms.uv; // tie into texture lookup
+    int2 uv = uniforms.uv; // tie into texture lookup
     //uv >>= uniforms.mipLOD;
     
     uint arrayOrSlice = uniforms.arrayOrSlice;
     
     // the color is returned to linear rgba32f
-    float4 color = colorMap.read(uv, arrayOrSlice, uniforms.mipLOD);
+    float4 color = colorMap.read((uint2)uv, arrayOrSlice, uniforms.mipLOD);
     result.write(color, index);
 }
 
@@ -1705,7 +1705,7 @@ kernel void SampleVolumeCS(
 {
     // the for-loop is replaced with a collection of threads, each of which
     // calls this function.
-    uint3 uv = uint3(uniforms.uv, uniforms.arrayOrSlice); // tie into texture lookup
+    uint3 uv = uint3((uint2)uniforms.uv, uniforms.arrayOrSlice); // tie into texture lookup
     //uv >>= uniforms.mipLOD);
     
     // the color is returned to linear rgba32f

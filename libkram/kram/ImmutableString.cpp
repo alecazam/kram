@@ -6,7 +6,7 @@
 
 namespace kram {
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 ImmutableStringPool::ImmutableStringPool(size_t capacity_) {
     capacity = capacity_;

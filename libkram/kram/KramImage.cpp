@@ -61,7 +61,7 @@
 
 namespace kram {
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 using namespace SIMD_NAMESPACE;
 
 template <typename T>
@@ -216,7 +216,7 @@ bool Image::convertToFourChannel(const KTXImage& image, uint32_t mipNumber)
 
             const half* srcPixels = (const half*)(srcLevelData + mipBaseOffset);
 
-            half4 dstTemp = toHalf4(float4m(0.0f, 0.0f, 0.0f, 1.0f));
+            half4 dstTemp = half4m(float4m(0.0f, 0.0f, 0.0f, 1.0f));
 
             for (int32_t y = 0; y < _height; ++y) {
                 int32_t y0 = y * _width;
@@ -227,11 +227,11 @@ bool Image::convertToFourChannel(const KTXImage& image, uint32_t mipNumber)
 
                     // copy in available values
                     for (int32_t i = 0; i < numSrcChannels; ++i) {
-                        dstTemp.v[i] = srcPixels[srcX + i];
+                        dstTemp[i] = srcPixels[srcX + i];
                     }
 
                     // use AVX to convert
-                    dstPixels[dstX] = toFloat4(dstTemp);
+                    dstPixels[dstX] = float4m(dstTemp);
                 }
             }
             break;
@@ -378,7 +378,7 @@ bool Image::convertToFourChannelForThumbnail(const KTXImage& image, uint32_t mip
 
             const half* srcPixels = (const half*)(srcLevelData + mipBaseOffset);
 
-            half4 dstTemp = toHalf4(float4m(0.0f, 0.0f, 0.0f, 1.0f));
+            half4 dstTemp = half4m(float4m(0.0f, 0.0f, 0.0f, 1.0f));
 
             for (int32_t y = 0; y < _height; ++y) {
                 int32_t y0 = y * _width;
@@ -389,12 +389,12 @@ bool Image::convertToFourChannelForThumbnail(const KTXImage& image, uint32_t mip
 
                     // copy in available values
                     for (int32_t i = 0; i < numSrcChannels; ++i) {
-                        dstTemp.v[i] = srcPixels[srcX + i];
+                        dstTemp[i] = srcPixels[srcX + i];
                     }
 
                     // use AVX to convert
                     // This is a simple saturate to unorm8
-                    dstPixels[dstX] = ColorFromUnormFloat4(toFloat4(dstTemp));
+                    dstPixels[dstX] = ColorFromUnormFloat4(float4m(dstTemp));
                 }
             }
             break;
@@ -2438,7 +2438,7 @@ bool KramEncoder::compressMipLevel(const ImageInfo& info, KTXImage& image,
 
                 // assumes we don't need to align r16f rows to 4 bytes
                 for (int32_t i = 0, iEnd = w * h; i < iEnd; ++i) {
-                    half4 src16 = toHalf4(src[0]);
+                    half4 src16 = half4m(src[0]);
 
                     switch (count) {
                         case 4:

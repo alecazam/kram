@@ -38,7 +38,7 @@ const char* kPropChannels = "KramChannels";
 const char* kPropAddress = "KramAddress";
 const char* kPropFilter = "KramFilter";
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // These start each KTX file to indicate the type
 const uint8_t kKTXIdentifier[kKTXIdentifierSize] = {
@@ -1287,7 +1287,7 @@ void KTXImage::initProps(const uint8_t* propsData, size_t propDataSize)
             }
 
             //LOGD("KTXImage", "KTXProp '%s': %s\n", keyStart, valueStart);
-            auto propPair = NAMESPACE_STL::make_pair(
+            auto propPair = STL_NAMESPACE::make_pair(
                 string((const char*)keyStart),
                 string((const char*)valueStart)
             );
@@ -1309,7 +1309,7 @@ void KTXImage::addProp(const char* name, const char* value)
             return;
         }
     }
-    auto propPair = NAMESPACE_STL::make_pair(
+    auto propPair = STL_NAMESPACE::make_pair(
         string(name),
         string(value)
     );

@@ -51,7 +51,7 @@
 
 namespace json11 {
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 using namespace kram;
 
 //---------------------

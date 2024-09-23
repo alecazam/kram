@@ -23,7 +23,7 @@
 // TODO: look at replacing this with Job Queue from Filament
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 enum class CoreType : uint8_t
 {

@@ -34,7 +34,7 @@
 //#include <algorithm>
 
 namespace squish {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 Sym3x3 ComputeWeightedCovariance( int n, Vec3 const* points, float const* weights )
 {

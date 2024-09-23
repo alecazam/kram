@@ -18,6 +18,7 @@
 #import "GLTFAccessor.h"
 #import "GLTFMesh.h"
 #import "GLTFVertexDescriptor.h"
+#import <simd/simd.h>
 
 @interface GLTFNode ()
 @property (nonatomic, assign, getter=localTransformIsDirty) BOOL localTransformDirty;

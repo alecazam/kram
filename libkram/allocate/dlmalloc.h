@@ -4,7 +4,7 @@
 #include <stddef.h> // for size_t
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 /*
  This version of malloc supports the standard SVID/XPG mallinfo

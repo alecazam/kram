@@ -36,7 +36,7 @@
 
 namespace utils
 {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 extern const uint32_t g_pretty_colors[];
 extern const uint32_t g_num_pretty_colors;

@@ -11,7 +11,7 @@
 
 namespace kram {
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 using namespace SIMD_NAMESPACE;
 
 Mipper::Mipper() { initTables(); }
@@ -172,7 +172,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
 {
     Color zeroColor = {0, 0, 0, 0};
     float4 zeroColorf = float4m(0.0, 0.0f, 0.0f, 0.f);  // need a constant for this
-    half4 zeroColorh = toHalf4(zeroColorf);
+    half4 zeroColorh = half4m(zeroColorf);
 
     int32_t w = srcImage.width;
     int32_t h = srcImage.height;
@@ -220,7 +220,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
                 // }
                 // else
                 {
-                    halfImage[y0 + x] = toHalf4(cFloat);
+                    halfImage[y0 + x] = half4m(cFloat);
                 }
 
                 // only have to rewrite src alpha/color if there is alpha and it's premul
@@ -248,7 +248,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
                 else {
                     float4 cFloat = {alphaToFloat[c0.r], alphaToFloat[c0.g],
                                      alphaToFloat[c0.b], alphaToFloat[c0.a]};
-                    halfImage[y0 + x] = toHalf4(cFloat);
+                    halfImage[y0 + x] = half4m(cFloat);
                 }
             }
         }
@@ -274,7 +274,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
                 // }
                 // else
                 {
-                    halfImage[y0 + x] = toHalf4(cFloat);
+                    halfImage[y0 + x] = half4m(cFloat);
                 }
 
                 // only have to rewrite color if there is alpha
@@ -515,17 +515,17 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
             float4 c[9];
 
             if (srcHalf) {
-                c[0] = toFloat4(srcHalf[ym + xm]);
-                c[1] = toFloat4(srcHalf[ym + x0]);
-                c[2] = toFloat4(srcHalf[ym + x1]);
+                c[0] = float4m(srcHalf[ym + xm]);
+                c[1] = float4m(srcHalf[ym + x0]);
+                c[2] = float4m(srcHalf[ym + x1]);
 
-                c[3] = toFloat4(srcHalf[y0 + xm]);
-                c[4] = toFloat4(srcHalf[y0 + x0]);
-                c[5] = toFloat4(srcHalf[y0 + x1]);
+                c[3] = float4m(srcHalf[y0 + xm]);
+                c[4] = float4m(srcHalf[y0 + x0]);
+                c[5] = float4m(srcHalf[y0 + x1]);
 
-                c[6] = toFloat4(srcHalf[y1 + xm]);
-                c[7] = toFloat4(srcHalf[y1 + x0]);
-                c[8] = toFloat4(srcHalf[y1 + x1]);
+                c[6] = float4m(srcHalf[y1 + xm]);
+                c[7] = float4m(srcHalf[y1 + x0]);
+                c[8] = float4m(srcHalf[y1 + x1]);
             }
             else if (srcFloat) {
                 c[0] = srcFloat[ym + xm];
@@ -575,7 +575,7 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
 
             if (srcHalf) {
                 // overwrite float4 image
-                cDstHalf[dstIndex] = toHalf4(cFloat);
+                cDstHalf[dstIndex] = half4m(cFloat);
 
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {
@@ -668,17 +668,17 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
 
             if (srcHalf) {
                 float4 c0, c1, c2, c3;
-                c0 = toFloat4(srcHalf[y0 + x0]);
-                c1 = toFloat4(srcHalf[y0 + x1]);
-                c2 = toFloat4(srcHalf[y1 + x0]);
-                c3 = toFloat4(srcHalf[y1 + x1]);
+                c0 = float4m(srcHalf[y0 + x0]);
+                c1 = float4m(srcHalf[y0 + x1]);
+                c2 = float4m(srcHalf[y1 + x0]);
+                c3 = float4m(srcHalf[y1 + x1]);
 
                 // mip filter is simple box filter
                 // assumes alpha premultiplied already
                 float4 cFloat = (c0 + c1 + c2 + c3) * 0.25;
 
                 // overwrite half4 image
-                cDstHalf[dstIndex] = toHalf4(cFloat);
+                cDstHalf[dstIndex] = half4m(cFloat);
 
                 // assume hdr pulls from half/float data
                 if (!srcImage.isHDR) {

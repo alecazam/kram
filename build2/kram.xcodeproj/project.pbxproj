@@ -7,8 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		706706482C9B3BB30008F865 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 706706472C9B3BB30008F865 /* sse2neon-arm64.h */; };
-		706706492C9B3BB30008F865 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 706706472C9B3BB30008F865 /* sse2neon-arm64.h */; };
+		705F7F072C9FF42700E377B7 /* vectormath++.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7F022C9FF42700E377B7 /* vectormath++.h */; };
+		705F7F082C9FF42700E377B7 /* sse_mathfun.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFC2C9FF42700E377B7 /* sse_mathfun.h */; };
+		705F7F092C9FF42700E377B7 /* float4a.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFA2C9FF42700E377B7 /* float4a.h */; };
+		705F7F0B2C9FF42700E377B7 /* sse2neon.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFD2C9FF42700E377B7 /* sse2neon.h */; };
+		705F7F0C2C9FF42700E377B7 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFE2C9FF42700E377B7 /* sse2neon-arm64.h */; };
+		705F7F0D2C9FF42700E377B7 /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 705F7EFB2C9FF42700E377B7 /* float4a.cpp */; };
+		705F7F0F2C9FF42700E377B7 /* vectormath++.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 705F7F032C9FF42700E377B7 /* vectormath++.cpp */; };
+		705F7F102C9FF42700E377B7 /* vectormath++.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7F022C9FF42700E377B7 /* vectormath++.h */; };
+		705F7F112C9FF42700E377B7 /* sse_mathfun.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFC2C9FF42700E377B7 /* sse_mathfun.h */; };
+		705F7F122C9FF42700E377B7 /* float4a.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFA2C9FF42700E377B7 /* float4a.h */; };
+		705F7F142C9FF42700E377B7 /* sse2neon.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFD2C9FF42700E377B7 /* sse2neon.h */; };
+		705F7F152C9FF42700E377B7 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 705F7EFE2C9FF42700E377B7 /* sse2neon-arm64.h */; };
+		705F7F162C9FF42700E377B7 /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 705F7EFB2C9FF42700E377B7 /* float4a.cpp */; };
+		705F7F182C9FF42700E377B7 /* vectormath++.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 705F7F032C9FF42700E377B7 /* vectormath++.cpp */; };
 		706EEF7F26D1595D001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAA26D1583E001C950E /* EtcBlock4x4Encoding_RGB8.cpp */; };
 		706EEF8026D1595D001C950E /* EtcImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAC26D1583E001C950E /* EtcImage.cpp */; };
 		706EEF8126D1595D001C950E /* EtcDifferentialTrys.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAF26D1583E001C950E /* EtcDifferentialTrys.cpp */; };
@@ -35,7 +47,6 @@
 		706EEFB226D1595D001C950E /* KramLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2826D1583F001C950E /* KramLog.cpp */; };
 		706EEFB326D1595D001C950E /* KramSDFMipper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2B26D1583F001C950E /* KramSDFMipper.cpp */; };
 		706EEFB426D1595D001C950E /* KramMmapHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2C26D1583F001C950E /* KramMmapHelper.cpp */; };
-		706EEFB526D1595D001C950E /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2F26D1583F001C950E /* float4a.cpp */; settings = {COMPILER_FLAGS = "-mf16c"; }; };
 		706EEFB626D1595D001C950E /* Kram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE3526D1583F001C950E /* Kram.cpp */; };
 		706EEFB726D1595D001C950E /* squish.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE3D26D1583F001C950E /* squish.cpp */; };
 		706EEFB826D1595D001C950E /* colourset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE3E26D1583F001C950E /* colourset.cpp */; };
@@ -83,7 +94,6 @@
 		706EEFFE26D15985001C950E /* stb_rect_pack.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE1726D1583F001C950E /* stb_rect_pack.h */; };
 		706EEFFF26D15985001C950E /* KramZipHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE1926D1583F001C950E /* KramZipHelper.h */; };
 		706EF00026D15985001C950E /* KramSDFMipper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2026D1583F001C950E /* KramSDFMipper.h */; };
-		706EF00126D15985001C950E /* sse2neon.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2226D1583F001C950E /* sse2neon.h */; };
 		706EF00226D15985001C950E /* KramConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2326D1583F001C950E /* KramConfig.h */; };
 		706EF00326D15985001C950E /* KramLog.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2426D1583F001C950E /* KramLog.h */; };
 		706EF00426D15985001C950E /* KramLib.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2726D1583F001C950E /* KramLib.h */; };
@@ -95,7 +105,6 @@
 		706EF00A26D15985001C950E /* KramImageInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3126D1583F001C950E /* KramImageInfo.h */; };
 		706EF00B26D15985001C950E /* KramTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3226D1583F001C950E /* KramTimer.h */; };
 		706EF00C26D15985001C950E /* KramMmapHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3326D1583F001C950E /* KramMmapHelper.h */; };
-		706EF00D26D15985001C950E /* float4a.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3426D1583F001C950E /* float4a.h */; };
 		706EF00E26D15985001C950E /* KramFileHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3626D1583F001C950E /* KramFileHelper.h */; };
 		706EF00F26D15985001C950E /* KramMipper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3726D1583F001C950E /* KramMipper.h */; };
 		706EF01026D15985001C950E /* TaskSystem.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3826D1583F001C950E /* TaskSystem.h */; };
@@ -145,7 +154,6 @@
 		706EF17826D166C5001C950E /* stb_rect_pack.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE1726D1583F001C950E /* stb_rect_pack.h */; };
 		706EF17926D166C5001C950E /* KramZipHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE1926D1583F001C950E /* KramZipHelper.h */; };
 		706EF17A26D166C5001C950E /* KramSDFMipper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2026D1583F001C950E /* KramSDFMipper.h */; };
-		706EF17B26D166C5001C950E /* sse2neon.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2226D1583F001C950E /* sse2neon.h */; };
 		706EF17C26D166C5001C950E /* KramConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2326D1583F001C950E /* KramConfig.h */; };
 		706EF17D26D166C5001C950E /* KramLog.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2426D1583F001C950E /* KramLog.h */; };
 		706EF17E26D166C5001C950E /* KramLib.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE2726D1583F001C950E /* KramLib.h */; };
@@ -157,7 +165,6 @@
 		706EF18426D166C5001C950E /* KramImageInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3126D1583F001C950E /* KramImageInfo.h */; };
 		706EF18526D166C5001C950E /* KramTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3226D1583F001C950E /* KramTimer.h */; };
 		706EF18626D166C5001C950E /* KramMmapHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3326D1583F001C950E /* KramMmapHelper.h */; };
-		706EF18726D166C5001C950E /* float4a.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3426D1583F001C950E /* float4a.h */; };
 		706EF18826D166C5001C950E /* KramFileHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3626D1583F001C950E /* KramFileHelper.h */; };
 		706EF18926D166C5001C950E /* KramMipper.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3726D1583F001C950E /* KramMipper.h */; };
 		706EF18A26D166C5001C950E /* TaskSystem.h in Headers */ = {isa = PBXBuildFile; fileRef = 706EEE3826D1583F001C950E /* TaskSystem.h */; };
@@ -199,7 +206,6 @@
 		706EF1CA26D166C5001C950E /* KramLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2826D1583F001C950E /* KramLog.cpp */; };
 		706EF1CB26D166C5001C950E /* KramSDFMipper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2B26D1583F001C950E /* KramSDFMipper.cpp */; };
 		706EF1CC26D166C5001C950E /* KramMmapHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2C26D1583F001C950E /* KramMmapHelper.cpp */; };
-		706EF1CD26D166C5001C950E /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE2F26D1583F001C950E /* float4a.cpp */; };
 		706EF1CE26D166C5001C950E /* Kram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE3526D1583F001C950E /* Kram.cpp */; };
 		706EF1CF26D166C5001C950E /* squish.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE3D26D1583F001C950E /* squish.cpp */; };
 		706EF1D026D166C5001C950E /* colourset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEE3E26D1583F001C950E /* colourset.cpp */; };
@@ -382,8 +388,6 @@
 		70B563A82C857B360089A64F /* KramZipStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B563A52C857B360089A64F /* KramZipStream.cpp */; };
 		70B563A92C857B360089A64F /* KramZipStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B563A62C857B360089A64F /* KramZipStream.h */; };
 		70B563AA2C857B360089A64F /* KramZipStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B563A62C857B360089A64F /* KramZipStream.h */; };
-		70C6398D289FB234006E7422 /* KramPrefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 70C6398C289FB234006E7422 /* KramPrefix.pch */; };
-		70C6398E289FB234006E7422 /* KramPrefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 70C6398C289FB234006E7422 /* KramPrefix.pch */; };
 		70CDB65027A1382700A546C1 /* KramDDSHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 70CDB64E27A1382600A546C1 /* KramDDSHelper.h */; };
 		70CDB65127A1382700A546C1 /* KramDDSHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 70CDB64E27A1382600A546C1 /* KramDDSHelper.h */; };
 		70CDB65227A1382700A546C1 /* KramDDSHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */; };
@@ -411,7 +415,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		706706472C9B3BB30008F865 /* sse2neon-arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "sse2neon-arm64.h"; sourceTree = "<group>"; };
+		705F7EFA2C9FF42700E377B7 /* float4a.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = float4a.h; sourceTree = "<group>"; };
+		705F7EFB2C9FF42700E377B7 /* float4a.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = float4a.cpp; sourceTree = "<group>"; };
+		705F7EFC2C9FF42700E377B7 /* sse_mathfun.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse_mathfun.h; sourceTree = "<group>"; };
+		705F7EFD2C9FF42700E377B7 /* sse2neon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse2neon.h; sourceTree = "<group>"; };
+		705F7EFE2C9FF42700E377B7 /* sse2neon-arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "sse2neon-arm64.h"; sourceTree = "<group>"; };
+		705F7F022C9FF42700E377B7 /* vectormath++.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "vectormath++.h"; sourceTree = "<group>"; };
+		705F7F032C9FF42700E377B7 /* vectormath++.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "vectormath++.cpp"; sourceTree = "<group>"; };
 		706ECDDE26D1577A001C950E /* libkram.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libkram.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EEDAA26D1583E001C950E /* EtcBlock4x4Encoding_RGB8.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EtcBlock4x4Encoding_RGB8.cpp; sourceTree = "<group>"; };
 		706EEDAB26D1583E001C950E /* EtcErrorMetric.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EtcErrorMetric.h; sourceTree = "<group>"; };
@@ -479,7 +489,6 @@
 		706EEE1F26D1583F001C950E /* TaskSystem.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TaskSystem.cpp; sourceTree = "<group>"; };
 		706EEE2026D1583F001C950E /* KramSDFMipper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramSDFMipper.h; sourceTree = "<group>"; };
 		706EEE2126D1583F001C950E /* KramFileHelper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramFileHelper.cpp; sourceTree = "<group>"; };
-		706EEE2226D1583F001C950E /* sse2neon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse2neon.h; sourceTree = "<group>"; };
 		706EEE2326D1583F001C950E /* KramConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramConfig.h; sourceTree = "<group>"; };
 		706EEE2426D1583F001C950E /* KramLog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramLog.h; sourceTree = "<group>"; };
 		706EEE2526D1583F001C950E /* KramImageInfo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramImageInfo.cpp; sourceTree = "<group>"; };
@@ -492,12 +501,10 @@
 		706EEE2C26D1583F001C950E /* KramMmapHelper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramMmapHelper.cpp; sourceTree = "<group>"; };
 		706EEE2D26D1583F001C950E /* win_mmap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = win_mmap.h; sourceTree = "<group>"; };
 		706EEE2E26D1583F001C950E /* Kram.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Kram.h; sourceTree = "<group>"; };
-		706EEE2F26D1583F001C950E /* float4a.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = float4a.cpp; sourceTree = "<group>"; };
 		706EEE3026D1583F001C950E /* KTXImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KTXImage.h; sourceTree = "<group>"; };
 		706EEE3126D1583F001C950E /* KramImageInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramImageInfo.h; sourceTree = "<group>"; };
 		706EEE3226D1583F001C950E /* KramTimer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramTimer.h; sourceTree = "<group>"; };
 		706EEE3326D1583F001C950E /* KramMmapHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramMmapHelper.h; sourceTree = "<group>"; };
-		706EEE3426D1583F001C950E /* float4a.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = float4a.h; sourceTree = "<group>"; };
 		706EEE3526D1583F001C950E /* Kram.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Kram.cpp; sourceTree = "<group>"; };
 		706EEE3626D1583F001C950E /* KramFileHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramFileHelper.h; sourceTree = "<group>"; };
 		706EEE3726D1583F001C950E /* KramMipper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramMipper.h; sourceTree = "<group>"; };
@@ -745,7 +752,6 @@
 		70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hdr_encode.h; sourceTree = "<group>"; };
 		70B563A52C857B360089A64F /* KramZipStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramZipStream.cpp; sourceTree = "<group>"; };
 		70B563A62C857B360089A64F /* KramZipStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramZipStream.h; sourceTree = "<group>"; };
-		70C6398C289FB234006E7422 /* KramPrefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramPrefix.pch; sourceTree = "<group>"; };
 		70CDB64E27A1382600A546C1 /* KramDDSHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramDDSHelper.h; sourceTree = "<group>"; };
 		70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramDDSHelper.cpp; sourceTree = "<group>"; };
 		70D222D62AC800AC00B9EA23 /* json11.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = json11.h; sourceTree = "<group>"; };
@@ -780,6 +786,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		705F7F042C9FF42700E377B7 /* vectormath */ = {
+			isa = PBXGroup;
+			children = (
+				705F7EFA2C9FF42700E377B7 /* float4a.h */,
+				705F7EFB2C9FF42700E377B7 /* float4a.cpp */,
+				705F7EFC2C9FF42700E377B7 /* sse_mathfun.h */,
+				705F7EFD2C9FF42700E377B7 /* sse2neon.h */,
+				705F7EFE2C9FF42700E377B7 /* sse2neon-arm64.h */,
+				705F7F022C9FF42700E377B7 /* vectormath++.h */,
+				705F7F032C9FF42700E377B7 /* vectormath++.cpp */,
+			);
+			path = vectormath;
+			sourceTree = "<group>";
+		};
 		706ECDD526D1577A001C950E = {
 			isa = PBXGroup;
 			children = (
@@ -820,6 +840,7 @@
 				706EEE4F26D1583F001C950E /* zstd */,
 				706EEE5326D1583F001C950E /* lodepng */,
 				706EEE5726D1583F001C950E /* tmpfileplus */,
+				705F7F042C9FF42700E377B7 /* vectormath */,
 			);
 			name = libkram;
 			path = ../libkram;
@@ -1015,7 +1036,6 @@
 				706EEE1A26D1583F001C950E /* KramTimer.cpp */,
 				706EEE3326D1583F001C950E /* KramMmapHelper.h */,
 				706EEE2C26D1583F001C950E /* KramMmapHelper.cpp */,
-				70C6398C289FB234006E7422 /* KramPrefix.pch */,
 				706EEE2E26D1583F001C950E /* Kram.h */,
 				706EEE3526D1583F001C950E /* Kram.cpp */,
 				706EEE3626D1583F001C950E /* KramFileHelper.h */,
@@ -1023,10 +1043,6 @@
 				706EEE3726D1583F001C950E /* KramMipper.h */,
 				706EEE1C26D1583F001C950E /* KramMipper.cpp */,
 				706EEE2D26D1583F001C950E /* win_mmap.h */,
-				706EEE2226D1583F001C950E /* sse2neon.h */,
-				706706472C9B3BB30008F865 /* sse2neon-arm64.h */,
-				706EEE3426D1583F001C950E /* float4a.h */,
-				706EEE2F26D1583F001C950E /* float4a.cpp */,
 				70D222E32AD22BED00B9EA23 /* BlockedLinearAllocator.h */,
 				70D222E22AD22BED00B9EA23 /* BlockedLinearAllocator.cpp */,
 				70D222DD2AD2132300B9EA23 /* ImmutableString.h */,
@@ -1383,7 +1399,6 @@
 			files = (
 				706EEFD126D15984001C950E /* EtcErrorMetric.h in Headers */,
 				706EEFD226D15984001C950E /* EtcColor.h in Headers */,
-				70C6398D289FB234006E7422 /* KramPrefix.pch in Headers */,
 				709B8D3D28D7BCAD0081BD1F /* chrono.h in Headers */,
 				706EEFD326D15984001C950E /* EtcDifferentialTrys.h in Headers */,
 				706EEFD426D15984001C950E /* EtcBlock4x4Encoding_RGB8.h in Headers */,
@@ -1391,7 +1406,6 @@
 				70871DC927DDDBCD00D0B9E1 /* astcenc_vecmathlib_common_4.h in Headers */,
 				706EEFD626D15984001C950E /* EtcBlock4x4Encoding_R11.h in Headers */,
 				706EEFD726D15984001C950E /* EtcBlock4x4Encoding_RG11.h in Headers */,
-				706706492C9B3BB30008F865 /* sse2neon-arm64.h in Headers */,
 				706EEFD826D15984001C950E /* EtcMath.h in Headers */,
 				706EEFD926D15984001C950E /* EtcIndividualTrys.h in Headers */,
 				706EEFDA26D15984001C950E /* EtcBlock4x4EncodingBits.h in Headers */,
@@ -1406,6 +1420,11 @@
 				709B8D4328D7BCAD0081BD1F /* args.h in Headers */,
 				708A6A9C2708CE4700BA5410 /* bc6h_encode.h in Headers */,
 				706EEFDF26D15984001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
+				705F7F102C9FF42700E377B7 /* vectormath++.h in Headers */,
+				705F7F112C9FF42700E377B7 /* sse_mathfun.h in Headers */,
+				705F7F122C9FF42700E377B7 /* float4a.h in Headers */,
+				705F7F142C9FF42700E377B7 /* sse2neon.h in Headers */,
+				705F7F152C9FF42700E377B7 /* sse2neon-arm64.h in Headers */,
 				706EEFE026D15984001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
 				706EEFE126D15984001C950E /* EtcColorFloatRGBA.h in Headers */,
 				706EEFE226D15984001C950E /* EtcBlock4x4Encoding.h in Headers */,
@@ -1433,7 +1452,6 @@
 				706EEFFE26D15985001C950E /* stb_rect_pack.h in Headers */,
 				706EEFFF26D15985001C950E /* KramZipHelper.h in Headers */,
 				706EF00026D15985001C950E /* KramSDFMipper.h in Headers */,
-				706EF00126D15985001C950E /* sse2neon.h in Headers */,
 				70D222E62AD22BED00B9EA23 /* BlockedLinearAllocator.h in Headers */,
 				70B563A92C857B360089A64F /* KramZipStream.h in Headers */,
 				70871DF127DDDBCD00D0B9E1 /* astcenc_mathlib.h in Headers */,
@@ -1458,7 +1476,6 @@
 				70871DF727DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EF00B26D15985001C950E /* KramTimer.h in Headers */,
 				706EF00C26D15985001C950E /* KramMmapHelper.h in Headers */,
-				706EF00D26D15985001C950E /* float4a.h in Headers */,
 				706EF00E26D15985001C950E /* KramFileHelper.h in Headers */,
 				709B8D3F28D7BCAD0081BD1F /* os.h in Headers */,
 				706EF00F26D15985001C950E /* KramMipper.h in Headers */,
@@ -1497,7 +1514,6 @@
 			files = (
 				706EF14B26D166C5001C950E /* EtcErrorMetric.h in Headers */,
 				706EF14C26D166C5001C950E /* EtcColor.h in Headers */,
-				70C6398E289FB234006E7422 /* KramPrefix.pch in Headers */,
 				709B8D3E28D7BCAD0081BD1F /* chrono.h in Headers */,
 				706EF14D26D166C5001C950E /* EtcDifferentialTrys.h in Headers */,
 				706EF14E26D166C5001C950E /* EtcBlock4x4Encoding_RGB8.h in Headers */,
@@ -1505,7 +1521,6 @@
 				70871DCA27DDDBCD00D0B9E1 /* astcenc_vecmathlib_common_4.h in Headers */,
 				706EF15026D166C5001C950E /* EtcBlock4x4Encoding_R11.h in Headers */,
 				706EF15126D166C5001C950E /* EtcBlock4x4Encoding_RG11.h in Headers */,
-				706706482C9B3BB30008F865 /* sse2neon-arm64.h in Headers */,
 				706EF15226D166C5001C950E /* EtcMath.h in Headers */,
 				706EF15326D166C5001C950E /* EtcIndividualTrys.h in Headers */,
 				706EF15426D166C5001C950E /* EtcBlock4x4EncodingBits.h in Headers */,
@@ -1520,6 +1535,11 @@
 				709B8D4428D7BCAD0081BD1F /* args.h in Headers */,
 				708A6A9D2708CE4700BA5410 /* bc6h_encode.h in Headers */,
 				706EF15926D166C5001C950E /* EtcBlock4x4Encoding_ETC1.h in Headers */,
+				705F7F072C9FF42700E377B7 /* vectormath++.h in Headers */,
+				705F7F082C9FF42700E377B7 /* sse_mathfun.h in Headers */,
+				705F7F092C9FF42700E377B7 /* float4a.h in Headers */,
+				705F7F0B2C9FF42700E377B7 /* sse2neon.h in Headers */,
+				705F7F0C2C9FF42700E377B7 /* sse2neon-arm64.h in Headers */,
 				706EF15A26D166C5001C950E /* EtcBlock4x4Encoding_RGBA8.h in Headers */,
 				706EF15B26D166C5001C950E /* EtcColorFloatRGBA.h in Headers */,
 				706EF15C26D166C5001C950E /* EtcBlock4x4Encoding.h in Headers */,
@@ -1547,7 +1567,6 @@
 				706EF17826D166C5001C950E /* stb_rect_pack.h in Headers */,
 				706EF17926D166C5001C950E /* KramZipHelper.h in Headers */,
 				706EF17A26D166C5001C950E /* KramSDFMipper.h in Headers */,
-				706EF17B26D166C5001C950E /* sse2neon.h in Headers */,
 				70D222E72AD22BED00B9EA23 /* BlockedLinearAllocator.h in Headers */,
 				70B563AA2C857B360089A64F /* KramZipStream.h in Headers */,
 				70871DF227DDDBCD00D0B9E1 /* astcenc_mathlib.h in Headers */,
@@ -1572,7 +1591,6 @@
 				70871DF827DDDBCD00D0B9E1 /* astcenc_vecmathlib_neon_4.h in Headers */,
 				706EF18526D166C5001C950E /* KramTimer.h in Headers */,
 				706EF18626D166C5001C950E /* KramMmapHelper.h in Headers */,
-				706EF18726D166C5001C950E /* float4a.h in Headers */,
 				706EF18826D166C5001C950E /* KramFileHelper.h in Headers */,
 				709B8D4028D7BCAD0081BD1F /* os.h in Headers */,
 				706EF18926D166C5001C950E /* KramMipper.h in Headers */,
@@ -1682,7 +1700,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				70871DE127DDDBCD00D0B9E1 /* astcenc_mathlib.cpp in Sources */,
-				706EEFB526D1595D001C950E /* float4a.cpp in Sources */,
 				70871DD727DDDBCD00D0B9E1 /* astcenc_quantization.cpp in Sources */,
 				70D222F52ADAF78300B9EA23 /* dlmalloc.cpp in Sources */,
 				707789E52881BA81008A51BC /* ert.cpp in Sources */,
@@ -1773,6 +1790,8 @@
 				707789E12881BA81008A51BC /* utils.cpp in Sources */,
 				706EEFC526D1595E001C950E /* tmpfileplus.cpp in Sources */,
 				70871E0127DDDBCD00D0B9E1 /* astcenc_weight_quant_xfer_tables.cpp in Sources */,
+				705F7F162C9FF42700E377B7 /* float4a.cpp in Sources */,
+				705F7F182C9FF42700E377B7 /* vectormath++.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1844,7 +1863,6 @@
 				706EF1CC26D166C5001C950E /* KramMmapHelper.cpp in Sources */,
 				70D222DF2AD2132300B9EA23 /* ImmutableString.cpp in Sources */,
 				70871DCC27DDDBCD00D0B9E1 /* astcenc_image.cpp in Sources */,
-				706EF1CD26D166C5001C950E /* float4a.cpp in Sources */,
 				706EFF7426D34740001C950E /* thread_support.cpp in Sources */,
 				706EF1CE26D166C5001C950E /* Kram.cpp in Sources */,
 				706EF1CF26D166C5001C950E /* squish.cpp in Sources */,
@@ -1859,6 +1877,8 @@
 				706EF1D426D166C5001C950E /* colourblock.cpp in Sources */,
 				706EF1D526D166C5001C950E /* colourfit.cpp in Sources */,
 				70871E0027DDDBCD00D0B9E1 /* astcenc_pick_best_endpoint_format.cpp in Sources */,
+				705F7F0D2C9FF42700E377B7 /* float4a.cpp in Sources */,
+				705F7F0F2C9FF42700E377B7 /* vectormath++.cpp in Sources */,
 				70871E0A27DDDBCD00D0B9E1 /* astcenc_ideal_endpoints_and_weights.cpp in Sources */,
 				70871DD027DDDBCD00D0B9E1 /* astcenc_symbolic_physical.cpp in Sources */,
 				70B563A82C857B360089A64F /* KramZipStream.cpp in Sources */,
@@ -1953,6 +1973,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/../libkram/eastl/include",
 					"$(PROJECT_DIR)/../libkram/kram",
+					"$(PROJECT_DIR)/../libkram/vectormath",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
@@ -2044,6 +2065,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/../libkram/eastl/include",
 					"$(PROJECT_DIR)/../libkram/kram",
+					"$(PROJECT_DIR)/../libkram/vectormath",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;

@@ -15,6 +15,7 @@
 //
 
 #import <GLTF/GLTFObject.h>
+#import <simd/vector_types.h>
 
 //@import simd;
 

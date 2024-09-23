@@ -10,7 +10,7 @@
 #import <Accelerate/Accelerate.h> // for vImage
 
 using namespace kram;
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 @implementation KramThumbnailProvider
 
@@ -80,8 +80,8 @@ struct ImageToPass
             return;
         }
         
-        imageWidth = NAMESPACE_STL::max(1U, image.width);
-        imageHeight = NAMESPACE_STL::max(1U, image.height);
+        imageWidth = STL_NAMESPACE::max(1U, image.width);
+        imageHeight = STL_NAMESPACE::max(1U, image.height);
     }
 
     // This is retina factor

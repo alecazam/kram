@@ -14,7 +14,7 @@
 
 namespace kram {
 using namespace SIMD_NAMESPACE;
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 #define ArrayCount(x) (sizeof(x) / sizeof(x[0]))
 
@@ -63,7 +63,7 @@ float4 inverseScaleSquared(const float4x4 &m)
     
     // don't divide by 0
     float3 invScaleSquared =
-    recip(simd::max(float3m(0.0001 * 0.0001), scaleSquared));
+    recip(SIMD_NAMESPACE::max(float3m(0.0001 * 0.0001), scaleSquared));
     
     // identify determinant here for flipping orientation
     // all shapes with negative determinant need orientation flipped for
@@ -462,7 +462,7 @@ void ShowSettings::updateUVPreviewState()
                     uvPreview -= uvPreviewStep;
             }
             
-            uvPreview = saturate(uvPreview);
+            uvPreview = std::clamp(uvPreview, 0.0f, 1.0f);
         }
     }
     else {
@@ -575,9 +575,9 @@ float4x4 matrix4x4_translation(float tx, float ty, float tz)
     return m;
 }
 
-float4x4 matrix4x4_rotation(float radians, vector_float3 axis)
+float4x4 matrix4x4_rotation(float radians, float3 axis)
 {
-    axis = vector_normalize(axis);
+    axis = normalize(axis);
     float ct = cosf(radians);
     float st = sinf(radians);
     float ci = 1 - ct;

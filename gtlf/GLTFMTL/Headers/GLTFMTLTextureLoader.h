@@ -16,7 +16,7 @@
 
 #import <GLTF/GLTF.h>
 #import <Foundation/Foundation.h>
-#import <simd/simd.h>
+//#import <simd/simd.h>
 #import <Metal/Metal.h>
 
 //@import Metal;

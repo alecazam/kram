@@ -12,7 +12,7 @@ struct mz_zip_archive;
 namespace kram {
 
 //struct MmapHelper;
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 struct ZipEntry {
     const char* filename;  // max 512, aliased

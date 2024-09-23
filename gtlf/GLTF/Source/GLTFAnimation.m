@@ -19,6 +19,7 @@
 #import "GLTFBufferView.h"
 #import "GLTFBuffer.h"
 #import "GLTFNode.h"
+#import <simd/quaternion.h>
 
 @implementation GLTFAnimationSampler
 

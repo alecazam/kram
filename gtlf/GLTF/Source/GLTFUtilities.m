@@ -16,6 +16,8 @@
 
 #import "GLTFUtilities.h"
 
+#import <simd/simd.h>
+
 bool GLTFBoundingBoxIsEmpty(GLTFBoundingBox b) {
     return (b.minPoint.x == b.maxPoint.x) && (b.minPoint.y == b.maxPoint.y) && (b.minPoint.z == b.maxPoint.z);
 }

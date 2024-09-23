@@ -50,7 +50,7 @@ namespace kram {
 using mymutex = std::recursive_mutex;
 using mylock = std::unique_lock<mymutex>;
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 
 #if KRAM_WIN

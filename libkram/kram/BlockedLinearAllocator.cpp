@@ -6,7 +6,7 @@
 
 namespace kram {
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 BlockedLinearAllocator::BlockedLinearAllocator(uint32_t itemsPerBlock, uint32_t itemSize)
 : _itemSize(itemSize),

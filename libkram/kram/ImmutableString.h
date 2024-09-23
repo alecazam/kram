@@ -13,7 +13,7 @@
 
 namespace kram {
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // case-sensitive fnv1a hash, can pass existing hash to continue a hash
 inline uint32_t HashFnv1a(const char* val, uint32_t hash = 0x811c9dc5) {

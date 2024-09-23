@@ -16,7 +16,7 @@
 
 
 #import <Foundation/Foundation.h>
-#import <simd/simd.h>
+//#import <simd/simd.h>
 //@import Foundation;
 
 typedef NS_ENUM(NSInteger, GLTFDataType) {

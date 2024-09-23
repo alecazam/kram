@@ -58,7 +58,7 @@ void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, cons
 
 namespace kram {
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // This fails with libCompression (see inter-a.png)
 // and with miniZ for the ICCP block (see inter-a.png)

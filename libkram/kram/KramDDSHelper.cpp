@@ -8,7 +8,7 @@
 #include "KramFileHelper.h"
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 const uint32_t DDS_MAGIC = 0x20534444; // "DDS "
 

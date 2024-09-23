@@ -1675,7 +1675,7 @@ inline const char* toFilenameShort(const char* filename) {
 static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
     GLTFBoundingSphere s;
     float3 center = 0.5f * (b.minPoint + b.maxPoint);
-    float r = simd::distance(b.maxPoint, center);
+    float r = distance(b.maxPoint, center);
     
     s.center = center;
     s.radius = r;
@@ -1792,7 +1792,12 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
             GLTFBoundingSphere bounds = GLTFBoundingSphereFromBox2(_asset.defaultScene.approximateBounds);
             float invScale = (bounds.radius > 0) ? (0.5 / (bounds.radius)) : 1.0;
             float4x4 centerScale = float4x4(float4m(invScale,invScale,invScale,1));
+            
+#if USE_SIMDLIB
+            float4x4 centerTranslation = float4x4::identity();
+#else
             float4x4 centerTranslation = matrix_identity_float4x4;
+#endif
             centerTranslation.columns[3] = vector4(-bounds.center, 1.0f);
             float4x4 regularizationMatrix = centerScale * centerTranslation;
     
@@ -1806,8 +1811,9 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
             // do not modify viewMatrix here since that messes with world space.
     
             // set the view and projection matrix
-            _gltfRenderer.viewMatrix = _data->_viewMatrix * regularizationMatrix;
-            _gltfRenderer.projectionMatrix = _data->_projectionMatrix;
+            float4x4 m = _data->_viewMatrix * regularizationMatrix;
+            _gltfRenderer.viewMatrix = reinterpret_cast<const simd_float4x4&>(m);
+            _gltfRenderer.projectionMatrix = reinterpret_cast<const simd_float4x4&>(_data->_projectionMatrix);
     
             RenderScope drawModelScope( renderEncoder, "DrawModel" );
             [_gltfRenderer renderScene:_asset.defaultScene commandBuffer:commandBuffer commandEncoder:renderEncoder];
@@ -2320,9 +2326,10 @@ private:
         };
 
         if (isDrawableBlit) {
-            kram::half4 data16f;
+            half4 data16f;
             [texture getBytes:&data16f bytesPerRow:8 fromRegion:region mipmapLevel:0];
-            data = toFloat4(data16f);
+            
+            data = float4m(data16f);
         }
         else {
             [texture getBytes:&data bytesPerRow:16 fromRegion:region mipmapLevel:0];

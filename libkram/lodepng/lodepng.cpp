@@ -6301,7 +6301,7 @@ const char* lodepng_error_text(unsigned code) {
 
 #ifdef LODEPNG_COMPILE_CPP
 namespace lodepng {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 #ifdef LODEPNG_COMPILE_DISK
 unsigned load_file(vector<unsigned char>& buffer, const string& filename) {

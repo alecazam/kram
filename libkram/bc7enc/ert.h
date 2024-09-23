@@ -12,7 +12,7 @@
 
 namespace ert
 {
-    using namespace NAMESPACE_STL;
+    using namespace STL_NAMESPACE;
 
 	struct color_rgba { uint8_t m_c[4]; };
 

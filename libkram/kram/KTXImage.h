@@ -11,7 +11,7 @@
 
 namespace kram {
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // TODO: abstract MyMTLPixelFormat and move to readable/neutral type
 enum MyMTLPixelFormat {

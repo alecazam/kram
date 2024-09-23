@@ -15,6 +15,7 @@
 //
 
 #import "GLTFCamera.h"
+#import <simd/simd.h>
 
 @interface GLTFCamera ()
 @property (nonatomic, assign, getter=projectionMatrixIsDirty) BOOL projectionMatrixDirty;
