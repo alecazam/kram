@@ -1812,6 +1812,8 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
     
             // set the view and projection matrix
             float4x4 m = _data->_viewMatrix * regularizationMatrix;
+            
+            // TODO: offer conversions to simd/simd.h
             _gltfRenderer.viewMatrix = reinterpret_cast<const simd_float4x4&>(m);
             _gltfRenderer.projectionMatrix = reinterpret_cast<const simd_float4x4&>(_data->_projectionMatrix);
     

@@ -4,6 +4,12 @@
 
 #pragma once
 
+#if !USE_SIMDLIB
+
+// This is Apple simd (it's huuuggge!)
+// Also can't use the half4 type until iOS18 + macOS15 minspec, so need fallback.
+#include <simd/simd.h>
+
 // only support avx2 and Neon, no avx-512 at first
 #if defined __ARM_NEON
 #define SIMD_SSE  0
@@ -18,9 +24,9 @@
 #define SIMD_NAMESPACE simd
 
 #if !__is_identifier(_Float16)
-#define USE_FLOAT16 1
+#define SIMD_HALF_FLOAT16 1
 #else
-#define USE_FLOAT16 0
+#define SIMD_HALF_FLOAT16 0
 #endif
 
 namespace SIMD_NAMESPACE {
@@ -68,7 +74,7 @@ inline float4 saturate(const float4& v) {
     return simd_clamp(v, 0.0f, 1.0f);
 }
 
-#if USE_FLOAT16
+#if SIMD_HALF_FLOAT16
 using half = _Float16;
 #else
 // for lack of a better type
@@ -80,7 +86,7 @@ using half = int16_t;
 #define vec4to2(x) (x).xy
 #define vec4to3(x) (x).xyz
 
-// define half ops just for conversion, don't do math of !USE_FLOAT16 set
+// define half ops just for conversion
 half4 half4m(float4 __x);
 inline half2 half2m(float2 __x) { return vec4to2(half4m(vec2to4(__x))); }
 inline half3 half3m(float3 __x) { return vec4to3(half4m(vec3to4(__x))); }
@@ -90,3 +96,5 @@ inline float2 float2m(half2 __x) { return vec4to2(float4m(vec2to4(__x))); }
 inline float3 float3m(half3 __x) { return vec4to3(float4m(vec3to4(__x))); }
 
 } // namespace SIMD_NAMESPACE
+
+#endif

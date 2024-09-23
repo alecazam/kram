@@ -200,20 +200,14 @@
 
 #define USE_SIMDLIB 0
 
-// This is Apple simd (it's huuuggge!)
-// Also can't use the half4 type until iOS18 + macOS15 minspec, so need fallback.
-#include <simd/simd.h>
-
-// this is glue code for now
+// old vector math, using simd/simd.h
 #include "float4a.h"
-
 
 #else
 
-// this means use vectormath
+// new vector math
 #define USE_SIMDLIB 1
 
-// Test out on Win build first.
 #include "vectormath++.h"
 
 #endif

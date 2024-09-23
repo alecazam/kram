@@ -104,41 +104,29 @@
 //  note iOS/macOS are on signed char, so may just only want to use signed simd ?
 //  often though need unsigned for low bit counts (f.e. 8 or 16).
 //
-// #define SIMD_UCHAR  0
-// #define SIMD_CHAR   0
-// #define SIMD_SHORT  0
-// #define SIMD_LONG   0
 
 // TODO: have some setting to override from prefix file
+#ifndef SIMD_CONFIG
+
+// Vector and matrix types.  Currently only matrix types for SIMD_FLOAT
+// TODO: support
+//#define SIMD_UCHAR  0
+//#define SIMD_CHAR   0
+//#define SIMD_SHORT  0
+//#define SIMD_LONG   0
+
 #define SIMD_HALF   1
 #define SIMD_FLOAT  1
 #define SIMD_DOUBLE 1
 #define SIMD_INT    1
 
-/*
-// can enable/disable types as needed
-#ifndef SIMD_HALF
-#if !__is_identifier(_Float16)
-#define SIMD_HALF   1
-#else
-#define SIMD_HALF   0
-#endif
-#endif // SIMD_HALF
+// Whether to support > 4 length vecs with some ops
+#define SIMD_LONG_VECS 0
 
-#ifndef SIMD_FLOAT
-#define SIMD_FLOAT  1
-#endif // SIMD_FLOAT
+// This means simd_float4 will come from this file instead of simd.h
+#define SIMD_RENAME_TO_SIMD_NAMESPACE 0
 
-#ifndef SIMD_DOUBLE
-#define SIMD_DOUBLE 0
-#endif // SIMD_DOUBLE
-
-// required for logic ops, so can't disable this
-// but mostly default vector ops defined to work with SIMD_INT right now
-#ifndef SIMD_INT
-#define SIMD_INT    1
-#endif // SIMD_INT
-*/
+#endif // SIMD_CONFIG
 
 #if SIMD_HALF
 
@@ -151,14 +139,6 @@
 #endif
 
 #endif // SIMD_HALF
-
-// Whether to support > 4 length vecs with some ops
-#ifndef SIMD_LONG_VECS
-#define SIMD_LONG_VECS 0
-#endif // SIMD_LONG_VECS
-
-// This means simd_float4 will come from this file instead of simd.h
-#define SIMD_RENAME_TO_SIMD_NAMESPACE 0
 
 // TODO: u/char
 // TODO: float16 and double8 requires 4x 16B instructions
@@ -432,12 +412,12 @@ SIMD_CALL float reduce_max(float4 x) {
 
 SIMD_CALL float4 min(float4 x, float4 y) {
     // precise returns x on Nan
-    return vmaxnmq_f32(x, y);
+    return vminnmq_f32(x, y);
 }
 
 SIMD_CALL float4 max(float4 x, float4 y) {
     // precise returns x on Nan
-    return vminnmq_f32(x, y);
+    return vmaxnmq_f32(x, y);
 }
 
 SIMD_CALL float4 muladd(float4 x, float4 y, float4 t) {
@@ -1091,12 +1071,12 @@ float trace(const float2x2& x);
 float trace(const float3x3& x);
 float trace(const float4x4& x);
 
-// dot with premul
+// premul = dot + premul
 float2 mul(float2 y, const float2x2& x);
 float3 mul(float3 y, const float3x3& x);
 float4 mul(float4 y, const float4x4& x);
 
-// mul, mad with postmul
+// posmul = mul + mad
 float2x2 mul(const float2x2& x, const float2x2& y);
 float3x3 mul(const float3x3& x, const float3x3& y);
 float4x4 mul(const float4x4& x, const float4x4& y);
@@ -1181,11 +1161,37 @@ SIMD_CALL const float3x3& as_float3x3(const float4x4& m) {
 
 #endif // SIMD_FLOAT
 
+#if SIMD_INT
+SIMD_CALL int2 int2m(int x) {
+    return x;
+}
+SIMD_CALL int2 int2m(int x, int y) {
+    return {x,y};
+}
+
+SIMD_CALL int3 int3m(int x) {
+    return x;
+}
+SIMD_CALL int3 int3m(int x, int y, int z) {
+    return {x,y,z};
+}
+
+SIMD_CALL int4 int4m(int x) {
+    return x;
+}
+SIMD_CALL int4 int4m(int x, int y, int z, int w) {
+    return {x,y,z,w};
+}
+SIMD_CALL int4 int4m(int3 v, float w) {
+    int4 r; r.xyz = v; r.w = w; return r;
+}
+#endif
+
 #if SIMD_HALF
 SIMD_CALL half2 half2m(half x) {
     return x;
 }
-SIMD_CALL half2 float4m(half x, half y, half z, half w = (half)1.0) {
+SIMD_CALL half2 half2m(half x, half y) {
     return {x,y};
 }
 
@@ -1211,7 +1217,7 @@ SIMD_CALL half4 half4m(half3 v, float w = (half)1.0) {
 SIMD_CALL double2 double2m(double x) {
     return x;
 }
-SIMD_CALL double2 float4m(double x, double y, double z, double w = 1.0) {
+SIMD_CALL double2 double2m(double x, double y) {
     return {x,y};
 }
 
