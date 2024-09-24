@@ -76,6 +76,11 @@ int32_t append_sprintf(string& str, const char* format, ...) __printflike(2, 3);
 // returns length of chars appended, -1 if failure
 int32_t append_vsprintf(string& str, const char* format, va_list args);
 
+// formats and returns string
+// ugh - name conflict if format or format_string or format_str
+string format(const char* format, ...) __printflike(1, 2);
+
+
 bool startsWith(const char* str, const string& substring);
 
 bool endsWithExtension(const char* str, const string& substring);

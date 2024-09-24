@@ -58,19 +58,19 @@ inline float4 float4m(float x) {
     return x;
 }
 
-inline float saturate(float v) {
-    return std::clamp(v, 0.0f, 1.0f);
-}
-inline double saturate(double v) {
-    return std::clamp(v, 0.0, 1.0);
-}
-inline float2 saturate(const float2& v) {
+//inline float saturate(float v) {
+//    return std::clamp(v, 0.0f, 1.0f);
+//}
+//inline double saturate(double v) {
+//    return std::clamp(v, 0.0, 1.0);
+//}
+inline float2 saturate(float2 v) {
     return simd_clamp(v, 0.0f, 1.0f);
 }
-inline float3 saturate(const float3& v) {
+inline float3 saturate(float3 v) {
     return simd_clamp(v, 0.0f, 1.0f);
 }
-inline float4 saturate(const float4& v) {
+inline float4 saturate(float4 v) {
     return simd_clamp(v, 0.0f, 1.0f);
 }
 

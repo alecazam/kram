@@ -196,20 +196,20 @@
 //-------------------------
 // simd
 
-#if 0 // KRAM_MAC || KRAM_IOS
+#if KRAM_MAC || KRAM_IOS
+// can use old or new
+#define USE_SIMDLIB 1
+#else
+// have to use new
+#define USE_SIMDLIB 1
+#endif
 
-#define USE_SIMDLIB 0
-
+#if USE_SIMDLIB
+// new vector math
+#include "vectormath++.h"
+#else
 // old vector math, using simd/simd.h
 #include "float4a.h"
-
-#else
-
-// new vector math
-#define USE_SIMDLIB 1
-
-#include "vectormath++.h"
-
 #endif
  
 //---------------------------------------

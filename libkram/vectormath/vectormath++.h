@@ -151,6 +151,9 @@
 // simplify calls
 #define SIMD_CALL static inline __attribute__((__always_inline__, __const__, __nodebug__))
 
+// dros inline and __const__, but not helping
+#define SIMD_CALL_OP SIMD_CALL
+
 // aligned
 #define macroVector2TypesStorage(type, name) \
 typedef type name##1s; \
@@ -238,16 +241,17 @@ typedef ::cname##8s cppname##8; \
 
 // TODO: can do +=, -= faster than calling sub/add, but this uses same impl that way
 #define macroMatrixOps(type) \
-SIMD_CALL type& operator*=(type& x, const type& y) { x = mul(x, y); return x; } \
-SIMD_CALL type& operator+=(type& x, const type& y) { x = add(x, y); return x; } \
-SIMD_CALL type& operator-=(type& x, const type& y) { x = sub(x, y); return x; } \
-SIMD_CALL bool operator==(const type& x, const type& y) { return equal(x, y); } \
-SIMD_CALL bool operator!=(const type& x, const type& y) { return !(x == y); } \
-SIMD_CALL type operator-(const type& x, const type& y) { return sub(x,y); } \
-SIMD_CALL type operator+(const type& x, const type& y) { return add(x,y); } \
-SIMD_CALL type operator*(const type& x, const type& y) { return mul(x,y); } \
-SIMD_CALL type::column_t operator*(const type::column_t& v, const type& y) { return mul(v,y); } \
-SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { return mul(x,v); } \
+SIMD_CALL_OP type& operator*=(type& x, const type& y) { x = mul(x, y); return x; } \
+SIMD_CALL_OP type& operator+=(type& x, const type& y) { x = add(x, y); return x; } \
+SIMD_CALL_OP type& operator-=(type& x, const type& y) { x = sub(x, y); return x; } \
+SIMD_CALL_OP bool operator==(const type& x, const type& y) { return equal(x, y); } \
+SIMD_CALL_OP bool operator!=(const type& x, const type& y) { return !(x == y); } \
+\
+SIMD_CALL_OP type operator-(const type& x, const type& y) { return sub(x,y); } \
+SIMD_CALL_OP type operator+(const type& x, const type& y) { return add(x,y); } \
+SIMD_CALL_OP type operator*(const type& x, const type& y) { return mul(x,y); } \
+SIMD_CALL_OP type::column_t operator*(const type::column_t& v, const type& y) { return mul(v,y); } \
+SIMD_CALL_OP type::column_t operator*(const type& x, const type::column_t& v) { return mul(x,v); } \
 
 //-----------------------------------
 
@@ -316,6 +320,12 @@ macroVector4TypesPacked(int, int)
 // define c types
 macroVector8TypesStorage(double, double)
 macroVector8TypesPacked(double, double)
+
+// storage type for matrix
+typedef struct { double2s columns[2]; } double2x2s;
+typedef struct { double3s columns[3]; } double3x3s;
+typedef struct { double4s columns[3]; } double3x4s;
+typedef struct { double4s columns[4]; } double4x4s;
 
 #endif // SIMD_DOUBLE
 
@@ -433,9 +443,9 @@ SIMD_CALL float4 sqrt(float4 x) {
 // use sse2neon to port this for now
 SIMD_CALL float4 reduce_addv(float4 x) {
     // 4:1 reduction
-    x = _mm_hadd_ps(x, x);
-    x = _mm_hadd_ps(x, x);
-    return x;
+    x = _mm_hadd_ps(x, x); // xy = x+y,z+w
+    x = _mm_hadd_ps(x, x); // x  = x+y
+    return x.x; // repeat x to all values
 }
 
 SIMD_CALL float reduce_add(float4 x) {
@@ -488,9 +498,9 @@ SIMD_CALL float4 sqrt(float4 x) {
 
 SIMD_CALL float4 reduce_addv(float4 x) {
     // 4:1 reduction
-    x = _mm_hadd_ps(x, x);
-    x = _mm_hadd_ps(x, x);
-    return x;
+    x = _mm_hadd_ps(x, x); // xy = x+y,z+w
+    x = _mm_hadd_ps(x, x); // x  = x+y
+    return x.x; // repeat x to all values
 }
 
 SIMD_CALL float reduce_add(float4 x) {
@@ -590,13 +600,13 @@ SIMD_CALL int4 bitselect(int4 x, int4 y, int4 mask) {
 
 // bitselect
 SIMD_CALL float2 bitselect(float2 x, float2 y, int2 mask) {
-  return (float2)bitselect((int2)x, (int2)y, mask);
+  return (float2)bitselect((int2)x, (int2)y, mask); // int4 -> float2
 }
 SIMD_CALL float3 bitselect(float3 x, float3 y, int3 mask) {
-  return (float3)bitselect((int3)x, (int3)y, mask);
+  return (float3)bitselect((int3)x, (int3)y, mask); // int4 -> float3
 }
 SIMD_CALL float4 bitselect(float4 x, float4 y, int4 mask) {
-  return (float4)bitselect((int4)x, (int4)y, mask);
+  return (float4)bitselect((int4)x, (int4)y, mask);  // int4 -> float4
 }
 
 // select
@@ -866,10 +876,10 @@ SIMD_CALL float reduce_max(float16 x) {
 
 // how important are 8/16 ops for float and double?  Could reduce with only doing up to 4.
 SIMD_CALL float8 muladd(float8 x, float4 y, float4 t) {
-    return tovec8(muladd(x.lo, y.lo, z.lo), muladd(x.hi, y.hi, z.hi));
+    return float8m(muladd(x.lo, y.lo, z.lo), muladd(x.hi, y.hi, z.hi));
 }
 SIMD_CALL float16 muladd(float4 x, float4 y, float4 t) {
-    return tovec16(muladd(x.lo, y.lo, z.lo), muladd(x.hi, y.hi, z.hi));
+    return float16m(muladd(x.lo, y.lo, z.lo), muladd(x.hi, y.hi, z.hi));
 }
 
 SIMD_CALL float8 lerp(float8 x, float8 y, float8 t) {
@@ -940,25 +950,15 @@ const float4& float4_negxw();
 const float4& float4_negyw();
 const float4& float4_negzw();
 
-// Could float2 instead be derived from c like the matrices?
-// Can just cast to the Apple types.
-
-// column matrix, so post muliply vectors
-// (projToCamera * cameraToWorld * worldToModel) * modelVec
-
-// premul use dot4 and can be used for nomral, on inverse if not transposed
-
-// Price of having a class wrapper, is that all simd_float2x3 have to go to ctor copy op.
-// even though they're the same data.  That seems to be why the vec type is just a typedef
-// then can use whichever typename.  But ctors and member functions are not possible.
-// But do get all the clang vector ext.
-
-
-// these allow C funcs to take in these types, but means conversions of
-// return values from the c-calls.  So think having 1 C++ type is better.
+#endif
 
 //-----------------------------------
 // matrix
+
+#if SIMD_FLOAT
+
+// column matrix, so postmul vectors
+// (projToCamera * cameraToWorld * worldToModel) * modelVec
 
 struct float2x2 : float2x2s
 {
@@ -1037,13 +1037,13 @@ struct float4x4 : float4x4s
     
     static const float4x4& zero();
     static const float4x4& identity();
-   
+    
     float4x4() { } // no default init
     explicit float4x4(float4 diag);
     float4x4(float4 c0, float4 c1, float4 c2, float4 c3)
-        : float4x4s((float4x4s){c0, c1, c2, c3}) { }
+    : float4x4s((float4x4s){c0, c1, c2, c3}) { }
     float4x4(const float4x4s& m)
-        : float4x4s(m) { }
+    : float4x4s(m) { }
     
     float4& operator[](uint32_t idx) { return columns[idx]; }
     const float4& operator[](uint32_t idx) const { return columns[idx]; }
@@ -1097,13 +1097,26 @@ bool equal(const float2x2& x, const float2x2& y);
 bool equal(const float3x3& x, const float3x3& y);
 bool equal(const float4x4& x, const float4x4& y);
 
+// TODO: these think they are all member functions
+// but they're just defined in a namespace, and Apples' aren't.
+    
 // operators for C++
 macroMatrixOps(float2x2);
 macroMatrixOps(float3x3);
 // TODO: no mat hops on storage type float3x4
-// macroMatrixOps(float3x4);
+// macroMatrixOps(float3x4s);
 macroMatrixOps(float4x4);
 
+// fast conversions where possible
+SIMD_CALL const float3x3& as_float3x3(const float4x4& m) {
+    return reinterpret_cast<const float3x3&>(m);
+}
+
+#endif // SIMD_FLOAT
+
+//----------------
+
+#if SIMD_FLOAT
 // make "m" ctors for vecs.  This avoids wrapping the type in a struct.
 // vector types are C typedef, and so cannot have member functions.
 // Be careful with initializers = { val }, only sets first element of vector
@@ -1140,24 +1153,6 @@ SIMD_CALL float4 float4m(float3 v, float w = 1.0f) {
 SIMD_CALL const float3& as_float3(const float4& m) {
     return reinterpret_cast<const float3&>(m);
 }
-
-// fast conversions where possible
-SIMD_CALL const float3x3& as_float3x3(const float4x4& m) {
-    return reinterpret_cast<const float3x3&>(m);
-}
-
-// "using func = simd_func" from C++ to C function doesn't really work.  Not doing
-// extern "C" around the C calls.  If did extern, then would need :: namespace.
-// Preprocessor would but annoying to have to incur another function call in debug
-// (and possibly optimized builds) just to rename calls.
-//
-// This also doesn't work due to overloads of each call for each type.
-// But it's a nice way to avoid the cost of C++ wrappers if call has unique name.
-// also constexpr auto* foo = simd_foo;
-
-// TODO: quat, no ops,  need a fast lerp and correct 2 quats
-// and rotate a vec, can convert to/from vector.
-// typedef struct { float4 vector; } quatf;
 
 #endif // SIMD_FLOAT
 
@@ -1239,6 +1234,164 @@ SIMD_CALL double4 double4m(double3 v, double w = 1.0) {
 }
 #endif
 
+#if SIMD_DOUBLE && 0
+
+// TODO: would need matrix class derivations
+// and all of the matrix ops, which then need vector ops, and need double
+// constants.  So this starts to really add to codegen.  But double
+// is one of the last bastions of cpu, since many gpu don't support it.
+
+struct double2x2 : double2x2s
+{
+    // can be split out to traits
+    static constexpr uint32_t col = 2;
+    static constexpr uint32_t row = 2;
+    using column_t = double2;
+    using scalar_t = double;
+    
+    static const double2x2& zero();
+    static const double2x2& identity();
+    
+    double2x2() { }  // no default init
+    explicit double2x2(double2 diag);
+    double2x2(double2 c0, double2 c1)
+        : double2x2s((double2x2s){c0, c1}) { }
+    double2x2(const double2x2s& m)
+        : double2x2s(m) { }
+    
+    // simd lacks these ops
+    double2& operator[](uint32_t idx) { return columns[idx]; }
+    const double2& operator[](uint32_t idx) const { return columns[idx]; }
+};
+
+struct double3x3 : double3x3s
+{
+    static constexpr uint32_t col = 3;
+    static constexpr uint32_t row = 3;
+    using column_t = double3;
+    using scalar_t = double;
+    
+    // Done as wordy c funcs otherwize.  Funcs allow statics to init.
+    static const double3x3& zero();
+    static const double3x3& identity();
+    
+    double3x3() { }  // no default init
+    explicit double3x3(double3 diag);
+    double3x3(double3 c0, double3 c1, double3 c2)
+        : double3x3s((double3x3s){c0, c1, c2}) { }
+    double3x3(const double3x3s& m)
+        : double3x3s(m) { }
+    
+    double3& operator[](uint32_t idx) { return columns[idx]; }
+    const double3& operator[](uint32_t idx) const { return columns[idx]; }
+};
+
+// This is mostly a transposed holder for a 4x4, so very few ops defined
+// Can also serve as a SOA for some types of cpu math.
+struct double3x4 : double3x4s
+{
+    static constexpr uint32_t col = 3;
+    static constexpr uint32_t row = 4;
+    using column_t = double4;
+    using scalar_t = double;
+    
+    static const double3x4& zero();
+    static const double3x4& identity();
+   
+    double3x4() { } // no default init
+    explicit double3x4(double3 diag);
+    double3x4(double4 c0, double4 c1, double4 c2)
+        : double3x4s((double3x4s){c0, c1, c2}) { }
+    double3x4(const double3x4s& m)
+        : double3x4s(m) { }
+    
+    double4& operator[](uint32_t idx) { return columns[idx]; }
+    const double4& operator[](uint32_t idx) const { return columns[idx]; }
+};
+
+struct double4x4 : double4x4s
+{
+    static constexpr uint32_t col = 4;
+    static constexpr uint32_t row = 4;
+    using column_t = double4;
+    using scalar_t = double;
+    
+    static const double4x4& zero();
+    static const double4x4& identity();
+   
+    double4x4() { } // no default init
+    explicit double4x4(double4 diag);
+    double4x4(double4 c0, double4 c1, double4 c2, double4 c3)
+        : double4x4s((double4x4s){c0, c1, c2, c3}) { }
+    double4x4(const double4x4s& m)
+        : double4x4s(m) { }
+    
+    double4& operator[](uint32_t idx) { return columns[idx]; }
+    const double4& operator[](uint32_t idx) const { return columns[idx]; }
+};
+
+double2x2 diagonal_matrix(double2 x);
+double3x3 diagonal_matrix(double3 x);
+double3x4 diagonal_matrix3x4(double3 x);
+double4x4 diagonal_matrix(double4 x);
+
+// using refs here, 3x3 and 4x4 are large to pass by value (3 simd regs)
+double2x2 transpose(const double2x2& x);
+double3x3 transpose(const double3x3& x);
+double4x4 transpose(const double4x4& x);
+
+double2x2 inverse(const double2x2& x);
+double3x3 inverse(const double3x3& x);
+double4x4 inverse(const double4x4& x);
+
+double determinant(const double2x2& x);
+double determinant(const double3x3& x);
+double determinant(const double4x4& x);
+
+double trace(const double2x2& x);
+double trace(const double3x3& x);
+double trace(const double4x4& x);
+
+// premul = dot + premul
+double2 mul(double2 y, const double2x2& x);
+double3 mul(double3 y, const double3x3& x);
+double4 mul(double4 y, const double4x4& x);
+
+// posmul = mul + mad
+double2x2 mul(const double2x2& x, const double2x2& y);
+double3x3 mul(const double3x3& x, const double3x3& y);
+double4x4 mul(const double4x4& x, const double4x4& y);
+
+double2 mul(const double2x2& x, double2 y);
+double3 mul(const double3x3& x, double3 y);
+double4 mul(const double4x4& x, double4 y);
+
+double2x2 sub(const double2x2& x, const double2x2& y);
+double3x3 sub(const double3x3& x, const double3x3& y);
+double4x4 sub(const double4x4& x, const double4x4& y);
+
+double2x2 add(const double2x2& x, const double2x2& y);
+double3x3 add(const double3x3& x, const double3x3& y);
+double4x4 add(const double4x4& x, const double4x4& y);
+
+bool equal(const double2x2& x, const double2x2& y);
+bool equal(const double3x3& x, const double3x3& y);
+bool equal(const double4x4& x, const double4x4& y);
+
+// operators for C++
+macroMatrixOps(double2x2);
+macroMatrixOps(double3x3);
+// TODO: no mat ops yet on storage type double3x4
+// macroMatrixOps(double3x4);
+macroMatrixOps(double4x4);
+
+// fast conversions where possible
+SIMD_CALL const double3x3& as_double3x3(const double4x4& m) {
+    return reinterpret_cast<const double3x3&>(m);
+}
+
+#endif
+
 // conversions
 #if SIMD_FLOAT && SIMD_INT
 SIMD_CALL float2 float2m(int2 __x) { return __builtin_convertvector(__x, float2); }
@@ -1253,6 +1406,12 @@ SIMD_CALL int4 float4m(float4 __x) { return __builtin_convertvector(__x, int4); 
 
 #if SIMD_FLOAT && SIMD_HALF
 
+// TODO: ryg
+// Not the right gist, you want the RTNE one (nm: that only matters for float->half,
+// this was the half->float one. FWIW, other dir is https://gist.github.com/rygorous/eb3a019b99fdaa9c3064.
+// These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
+// which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
+    
 #if SIMD_HALF4_ONLY
 
 half4 half4m(float4 __x);
@@ -1284,6 +1443,34 @@ SIMD_CALL float2 float2m(double2 __x) { return __builtin_convertvector(__x, floa
 SIMD_CALL float3 float3m(double3 __x) { return __builtin_convertvector(__x, float3); }
 SIMD_CALL float4 float4m(double4 __x) { return __builtin_convertvector(__x, float4); }
 #endif
+
+using namespace STL_NAMESPACE;
+        
+// Usage:
+// vecf vfmt;
+// fprintf(stdout, "%s", vfmt.str(v1).c_str() );
+struct vecf {
+    // TODO: pass formatting options too
+    vecf() {
+    }
+    
+#if SIMD_FLOAT
+    // vector
+    string str(float2 v) const;
+    string str(float3 v) const;
+    string str(float4 v) const;
+    
+    // matrix
+    string str(const float2x2& m) const;
+    string str(const float3x3& m) const;
+    string str(const float4x4& m) const;
+#endif // SIMD_FLOAT
+};
+
+    
+// TODO: quat, need a fast lerp and correct 2 quats
+// and rotate a vec, can convert to/from vector.
+// typedef struct { float4 vector; } quatf;
 
 // TODO: saturating conversions would be useful to, and prevent overflow
 // see the conversion.h code, bit select to clamp values.

@@ -214,6 +214,8 @@ float3x3 inverse(const float3x3& x) {
     return r;
 }
 
+// TODO: bring over fast inverses (RTS, RTU, etc)
+
 float4x4 inverse(const float4x4& x) {
     // This is a full gje inverse
     
@@ -222,8 +224,8 @@ float4x4 inverse(const float4x4& x) {
     
     // As a evolves from original mat into identity -
     // b evolves from identity into inverse(a)
-    uint32_t cols = 4;
-    uint32_t rows = 4;
+    uint32_t cols = float4x4::col;
+    uint32_t rows = float4x4::row;
     
     // Loop over cols of a from left to right, eliminating above and below diag
     for (uint32_t j=0; j<rows; j++) {
@@ -347,20 +349,20 @@ float4 mul(float4 y, const float4x4& x) {
 
 // post-transform at least does a mul madd
 float2 mul(const float2x2& x, float2 y) {
-    float2 r = x[0]*y[0];
-    r = muladd( x[1], y[1],r);
+    float2 r = x[0] * y[0]; // no mul(v,v)
+    r = muladd( x[1], y[1], r);
     return r;
 }
 
 float3 mul(const float3x3& x, float3 y) {
-    float3 r = x[0]*y[0];
-    r = muladd( x[1], y[1],r);
-    r = muladd( x[2], y[2],r);
+    float3 r = x[0] * y[0];
+    r = muladd( x[1], y[1], r);
+    r = muladd( x[2], y[2], r);
     return r;
 }
 
 float4 mul(const float4x4& x, float4 y) {
-    float4 r = x[0]*y[0];
+    float4 r = x[0] * y[0];
     r = muladd( x[1], y[1], r);
     r = muladd( x[2], y[2], r);
     r = muladd( x[3], y[3], r);
@@ -370,21 +372,23 @@ float4 mul(const float4x4& x, float4 y) {
 // matrix muls using mul madd
 float2x2 mul(const float2x2& x, const float2x2& y) {
     float2x2 r;
-    for (int i=0; i<2; ++i)
+    
+    // m * columns
+    for (int i=0; i<float2x2::col; ++i)
         r[i] = mul(x, y[i]);
     return r;
 }
 
 float3x3 mul(const float3x3& x, const float3x3& y) {
     float3x3 r;
-    for (int i=0; i<3; ++i)
+    for (int i=0; i<float3x3::col; ++i)
         r[i] = mul(x, y[i]);
     return r;
 }
 
 float4x4 mul(const float4x4& x, const float4x4& y) {
     float4x4 r;
-    for (int i=0; i<4; ++i)
+    for (int i=0; i<float4x4::col; ++i)
         r[i] = mul(x, y[i]);
     return r;
 }
@@ -392,19 +396,19 @@ float4x4 mul(const float4x4& x, const float4x4& y) {
 // sub
 float2x2 sub(const float2x2& x, const float2x2& y) {
     float2x2 r(x);
-    for (int i=0; i<2; ++i)
-        r[i] = x[i] - y[i];
+    for (int i=0; i<float2x2::col; ++i)
+        r[i] -= y[i];
     return r;
 }
 float3x3 sub(const float3x3& x, const float3x3& y) {
     float3x3 r(x);
-    for (int i=0; i<3; ++i)
+    for (int i=0; i<float3x3::col; ++i)
         r[i] -= y[i];
     return r;
 }
 float4x4 sub(const float4x4& x, const float4x4& y) {
     float4x4 r(x);
-    for (int i=0; i<4; ++i)
+    for (int i=0; i<float4x4::col; ++i)
         r[i] -= y[i];
     return r;
 }
@@ -412,19 +416,19 @@ float4x4 sub(const float4x4& x, const float4x4& y) {
 // add
 float2x2 add(const float2x2& x, const float2x2& y) {
     float2x2 r(x);
-    for (int i=0; i<2; ++i)
+    for (int i=0; i<float2x2::col; ++i)
         r[i] += y[i];
     return r;
 }
 float3x3 add(const float3x3& x, const float3x3& y) {
     float3x3 r(x);
-    for (int i=0; i<3; ++i)
+    for (int i=0; i<float3x3::col; ++i)
         r[i] += y[i];
     return r;
 }
 float4x4 add(const float4x4& x, const float4x4& y) {
     float4x4 r(x);
-    for (int i=0; i<4; ++i)
+    for (int i=0; i<float4x4::col; ++i)
         r[i] += y[i];
     return r;
 }
@@ -458,6 +462,7 @@ const float2& float2_ones(){ return kfloat2_ones; }
 
 const float2& float2_posx(){ return kfloat2_posx; }
 const float2& float2_posy(){ return kfloat2_posy; }
+
 const float2& float2_negx(){ return kfloat2_negx; }
 const float2& float2_negy(){ return kfloat2_negy; }
 
@@ -469,6 +474,7 @@ const float3& float3_ones(){ return kfloat3_ones; }
 const float3& float3_posx(){ return kfloat3_posx; }
 const float3& float3_posy(){ return kfloat3_posy; }
 const float3& float3_posz(){ return kfloat3_posz; }
+
 const float3& float3_negx(){ return kfloat3_negx; }
 const float3& float3_negy(){ return kfloat3_negy; }
 const float3& float3_negz(){ return kfloat3_negz; }
@@ -482,6 +488,7 @@ const float4& float4_posx(){ return kfloat4_posx; }
 const float4& float4_posy(){ return kfloat4_posy; }
 const float4& float4_posz(){ return kfloat4_posz; }
 const float4& float4_posw(){ return kfloat4_posw; }
+
 const float4& float4_negx(){ return kfloat4_negx; }
 const float4& float4_negy(){ return kfloat4_negy; }
 const float4& float4_negz(){ return kfloat4_negz; }
@@ -490,6 +497,7 @@ const float4& float4_negw(){ return kfloat4_negw; }
 const float4& float4_posxw(){ return kfloat4_posxw; }
 const float4& float4_posyw(){ return kfloat4_posyw; }
 const float4& float4_poszw(){ return kfloat4_poszw; }
+
 const float4& float4_negxw(){ return kfloat4_negxw; }
 const float4& float4_negyw(){ return kfloat4_negyw; }
 const float4& float4_negzw(){ return kfloat4_negzw; }
@@ -508,6 +516,36 @@ const float3x4& float3x4::identity() { return kfloat3x4_identity; }
 const float4x4& float4x4::zero() { return kfloat4x4_zero; }
 const float4x4& float4x4::identity() { return kfloat4x4_identity; }
 
+
+
+#if SIMD_FLOAT
+
+string vecf::str(float2 v) const {
+    return kram::format("(%f %f)", v.x, v.y);
+}
+string vecf::str(float3 v) const {
+    return kram::format("(%f %f %f)", v.x, v.y, v.z);
+}
+string vecf::str(float4 v) const {
+    return kram::format("(%f %f %f %f)", v.x, v.y, v.z, v.w);
+}
+ 
+string vecf::str(const float2x2& m) const {
+    return kram::format("%s\n%s\n",
+        str(m[0]).c_str(), str(m[1]).c_str());
+}
+string vecf::str(const float3x3& m) const {
+    return kram::format("%s\n%s\n%s\n",
+        str(m[0]).c_str(), str(m[1]).c_str(), str(m[2]).c_str());
+}
+string vecf::str(const float4x4& m) const {
+  return kram::format("%s\n%s\n%s\n%s\n",
+      str(m[0]).c_str(), str(m[1]).c_str(),
+      str(m[2]).c_str(), str(m[3]).c_str());
+}
+
+#endif // SIMD_FLOAT
+                  
 //---------------
 
 #if SIMD_HALF4_ONLY

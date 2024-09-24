@@ -432,6 +432,18 @@ int32_t append_sprintf(string& str, const char* format, ...)
     return len;
 }
 
+string format(const char* format, ...)
+{
+    string str;
+    
+    va_list args;
+    va_start(args, format);
+    /*int32_t len = */ vsprintf(str, format, args);
+    va_end(args);
+
+    return str;
+}
+
 //----------------------------------
 
 static size_t my_formatted_size(fmt::string_view format, fmt::format_args args)
