@@ -66,9 +66,9 @@ if (BUILD_WIN)
 
     # don't need force with apps, since they only access kram folder files which include KramConfig
     
-    # all warnings, AVX, and multiprocess compiles,
+    # all warnings, AVX2, and multiprocess compiles,
     # eliminate duplicate strings, embed full path
-    target_compile_options(${myTargetApp} PRIVATE /W3 /arch:AVX -mf16c /MP /GF /FC)
+    target_compile_options(${myTargetApp} PRIVATE /W3 -march=haswell -mf16c -mfma /MP /GF /FC)
     
     # fix STL (don't use -D here, will remove)
     target_compile_definitions(${myTargetApp} PRIVATE _ITERATOR_DEBUG_LEVEL=0 _HAS_EXCEPTIONS=0)

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
 #-----------------------------------------------------
 
 # really not using cmake for mac, but this was used in the past so leaving it in
-# still building Win using Cmake.  macOS uses avx2 and Win uses avx.
+# still building Win using Cmake.  macOS uses avx2 and Win uses avx2.
 set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
 

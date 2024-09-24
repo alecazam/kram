@@ -39,11 +39,11 @@ target_link_libraries(${myTargetApp}
 set_target_properties(${myTargetApp} PROPERTIES
     # Note: match this up with CXX version
     # c++11 min
-    XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14"
+    XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
     XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
 
     # avx1
-    XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx"
+    XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS "avx2"
     
     # turn off exceptions/rtti
     XCODE_ATTRIBUTE_GCC_ENABLE_CPP_EXCEPTIONS NO

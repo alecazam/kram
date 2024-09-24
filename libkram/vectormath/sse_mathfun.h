@@ -31,6 +31,8 @@
 
 // TODO: may want to rename to sse_mathfun.cpp, since this is
 // a lot of code to inline.
+// TODO: use math ops and simd ops here and let compiler gen intrinsics?
+// TODO: combine the constants into fewer registers, reference .x,..
 
 #pragma once
 

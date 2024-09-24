@@ -1,4 +1,4 @@
-﻿
+
 # dll output can be renamed for debug vs. release, but is hard to debug
 set(myTargetLib kram-thumb-win)
 
@@ -21,8 +21,8 @@ add_library(${myTargetLib} MODULE ${SOURCE_FILES})
 string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     
-# all warnings, AVX1, and multiprocess compiles
-target_compile_options(${myTargetLib} PRIVATE /W3 /arch:AVX -mf16c /MP /GF /FC)
+# all warnings, AVX2, and multiprocess compiles
+target_compile_options(${myTargetLib} PRIVATE /W3 -march=haswell -mf16c -mfma /MP /GF /FC)
   
 target_compile_definitions(${myTargetLib} PRIVATE -D_ITERATOR_DEBUG_LEVEL=0 -D_HAS_EXCEPTIONS=0 -DUNICODE -D_UNICODE)
     

@@ -121,7 +121,7 @@
 #define SIMD_INT    1
 
 // Whether to support > 4 length vecs with some ops
-#define SIMD_LONG_VECS 0
+#define SIMD_FLOAT_EXT 0
 
 // This means simd_float4 will come from this file instead of simd.h
 #define SIMD_RENAME_TO_SIMD_NAMESPACE 0
@@ -149,9 +149,10 @@
 //-----------------------------------
 
 // simplify calls
+// const means it doesn't pull from global changing state (what about constants)
+// and inline is needed or get unused static calls, always_inline forces inline
+// of these mostly wrapper calls.
 #define SIMD_CALL static inline __attribute__((__always_inline__, __const__, __nodebug__))
-
-// dros inline and __const__, but not helping
 #define SIMD_CALL_OP SIMD_CALL
 
 // aligned
@@ -829,7 +830,7 @@ float4 cos(float4 x);
 float4 tan(float4 x);
 void sincos(float4 x, float4& s, float4& c);
 
-// TODO: add float2/3 version of ops above
+// TODO: add float2/3 version of log/exp/pow/sin/cos/tan/sincos above
 
 SIMD_CALL float cross(float2 x, float2 y) {
     return x.x * y.y - x.y * y.x;
@@ -838,10 +839,10 @@ SIMD_CALL float3 cross(float3 x, float3 y) {
     return x.yzx * y.zxy - x.zxy * y.yzx;
 }
 
-// TODO: select, abs, almost_equal, almost_equal_relative
+// TODO: almost_equal, almost_equal_rel
 // TODO: step, smoothstep, fract
 
-#if SIMD_LONG_VECS
+#if SIMD_FLOAT_EXT
 
 // These are cpu only math.  None of the gpus support these long types.
 // and MSL doesn't even support double.
@@ -904,7 +905,7 @@ SIMD_CALL float normalize(float16 x) {
     return x / length(x);
 }
 
-#endif // SIMD_LONG_VECS
+#endif // SIMD_FLOAT_EXT
 
 // TODO: better way to rename, can there be float2::zero()
 // also could maybe use that for fake vector ctors.

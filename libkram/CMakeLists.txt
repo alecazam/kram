@@ -119,6 +119,9 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
 
     "${SOURCE_DIR}/tmpfileplus/tmpfileplus.cpp"
     "${SOURCE_DIR}/tmpfileplus/tmpfileplus.h"
+     
+    "${SOURCE_DIR}/vectormath/*.h"
+    "${SOURCE_DIR}/vectormath/*.cpp"
     
     # partial zstd decode-only unity file
     # cd zstd/build/single_file_libs
@@ -169,8 +172,6 @@ target_include_directories(${myTargetLib} PUBLIC
     
     # why are these public, must be in public headers
     "${SOURCE_DIR}/eastl/include/"
-
-    "${SOURCE_DIR}/fastl/"
 )
 
 target_include_directories(${myTargetLib} PRIVATE
@@ -185,6 +186,7 @@ target_include_directories(${myTargetLib} PRIVATE
     "${SOURCE_DIR}/miniz/"
     "${SOURCE_DIR}/squish/"
     "${SOURCE_DIR}/tmpfileplus/"
+    "${SOURCE_DIR}/vectormath/"
     "${SOURCE_DIR}/zstd/"
     )
      
@@ -234,9 +236,9 @@ if (BUILD_WIN)
     # force include (public)
     target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
        
-    # all warnings, AVX, and multiprocess compiles,
+    # all warnings, AVX2, and multiprocess compiles,
     # eliminate duplicate strings, embed full path
-    target_compile_options(${myTargetLib} PRIVATE  /W3 /arch:AVX -mf16c /MP /GF /FC)
+    target_compile_options(${myTargetLib} PRIVATE  /W3 -march=haswell -mf16c -mfma /MP /GF /FC)
     
     # fix STL (don't use -D here, will remove)
     target_compile_definitions(${myTargetLib} PRIVATE _ITERATOR_DEBUG_LEVEL=0 _HAS_EXCEPTIONS=0)
