@@ -1142,6 +1142,9 @@ SIMD_CALL float3 float3m(float2 v, float z) {
 SIMD_CALL float4 float4m(float x) {
     return x; // TODO: does this go to _mm_set1_ps(x)
 }
+SIMD_CALL float4 float4m(float2 xy, float2 zw) {
+    return {xy.x,xy.y,zw.x,zw.y};
+}
 SIMD_CALL float4 float4m(float x, float y, float z, float w = 1.0f) {
     return {x,y,z,w}; // _mm_setr_ps ?
 }
@@ -1174,6 +1177,9 @@ SIMD_CALL int3 int3m(int x, int y, int z) {
 SIMD_CALL int4 int4m(int x) {
     return x;
 }
+SIMD_CALL int4 int4m(int2 xy, int2 zw) {
+    return {xy.x,xy.y,zw.x,zw.y};
+}
 SIMD_CALL int4 int4m(int x, int y, int z, int w) {
     return {x,y,z,w};
 }
@@ -1200,6 +1206,9 @@ SIMD_CALL half3 half3m(half x, half y, half z) {
 SIMD_CALL half4 half4m(half x) {
     return x;
 }
+SIMD_CALL half4 half4m(half2 xy, half2 zw) {
+    return {xy.x,xy.y,zw.x,zw.y};
+}
 SIMD_CALL half4 half4m(half x, half y, half z, half w = (half)1.0) {
     return {x,y,z,w};
 }
@@ -1225,6 +1234,9 @@ SIMD_CALL double3 double3m(double x, double y, double z) {
 
 SIMD_CALL double4 double4m(double x) {
     return x;
+}
+SIMD_CALL double4 double4m(double2 xy, double2 zw) {
+    return {xy.x,xy.y,zw.x,zw.y};
 }
 SIMD_CALL double4 double4m(double x, double y, double z, double w = 1.0) {
     return {x,y,z,w};

@@ -94,7 +94,7 @@ float3x4 diagonal_matrix3x4(float3 x) {
 }
 float4x4 diagonal_matrix(float4 x) {
     float4 xx = x; xx.w = 0.0f;
-    float4 ww = xx; xx.z = x.w;
+    float4 ww = xx; ww.z = x.w;
     return float4x4(xx.xwww, xx.wyww, xx.wwzw, ww.wwwz);
 }
 
