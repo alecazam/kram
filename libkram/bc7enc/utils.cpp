@@ -10,7 +10,7 @@
 
 namespace utils 
 {		
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 #define FLOOD_PUSH(y, xl, xr, dy) if (((y + (dy)) >= 0) && ((y + (dy)) < (int)m_height)) { stack.push_back(fill_segment(y, xl, xr, dy)); }
 

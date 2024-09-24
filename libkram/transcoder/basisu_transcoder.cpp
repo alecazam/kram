@@ -185,7 +185,7 @@ namespace basisu
 
 namespace basist
 {
-    using namespace NAMESPACE_STL;
+    using namespace STL_NAMESPACE;
 
 #if BASISD_ENABLE_DEBUG_FLAGS
 	static uint32_t g_debug_flags = 0;

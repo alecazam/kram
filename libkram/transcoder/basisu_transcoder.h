@@ -42,7 +42,7 @@
 
 namespace basist
 {
-    using namespace NAMESPACE_STL;
+    using namespace STL_NAMESPACE;
 
 	// High-level composite texture formats supported by the transcoder.
 	// Each of these texture formats directly correspond to OpenGL/D3D/Vulkan etc. texture formats.

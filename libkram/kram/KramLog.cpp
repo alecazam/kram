@@ -1055,7 +1055,7 @@ int32_t logMessage(const char* group, int32_t logLevel,
 // to have full source to impl to fix things in fmt.
 // https://fmt.dev/latest/api.html#_CPPv4IDpEN3fmt14formatted_sizeE6size_t13format_stringIDp1TEDpRR1T
 
-// TODO: can this use NAMESPACE_STL::string_view instead ?
+// TODO: can this use STL_NAMESPACE::string_view instead ?
 int32_t logMessage(const char* group, int32_t logLevel,
                           const char* file, int32_t line, const char* func,
                           fmt::string_view format, fmt::format_args args)

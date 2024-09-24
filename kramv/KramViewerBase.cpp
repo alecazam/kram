@@ -1605,9 +1605,9 @@ void Data::loadFilesFromUrls(vector<string>& urls, bool skipSubdirs)
     
     // sort them by short filename
 #if USE_EASTL
-    NAMESPACE_STL::quick_sort(_files.begin(), _files.end());
+    STL_NAMESPACE::quick_sort(_files.begin(), _files.end());
 #else
-    std::sort(_files.begin(), _files.end());
+    STL_NAMESPACE::sort(_files.begin(), _files.end());
 #endif
     
     // preserve filename before load, and restore that index, by finding
