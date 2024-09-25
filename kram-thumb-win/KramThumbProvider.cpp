@@ -8,7 +8,7 @@
 #include <vector>
 
 using namespace kram;
-using namespace std;
+using namespace std; // or STL_NAMESPACE
 
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;
@@ -149,8 +149,8 @@ private:
                 return false;
             }
 
-            imageWidth = NAMESPACE_STL::max(1U, image.width);
-            imageHeight = NAMESPACE_STL::max(1U, image.height);
+            imageWidth = std::max(1U, image.width);
+            imageHeight = std::max(1U, image.height);
         }
 
         // This is retina factor

@@ -84,7 +84,7 @@ extern MyMTLPixelFormat FormatToPixelFormat(DDS_Format fmt);
 // global needed by a bunch of Photoshop SDK routines
 SPBasicSuite *sSPBasic = NULL;
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 const char* kBundleIdentifier = "com.ba.kram-ps";
 

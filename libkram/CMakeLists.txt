@@ -168,10 +168,11 @@ list(FILTER libSources EXCLUDE REGEX ".fmt.cpp$")
 source_group(TREE "${SOURCE_DIR}" PREFIX "source" FILES ${libSources})
 
 target_include_directories(${myTargetLib} PUBLIC
+    # public since included in other project files
     "${SOURCE_DIR}/kram/"
-    
-    # why are these public, must be in public headers
     "${SOURCE_DIR}/eastl/include/"
+    "${SOURCE_DIR}/vectormath/"
+    
 )
 
 target_include_directories(${myTargetLib} PRIVATE
@@ -186,7 +187,6 @@ target_include_directories(${myTargetLib} PRIVATE
     "${SOURCE_DIR}/miniz/"
     "${SOURCE_DIR}/squish/"
     "${SOURCE_DIR}/tmpfileplus/"
-    "${SOURCE_DIR}/vectormath/"
     "${SOURCE_DIR}/zstd/"
     )
      

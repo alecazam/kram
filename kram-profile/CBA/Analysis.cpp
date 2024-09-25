@@ -26,8 +26,8 @@
 
 // from kram
 // returns length of chars appended, -1 if failure
-#define NAMESPACE_STL std
-using namespace NAMESPACE_STL;
+#define STL_NAMESPACE std
+using namespace STL_NAMESPACE;
 int32_t append_sprintf(string& str, const char* format, ...) __printflike(2, 3);
 
 namespace col

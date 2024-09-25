@@ -3,7 +3,7 @@
 // TODO: move to KramConfig.h
 #define KRAM_MAC 1
 #define KRAM_IOS 0
-#define NAMESPACE_STL std
+#define STL_NAMESPACE
 
 #include <stdint.h>
 
@@ -18,7 +18,7 @@ struct mz_zip_archive;
 namespace kram {
 
 //struct MmapHelper;
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 struct ZipEntry {
     const char* filename;  // max 512, aliased

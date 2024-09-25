@@ -26,7 +26,7 @@
 #include <cxxabi.h> // demangle
 #endif
 
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // copied out of KramLog.cpp
 static int32_t append_vsprintf(string& str, const char* format, va_list args)
@@ -180,7 +180,7 @@ extern "C" const char* _Nullable demangleSymbolName(const char* _Nonnull symbolN
 }
 
 namespace kram {
-using namespace NAMESPACE_STL;
+using namespace STL_NAMESPACE;
 
 // Copied out of KramLog.cpp
 inline bool endsWithExtension(const char* str, const string& substring)
