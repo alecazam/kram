@@ -97,28 +97,22 @@
 #warning unuspported simd arch
 #endif
 
-// TODO: u/char16 max, only 16 channels/mask bits?
-// TODO: u/short16, nothing goes above 32 elements
-// TODO: u/long8 type
-// TODO: add, but don't add uint/ushort/ulong (too much code already)
-//  note iOS/macOS are on signed char, so may just only want to use signed simd ?
-//  often though need unsigned for low bit counts (f.e. 8 or 16).
-//
-
-// TODO: have some setting to override from prefix file
+// a define to override setings from prefix file
 #ifndef SIMD_CONFIG
 
-// Vector and matrix types.  Currently only matrix types for SIMD_FLOAT
-// TODO: support
-//#define SIMD_UCHAR  0
-//#define SIMD_CHAR   0
-//#define SIMD_SHORT  0
-//#define SIMD_LONG   0
-
+// Vector and matrix types.  Currently only matrix types for SIMD_FLOAT, SIMD_DOUBLE.
+// SIMD_INT must be kept on for conditional tests.
 #define SIMD_HALF   1
 #define SIMD_FLOAT  1
 #define SIMD_DOUBLE 1
+
 #define SIMD_INT    1
+#define SIMD_CHAR   0
+//#define SIMD_UCHAR  0
+#define SIMD_SHORT  0
+//#define SIMD_USHORT 0
+#define SIMD_LONG   0
+//#define SIMD_ULONG  0
 
 // Whether to support > 4 length vecs with some ops
 #define SIMD_FLOAT_EXT 0
@@ -140,12 +134,6 @@
 
 #endif // SIMD_HALF
 
-// TODO: u/char
-// TODO: float16 and double8 requires 4x 16B instructions
-// TODO: float8 and double3/double4 require 2x 16B instructions,
-//   but double needed for double3x3, 3x4, 4x4
-// may want to stop one before for AVX2 registers.
-
 //-----------------------------------
 
 // simplify calls
@@ -154,6 +142,41 @@
 // of these mostly wrapper calls.
 #define SIMD_CALL static inline __attribute__((__always_inline__, __const__, __nodebug__))
 #define SIMD_CALL_OP SIMD_CALL
+
+//------------
+
+// aligned
+#define macroVector1TypesStorage(type, name) \
+typedef type name##1s; \
+typedef __attribute__((__ext_vector_type__(2)))  type name##2s; \
+typedef __attribute__((__ext_vector_type__(3)))  type name##3s; \
+typedef __attribute__((__ext_vector_type__(4)))  type name##4s; \
+typedef __attribute__((__ext_vector_type__(8)))  type name##8s; \
+typedef __attribute__((__ext_vector_type__(16))) type name##16s; \
+typedef __attribute__((__ext_vector_type__(32),__aligned__(16))) type name##32s; \
+
+// packed
+#define macroVector1TypesPacked(type, name) \
+typedef type name##1p; \
+typedef __attribute__((__ext_vector_type__(2),__aligned__(1)))  type name##2p; \
+typedef __attribute__((__ext_vector_type__(3),__aligned__(1)))  type name##3p; \
+typedef __attribute__((__ext_vector_type__(4),__aligned__(1)))  type name##4p; \
+typedef __attribute__((__ext_vector_type__(8),__aligned__(1)))  type name##8p; \
+typedef __attribute__((__ext_vector_type__(16),__aligned__(1))) type name##16p; \
+typedef __attribute__((__ext_vector_type__(32),__aligned__(1))) type name##32p; \
+
+// cpp rename for half, u/short
+#define macroVector1TypesStorageRenames(cname, cppname) \
+typedef ::cname##1s cppname##1; \
+typedef ::cname##2s cppname##2; \
+typedef ::cname##3s cppname##3; \
+typedef ::cname##4s cppname##4; \
+typedef ::cname##8s cppname##8; \
+typedef ::cname##16s cppname##16; \
+typedef ::cname##32s cppname##32; \
+
+//------------
+
 
 // aligned
 #define macroVector2TypesStorage(type, name) \
@@ -268,6 +291,39 @@ extern "C" {
 
 //----------
 
+#if SIMD_CHAR
+
+// define c vector types
+macroVector1TypesStorage(char, char)
+macroVector1TypesPacked(char, char)
+
+#endif
+
+#if SIMD_SHORT
+
+// define c vector types
+macroVector2TypesStorage(short, short)
+macroVector2TypesPacked(short, short)
+
+#endif
+
+#if SIMD_INT
+
+// define c vector types
+// Apple uses int type here (32-bit) instead of int32_t
+macroVector4TypesStorage(int, int)
+macroVector4TypesPacked(int, int)
+
+#endif // SIMD_INT
+
+#if SIMD_LONG
+
+// define c vector types
+macroVector8TypesStorage(long, long)
+macroVector8TypesPacked(long, long)
+
+#endif
+
 #if SIMD_HALF
 
 #if SIMD_HALF_FLOAT16
@@ -287,15 +343,17 @@ typedef short half;
 // That's not available on Android devices like it should be, but the Neon
 // fp16x4 <-> fp32x4 conversions are.
 
-// define c++ types
+// define c vector types
 macroVector2TypesStorage(half, half)
 macroVector2TypesPacked(half, half)
+
+// No matrix type defined right now.
 
 #endif // SIMD_HALF
 
 #if SIMD_FLOAT
 
-// define c++ types
+// define c++ vector/matrix types
 macroVector4TypesStorage(float, float)
 macroVector4TypesPacked(float, float)
 
@@ -307,18 +365,9 @@ typedef struct { float4s columns[4]; } float4x4s;
 
 #endif // SIMD_FLOAT
 
-#if SIMD_INT
-
-// define c++ types
-// Apple uses int type here (32-bit) instead of int32_t
-macroVector4TypesStorage(int, int)
-macroVector4TypesPacked(int, int)
-
-#endif // SIMD_INT
-
 #if SIMD_DOUBLE
 
-// define c types
+// define c vector/matrix types
 macroVector8TypesStorage(double, double)
 macroVector8TypesPacked(double, double)
 
@@ -333,7 +382,29 @@ typedef struct { double4s columns[4]; } double4x4s;
 //----------
 
 // This means simd_float4 will come from this file instead of simd.h
+// c typedef rename to simd_ namespace.
 #if SIMD_RENAME_TO_SIMD_NAMESPACE
+
+#if SIMD_CHAR
+macroVector1TypesStorageRenames(char, simd_char)
+#endif // SIMD_CHAR
+
+#if SIMD_SHORT
+macroVector2TypesStorageRenames(short, simd_short)
+#endif // SIMD_SHORT
+
+#if SIMD_INT
+macroVector4TypesStorageRenames(int, simd_int)
+#endif // SIMD_INT
+
+#if SIMD_LONG
+macroVector8TypesStorageRenames(long, simd_long)
+#endif // SIMD_INT
+
+
+#if SIMD_CHAR
+macroVector4TypesStorageRenames(char, simd_char)
+#endif // SIMD_CHAR
 
 #if SIMD_HALF
 macroVector2TypesStorageRenames(half, simd_half)
@@ -342,10 +413,6 @@ macroVector2TypesStorageRenames(half, simd_half)
 #if SIMD_FLOAT
 macroVector4TypesStorageRenames(float, simd_float)
 #endif // SIMD_FLOAT
-
-#if SIMD_INT
-macroVector4TypesStorageRenames(int, simd_int)
-#endif // SIMD_INT
 
 #if SIMD_DOUBLE
 macroVector8TypesStorageRenames(double, simd_double)
@@ -381,18 +448,32 @@ macroVector8TypesStorageRenames(double, simd_double)
 
 namespace SIMD_NAMESPACE {
 
-// The C++ vectors are the same as the c vectors.  But these are namespaced.
+// c++ typedef of the c vectors.  But these are namespaced.
 // So they shouldn't conflict, or conflicts can be resolve easier than the c types.
+
+#if SIMD_CHAR
+macroVector4TypesStorageRenames(char, char)
+#endif
+
+#if SIMD_SHORT
+macroVector4TypesStorageRenames(short, short)
+#endif
+
+#if SIMD_INT
+macroVector4TypesStorageRenames(int, int)
+#endif
+
+#if SIMD_LONG
+macroVector8TypesStorageRenames(long, long)
+#endif
+
+
 #if SIMD_HALF
 macroVector2TypesStorageRenames(half, half)
 #endif
                      
 #if SIMD_FLOAT
 macroVector4TypesStorageRenames(float, float)
-#endif
-
-#if SIMD_INT
-macroVector4TypesStorageRenames(int, int)
 #endif
 
 #if SIMD_DOUBLE
@@ -409,8 +490,6 @@ macroVector8TypesStorageRenames(double, double)
 #define sqrt_scalar(x) sqrtf(x)
 
 #if SIMD_FLOAT && SIMD_NEON
-
-// TODO: vec extension supports comparison but they return a mask then can select off that.
 
 // These are the only 2 ops on Neon
 SIMD_CALL float reduce_min(float4 x) {
@@ -652,8 +731,8 @@ SIMD_CALL float3 sqrt(float3 x) {
 
 // rsqrt
 SIMD_CALL float4 rsqrt(float4 x) {
-    // TODO: fixup near 0
-    // TODO: use _mm_div_ps if / doesn't
+    // TODO: fixup near 0 ?
+    // TODO: use _mm_div_ps if / doesn't use
     return 1.0f/sqrt(x);
 }
 SIMD_CALL float2 rsqrt(float2 x) {
@@ -666,8 +745,8 @@ SIMD_CALL float3 rsqrt(float3 x) {
 
 // recip
 SIMD_CALL float4 recip(float4 x) {
-    // TODO: fixup near 0
-    // TODO: use _mm_div_ps if / doesn't
+    // TODO: fixup near 0 ?
+    // TODO: use _mm_div_ps if / doesn't use
     return 1.0f/x;
 }
 SIMD_CALL float2 recip(float2 x) {
@@ -830,7 +909,7 @@ float4 cos(float4 x);
 float4 tan(float4 x);
 void sincos(float4 x, float4& s, float4& c);
 
-// TODO: add float2/3 version of log/exp/pow/sin/cos/tan/sincos above
+// TODO: add float1/float2/3 version of log/exp/pow/sin/cos/tan/sincos above
 
 SIMD_CALL float cross(float2 x, float2 y) {
     return x.x * y.y - x.y * y.x;
@@ -839,8 +918,9 @@ SIMD_CALL float3 cross(float3 x, float3 y) {
     return x.yzx * y.zxy - x.zxy * y.yzx;
 }
 
-// TODO: almost_equal, almost_equal_rel
+// TODO: equal_abs, equal_rel
 // TODO: step, smoothstep, fract
+
 
 #if SIMD_FLOAT_EXT
 
@@ -872,8 +952,8 @@ SIMD_CALL float reduce_max(float16 x) {
 }
 
 // need to convert float4 to 8/16
-// TODO: float8 tovec8(float4 x, float4 y)
-// TODO: float16 tovec16(float8 x, float8 y)
+// TODO: float8 float8m(float4 x, float4 y)
+// TODO: float16 float16m(float8 x, float8 y)
 
 // how important are 8/16 ops for float and double?  Could reduce with only doing up to 4.
 SIMD_CALL float8 muladd(float8 x, float4 y, float4 t) {
@@ -907,7 +987,7 @@ SIMD_CALL float normalize(float16 x) {
 
 #endif // SIMD_FLOAT_EXT
 
-// TODO: better way to rename, can there be float2::zero()
+// TODO: better way to name these, can there be float2::zero()
 // also could maybe use that for fake vector ctors.
 
 const float2& float2_zero();
@@ -1099,12 +1179,11 @@ bool equal(const float3x3& x, const float3x3& y);
 bool equal(const float4x4& x, const float4x4& y);
 
 // TODO: these think they are all member functions
-// but they're just defined in a namespace, and Apples' aren't.
     
 // operators for C++
 macroMatrixOps(float2x2);
 macroMatrixOps(float3x3);
-// TODO: no mat hops on storage type float3x4
+// TODO: no mat ops on storage type float3x4
 // macroMatrixOps(float3x4s);
 macroMatrixOps(float4x4);
 
@@ -1483,7 +1562,17 @@ struct vecf {
     
 // TODO: quat, need a fast lerp and correct 2 quats
 // and rotate a vec, can convert to/from vector.
-// typedef struct { float4 vector; } quatf;
+#if USE_FLOAT
+struct quatf : float4 {
+    
+};
+#endif
+
+#if USE_DOUBLE
+struct quatd : double4 {
+    
+};
+#endif
 
 // TODO: saturating conversions would be useful to, and prevent overflow
 // see the conversion.h code, bit select to clamp values.
