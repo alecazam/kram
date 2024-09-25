@@ -3,7 +3,7 @@
 // TODO: move to KramConfig.h
 #define KRAM_MAC 1
 #define KRAM_IOS 0
-#define STL_NAMESPACE
+#define STL_NAMESPACE std
 
 #include <stdint.h>
 
