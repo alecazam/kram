@@ -12,7 +12,7 @@ vectormath
 * Platforms: macOS/iOS, Win, Linux, others
 
 Small vector simd kernel based around 4 element int, float, double ops.
-  Despite AVX2, it's only using 128-bit ops currently (SSE 4.2.
+  Despite AVX2, it's only using 128-bit ops currently (SSE 4.2).
   
 Half (fp16) conversions in case _Float16 not supported (f.e. Android)
 
@@ -39,7 +39,6 @@ Clang vector extensions provide:
 Types
 
 * half2/3/4/8/16
-* half2x2/3x3/3x4/4x4
 
 * float2/3/4/8/16
 * float2x2/3x3/3x4/4x4
@@ -47,12 +46,18 @@ Types
 * int2/3/4/8/16
 * int2x2, int3x3, int3x4, int4x4
 
+* double type should replicate float code
 * double2/3/4/8/16
 * doublet2x2/3x3/3x4/4x4
 
-* u/char2...16
-* u/short2...16
-* u/long2...8
+* didn't really need a half matrix yet
+* - half2x2/3x3/3x4/4x4
+
+* optional vector only types with only default vector ops
+*  note macOS/iOS is signed char, so should compile same for Win/Linux/etc
+* - u/char2...16
+* - u/short2...16
+* - u/long2...8
 
 ---
 
@@ -86,9 +91,7 @@ Small implementation kernel (just using the float4 simd ops), so is easy to add 
 
 You can also bury the impls with a little work, and avoid the simd headers getting pulled into code, but the whole point is to inline the calls for speed and stay in register.  So can drop to SSE4.2, but give up F16C.  And AVX2 provides fma to line up with arm64.  So going between arm64 and AVX2 seems like a good parallel if your systems support it.
 
-Written so many of these libs over the years, but this one is based around the gcc/clang vector extensions.   The vecs extend from 2, 4, 8, 16, 32.   They all use more 4 ops to do so.   I'm tempted to limit counts to 32B for AVX2.   So no ctors or member functions on the vectors (see float4m, half4m - make ops), and some derived structs on the matrices.  You can further wrap these under your own vector math code, but you then have a lot of forwarding and conversion.
-
-I recommend using the make ctors.   The curly brace init is easy to mistake for what it does.
+Written so many of these libs over the years, but this one is based around the gcc/clang vector extensions.   The vecs extend from 2, 4, 8, 16, 32.   They all use more 4 ops to do so.   I'm tempted to limit counts to 32B for AVX2.   So no ctors or member functions on the vectors (see float4m, half4m - make ops), and some derived structs on the matrices.  You can further wrap these under your own vector math code, but you then have a lot of forwarding and conversion.  I recommend using the make ctors for the vectors.   The curly brace init is easy to mistake for what it does.
 
 ```
 float4 v = {1.0f};    v = 1,xxx
@@ -96,7 +99,7 @@ float4 v = float4m(1.0f); v = 1,1,1,1
 float4 v = 1.0f.          v = 1,1,1,1
 ```
 
-Matrices are 2x2, 3x3, 3x4, and 4x4 column only.  Matrices have a C++ type with operators and calls.  Chop out with defines float, double, half, but keep int for the conditional tests.   Easy to add more types with the macros - u/char, u/long, u/short.  Had a pretty sucky day, so positive feedback or any changes to optimize this further are welcome.   And this had numerous git crlf failures today trying to fix it for Win.
+Matrices are 2x2, 3x3, 3x4, and 4x4 column only.  Matrices have a C++ type with operators and calls.  Chop out with defines float, double, half, but keep int for the conditional tests.   Easy to add more types with the macros - u/char, u/long, u/short. 
 
 I gutted the arrmv7 stuff from sse2Neon.h, so that's readable, and updated sse_mathfun for the cos/sin/log ops.  I had the fp16 <-> fp32 calls, since that's all Android has.  Apple has similar calls and structs, but the Accelerate lib holds many of the optimized calls for sin, cos, log, inverse.  And you only get them if you're on a new enough iOS/macOS.   And that api is so much code, that for some things it's not using the best methods.  Mine probably isn't either.  A lot of this was cobbled together out of an old vec math lib for my personal apps.  And there's still more I can salvage.
 

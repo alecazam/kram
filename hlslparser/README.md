@@ -187,6 +187,7 @@ Mali
 * Sparse index buffer limits 
 * 180MB parameter buffer limit - device lost after exceeded
 * Missing VK_POLYGON_MODE_LINE (feature.fillModeNonSolid) - affects debug visuals
+* Missing shaderClipDistance and shaderCullDistance
 * ARM licenses mobile cpu reference designs
 * ARM bought Mali gpu from Falanx Microsystems
 * Sets maxDrawIndirectCount = 1, limiting MDI utility
