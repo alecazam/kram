@@ -99,20 +99,6 @@ float4x4 diagonal_matrix(float4 x) {
 
 //---------------------------
 
-
-float4 pow(float4 x, float4 y) {
-    // can xy be <= 0 ?
-    return exp(log(x) * y);
-}
-
-float4 tan(float4 x) {
-    float4 s, c;
-    sincos(x, s, c);
-    
-    // TODO: handle around c == 0 case
-    return s / c;
-}
-
 // saturate
 float2 saturate(float2 x) {
     return clamp(x, kfloat2_zero, kfloat2_ones);

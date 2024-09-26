@@ -33,11 +33,73 @@
 // a lot of code to inline.
 // TODO: use math ops and simd ops here and let compiler gen intrinsics?
 // TODO: combine the constants into fewer registers, reference .x,..
+// TODO: have precise version with 2/3/4 function calls to math or simd lib
+// these aproximations may not be good enough
 
 #pragma once
 
+#include <math.h>
 
 namespace SIMD_NAMESPACE {
+
+// I don't trust the approximations for now.  But providing them in case
+// want to do futher.  Really 3 choices, use c calls, use approximations,
+// or use simd lib that implements these (f.e. Accelerate).
+
+// pow needs 2 args, so haven't exposed yet
+//float4 pow(float4 x, float4 y) {
+//    // can xy be <= 0 ?, no will return Nan in log/exp approx
+//    return exp(log(x) * y);
+//}
+
+// don't have a c sincos, so just use fn calls
+//float4 tan(float4 x) {
+//    float4 s, c;
+//    sincos(x, s, c);
+//
+//    // TODO: handle around c == 0 case
+//    return s / c;
+//}
+
+
+#define SIMD_FAST_MATH 0
+#if !SIMD_FAST_MATH
+
+// This calls function repeatedly, then returns as vector.
+// These don't call to the 4 version since it's so much more work.
+#define macroVectorRepeatFnImpl(type, cppfun, func) \
+type##1 cppfunc(type##1 x) { return func(x); } \
+type##2 cppfunc(type##2 x) { return {func(x.x), func(x.y)}; } \
+type##3 cppfunc(type##3 x) { return {func(x.x), func(x.y), func(x.z)}; } \
+type##4 cppfunc(type##4 x) { return {func(x.x), func(x.y), func(x.z), func(x.w)}; } \
+
+#if USE_FLOAT
+
+macroVectorRepeatFnImpl(float, log, ::logf)
+macroVectorRepeatFnImpl(float, exp, ::expf)
+
+macroVectorRepeatFnImpl(float, sin, ::sinf)
+macroVectorRepeatFnImpl(float, cos, ::cosf)
+macroVectorRepeatFnImpl(float, tan, ::tanf)
+
+#endif // USE_FLOAT
+
+#if USE_DOUBLE
+
+macroVectorRepeatFnImpl(double, log, ::log)
+macroVectorRepeatFnImpl(double, exp, ::exp)
+
+macroVectorRepeatFnImpl(double, sin, ::sin)
+macroVectorRepeatFnImpl(double, cos, ::cos)
+macroVectorRepeatFnImpl(double, tan, ::tan)
+
+#endif // USE_DOUBLE
+
+#else
+
+// Start of mathfun below
+
+#if USE_FLOAT
 
 #define _PS_CONST(Name, Val) \
   static const float4 _ps_##Name = Val
@@ -74,40 +136,25 @@ _PS_CONST(cephes_log_p8, + 3.3333331174E-1);
 _PS_CONST(cephes_log_q1, -2.12194440e-4);
 _PS_CONST(cephes_log_q2, 0.693359375);
 
-// Named to match Intel simd calls.  Can expose in header if needed.
-// sincos returns sin, take in cos as ptr though.  So that doesn't match.
-// Also can't we just pass cos, sin now instead of reversing args?
-float4 _mm_log_ps(float4 x);
-float4 _mm_exp_ps(float4 x);
-//float4 _mm_sin_ps(float4 x);
-//float4 _mm_cos_ps(float4 x);
-void _mm_sincos_ps(float4 x, float4* s, float4* c);
+// not exposing yet due to calling convention and no math equiv
+static void sincos(float4 x, float4& s, float4& c);
 
 // This is just extra function overhead.  May just want to rename
-float4 log(float4 x) {
-    return _mm_log_ps(x);
-}
-float4 exp(float4 x) {
-    return _mm_exp_ps(x);
-}
 float4 sin(float4 x) {
     float4 s, c;
-    _mm_sincos_ps(x, &s, &c);
+    sincos(x, s, c);
     return s;
 }
 float4 cos(float4 x) {
     float4 s, c;
-    _mm_sincos_ps(x, &s, &c);
+    sincos(x, s, c);
     return c;
-}
-void sincos(float4 x, float4& s, float4& c) {
-    return _mm_sincos_ps(x, &s, &c);
 }
 
 /* natural logarithm computed for 4 simultaneous float
    return NaN for x <= 0
 */
-float4 _mm_log_ps(float4 x) {
+float4 log(float4 x) {
     int4 emm0;
     float4 one = _ps_1;
 
@@ -190,7 +237,7 @@ _PS_CONST(cephes_exp_p3, 4.1665795894E-2);
 _PS_CONST(cephes_exp_p4, 1.6666665459E-1);
 _PS_CONST(cephes_exp_p5, 5.0000001201E-1);
 
-float4 _mm_exp_ps(float4 x) {
+float4 exp(float4 x) {
     float4 tmp = _mm_setzero_ps(), fx;
     int4 emm0;
     float4 one = _ps_1;
@@ -267,7 +314,6 @@ float4 _mm_exp_ps(float4 x) {
     return y;
 }
 
-
 _PS_CONST(minus_cephes_DP1, -0.78515625);
 _PS_CONST(minus_cephes_DP2, -2.4187564849853515625e-4);
 _PS_CONST(minus_cephes_DP3, -3.77489497744594108e-8);
@@ -278,8 +324,6 @@ _PS_CONST(coscof_p0,  2.443315711809948E-005);
 _PS_CONST(coscof_p1, -1.388731625493765E-003);
 _PS_CONST(coscof_p2,  4.166664568298827E-002);
 _PS_CONST(cephes_FOPI, 1.27323954473516); // 4 / M_PI
-
-#if 0
 
 /* evaluation of 4 sines at onces, using only SSE1+MMX intrinsics so
    it runs also on old athlons XPs and the pentium III of your grand
@@ -309,171 +353,11 @@ _PS_CONST(cephes_FOPI, 1.27323954473516); // 4 / M_PI
    Since it is based on SSE intrinsics, it has to be compiled at -O2 to
    deliver full speed.
 */
-float4 _mm_sin_ps(float4 x) { // any x
-    float4 xmm1, xmm2 = _mm_setzero_ps(), xmm3, sign_bit, y;
 
-    int4 emm0, emm2;
-    sign_bit = x;
-    /* take the absolute value */
-    x = _mm_and_ps(x, _pi_inv_sign_mask);
-    /* extract the sign bit (upper one) */
-    sign_bit = _mm_and_ps(sign_bit, _pi_sign_mask);
-
-    /* scale by 4/Pi */
-    y = _mm_mul_ps(x, _ps_cephes_FOPI);
-
-    /* store the integer part of y in mm0 */
-    emm2 = _mm_cvttps_epi32(y);
-    /* j=(j+1) & (~1) (see the cephes sources) */
-    emm2 = _mm_add_epi32(emm2, _pi_1);
-    emm2 = _mm_and_si128(emm2, _pi_inv1);
-    y = _mm_cvtepi32_ps(emm2);
-
-    /* get the swap sign flag */
-    emm0 = _mm_and_si128(emm2, _pi_4);
-    emm0 = _mm_slli_epi32(emm0, 29);
-    /* get the polynom selection mask
-     there is one polynom for 0 <= x <= Pi/4
-     and another one for Pi/4<x<=Pi/2
-
-     Both branches will be computed.
-    */
-    emm2 = _mm_and_si128(emm2, _pi_2);
-    emm2 = _mm_cmpeq_epi32(emm2, _mm_setzero_si128());
-
-    float4 swap_sign_bit = _mm_castsi128_ps(emm0);
-    float4 poly_mask = _mm_castsi128_ps(emm2);
-    sign_bit = _mm_xor_ps(sign_bit, swap_sign_bit);
-
-
-    /* The magic pass: "Extended precision modular arithmetic"
-     x = ((x - y * DP1) - y * DP2) - y * DP3; */
-    xmm1 = _ps_minus_cephes_DP1;
-    xmm2 = _ps_minus_cephes_DP2;
-    xmm3 = _ps_minus_cephes_DP3;
-    xmm1 = _mm_mul_ps(y, xmm1);
-    xmm2 = _mm_mul_ps(y, xmm2);
-    xmm3 = _mm_mul_ps(y, xmm3);
-    x = _mm_add_ps(x, xmm1);
-    x = _mm_add_ps(x, xmm2);
-    x = _mm_add_ps(x, xmm3);
-
-    /* Evaluate the first polynom  (0 <= x <= Pi/4) */
-    y = _ps_coscof_p0;
-    float4 z = _mm_mul_ps(x,x);
-
-    y = _mm_mul_ps(y, z);
-    y = _mm_add_ps(y, _ps_coscof_p1);
-    y = _mm_mul_ps(y, z);
-    y = _mm_add_ps(y, _ps_coscof_p2);
-    y = _mm_mul_ps(y, z);
-    y = _mm_mul_ps(y, z);
-    float4 tmp = _mm_mul_ps(z, _ps_0p5);
-    y = _mm_sub_ps(y, tmp);
-    y = _mm_add_ps(y, _ps_1);
-
-    /* Evaluate the second polynom  (Pi/4 <= x <= 0) */
-
-    float4 y2 = _ps_sincof_p0;
-    y2 = _mm_mul_ps(y2, z);
-    y2 = _mm_add_ps(y2, _ps_sincof_p1);
-    y2 = _mm_mul_ps(y2, z);
-    y2 = _mm_add_ps(y2, _ps_sincof_p2);
-    y2 = _mm_mul_ps(y2, z);
-    y2 = _mm_mul_ps(y2, x);
-    y2 = _mm_add_ps(y2, x);
-
-    /* select the correct result from the two polynoms */
-    xmm3 = poly_mask;
-    y2 = _mm_and_ps(xmm3, y2); //, xmm3);
-    y = _mm_andnot_ps(xmm3, y);
-    y = _mm_add_ps(y,y2);
-    /* update the sign */
-    y = _mm_xor_ps(y, sign_bit);
-    return y;
-}
-
-/* almost the same as sin_ps */
-float4 _mm_cos_ps(float4 x) { // any x
-    float4 xmm1, xmm2 = _mm_setzero_ps(), xmm3, y;
-    int4 emm0, emm2;
-    /* take the absolute value */
-    x = _mm_and_ps(x, _pi_inv_sign_mask);
-
-    /* scale by 4/Pi */
-    y = _mm_mul_ps(x, _ps_cephes_FOPI);
-
-    /* store the integer part of y in mm0 */
-    emm2 = _mm_cvttps_epi32(y);
-    /* j=(j+1) & (~1) (see the cephes sources) */
-    emm2 = _mm_add_epi32(emm2, _pi_1);
-    emm2 = _mm_and_si128(emm2, _pi_inv1);
-    y = _mm_cvtepi32_ps(emm2);
-
-    emm2 = _mm_sub_epi32(emm2, _pi_2);
-
-    /* get the swap sign flag */
-    emm0 = _mm_andnot_si128(emm2, _pi_4);
-    emm0 = _mm_slli_epi32(emm0, 29);
-    /* get the polynom selection mask */
-    emm2 = _mm_and_si128(emm2, _pi_2);
-    emm2 = _mm_cmpeq_epi32(emm2, _mm_setzero_si128());
-
-    float4 sign_bit = _mm_castsi128_ps(emm0);
-    float4 poly_mask = _mm_castsi128_ps(emm2);
-    /* The magic pass: "Extended precision modular arithmetic"
-     x = ((x - y * DP1) - y * DP2) - y * DP3; */
-    xmm1 = _ps_minus_cephes_DP1;
-    xmm2 = _ps_minus_cephes_DP2;
-    xmm3 = _ps_minus_cephes_DP3;
-    xmm1 = _mm_mul_ps(y, xmm1);
-    xmm2 = _mm_mul_ps(y, xmm2);
-    xmm3 = _mm_mul_ps(y, xmm3);
-    x = _mm_add_ps(x, xmm1);
-    x = _mm_add_ps(x, xmm2);
-    x = _mm_add_ps(x, xmm3);
-
-    /* Evaluate the first polynom  (0 <= x <= Pi/4) */
-    y = _ps_coscof_p0;
-    float4 z = _mm_mul_ps(x,x);
-
-    y = _mm_mul_ps(y, z);
-    y = _mm_add_ps(y, _ps_coscof_p1);
-    y = _mm_mul_ps(y, z);
-    y = _mm_add_ps(y, _ps_coscof_p2);
-    y = _mm_mul_ps(y, z);
-    y = _mm_mul_ps(y, z);
-    float4 tmp = _mm_mul_ps(z, _ps_0p5);
-    y = _mm_sub_ps(y, tmp);
-    y = _mm_add_ps(y, _ps_1);
-
-    /* Evaluate the second polynom  (Pi/4 <= x <= 0) */
-
-    float4 y2 = _ps_sincof_p0;
-    y2 = _mm_mul_ps(y2, z);
-    y2 = _mm_add_ps(y2, _ps_sincof_p1);
-    y2 = _mm_mul_ps(y2, z);
-    y2 = _mm_add_ps(y2, _ps_sincof_p2);
-    y2 = _mm_mul_ps(y2, z);
-    y2 = _mm_mul_ps(y2, x);
-    y2 = _mm_add_ps(y2, x);
-
-    /* select the correct result from the two polynoms */
-    xmm3 = poly_mask;
-    y2 = _mm_and_ps(xmm3, y2); //, xmm3);
-    y = _mm_andnot_ps(xmm3, y);
-    y = _mm_add_ps(y,y2);
-    /* update the sign */
-    y = _mm_xor_ps(y, sign_bit);
-
-    return y;
-}
-
-#endif
 
 /* since sin_ps and cos_ps are almost identical, sincos_ps could replace both of them..
    it is almost as fast, and gives you a free cosine with your sine */
-void _mm_sincos_ps(float4 x, float4 *s, float4 *c) {
+static void sincos(float4 x, float4& s, float4& c) {
     float4 xmm1, xmm2, xmm3 = _mm_setzero_ps(), sign_bit_sin, y;
     int4 emm0, emm2, emm4;
     sign_bit_sin = x;
@@ -561,8 +445,27 @@ void _mm_sincos_ps(float4 x, float4 *s, float4 *c) {
     xmm2 = _mm_add_ps(y,y2);
 
     /* update the sign */
-    *s = _mm_xor_ps(xmm1, sign_bit_sin);
-    *c = _mm_xor_ps(xmm2, sign_bit_cos);
+    s = _mm_xor_ps(xmm1, sign_bit_sin);
+    c = _mm_xor_ps(xmm2, sign_bit_cos);
 }
+
+// This has to forward 2/3 to the 4 element version.  
+#define macroVectorRepeatFnImpl(type, cppfun, func) \
+type##2 cppfunc(type##2) { return vec4to2(func(zeroext(x))); } \
+type##3 cppfunc(type##3) { return vec4to3(func(zeroext(x))); } \
+
+macroVectorRepeatFnImpl(float, log, log)
+macroVectorRepeatFnImpl(float, exp, exp)
+
+macroVectorRepeatFnImpl(float, sin, sin)
+macroVectorRepeatFnImpl(float, cos, cos)
+macroVectorRepeatFnImpl(float, cos, tan)
+
+// TODO: pow takes in 2 args
+
+#endif // USE_FLOAT
+
+#endif //
+
 
 } // namespace SIMD_NAMESPACE

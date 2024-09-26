@@ -898,19 +898,6 @@ SIMD_CALL float4 abs(float4 x) {
     return bitselect(0.0, x, 0x7fffffff);
 }
 
-// power series
-float4 log(float4 x);
-float4 exp(float4 x);
-float4 pow(float4 x, float4 y);
-
-// trig
-float4 sin(float4 x);
-float4 cos(float4 x);
-float4 tan(float4 x);
-void sincos(float4 x, float4& s, float4& c);
-
-// TODO: add float1/float2/3 version of log/exp/pow/sin/cos/tan/sincos above
-
 SIMD_CALL float cross(float2 x, float2 y) {
     return x.x * y.y - x.y * y.x;
 }
@@ -1325,6 +1312,44 @@ SIMD_CALL double4 double4m(double3 v, double w = 1.0) {
     double4 r; r.xyz = v; r.w = w; return r;
 }
 #endif
+
+// includes type1 simdk::pow(float1)
+#define macroVectorRepeatFnDecl(type, cppfun) \
+type##1 cppfunc(type##1 x); \
+type##2 cppfunc(type##2 x); \
+type##3 cppfunc(type##3 x); \
+type##4 cppfunc(type##4 x); \
+
+#if USE_FLOAT
+
+// power series
+macroVectorRepeatFnDecl(float, log)
+macroVectorRepeatFnDecl(float, exp)
+//macroVectorRepeatFnDecl(float, pow) takes 2 args
+
+// trig
+macroVectorRepeatFnDecl(float, cos)
+macroVectorRepeatFnDecl(float, sin)
+macroVectorRepeatFnDecl(float, tan)
+
+// TODO: add mort math ops (sinh, ...)
+
+#endif
+
+#if USE_DOUBLE
+
+// power series
+macroVectorRepeatFnDecl(double, log)
+macroVectorRepeatFnDecl(double, exp)
+//macroVectorRepeatFnDecl(double, pow)
+
+// trig
+macroVectorRepeatFnDecl(double, cos)
+macroVectorRepeatFnDecl(double, sin)
+macroVectorRepeatFnDecl(double, tan)
+
+#endif
+
 
 #if SIMD_DOUBLE && 0
 
