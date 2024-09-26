@@ -6,7 +6,6 @@
 #if USE_SIMDLIB
 
 // these are large functions that can be buried and optimized in the .cpp
-#define SIMD_CPPMATHFUN
 #include "sse_mathfun.h"
 
 namespace SIMD_NAMESPACE {
