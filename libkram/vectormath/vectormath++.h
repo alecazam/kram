@@ -263,7 +263,6 @@ typedef ::cname##8s cppname##8; \
 
 //-----------------------------------
 
-// TODO: can do +=, -= faster than calling sub/add, but this uses same impl that way
 #define macroMatrixOps(type) \
 SIMD_CALL_OP type& operator*=(type& x, const type& y) { x = mul(x, y); return x; } \
 SIMD_CALL_OP type& operator+=(type& x, const type& y) { x = add(x, y); return x; } \
@@ -1522,12 +1521,6 @@ SIMD_CALL int4 float4m(float4 __x) { return __builtin_convertvector(__x, int4); 
 #endif
 
 #if SIMD_FLOAT && SIMD_HALF
-
-// TODO: ryg
-// Not the right gist, you want the RTNE one (nm: that only matters for float->half,
-// this was the half->float one. FWIW, other dir is https://gist.github.com/rygorous/eb3a019b99fdaa9c3064.
-// These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
-// which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
     
 #if SIMD_HALF4_ONLY
 
@@ -1585,25 +1578,43 @@ struct vecf {
 };
 
     
-// TODO: quat, need a fast lerp and correct 2 quats
-// and rotate a vec, can convert to/from vector.
-#if USE_FLOAT
-struct quatf : float4 {
+#if SIMD_FLOAT
+//typedef float4s quatfs;
+
+// Only need a float quat.  double/half are pretty worthless.
+struct quatf {
+    quatf(): v{0.0f,0.0f,0.0f,1.0f} {}
+    quatf(float x, float y, float z, float w) : v{x,y,z,w} {}
+    quatf(float3 vv, float angle);
+    explicit quatf(float4 vv) { v = vv; }
     
-};
-#endif
-
-#if USE_DOUBLE
-struct quatd : double4 {
+    static const quatf& zero();
+    static const quatf& identity();
     
+    float4 v;
 };
+
+// how many quatf ops are needed?
+quatf operator*(quatf q1, quatf q2);
+// need quat * v
+// quatf operator*(quatf q1, float3 q2);
+
+float4x4 float4x4m(quatf q);
+//quatf quatfm(float3 axis, float angleInRadians);
+// need matrix into quatf
+// need shortest arc correction
+
+void quat_bezier_cp(quatf q0, quatf q1, quatf q2, quatf q3,
+                    quatf& a1, quatf& b2);
+quatf slerp(quatf q0, quatf q1, float t);
+quatf lerp(quatf q0, quatf q1, float t);
+
+quatf quat_bezer_lerp(quatf a, quatf b, quatf c, quatf d, float t);
+quatf quat_bezer_slerp(quatf a, quatf b, quatf c, quatf d, float t);
+
+quatf inverse(quatf q);
+
 #endif
-
-// TODO: saturating conversions would be useful to, and prevent overflow
-// see the conversion.h code, bit select to clamp values.
-
-// matrix_types.h has a type_traits with rows, cols, etc.
-// can call get_traits() on them.  See matrix.h for all the ops.
 
 } // namespace SIMD_NAMESPACE
 

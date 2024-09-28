@@ -5,14 +5,53 @@
 
 #if USE_SIMDLIB
 
+// These are large functions that can be buried and optimized in the .cpp
+// Has alternate cmath form it uses for now.  Look into ISPC calls to
+// replace all this.
+#include "sse_mathfun.h"
+
 // Tests with godbolt are here to show code comparsions with optimizations.
 
 // -Og can't unroll small loops for some reason. -O2 and -O3 do.
 // https://godbolt.org/z/KMPa8bchb
+//
+// As optimal as it gets
+// https://godbolt.org/z/YxzobGM17
+//
+// optimized quake rcp, rsqrt, sqrt
+// https://michaldrobot.files.wordpress.com/2014/05/gcn_alu_opt_digitaldragons2014.pdf
+//
+// TODO: Fabian on fp16 <-> fp32
+// Not the right gist, you want the RTNE one (nm: that only matters for float->half,
+// this was the half->float one. FWIW, other dir is https://gist.github.com/rygorous/eb3a019b99fdaa9c3064.
+// These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
+// which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
+//
+// TODO: bring over fast inverses (RTS, RTU, etc)
+//
+// TODO: saturating conversions would be useful to, and prevent overflow
+// see the conversion.h code, bit select to clamp values.
+//
+// TODO: matrix_types.h has a type_traits with rows, cols, etc.
+// can call get_traits() on them.  See matrix.h for all the ops.
 
+// The storage of affine data in a column matrix is no different than rows
+// translation is in (r30 r31 r32) or in (c30, c31 c32)
+//
+// r0: r00 r01 r02 r03
+// r1: r10
+// r2: r20
+// r3: r30
+//
+// c0  c1  c2  c3
+// c00 c10 c20 c30
+// c01 c11
+// c02
+// c03
+//
 
-// these are large functions that can be buried and optimized in the .cpp
-#include "sse_mathfun.h"
+//-----------------
+
 
 namespace SIMD_NAMESPACE {
 
@@ -204,8 +243,6 @@ float3x3 inverse(const float3x3& x) {
     r[2] = cross(x[0], x[1]) * invDet;
     return r;
 }
-
-// TODO: bring over fast inverses (RTS, RTU, etc)
 
 float4x4 inverse(const float4x4& x) {
     // This is a full gje inverse
@@ -600,6 +637,177 @@ half4 half4m(float4 vv)
 
 #endif // SIMD_SSE
 #endif // SIMD_HALF4_ONLY
+
+#if SIMD_FLOAT
+
+static quatf quatf_zero(0.0f, 0.0f, 0.0f, 0.0f);
+static quatf quatf_identity(0.0f, 0.0f, 0.0f, 1.0f);
+
+const quatf& quatf::zero() { return quatf_zero; }
+const quatf& quatf::identity() { return quatf_identity; }
+
+// can negate w, or xyz with -kCross
+static const float4 kCross = {1.0f,1.0f,1.0f,-1.0f};
+
+// can eliminate 4 shufs by using 4 constants, 2 q swizzles are dupes
+static const float4 kConvertToMatrix = {0,1,2,-2};
+
+quatf::quatf(float3 axis, float angleInRadians)
+{
+    float c = ::cosf(angleInRadians * 0.5f);
+    float s = ::sinf(angleInRadians * 0.5f);
+    
+    v = float4m(s * axis, c);
+}
+
+quatf inverse(quatf q)
+{
+    return quatf(normalize(q.v * -kCross)); // vec *, but goiong to get quad mul below
+}
+
+quatf operator*(quatf q1, quatf q2)
+{
+    // This is original
+    //q1.y * q2.z - q1.z * q2.y + q1.x * q2.w + q1.w * q2.x,
+    //q1.z * q2.x - q1.x * q2.z + q1.y * q2.w + q1.w * q2.y,
+    //q1.x * q2.y - q1.y * q2.x + q1.z * q2.w + q1.w * q2.z,
+    //q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z
+    
+    // quaternion multiplication is similar to a four-space cross-product
+    float4 qv1 = q1.v;
+    float4 qv2 = q2.v;
+
+    return quatf
+    (
+        dot((qv1 * qv2.wzyx).xywz, kCross), // Vec4(1,1,-1,1))
+        dot((qv1 * qv2.zwxy).wyzx, kCross), // Vec4(-1,1,1,1))
+        dot((qv1 * qv2.yxwz).xwzy, kCross), // Vec4(1,-1,1,1))
+        dot(-qv1 * qv2, kCross)
+    );
+}
+
+                                                                                    
+float4x4 float4x4m(quatf qq)
+{
+    /* from Ken Shoemake's GGIV article
+    float xs = x*s,      ys = y*s,          zs = z*s;
+    float wx = w*xs,      wy = w*ys,     wz = w*zs;
+    float xx = x*xs,      xy = x*ys,     xz = x*zs;
+    float yy = y*ys,      yz = y*zs;
+    float zz = z*zs;
+   
+    // original formulation
+    return Mat44
+            (
+            1.0 - 2.0*(y*y + z*z),          2.0*(x*y - w*z),        2.0*(x*z + w*y), 0.0,
+                  2.0*(x*y + w*z), 1.0 - 2.0*(x*x + z*z),        2.0*(y*z - w*x), 0.0,
+                  2.0*(x*z - w*y),       2.0*(y*z + w*x),  1.0 - 2.0*(x*x + y*y), 0.0
+                  0.0,                                  0.0,                       0.0, 1.0
+            );
+   */
+
+    float4 q = qq.v;
+    
+    // should be able to transpose using inverse (rinv = rt)
+    q *= -kCross;
+
+    // not doing normalize like original is
+    //q = normalize(q);
+    float4 c = kConvertToMatrix;
+    
+    float4x4 m;
+    float4 t;
+
+    t = q.wzyw * c.wzwx;
+    m[0] = q.yzxw * t.zxyw - q.zxyw * t.yzxw + c.yxxx;
+    
+    t = q.zwxw * c.wwzx;
+    m[1] = q.yzxw * t.zxyw - q.zxyw * t.yzxw + c.xyxx;
+    
+    // orthonormal basis, so use cross product for last term
+    m[2] = float4m(cross(m[0].xyz, m[1].xyz), 0.0f); // 2 instr hlsl, 7 ops SSE
+    m[3] = float4_posw();
+
+    return m;
+}
+
+// Should just use nlerp, instead of slerp
+quatf lerp(quatf q0, quatf q1, float t)
+{
+    float4 v = lerp(q0.v, q1.v, t);
+    return quatf(v);
+}
+
+// Slow but constant velocity.
+quatf slerp(quatf q0, quatf q1, float t)
+{
+    // theta/2
+    float cosThetaHalf = dot(q0.v,q1.v);
+    if (cosThetaHalf >= 0.995f)
+    {
+        return lerp(q0,q1,t);
+    }
+    else
+    {
+        // expensive
+        float thetaHalf = acosf(cosThetaHalf);
+        float sinThetaHalf = sinf(thetaHalf);
+
+        float s0 = sinf(thetaHalf * (1-t)) / sinThetaHalf;  // at t=0, s0 = 1
+        float s1 = sinf(thetaHalf * t)     / sinThetaHalf;  // at t=1, s1 = 1
+
+        return quatf(s0 * q0.v+ s1 * q1.v);
+    }
+}
+
+// compute control points for a bezier spline segment
+inline void quat_bezier_cp_impl(quatf q0, quatf q1, quatf q2,
+              quatf& a1, quatf& b1)
+{
+    // TODO: find out of these were quat or vec mul?
+    a1.v = 2.0f * dot(q0.v,q1.v) * q1.v - q0.v; // Double(q0, q1);
+    
+    // Bisect(a1, q2);
+    a1.v = (a1.v + q2.v);
+    a1.v = normalize(a1.v);
+    
+    b1.v = 2.0f * dot(a1.v,q1.v) * q1.v - a1.v; // Double(a1, q1);
+}
+
+
+// compute control points for a bezier spline segment (quats must be smallest angle)
+void quat_bezier_cp(quatf q0, quatf q1, quatf q2, quatf q3,
+                     quatf& a1, quatf& b2)
+{
+    quatf b1, a2; // b1 unused calc
+    quat_bezier_cp_impl(q0,q1,q1, a1,b1);
+    quat_bezier_cp_impl(q1,q2,q3, a2,b2);
+}
+
+
+// spherical bezier spline interpolation
+// takes q1, a1, b2, q2
+quatf quat_bezer_slerp(quatf a, quatf b, quatf c, quatf d, float t)
+{
+    quatf mid(slerp(b, c, t));
+
+    return slerp(
+                 slerp(slerp(a, b, t), mid, t),
+                 slerp(mid, slerp(c, d, t), t),
+        t);
+}
+
+quatf quat_bezer_lerp(quatf a, quatf b, quatf c, quatf d, float t)
+{
+    quatf mid(lerp(b, c, t));
+
+    return lerp(
+                 lerp(lerp(a, b, t), mid, t),
+                 lerp(mid, lerp(c, d, t), t),
+        t);
+}
+
+#endif // SIMD_FLOAT
 
 
 } // namespace SIMD_NAMESPACE
