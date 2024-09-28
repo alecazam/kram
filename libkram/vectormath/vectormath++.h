@@ -1601,7 +1601,25 @@ quatf quat_bezer_slerp(quatf a, quatf b, quatf c, quatf d, float t);
 
 quatf inverse(quatf q);
 
-#endif
+#endif // SIMD_FLOAT
+
+#if SIMD_FLOAT
+
+// in-place affine transose
+void transpose_affine(float4x4& m);
+
+// fast inverses for translate, rotate, scale
+float4x4 inverse_tr(const float4x4& mtx);
+float4x4 inverse_tru(const float4x4& mtx);
+float4x4 inverse_trs(const float4x4& mtx);
+
+float4x4 float4x4m(char axis, float angleInRadians);
+
+SIMD_CALL float4x4 float4x4m(float3 axis, float angleInRadians) {
+    return float4x4m(quatf(axis, angleInRadians));
+}
+
+#endif // SIMD_FLOAT
 
 
 using namespace STL_NAMESPACE;

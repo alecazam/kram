@@ -27,7 +27,9 @@
 // These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
 // which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
 //
-// TODO: bring over fast inverses (RTS, RTU, etc)
+// DONE: bring over fast inverses (RTS, RTU, etc)
+// DONE: need translation, rotation, scale
+// TODO: need fast post-translation, post-rotation, post-scale
 //
 // TODO: saturating conversions would be useful to, and prevent overflow
 // see the conversion.h code, bit select to clamp values.
@@ -49,12 +51,21 @@
 // c02
 // c03
 //
+// col: TRS * TRS * v   cameraToWorldTfm * worldToModelTfm * ..
+// row: v * SRT * SRT   modelToWorldTfm * worldToCameraTfm * ...
+
 // TODO: need natvis and lldb formatting of math classes.
 
 //-----------------
 
 
 namespace SIMD_NAMESPACE {
+
+// Which cmath had this
+inline void sincosf(float angleInRadians, float& s, float& c) {
+    s = sinf(angleInRadians);
+    c = cosf(angleInRadians);
+}
 
 // These aren't embedded in function, so may have pre-init ordering issues.
 // or could add pre-init order to skip using functions.
@@ -655,9 +666,8 @@ static const float4 kConvertToMatrix = {0.0f,1.0f,2.0f,-2.0f};
 
 quatf::quatf(float3 axis, float angleInRadians)
 {
-    float c = ::cosf(angleInRadians * 0.5f);
-    float s = ::sinf(angleInRadians * 0.5f);
-    
+    float s, c;
+    sincosf(angleInRadians * 0.5f, s, c);
     v = float4m(s * axis, c);
 }
 
@@ -763,13 +773,15 @@ inline void quat_bezier_cp_impl(quatf q0, quatf q1, quatf q2,
               quatf& a1, quatf& b1)
 {
     // TODO: find out of these were quat or vec mul?
-    a1.v = 2.0f * dot(q0.v,q1.v) * q1.v - q0.v; // Double(q0, q1);
+    // Double(q0, q1);
+    a1.v = 2.0f * dot(q0.v,q1.v) * q1.v - q0.v;
     
     // Bisect(a1, q2);
     a1.v = (a1.v + q2.v);
     a1.v = normalize(a1.v);
     
-    b1.v = 2.0f * dot(a1.v,q1.v) * q1.v - a1.v; // Double(a1, q1);
+    // Double(a1, q1);
+    b1.v = 2.0f * dot(a1.v,q1.v) * q1.v - a1.v;
 }
 
 
@@ -807,6 +819,140 @@ quatf quat_bezer_lerp(quatf a, quatf b, quatf c, quatf d, float t)
 
 #endif // SIMD_FLOAT
 
+
+#if SIMD_FLOAT
+
+void transpose_affine(float4x4& m)
+{
+    // avoid copy and one shuffle
+    float4 tmp3, tmp2, tmp1, tmp0;
+                   
+    // TOOD: use platform shuffles on Neon
+    //  this is using sse2neon
+    tmp0 = _mm_shuffle_ps(m[0], m[1], 0x44);
+    tmp2 = _mm_shuffle_ps(m[0], m[1], 0xEE);
+
+    tmp1 = _mm_shuffle_ps(m[2], m[3], 0x44);
+    tmp3 = _mm_shuffle_ps(m[2], m[3], 0xEE);
+                                                            
+    m[0] = _mm_shuffle_ps(tmp0, tmp1, 0x88);
+    m[1] = _mm_shuffle_ps(tmp0, tmp1, 0xDD);
+    m[2] = _mm_shuffle_ps(tmp2, tmp3, 0x88);
+
+    // skips m[3] - known 0001
+}
+
+float4x4 inverse_tr(const float4x4& mtx)
+{
+    float4x4 inverse(mtx);
+    inverse[3] = float4_negw();  // will be flipped by matrix mul
+    transpose_affine(inverse);  // handle rotation (R)inv = (R)T
+    
+    inverse[3] = inverse * (-mtx[3]); // 1 mul, 3 mads
+
+    return inverse;
+}
+
+// invert a row vector matrix
+float4x4 inverse_tru(const float4x4& mtx)
+{
+    bool success = false;
+    
+    float scaleX = length_squared(mtx[0]);
+    
+    float4x4 inverse(mtx);
+    if (scaleX > 1e-6f) {
+        inverse[3] = float4_negw();
+        
+        transpose_affine(inverse);
+
+        // all rows/columns in orthogonal tfm have same magnitude with uniform scale
+        float4 invScaleX = float4m(1.0f / scaleX); // inverse squared
+        
+        // scale the rotation matrix by scaling inverse
+        inverse[0] *= invScaleX;
+        inverse[1] *= invScaleX;
+        inverse[2] *= invScaleX;
+
+        // handle the translation
+        inverse[3] = inverse * (-mtx[3]);
+        
+        success = true;
+    }
+    
+    return inverse;
+}
+
+float4x4 inverse_trs(const float4x4& mtx)
+{
+    bool success = false;
+    
+    float4x4 inverse(mtx);
+    
+    // TODO: fix handling of failure
+    // compute the scaling terms (4 dots)
+    // float3 scale = calcScaleSquaredRowTfm(m);
+    // if (all(scale > float3(1e-6f)) {
+        inverse[3] = float4_negw(); // neccessary for simple inverse to hold
+    
+        transpose_affine(inverse);
+
+        // this is cheaper than 3 dot's above, just mul/add
+        float4 invScale = recip(inverse[0]*inverse[0] +
+                                inverse[1]*inverse[1] +
+                                inverse[2]*inverse[2]);
+    
+        // scale the rotation matrix by scaling inverse
+        inverse[0] *= invScale;
+        inverse[1] *= invScale;
+        inverse[2] *= invScale;
+        inverse[3] = inverse * (-mtx[3]);
+        
+        success = true;
+    //}
+    
+    return inverse;
+}
+
+// TODO: make ctor to avoid returning large matrix
+float4x4 float4x4m(char axis, float angleInRadians)
+{
+    float    sinTheta, cosTheta;
+    sincosf(angleInRadians, sinTheta, cosTheta);
+            
+    float4x4 m;
+    m[3] = float4_posw();
+            
+    switch(axis) {
+        case 'x':
+        {
+            m[0] = float4_posx();
+            m[1] = float4m(0.0f,  cosTheta, sinTheta, 0.0f);
+            m[2] = float4m(0.0f, -sinTheta, cosTheta, 0.0f);
+            break;
+        }
+        
+        case 'y':
+        {
+            m[0] = float4m(cosTheta, 0.0f, -sinTheta, 0.0f);
+            m[1] = float4_posy();
+            m[2] = float4m(sinTheta, 0.0f,  cosTheta, 0.0f);
+            break;
+        }
+        
+        case 'z':
+        {
+            m[0] = float4m( cosTheta, sinTheta, 0.0f, 0.0f);
+            m[1] = float4m(-sinTheta, cosTheta, 0.0f, 0.0f);
+            m[2] = float4_posz();
+            break;
+        }
+    }
+    return m;
+}
+
+
+#endif // SIMD_FLOAT
 
 } // namespace SIMD_NAMESPACE
 
