@@ -53,8 +53,11 @@
 //
 // col: TRS * TRS * v   cameraToWorldTfm * worldToModelTfm * ..
 // row: v * SRT * SRT   modelToWorldTfm * worldToCameraTfm * ...
-
+//
 // TODO: need natvis and lldb formatting of math classes.
+//
+// TODO: here's a decomp
+// https://github.com/erich666/GraphicsGems/blob/master/gemsii/unmatrix.c
 
 //-----------------
 
@@ -881,6 +884,29 @@ float4x4 inverse_tru(const float4x4& mtx)
     }
     
     return inverse;
+}
+
+float4x4 float4x4_tr(float3 t, quatf r) {
+    float4x4 m(float4x4::identity());
+    m[3].xyz = t;
+    m = m * float4x4m(r);
+    return m;
+}
+
+// TODO: there are faster ways to apply post rot, post scale
+float4x4 float4x4_trs(float3 t, quatf r, float3 scale) {
+    float4x4 m(float4x4::identity());
+    m[3].xyz = t;
+    m = m * float4x4m(r);
+    
+    // TODO: *= not working
+    m = m * float4x4(float4m(scale,1.0f));
+    return m;
+}
+
+// leaving this in here, since it can be further optimized
+float4x4 float4x4_tru(float3 t, quatf r, float scale) {
+    return float4x4_trs(t, r, float3m(scale));
 }
 
 float4x4 inverse_trs(const float4x4& mtx)

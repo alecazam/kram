@@ -1619,6 +1619,10 @@ SIMD_CALL float4x4 float4x4m(float3 axis, float angleInRadians) {
     return float4x4m(quatf(axis, angleInRadians));
 }
 
+float4x4 float4x4_tr(float3 t, quatf r);
+float4x4 float4x4_trs(float3 t, quatf r, float3 scale);
+float4x4 float4x4_tru(float3 t, quatf r, float scale);
+
 #endif // SIMD_FLOAT
 
 
