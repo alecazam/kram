@@ -5,6 +5,12 @@
 
 #if USE_SIMDLIB
 
+// Tests with godbolt are here to show code comparsions with optimizations.
+
+// -Og can't unroll small loops for some reason. -O2 and -O3 do.
+// https://godbolt.org/z/KMPa8bchb
+
+
 // these are large functions that can be buried and optimized in the .cpp
 #include "sse_mathfun.h"
 
@@ -359,62 +365,72 @@ float2x2 mul(const float2x2& x, const float2x2& y) {
     float2x2 r;
     
     // m * columns
-    for (int i=0; i<float2x2::col; ++i)
-        r[i] = mul(x, y[i]);
+    r[0] = mul(x, y[0]);
+    r[1] = mul(x, y[1]);
+    
     return r;
 }
 
 float3x3 mul(const float3x3& x, const float3x3& y) {
     float3x3 r;
-    for (int i=0; i<float3x3::col; ++i)
-        r[i] = mul(x, y[i]);
+    r[0] = mul(x, y[0]);
+    r[1] = mul(x, y[1]);
+    r[2] = mul(x, y[2]);
     return r;
 }
 
 float4x4 mul(const float4x4& x, const float4x4& y) {
     float4x4 r;
-    for (int i=0; i<float4x4::col; ++i)
-        r[i] = mul(x, y[i]);
+    r[0] = mul(x, y[0]);
+    r[1] = mul(x, y[1]);
+    r[2] = mul(x, y[2]);
+    r[3] = mul(x, y[3]);
     return r;
 }
 
 // sub
 float2x2 sub(const float2x2& x, const float2x2& y) {
     float2x2 r(x);
-    for (int i=0; i<float2x2::col; ++i)
-        r[i] -= y[i];
+    r[0] -= y[0];
+    r[1] -= y[1];
     return r;
 }
 float3x3 sub(const float3x3& x, const float3x3& y) {
     float3x3 r(x);
-    for (int i=0; i<float3x3::col; ++i)
-        r[i] -= y[i];
+    r[0] -= y[0];
+    r[1] -= y[1];
+    r[2] -= y[2];
     return r;
 }
 float4x4 sub(const float4x4& x, const float4x4& y) {
     float4x4 r(x);
-    for (int i=0; i<float4x4::col; ++i)
-        r[i] -= y[i];
+    r[0] -= y[0];
+    r[1] -= y[1];
+    r[2] -= y[2];
+    r[3] -= y[3];
     return r;
 }
 
 // add
 float2x2 add(const float2x2& x, const float2x2& y) {
     float2x2 r(x);
-    for (int i=0; i<float2x2::col; ++i)
-        r[i] += y[i];
+    r[0] += y[0];
+    r[1] += y[1];
     return r;
 }
 float3x3 add(const float3x3& x, const float3x3& y) {
     float3x3 r(x);
-    for (int i=0; i<float3x3::col; ++i)
-        r[i] += y[i];
+    r[0] += y[0];
+    r[1] += y[1];
+    r[2] += y[2];
     return r;
 }
 float4x4 add(const float4x4& x, const float4x4& y) {
     float4x4 r(x);
-    for (int i=0; i<float4x4::col; ++i)
-        r[i] += y[i];
+    r[0] += y[0];
+    r[1] += y[1];
+    r[2] += y[2];
+    r[3] += y[3];
     return r;
 }
 
