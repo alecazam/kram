@@ -49,6 +49,7 @@
 // c02
 // c03
 //
+// TODO: need natvis and lldb formatting of math classes.
 
 //-----------------
 
@@ -650,7 +651,7 @@ const quatf& quatf::identity() { return quatf_identity; }
 static const float4 kCross = {1.0f,1.0f,1.0f,-1.0f};
 
 // can eliminate 4 shufs by using 4 constants, 2 q swizzles are dupes
-static const float4 kConvertToMatrix = {0,1,2,-2};
+static const float4 kConvertToMatrix = {0.0f,1.0f,2.0f,-2.0f};
 
 quatf::quatf(float3 axis, float angleInRadians)
 {
@@ -677,12 +678,13 @@ quatf operator*(quatf q1, quatf q2)
     float4 qv1 = q1.v;
     float4 qv2 = q2.v;
 
+    // TODO: probably better to swizzle the kCross, but need 4 constants then
     return quatf
     (
-        dot((qv1 * qv2.wzyx).xywz, kCross), // Vec4(1,1,-1,1))
-        dot((qv1 * qv2.zwxy).wyzx, kCross), // Vec4(-1,1,1,1))
-        dot((qv1 * qv2.yxwz).xwzy, kCross), // Vec4(1,-1,1,1))
-        dot(-qv1 * qv2, kCross)
+        dot((qv1 * qv2.wzyx).xywz, kCross), // -zy
+        dot((qv1 * qv2.zwxy).wyzx, kCross), // -xz
+        dot((qv1 * qv2.yxwz).xwzy, kCross), // -yx
+        dot(-qv1 * qv2, kCross) // +w, -xyz
     );
 }
 
@@ -731,18 +733,14 @@ float4x4 float4x4m(quatf qq)
     return m;
 }
 
-// Should just use nlerp, instead of slerp
-quatf lerp(quatf q0, quatf q1, float t)
-{
-    float4 v = lerp(q0.v, q1.v, t);
-    return quatf(v);
-}
-
 // Slow but constant velocity.
 quatf slerp(quatf q0, quatf q1, float t)
 {
+    if (dot(q0.v, q1.v) < 0.0f)
+        q1.v.xyz = -q1.v.xyz;
+    
     // theta/2
-    float cosThetaHalf = dot(q0.v,q1.v);
+    float cosThetaHalf = dot(q0.v, q1.v);
     if (cosThetaHalf >= 0.995f)
     {
         return lerp(q0,q1,t);
