@@ -868,9 +868,9 @@ string vecf::simd_configs() const {
     FMT_CONFIG(SIMD_FLOAT_EXT);
     FMT_CONFIG(SIMD_RENAME_TO_SIMD_NAMESPACE);
     FMT_CONFIG(SIMD_HALF_FLOAT16);
-#if SIMD_HALF
-    FMT_CONFIG(SIMD_HALF4_ONLY);
-#endif
+//#if SIMD_HALF
+//    FMT_CONFIG(SIMD_HALF4_ONLY);
+//#endif
     FMT_CONFIG(SIMD_ACCELERATE_MATH);
 #if SIMD_ACCELERATE_MATH
     FMT_CONFIG(SIMD_LIBRARY_VERSION);
@@ -946,57 +946,57 @@ string vecf::simd_alignments() const {
 
 //---------------
 
-#if SIMD_HALF4_ONLY
- 
-#if SIMD_NEON
-
-float4 float4m(half4 vv)
-{
-    return float4(vcvt_f32_f16(*(const float16x4_t*)&vv));
-}
-half4 half4m(float4 vv)
-{
-    return half4(vcvt_f16_f32(*(const float32x4_t*)&vv));
-}
-
-#endif // SIMD_NEON
-
-#if SIMD_SSE
-
-float4 float4m(half4 vv)
-{
-    // https://patchwork.ozlabs.org/project/gcc/patch/559BC75A.1080606@arm.com/
-    // https://gcc.gnu.org/onlinedocs/gcc-7.5.0/gcc/Half-Precision.html
-    // https://developer.arm.com/documentation/dui0491/i/Using-NEON-Support/Converting-vectors
-    __m128i reg16 = _mm_setzero_si128();
-    
-    // TODO: switch to load low 64-bits, but don't know which one _mm_cvtsi32_si128(&vv.reg); ?
-    // want 0 extend here, sse overuses int32_t when really unsigned and zero extended value
-    reg16 = _mm_insert_epi16(reg16, vv[0], 0);
-    reg16 = _mm_insert_epi16(reg16, vv[1], 1);
-    reg16 = _mm_insert_epi16(reg16, vv[2], 2);
-    reg16 = _mm_insert_epi16(reg16, vv[3], 3);
-    
-    return simd::float4(_mm_cvtph_ps(reg16));
-}
-
-half4 half4m(float4 vv)
-{
-    __m128i reg16 = _mm_cvtps_ph(*(const __m128*)&vv, 0);  // 4xfp32-> 4xfp16,  round to nearest-even
-    
-    // TODO: switch to store/steam, but don't know which one _mm_storeu_epi16 ?
-    half4 val;  // = 0;
-    
-    // 0 extended
-    val[0] = (half)_mm_extract_epi16(reg16, 0);
-    val[1] = (half)_mm_extract_epi16(reg16, 1);
-    val[2] = (half)_mm_extract_epi16(reg16, 2);
-    val[3] = (half)_mm_extract_epi16(reg16, 3);
-    return val;
-}
-
-#endif // SIMD_SSE
-#endif // SIMD_HALF4_ONLY
+//#if SIMD_HALF4_ONLY
+// 
+//#if SIMD_NEON
+//
+//float4 float4m(half4 vv)
+//{
+//    return float4(vcvt_f32_f16(*(const float16x4_t*)&vv));
+//}
+//half4 half4m(float4 vv)
+//{
+//    return half4(vcvt_f16_f32(*(const float32x4_t*)&vv));
+//}
+//
+//#endif // SIMD_NEON
+//
+//#if SIMD_SSE
+//
+//float4 float4m(half4 vv)
+//{
+//    // https://patchwork.ozlabs.org/project/gcc/patch/559BC75A.1080606@arm.com/
+//    // https://gcc.gnu.org/onlinedocs/gcc-7.5.0/gcc/Half-Precision.html
+//    // https://developer.arm.com/documentation/dui0491/i/Using-NEON-Support/Converting-vectors
+//    __m128i reg16 = _mm_setzero_si128();
+//    
+//    // TODO: switch to load low 64-bits, but don't know which one _mm_cvtsi32_si128(&vv.reg); ?
+//    // want 0 extend here, sse overuses int32_t when really unsigned and zero extended value
+//    reg16 = _mm_insert_epi16(reg16, vv[0], 0);
+//    reg16 = _mm_insert_epi16(reg16, vv[1], 1);
+//    reg16 = _mm_insert_epi16(reg16, vv[2], 2);
+//    reg16 = _mm_insert_epi16(reg16, vv[3], 3);
+//    
+//    return simd::float4(_mm_cvtph_ps(reg16));
+//}
+//
+//half4 half4m(float4 vv)
+//{
+//    __m128i reg16 = _mm_cvtps_ph(*(const __m128*)&vv, 0);  // 4xfp32-> 4xfp16,  round to nearest-even
+//    
+//    // TODO: switch to store/steam, but don't know which one _mm_storeu_epi16 ?
+//    half4 val;  // = 0;
+//    
+//    // 0 extended
+//    val[0] = (half)_mm_extract_epi16(reg16, 0);
+//    val[1] = (half)_mm_extract_epi16(reg16, 1);
+//    val[2] = (half)_mm_extract_epi16(reg16, 2);
+//    val[3] = (half)_mm_extract_epi16(reg16, 3);
+//    return val;
+//}
+//
+//#endif // SIMD_SSE
+//#endif // SIMD_HALF4_ONLY
 
 #if SIMD_FLOAT
 
