@@ -140,8 +140,10 @@
 // const means it doesn't pull from global changing state (what about constants)
 // and inline is needed or get unused static calls, always_inline forces inline
 // of these mostly wrapper calls.
-#define SIMD_CALL static inline __attribute__((__always_inline__, __const__, __nodebug__))
-#define SIMD_CALL_OP SIMD_CALL
+#define SIMD_CALL static inline __attribute__((__always_inline__,__const__,__nodebug__))
+
+// op *=, +=, -=, /= mods the calling object, so can't be const
+#define SIMD_CALL_OP static inline __attribute__((__always_inline__,__nodebug__))
 
 //------------
 
@@ -267,14 +269,14 @@ typedef ::cname##8s cppname##8; \
 SIMD_CALL_OP type& operator*=(type& x, const type& y) { x = mul(x, y); return x; } \
 SIMD_CALL_OP type& operator+=(type& x, const type& y) { x = add(x, y); return x; } \
 SIMD_CALL_OP type& operator-=(type& x, const type& y) { x = sub(x, y); return x; } \
-SIMD_CALL_OP bool operator==(const type& x, const type& y) { return equal(x, y); } \
-SIMD_CALL_OP bool operator!=(const type& x, const type& y) { return !(x == y); } \
+SIMD_CALL bool operator==(const type& x, const type& y) { return equal(x, y); } \
+SIMD_CALL bool operator!=(const type& x, const type& y) { return !(x == y); } \
 \
-SIMD_CALL_OP type operator-(const type& x, const type& y) { return sub(x,y); } \
-SIMD_CALL_OP type operator+(const type& x, const type& y) { return add(x,y); } \
-SIMD_CALL_OP type operator*(const type& x, const type& y) { return mul(x,y); } \
-SIMD_CALL_OP type::column_t operator*(const type::column_t& v, const type& y) { return mul(v,y); } \
-SIMD_CALL_OP type::column_t operator*(const type& x, const type::column_t& v) { return mul(x,v); } \
+SIMD_CALL type operator-(const type& x, const type& y) { return sub(x,y); } \
+SIMD_CALL type operator+(const type& x, const type& y) { return add(x,y); } \
+SIMD_CALL type operator*(const type& x, const type& y) { return mul(x,y); } \
+SIMD_CALL type::column_t operator*(const type::column_t& v, const type& y) { return mul(v,y); } \
+SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { return mul(x,v); } \
 
 //-----------------------------------
 

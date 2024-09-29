@@ -1160,7 +1160,8 @@ float4x4 inverse_tru(const float4x4& mtx)
 float4x4 float4x4_tr(float3 t, quatf r) {
     float4x4 m(float4x4::identity());
     m[3].xyz = t;
-    m = m * float4x4m(r);
+    
+    m *= float4x4m(r);
     return m;
 }
 
@@ -1170,8 +1171,7 @@ float4x4 float4x4_trs(float3 t, quatf r, float3 scale) {
     m[3].xyz = t;
     m = m * float4x4m(r);
     
-    // TODO: *= not working
-    m = m * float4x4(float4m(scale,1.0f));
+    m *= float4x4(float4m(scale,1.0f));
     return m;
 }
 
