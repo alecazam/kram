@@ -264,6 +264,8 @@ static const float4 kfloat4_negw = kfloat4_negx.yyyx;
 static const float4 kfloat4_ones = kfloat4_posx.xxxx;
 static const float4 kfloat4_zero = {};
 
+//---------------------------
+
 static const float2x2 kfloat2x2_zero = {}; // what is this value 0, or default ctor
 static const float3x3 kfloat3x3_zero = {};
 static const float3x4 kfloat3x4_zero = {};
@@ -290,7 +292,6 @@ float3x4 float3x4m(const float4x4& m) {
     float4x4 m44(transpose(m));
     return (const float3x4&)m44;
 }
-
 
 //---------------------------
 
@@ -710,11 +711,7 @@ bool equal_rel(const float4x4& x, const float4x4& y, float tol) {
                (abs(x[3] - y[3]) <= tol * abs(x[3])));
 }
 
-
-//---------------------------
-// Start of cpp calls
-
-//---------------
+//----
 
 const float2& float2_zero(){ return kfloat2_zero; }
 const float2& float2_ones(){ return kfloat2_ones; }
@@ -775,9 +772,8 @@ const float3x4& float3x4::identity() { return kfloat3x4_identity; }
 const float4x4& float4x4::zero() { return kfloat4x4_zero; }
 const float4x4& float4x4::identity() { return kfloat4x4_identity; }
 
-#endif // SIMD_FLOAT
 
-#if SIMD_FLOAT
+//-------------------
 
 string vecf::str(float2 v) const {
     return kram::format("(%f %f)", v.x, v.y);
@@ -804,6 +800,11 @@ string vecf::str(const float4x4& m) const {
 }
 
 #endif // SIMD_FLOAT
+
+#if SIMD_DOUBLE
+
+
+#endif // SIMD_DOUBLE
 
 #define FMT_SEP() s += "-----------\n"
 
@@ -920,12 +921,12 @@ string vecf::simd_alignments() const {
     FMT_CONFIG(double2);
     FMT_CONFIG(double3);
     FMT_CONFIG(double4);
-    //FMT_CONFIG(double8);
+    // FMT_CONFIG(double8);
     
-//    FMT_CONFIG(double2x2);
-//    FMT_CONFIG(double3x3);
-//    FMT_CONFIG(double3x4);
-//    FMT_CONFIG(double4x4);
+    FMT_CONFIG(double2x2);
+    FMT_CONFIG(double3x3);
+    FMT_CONFIG(double3x4);
+    FMT_CONFIG(double4x4);
 #endif
     
 #if SIMD_INT
@@ -1193,10 +1194,7 @@ quatf quat_bezer_lerp(quatf q0, quatf b, quatf c, quatf q1, float t)
         t);
 }
 
-#endif // SIMD_FLOAT
-
-
-#if SIMD_FLOAT
+// ----------------------
 
 void transpose_affine(float4x4& m)
 {
@@ -1315,7 +1313,6 @@ float4x4 inverse_trs(const float4x4& mtx)
     return inverse;
 }
 
-// TODO: make ctor to avoid returning large matrix
 float4x4 float4x4m(char axis, float angleInRadians)
 {
     float    sinTheta, cosTheta;
@@ -1354,6 +1351,100 @@ float4x4 float4x4m(char axis, float angleInRadians)
 
 
 #endif // SIMD_FLOAT
+
+} // namespace SIMD_NAMESPACE
+
+
+
+namespace SIMD_NAMESPACE {
+
+#if SIMD_DOUBLE
+
+//---------------------------
+
+static const double2x2 kdouble2x2_zero = {}; // what is this value 0, or default ctor
+static const double3x3 kdouble3x3_zero = {};
+static const double3x4 kdouble3x4_zero = {};
+static const double4x4 kdouble4x4_zero = {};
+
+static const double2x2 kdouble2x2_identity = diagonal_matrix((double2)1);
+static const double3x3 kdouble3x3_identity = diagonal_matrix((double3)1);
+static const double3x4 kdouble3x4_identity = diagonal_matrix3x4((double3)1);
+static const double4x4 kdouble4x4_identity = diagonal_matrix((double4)1);
+
+//---------------------------
+
+const double2x2& double2x2::zero() { return kdouble2x2_zero; }
+const double2x2& double2x2::identity() { return kdouble2x2_identity; }
+
+const double3x3& double3x3::zero() { return kdouble3x3_zero; }
+const double3x3& double3x3::identity() { return kdouble3x3_identity; }
+
+const double3x4& double3x4::zero() { return kdouble3x4_zero; }
+const double3x4& double3x4::identity() { return kdouble3x4_identity; }
+
+const double4x4& double4x4::zero() { return kdouble4x4_zero; }
+const double4x4& double4x4::identity() { return kdouble4x4_identity; }
+
+//---------------------------
+
+// These should not be used often.  So can stay buried
+double2x2::double2x2(double2 diag)
+: double2x2s((const double2x2s&)diagonal_matrix(diag)) { }
+double3x3::double3x3(double3 diag)
+: double3x3s((const double3x3s&)diagonal_matrix(diag)) { }
+double3x4::double3x4(double3 diag)
+: double3x4s((const double3x4s&)diagonal_matrix3x4(diag)) { }
+double4x4::double4x4(double4 diag)
+: double4x4s((const double4x4s&)diagonal_matrix(diag)) { }
+
+//---------------------------
+
+double2x2 diagonal_matrix(double2 x) {
+    double4 xx = zeroext(x);
+    return double2x2(xx.xw, xx.wy);
+}
+double3x3 diagonal_matrix(double3 x) {
+    double4 xx = zeroext(x);
+    return double3x3(xx.xww, xx.wyw, xx.wwz);
+}
+double3x4 diagonal_matrix3x4(double3 x) {
+    double4 xx = zeroext(x);
+    return double3x4(xx.xwww, xx.wyww, xx.wwzw);
+}
+double4x4 diagonal_matrix(double4 x) {
+    double4 xx = x; xx.w = 0.0f;
+    double4 ww = xx; ww.z = x.w;
+    return double4x4(xx.xwww, xx.wyww, xx.wwzw, ww.wwwz);
+}
+
+//---------------------------
+
+string vecf::str(double2 v) const {
+    return kram::format("(%f %f)", v.x, v.y);
+}
+string vecf::str(double3 v) const {
+    return kram::format("(%f %f %f)", v.x, v.y, v.z);
+}
+string vecf::str(double4 v) const {
+    return kram::format("(%f %f %f %f)", v.x, v.y, v.z, v.w);
+}
+ 
+string vecf::str(const double2x2& m) const {
+    return kram::format("%s\n%s\n",
+        str(m[0]).c_str(), str(m[1]).c_str());
+}
+string vecf::str(const double3x3& m) const {
+    return kram::format("%s\n%s\n%s\n",
+        str(m[0]).c_str(), str(m[1]).c_str(), str(m[2]).c_str());
+}
+string vecf::str(const double4x4& m) const {
+  return kram::format("%s\n%s\n%s\n%s\n",
+      str(m[0]).c_str(), str(m[1]).c_str(),
+      str(m[2]).c_str(), str(m[3]).c_str());
+}
+
+#endif // SIMD_DOUBLE
 
 } // namespace SIMD_NAMESPACE
 

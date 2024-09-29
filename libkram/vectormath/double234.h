@@ -35,7 +35,13 @@ namespace SIMD_NAMESPACE {
 
 macroVector8TypesStorageRenames(double, double)
 
-#if 0
+// zeroext - internal helper
+SIMD_CALL double4 zeroext(double2 x) {
+    return (double4){x.x,x.y,0,0};
+}
+SIMD_CALL double4 zeroext(double3 x) {
+    return (double4){x.x,x.y,x.z,0};
+}
 
 SIMD_CALL double2 double2m(double x) {
     return x;
@@ -87,10 +93,15 @@ SIMD_CALL double4 pow(double4 x, double4 y) {
     return exp(log(x) * y);
 }
 
+// Need to split out float234.cpp, then can alter
+// that for double calls.
+
+
 // TODO: would need matrix class derivations
 // and all of the matrix ops, which then need vector ops, and need double
 // constants.  So this starts to really add to codegen.  But double
 // is one of the last bastions of cpu, since many gpu don't support it.
+
 
 struct double2x2 : double2x2s
 {
@@ -186,6 +197,10 @@ double3x3 diagonal_matrix(double3 x);
 double3x4 diagonal_matrix3x4(double3 x);
 double4x4 diagonal_matrix(double4 x);
 
+// TODO: port these over from float versions
+// ops need to call these
+#if 0
+
 // using refs here, 3x3 and 4x4 are large to pass by value (3 simd regs)
 double2x2 transpose(const double2x2& x);
 double3x3 transpose(const double3x3& x);
@@ -229,6 +244,8 @@ bool equal(const double2x2& x, const double2x2& y);
 bool equal(const double3x3& x, const double3x3& y);
 bool equal(const double4x4& x, const double4x4& y);
 
+// TODO: equal_abs, equal_rel
+
 // operators for C++
 macroMatrixOps(double2x2);
 macroMatrixOps(double3x3);
@@ -241,11 +258,10 @@ SIMD_CALL const double3x3& as_double3x3(const double4x4& m) {
     return reinterpret_cast<const double3x3&>(m);
 }
 
-#endif // SIMD_DOUBLE
-
+#endif // 0
 
 } // SIMD_NAMESPACE
 
 #endif
 
-#endif // USE_SIMDLIB && SIMD_FLOAT
+#endif // USE_SIMDLIB && SIMD_DOUBLE

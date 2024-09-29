@@ -219,7 +219,6 @@ typedef __attribute__((__ext_vector_type__(3)))  type name##3s; \
 typedef __attribute__((__ext_vector_type__(4)))  type name##4s; \
 typedef __attribute__((__ext_vector_type__(8)))  type name##8s; \
 typedef __attribute__((__ext_vector_type__(16),__aligned__(16))) type name##16s; \
-// also a 32
 
 // packed
 #define macroVector2TypesPacked(type, name) \
@@ -248,7 +247,8 @@ typedef __attribute__((__ext_vector_type__(2)))  type name##2s; \
 typedef __attribute__((__ext_vector_type__(3)))  type name##3s; \
 typedef __attribute__((__ext_vector_type__(4)))  type name##4s; \
 typedef __attribute__((__ext_vector_type__(8),__aligned__(16)))  type name##8s; \
-typedef __attribute__((__ext_vector_type__(16),__aligned__(16))) type name##16s; \
+
+// typedef __attribute__((__ext_vector_type__(16),__aligned__(16))) type name##16s;
 
 // packed
 #define macroVector4TypesPacked(type, name) \
@@ -257,7 +257,8 @@ typedef __attribute__((__ext_vector_type__(2),__aligned__(4)))  type name##2p; \
 typedef __attribute__((__ext_vector_type__(3),__aligned__(4)))  type name##3p; \
 typedef __attribute__((__ext_vector_type__(4),__aligned__(4)))  type name##4p; \
 typedef __attribute__((__ext_vector_type__(8),__aligned__(4)))  type name##8p; \
-typedef __attribute__((__ext_vector_type__(16),__aligned__(4))) type name##16p; \
+
+// typedef __attribute__((__ext_vector_type__(16),__aligned__(4))) type name##16p; \
 
 // cpp rename for float, u/int
 #define macroVector4TypesStorageRenames(cname, cppname) \
@@ -266,7 +267,8 @@ typedef ::cname##2s cppname##2; \
 typedef ::cname##3s cppname##3; \
 typedef ::cname##4s cppname##4; \
 typedef ::cname##8s cppname##8; \
-typedef ::cname##16s cppname##16; \
+
+// typedef ::cname##16s cppname##16; \
 
 //------------
 
@@ -276,7 +278,8 @@ typedef type name##1s; \
 typedef __attribute__((__ext_vector_type__(2))) type name##2s; \
 typedef __attribute__((__ext_vector_type__(3),__aligned__(16))) type name##3s; \
 typedef __attribute__((__ext_vector_type__(4),__aligned__(16))) type name##4s; \
-typedef __attribute__((__ext_vector_type__(8),__aligned__(16))) type name##8s; \
+
+// typedef __attribute__((__ext_vector_type__(8),__aligned__(16))) type name##8s;
 
 // packed
 #define macroVector8TypesPacked(type, name) \
@@ -284,7 +287,8 @@ typedef type name##1p; \
 typedef __attribute__((__ext_vector_type__(2),__aligned__(8))) type name##2p; \
 typedef __attribute__((__ext_vector_type__(3),__aligned__(8))) type name##3p; \
 typedef __attribute__((__ext_vector_type__(4),__aligned__(8))) type name##4p; \
-typedef __attribute__((__ext_vector_type__(8),__aligned__(8))) type name##8p; \
+
+//typedef __attribute__((__ext_vector_type__(8),__aligned__(8))) type name##8p;
 
 // cpp rename for double, u/long
 #define macroVector8TypesStorageRenames(cname, cppname) \
@@ -292,7 +296,8 @@ typedef ::cname##1s cppname##1; \
 typedef ::cname##2s cppname##2; \
 typedef ::cname##3s cppname##3; \
 typedef ::cname##4s cppname##4; \
-typedef ::cname##8s cppname##8; \
+
+// typedef ::cname##8s cppname##8;
 
 //-----------------------------------
 
@@ -309,13 +314,9 @@ SIMD_CALL type operator*(const type& x, const type& y) { return mul(x,y); } \
 SIMD_CALL type::column_t operator*(const type::column_t& v, const type& y) { return mul(v,y); } \
 SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { return mul(x,v); } \
 
-
-
-
-
 //-----------------------------------
 
-#include <math.h> // for sqrt
+#include <math.h> // for sqrt, sqrtf
 
 #if SIMD_NEON
 // neon types and intrinsics, 16B
@@ -359,12 +360,9 @@ macroVector1TypesStorageRenames(char, simd_char)
 }
 
 namespace SIMD_NAMESPACE {
-#if SIMD_CHAR
 macroVector4TypesStorageRenames(char, char)
-#endif
 }
-#endif
-
+#endif // __cplusplus
 #endif // SIMD_CHAR
 
 //------------
@@ -386,12 +384,9 @@ macroVector2TypesStorageRenames(short, simd_short)
 }
 
 namespace SIMD_NAMESPACE {
-#if SIMD_CHAR
 macroVector2TypesStorageRenames(short, short)
-#endif
 }
-#endif
-
+#endif // __cplusplus
 #endif // SIMD_SHORT
 
 //------------
@@ -415,8 +410,7 @@ macroVector8TypesStorageRenames(long, simd_long)
 namespace SIMD_NAMESPACE {
 macroVector8TypesStorageRenames(long, long)
 }
-#endif
-
+#endif // __cplusplus
 #endif // SIMD_LONG
 
 //-------------------
@@ -424,8 +418,6 @@ macroVector8TypesStorageRenames(long, long)
 
 namespace SIMD_NAMESPACE {
 
-
-//-----------------------------------
 // conversions
 // keeping these here due to ordering issues of header includes
 
@@ -482,6 +474,7 @@ SIMD_CALL float4 float4m(double4 x) { return __builtin_convertvector(x, float4);
 #endif // SIMD_FLOAT
 
 //---------------------------
+// formatting
 
 using namespace STL_NAMESPACE;
 
@@ -505,10 +498,26 @@ struct vecf {
     string str(const float3x3& m) const;
     string str(const float4x4& m) const;
     
+    // quat
     string quat(quatf q) { return str(q.v); }
     
+    // no packed float support
 #endif // SIMD_FLOAT
     
+#if SIMD_DOUBLE
+    // vector
+    string str(double2 v) const;
+    string str(double3 v) const;
+    string str(double4 v) const;
+    
+    // matrix
+    string str(const double2x2& m) const;
+    string str(const double3x3& m) const;
+    string str(const double4x4& m) const;
+    
+    // no packed double support
+#endif // SIMD_DOUBLE
+
     // Just stuffing this here for now
     string simd_configs() const;
     string simd_alignments() const;
