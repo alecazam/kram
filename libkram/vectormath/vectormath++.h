@@ -73,10 +73,45 @@
 // HLSL and DX12/Vulkan support double on desktop, but not mobile?
 //   and likely not on arm64 gpus.
 //
+//------------
 // x64 -> arm64 emulators
 // Prism   supports SSE4.2, no fma, no f16c
 // Rosetta supports SSE4.2, no fma, no f16c
 // Rosetta supports AVX2 (macOS 15.0)
+//
+//------------
+// Types for 32B max vector size (2 Neon reg, 1 AVX/AVX2 reg)
+// char2,3,4,8,16,32
+// int2,3,4,8
+//
+// half2,3,4,8,16
+// float2,3,4,8
+// double2,3,4
+//
+//------------
+// APX first introduced in 10th gen has APX extension
+//   expands general purpose registers from 16 to 32.
+//
+// Intel chips
+//  1 Nehalem,
+//  2 Sandy Bridge,
+//  3 Ivy Bridge,
+//  4 Haswell,       AVX2
+//  5 Broadwell,
+//  6 Sky Lake,
+//  7 Kaby Lake,
+//  8 Coffee Lake,
+//  9 Coffee Lake Refresh
+// 10 Comet Lake,    APX
+// 11 Rocket Lake,
+// 12 Alder Lake,
+// 13 Raptor Lake
+//
+// AMD chips
+//
+//
+// Apple Silicon
+// iPhone 5S has arm64 arm64-v?
 //
 
 //-----------------------------------
@@ -145,9 +180,10 @@
 // op *=, +=, -=, /= mods the calling object, so can't be const
 #define SIMD_CALL_OP static inline __attribute__((__always_inline__,__nodebug__))
 
-// includes type1 simdk::log(float1)
-#define macroVectorRepeatFnDecl(type, cppfun) \
-type##1 cppfunc(type##1 x); \
+// TODO: type1 simdk::log(float1)
+// type##1 cppfunc(type##1 x);
+
+#define macroVectorRepeatFnDecl(type, cppfunc) \
 type##2 cppfunc(type##2 x); \
 type##3 cppfunc(type##3 x); \
 type##4 cppfunc(type##4 x); \
@@ -288,7 +324,8 @@ SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { ret
 //-----------------------------------
 
 // for u/int8_t, u/int32_t, u/int64_t etc
-#include <inttypes.h>
+// using the built-in types now
+//#include <inttypes.h>
 
 //------------
 // define count and alignment of core types
@@ -1079,12 +1116,23 @@ SIMD_CALL const float3& as_float3(const float4& m) {
 // power series
 macroVectorRepeatFnDecl(float, log)
 macroVectorRepeatFnDecl(float, exp)
-//macroVectorRepeatFnDecl(float, pow) takes 2 args
 
 // trig
 macroVectorRepeatFnDecl(float, cos)
 macroVectorRepeatFnDecl(float, sin)
 macroVectorRepeatFnDecl(float, tan)
+
+// pow
+// can xy be <= 0 ?, no will return Nan in log/exp approx
+SIMD_CALL float2 pow(float2 x, float2 y) {
+    return exp(log(x) * y);
+}
+SIMD_CALL float3 pow(float3 x, float3 y) {
+    return exp(log(x) * y);
+}
+SIMD_CALL float4 pow(float4 x, float4 y) {
+    return exp(log(x) * y);
+}
 
 // TODO: add more math ops
 
@@ -1189,15 +1237,15 @@ const float4& float4_negzw();
 struct float2x2 : float2x2s
 {
     // can be split out to traits
-    static constexpr uint32_t col = 2;
-    static constexpr uint32_t row = 2;
+    static constexpr int col = 2;
+    static constexpr int row = 2;
     using column_t = float2;
     using scalar_t = float;
     
     static const float2x2& zero();
     static const float2x2& identity();
     
-    float2x2() { }  // no default init
+    float2x2() { }  // default uninit
     explicit float2x2(float2 diag);
     float2x2(float2 c0, float2 c1)
     : float2x2s((float2x2s){c0, c1}) { }
@@ -1205,14 +1253,14 @@ struct float2x2 : float2x2s
     : float2x2s(m) { }
     
     // simd lacks these ops
-    float2& operator[](uint32_t idx) { return columns[idx]; }
-    const float2& operator[](uint32_t idx) const { return columns[idx]; }
+    float2& operator[](int idx) { return columns[idx]; }
+    const float2& operator[](int idx) const { return columns[idx]; }
 };
 
 struct float3x3 : float3x3s
 {
-    static constexpr uint32_t col = 3;
-    static constexpr uint32_t row = 3;
+    static constexpr int col = 3;
+    static constexpr int row = 3;
     using column_t = float3;
     using scalar_t = float;
     
@@ -1220,60 +1268,64 @@ struct float3x3 : float3x3s
     static const float3x3& zero();
     static const float3x3& identity();
     
-    float3x3() { }  // no default init
+    float3x3() { }  // default uninit
     explicit float3x3(float3 diag);
     float3x3(float3 c0, float3 c1, float3 c2)
     : float3x3s((float3x3s){c0, c1, c2}) { }
     float3x3(const float3x3s& m)
     : float3x3s(m) { }
     
-    float3& operator[](uint32_t idx) { return columns[idx]; }
-    const float3& operator[](uint32_t idx) const { return columns[idx]; }
+    float3& operator[](int idx) { return columns[idx]; }
+    const float3& operator[](int idx) const { return columns[idx]; }
 };
 
 // This is mostly a transposed holder for a 4x4, so very few ops defined
 // Can also serve as a SOA for some types of cpu math.
 struct float3x4 : float3x4s
 {
-    static constexpr uint32_t col = 3;
-    static constexpr uint32_t row = 4;
+    static constexpr int col = 3;
+    static constexpr int row = 4;
     using column_t = float4;
     using scalar_t = float;
     
     static const float3x4& zero();
     static const float3x4& identity();
     
-    float3x4() { } // no default init
+    float3x4() { } // default uninit
     explicit float3x4(float3 diag);
     float3x4(float4 c0, float4 c1, float4 c2)
     : float3x4s((float3x4s){c0, c1, c2}) { }
     float3x4(const float3x4s& m)
     : float3x4s(m) { }
     
-    float4& operator[](uint32_t idx) { return columns[idx]; }
-    const float4& operator[](uint32_t idx) const { return columns[idx]; }
+    float4& operator[](int idx) { return columns[idx]; }
+    const float4& operator[](int idx) const { return columns[idx]; }
 };
 
 struct float4x4 : float4x4s
 {
-    static constexpr uint32_t col = 4;
-    static constexpr uint32_t row = 4;
+    static constexpr int col = 4;
+    static constexpr int row = 4;
     using column_t = float4;
     using scalar_t = float;
     
     static const float4x4& zero();
     static const float4x4& identity();
     
-    float4x4() { } // no default init
+    float4x4() { } // default uninit
     explicit float4x4(float4 diag);
     float4x4(float4 c0, float4 c1, float4 c2, float4 c3)
     : float4x4s((float4x4s){c0, c1, c2, c3}) { }
     float4x4(const float4x4s& m)
     : float4x4s(m) { }
     
-    float4& operator[](uint32_t idx) { return columns[idx]; }
-    const float4& operator[](uint32_t idx) const { return columns[idx]; }
+    float4& operator[](int idx) { return columns[idx]; }
+    const float4& operator[](int idx) const { return columns[idx]; }
 };
+
+// transposes to convert between matrix type
+float4x4 float4x4m(const float3x4& m);
+float3x4 float3x4m(const float4x4& m);
 
 // set diangonal and rest to 0
 float2x2 diagonal_matrix(float2 x);
@@ -1475,6 +1527,16 @@ macroVectorRepeatFnDecl(double, cos)
 macroVectorRepeatFnDecl(double, sin)
 macroVectorRepeatFnDecl(double, tan)
 
+SIMD_CALL double2 pow(double2 x, double2 y) {
+    return exp(log(x) * y);
+}
+SIMD_CALL double3 pow(double3 x, double3 y) {
+    return exp(log(x) * y);
+}
+SIMD_CALL double4 pow(double4 x, double4 y) {
+    return exp(log(x) * y);
+}
+
 // TODO: would need matrix class derivations
 // and all of the matrix ops, which then need vector ops, and need double
 // constants.  So this starts to really add to codegen.  But double
@@ -1483,8 +1545,8 @@ macroVectorRepeatFnDecl(double, tan)
 struct double2x2 : double2x2s
 {
     // can be split out to traits
-    static constexpr uint32_t col = 2;
-    static constexpr uint32_t row = 2;
+    static constexpr int col = 2;
+    static constexpr int row = 2;
     using column_t = double2;
     using scalar_t = double;
     
@@ -1499,14 +1561,14 @@ struct double2x2 : double2x2s
     : double2x2s(m) { }
     
     // simd lacks these ops
-    double2& operator[](uint32_t idx) { return columns[idx]; }
-    const double2& operator[](uint32_t idx) const { return columns[idx]; }
+    double2& operator[](int idx) { return columns[idx]; }
+    const double2& operator[](int idx) const { return columns[idx]; }
 };
 
 struct double3x3 : double3x3s
 {
-    static constexpr uint32_t col = 3;
-    static constexpr uint32_t row = 3;
+    static constexpr int col = 3;
+    static constexpr int row = 3;
     using column_t = double3;
     using scalar_t = double;
     
@@ -1521,16 +1583,16 @@ struct double3x3 : double3x3s
     double3x3(const double3x3s& m)
     : double3x3s(m) { }
     
-    double3& operator[](uint32_t idx) { return columns[idx]; }
-    const double3& operator[](uint32_t idx) const { return columns[idx]; }
+    double3& operator[](int idx) { return columns[idx]; }
+    const double3& operator[](int idx) const { return columns[idx]; }
 };
 
 // This is mostly a transposed holder for a 4x4, so very few ops defined
 // Can also serve as a SOA for some types of cpu math.
 struct double3x4 : double3x4s
 {
-    static constexpr uint32_t col = 3;
-    static constexpr uint32_t row = 4;
+    static constexpr int col = 3;
+    static constexpr int row = 4;
     using column_t = double4;
     using scalar_t = double;
     
@@ -1544,14 +1606,14 @@ struct double3x4 : double3x4s
     double3x4(const double3x4s& m)
     : double3x4s(m) { }
     
-    double4& operator[](uint32_t idx) { return columns[idx]; }
-    const double4& operator[](uint32_t idx) const { return columns[idx]; }
+    double4& operator[](int idx) { return columns[idx]; }
+    const double4& operator[](int idx) const { return columns[idx]; }
 };
 
 struct double4x4 : double4x4s
 {
-    static constexpr uint32_t col = 4;
-    static constexpr uint32_t row = 4;
+    static constexpr int col = 4;
+    static constexpr int row = 4;
     using column_t = double4;
     using scalar_t = double;
     
@@ -1565,8 +1627,8 @@ struct double4x4 : double4x4s
     double4x4(const double4x4s& m)
     : double4x4s(m) { }
     
-    double4& operator[](uint32_t idx) { return columns[idx]; }
-    const double4& operator[](uint32_t idx) const { return columns[idx]; }
+    double4& operator[](int idx) { return columns[idx]; }
+    const double4& operator[](int idx) const { return columns[idx]; }
 };
 
 double2x2 diagonal_matrix(double2 x);
@@ -1699,10 +1761,10 @@ SIMD_CALL half4 half4m(half3 v, float w = (half)1.0) {
 #endif
 
 
-
+//---------------------------
 
 using namespace STL_NAMESPACE;
-        
+
 // Usage:
 // vecf vfmt(fmtToken);
 // fprintf(stdout, "%s", vfmt.str(v1).c_str() );
@@ -1711,7 +1773,7 @@ struct vecf {
     // TODO: add formatting options too
     vecf() {
     }
-    
+   
 #if SIMD_FLOAT
     // vector
     string str(float2 v) const;

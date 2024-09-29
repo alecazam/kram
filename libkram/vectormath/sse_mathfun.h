@@ -29,12 +29,14 @@
   (this is the zlib license)
 */
 
-// TODO: may want to rename to sse_mathfun.cpp, since this is
-// a lot of code to inline.
+// Mods to this;
+// kram - Copyright 2020-2024 by Alec Miller. - MIT License
+// The license and copyright notice shall be included
+// in all copies or substantial portions of the Software.
+
+// TODO: may want to rename to sse_mathfun.cpp
 // TODO: use math ops and simd ops here and let compiler gen intrinsics?
 // TODO: combine the constants into fewer registers, reference .x,..
-// TODO: have precise version with 2/3/4 function calls to math or simd lib
-// these aproximations may not be good enough
 
 #pragma once
 

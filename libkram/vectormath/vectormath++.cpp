@@ -11,8 +11,9 @@
 // clang version matters to codegen.
 // These two version seem to be significant changes in output.
 //
-// v14
-// v16
+// v14 fma
+// v16 better fma
+// v18 Intel APX support
 //
 // -Og can't unroll small loops for some reason. -O2 and -O3 do.
 // https://godbolt.org/z/KMPa8bchb
@@ -76,7 +77,7 @@
 //
 // TODO: ryg on 32B ops on AVX systems
 //   These often only have 16B simd units, so running 32B ops isn't efficient.
-//   This could apply say to PS4 or other Athlon chips too.
+//   This could apply say to PS4/AMD chips too.
 //
 // DONE: bring over fast inverses (RTS, RTU, etc)
 // DONE: need translation, rotation, scale
@@ -128,12 +129,6 @@ namespace SIMD_NAMESPACE {
 // want to do futher.  Really 3 choices, use c calls, use approximations,
 // or use simd lib that implements these (f.e. Accelerate).
 
-// pow needs 2 args, so haven't exposed yet
-//float4 pow(float4 x, float4 y) {
-//    // can xy be <= 0 ?, no will return Nan in log/exp approx
-//    return exp(log(x) * y);
-//}
-//
 // don't have a c sincos, so just use fn calls
 //float4 tan(float4 x) {
 //    float4 s, c;
@@ -278,6 +273,24 @@ static const float2x2 kfloat2x2_identity = diagonal_matrix(kfloat2_ones);
 static const float3x3 kfloat3x3_identity = diagonal_matrix(kfloat3_ones);
 static const float3x4 kfloat3x4_identity = diagonal_matrix3x4(kfloat3_ones);
 static const float4x4 kfloat4x4_identity = diagonal_matrix(kfloat4_ones);
+
+//---------------------------
+
+float4x4 float4x4m(const float3x4& m) {
+    float4x4 m44;
+    m44[0] = m[0];
+    m44[1] = m[1];
+    m44[2] = m[2];
+    m44[3] = float4_posw();
+    
+    return transpose(m44);
+}
+
+float3x4 float3x4m(const float4x4& m) {
+    float4x4 m44(transpose(m));
+    return (const float3x4&)m44;
+}
+
 
 //---------------------------
 
@@ -427,14 +440,14 @@ float4x4 inverse(const float4x4& x) {
     
     // As a evolves from original mat into identity -
     // b evolves from identity into inverse(a)
-    uint32_t cols = float4x4::col;
-    uint32_t rows = float4x4::row;
+    int cols = float4x4::col;
+    int rows = float4x4::row;
     
     // Loop over cols of a from left to right, eliminating above and below diag
-    for (uint32_t j=0; j<rows; j++) {
+    for (int j=0; j<rows; j++) {
         // Find largest pivot in column j among rows j..2
-        uint32_t i1 = j;            // Row with largest pivot candidate
-        for (uint32_t i=j+1; i<cols; i++) {
+        int i1 = j;            // Row with largest pivot candidate
+        for (int i=j+1; i<cols; i++) {
             if ( fabsf(a[i][j]) > fabsf(a[i1][j]) ) {
                 i1 = i;
             }
@@ -456,7 +469,7 @@ float4x4 inverse(const float4x4& x) {
         a[j] *= s;
     
         // Eliminate off-diagonal elems in col j of a, doing identical ops to b
-        for (uint32_t i=0; i<cols; i++ ) {
+        for (int i=0; i<cols; i++ ) {
             if (i != j) {
                 s = a[i][j];
                 b[i] -= b[j] * s;
@@ -803,13 +816,26 @@ string vecf::simd_configs() const {
     FMT_CONFIG(SIMD_NEON);
     
 #if SIMD_SSE
+    bool hasSSE42 = false;
+    bool hasAVX = false;
     bool hasAVX2 = false;
+    
     bool hasF16C = false;
     bool hasFMA = false;
     
+    #ifdef __SSE42__
+    hasSSE42 = true;
+    #endif
+    #ifdef __AVX__
+    hasAVX = true;
+    #endif
     #ifdef __AVX2__
     hasAVX2 = true;
     #endif
+    
+    // TODO: AVX-512 flags (combine into one?)
+    // (__AVX512F__) && (__AVX512DQ__) && (__AVX512CD__) && (__AVX512BW__) && (__AVX512VL__) && (__AVX512VBMI2__)
+   
     #ifdef __F16C__
     hasF16C = true;
     #endif
@@ -817,21 +843,34 @@ string vecf::simd_configs() const {
     hasFMA = true;
     #endif
     
-    s += kram::format("%s: %d\n", "AVX2", hasAVX2);
-    s += kram::format("%s: %d\n", "F16C", hasF16C);
-    s += kram::format("%s: %d\n", "FMA ", hasFMA);
+    if (hasAVX2)
+        s += kram::format("%s: %d\n", "AVX2 ", hasAVX2);
+    else if (hasAVX)
+        s += kram::format("%s: %d\n", "AVX  ", hasAVX);
+    else if (hasSSE42)
+        s += kram::format("%s: %d\n", "SSE42 ", hasSSE42);
+    
+    s += kram::format("%s: %d\n", "F16C  ", hasF16C);
+    s += kram::format("%s: %d\n", "FMA   ", hasFMA);
     
     // fp-contract, etc ?
+    // CRC (may not be worth it)
+                                                    
 #endif
     
 #if SIMD_NEON
     // any neon setting, arm64 version
+    // __ARM_VFPV4__
+    // CRC (may not be worth it)
+    
 #endif
     
     FMT_CONFIG(SIMD_FLOAT_EXT);
     FMT_CONFIG(SIMD_RENAME_TO_SIMD_NAMESPACE);
     FMT_CONFIG(SIMD_HALF_FLOAT16);
-    
+#if SIMD_HALF
+    FMT_CONFIG(SIMD_HALF4_ONLY);
+#endif
     FMT_CONFIG(SIMD_ACCELERATE_MATH);
 #if SIMD_ACCELERATE_MATH
     FMT_CONFIG(SIMD_LIBRARY_VERSION);
