@@ -767,7 +767,10 @@ string vecf::simd_configs() const {
     FMT_CONFIG(SIMD_RENAME_TO_SIMD_NAMESPACE);
     FMT_CONFIG(SIMD_HALF_FLOAT16);
     
+    FMT_CONFIG(SIMD_ACCELERATE_LIB);
+#if SIMD_ACCELERATE_LIB
     FMT_CONFIG(SIMD_LIBRARY_VERSION);
+#endif
     
     FMT_SEP();
     
@@ -799,7 +802,7 @@ string vecf::simd_alignments() const {
     FMT_CONFIG(float3);
     FMT_CONFIG(float4);
     FMT_CONFIG(float8);
-    FMT_CONFIG(float16);
+    //FMT_CONFIG(float16);
     
     FMT_CONFIG(float2x2);
     FMT_CONFIG(float3x3);
@@ -813,7 +816,7 @@ string vecf::simd_alignments() const {
     FMT_CONFIG(double2);
     FMT_CONFIG(double3);
     FMT_CONFIG(double4);
-    FMT_CONFIG(double8);
+    //FMT_CONFIG(double8);
     
 //    FMT_CONFIG(double2x2);
 //    FMT_CONFIG(double3x3);
@@ -828,7 +831,7 @@ string vecf::simd_alignments() const {
     FMT_CONFIG(int3);
     FMT_CONFIG(int4);
     FMT_CONFIG(int8);
-    FMT_CONFIG(int16);
+    //FMT_CONFIG(int16);
 #endif
     
 #undef FMT_CONFIG
