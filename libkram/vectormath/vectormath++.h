@@ -401,10 +401,6 @@ macroVector8TypesStorageRenames(long, simd_long)
 #endif // SIMD_INT
 
 
-#if SIMD_CHAR
-macroVector4TypesStorageRenames(char, simd_char)
-#endif // SIMD_CHAR
-
 #if SIMD_HALF
 macroVector2TypesStorageRenames(half, simd_half)
 #endif // SIMD_HALF
@@ -1319,7 +1315,7 @@ type##2 cppfunc(type##2 x); \
 type##3 cppfunc(type##3 x); \
 type##4 cppfunc(type##4 x); \
 
-#if USE_FLOAT
+#if SIMD_FLOAT
 
 // power series
 macroVectorRepeatFnDecl(float, log)
@@ -1335,7 +1331,7 @@ macroVectorRepeatFnDecl(float, tan)
 
 #endif
 
-#if USE_DOUBLE
+#if SIMD_DOUBLE
 
 // power series
 macroVectorRepeatFnDecl(double, log)
@@ -1601,6 +1597,10 @@ quatf quat_bezer_slerp(quatf a, quatf b, quatf c, quatf d, float t);
 
 quatf inverse(quatf q);
 
+SIMD_CALL quatf normalize(quatf q) {
+    return quatf(normalize(q.v));
+}
+
 #endif // SIMD_FLOAT
 
 #if SIMD_FLOAT
@@ -1613,11 +1613,14 @@ float4x4 inverse_tr(const float4x4& mtx);
 float4x4 inverse_tru(const float4x4& mtx);
 float4x4 inverse_trs(const float4x4& mtx);
 
+// affine and convenience ctors
 float4x4 float4x4m(char axis, float angleInRadians);
 
 SIMD_CALL float4x4 float4x4m(float3 axis, float angleInRadians) {
     return float4x4m(quatf(axis, angleInRadians));
 }
+
+float3x3 float3x3m(quatf qq);
 
 float4x4 float4x4_tr(float3 t, quatf r);
 float4x4 float4x4_trs(float3 t, quatf r, float3 scale);
@@ -1651,6 +1654,10 @@ struct vecf {
     string quat(quatf q) { return str(q.v); }
     
 #endif // SIMD_FLOAT
+    
+    // Just stuffing this here for now
+    string simd_configs() const;
+    string simd_alignments() const;
     
     // TODO: add double, int, half printing
 };

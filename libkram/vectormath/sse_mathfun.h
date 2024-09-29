@@ -42,64 +42,10 @@
 
 namespace SIMD_NAMESPACE {
 
-// I don't trust the approximations for now.  But providing them in case
-// want to do futher.  Really 3 choices, use c calls, use approximations,
-// or use simd lib that implements these (f.e. Accelerate).
-
-// pow needs 2 args, so haven't exposed yet
-//float4 pow(float4 x, float4 y) {
-//    // can xy be <= 0 ?, no will return Nan in log/exp approx
-//    return exp(log(x) * y);
-//}
-
-// don't have a c sincos, so just use fn calls
-//float4 tan(float4 x) {
-//    float4 s, c;
-//    sincos(x, s, c);
-//
-//    // TODO: handle around c == 0 case
-//    return s / c;
-//}
-
-
-#define SIMD_FAST_MATH 0
-#if !SIMD_FAST_MATH
-
-// This calls function repeatedly, then returns as vector.
-// These don't call to the 4 version since it's so much more work.
-#define macroVectorRepeatFnImpl(type, cppfun, func) \
-type##1 cppfunc(type##1 x) { return func(x); } \
-type##2 cppfunc(type##2 x) { return {func(x.x), func(x.y)}; } \
-type##3 cppfunc(type##3 x) { return {func(x.x), func(x.y), func(x.z)}; } \
-type##4 cppfunc(type##4 x) { return {func(x.x), func(x.y), func(x.z), func(x.w)}; } \
-
-#if USE_FLOAT
-
-macroVectorRepeatFnImpl(float, log, ::logf)
-macroVectorRepeatFnImpl(float, exp, ::expf)
-
-macroVectorRepeatFnImpl(float, sin, ::sinf)
-macroVectorRepeatFnImpl(float, cos, ::cosf)
-macroVectorRepeatFnImpl(float, tan, ::tanf)
-
-#endif // USE_FLOAT
-
-#if USE_DOUBLE
-
-macroVectorRepeatFnImpl(double, log, ::log)
-macroVectorRepeatFnImpl(double, exp, ::exp)
-
-macroVectorRepeatFnImpl(double, sin, ::sin)
-macroVectorRepeatFnImpl(double, cos, ::cos)
-macroVectorRepeatFnImpl(double, tan, ::tan)
-
-#endif // USE_DOUBLE
-
-#else
-
+//---------------------------
 // Start of mathfun below
 
-#if USE_FLOAT
+#if SIMD_FLOAT
 
 #define _PS_CONST(Name, Val) \
   static const float4 _ps_##Name = Val
@@ -463,9 +409,6 @@ macroVectorRepeatFnImpl(float, cos, tan)
 
 // TODO: pow takes in 2 args
 
-#endif // USE_FLOAT
-
-#endif //
-
+#endif // SIMD_FLOAT
 
 } // namespace SIMD_NAMESPACE

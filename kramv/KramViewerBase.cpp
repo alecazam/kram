@@ -683,6 +683,14 @@ float4x4 orthographic_rhs(float width, float height, float nearZ, float farZ,
 
 Data::Data()
 {
+#if USE_SIMDLIB && 1
+    vecf vfmt;
+    
+    // want to see the simd config
+    KLOGI("SIMDK", "%s", vfmt.simd_configs().c_str());
+    KLOGI("SIMDK", "%s", vfmt.simd_alignments().c_str());
+#endif
+    
     _showSettings = new ShowSettings();
     
     _textSlots.resize(kTextSlotCount);

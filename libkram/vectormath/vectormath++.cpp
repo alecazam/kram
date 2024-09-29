@@ -5,11 +5,6 @@
 
 #if USE_SIMDLIB
 
-// These are large functions that can be buried and optimized in the .cpp
-// Has alternate cmath form it uses for now.  Look into ISPC calls to
-// replace all this.
-#include "sse_mathfun.h"
-
 // Tests with godbolt are here to show code comparsions with optimizations.
 
 // -Og can't unroll small loops for some reason. -O2 and -O3 do.
@@ -40,16 +35,16 @@
 // The storage of affine data in a column matrix is no different than rows
 // translation is in (r30 r31 r32) or in (c30, c31 c32)
 //
-// r0: r00 r01 r02 r03
-// r1: r10
-// r2: r20
-// r3: r30
+// r0: r00 r01 r02 0
+// r1: r10         0
+// r2: r20         0
+// r3: px  py  pz  1
 //
 // c0  c1  c2  c3
-// c00 c10 c20 c30
-// c01 c11
-// c02
-// c03
+// c00 c10 c20 px
+// c01 c11     py
+// c02         pz
+//  0   0   0  1
 //
 // col: TRS * TRS * v   cameraToWorldTfm * worldToModelTfm * ..
 // row: v * SRT * SRT   modelToWorldTfm * worldToCameraTfm * ...
@@ -61,8 +56,135 @@
 
 //-----------------
 
+// TODO: profvide controls over this
+#ifdef __APPLE__
+#define SIMD_ACCELERATE_LIB 1
+#define SIMD_FAST_MATH      0
+#else
+#define SIMD_ACCELERATE_LIB 0
+#define SIMD_FAST_MATH      0
+#endif
+
+#if SIMD_ACCELERATE_LIB
+// TODO: reduce this header to just calls use (f.e. geometry, etc)
+#include <simd/simd.h>
+#elif SIMD_FAST_MATH
+#include "sse_mathfun.h"
+#endif
+
+// These are large functions that can be buried and optimized in the .cpp
+// Has alternate cmath form it uses for now.  Look into ISPC calls to
+// replace some of this.
+
+//-----------------
 
 namespace SIMD_NAMESPACE {
+
+// I don't trust the approximations for now.  But providing them in case
+// want to do futher.  Really 3 choices, use c calls, use approximations,
+// or use simd lib that implements these (f.e. Accelerate).
+
+// pow needs 2 args, so haven't exposed yet
+//float4 pow(float4 x, float4 y) {
+//    // can xy be <= 0 ?, no will return Nan in log/exp approx
+//    return exp(log(x) * y);
+//}
+//
+// don't have a c sincos, so just use fn calls
+//float4 tan(float4 x) {
+//    float4 s, c;
+//    sincos(x, s, c);
+//
+//    // TODO: handle around c == 0 case
+//    return s / c;
+//}
+
+#if SIMD_ACCELERATE_LIB
+
+//---------------------------
+// Use existing Accelerate lib.
+//
+// So there are currently 6 version of the Accelerate lib.
+// This library hides implmenentations of some of the calls.
+// So need to rely on a version of the lib to get them,
+// or supply some alternative.
+//
+// 6: macOS 15.0, iOS 18.0
+// 5: macOS 13.0, iOS 16.0
+// 4: macOS 12.0, iOS 15.0
+// 0: header only
+//
+// use 5 for macOS
+// SIMD_LIBRARY_VERSION >= 5
+//
+// use 4 for iOS
+// SIMD_LIBRARY_VERSION >= 4
+
+// remap simdk to simd namespace
+#define macroVectorRepeatFnImpl(type, cppfunc) \
+type##2 cppfunc(type##2 x) { return simd::cppfunc(x); } \
+type##3 cppfunc(type##3 x) { return simd::cppfunc(x); } \
+type##4 cppfunc(type##4 x) { return simd::cppfunc(x); } \
+
+#if SIMD_FLOAT
+
+// These will get inlined here from the template
+macroVectorRepeatFnImpl(float, log)
+macroVectorRepeatFnImpl(float, exp)
+
+macroVectorRepeatFnImpl(float, sin)
+macroVectorRepeatFnImpl(float, cos)
+macroVectorRepeatFnImpl(float, tan)
+
+#endif
+
+#if SIMD_DOUBLE
+
+// These will get inlined here from the template
+macroVectorRepeatFnImpl(double, log)
+macroVectorRepeatFnImpl(double, exp)
+
+macroVectorRepeatFnImpl(double, sin)
+macroVectorRepeatFnImpl(double, cos)
+macroVectorRepeatFnImpl(double, tan)
+
+#endif
+
+#elif !SIMD_FAST_MATH
+
+//---------------------------
+
+// This calls function repeatedly, then returns as vector.
+// These don't call to the 4 version since it's so much more work.
+#define macroVectorRepeatFnImpl(type, cppfunc, func) \
+type##1 cppfunc(type##1 x) { return func(x); } \
+type##2 cppfunc(type##2 x) { return {func(x.x), func(x.y)}; } \
+type##3 cppfunc(type##3 x) { return {func(x.x), func(x.y), func(x.z)}; } \
+type##4 cppfunc(type##4 x) { return {func(x.x), func(x.y), func(x.z), func(x.w)}; } \
+
+#if SIMD_FLOAT
+
+macroVectorRepeatFnImpl(float, log, ::logf)
+macroVectorRepeatFnImpl(float, exp, ::expf)
+
+macroVectorRepeatFnImpl(float, sin, ::sinf)
+macroVectorRepeatFnImpl(float, cos, ::cosf)
+macroVectorRepeatFnImpl(float, tan, ::tanf)
+
+#endif // SIMD_FLOAT
+
+#if SIMD_DOUBLE
+
+macroVectorRepeatFnImpl(double, log, ::log)
+macroVectorRepeatFnImpl(double, exp, ::exp)
+
+macroVectorRepeatFnImpl(double, sin, ::sin)
+macroVectorRepeatFnImpl(double, cos, ::cos)
+macroVectorRepeatFnImpl(double, tan, ::tan)
+
+#endif // SIMD_DOUBLE
+
+#endif
 
 // Which cmath had this
 inline void sincosf(float angleInRadians, float& s, float& c) {
@@ -129,13 +251,13 @@ static const float4x4 kfloat4x4_identity = diagonal_matrix(kfloat4_ones);
 
 // These should not be used often.  So can stay buried
 float2x2::float2x2(float2 diag)
-    : float2x2s((const float2x2s&)diagonal_matrix(diag)) { }
+: float2x2s((const float2x2s&)diagonal_matrix(diag)) { }
 float3x3::float3x3(float3 diag)
-    : float3x3s((const float3x3s&)diagonal_matrix(diag)) { }
+: float3x3s((const float3x3s&)diagonal_matrix(diag)) { }
 float3x4::float3x4(float3 diag)
-    : float3x4s((const float3x4s&)diagonal_matrix3x4(diag)) { }
+: float3x4s((const float3x4s&)diagonal_matrix3x4(diag)) { }
 float4x4::float4x4(float4 diag)
-    : float4x4s((const float4x4s&)diagonal_matrix(diag)) { }
+: float4x4s((const float4x4s&)diagonal_matrix(diag)) { }
 
 //---------------------------
 
@@ -164,7 +286,7 @@ float2 saturate(float2 x) {
     return clamp(x, kfloat2_zero, kfloat2_ones);
 }
 float3 saturate(float3 x) {
-   return clamp(x, kfloat3_zero, kfloat3_ones);
+    return clamp(x, kfloat3_zero, kfloat3_ones);
 }
 float4 saturate(float4 x) {
     return clamp(x, kfloat4_zero, kfloat4_ones);
@@ -208,11 +330,17 @@ float3x3 transpose(const float3x3& x) {
 #endif
     return (float3x3){r0.xyz, r1.xyz, r2.xyz};
 }
-   
-// TODO: conversion back to 4x4 using transpose
-// static float4x4 transpose(float3x4 x);
+
+// TODO: needs to transpose both ways
+// float4x4 transpose(float3x4 x) { .. }
+// float3x4 transpose(float4x4 x) { .. }
+// SIMD_CALL float4x4 transpose(float3x4 x) { m = transpose(x); }
+// SIMD_CALL float3x4 transpose(float4x4 x) { m = transpose(x); }
 
 float4x4 transpose(const float4x4& x) {
+    // NOTE: also _MM_TRANSPOSE4_PS using shuffles
+    // but old Neon didn't really have shuffle
+
 #if SIMD_SSE
     float4 t0 = _mm_unpacklo_ps(x[0],x[2]);
     float4 t1 = _mm_unpackhi_ps(x[0],x[2]);
@@ -353,7 +481,7 @@ float trace(const float4x4& x) {
 // TODO: may want pre-transform on float3x4 since it's transposed
 // 3 x m3x4 should = 3 element vec
 //
-// Apple premul transform on left does a super expensive transpose to avoid dot
+// simd premul transform on left does a super expensive transpose to avoid dot
 // don't use this, should just dotproducts?
 //static   half2 mul(  half2 x,   half2x2 y) { return mul(transpose(y), x); }
 //
@@ -598,7 +726,117 @@ string vecf::str(const float4x4& m) const {
 }
 
 #endif // SIMD_FLOAT
-                  
+
+#define FMT_SEP() s += "-----------\n"
+
+string vecf::simd_configs() const {
+    string s;
+    
+#define FMT_CONFIG(val) s += kram::format("%s: %d\n", #val, val);
+    
+    FMT_CONFIG(SIMD_SSE);
+    FMT_CONFIG(SIMD_NEON);
+    
+#if SIMD_SSE
+    bool hasAVX2 = false;
+    bool hasF16C = false;
+    bool hasFMA = false;
+    
+    #ifdef __AVX2__
+    hasAVX2 = true;
+    #endif
+    #ifdef __F16C__
+    hasF16C = true;
+    #endif
+    #ifdef __FMA__
+    hasFMA = true;
+    #endif
+    
+    s += kram::format("%s: %d\n", "AVX2", hasAVX2);
+    s += kram::format("%s: %d\n", "F16C", hasF16C);
+    s += kram::format("%s: %d\n", "FMA ", hasFMA);
+    
+    // fp-contract, etc ?
+#endif
+    
+#if SIMD_NEON
+    // any neon setting, arm64 version
+#endif
+    
+    FMT_CONFIG(SIMD_FLOAT_EXT);
+    FMT_CONFIG(SIMD_RENAME_TO_SIMD_NAMESPACE);
+    FMT_CONFIG(SIMD_HALF_FLOAT16);
+    
+    FMT_CONFIG(SIMD_LIBRARY_VERSION);
+    
+    FMT_SEP();
+    
+    FMT_CONFIG(SIMD_HALF);
+    FMT_CONFIG(SIMD_FLOAT);
+    FMT_CONFIG(SIMD_DOUBLE);
+   
+    FMT_CONFIG(SIMD_INT);
+    FMT_CONFIG(SIMD_CHAR);
+    FMT_CONFIG(SIMD_SHORT);
+    FMT_CONFIG(SIMD_LONG);
+    
+#undef FMT_CONFIG
+    
+    return s;
+}
+
+string vecf::simd_alignments() const {
+    string s;
+    
+#define FMT_CONFIG(val) s += kram::format("%s: %zu %zu\n", #val, sizeof(val), __alignof(val));
+    
+    // TODO: add other types int, half?
+    
+#if SIMD_FLOAT
+    FMT_SEP();
+    
+    FMT_CONFIG(float2);
+    FMT_CONFIG(float3);
+    FMT_CONFIG(float4);
+    FMT_CONFIG(float8);
+    FMT_CONFIG(float16);
+    
+    FMT_CONFIG(float2x2);
+    FMT_CONFIG(float3x3);
+    FMT_CONFIG(float3x4);
+    FMT_CONFIG(float4x4);
+#endif
+    
+#if SIMD_DOUBLE
+    FMT_SEP();
+    
+    FMT_CONFIG(double2);
+    FMT_CONFIG(double3);
+    FMT_CONFIG(double4);
+    FMT_CONFIG(double8);
+    
+//    FMT_CONFIG(double2x2);
+//    FMT_CONFIG(double3x3);
+//    FMT_CONFIG(double3x4);
+//    FMT_CONFIG(double4x4);
+#endif
+    
+#if SIMD_INT
+    FMT_SEP();
+    
+    FMT_CONFIG(int2);
+    FMT_CONFIG(int3);
+    FMT_CONFIG(int4);
+    FMT_CONFIG(int8);
+    FMT_CONFIG(int16);
+#endif
+    
+#undef FMT_CONFIG
+    
+    return s;
+}
+    
+
 //---------------
 
 #if SIMD_HALF4_ONLY
@@ -701,7 +939,30 @@ quatf operator*(quatf q1, quatf q2)
     );
 }
 
-                                                                                    
+float3x3 float3x3m(quatf qq)
+{
+    // not doing normalize like original
+    //q = normalize(q);
+    
+    float3x3 m;
+    float3 t;
+    
+    float4 c = kConvertToMatrix;
+    float4 q = qq.v;
+    q *= -kCross;
+    
+    t = q.wzy * c.wzw;
+    m[0] = q.yzx * t.zxy - q.zxy * t.yzx + c.yxx;
+    
+    t = q.zwx * c.wwz;
+    m[1] = q.yzx * t.zxy - q.zxy * t.yzx + c.xyx;
+    
+    // orthonormal basis, so use cross product for last term
+    m[2] = cross(m[0], m[1]); // 2 instr hlsl, 7 ops SSE
+    
+    return m;
+}
+
 float4x4 float4x4m(quatf qq)
 {
     /* from Ken Shoemake's GGIV article
@@ -721,21 +982,22 @@ float4x4 float4x4m(quatf qq)
             );
    */
 
-    float4 q = qq.v;
     
-    // should be able to transpose using inverse (rinv = rt)
-    q *= -kCross;
-
-    // not doing normalize like original is
+    // not doing normalize like original
     //q = normalize(q);
-    float4 c = kConvertToMatrix;
     
     float4x4 m;
     float4 t;
 
+    float4 c = kConvertToMatrix;
+    float4 q = qq.v;
+    q *= -kCross;
+
+    // really just 3 values, so w is always 0
     t = q.wzyw * c.wzwx;
     m[0] = q.yzxw * t.zxyw - q.zxyw * t.yzxw + c.yxxx;
     
+    // really just 3 values, so w is always 0
     t = q.zwxw * c.wwzx;
     m[1] = q.yzxw * t.zxyw - q.zxyw * t.yzxw + c.xyxx;
     
@@ -749,6 +1011,7 @@ float4x4 float4x4m(quatf qq)
 // Slow but constant velocity.
 quatf slerp(quatf q0, quatf q1, float t)
 {
+    // find smallest angle, flip axis
     if (dot(q0.v, q1.v) < 0.0f)
         q1.v.xyz = -q1.v.xyz;
     
@@ -788,7 +1051,7 @@ inline void quat_bezier_cp_impl(quatf q0, quatf q1, quatf q2,
 }
 
 
-// compute control points for a bezier spline segment (quats must be smallest angle)
+// compute control points for a cubic bezier spline segment (quats must be smallest angle)
 void quat_bezier_cp(quatf q0, quatf q1, quatf q2, quatf q3,
                      quatf& a1, quatf& b2)
 {
@@ -798,25 +1061,28 @@ void quat_bezier_cp(quatf q0, quatf q1, quatf q2, quatf q3,
 }
 
 
-// spherical bezier spline interpolation
-// takes q1, a1, b2, q2
-quatf quat_bezer_slerp(quatf a, quatf b, quatf c, quatf d, float t)
+// spherical cubic bezier spline interpolation
+// takes in contol points
+quatf quat_bezer_slerp(quatf q0, quatf b, quatf c, quatf q1, float t)
 {
+    // deCastljau interpolation of the control points
     quatf mid(slerp(b, c, t));
 
-    return slerp(
-                 slerp(slerp(a, b, t), mid, t),
-                 slerp(mid, slerp(c, d, t), t),
+    return slerp(slerp(slerp(q0, b, t), mid, t),
+                 slerp(mid, slerp(c, q1, t), t),
         t);
 }
 
-quatf quat_bezer_lerp(quatf a, quatf b, quatf c, quatf d, float t)
+// spherical cubic bezier spline interpolation
+// takes in contol points
+quatf quat_bezer_lerp(quatf q0, quatf b, quatf c, quatf q1, float t)
 {
+    // deCastljau interpolation of the control points
     quatf mid(lerp(b, c, t));
 
     return lerp(
-                 lerp(lerp(a, b, t), mid, t),
-                 lerp(mid, lerp(c, d, t), t),
+                 lerp(lerp(q0, b, t), mid, t),
+                 lerp(mid, lerp(c, q1, t), t),
         t);
 }
 
@@ -827,6 +1093,8 @@ quatf quat_bezer_lerp(quatf a, quatf b, quatf c, quatf d, float t)
 
 void transpose_affine(float4x4& m)
 {
+    // TODO: see other tranpose not using shuffles and do that.
+    
     // avoid copy and one shuffle
     float4 tmp3, tmp2, tmp1, tmp0;
                    
