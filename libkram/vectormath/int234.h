@@ -22,11 +22,7 @@ macroVector4TypesStorageRenames(int, simd_int)
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
 
-//--------------------
-
-#ifdef __cplusplus
 namespace SIMD_NAMESPACE {
 
 macroVector4TypesStorageRenames(int, int)

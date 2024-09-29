@@ -29,9 +29,7 @@ macroVector4TypesStorageRenames(float, simd_float)
 
 #ifdef __cplusplus
 }
-#endif
 
-#ifdef __cplusplus
 namespace SIMD_NAMESPACE {
 
 macroVector4TypesStorageRenames(float, float)

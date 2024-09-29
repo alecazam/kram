@@ -309,61 +309,11 @@ SIMD_CALL type operator*(const type& x, const type& y) { return mul(x,y); } \
 SIMD_CALL type::column_t operator*(const type::column_t& v, const type& y) { return mul(v,y); } \
 SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { return mul(x,v); } \
 
-//---------------------------
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-//----------
-// define count and alignment of core types
 
-#if SIMD_CHAR
-
-// define c vector types
-macroVector1TypesStorage(char, char)
-macroVector1TypesPacked(char, char)
-
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
-macroVector1TypesStorageRenames(char, simd_char)
-#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
-
-#endif // SIMD_CHAR
-
-//------------
-#if SIMD_SHORT
-
-// define c vector types
-macroVector2TypesStorage(short, short)
-macroVector2TypesPacked(short, short)
-
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
-macroVector2TypesStorageRenames(short, simd_short)
-#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
-
-#endif // SIMD_SHORT
-
-//------------
-#if SIMD_LONG
-
-// define c vector types
-macroVector8TypesStorage(long, long)
-macroVector8TypesPacked(long, long)
-
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
-macroVector8TypesStorageRenames(long, simd_long)
-#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
-
-#endif // SIMD_LONG
-
-#ifdef __cplusplus
-}
-#endif
 
 //-----------------------------------
-// imlementation - only code simd arch specific
-
-// Could optionally bury impl and headers, but then couldn't inline.
 
 #include <math.h> // for sqrt
 
@@ -389,32 +339,97 @@ macroVector8TypesStorageRenames(long, simd_long)
 #include "float234.h"
 #include "double234.h"
 
+//---------------------------
+
+#if SIMD_CHAR
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// define c vector types
+macroVector1TypesStorage(char, char)
+macroVector1TypesPacked(char, char)
+
+#if SIMD_RENAME_TO_SIMD_NAMESPACE
+macroVector1TypesStorageRenames(char, simd_char)
+#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
+
+#ifdef __cplusplus
+}
+
+namespace SIMD_NAMESPACE {
+#if SIMD_CHAR
+macroVector4TypesStorageRenames(char, char)
+#endif
+}
+#endif
+
+#endif // SIMD_CHAR
+
+//------------
+#if SIMD_SHORT
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// define c vector types
+macroVector2TypesStorage(short, short)
+macroVector2TypesPacked(short, short)
+
+#if SIMD_RENAME_TO_SIMD_NAMESPACE
+macroVector2TypesStorageRenames(short, simd_short)
+#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
+
+#ifdef __cplusplus
+}
+
+namespace SIMD_NAMESPACE {
+#if SIMD_CHAR
+macroVector2TypesStorageRenames(short, short)
+#endif
+}
+#endif
+
+#endif // SIMD_SHORT
+
+//------------
+#if SIMD_LONG
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// define c vector types
+macroVector8TypesStorage(long, long)
+macroVector8TypesPacked(long, long)
+
+#if SIMD_RENAME_TO_SIMD_NAMESPACE
+macroVector8TypesStorageRenames(long, simd_long)
+#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
+
+#ifdef __cplusplus
+}
+
+namespace SIMD_NAMESPACE {
+macroVector8TypesStorageRenames(long, long)
+}
+#endif
+
+#endif // SIMD_LONG
+
 //-------------------
-// This is for C++ only
 #ifdef __cplusplus
 
 namespace SIMD_NAMESPACE {
 
-// c++ typedef of the c vectors.  But these are namespaced.
-// So they shouldn't conflict, or conflicts can be resolve easier than the c types.
-
-#if SIMD_CHAR
-macroVector4TypesStorageRenames(char, char)
-#endif
-
-#if SIMD_SHORT
-macroVector4TypesStorageRenames(short, short)
-#endif
-
-#if SIMD_LONG
-macroVector8TypesStorageRenames(long, long)
-#endif
-
-#if SIMD_FLOAT
 
 //-----------------------------------
 // conversions
 // keeping these here due to ordering issues of header includes
+
+#if SIMD_FLOAT
 
 #if SIMD_INT // && SIMD_FLOAT
 SIMD_CALL float2 float2m(int2 x) { return __builtin_convertvector(x, float2); }

@@ -49,9 +49,7 @@ macroVector8TypesStorageRenames(half, simd_half)
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
 
-#ifdef __cplusplus
 namespace SIMD_NAMESPACE {
 
 macroVector2TypesStorageRenames(half, half)
