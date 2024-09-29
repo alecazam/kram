@@ -74,9 +74,9 @@
 //   and likely not on arm64 gpus.
 //
 // x64 -> arm64 emulators
-// Prism supports SSE4.2, no fma, no f16c
+// Prism   supports SSE4.2, no fma, no f16c
 // Rosetta supports SSE4.2, no fma, no f16c
-// Rosetta was updated to AVX2 support
+// Rosetta supports AVX2 (macOS 15.0)
 //
 
 //-----------------------------------
@@ -145,6 +145,13 @@
 // op *=, +=, -=, /= mods the calling object, so can't be const
 #define SIMD_CALL_OP static inline __attribute__((__always_inline__,__nodebug__))
 
+// includes type1 simdk::log(float1)
+#define macroVectorRepeatFnDecl(type, cppfun) \
+type##1 cppfunc(type##1 x); \
+type##2 cppfunc(type##2 x); \
+type##3 cppfunc(type##3 x); \
+type##4 cppfunc(type##4 x); \
+
 //------------
 
 // aligned
@@ -167,7 +174,7 @@ typedef __attribute__((__ext_vector_type__(8),__aligned__(1)))  type name##8p; \
 typedef __attribute__((__ext_vector_type__(16),__aligned__(1))) type name##16p; \
 typedef __attribute__((__ext_vector_type__(32),__aligned__(1))) type name##32p; \
 
-// cpp rename for half, u/short
+// cpp rename for u/char
 #define macroVector1TypesStorageRenames(cname, cppname) \
 typedef ::cname##1s cppname##1; \
 typedef ::cname##2s cppname##2; \
@@ -488,7 +495,8 @@ macroVector8TypesStorageRenames(double, double)
 
 #if SIMD_FLOAT && SIMD_NEON
 
-// These are the only 2 ops on Neon
+// TODO: expose float2 ops on Neon.
+
 SIMD_CALL float reduce_min(float4 x) {
     return vminvq_f32(x);
 }
@@ -624,6 +632,8 @@ SIMD_CALL bool all(int4 x) {
 
 #endif // SIMD_INT && SIMD_NEON
 
+#if SIMD_FLOAT
+
 // SSE4.1
 SIMD_CALL float4 round(float4 vv) {
     return _mm_round_ps(vv, 0x8);  // round to nearest | exc
@@ -635,28 +645,11 @@ SIMD_CALL float4 floor(float4 vv) {
     return _mm_floor_ps(vv);
 }
 
+#endif // SIMD_FLOAT
+
+
 // end of implementation
 //-----------------------------------
-
-#if SIMD_FLOAT
-
-// zeroext - internal helper
-SIMD_CALL float4 zeroext(float2 x) {
-    return (float4){x.x,x.y,0,0};
-}
-SIMD_CALL float4 zeroext(float3 x) {
-    return (float4){x.x,x.y,x.z,0};
-}
-
-// any
-SIMD_CALL bool any(int3 x) {
-    return any(vec3to4(x));
-}
-SIMD_CALL bool all(int3 x) {
-    return all(vec3to4(x));
-}
-
-#endif
 
 // bit select
 #if SIMD_INT
@@ -673,17 +666,18 @@ SIMD_CALL int4 bitselect(int4 x, int4 y, int4 mask) {
 }
 #endif // SIMD_INT
 
-#if SIMD_INT && SIMD_FLOAT
+#if SIMD_FLOAT
+#if SIMD_INT // && SIMD_FLOAT
 
 // bitselect
 SIMD_CALL float2 bitselect(float2 x, float2 y, int2 mask) {
-    return (float2)bitselect((int2)x, (int2)y, mask); // int4 -> float2
+    return (float2)bitselect((int2)x, (int2)y, mask);
 }
 SIMD_CALL float3 bitselect(float3 x, float3 y, int3 mask) {
-    return (float3)bitselect((int3)x, (int3)y, mask); // int4 -> float3
+    return (float3)bitselect((int3)x, (int3)y, mask);
 }
 SIMD_CALL float4 bitselect(float4 x, float4 y, int4 mask) {
-    return (float4)bitselect((int4)x, (int4)y, mask);  // int4 -> float4
+    return (float4)bitselect((int4)x, (int4)y, mask);
 }
 
 // select
@@ -697,10 +691,23 @@ SIMD_CALL float4 select(float4 x, float4 y, int4 mask) {
     return bitselect(x, y, mask >> 31);
 }
 
-#endif // SIMD_INT && SIMD_FLOAT
+#endif // SIMD_INT // && SIMD_FLOAT
 
-#if SIMD_FLOAT
+// zeroext - internal helper
+SIMD_CALL float4 zeroext(float2 x) {
+    return (float4){x.x,x.y,0,0};
+}
+SIMD_CALL float4 zeroext(float3 x) {
+    return (float4){x.x,x.y,x.z,0};
+}
 
+// any
+SIMD_CALL bool any(int3 x) {
+    return any(vec3to4(x));
+}
+SIMD_CALL bool all(int3 x) {
+    return all(vec3to4(x));
+}
 
 // min
 SIMD_CALL float2 min(float2 x, float2 y) {
@@ -895,6 +902,7 @@ SIMD_CALL float4 abs(float4 x) {
     return bitselect(0.0, x, 0x7fffffff);
 }
 
+// cross
 SIMD_CALL float cross(float2 x, float2 y) {
     return x.x * y.y - x.y * y.x;
 }
@@ -902,8 +910,65 @@ SIMD_CALL float3 cross(float3 x, float3 y) {
     return x.yzx * y.zxy - x.zxy * y.yzx;
 }
 
-// TODO: equal_abs, equal_rel
-// TODO: step, smoothstep, fract
+// equal_abs
+SIMD_CALL bool equal_abs(float2 x, float2 y, float tol) {
+    return all((abs(x - y) <= tol));
+}
+SIMD_CALL bool equal_abs(float3 x, float3 y, float tol) {
+    return all((abs(x - y) <= tol));
+}
+SIMD_CALL bool equal_abs(float4 x, float4 y, float tol) {
+    return all((abs(x - y) <= tol));
+}
+
+// equal_rel
+SIMD_CALL bool equal_rel(float2 x, float2 y, float tol) {
+    return all((abs(x - y) <= tol * ::abs(x.x)));
+}
+SIMD_CALL bool equal_rel(float3 x, float3 y, float tol) {
+    return all((abs(x - y) <= tol * ::abs(x.x)));
+}
+SIMD_CALL bool equal_rel(float4 x, float4 y, float tol) {
+    return all((abs(x - y) <= tol * ::abs(x.x)));
+}
+
+// step
+SIMD_CALL float2 step(float2 edge, float2 x) {
+    return bitselect((float2)1, 0, x < edge);
+}
+SIMD_CALL float3 step(float3 edge, float3 x) {
+    return bitselect((float3)1, 0, x < edge);
+}
+SIMD_CALL float4 step(float4 edge, float4 x) {
+    return bitselect((float4)1, 0, x < edge);
+}
+
+// smoothstep
+SIMD_CALL float2 smoothstep(float2 edge0, float2 edge1, float2 x) {
+    float2 t = saturate((x-edge0)/(edge0-edge1));
+    return t*t*(3 - 2*t);
+}
+SIMD_CALL float3 smoothstep(float3 edge0, float3 edge1, float3 x) {
+    float3 t = saturate((x-edge0)/(edge0-edge1));
+    return t*t*(3 - 2*t);
+}
+SIMD_CALL float4 smoothstep(float4 edge0, float4 edge1, float4 x) {
+    float4 t = saturate((x-edge0)/(edge0-edge1));
+    return t*t*(3 - 2*t);
+}
+
+// fract
+SIMD_CALL float2 fract(float2 x) {
+    return min(x - floor(x), 0x1.fffffep-1f);
+}
+
+SIMD_CALL float3 fract(float3 x) {
+    return min(x - floor(x), 0x1.fffffep-1f);
+}
+
+SIMD_CALL float4 fract(float4 x) {
+    return min(x - floor(x), 0x1.fffffep-1f);
+}
 
 
 #if SIMD_FLOAT_EXT
@@ -971,6 +1036,106 @@ SIMD_CALL float normalize(float16 x) {
 
 #endif // SIMD_FLOAT_EXT
 
+// make "m" ctors for vecs.  This avoids wrapping the type in a struct.
+// vector types are C typedef, and so cannot have member functions.
+// Be careful with initializers = { val }, only sets first element of vector
+// and not all the values.  Use = val; or one of the calls below to be safe.
+
+SIMD_CALL float2 float2m(float x) {
+    return x;
+}
+SIMD_CALL float2 float2m(float x, float y) {
+    return {x,y};
+}
+
+SIMD_CALL float3 float3m(float x) {
+    return x;
+}
+SIMD_CALL float3 float3m(float x, float y, float z) {
+    return {x,y,z};
+}
+SIMD_CALL float3 float3m(float2 v, float z) {
+    float3 r; r.xy = v; r.z = z; return r;
+}
+
+SIMD_CALL float4 float4m(float x) {
+    return x;
+}
+SIMD_CALL float4 float4m(float2 xy, float2 zw) {
+    float4 r; r.xy = xy; r.zw = zw; return r;
+}
+SIMD_CALL float4 float4m(float x, float y, float z, float w = 1.0f) {
+    return {x,y,z,w};
+}
+SIMD_CALL float4 float4m(float3 v, float w = 1.0f) {
+    float4 r; r.xyz = v; r.w = w; return r;
+}
+
+// fast conversions where possible
+SIMD_CALL const float3& as_float3(const float4& m) {
+    return reinterpret_cast<const float3&>(m);
+}
+
+// power series
+macroVectorRepeatFnDecl(float, log)
+macroVectorRepeatFnDecl(float, exp)
+//macroVectorRepeatFnDecl(float, pow) takes 2 args
+
+// trig
+macroVectorRepeatFnDecl(float, cos)
+macroVectorRepeatFnDecl(float, sin)
+macroVectorRepeatFnDecl(float, tan)
+
+// TODO: add more math ops
+
+// conversions
+#if SIMD_INT // && SIMD_FLOAT
+SIMD_CALL float2 float2m(int2 x) { return __builtin_convertvector(x, float2); }
+SIMD_CALL float3 float3m(int3 x) { return __builtin_convertvector(x, float3); }
+SIMD_CALL float4 float4m(int4 x) { return __builtin_convertvector(x, float4); }
+
+SIMD_CALL int2 float2m(float2 x) { return __builtin_convertvector(x, int2); }
+SIMD_CALL int3 float3m(float3 x) { return __builtin_convertvector(x, int3); }
+SIMD_CALL int4 float4m(float4 x) { return __builtin_convertvector(x, int4); }
+
+#endif
+
+#if SIMD_HALF // && SIMD_FLOAT
+
+#if SIMD_HALF4_ONLY
+
+half4 half4m(float4 );
+SIMD_CALL half2 half2m(float2 x) { return vec4to2(half4m(vec2to4(x))); }
+SIMD_CALL half3 half3m(float3 x) { return vec4to3(half4m(vec3to4(x))); }
+
+float4 float4m(half4 );
+SIMD_CALL float2 float2m(half2 x) { return vec4to2(float4m(vec2to4(x))); }
+SIMD_CALL float3 float3m(half3 x) { return vec4to3(float4m(vec3to4(x))); }
+
+#else
+SIMD_CALL float2 float2m(half2 x) { return __builtin_convertvector(x, float2); }
+SIMD_CALL float3 float3m(half3 x) { return __builtin_convertvector(x, float3); }
+SIMD_CALL float4 float4m(half4 x) { return __builtin_convertvector(x, float4); }
+
+SIMD_CALL half2 half2m(float2 x) { return __builtin_convertvector(x, half2); }
+SIMD_CALL half3 half3m(float3 x) { return __builtin_convertvector(x, half3); }
+SIMD_CALL half4 half4m(float4 x) { return __builtin_convertvector(x, half4); }
+#endif
+
+#endif
+
+#if SIMD_DOUBLE // && SIMD_FLOAT
+SIMD_CALL double2 double2m(float2 x) { return __builtin_convertvector(x, double2); }
+SIMD_CALL double3 double3m(float3 x) { return __builtin_convertvector(x, double3); }
+SIMD_CALL double4 double4m(float4 x) { return __builtin_convertvector(x, double4); }
+
+SIMD_CALL float2 float2m(double2 x) { return __builtin_convertvector(x, float2); }
+SIMD_CALL float3 float3m(double3 x) { return __builtin_convertvector(x, float3); }
+SIMD_CALL float4 float4m(double4 x) { return __builtin_convertvector(x, float4); }
+#endif
+
+//----
+
 // TODO: better way to name these, can there be float2::zero()
 // also could maybe use that for fake vector ctors.
 
@@ -1015,12 +1180,8 @@ const float4& float4_negxw();
 const float4& float4_negyw();
 const float4& float4_negzw();
 
-#endif
-
 //-----------------------------------
 // matrix
-
-#if SIMD_FLOAT
 
 // column matrix, so postmul vectors
 // (projToCamera * cameraToWorld * worldToModel) * modelVec
@@ -1114,6 +1275,7 @@ struct float4x4 : float4x4s
     const float4& operator[](uint32_t idx) const { return columns[idx]; }
 };
 
+// set diangonal and rest to 0
 float2x2 diagonal_matrix(float2 x);
 float3x3 diagonal_matrix(float3 x);
 float3x4 diagonal_matrix3x4(float3 x);
@@ -1124,6 +1286,7 @@ float2x2 transpose(const float2x2& x);
 float3x3 transpose(const float3x3& x);
 float4x4 transpose(const float4x4& x);
 
+// general inverses - faster ones for trs
 float2x2 inverse(const float2x2& x);
 float3x3 inverse(const float3x3& x);
 float4x4 inverse(const float4x4& x);
@@ -1132,35 +1295,50 @@ float determinant(const float2x2& x);
 float determinant(const float3x3& x);
 float determinant(const float4x4& x);
 
+// diagonal sum
 float trace(const float2x2& x);
 float trace(const float3x3& x);
 float trace(const float4x4& x);
 
-// premul = dot + premul
-float2 mul(float2 y, const float2x2& x);
-float3 mul(float3 y, const float3x3& x);
-float4 mul(float4 y, const float4x4& x);
-
-// posmul = mul + mad
+// m * m
 float2x2 mul(const float2x2& x, const float2x2& y);
 float3x3 mul(const float3x3& x, const float3x3& y);
 float4x4 mul(const float4x4& x, const float4x4& y);
 
+// vrow * m - premul = dot + premul
+float2 mul(float2 y, const float2x2& x);
+float3 mul(float3 y, const float3x3& x);
+float4 mul(float4 y, const float4x4& x);
+
+// m * vcol - postmul = mul + mad (prefer this)
 float2 mul(const float2x2& x, float2 y);
 float3 mul(const float3x3& x, float3 y);
 float4 mul(const float4x4& x, float4 y);
 
+// sub
 float2x2 sub(const float2x2& x, const float2x2& y);
 float3x3 sub(const float3x3& x, const float3x3& y);
 float4x4 sub(const float4x4& x, const float4x4& y);
 
+// add
 float2x2 add(const float2x2& x, const float2x2& y);
 float3x3 add(const float3x3& x, const float3x3& y);
 float4x4 add(const float4x4& x, const float4x4& y);
 
+// equal
 bool equal(const float2x2& x, const float2x2& y);
 bool equal(const float3x3& x, const float3x3& y);
 bool equal(const float4x4& x, const float4x4& y);
+
+// equal_abs
+bool equal_abs(const float2x2& x, const float2x2& y, float tol);
+bool equal_abs(const float3x3& x, const float3x3& y, float tol);
+bool equal_abs(const float4x4& x, const float4x4& y, float tol);
+
+// equal_rel
+bool equal_rel(const float2x2& x, const float2x2& y, float tol);
+bool equal_rel(const float3x3& x, const float3x3& y, float tol);
+bool equal_rel(const float4x4& x, const float4x4& y, float tol);
 
 // TODO: these think they are all member functions
 
@@ -1176,112 +1354,87 @@ SIMD_CALL const float3x3& as_float3x3(const float4x4& m) {
     return reinterpret_cast<const float3x3&>(m);
 }
 
-#endif // SIMD_FLOAT
+//-----------------------
+// quat
+
+// Only need a fp32 quat.  double/half are pretty worthless.
+struct quatf {
+    // TODO: should all ctor be SIMD_CALL ?
+    quatf() : v{0.0f,0.0f,0.0f,1.0f} {}
+    quatf(float x, float y, float z, float w) : v{x,y,z,w} {}
+    quatf(float3 vv, float angle);
+    explicit quatf(float4 vv): v(vv) {}
+    
+    static const quatf& zero();
+    static const quatf& identity();
+    
+    float4 v;
+};
+
+SIMD_CALL float3 operator*(quatf q, float3 v) {
+    float4 qv = q.v;
+    float3 t = qv.w * cross(qv.xyz, v);
+    return v + 2.0f * t + cross(q.v.xyz, t);
+}
+
+float4x4 float4x4m(quatf q);
+
+// how many quatf ops are needed?
+// TODO: need matrix into quatf
+// TDOO: need shortest arc correction (dot(q0.v, q1.v) < 0) negate
+// TODO: need negate (or conjuagate?)
+// TODO: what about math ops
+
+SIMD_CALL quatf lerp(quatf q0, quatf q1, float t) {
+    if (dot(q0.v, q1.v) < 0.0f)
+        q1.v.xyz = -q1.v.xyz;
+    
+    float4 v = lerp(q0.v, q1.v, t);
+    return quatf(v);
+}
+quatf slerp(quatf q0, quatf q1, float t);
+
+void quat_bezier_cp(quatf q0, quatf q1, quatf q2, quatf q3,
+                    quatf& a1, quatf& b2);
+quatf quat_bezer_lerp(quatf a, quatf b, quatf c, quatf d, float t);
+quatf quat_bezer_slerp(quatf a, quatf b, quatf c, quatf d, float t);
+
+quatf inverse(quatf q);
+
+SIMD_CALL quatf normalize(quatf q) {
+    return quatf(normalize(q.v));
+}
 
 //----------------
+// affine and convenience ctors
 
-#if SIMD_FLOAT
-// make "m" ctors for vecs.  This avoids wrapping the type in a struct.
-// vector types are C typedef, and so cannot have member functions.
-// Be careful with initializers = { val }, only sets first element of vector
-// and not all the values.  Use = val; or one of the calls below to be safe.
+// in-place affine transose
+void transpose_affine(float4x4& m);
 
-SIMD_CALL float2 float2m(float x) {
-    return x;
-}
-SIMD_CALL float2 float2m(float x, float y) {
-    return {x,y};
-}
+// fast inverses for translate, rotate, scale
+float4x4 inverse_tr(const float4x4& mtx);
+float4x4 inverse_tru(const float4x4& mtx);
+float4x4 inverse_trs(const float4x4& mtx);
 
-SIMD_CALL float3 float3m(float x) {
-    return x; // TODO: does this go to _mm_set1_ps(x)
-}
-SIMD_CALL float3 float3m(float x, float y, float z) {
-    return {x,y,z}; // _mm_setr_ps ?
-}
-SIMD_CALL float3 float3m(float2 v, float z) {
-    float3 r; r.xy = v; r.z = z; return r;
+float4x4 float4x4m(char axis, float angleInRadians);
+
+SIMD_CALL float4x4 float4x4m(float3 axis, float angleInRadians) {
+    return float4x4m(quatf(axis, angleInRadians));
 }
 
-SIMD_CALL float4 float4m(float x) {
-    return x; // TODO: does this go to _mm_set1_ps(x)
-}
-SIMD_CALL float4 float4m(float2 xy, float2 zw) {
-    return {xy.x,xy.y,zw.x,zw.y};
-}
-SIMD_CALL float4 float4m(float x, float y, float z, float w = 1.0f) {
-    return {x,y,z,w}; // _mm_setr_ps ?
-}
-SIMD_CALL float4 float4m(float3 v, float w = 1.0f) {
-    float4 r; r.xyz = v; r.w = w; return r;
-}
+float3x3 float3x3m(quatf qq);
 
-// fast conversions where possible
-SIMD_CALL const float3& as_float3(const float4& m) {
-    return reinterpret_cast<const float3&>(m);
-}
+float4x4 float4x4_tr(float3 t, quatf r);
+float4x4 float4x4_trs(float3 t, quatf r, float3 scale);
+float4x4 float4x4_tru(float3 t, quatf r, float scale);
 
 #endif // SIMD_FLOAT
 
-#if SIMD_INT
-SIMD_CALL int2 int2m(int x) {
-    return x;
-}
-SIMD_CALL int2 int2m(int x, int y) {
-    return {x,y};
-}
+//---------------------------
+// double vec/matrix
 
-SIMD_CALL int3 int3m(int x) {
-    return x;
-}
-SIMD_CALL int3 int3m(int x, int y, int z) {
-    return {x,y,z};
-}
+#if SIMD_DOUBLE && 0
 
-SIMD_CALL int4 int4m(int x) {
-    return x;
-}
-SIMD_CALL int4 int4m(int2 xy, int2 zw) {
-    return {xy.x,xy.y,zw.x,zw.y};
-}
-SIMD_CALL int4 int4m(int x, int y, int z, int w) {
-    return {x,y,z,w};
-}
-SIMD_CALL int4 int4m(int3 v, float w) {
-    int4 r; r.xyz = v; r.w = w; return r;
-}
-#endif
-
-#if SIMD_HALF
-SIMD_CALL half2 half2m(half x) {
-    return x;
-}
-SIMD_CALL half2 half2m(half x, half y) {
-    return {x,y};
-}
-
-SIMD_CALL half3 half3m(half x) {
-    return x;
-}
-SIMD_CALL half3 half3m(half x, half y, half z) {
-    return {x,y,z};
-}
-
-SIMD_CALL half4 half4m(half x) {
-    return x;
-}
-SIMD_CALL half4 half4m(half2 xy, half2 zw) {
-    return {xy.x,xy.y,zw.x,zw.y};
-}
-SIMD_CALL half4 half4m(half x, half y, half z, half w = (half)1.0) {
-    return {x,y,z,w};
-}
-SIMD_CALL half4 half4m(half3 v, float w = (half)1.0) {
-    half4 r; r.xyz = v; r.w = w; return r;
-}
-#endif
-
-#if SIMD_DOUBLE
 SIMD_CALL double2 double2m(double x) {
     return x;
 }
@@ -1295,12 +1448,15 @@ SIMD_CALL double3 double3m(double x) {
 SIMD_CALL double3 double3m(double x, double y, double z) {
     return {x,y,z};
 }
+SIMD_CALL double3 double3m(double2 v, float z) {
+    double3 r; r.xy = v; r.z = z; return r;
+}
 
 SIMD_CALL double4 double4m(double x) {
     return x;
 }
 SIMD_CALL double4 double4m(double2 xy, double2 zw) {
-    return {xy.x,xy.y,zw.x,zw.y};
+    double4 r; r.xy = xy; r.zw = zw; return r;
 }
 SIMD_CALL double4 double4m(double x, double y, double z, double w = 1.0) {
     return {x,y,z,w};
@@ -1308,32 +1464,6 @@ SIMD_CALL double4 double4m(double x, double y, double z, double w = 1.0) {
 SIMD_CALL double4 double4m(double3 v, double w = 1.0) {
     double4 r; r.xyz = v; r.w = w; return r;
 }
-#endif
-
-// includes type1 simdk::pow(float1)
-#define macroVectorRepeatFnDecl(type, cppfun) \
-type##1 cppfunc(type##1 x); \
-type##2 cppfunc(type##2 x); \
-type##3 cppfunc(type##3 x); \
-type##4 cppfunc(type##4 x); \
-
-#if SIMD_FLOAT
-
-// power series
-macroVectorRepeatFnDecl(float, log)
-macroVectorRepeatFnDecl(float, exp)
-//macroVectorRepeatFnDecl(float, pow) takes 2 args
-
-// trig
-macroVectorRepeatFnDecl(float, cos)
-macroVectorRepeatFnDecl(float, sin)
-macroVectorRepeatFnDecl(float, tan)
-
-// TODO: add mort math ops (sinh, ...)
-
-#endif
-
-#if SIMD_DOUBLE
 
 // power series
 macroVectorRepeatFnDecl(double, log)
@@ -1344,11 +1474,6 @@ macroVectorRepeatFnDecl(double, exp)
 macroVectorRepeatFnDecl(double, cos)
 macroVectorRepeatFnDecl(double, sin)
 macroVectorRepeatFnDecl(double, tan)
-
-#endif
-
-
-#if SIMD_DOUBLE && 0
 
 // TODO: would need matrix class derivations
 // and all of the matrix ops, which then need vector ops, and need double
@@ -1504,131 +1629,76 @@ SIMD_CALL const double3x3& as_double3x3(const double4x4& m) {
     return reinterpret_cast<const double3x3&>(m);
 }
 
-#endif
+#endif // SIMD_DOUBLE
 
-// conversions
-#if SIMD_FLOAT && SIMD_INT
-SIMD_CALL float2 float2m(int2 __x) { return __builtin_convertvector(__x, float2); }
-SIMD_CALL float3 float3m(int3 __x) { return __builtin_convertvector(__x, float3); }
-SIMD_CALL float4 float4m(int4 __x) { return __builtin_convertvector(__x, float4); }
+//----------------
 
-SIMD_CALL int2 float2m(float2 __x) { return __builtin_convertvector(__x, int2); }
-SIMD_CALL int3 float3m(float3 __x) { return __builtin_convertvector(__x, int3); }
-SIMD_CALL int4 float4m(float4 __x) { return __builtin_convertvector(__x, int4); }
-
-#endif
-
-#if SIMD_FLOAT && SIMD_HALF
-
-#if SIMD_HALF4_ONLY
-
-half4 half4m(float4 __x);
-SIMD_CALL half2 half2m(float2 __x) { return vec4to2(half4m(vec2to4(__x))); }
-SIMD_CALL half3 half3m(float3 __x) { return vec4to3(half4m(vec3to4(__x))); }
-
-float4 float4m(half4 __x);
-SIMD_CALL float2 float2m(half2 __x) { return vec4to2(float4m(vec2to4(__x))); }
-SIMD_CALL float3 float3m(half3 __x) { return vec4to3(float4m(vec3to4(__x))); }
-
-#else
-SIMD_CALL float2 float2m(half2 __x) { return __builtin_convertvector(__x, float2); }
-SIMD_CALL float3 float3m(half3 __x) { return __builtin_convertvector(__x, float3); }
-SIMD_CALL float4 float4m(half4 __x) { return __builtin_convertvector(__x, float4); }
-
-SIMD_CALL half2 half2m(float2 __x) { return __builtin_convertvector(__x, half2); }
-SIMD_CALL half3 half3m(float3 __x) { return __builtin_convertvector(__x, half3); }
-SIMD_CALL half4 half4m(float4 __x) { return __builtin_convertvector(__x, half4); }
-#endif
-
-#endif
-
-#if SIMD_FLOAT && SIMD_DOUBLE
-SIMD_CALL double2 double2m(float2 __x) { return __builtin_convertvector(__x, double2); }
-SIMD_CALL double3 double3m(float3 __x) { return __builtin_convertvector(__x, double3); }
-SIMD_CALL double4 double4m(float4 __x) { return __builtin_convertvector(__x, double4); }
-
-SIMD_CALL float2 float2m(double2 __x) { return __builtin_convertvector(__x, float2); }
-SIMD_CALL float3 float3m(double3 __x) { return __builtin_convertvector(__x, float3); }
-SIMD_CALL float4 float4m(double4 __x) { return __builtin_convertvector(__x, float4); }
-#endif
-
-#if SIMD_FLOAT
-//typedef float4s quatfs;
-
-// Only need a float quat.  double/half are pretty worthless.
-struct quatf {
-    // TODO: should all ctor be SIMD_CALL ?
-    quatf() : v{0.0f,0.0f,0.0f,1.0f} {}
-    quatf(float x, float y, float z, float w) : v{x,y,z,w} {}
-    quatf(float3 vv, float angle);
-    explicit quatf(float4 vv): v(vv) {}
-    
-    static const quatf& zero();
-    static const quatf& identity();
-    
-    float4 v;
-};
-
-SIMD_CALL float3 operator*(quatf q, float3 v) {
-    float4 qv = q.v;
-    float3 t = qv.w * cross(qv.xyz, v);
-    return v + 2.0f * t + cross(q.v.xyz, t);
+#if SIMD_INT
+SIMD_CALL int2 int2m(int x) {
+    return x;
+}
+SIMD_CALL int2 int2m(int x, int y) {
+    return {x,y};
 }
 
-float4x4 float4x4m(quatf q);
-
-// how many quatf ops are needed?
-// TODO: need matrix into quatf
-// TDOO: need shortest arc correction (dot(q0.v, q1.v) < 0) negate
-// TODO: need negate (or conjuagate?)
-// TODO: what about math ops
-
-SIMD_CALL quatf lerp(quatf q0, quatf q1, float t) {
-    if (dot(q0.v, q1.v) < 0.0f)
-        q1.v.xyz = -q1.v.xyz;
-    
-    float4 v = lerp(q0.v, q1.v, t);
-    return quatf(v);
+SIMD_CALL int3 int3m(int x) {
+    return x;
 }
-quatf slerp(quatf q0, quatf q1, float t);
-
-void quat_bezier_cp(quatf q0, quatf q1, quatf q2, quatf q3,
-                    quatf& a1, quatf& b2);
-quatf quat_bezer_lerp(quatf a, quatf b, quatf c, quatf d, float t);
-quatf quat_bezer_slerp(quatf a, quatf b, quatf c, quatf d, float t);
-
-quatf inverse(quatf q);
-
-SIMD_CALL quatf normalize(quatf q) {
-    return quatf(normalize(q.v));
+SIMD_CALL int3 int3m(int x, int y, int z) {
+    return {x,y,z};
+}
+SIMD_CALL int3 int3m(int2 v, float z) {
+    int3 r; r.xy = v; r.z = z; return r;
 }
 
-#endif // SIMD_FLOAT
 
-#if SIMD_FLOAT
+SIMD_CALL int4 int4m(int x) {
+    return x;
+}
+SIMD_CALL int4 int4m(int2 xy, int2 zw) {
+    int4 r; r.xy = xy; r.zw = zw; return r;
+}
+SIMD_CALL int4 int4m(int x, int y, int z, int w) {
+    return {x,y,z,w};
+}
+SIMD_CALL int4 int4m(int3 v, float w) {
+    int4 r; r.xyz = v; r.w = w; return r;
+}
+#endif
 
-// in-place affine transose
-void transpose_affine(float4x4& m);
-
-// fast inverses for translate, rotate, scale
-float4x4 inverse_tr(const float4x4& mtx);
-float4x4 inverse_tru(const float4x4& mtx);
-float4x4 inverse_trs(const float4x4& mtx);
-
-// affine and convenience ctors
-float4x4 float4x4m(char axis, float angleInRadians);
-
-SIMD_CALL float4x4 float4x4m(float3 axis, float angleInRadians) {
-    return float4x4m(quatf(axis, angleInRadians));
+#if SIMD_HALF
+SIMD_CALL half2 half2m(half x) {
+    return x;
+}
+SIMD_CALL half2 half2m(half x, half y) {
+    return {x,y};
 }
 
-float3x3 float3x3m(quatf qq);
+SIMD_CALL half3 half3m(half x) {
+    return x;
+}
+SIMD_CALL half3 half3m(half x, half y, half z) {
+    return {x,y,z};
+}
+SIMD_CALL half3 half3m(half2 v, float z) {
+    half3 r; r.xy = v; r.z = z; return r;
+}
 
-float4x4 float4x4_tr(float3 t, quatf r);
-float4x4 float4x4_trs(float3 t, quatf r, float3 scale);
-float4x4 float4x4_tru(float3 t, quatf r, float scale);
+SIMD_CALL half4 half4m(half x) {
+    return x;
+}
+SIMD_CALL half4 half4m(half2 xy, half2 zw) {
+    half4 r; r.xy = xy; r.zw = zw; return r;
+}
+SIMD_CALL half4 half4m(half x, half y, half z, half w = (half)1.0) {
+    return {x,y,z,w};
+}
+SIMD_CALL half4 half4m(half3 v, float w = (half)1.0) {
+    half4 r; r.xyz = v; r.w = w; return r;
+}
+#endif
 
-#endif // SIMD_FLOAT
+
 
 
 using namespace STL_NAMESPACE;

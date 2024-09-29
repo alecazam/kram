@@ -7,6 +7,13 @@
 
 // Tests with godbolt are here to show code comparsions with optimizations.
 
+//-----------------
+// clang version matters to codegen.
+// These two version seem to be significant changes in output.
+//
+// v14
+// v16
+//
 // -Og can't unroll small loops for some reason. -O2 and -O3 do.
 // https://godbolt.org/z/KMPa8bchb
 //
@@ -16,22 +23,10 @@
 // optimized quake rcp, rsqrt, sqrt
 // https://michaldrobot.files.wordpress.com/2014/05/gcn_alu_opt_digitaldragons2014.pdf
 //
-// TODO: Fabian on fp16 <-> fp32
-// Not the right gist, you want the RTNE one (nm: that only matters for float->half,
-// this was the half->float one. FWIW, other dir is https://gist.github.com/rygorous/eb3a019b99fdaa9c3064.
-// These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
-// which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
-//
-// DONE: bring over fast inverses (RTS, RTU, etc)
-// DONE: need translation, rotation, scale
-// TODO: need fast post-translation, post-rotation, post-scale
-//
-// TODO: saturating conversions would be useful to, and prevent overflow
-// see the conversion.h code, bit select to clamp values.
-//
-// TODO: matrix_types.h has a type_traits with rows, cols, etc.
-// can call get_traits() on them.  See matrix.h for all the ops.
-
+// ---------------
+// Note: float4a.h has a rcp and rsqrt ops, but they are approximate.
+// Have real div and sqrt ops now.
+// ---------------
 // The storage of affine data in a column matrix is no different than rows
 // translation is in (r30 r31 r32) or in (c30, c31 c32)
 //
@@ -49,23 +44,72 @@
 // col: TRS * TRS * v   cameraToWorldTfm * worldToModelTfm * ..
 // row: v * SRT * SRT   modelToWorldTfm * worldToCameraTfm * ...
 //
-// TODO: need natvis and lldb formatting of math classes.
+// ---------------
+// So there are currently 6 version of the Accelerate lib.
+// This library hides implementations of some of the calls.
+// So need to rely on a version of the lib to get them,
+// or supply some alternative.  Many calls have fallbacks.
 //
+// 6: macOS 15.0, iOS 18.0
+// 5: macOS 13.0, iOS 16.0
+// 4: macOS 12.0, iOS 15.0
+// 0: header only
+//
+// use 5 for macOS
+// SIMD_LIBRARY_VERSION >= 5
+//
+// use 4 for iOS
+// SIMD_LIBRARY_VERSION >= 4
+//
+//-----------------
+//
+// TODO: rename README, and name of .cpp/h (simdk?)
+// TODO: build an optimized library that is a clang module
+// TODO: split up files into types, float ops, double ops
+// TODO: limit !SIMD_FLOAT_EXT to only 32B vector types?  Have 64B vecs.
+//
+// TODO: ryg on fp16 <-> fp32
+// Not the right gist, you want the RTNE one (nm: that only matters for float->half,
+// this was the half->float one. FWIW, other dir is https://gist.github.com/rygorous/eb3a019b99fdaa9c3064.
+// These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
+// which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
+//
+// TODO: ryg on 32B ops on AVX systems
+//   These often only have 16B simd units, so running 32B ops isn't efficient.
+//   This could apply say to PS4 or other Athlon chips too.
+//
+// DONE: bring over fast inverses (RTS, RTU, etc)
+// DONE: need translation, rotation, scale
+// TODO: need fast post-translation, post-rotation, post-scale
+// TODO: need euler <-> matrix
 // TODO: here's a decomp
 // https://github.com/erich666/GraphicsGems/blob/master/gemsii/unmatrix.c
+//
+// TODO: saturating conversions would be useful to, and prevent overflow
+// see the conversion.h code, bit select to clamp values.
+//
+// TODO: matrix_types.h has a type_traits with rows, cols, etc.
+// can call get_traits() on them.  See matrix.h for all the ops.
+//
+// TODO: need natvis and lldb formatting of math classes.
+//
+// TODO: add optimized vec2 ops on Neon, but may not be worth kernal mods
+
 
 //-----------------
 
-// TODO: profvide controls over this
+// TODO: provide controls over fast math vs. acclerate vs. func calls
 #ifdef __APPLE__
-#define SIMD_ACCELERATE_LIB 1
-#define SIMD_FAST_MATH      0
+#define SIMD_ACCELERATE_MATH 1
+#define SIMD_FAST_MATH       0
+#define SIMD_CMATH_MATH      0
 #else
-#define SIMD_ACCELERATE_LIB 0
-#define SIMD_FAST_MATH      0
+#define SIMD_ACCELERATE_MATH 0
+#define SIMD_FAST_MATH       0
+#define SIMD_CMATH_MATH      1
 #endif
 
-#if SIMD_ACCELERATE_LIB
+#if SIMD_ACCELERATE_MATH
 // TODO: reduce this header to just calls use (f.e. geometry, etc)
 #include <simd/simd.h>
 #elif SIMD_FAST_MATH
@@ -99,26 +143,10 @@ namespace SIMD_NAMESPACE {
 //    return s / c;
 //}
 
-#if SIMD_ACCELERATE_LIB
+#if SIMD_ACCELERATE_MATH
 
 //---------------------------
 // Use existing Accelerate lib.
-//
-// So there are currently 6 version of the Accelerate lib.
-// This library hides implmenentations of some of the calls.
-// So need to rely on a version of the lib to get them,
-// or supply some alternative.
-//
-// 6: macOS 15.0, iOS 18.0
-// 5: macOS 13.0, iOS 16.0
-// 4: macOS 12.0, iOS 15.0
-// 0: header only
-//
-// use 5 for macOS
-// SIMD_LIBRARY_VERSION >= 5
-//
-// use 4 for iOS
-// SIMD_LIBRARY_VERSION >= 4
 
 // remap simdk to simd namespace
 #define macroVectorRepeatFnImpl(type, cppfunc) \
@@ -136,7 +164,9 @@ macroVectorRepeatFnImpl(float, sin)
 macroVectorRepeatFnImpl(float, cos)
 macroVectorRepeatFnImpl(float, tan)
 
-#endif
+#endif // SIMD_FLOAT
+
+//---------------------
 
 #if SIMD_DOUBLE
 
@@ -148,11 +178,12 @@ macroVectorRepeatFnImpl(double, sin)
 macroVectorRepeatFnImpl(double, cos)
 macroVectorRepeatFnImpl(double, tan)
 
-#endif
-
-#elif !SIMD_FAST_MATH
+#endif // SIMD_DOUBLE
+#endif // SIMD_ACCELERATE_MATH
 
 //---------------------------
+
+#if SIMD_CMATH_MATH
 
 // This calls function repeatedly, then returns as vector.
 // These don't call to the 4 version since it's so much more work.
@@ -183,14 +214,15 @@ macroVectorRepeatFnImpl(double, cos, ::cos)
 macroVectorRepeatFnImpl(double, tan, ::tan)
 
 #endif // SIMD_DOUBLE
+#endif // SIMD_CMATH_MATH
 
-#endif
-
-// Which cmath had this
+// Wish cmath had this
 inline void sincosf(float angleInRadians, float& s, float& c) {
     s = sinf(angleInRadians);
     c = cosf(angleInRadians);
 }
+
+#if SIMD_FLOAT
 
 // These aren't embedded in function, so may have pre-init ordering issues.
 // or could add pre-init order to skip using functions.
@@ -631,6 +663,39 @@ bool equal(const float4x4& x, const float4x4& y) {
                x[3] == y[3]);
 }
 
+// equal_abs
+bool equal_abs(const float2x2& x, const float2x2& y, float tol) {
+    return all((abs(x[0] - y[0]) <= tol) &
+               (abs(x[1] - y[1]) <= tol));
+}
+bool equal_abs(const float3x3& x, const float3x3& y, float tol) {
+    return all((abs(x[0] - y[0]) <= tol) &
+               (abs(x[1] - y[1]) <= tol) &
+               (abs(x[2] - y[2]) <= tol));
+}
+bool equal_abs(const float4x4& x, const float4x4& y, float tol) {
+    return all((abs(x[0] - y[0]) <= tol) &
+               (abs(x[1] - y[1]) <= tol) &
+               (abs(x[2] - y[2]) <= tol) &
+               (abs(x[3] - y[3]) <= tol));
+}
+
+// equal_rel
+bool equal_rel(const float2x2& x, const float2x2& y, float tol) {
+    return all((abs(x[0] - y[0]) <= tol * abs(x[0])) &
+               (abs(x[1] - y[1]) <= tol * abs(x[1])));
+}
+bool equal_rel(const float3x3& x, const float3x3& y, float tol) {
+    return all((abs(x[0] - y[0]) <= tol * abs(x[0])) &
+               (abs(x[1] - y[1]) <= tol * abs(x[1])) &
+               (abs(x[2] - y[2]) <= tol * abs(x[2])));
+}
+bool equal_rel(const float4x4& x, const float4x4& y, float tol) {
+    return all((abs(x[0] - y[0]) <= tol * abs(x[0])) &
+               (abs(x[1] - y[1]) <= tol * abs(x[1])) &
+               (abs(x[2] - y[2]) <= tol * abs(x[2])) &
+               (abs(x[3] - y[3]) <= tol * abs(x[3])));
+}
 
 
 //---------------------------
@@ -697,7 +762,7 @@ const float3x4& float3x4::identity() { return kfloat3x4_identity; }
 const float4x4& float4x4::zero() { return kfloat4x4_zero; }
 const float4x4& float4x4::identity() { return kfloat4x4_identity; }
 
-
+#endif // SIMD_FLOAT
 
 #if SIMD_FLOAT
 
@@ -767,8 +832,8 @@ string vecf::simd_configs() const {
     FMT_CONFIG(SIMD_RENAME_TO_SIMD_NAMESPACE);
     FMT_CONFIG(SIMD_HALF_FLOAT16);
     
-    FMT_CONFIG(SIMD_ACCELERATE_LIB);
-#if SIMD_ACCELERATE_LIB
+    FMT_CONFIG(SIMD_ACCELERATE_MATH);
+#if SIMD_ACCELERATE_MATH
     FMT_CONFIG(SIMD_LIBRARY_VERSION);
 #endif
     
@@ -1253,8 +1318,6 @@ float4x4 float4x4m(char axis, float angleInRadians)
 
 } // namespace SIMD_NAMESPACE
 
-#endif
+#endif // USE_SIMDLIB
 
-// Note: float4a.h has a rcp and rsqrt ops, but they are approximate.
-// Have real div and sqrt ops now.
 
