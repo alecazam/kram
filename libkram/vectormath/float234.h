@@ -447,11 +447,9 @@ SIMD_CALL float4 smoothstep(float4 edge0, float4 edge1, float4 x) {
 SIMD_CALL float2 fract(float2 x) {
     return min(x - floor(x), 0x1.fffffep-1f);
 }
-
 SIMD_CALL float3 fract(float3 x) {
     return min(x - floor(x), 0x1.fffffep-1f);
 }
-
 SIMD_CALL float4 fract(float4 x) {
     return min(x - floor(x), 0x1.fffffep-1f);
 }

@@ -35,46 +35,102 @@ namespace SIMD_NAMESPACE {
 
 macroVector8TypesStorageRenames(double, double)
 
+SIMD_CALL double2 double2m(double x) {
+    return x;
+}
+SIMD_CALL double2 double2m(double x, double y) {
+    return {x,y};
+}
+
+SIMD_CALL double3 double3m(double x) {
+    return x;
+}
+SIMD_CALL double3 double3m(double x, double y, double z) {
+    return {x,y,z};
+}
+SIMD_CALL double3 double3m(double2 v, double z) {
+    double3 r; r.xy = v; r.z = z; return r;
+}
+
+SIMD_CALL double4 double4m(double x) {
+    return x;
+}
+SIMD_CALL double4 double4m(double2 xy, double2 zw) {
+    double4 r; r.xy = xy; r.zw = zw; return r;
+}
+SIMD_CALL double4 double4m(double x, double y, double z, double w = 1.0) {
+    return {x,y,z,w};
+}
+SIMD_CALL double4 double4m(double3 v, double w = 1.0) {
+    double4 r; r.xyz = v; r.w = w; return r;
+}
+
 //-----------------------------------
 // start of implementation
 
 #if SIMD_NEON
 
 // TODO: expose double2 ops on Neon.
+// think I have to, so that 4 can call 2x2 with hi/lo
+
+SIMD_CALL double reduce_min(double2 x) {
+    return vminvq_f64(x);
+}
 
 SIMD_CALL double reduce_min(double4 x) {
-    return vminvq_f32(x); // TODO: fp64
+    return fmin(reduce_min(x.lo),reduce_min(x.hi));
+}
+
+SIMD_CALL double reduce_max(double2 x) {
+    return vmaxvq_f64(x);
 }
 
 SIMD_CALL double reduce_max(double4 x) {
-    return vmaxvq_f32(x); // TODO: fp64
+    return fmax(reduce_max(x.lo),reduce_max(x.hi));
 }
 
+SIMD_CALL double2 min(double2 x, double2 y) {
+    // precise returns x on Nan
+    return vminnmq_f64(x, y);
+}
 SIMD_CALL double4 min(double4 x, double4 y) {
     // precise returns x on Nan
-    return vminnmq_f32(x, y); // TODO: fp64
+    return double4m(min(x.lo,y.lo), min(x.hi,y.hi));
+}
+
+SIMD_CALL double2 max(double2 x, double2 y) {
+    // precise returns x on Nan
+    return vmaxnmq_f64(x, y);
 }
 
 SIMD_CALL double4 max(double4 x, double4 y) {
     // precise returns x on Nan
-    return vmaxnmq_f32(x, y); // TODO: fp64
+    return double4m(max(x.lo,y.lo), max(x.hi,y.hi));
 }
 
-SIMD_CALL double4 muladd(double4 x, double4 y, double4 t) {
+
+SIMD_CALL double2 muladd(double2 x, double2 y, double2 t) {
     // requires __ARM_VFPV4__
     // t passed first unlike sse
-    return vfmaq_f32(t, x,y); // TODO: fp64
+    return vfmaq_f64(t, x,y);
+}
+SIMD_CALL double4 muladd(double4 x, double4 y, double4 t) {
+    return double4m(muladd(x.lo,y.lo,t.lo), muladd(x.hi,y.hi,t.hi));
 }
 
+SIMD_CALL double2 sqrt(double2 x) {
+    return vsqrtq_f64(x);
+}
 SIMD_CALL double4 sqrt(double4 x) {
-    return vsqrtq_f32(x); // TODO: fp64
+    return double4m(sqrt(x.lo,x.lo), sqrt(x.hi,x.hi));
 }
 
 // use sse2neon to port this for now
 SIMD_CALL double4 reduce_addv(double4 x) {
     // 4:1 reduction
-    x = _mm_hadd_pd(x, x); // xy = x+y,z+w
-    x = _mm_hadd_pd(x, x); // x  = x+y
+    x = _mm_hadd_pd(x.lo, x.lo);
+    x = _mm_hadd_pd(x.hi, x.hi);
+    x = _mm_hadd_pd(x.lo, x.hi);
     return x.x; // repeat x to all values
 }
 
@@ -95,13 +151,13 @@ SIMD_CALL double reduce_max(double4 x) {
     return fmax(fmax(x.x,x.y), fmax(x.z,x.w));
 }
 
-// needs SIMD_INT
+// needs SIMD_LONG
 // needed for precise min/max calls below
-#if SIMD_INT
-SIMD_CALL double4 bitselect_forminmax(double4 x, double4 y, int4 mask) { // TODO: fp64
-    return (double4)(((int4)x & ~mask) | ((int4)y & mask));
+#if SIMD_LONG
+SIMD_CALL double4 bitselect_forminmax(double4 x, double4 y, long4 mask) {
+    return (double4)(((long4)x & ~mask) | ((long4)y & mask));
 }
-#endif
+#endif // SIMD_LONG
 
 SIMD_CALL double4 min(double4 x, double4 y) {
     // precise returns x on Nan
@@ -129,8 +185,9 @@ SIMD_CALL double4 sqrt(double4 x) {
 
 SIMD_CALL double4 reduce_addv(double4 x) {
     // 4:1 reduction
-    x = _mm_hadd_pd(x, x); // xy = x+y,z+w
-    x = _mm_hadd_pd(x, x); // x  = x+y
+    x = _mm_hadd_pd(x.lo, x.lo);
+    x = _mm_hadd_pd(x.hi, x.hi);
+    x = _mm_hadd_pd(x.lo, x.hi);
     return x.x; // repeat x to all values
 }
 
@@ -138,47 +195,49 @@ SIMD_CALL double reduce_add(double4 x) {
     return reduce_addv(x).x;
 }
 
-#endif // SIMD_INT && SIMD_SSE
+#endif // SIMD_LONG && SIMD_SSE
 
 // SSE4.1
+// single ops in AVX/2
+
 SIMD_CALL double4 round(double4 vv) {
-    return _mm_round_pd(vv, 0x8);  // round to nearest | exc
+    return double4m(_mm_round_pd(vv.lo, 0x8),_mm_round_pd(vv.hi, 0x8));  // round to nearest | exc
 }
 SIMD_CALL double4 ceil(double4 vv) {
-    return _mm_ceil_pd(vv);
+    return double4m(_mm_ceil_pd(vv.lo),_mm_ceil_pd(vv.hi));
 }
 SIMD_CALL double4 floor(double4 vv) {
-    return _mm_floor_pd(vv);
+    return double4m(_mm_floor_pd(vv.lo),_mm_floor_pd(vv.hi));
 }
 
 // end of implementation
 //-----------------------------------
 
-#if SIMD_INT
+#if SIMD_LONG
 
 // bitselect
-SIMD_CALL double2 bitselect(double2 x, double2 y, int2 mask) { // TODO: fp64
-    return (double2)bitselect((int2)x, (int2)y, mask);
+SIMD_CALL double2 bitselect(double2 x, double2 y, long2 mask) {
+    return (double2)bitselect((long2)x, (long2)y, mask);
 }
-SIMD_CALL double3 bitselect(double3 x, double3 y, int3 mask) {
-    return (double3)bitselect((int3)x, (int3)y, mask);
+SIMD_CALL double3 bitselect(double3 x, double3 y, long3 mask) {
+    return (double3)bitselect((long3)x, (long3)y, mask);
 }
-SIMD_CALL double4 bitselect(double4 x, double4 y, int4 mask) {
-    return (double4)bitselect((int4)x, (int4)y, mask);
+SIMD_CALL double4 bitselect(double4 x, double4 y, long4 mask) {
+    return (double4)bitselect((long4)x, (long4)y, mask);
 }
 
 // select
-SIMD_CALL double2 select(double2 x, double2 y, int2 mask) { // TODO: fp64
-    return bitselect(x, y, mask >> 31);
+SIMD_CALL double2 select(double2 x, double2 y, long2 mask) {
+    return bitselect(x, y, mask >> 63);
 }
-SIMD_CALL double3 select(double3 x, double3 y, int3 mask) {
-    return bitselect(x, y, mask >> 31);
+SIMD_CALL double3 select(double3 x, double3 y, long3 mask) {
+    return bitselect(x, y, mask >> 63);
 }
-SIMD_CALL double4 select(double4 x, double4 y, int4 mask) {
-    return bitselect(x, y, mask >> 31);
+SIMD_CALL double4 select(double4 x, double4 y, long4 mask) {
+    return bitselect(x, y, mask >> 63);
 }
 
-#endif // SIMD_INT
+#endif // SIMD_LONG
 
 // zeroext - internal helper
 SIMD_CALL double4 zeroext(double2 x) {
@@ -189,10 +248,10 @@ SIMD_CALL double4 zeroext(double3 x) {
 }
 
 // any
-SIMD_CALL bool any(int3 x) {
+SIMD_CALL bool any(long3 x) {
     return any(vec3to4(x));
 }
-SIMD_CALL bool all(int3 x) {
+SIMD_CALL bool all(long4 x) {
     return all(vec3to4(x));
 }
 
@@ -449,46 +508,16 @@ SIMD_CALL double4 smoothstep(double4 edge0, double4 edge1, double4 x) {
 SIMD_CALL double2 fract(double2 x) {
     return min(x - floor(x), 0x1.fffffep-1f); // TODO: fp64
 }
-
 SIMD_CALL double3 fract(double3 x) {
     return min(x - floor(x), 0x1.fffffep-1f);
 }
-
 SIMD_CALL double4 fract(double4 x) {
     return min(x - floor(x), 0x1.fffffep-1f);
 }
 
 //-------------------
 
-SIMD_CALL double2 double2m(double x) {
-    return x;
-}
-SIMD_CALL double2 double2m(double x, double y) {
-    return {x,y};
-}
 
-SIMD_CALL double3 double3m(double x) {
-    return x;
-}
-SIMD_CALL double3 double3m(double x, double y, double z) {
-    return {x,y,z};
-}
-SIMD_CALL double3 double3m(double2 v, double z) {
-    double3 r; r.xy = v; r.z = z; return r;
-}
-
-SIMD_CALL double4 double4m(double x) {
-    return x;
-}
-SIMD_CALL double4 double4m(double2 xy, double2 zw) {
-    double4 r; r.xy = xy; r.zw = zw; return r;
-}
-SIMD_CALL double4 double4m(double x, double y, double z, double w = 1.0) {
-    return {x,y,z,w};
-}
-SIMD_CALL double4 double4m(double3 v, double w = 1.0) {
-    double4 r; r.xyz = v; r.w = w; return r;
-}
 
 // power series
 macroVectorRepeatFnDecl(double, log)

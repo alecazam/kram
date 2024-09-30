@@ -136,18 +136,21 @@
 // a define to override setings from prefix file
 #ifndef SIMD_CONFIG
 
+#define SIMD_INT    1
+#define SIMD_LONG   1
+
 // Vector and matrix types.  Currently only matrix types for SIMD_FLOAT, SIMD_DOUBLE.
 // SIMD_INT must be kept on for conditional tests.
-#define SIMD_HALF   1
-#define SIMD_FLOAT  1
-#define SIMD_DOUBLE 0
+// SIMD_HALF for bitselect would need SIMD_SHORT or SIMD_INT?
+#define SIMD_HALF   (1)
+#define SIMD_FLOAT  (1 && SIMD_INT)
+#define SIMD_DOUBLE (0 && SIMD_LONG)
 
-#define SIMD_INT    1
+
 #define SIMD_CHAR   0
 //#define SIMD_UCHAR  0
 #define SIMD_SHORT  0
 //#define SIMD_USHORT 0
-#define SIMD_LONG   0
 //#define SIMD_ULONG  0
 
 // Whether to support > 4 length vecs with some ops
