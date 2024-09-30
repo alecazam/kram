@@ -9,7 +9,7 @@
 
 #ifdef _WIN32
 // Windows breaks portable code.
-typedef int64_t long1;
+typedef long long long1;
 #else
 typedef long long1;
 #endif
