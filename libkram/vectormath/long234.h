@@ -7,14 +7,16 @@
 // This is not yet standalone.  vectormath++.h includes it.
 #if USE_SIMDLIB && SIMD_LONG
 
+typedef int64_t long1;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
 // define c vector types
 // Apple uses long type here (32-bit) instead of long32_t
-macroVector8TypesStorage(long, long)
-macroVector8TypesPacked(long, long)
+macroVector8TypesStorage(long1, long)
+macroVector8TypesPacked(long1, long)
 
 #if SIMD_ACCELERATE_MATH_NAMES
 macroVector8TypesStorageRenames(long, simd_long)
@@ -96,34 +98,34 @@ SIMD_CALL long4 bitselect(long4 x, long4 y, long4 mask) {
     return (x & ~mask) | (y & mask);
 }
 
-SIMD_CALL long2 long2m(long x) {
+SIMD_CALL long2 long2m(long1 x) {
     return x;
 }
-SIMD_CALL long2 long2m(long x, long y) {
+SIMD_CALL long2 long2m(long1 x, long1 y) {
     return {x,y};
 }
 
-SIMD_CALL long3 long3m(long x) {
+SIMD_CALL long3 long3m(long1 x) {
     return x;
 }
-SIMD_CALL long3 long3m(long x, long y, long z) {
+SIMD_CALL long3 long3m(long1 x, long1 y, long1 z) {
     return {x,y,z};
 }
-SIMD_CALL long3 long3m(long2 v, long z) {
+SIMD_CALL long3 long3m(long2 v, long1 z) {
     long3 r; r.xy = v; r.z = z; return r;
 }
 
 
-SIMD_CALL long4 long4m(long x) {
+SIMD_CALL long4 long4m(long1 x) {
     return x;
 }
 SIMD_CALL long4 long4m(long2 xy, long2 zw) {
     long4 r; r.xy = xy; r.zw = zw; return r;
 }
-SIMD_CALL long4 long4m(long x, long y, long z, long w) {
+SIMD_CALL long4 long4m(long1 x, long1 y, long1 z, long1 w) {
     return {x,y,z,w};
 }
-SIMD_CALL long4 long4m(long3 v, long w) {
+SIMD_CALL long4 long4m(long3 v, long1 w) {
     long4 r; r.xyz = v; r.w = w; return r;
 }
 

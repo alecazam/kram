@@ -1188,12 +1188,12 @@ quatf quat_bezer_lerp(quatf q0, quatf b, quatf c, quatf q1, float t)
 void transpose_affine(float4x4& m)
 {
     // TODO: see other tranpsose not using shuffles and do that.
+    // TODO: use platform shuffles on Neon
     
     // avoid copy and one shuffle
     float4 tmp3, tmp2, tmp1, tmp0;
                    
-    // TOOD: use platform shuffles on Neon
-    //  this is using sse2neon
+    // using sse2neon to port this
     tmp0 = _mm_shuffle_ps(m[0], m[1], 0x44);
     tmp2 = _mm_shuffle_ps(m[0], m[1], 0xEE);
 
