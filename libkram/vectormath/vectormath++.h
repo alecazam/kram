@@ -159,7 +159,7 @@
 #define SIMD_FLOAT_EXT 0
 
 // This means simd_float4 will come from this file instead of simd.h
-#define SIMD_RENAME_TO_SIMD_NAMESPACE 0
+#define SIMD_ACCELERATE_MATH_NAMES 0
 
 #endif // SIMD_CONFIG
 
@@ -359,9 +359,9 @@ extern "C" {
 macroVector1TypesStorage(char, char)
 macroVector1TypesPacked(char, char)
 
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
+#if SIMD_ACCELERATE_MATH_NAMES
 macroVector1TypesStorageRenames(char, simd_char)
-#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
+#endif // SIMD_ACCELERATE_MATH_NAMES
 
 #ifdef __cplusplus
 }
@@ -383,9 +383,9 @@ extern "C" {
 macroVector2TypesStorage(short, short)
 macroVector2TypesPacked(short, short)
 
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
+#if SIMD_ACCELERATE_MATH_NAMES
 macroVector2TypesStorageRenames(short, simd_short)
-#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
+#endif // SIMD_ACCELERATE_MATH_NAMES
 
 #ifdef __cplusplus
 }
@@ -419,20 +419,19 @@ SIMD_CALL int4 float4m(float4 x) { return __builtin_convertvector(x, int4); }
 
 #if SIMD_HALF // && SIMD_FLOAT
 
-// keep this for now, until know if Android has the builtin
-//#if SIMD_HALF4_ONLY
-//
-//half4 half4m(float4 );
-//SIMD_CALL half2 half2m(float2 x) { return vec4to2(half4m(vec2to4(x))); }
-//SIMD_CALL half3 half3m(float3 x) { return vec4to3(half4m(vec3to4(x))); }
-//
-//float4 float4m(half4 );
-//SIMD_CALL float2 float2m(half2 x) { return vec4to2(float4m(vec2to4(x))); }
-//SIMD_CALL float3 float3m(half3 x) { return vec4to3(float4m(vec3to4(x))); }
-//
-//#else
+#if SIMD_HALF4_ONLY
 
-// this probably goes to correct call, could elim SIMD_HALF4_ONLY
+// half type is short, so builtin convert doesn't work
+half4 half4m(float4 x);
+SIMD_CALL half2 half2m(float2 x) { return vec4to2(half4m(vec2to4(x))); }
+SIMD_CALL half3 half3m(float3 x) { return vec4to3(half4m(vec3to4(x))); }
+
+float4 float4m(half4 x);
+SIMD_CALL float2 float2m(half2 x) { return vec4to2(float4m(vec2to4(x))); }
+SIMD_CALL float3 float3m(half3 x) { return vec4to3(float4m(vec3to4(x))); }
+
+#else
+
 SIMD_CALL float2 float2m(half2 x) { return __builtin_convertvector(x, float2); }
 SIMD_CALL float3 float3m(half3 x) { return __builtin_convertvector(x, float3); }
 SIMD_CALL float4 float4m(half4 x) { return __builtin_convertvector(x, float4); }
@@ -440,7 +439,7 @@ SIMD_CALL float4 float4m(half4 x) { return __builtin_convertvector(x, float4); }
 SIMD_CALL half2 half2m(float2 x) { return __builtin_convertvector(x, half2); }
 SIMD_CALL half3 half3m(float3 x) { return __builtin_convertvector(x, half3); }
 SIMD_CALL half4 half4m(float4 x) { return __builtin_convertvector(x, half4); }
-//#endif
+#endif
 
 #endif // SIMD_HALF
 
@@ -455,6 +454,16 @@ SIMD_CALL float4 float4m(double4 x) { return __builtin_convertvector(x, float4);
 #endif // SIMD_DOUBLE
 
 #endif // SIMD_FLOAT
+
+#if SIMD_DOUBLE && SIMD_LONG
+SIMD_CALL double2 double2m(long2 x) { return __builtin_convertvector(x, double2); }
+SIMD_CALL double3 double3m(long3 x) { return __builtin_convertvector(x, double3); }
+SIMD_CALL double4 double4m(long4 x) { return __builtin_convertvector(x, double4); }
+
+SIMD_CALL long2 long2m(double2 x) { return __builtin_convertvector(x, long2); }
+SIMD_CALL long3 long3m(double3 x) { return __builtin_convertvector(x, long3); }
+SIMD_CALL long4 long4m(double4 x) { return __builtin_convertvector(x, long4); }
+#endif // SIMD_LONG
 
 //---------------------------
 // formatting

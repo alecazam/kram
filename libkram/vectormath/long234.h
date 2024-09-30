@@ -13,19 +13,19 @@ extern "C" {
 
 // define c vector types
 // Apple uses long type here (32-bit) instead of long32_t
-macroVector4TypesStorage(long, long)
-macroVector4TypesPacked(long, long)
+macroVector8TypesStorage(long, long)
+macroVector8TypesPacked(long, long)
 
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
-macroVector4TypesStorageRenames(long, simd_long)
-#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
+#if SIMD_ACCELERATE_MATH_NAMES
+macroVector8TypesStorageRenames(long, simd_long)
+#endif // SIMD_ACCELERATE_MATH_NAMES
 
 #ifdef __cplusplus
 }
 
 namespace SIMD_NAMESPACE {
 
-macroVector4TypesStorageRenames(long, long)
+macroVector8TypesStorageRenames(long, long)
 
 //-----------------------------------
 // imlementation - only code simd arch specific

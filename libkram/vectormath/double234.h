@@ -22,9 +22,9 @@ typedef struct { double4s columns[3]; } double3x4s;
 typedef struct { double4s columns[4]; } double4x4s;
 
 // glue to Accelerate
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
+#if SIMD_ACCELERATE_MATH_NAMES
 macroVector8TypesStorageRenames(double, simd_double)
-#endif
+#endif // SIMD_ACCELERATE_MATH_NAMES
 
 #ifdef __cplusplus
 }
@@ -76,7 +76,6 @@ SIMD_CALL double4 double4m(double3 v, double w = 1.0) {
 SIMD_CALL double reduce_min(double2 x) {
     return vminvq_f64(x);
 }
-
 SIMD_CALL double reduce_min(double4 x) {
     return fmin(reduce_min(x.lo),reduce_min(x.hi));
 }
@@ -84,7 +83,6 @@ SIMD_CALL double reduce_min(double4 x) {
 SIMD_CALL double reduce_max(double2 x) {
     return vmaxvq_f64(x);
 }
-
 SIMD_CALL double reduce_max(double4 x) {
     return fmax(reduce_max(x.lo),reduce_max(x.hi));
 }
@@ -102,7 +100,6 @@ SIMD_CALL double2 max(double2 x, double2 y) {
     // precise returns x on Nan
     return vmaxnmq_f64(x, y);
 }
-
 SIMD_CALL double4 max(double4 x, double4 y) {
     // precise returns x on Nan
     return double4m(max(x.lo,y.lo), max(x.hi,y.hi));
@@ -125,20 +122,52 @@ SIMD_CALL double4 sqrt(double4 x) {
     return double4m(sqrt(x.lo), sqrt(x.hi));
 }
 
-// use sse2neon to port this for now
+SIMD_CALL double2 reduce_addv(double2 x) {
+    // 4:1 reduction
+    x = vpaddq_f64(x, x);
+    return x.x;
+}
 SIMD_CALL double4 reduce_addv(double4 x) {
     // 4:1 reduction
-    x.lo = _mm_hadd_pd(x.lo, x.lo);
-    x.hi = _mm_hadd_pd(x.hi, x.hi);
-    x.lo = _mm_hadd_pd(x.lo, x.hi);
+    x.lo = vpaddq_f64(x.lo, x.lo);
+    x.hi = vpaddq_f64(x.hi, x.hi);
+    x.lo = vpaddq_f64(x.lo, x.hi);
     return x.lo.x; // repeat x to all values
 }
 
+SIMD_CALL double reduce_add(double2 x) {
+    return reduce_addv(x).x;
+}
 SIMD_CALL double reduce_add(double4 x) {
     return reduce_addv(x).x;
 }
 
+SIMD_CALL double2 round(double2 vv) {
+    // round to nearest | exc
+    return vrndnq_f64(vv); // _MM_FROUND_NO_EXC
+}
+SIMD_CALL double4 round(double4 vv) {
+    // round to nearest | exc
+    return double4m(round(vv.lo),round(vv.hi));
+}
+
+SIMD_CALL double2 ceil(double2 vv) {
+    return vrndpq_f64(vv);
+}
+SIMD_CALL double4 ceil(double4 vv) {
+    return double4m(ceil(vv.lo),ceil(vv.hi));
+}
+
+SIMD_CALL double2 floor(double2 vv) {
+    return vrndmq_f64(vv);
+}
+SIMD_CALL double4 floor(double4 vv) {
+    return double4m(floor(vv.lo),floor(vv.hi));
+}
+
 #endif // SIMD_NEON
+
+//----------------------
 
 #if SIMD_SSE
 
@@ -146,7 +175,6 @@ SIMD_CALL double reduce_add(double4 x) {
 SIMD_CALL double reduce_min(double4 x) {
     return fmin(fmin(x.x,x.y), fmin(x.z,x.w));
 }
-
 SIMD_CALL double reduce_max(double4 x) {
     return fmax(fmax(x.x,x.y), fmax(x.z,x.w));
 }
@@ -163,7 +191,6 @@ SIMD_CALL double4 min(double4 x, double4 y) {
     // precise returns x on Nan
     return bitselect_forminmax(_mm_min_pd(x, y), x, y != y);
 }
-
 SIMD_CALL double4 max(double4 x, double4 y) {
     // precise returns x on Nan
     return bitselect_forminmax(_mm_max_pd(x, y), x, y != y);
@@ -178,6 +205,9 @@ SIMD_CALL double4 muladd(double4 x, double4 y, double4 t) {
     return x * y + t;
 #endif
 }
+SIMD_CALL double2 muladd(double2 x, double2 y, double2 t) {
+    return vec4to2(muladd(vec2to4(x), vec2to4(y), vec2to4(t)));
+}
 
 SIMD_CALL double2 sqrt(double2 x) {
     return _mm_sqrt_pd(x);
@@ -190,7 +220,6 @@ SIMD_CALL double2 reduce_addv(double2 x) {
     x = _mm_hadd_pd(x.lo, x.lo);
     return x.x;
 }
-
 SIMD_CALL double4 reduce_addv(double4 x) {
     // 4:1 reduction
     x.lo = _mm_hadd_pd(x.lo, x.lo); // TODO: fix
@@ -199,24 +228,42 @@ SIMD_CALL double4 reduce_addv(double4 x) {
     return x.lo.x; // repeat x to all values
 }
 
+SIMD_CALL double reduce_add(double2 x) {
+    return reduce_addv(x).x;
+}
 SIMD_CALL double reduce_add(double4 x) {
     return reduce_addv(x).x;
 }
-
-#endif // SIMD_LONG && SIMD_SSE
 
 // SSE4.1
 // single ops in AVX/2
 
 SIMD_CALL double4 round(double4 vv) {
-    return double4m(_mm_round_pd(vv.lo, 0x8),_mm_round_pd(vv.hi, 0x8));  // round to nearest | exc
+    // round to nearest | exc
+    return double4m(_mm_round_pd(vv.lo, _MM_FROUND_NO_EXC),
+                    _mm_round_pd(vv.hi, _MM_FROUND_NO_EXC));
 }
+SIMD_CALL double2 round(double2 x) {
+    return vec4to2(round(vec2to4(x)));
+}
+
 SIMD_CALL double4 ceil(double4 vv) {
     return double4m(_mm_ceil_pd(vv.lo),_mm_ceil_pd(vv.hi));
 }
+SIMD_CALL double2 ceil(double2 x) {
+    return vec4to2(ceil(vec2to4(x)));
+}
+
 SIMD_CALL double4 floor(double4 vv) {
     return double4m(_mm_floor_pd(vv.lo),_mm_floor_pd(vv.hi));
 }
+SIMD_CALL double2 floor(double2 x) {
+    return vec4to2(floor(vec2to4(x)));
+}
+
+
+#endif // SIMD_SSE
+
 
 // end of implementation
 //-----------------------------------
@@ -249,10 +296,10 @@ SIMD_CALL double4 select(double4 x, double4 y, long4 mask) {
 
 // zeroext - internal helper
 SIMD_CALL double4 zeroext(double2 x) {
-    return (double4){x.x,x.y,0,0};
+    double4 v = 0; v.xy = x; return v;
 }
 SIMD_CALL double4 zeroext(double3 x) {
-    return (double4){x.x,x.y,x.z,0};
+    double4 v = 0; v.xyz = x; return v;
 }
 
 // min
@@ -307,9 +354,9 @@ SIMD_CALL double3 recip(double3 x) {
 }
 
 // reduce_add
-SIMD_CALL double reduce_add(double2 x) {
-    return reduce_add(zeroext(x));
-}
+//SIMD_CALL double reduce_add(double2 x) {
+//    return reduce_add(zeroext(x));
+//}
 SIMD_CALL double reduce_add(double3 x) {
     return reduce_add(zeroext(x));
 }
@@ -332,16 +379,14 @@ SIMD_CALL double reduce_max(double3 x) {
     return reduce_max(vec3to4(x));
 }
 
+
 // round (to nearest)
-SIMD_CALL double2 round(double2 x) { return vec4to2(round(vec2to4(x))); }
 SIMD_CALL double3 round(double3 x) { return vec4to3(round(vec3to4(x))); }
 
 // ceil
-SIMD_CALL double2 ceil(double2 x) { return vec4to2(ceil(vec2to4(x))); }
 SIMD_CALL double3 ceil(double3 x) { return vec4to3(ceil(vec3to4(x))); }
 
 // floor
-SIMD_CALL double2 floor(double2 x) { return vec4to2(floor(vec2to4(x))); }
 SIMD_CALL double3 floor(double3 x) { return vec4to3(floor(vec3to4(x))); }
 
 // clamp
@@ -356,14 +401,18 @@ SIMD_CALL double4 clamp(double4 x, double4 minv, double4 maxv) {
     return min(maxv, max(minv, x));
 }
 
-double2 saturate(double2 x);
-double3 saturate(double3 x);
-double4 saturate(double4 x);
+// saturate
+SIMD_CALL double2 saturate(double2 x) {
+    return clamp(x, 0, (double2)1);
+}
+SIMD_CALL double3 saturate(double3 x) {
+    return clamp(x, 0, (double3)1);
+}
+SIMD_CALL double4 saturate(double4 x) {
+    return clamp(x, 0, (double4)1);
+}
 
-// muladd - arm has double2 op
-//SIMD_CALL double2 muladd(double2 x, double2 y, double2 t) {
-//    return vec4to2(muladd(vec2to4(x), vec2to4(y), vec2to4(t)));
-//}
+// muladd
 SIMD_CALL double3 muladd(double3 x, double3 y, double3 t) {
     return vec4to3(muladd(vec3to4(x), vec3to4(y), vec3to4(t)));
 }
@@ -440,13 +489,13 @@ SIMD_CALL double3 normalize(double3 x) {
 
 // abs
 SIMD_CALL double2 abs(double2 x) {
-    return bitselect(0.0, x, 0x7fffffff); // TODO: fp64
+    return bitselect(0.0, x, 0x7fffffffffffffff);
 }
 SIMD_CALL double3 abs(double3 x) {
-    return bitselect(0.0, x, 0x7fffffff);
+    return bitselect(0.0, x, 0x7fffffffffffffff);
 }
 SIMD_CALL double4 abs(double4 x) {
-    return bitselect(0.0, x, 0x7fffffff);
+    return bitselect(0.0, x, 0x7fffffffffffffff);
 }
 
 // cross
@@ -506,13 +555,13 @@ SIMD_CALL double4 smoothstep(double4 edge0, double4 edge1, double4 x) {
 
 // fract
 SIMD_CALL double2 fract(double2 x) {
-    return min(x - floor(x), 0x1.fffffep-1f); // TODO: fp64
+    return min(x - floor(x), 0x1.fffffffffffffp-1);
 }
 SIMD_CALL double3 fract(double3 x) {
-    return min(x - floor(x), 0x1.fffffep-1f);
+    return min(x - floor(x), 0x1.fffffffffffffp-1);
 }
 SIMD_CALL double4 fract(double4 x) {
-    return min(x - floor(x), 0x1.fffffep-1f);
+    return min(x - floor(x), 0x1.fffffffffffffp-1);
 }
 
 //-------------------

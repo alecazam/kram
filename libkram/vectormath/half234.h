@@ -29,7 +29,7 @@ typedef short half;
 #endif // SIMD_HALF_FLOAT16
 
 // This means math and conversions don't work, so have to use simd ops
-//#define SIMD_HALF4_ONLY !SIMD_HALF_FLOAT16
+#define SIMD_HALF4_ONLY !SIMD_HALF_FLOAT16
 
 // Half isn't something that should have math ops yet.  Just useful as packed type.
 // This does math, but really needs _Float16 to work properly for the operators.
@@ -43,9 +43,9 @@ macroVector2TypesPacked(half, half)
 // No matrix type defined right now.
 
 // glue to Accelerate
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
+#if SIMD_ACCELERATE_MATH_NAMES
 macroVector8TypesStorageRenames(half, simd_half)
-#endif
+#endif // SIMD_ACCELERATE_MATH_NAMES
 
 #ifdef __cplusplus
 }

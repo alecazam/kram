@@ -16,9 +16,9 @@ extern "C" {
 macroVector4TypesStorage(int, int)
 macroVector4TypesPacked(int, int)
 
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
+#if SIMD_ACCELERATE_MATH_NAMES
 macroVector4TypesStorageRenames(int, simd_int)
-#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
+#endif // SIMD_ACCELERATE_MATH_NAMES
 
 #ifdef __cplusplus
 }
