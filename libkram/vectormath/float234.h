@@ -175,7 +175,7 @@ SIMD_CALL float3 reduce_addv(float3 x) {
 // SSE4.1
 SIMD_CALL float4 round(float4 vv) {
     // round to nearest | exc
-    return _mm_round_ps(vv, _MM_FROUND_NO_EXC); // TODO: _MM_FROUND_TO_NEAREST_INT
+    return _mm_round_ps(vv, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 SIMD_CALL float2 round(float2 x) {
     return vec4to2(round(vec2to4(x)));
@@ -204,6 +204,8 @@ SIMD_CALL float2 floor(float2 x) {
 #if SIMD_INT
 
 // bitselect
+// Hoping these casts float2 -> int2 don't truncate
+//  want this to map to _mm_cast calls
 SIMD_CALL float2 bitselect(float2 x, float2 y, int2 mask) {
     return (float2)bitselect((int2)x, (int2)y, mask);
 }

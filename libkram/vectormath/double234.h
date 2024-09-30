@@ -254,7 +254,7 @@ SIMD_CALL double3 reduce_addv(double3 x) {
 // single ops in AVX/2
 // round to nearest | exc
 SIMD_CALL double2 round(double2 x) {
-    return _mm_round_pd(x, _MM_FROUND_NO_EXC); // TODO: _MM_FROUND_TO_NEAREST_INT |
+    return _mm_round_pd(x, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 SIMD_CALL double4 round(double4 vv) {
     return double4m(round(vv.lo), round(vv.hi));

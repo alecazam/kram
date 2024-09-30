@@ -348,16 +348,16 @@ FORCE_INLINE void _sse2neon_smp_mb(void)
 #define _MM_SHUFFLE(fp3, fp2, fp1, fp0) \
     (((fp3) << 6) | ((fp2) << 4) | ((fp1) << 2) | ((fp0)))
 
-#if __has_builtin(__builtin_shufflevector)
+//#if __has_builtin(__builtin_shufflevector)
 #define _sse2neon_shuffle(type, a, b, ...) \
     __builtin_shufflevector(a, b, __VA_ARGS__)
-#elif __has_builtin(__builtin_shuffle)
-#define _sse2neon_shuffle(type, a, b, ...) \
-    __extension__({                        \
-        type tmp = {__VA_ARGS__};          \
-        __builtin_shuffle(a, b, tmp);      \
-    })
-#endif
+//#elif __has_builtin(__builtin_shuffle)
+//#define _sse2neon_shuffle(type, a, b, ...) \
+//    __extension__({                        \
+//        type tmp = {__VA_ARGS__};          \
+//        __builtin_shuffle(a, b, tmp);      \
+//    })
+//#endif
 
 #ifdef _sse2neon_shuffle
 #define vshuffle_s16(a, b, ...) _sse2neon_shuffle(int16x4_t, a, b, __VA_ARGS__)
@@ -686,6 +686,7 @@ typedef struct {
     uint32_t res3;
 } fpcr_bitfield;
 
+/*
 // Takes the upper 64 bits of a and places it in the low end of the result
 // Takes the lower 64 bits of b and places it into the high end of the result.
 FORCE_INLINE __m128 _mm_shuffle_ps_1032(__m128 a, __m128 b)
@@ -781,7 +782,7 @@ FORCE_INLINE __m128 _mm_shuffle_ps_3202(__m128 a, __m128 b)
     float32_t a0 = vgetq_lane_f32(vreinterpretq_f32_m128(a), 0);
     float32x2_t a22 =
         vdup_lane_f32(vget_high_f32(vreinterpretq_f32_m128(a)), 0);
-    float32x2_t a02 = vset_lane_f32(a0, a22, 1); /* TODO: use vzip ?*/
+    float32x2_t a02 = vset_lane_f32(a0, a22, 1); // TODO: use vzip ?
     float32x2_t b32 = vget_high_f32(vreinterpretq_f32_m128(b));
     return vreinterpretq_m128_f32(vcombine_f32(a02, b32));
 }
@@ -820,6 +821,7 @@ FORCE_INLINE __m128 _mm_shuffle_ps_2032(__m128 a, __m128 b)
     float32x2_t b20 = vset_lane_f32(b2, b00, 1);
     return vreinterpretq_m128_f32(vcombine_f32(a32, b20));
 }
+*/
 
 // For MSVC, we check only if it is ARM64, as every single ARM64 processor
 // supported by WoA has crypto extensions. If this changes in the future,

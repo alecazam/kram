@@ -7,7 +7,12 @@
 // This is not yet standalone.  vectormath++.h includes it.
 #if USE_SIMDLIB && SIMD_LONG
 
+#ifdef _WIN32
+// Windows breaks portable code.
 typedef int64_t long1;
+#else
+typedef long long1;
+#endif
 
 #ifdef __cplusplus
 extern "C" {

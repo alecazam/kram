@@ -366,8 +366,13 @@ float3x3 transpose(const float3x3& x) {
 
 float4x4 transpose(const float4x4& x) {
     // NOTE: also _MM_TRANSPOSE4_PS using shuffles
-    // but old Neon didn't really have shuffle
+    // but old Neon didn't really have shuffle, but
+    // and sse2neon is using combine instead of shuffle.
 
+//    float4x4 xt(x);
+//    _MM_TRANSPOSE4_PS(xt[0], xt[1], xt[2], xt[3]);
+//    return xt;
+    
 #if SIMD_SSE
     float4 t0 = _mm_unpacklo_ps(x[0],x[2]);
     float4 t1 = _mm_unpackhi_ps(x[0],x[2]);

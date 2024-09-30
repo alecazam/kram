@@ -138,7 +138,7 @@
 
 // fp comparisons gen a corresponding signed integer type
 #define SIMD_INT    1
-#define SIMD_LONG   0
+#define SIMD_LONG   1
 
 // don't need these yet, doing math, not string processing
 #define SIMD_CHAR   0
@@ -153,7 +153,7 @@
 // #define SIMD_HALF   (1 && SIMD_SHORT)
 #define SIMD_HALF   (1)
 #define SIMD_FLOAT  (1 && SIMD_INT)
-#define SIMD_DOUBLE (0 && SIMD_LONG)
+#define SIMD_DOUBLE (1 && SIMD_LONG)
 
 // Whether to support > 4 length vecs with some ops
 #define SIMD_FLOAT_EXT 0
@@ -330,6 +330,7 @@ SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { ret
 
 // This converts sse to neon intrinsics.
 // Only for transpose_affine (_mm_shuffle_ps)
+// Good reference for SSE <-> Neon mapping .
 #include "sse2neon-arm64.h"
 
 #else
