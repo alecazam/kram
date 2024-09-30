@@ -66,6 +66,13 @@ SIMD_CALL bool all(int4 x) {
 }
 #endif // SIMD_SSE
        
+// any-all
+SIMD_CALL bool any(int3 x) {
+    return any(vec3to4(x));
+}
+SIMD_CALL bool all(int3 x) {
+    return all(vec3to4(x));
+}
 
 // end of implementation
 //-----------------------------------
@@ -94,7 +101,7 @@ SIMD_CALL int3 int3m(int x) {
 SIMD_CALL int3 int3m(int x, int y, int z) {
     return {x,y,z};
 }
-SIMD_CALL int3 int3m(int2 v, float z) {
+SIMD_CALL int3 int3m(int2 v, int z) {
     int3 r; r.xy = v; r.z = z; return r;
 }
 
@@ -108,7 +115,7 @@ SIMD_CALL int4 int4m(int2 xy, int2 zw) {
 SIMD_CALL int4 int4m(int x, int y, int z, int w) {
     return {x,y,z,w};
 }
-SIMD_CALL int4 int4m(int3 v, float w) {
+SIMD_CALL int4 int4m(int3 v, int w) {
     int4 r; r.xyz = v; r.w = w; return r;
 }
 

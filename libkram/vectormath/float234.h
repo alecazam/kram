@@ -186,14 +186,6 @@ SIMD_CALL float4 zeroext(float3 x) {
     return (float4){x.x,x.y,x.z,0};
 }
 
-// any
-SIMD_CALL bool any(int3 x) {
-    return any(vec3to4(x));
-}
-SIMD_CALL bool all(int3 x) {
-    return all(vec3to4(x));
-}
-
 // min
 SIMD_CALL float2 min(float2 x, float2 y) {
     return vec4to2(min(vec2to4(x), vec2to4(y)));

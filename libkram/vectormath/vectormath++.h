@@ -136,22 +136,24 @@
 // a define to override setings from prefix file
 #ifndef SIMD_CONFIG
 
+// fp comparisons gen a corresponding signed integer type
 #define SIMD_INT    1
 #define SIMD_LONG   1
+
+// don't need these yet, doing math, not string processing
+#define SIMD_CHAR   0
+#define SIMD_SHORT  0
+//#define SIMD_UCHAR  0
+//#define SIMD_USHORT 0
+//#define SIMD_ULONG  0
 
 // Vector and matrix types.  Currently only matrix types for SIMD_FLOAT, SIMD_DOUBLE.
 // SIMD_INT must be kept on for conditional tests.
 // SIMD_HALF for bitselect would need SIMD_SHORT or SIMD_INT?
+// #define SIMD_HALF   (1 && SIMD_SHORT)
 #define SIMD_HALF   (1)
 #define SIMD_FLOAT  (1 && SIMD_INT)
-#define SIMD_DOUBLE (0 && SIMD_LONG)
-
-
-#define SIMD_CHAR   0
-//#define SIMD_UCHAR  0
-#define SIMD_SHORT  0
-//#define SIMD_USHORT 0
-//#define SIMD_ULONG  0
+#define SIMD_DOUBLE (1 && SIMD_LONG)
 
 // Whether to support > 4 length vecs with some ops
 #define SIMD_FLOAT_EXT 0
@@ -339,6 +341,8 @@ SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { ret
 
 // moved vec/matrix ops into secondary headers
 #include "int234.h"
+#include "long234.h"
+
 #include "half234.h"
 #include "float234.h"
 #include "double234.h"
@@ -391,30 +395,6 @@ macroVector2TypesStorageRenames(short, short)
 }
 #endif // __cplusplus
 #endif // SIMD_SHORT
-
-//------------
-#if SIMD_LONG
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// define c vector types
-macroVector8TypesStorage(long, long)
-macroVector8TypesPacked(long, long)
-
-#if SIMD_RENAME_TO_SIMD_NAMESPACE
-macroVector8TypesStorageRenames(long, simd_long)
-#endif // SIMD_RENAME_TO_SIMD_NAMESPACE
-
-#ifdef __cplusplus
-}
-
-namespace SIMD_NAMESPACE {
-macroVector8TypesStorageRenames(long, long)
-}
-#endif // __cplusplus
-#endif // SIMD_LONG
 
 //-------------------
 #ifdef __cplusplus

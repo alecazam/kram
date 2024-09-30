@@ -122,16 +122,16 @@ SIMD_CALL double2 sqrt(double2 x) {
     return vsqrtq_f64(x);
 }
 SIMD_CALL double4 sqrt(double4 x) {
-    return double4m(sqrt(x.lo,x.lo), sqrt(x.hi,x.hi));
+    return double4m(sqrt(x.lo), sqrt(x.hi));
 }
 
 // use sse2neon to port this for now
 SIMD_CALL double4 reduce_addv(double4 x) {
     // 4:1 reduction
-    x = _mm_hadd_pd(x.lo, x.lo);
-    x = _mm_hadd_pd(x.hi, x.hi);
-    x = _mm_hadd_pd(x.lo, x.hi);
-    return x.x; // repeat x to all values
+    x.lo = _mm_hadd_pd(x.lo, x.lo);
+    x.hi = _mm_hadd_pd(x.hi, x.hi);
+    x.lo = _mm_hadd_pd(x.lo, x.hi);
+    return x.lo.x; // repeat x to all values
 }
 
 SIMD_CALL double reduce_add(double4 x) {
@@ -179,16 +179,24 @@ SIMD_CALL double4 muladd(double4 x, double4 y, double4 t) {
 #endif
 }
 
-SIMD_CALL double4 sqrt(double4 x) {
+SIMD_CALL double2 sqrt(double2 x) {
     return _mm_sqrt_pd(x);
+}
+SIMD_CALL double4 sqrt(double4 x) {
+    return double4m(sqrt(x.lo), sqrt(x.hi));
+}
+
+SIMD_CALL double2 reduce_addv(double2 x) {
+    x = _mm_hadd_pd(x.lo, x.lo);
+    return x.x;
 }
 
 SIMD_CALL double4 reduce_addv(double4 x) {
     // 4:1 reduction
-    x = _mm_hadd_pd(x.lo, x.lo);
-    x = _mm_hadd_pd(x.hi, x.hi);
-    x = _mm_hadd_pd(x.lo, x.hi);
-    return x.x; // repeat x to all values
+    x.lo = _mm_hadd_pd(x.lo, x.lo); // TODO: fix
+    x.hi = _mm_hadd_pd(x.hi, x.hi);
+    x.lo = _mm_hadd_pd(x.lo, x.hi);
+    return x.lo.x; // repeat x to all values
 }
 
 SIMD_CALL double reduce_add(double4 x) {
@@ -247,34 +255,26 @@ SIMD_CALL double4 zeroext(double3 x) {
     return (double4){x.x,x.y,x.z,0};
 }
 
-// any
-SIMD_CALL bool any(long3 x) {
-    return any(vec3to4(x));
-}
-SIMD_CALL bool all(long4 x) {
-    return all(vec3to4(x));
-}
-
 // min
-SIMD_CALL double2 min(double2 x, double2 y) {
-    return vec4to2(min(vec2to4(x), vec2to4(y)));
-}
+//SIMD_CALL double2 min(double2 x, double2 y) {
+//    return vec4to2(min(vec2to4(x), vec2to4(y)));
+//}
 SIMD_CALL double3 min(double3 x, double3 y) {
     return vec4to3(min(vec3to4(x), vec3to4(y)));
 }
 
 // max
-SIMD_CALL double2 max(double2 x, double2 y) {
-    return vec4to2(max(vec2to4(x), vec2to4(y)));
-}
+//SIMD_CALL double2 max(double2 x, double2 y) {
+//    return vec4to2(max(vec2to4(x), vec2to4(y)));
+//}
 SIMD_CALL double3 max(double3 x, double3 y) {
     return vec4to3(max(vec3to4(x), vec3to4(y)));
 }
 
 // sqrt
-SIMD_CALL double2 sqrt(double2 x) {
-    return vec4to2(sqrt(vec2to4(x)));
-}
+//SIMD_CALL double2 sqrt(double2 x) {
+//    return vec4to2(sqrt(vec2to4(x)));
+//}
 SIMD_CALL double3 sqrt(double3 x) {
     return vec4to3(sqrt(vec3to4(x)));
 }
@@ -315,18 +315,18 @@ SIMD_CALL double reduce_add(double3 x) {
 }
 
 // reduce_min - arm has double2 op
-SIMD_CALL double reduce_min(double2 x) {
-    return reduce_min(vec2to4(x));
-}
+//SIMD_CALL double reduce_min(double2 x) {
+//    return reduce_min(vec2to4(x));
+//}
 
 SIMD_CALL double reduce_min(double3 x) {
     return reduce_min(vec3to4(x));
 }
 
 // reduce_max
-SIMD_CALL double reduce_max(double2 x) {
-    return reduce_max(vec2to4(x));
-}
+//SIMD_CALL double reduce_max(double2 x) {
+//    return reduce_max(vec2to4(x));
+//}
 
 SIMD_CALL double reduce_max(double3 x) {
     return reduce_max(vec3to4(x));
@@ -361,9 +361,9 @@ double3 saturate(double3 x);
 double4 saturate(double4 x);
 
 // muladd - arm has double2 op
-SIMD_CALL double2 muladd(double2 x, double2 y, double2 t) {
-    return vec4to2(muladd(vec2to4(x), vec2to4(y), vec2to4(t)));
-}
+//SIMD_CALL double2 muladd(double2 x, double2 y, double2 t) {
+//    return vec4to2(muladd(vec2to4(x), vec2to4(y), vec2to4(t)));
+//}
 SIMD_CALL double3 muladd(double3 x, double3 y, double3 t) {
     return vec4to3(muladd(vec3to4(x), vec3to4(y), vec3to4(t)));
 }

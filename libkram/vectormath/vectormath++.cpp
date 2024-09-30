@@ -1444,15 +1444,19 @@ string vecf::str(const double4x4& m) const {
 
 // textbook transpose 
 double2x2 transpose(const double2x2& x) {
-    double4 x0, x1;
+    double2 x0, x1;
     x0.xy = x[0];
     x1.xy = x[1];
+    
+    // std::swap would seem faster here?
 #if SIMD_SSE
-    double4 r01 = _mm_unpacklo_pd(x0, x1); // required AVX2
+    double2 r0 = { x0[0], x1[0] };
+    double2 r1 = { x0[1], x1[1] };
 #else
-    double4 r01 = vzip1q_f64(x0, x1);
+    double2 r0 = vzip1q_f64(x0, x1);
+    double2 r1 = vzip2q_f64(x0, x1);
 #endif
-    return (double2x2){r01.lo, r01.hi};
+    return (double2x2){r0, r1};
 }
 
 double3x3 transpose(const double3x3& x) {

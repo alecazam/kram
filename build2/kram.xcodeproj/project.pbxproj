@@ -396,6 +396,8 @@
 		70B563A82C857B360089A64F /* KramZipStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B563A52C857B360089A64F /* KramZipStream.cpp */; };
 		70B563A92C857B360089A64F /* KramZipStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B563A62C857B360089A64F /* KramZipStream.h */; };
 		70B563AA2C857B360089A64F /* KramZipStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B563A62C857B360089A64F /* KramZipStream.h */; };
+		70B686E32CAA3409007ACA58 /* long234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686E22CAA3405007ACA58 /* long234.h */; };
+		70B686E42CAA3409007ACA58 /* long234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686E22CAA3405007ACA58 /* long234.h */; };
 		70CDB65027A1382700A546C1 /* KramDDSHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 70CDB64E27A1382600A546C1 /* KramDDSHelper.h */; };
 		70CDB65127A1382700A546C1 /* KramDDSHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 70CDB64E27A1382600A546C1 /* KramDDSHelper.h */; };
 		70CDB65227A1382700A546C1 /* KramDDSHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */; };
@@ -764,6 +766,7 @@
 		70A7BD2F27092A1200DBCCF7 /* hdr_encode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hdr_encode.h; sourceTree = "<group>"; };
 		70B563A52C857B360089A64F /* KramZipStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramZipStream.cpp; sourceTree = "<group>"; };
 		70B563A62C857B360089A64F /* KramZipStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramZipStream.h; sourceTree = "<group>"; };
+		70B686E22CAA3405007ACA58 /* long234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = long234.h; sourceTree = "<group>"; };
 		70CDB64E27A1382600A546C1 /* KramDDSHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramDDSHelper.h; sourceTree = "<group>"; };
 		70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramDDSHelper.cpp; sourceTree = "<group>"; };
 		70D222D62AC800AC00B9EA23 /* json11.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = json11.h; sourceTree = "<group>"; };
@@ -807,6 +810,7 @@
 				705F7EFD2C9FF42700E377B7 /* sse2neon.h */,
 				705F7EFE2C9FF42700E377B7 /* sse2neon-arm64.h */,
 				705F7F022C9FF42700E377B7 /* vectormath++.h */,
+				70B686E22CAA3405007ACA58 /* long234.h */,
 				7013AD5D2CAA0E18007E5554 /* half234.h */,
 				7013AD602CAA0E21007E5554 /* int234.h */,
 				7013AD4E2CAA0818007E5554 /* float234.h */,
@@ -1513,6 +1517,7 @@
 				707789F32881BCE2008A51BC /* rdo_bc_encoder.h in Headers */,
 				70D222D82AC800AC00B9EA23 /* json11.h in Headers */,
 				706EF01726D15985001C950E /* colourset.h in Headers */,
+				70B686E42CAA3409007ACA58 /* long234.h in Headers */,
 				708A6AA42708CE4700BA5410 /* bc6h_utils.h in Headers */,
 				706EF01826D15985001C950E /* colourblock.h in Headers */,
 				706EF01926D15985001C950E /* rangefit.h in Headers */,
@@ -1632,6 +1637,7 @@
 				707789F42881BCE2008A51BC /* rdo_bc_encoder.h in Headers */,
 				70D222D92AC800AC00B9EA23 /* json11.h in Headers */,
 				706EF19126D166C5001C950E /* colourset.h in Headers */,
+				70B686E32CAA3409007ACA58 /* long234.h in Headers */,
 				708A6AA52708CE4700BA5410 /* bc6h_utils.h in Headers */,
 				706EF19226D166C5001C950E /* colourblock.h in Headers */,
 				706EF19326D166C5001C950E /* rangefit.h in Headers */,
