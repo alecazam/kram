@@ -167,6 +167,8 @@ static const CoreInfo& GetCoreInfo()
                 }
                 break;
             }
+            default:
+                break;
         }
         
         if (isHyperthreaded)
@@ -203,6 +205,8 @@ static const CoreInfo& GetCoreInfo()
                 logicalCoreCount += logicalCores;
                 break;
             }
+            default:
+                break;
         }
         byteOffset += sizeof(ProcInfo);
         ptr++;

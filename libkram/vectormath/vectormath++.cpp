@@ -419,6 +419,13 @@ float3x3 inverse(const float3x3& x) {
     return r;
 }
 
+// std::swap has warning on aligned data
+inline void swap(float4& a, float4& b) {
+    float4 temp = a;
+    a = b;
+    b = temp;
+}
+
 float4x4 inverse(const float4x4& x) {
     // This is a full gje inverse
     
@@ -441,8 +448,8 @@ float4x4 inverse(const float4x4& x) {
         }
         
         // Swap rows i1 and j in a and b to put pivot on diagonal
-        std::swap(a[i1], a[j]);
-        std::swap(b[i1], b[j]);
+        SIMD_NAMESPACE::swap(a[i1], a[j]);
+        SIMD_NAMESPACE::swap(b[i1], b[j]);
     
         // Scale row j to have a unit diagonal
         float s = a[j][j];
@@ -1248,6 +1255,7 @@ float4x4 inverse_tru(const float4x4& mtx)
         inverse[3] = inverse * (-mtx[3]);
         
         success = true;
+        macroUnusedVar(success);
     }
     
     return inverse;
@@ -1302,6 +1310,7 @@ float4x4 inverse_trs(const float4x4& mtx)
         inverse[3] = inverse * (-mtx[3]);
         
         success = true;
+    macroUnusedVar(success);
     //}
     
     return inverse;
@@ -1604,6 +1613,13 @@ double3x3 inverse(const double3x3& x) {
     return r;
 }
 
+// std::swap has warning on aligned data
+inline void swap(double4& a, double4& b) {
+    double4 temp = a;
+    a = b;
+    b = temp;
+}
+
 double4x4 inverse(const double4x4& x) {
     // This is a full gje inverse
     
@@ -1626,8 +1642,8 @@ double4x4 inverse(const double4x4& x) {
         }
         
         // Swap rows i1 and j in a and b to put pivot on diagonal
-        std::swap(a[i1], a[j]);
-        std::swap(b[i1], b[j]);
+        SIMD_NAMESPACE::swap(a[i1], a[j]);
+        SIMD_NAMESPACE::swap(b[i1], b[j]);
     
         // Scale row j to have a unit diagonal
         double s = a[j][j];
