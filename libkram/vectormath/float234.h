@@ -37,58 +37,40 @@ macroVector4TypesStorageRenames(float, float)
 //-----------------------------------
 // start of implementation
 
+// zeroext - internal helper
+SIMD_CALL float4 zeroext(float2 x) {
+    float4 v = 0; v.xy = x; return v;
+}
+SIMD_CALL float4 zeroext(float3 x) {
+    float4 v = 0; v.xyz = x; return v;
+}
+
 #if SIMD_NEON
 
 // DONE: expose float2 ops on Neon.
 // q = 4, nothing = 2
 
-SIMD_CALL float reduce_min(float2 x) {
-    return vminv_f32(x);
-}
-SIMD_CALL float reduce_min(float4 x) {
-    return vminvq_f32(x);
-}
+SIMD_CALL float reduce_min(float2 x) { return vminv_f32(x); }
+SIMD_CALL float reduce_min(float4 x) { return vminvq_f32(x); }
 
-SIMD_CALL float reduce_max(float2 x) {
-    return vmaxv_f32(x);
-}
-SIMD_CALL float reduce_max(float4 x) {
-    return vmaxvq_f32(x);
-}
+SIMD_CALL float reduce_max(float2 x) { return vmaxv_f32(x); }
+SIMD_CALL float reduce_max(float4 x) { return vmaxvq_f32(x); }
 
-SIMD_CALL float2 min(float2 x, float2 y) {
-    // precise returns x on Nan
-    return vminnm_f32(x, y);
-}
-SIMD_CALL float4 min(float4 x, float4 y) {
-    // precise returns x on Nan
-    return vminnmq_f32(x, y);
-}
+// precise returns x on Nan
+SIMD_CALL float2 min(float2 x, float2 y) { return vminnm_f32(x, y); }
+SIMD_CALL float4 min(float4 x, float4 y) { return vminnmq_f32(x, y); }
 
-SIMD_CALL float2 max(float2 x, float2 y) {
-    // precise returns x on Nan
-    return vmaxnm_f32(x, y);
-}
-SIMD_CALL float4 max(float4 x, float4 y) {
-    // precise returns x on Nan
-    return vmaxnmq_f32(x, y);
-}
+// precise returns x on Nan
+SIMD_CALL float2 max(float2 x, float2 y) { return vmaxnm_f32(x, y); }
+SIMD_CALL float4 max(float4 x, float4 y) { return vmaxnmq_f32(x, y); }
 
 // requires __ARM_VFPV4__
 // t passed first unlike sse
-SIMD_CALL float2 muladd(float2 x, float2 y, float2 t) {
-    return vfma_f32(t, x,y);
-}
-SIMD_CALL float4 muladd(float4 x, float4 y, float4 t) {
-    return vfmaq_f32(t, x,y);
-}
+SIMD_CALL float2 muladd(float2 x, float2 y, float2 t) { return vfma_f32(t, x,y); }
+SIMD_CALL float4 muladd(float4 x, float4 y, float4 t) { return vfmaq_f32(t, x,y); }
 
-SIMD_CALL float2 sqrt(float2 x) {
-    return vsqrt_f32(x);
-}
-SIMD_CALL float4 sqrt(float4 x) {
-    return vsqrtq_f32(x);
-}
+SIMD_CALL float2 sqrt(float2 x) { return vsqrt_f32(x); }
+SIMD_CALL float4 sqrt(float4 x) { return vsqrtq_f32(x); }
 
 SIMD_CALL float2 reduce_addv(float2 x) {
     x = vpadd_f32(x, x);
@@ -100,36 +82,19 @@ SIMD_CALL float4 reduce_addv(float4 x) {
     x = vpaddq_f32(x, x); // x  = x+y
     return x.x; // repeat x to all values
 }
-
-SIMD_CALL float reduce_add(float2 x) {
-    return reduce_addv(x).x;
-}
-SIMD_CALL float reduce_add(float4 x) {
-    return reduce_addv(x).x;
+SIMD_CALL float3 reduce_addv(float3 x) {
+    return reduce_addv(zeroext(x)).x; // repeat
 }
 
-SIMD_CALL float2 round(float2 vv) {
-    // round to nearest | exc
-    return vrndn_f32(vv); // _MM_FROUND_NO_EXC
-}
-SIMD_CALL float4 round(float4 vv) {
-    // round to nearest | exc
-    return vrndnq_f32(vv); // _MM_FROUND_NO_EXC
-}
+// round to nearest | exc
+SIMD_CALL float2 round(float2 vv) { return vrndn_f32(vv); }
+SIMD_CALL float4 round(float4 vv) { return vrndnq_f32(vv); }
 
-SIMD_CALL float2 ceil(float2 vv) {
-    return vrndp_f32(vv);
-}
-SIMD_CALL float4 ceil(float4 vv) {
-    return vrndpq_f32(vv);
-}
+SIMD_CALL float2 ceil(float2 vv) { return vrndp_f32(vv); }
+SIMD_CALL float4 ceil(float4 vv) { return vrndpq_f32(vv); }
 
-SIMD_CALL float2 floor(float2 vv) {
-    return vrndm_f32(vv);
-}
-SIMD_CALL float4 floor(float4 vv) {
-    return vrndmq_f32(vv);
-}
+SIMD_CALL float2 floor(float2 vv) { return vrndm_f32(vv); }
+SIMD_CALL float4 floor(float4 vv) { return vrndmq_f32(vv); }
 
 #endif // SIMD_NEON
 
@@ -200,12 +165,11 @@ SIMD_CALL float4 reduce_addv(float4 x) {
     x = _mm_hadd_ps(x, x); // x  = x+y
     return x.x; // repeat x to all values
 }
-
-SIMD_CALL float reduce_add(float4 x) {
-    return reduce_addv(x).x;
+SIMD_CALL float2 reduce_addv(float2 x) {
+    return reduce_addv(zeroext(x)).x;
 }
-SIMD_CALL float reduce_add(float2 x) {
-    return reduce_add(zeroext(x));
+SIMD_CALL float3 reduce_addv(float3 x) {
+    return reduce_addv(zeroext(x)).x;
 }
 
 // SSE4.1
@@ -263,87 +227,33 @@ SIMD_CALL float4 select(float4 x, float4 y, int4 mask) {
 
 #endif // SIMD_INT
 
-// zeroext - internal helper
-SIMD_CALL float4 zeroext(float2 x) {
-    float4 v = 0; v.xy = x; return v;
-}
-SIMD_CALL float4 zeroext(float3 x) {
-    float4 v = 0; v.xyz = x; return v;
-}
-
 // TODO: consider casts instead of shuffles below, at least on inputs
 // float3 same size as float4, can't use cast on reduce calls.
 
-// min
-SIMD_CALL float3 min(float3 x, float3 y) {
-    return vec4to3(min(vec3to4(x), vec3to4(y)));
-}
-
-// max
-SIMD_CALL float3 max(float3 x, float3 y) {
-    return vec4to3(max(vec3to4(x), vec3to4(y)));
-}
-
-// sqrt
-SIMD_CALL float3 sqrt(float3 x) {
-    return vec4to3(sqrt(vec3to4(x)));
-}
-
-// muladd
-SIMD_CALL float3 muladd(float3 x, float3 y, float3 t) {
-    return vec4to3(muladd(vec3to4(x), vec3to4(y), vec3to4(t)));
-}
+// float3 leftovers
+SIMD_CALL float3 min(float3 x, float3 y) { return vec4to3(min(vec3to4(x), vec3to4(y))); }
+SIMD_CALL float3 max(float3 x, float3 y) { return vec4to3(max(vec3to4(x), vec3to4(y))); }
+SIMD_CALL float3 muladd(float3 x, float3 y, float3 t) { return vec4to3(muladd(vec3to4(x), vec3to4(y), vec3to4(t))); }
+SIMD_CALL float reduce_min(float3 x) { return reduce_min(vec3to4(x)); }
+SIMD_CALL float reduce_max(float3 x) { return reduce_max(vec3to4(x)); }
+SIMD_CALL float3 round(float3 x) { return vec4to3(round(vec3to4(x))); }
+SIMD_CALL float3 ceil(float3 x) { return vec4to3(ceil(vec3to4(x))); }
+SIMD_CALL float3 floor(float3 x) { return vec4to3(floor(vec3to4(x))); }
+SIMD_CALL float3 sqrt(float3 x) { return vec4to3(sqrt(vec3to4(x))); }
 
 // rsqrt
-// TODO: fixup near 0 ?
-// TODO: use _mm_div_ps if / doesn't use
-SIMD_CALL float4 rsqrt(float4 x) {
-    return 1.0f/sqrt(x);
-}
-SIMD_CALL float2 rsqrt(float2 x) {
-    return 1.0f/sqrt(x);
-}
-SIMD_CALL float3 rsqrt(float3 x) {
-    return 1.0f/sqrt(x);
-}
+SIMD_CALL float4 rsqrt(float4 x) { return 1.0f/sqrt(x); }
+SIMD_CALL float2 rsqrt(float2 x) { return 1.0f/sqrt(x); }
+SIMD_CALL float3 rsqrt(float3 x) { return 1.0f/sqrt(x); }
 
 // recip
-SIMD_CALL float4 recip(float4 x) {
-    // TODO: fixup near 0 ?
-    // TODO: use _mm_div_ps if / doesn't use
-    return 1.0f/x;
-}
-SIMD_CALL float2 recip(float2 x) {
-    return 1.0f/x;
-}
-SIMD_CALL float3 recip(float3 x) {
-    return 1.0f/x;
-}
+SIMD_CALL float4 recip(float4 x) { return 1.0f/x; }
+SIMD_CALL float2 recip(float2 x) { return 1.0f/x; }
+SIMD_CALL float3 recip(float3 x) { return 1.0f/x; }
 
-// reduce_add
-SIMD_CALL float reduce_add(float3 x) {
-    return reduce_add(zeroext(x));
-}
-
-// reduce_min - arm has float2 op
-SIMD_CALL float reduce_min(float3 x) {
-    return reduce_min(vec3to4(x));
-}
-
-// reduce_max
-SIMD_CALL float reduce_max(float3 x) {
-    return reduce_max(vec3to4(x));
-}
-
-
-// round (to nearest)
-SIMD_CALL float3 round(float3 x) { return vec4to3(round(vec3to4(x))); }
-
-// ceil
-SIMD_CALL float3 ceil(float3 x) { return vec4to3(ceil(vec3to4(x))); }
-
-// floor
-SIMD_CALL float3 floor(float3 x) { return vec4to3(floor(vec3to4(x))); }
+SIMD_CALL float reduce_add(float2 x) { return reduce_addv(x).x; }
+SIMD_CALL float reduce_add(float3 x) { return reduce_addv(x).x; }
+SIMD_CALL float reduce_add(float4 x) { return reduce_addv(x).x; }
 
 // clamp
 // order matters here for Nan, left op returned on precise min/max
@@ -358,86 +268,41 @@ SIMD_CALL float4 clamp(float4 x, float4 minv, float4 maxv) {
 }
 
 // saturate
-SIMD_CALL float2 saturate(float2 x) {
-    return clamp(x, 0, (float2)1);
-}
-SIMD_CALL float3 saturate(float3 x) {
-    return clamp(x, 0, (float3)1);
-}
-SIMD_CALL float4 saturate(float4 x) {
-    return clamp(x, 0, (float4)1);
-}
-
+SIMD_CALL float2 saturate(float2 x) { return clamp(x, 0, (float2)1); }
+SIMD_CALL float3 saturate(float3 x) { return clamp(x, 0, (float3)1); }
+SIMD_CALL float4 saturate(float4 x) { return clamp(x, 0, (float4)1); }
 
 // lerp - another easy one, could use muladd(t, y-x, x)
-SIMD_CALL float2 lerp(float2 x, float2 y, float2 t) {
-    return x + t*(y - x);
-}
-SIMD_CALL float3 lerp(float3 x, float3 y, float3 t) {
-    return x + t*(y - x);
-}
-SIMD_CALL float4 lerp(float4 x, float4 y, float4 t) {
-    return x + t*(y - x);
-}
-
+SIMD_CALL float2 lerp(float2 x, float2 y, float2 t) { return x + t*(y - x); }
+SIMD_CALL float3 lerp(float3 x, float3 y, float3 t) { return x + t*(y - x); }
+SIMD_CALL float4 lerp(float4 x, float4 y, float4 t) { return x + t*(y - x); }
 
 // dot
-SIMD_CALL float dot(float2 x, float2 y) {
-    return reduce_add(x * y);
-}
-SIMD_CALL float dot(float3 x, float3 y) {
-    return reduce_add(x * y);
-}
-SIMD_CALL float dot(float4 x, float4 y) {
-    return reduce_add(x * y);
-}
+SIMD_CALL float dot(float2 x, float2 y) { return reduce_add(x * y); }
+SIMD_CALL float dot(float3 x, float3 y) { return reduce_add(x * y); }
+SIMD_CALL float dot(float4 x, float4 y) { return reduce_add(x * y); }
 
 // length_squared
-SIMD_CALL float length_squared(float2 x) {
-    return reduce_add(x * x);
-}
-SIMD_CALL float length_squared(float3 x) {
-    return reduce_add(x * x);
-}
-SIMD_CALL float length_squared(float4 x) {
-    return reduce_add(x * x);
-}
+SIMD_CALL float length_squared(float2 x) { return reduce_add(x * x); }
+SIMD_CALL float length_squared(float3 x) { return reduce_add(x * x); }
+SIMD_CALL float length_squared(float4 x) { return reduce_add(x * x); }
 
 // length
-SIMD_CALL float length(float2 x) {
-    // worth using simd_sqrt?
-    return ::sqrt(reduce_add(x * x));
-}
-SIMD_CALL float length(float3 x) {
-    return ::sqrt(reduce_add(x * x));
-}
-SIMD_CALL float length(float4 x) {
-    return ::sqrt(reduce_add(x * x));
-}
+SIMD_CALL float length(float2 x) { return ::sqrt(reduce_add(x * x)); }
+SIMD_CALL float length(float3 x) { return ::sqrt(reduce_add(x * x)); }
+SIMD_CALL float length(float4 x) { return ::sqrt(reduce_add(x * x)); }
 
 // distance
-SIMD_CALL float distance(float2 x, float2 y) {
-    return length(x - y);
-}
-SIMD_CALL float distance(float3 x, float3 y) {
-    return length(x - y);
-}
-SIMD_CALL float distance(float4 x, float4 y) {
-    return length(x - y);
-}
+SIMD_CALL float distance(float2 x, float2 y) { return length(x - y); }
+SIMD_CALL float distance(float3 x, float3 y) { return length(x - y); }
+SIMD_CALL float distance(float4 x, float4 y) { return length(x - y); }
 
 // normalize
 // optimized by staying in reg
-SIMD_CALL float4 normalize(float4 x) {
-    // x * invlength(x)
-    return x * rsqrt(reduce_addv(x * x)).x;
-}
-SIMD_CALL float2 normalize(float2 x) {
-    return vec4to2(normalize(zeroext(x)));
-}
-SIMD_CALL float3 normalize(float3 x) {
-    return vec4to3(normalize(zeroext(x)));
-}
+// x * invlength(x)
+SIMD_CALL float4 normalize(float4 x) { return x * rsqrt(reduce_addv(x * x)).x; }
+SIMD_CALL float2 normalize(float2 x) { return x * rsqrt(reduce_addv(x * x)).x; }
+SIMD_CALL float3 normalize(float3 x) { return x * rsqrt(reduce_addv(x * x)).x; }
 
 // abs
 SIMD_CALL float2 abs(float2 x) {

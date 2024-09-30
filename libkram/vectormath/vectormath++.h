@@ -153,7 +153,7 @@
 // #define SIMD_HALF   (1 && SIMD_SHORT)
 #define SIMD_HALF   (1)
 #define SIMD_FLOAT  (1 && SIMD_INT)
-#define SIMD_DOUBLE (1 && SIMD_LONG)
+#define SIMD_DOUBLE (0 && SIMD_LONG)
 
 // Whether to support > 4 length vecs with some ops
 #define SIMD_FLOAT_EXT 0
