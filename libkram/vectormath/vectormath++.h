@@ -140,7 +140,7 @@
 // SIMD_INT must be kept on for conditional tests.
 #define SIMD_HALF   1
 #define SIMD_FLOAT  1
-#define SIMD_DOUBLE 1
+#define SIMD_DOUBLE 0
 
 #define SIMD_INT    1
 #define SIMD_CHAR   0
@@ -432,7 +432,7 @@ SIMD_CALL int2 float2m(float2 x) { return __builtin_convertvector(x, int2); }
 SIMD_CALL int3 float3m(float3 x) { return __builtin_convertvector(x, int3); }
 SIMD_CALL int4 float4m(float4 x) { return __builtin_convertvector(x, int4); }
 
-#endif
+#endif // SIMD_INT
 
 #if SIMD_HALF // && SIMD_FLOAT
 
@@ -459,7 +459,7 @@ SIMD_CALL half3 half3m(float3 x) { return __builtin_convertvector(x, half3); }
 SIMD_CALL half4 half4m(float4 x) { return __builtin_convertvector(x, half4); }
 //#endif
 
-#endif
+#endif // SIMD_HALF
 
 #if SIMD_DOUBLE // && SIMD_FLOAT
 SIMD_CALL double2 double2m(float2 x) { return __builtin_convertvector(x, double2); }
@@ -469,7 +469,7 @@ SIMD_CALL double4 double4m(float4 x) { return __builtin_convertvector(x, double4
 SIMD_CALL float2 float2m(double2 x) { return __builtin_convertvector(x, float2); }
 SIMD_CALL float3 float3m(double3 x) { return __builtin_convertvector(x, float3); }
 SIMD_CALL float4 float4m(double4 x) { return __builtin_convertvector(x, float4); }
-#endif
+#endif // SIMD_DOUBLE
 
 #endif // SIMD_FLOAT
 

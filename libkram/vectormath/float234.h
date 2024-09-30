@@ -37,9 +37,6 @@ macroVector4TypesStorageRenames(float, float)
 //-----------------------------------
 // start of implementation
 
-// Note there is _mm_sqrt_ss() instead of this math op to keep in registers
-#define sqrt_scalar(x) sqrtf(x)
-
 #if SIMD_NEON
 
 // TODO: expose float2 ops on Neon.
@@ -346,13 +343,14 @@ SIMD_CALL float length_squared(float4 x) {
 
 // length
 SIMD_CALL float length(float2 x) {
-    return sqrt_scalar(reduce_add(x * x));
+    // worth using simd_sqrt?
+    return ::sqrt(reduce_add(x * x));
 }
 SIMD_CALL float length(float3 x) {
-    return sqrt_scalar(reduce_add(x * x));
+    return ::sqrt(reduce_add(x * x));
 }
 SIMD_CALL float length(float4 x) {
-    return sqrt_scalar(reduce_add(x * x));
+    return ::sqrt(reduce_add(x * x));
 }
 
 // distance
@@ -458,71 +456,67 @@ SIMD_CALL float4 fract(float4 x) {
     return min(x - floor(x), 0x1.fffffep-1f);
 }
 
-
+/* this is just to show examples of extended vector types, float8 should move out
+   
 #if SIMD_FLOAT_EXT
 
 // These are cpu only math.  None of the gpus support these long types.
 // and MSL doesn't even support double.
+ // need to convert float4 to 8/16
+ // TODO: float8 float8m(float4 x, float4 y)
+ // TODO: float16 float16m(float8 x, float8 y)
 
 // how important are 8/16 ops for float and 8 for double?  Could reduce with only doing up to 4.
 // can see doing more ops on smaller types.  Slower when these have to route through simd4.
+ 
+ 
 SIMD_CALL float8 clamp(float8 x, float8 min, float8 max) {
     return min(max(x, min), max);
 }
+SIMD_CALL float reduce_min(float8 x) {
+     return reduce_min(min(x.lo, x.hi));
+}
+SIMD_CALL float reduce_max(float8 x) {
+     return reduce_max(max(x.lo, x.hi));
+}
+SIMD_CALL float8 muladd(float8 x, float8 y, float8 t) {
+     return float8m(muladd(x.lo, y.lo, z.lo), muladd(x.hi, y.hi, z.hi));
+}
+SIMD_CALL float8 lerp(float8 x, float8 y, float8 t) {
+     return x + t*(y - x);
+}
+SIMD_CALL float reduce_add(float8 x) {
+    return reduce_add(x.lo + x.hi);
+}
+SIMD_CALL float normalize(float8 x) {
+     return x / length(x);
+}
+ 
+// float16 calling up to float8
 SIMD_CALL float16 clamp(float16 x, float16 min, float16 max) {
     return min(max(x, min), max);
 }
-
-SIMD_CALL float reduce_min(float8 x) {
-    return reduce_min(min(x.lo, x.hi));
-}
-
 SIMD_CALL float reduce_min(float16 x) {
     return fmin(reduce_min(x.lo), reduce_min(x.hi));
-}
-
-SIMD_CALL float reduce_max(float8 x) {
-    return reduce_max(max(x.lo, x.hi));
 }
 SIMD_CALL float reduce_max(float16 x) {
     return fmax(reduce_max(x.lo), reduce_max(x.hi));
 }
-
-// need to convert float4 to 8/16
-// TODO: float8 float8m(float4 x, float4 y)
-// TODO: float16 float16m(float8 x, float8 y)
-
-// how important are 8/16 ops for float and double?  Could reduce with only doing up to 4.
-SIMD_CALL float8 muladd(float8 x, float4 y, float4 t) {
-    return float8m(muladd(x.lo, y.lo, z.lo), muladd(x.hi, y.hi, z.hi));
-}
-SIMD_CALL float16 muladd(float4 x, float4 y, float4 t) {
+SIMD_CALL float16 muladd(float16 x, float16 y, float16 t) {
     return float16m(muladd(x.lo, y.lo, z.lo), muladd(x.hi, y.hi, z.hi));
-}
-
-SIMD_CALL float8 lerp(float8 x, float8 y, float8 t) {
-    return x + t*(y - x);
 }
 SIMD_CALL float16 lerp(float16 x, float16 y, float16 t) {
     return x + t*(y - x);
 }
-
-SIMD_CALL float reduce_add(float8 x) {
-    return reduce_add(x.lo + x.hi);
-}
-
 SIMD_CALL float reduce_add(float16 x) {
     return reduce_add(x.lo + x.hi);
-}
-
-SIMD_CALL float normalize(float8 x) {
-    return x / length(x);
 }
 SIMD_CALL float normalize(float16 x) {
     return x / length(x);
 }
 
 #endif // SIMD_FLOAT_EXT
+*/
 
 // make "m" ctors for vecs.  This avoids wrapping the type in a struct.
 // vector types are C typedef, and so cannot have member functions.
@@ -586,6 +580,9 @@ SIMD_CALL float4 pow(float4 x, float4 y) {
 }
 
 // TODO: add more math ops
+
+//-----------------------------------
+// constants
 
 // TODO: better way to name these, can there be float2::zero()
 // also could maybe use that for fake vector ctors.
@@ -730,13 +727,13 @@ struct float4x4 : float4x4s
 float4x4 float4x4m(const float3x4& m);
 float3x4 float3x4m(const float4x4& m);
 
-// set diangonal and rest to 0
+// set diagonal to vec and rest to 0
 float2x2 diagonal_matrix(float2 x);
 float3x3 diagonal_matrix(float3 x);
 float3x4 diagonal_matrix3x4(float3 x);
 float4x4 diagonal_matrix(float4 x);
 
-// using refs here, 3x3 and 4x4 are large to pass by value (3 simd regs)
+// transpose
 float2x2 transpose(const float2x2& x);
 float3x3 transpose(const float3x3& x);
 float4x4 transpose(const float4x4& x);
@@ -746,6 +743,7 @@ float2x2 inverse(const float2x2& x);
 float3x3 inverse(const float3x3& x);
 float4x4 inverse(const float4x4& x);
 
+// determinant
 float determinant(const float2x2& x);
 float determinant(const float3x3& x);
 float determinant(const float4x4& x);

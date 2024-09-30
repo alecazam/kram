@@ -340,7 +340,7 @@ float4 saturate(float4 x) {
 
 //--------------------------------------
 
-// textbook transpose from simd/matrix.h
+// textbook transpose
 float2x2 transpose(const float2x2& x) {
     float4 x0, x1;
     x0.xy = x[0];
@@ -376,12 +376,6 @@ float3x3 transpose(const float3x3& x) {
 #endif
     return (float3x3){r0.xyz, r1.xyz, r2.xyz};
 }
-
-// TODO: needs to transpose both ways
-// float4x4 transpose(float3x4 x) { .. }
-// float3x4 transpose(float4x4 x) { .. }
-// SIMD_CALL float4x4 transpose(float3x4 x) { m = transpose(x); }
-// SIMD_CALL float3x4 transpose(float4x4 x) { m = transpose(x); }
 
 float4x4 transpose(const float4x4& x) {
     // NOTE: also _MM_TRANSPOSE4_PS using shuffles
@@ -1198,7 +1192,7 @@ quatf quat_bezer_lerp(quatf q0, quatf b, quatf c, quatf q1, float t)
 
 void transpose_affine(float4x4& m)
 {
-    // TODO: see other tranpose not using shuffles and do that.
+    // TODO: see other tranpsose not using shuffles and do that.
     
     // avoid copy and one shuffle
     float4 tmp3, tmp2, tmp1, tmp0;
@@ -1354,6 +1348,8 @@ float4x4 float4x4m(char axis, float angleInRadians)
 
 } // namespace SIMD_NAMESPACE
 
+// --------------------------
+// TODO: break into own file with double ops
 
 
 namespace SIMD_NAMESPACE {
@@ -1442,6 +1438,375 @@ string vecf::str(const double4x4& m) const {
   return kram::format("%s\n%s\n%s\n%s\n",
       str(m[0]).c_str(), str(m[1]).c_str(),
       str(m[2]).c_str(), str(m[3]).c_str());
+}
+
+//-----------------------------
+
+// textbook transpose 
+double2x2 transpose(const double2x2& x) {
+    double4 x0, x1;
+    x0.xy = x[0];
+    x1.xy = x[1];
+#if SIMD_SSE
+    double4 r01 = _mm_unpacklo_pd(x0, x1); // required AVX2
+#else
+    double4 r01 = vzip1q_f64(x0, x1);
+#endif
+    return (double2x2){r01.lo, r01.hi};
+}
+
+double3x3 transpose(const double3x3& x) {
+    double4 x0, x1, x2;
+    x0.xyz = x[0];
+    x1.xyz = x[1];
+    x2.xyz = x[2];
+#if SIMD_SSE
+    double4 t0 = _mm_unpacklo_pd(x0, x1);
+    double4 t1 = _mm_unpackhi_pd(x0, x1);
+    double4 r0 = t0; r0.hi = x2.lo;
+    double4 r1 = _mm_shuffle_pd(t0, x2, 0xde);
+    double4 r2 = x2; r2.lo = t1.lo;
+#else // SIMD_NEON
+    double2 padding = { 0 };
+    double4 r0,r1,r2;
+    r0.lo = vzip1q_f64(x0.lo,x1.lo);
+    r1.lo = vzip2q_f64(x0.lo,x1.lo);
+    r2.lo = vzip1q_f64(x0.hi,x1.hi);
+    r0.hi = vzip1q_f64(x2.lo,padding);
+    r1.hi = vzip2q_f64(x2.lo,padding);
+    r2.hi = vzip1q_f64(x2.hi,padding);
+#endif
+    return (double3x3){r0.xyz, r1.xyz, r2.xyz};
+}
+
+double4x4 transpose(const double4x4& x) {
+    // NOTE: also _MM_TRANSPOSE4_PS using shuffles
+    // but old Neon didn't really have shuffle.
+
+#if SIMD_SSE
+    double4 t0 = _mm_unpacklo_pd(x[0],x[2]);
+    double4 t1 = _mm_unpackhi_pd(x[0],x[2]);
+    double4 t2 = _mm_unpacklo_pd(x[1],x[3]);
+    double4 t3 = _mm_unpackhi_pd(x[1],x[3]);
+    double4 r0 = _mm_unpacklo_pd(t0,t2);
+    double4 r1 = _mm_unpackhi_pd(t0,t2);
+    double4 r2 = _mm_unpacklo_pd(t1,t3);
+    double4 r3 = _mm_unpackhi_pd(t1,t3);
+#else // SIMD_NEON
+    simd_double4 r0,r1,r2,r3;
+    r0.lo = vzip1q_f64(x[0].lo,x[1].lo);
+    r1.lo = vzip2q_f64(x[0].lo,x[1].lo);
+    r2.lo = vzip1q_f64(x[0].hi,x[1].hi);
+    r3.lo = vzip2q_f64(x[0].hi,x[1].hi);
+    r0.hi = vzip1q_f64(x[2].lo,x[3].lo);
+    r1.hi = vzip2q_f64(x[2].lo,x[3].lo);
+    r2.hi = vzip1q_f64(x[2].hi,x[3].hi);
+    r3.hi = vzip2q_f64(x[2].hi,x[3].hi);
+#endif
+    return (double4x4){r0,r1,r2,r3};
+}
+
+// inverse
+double2x2 inverse(const double2x2& x) {
+    double invDet = 1.0f / determinant(x);
+    if (invDet == 0.0f) return kdouble2x2_zero;
+    
+    double2x2 r = transpose(x);
+    r[0] *= invDet;
+    r[1] *= invDet;
+    return r;
+}
+
+double3x3 inverse(const double3x3& x) {
+    double invDet = 1.0f / determinant(x);
+    if (invDet == 0.0f) return kdouble3x3_zero;
+    
+    double3x3 r;
+    
+    // this forms the adjoint
+    r[0] = cross(x[1], x[2]) * invDet;
+    r[1] = cross(x[2], x[0]) * invDet;
+    r[2] = cross(x[0], x[1]) * invDet;
+    return r;
+}
+
+double4x4 inverse(const double4x4& x) {
+    // This is a full gje inverse
+    
+    double4x4 a(x), b(kdouble4x4_identity);
+    bool inversionSucceeded = true;
+    
+    // As a evolves from original mat into identity -
+    // b evolves from identity into inverse(a)
+    int cols = double4x4::col;
+    int rows = double4x4::row;
+    
+    // Loop over cols of a from left to right, eliminating above and below diag
+    for (int j=0; j<rows; j++) {
+        // Find largest pivot in column j among rows j..2
+        int i1 = j;            // Row with largest pivot candidate
+        for (int i=j+1; i<cols; i++) {
+            if ( fabsf(a[i][j]) > fabsf(a[i1][j]) ) {
+                i1 = i;
+            }
+        }
+        
+        // Swap rows i1 and j in a and b to put pivot on diagonal
+        std::swap(a[i1], a[j]);
+        std::swap(b[i1], b[j]);
+    
+        // Scale row j to have a unit diagonal
+        double s = a[j][j];
+        if ( s == 0.0f ) {
+            inversionSucceeded = false;
+            break;
+        }
+        
+        s = 1.0f/s;
+        b[j] *= s;
+        a[j] *= s;
+    
+        // Eliminate off-diagonal elems in col j of a, doing identical ops to b
+        for (int i=0; i<cols; i++ ) {
+            if (i != j) {
+                s = a[i][j];
+                b[i] -= b[j] * s;
+                a[i] -= a[j] * s;
+            }
+        }
+    }
+    
+    if (!inversionSucceeded) {
+        b = kdouble4x4_zero;
+    }
+    
+    return b;
+}
+
+
+// determinant
+// internal only ops
+// TODO: could just be macros
+inline double3 rotate1(double3 x) { return x.yzx; }
+inline double3 rotate2(double3 x) { return x.zxy; }
+inline double4 rotate1(double4 x) { return x.yzwx; }
+inline double4 rotate2(double4 x) { return x.zwxy; }
+inline double4 rotate3(double4 x) { return x.wxyz; }
+
+double determinant(const double2x2& x) {
+    return cross(x[0], x[1]);
+}
+
+double determinant(const double3x3& x) {
+    return reduce_add(
+            x[0]*(rotate1(x[1])*rotate2(x[2]) - rotate2(x[1])*rotate1(x[2])));
+}
+
+double determinant(const double4x4& x) {
+    double4 codet = x[0]*(rotate1(x[1])*(rotate2(x[2])*rotate3(x[3])-rotate3(x[2])*rotate2(x[3])) +
+      rotate2(x[1])*(rotate3(x[2])*rotate1(x[3])-rotate1(x[2])*rotate3(x[3])) +
+      rotate3(x[1])*(rotate1(x[2])*rotate2(x[3])-rotate2(x[2])*rotate1(x[3])));
+    return reduce_add(codet.even - codet.odd);
+}
+
+// trace
+double trace(const double2x2& x) {
+    return x[0].x + x[1].y;
+}
+
+double trace(const double3x3& x) {
+    return x[0].x + x[1].y + x[2].z;
+}
+
+double trace(const double4x4& x) {
+    return x[0].x + x[1].y + x[2].z + x[3].w;
+}
+
+// TODO: may want pre-transform on double3x4 since it's transposed
+// 3 x m3x4 should = 3 element vec
+//
+// simd premul transform on left does a super expensive transpose to avoid dot
+// don't use this, should just dotproducts?
+//static   half2 mul(  half2 x,   half2x2 y) { return mul(transpose(y), x); }
+//
+//
+// Here's how to multiply matrices, since default ops won't do this.
+// be careful with operator* built-in.  Will do column by column mul won't it?
+// Maybe that's why *= is missing on matrices.
+//
+// This is taking each scalar of y[0], hopfully this extends and stays in vec op
+
+// premul-transform has to do dots
+double2 mul(double2 y, const double2x2& x) {
+    double2 r;
+    r.x = dot(y, x[0]);
+    r.y = dot(y, x[1]);
+    return r;
+}
+
+double3 mul(double3 y, const double3x3& x) {
+    double3 r;
+    r.x = dot(y, x[0]);
+    r.y = dot(y, x[1]);
+    r.z = dot(y, x[2]);
+    return r;
+}
+
+double4 mul(double4 y, const double4x4& x) {
+    double4 r;
+    r.x = dot(y, x[0]);
+    r.y = dot(y, x[1]);
+    r.z = dot(y, x[2]);
+    r.w = dot(y, x[3]);
+    return r;
+}
+
+
+// post-transform at least does a mul madd
+double2 mul(const double2x2& x, double2 y) {
+    double2 r = x[0] * y[0]; // no mul(v,v)
+    r = muladd( x[1], y[1], r);
+    return r;
+}
+
+double3 mul(const double3x3& x, double3 y) {
+    double3 r = x[0] * y[0];
+    r = muladd( x[1], y[1], r);
+    r = muladd( x[2], y[2], r);
+    return r;
+}
+
+double4 mul(const double4x4& x, double4 y) {
+    double4 r = x[0] * y[0];
+    r = muladd( x[1], y[1], r);
+    r = muladd( x[2], y[2], r);
+    r = muladd( x[3], y[3], r);
+    return r;
+}
+
+// matrix muls using mul madd
+double2x2 mul(const double2x2& x, const double2x2& y) {
+    double2x2 r;
+    
+    // m * columns
+    r[0] = mul(x, y[0]);
+    r[1] = mul(x, y[1]);
+    
+    return r;
+}
+
+double3x3 mul(const double3x3& x, const double3x3& y) {
+    double3x3 r;
+    r[0] = mul(x, y[0]);
+    r[1] = mul(x, y[1]);
+    r[2] = mul(x, y[2]);
+    return r;
+}
+
+double4x4 mul(const double4x4& x, const double4x4& y) {
+    double4x4 r;
+    r[0] = mul(x, y[0]);
+    r[1] = mul(x, y[1]);
+    r[2] = mul(x, y[2]);
+    r[3] = mul(x, y[3]);
+    return r;
+}
+
+// sub
+double2x2 sub(const double2x2& x, const double2x2& y) {
+    double2x2 r(x);
+    r[0] -= y[0];
+    r[1] -= y[1];
+    return r;
+}
+double3x3 sub(const double3x3& x, const double3x3& y) {
+    double3x3 r(x);
+    r[0] -= y[0];
+    r[1] -= y[1];
+    r[2] -= y[2];
+    return r;
+}
+double4x4 sub(const double4x4& x, const double4x4& y) {
+    double4x4 r(x);
+    r[0] -= y[0];
+    r[1] -= y[1];
+    r[2] -= y[2];
+    r[3] -= y[3];
+    return r;
+}
+
+// add
+double2x2 add(const double2x2& x, const double2x2& y) {
+    double2x2 r(x);
+    r[0] += y[0];
+    r[1] += y[1];
+    return r;
+}
+double3x3 add(const double3x3& x, const double3x3& y) {
+    double3x3 r(x);
+    r[0] += y[0];
+    r[1] += y[1];
+    r[2] += y[2];
+    return r;
+}
+double4x4 add(const double4x4& x, const double4x4& y) {
+    double4x4 r(x);
+    r[0] += y[0];
+    r[1] += y[1];
+    r[2] += y[2];
+    r[3] += y[3];
+    return r;
+}
+
+// equal
+bool equal(const double2x2& x, const double2x2& y) {
+    return all(x[0] == y[0] &
+               x[1] == y[1]);
+}
+bool equal(const double3x3& x, const double3x3& y) {
+    return all(x[0] == y[0] &
+               x[1] == y[1] &
+               x[2] == y[2]);
+}
+bool equal(const double4x4& x, const double4x4& y) {
+    return all(x[0] == y[0] &
+               x[1] == y[1] &
+               x[2] == y[2] &
+               x[3] == y[3]);
+}
+
+// equal_abs
+bool equal_abs(const double2x2& x, const double2x2& y, double tol) {
+    return all((abs(x[0] - y[0]) <= tol) &
+               (abs(x[1] - y[1]) <= tol));
+}
+bool equal_abs(const double3x3& x, const double3x3& y, double tol) {
+    return all((abs(x[0] - y[0]) <= tol) &
+               (abs(x[1] - y[1]) <= tol) &
+               (abs(x[2] - y[2]) <= tol));
+}
+bool equal_abs(const double4x4& x, const double4x4& y, double tol) {
+    return all((abs(x[0] - y[0]) <= tol) &
+               (abs(x[1] - y[1]) <= tol) &
+               (abs(x[2] - y[2]) <= tol) &
+               (abs(x[3] - y[3]) <= tol));
+}
+
+// equal_rel
+bool equal_rel(const double2x2& x, const double2x2& y, double tol) {
+    return all((abs(x[0] - y[0]) <= tol * abs(x[0])) &
+               (abs(x[1] - y[1]) <= tol * abs(x[1])));
+}
+bool equal_rel(const double3x3& x, const double3x3& y, double tol) {
+    return all((abs(x[0] - y[0]) <= tol * abs(x[0])) &
+               (abs(x[1] - y[1]) <= tol * abs(x[1])) &
+               (abs(x[2] - y[2]) <= tol * abs(x[2])));
+}
+bool equal_rel(const double4x4& x, const double4x4& y, double tol) {
+    return all((abs(x[0] - y[0]) <= tol * abs(x[0])) &
+               (abs(x[1] - y[1]) <= tol * abs(x[1])) &
+               (abs(x[2] - y[2]) <= tol * abs(x[2])) &
+               (abs(x[3] - y[3]) <= tol * abs(x[3])));
 }
 
 #endif // SIMD_DOUBLE
