@@ -1439,19 +1439,34 @@ string vecf::str(const double4x4& m) const {
 
 // textbook transpose 
 double2x2 transpose(const double2x2& x) {
+    
+    
+    // std::swap would seem faster here?
+#if SIMD_SSE
+#ifdef __AVX2__
+    double4 x0, x1;
+    x0.xy = x[0];
+    x1.xy = x[1];
+    
+    double4 r01 = _mm256_unpacklo_pd(x0, x1);
+    return (double2x2){r01.lo, r01.hi};
+#else
     double2 x0, x1;
     x0.xy = x[0];
     x1.xy = x[1];
     
-    // std::swap would seem faster here?
-#if SIMD_SSE
+    // super slow transpose
     double2 r0 = { x0[0], x1[0] };
     double2 r1 = { x0[1], x1[1] };
-#else
-    double2 r0 = vzip1q_f64(x0, x1);
-    double2 r1 = vzip2q_f64(x0, x1);
-#endif
     return (double2x2){r0, r1};
+#endif
+#endif // SIMD_SSE
+    
+#if SIMD_NEON
+    double2 r0 = vzip1q_f64(x[0], x[1]);
+    double2 r1 = vzip2q_f64(x[0], x[1]);
+    return (double2x2){r0, r1};
+#endif // SIMD_NEON
 }
 
 double3x3 transpose(const double3x3& x) {
@@ -1459,13 +1474,33 @@ double3x3 transpose(const double3x3& x) {
     x0.xyz = x[0];
     x1.xyz = x[1];
     x2.xyz = x[2];
+    
 #if SIMD_SSE
-    double4 t0 = _mm_unpacklo_pd(x0, x1);
-    double4 t1 = _mm_unpackhi_pd(x0, x1);
+#if defined( __AVX2__) && 0
+    double4 t0 = _mm256_unpacklo_pd(x0, x1);
+    double4 t1 = _mm256_unpackhi_pd(x0, x1);
+    
     double4 r0 = t0; r0.hi = x2.lo;
-    double4 r1 = _mm_shuffle_pd(t0, x2, 0xde);
+    // TODO: fix shuffle,  222 outside 15 range
+    // looks like op was changed to 4-bit bitmask
+    // lookup shuffle 4 values, and convert this
+    //
+    // 0xde = _MM_SHUFFLE(x,y,z,w)
+    // #define _MM_SHUFFLE(fp3, fp2, fp1, fp0) \
+        (((fp3) << 6) | ((fp2) << 4) | ((fp1) << 2) | ((fp0)))
+    // fp0 to fp3 = 2, 3, 1, 3
+    
+    double4 r1 = _mm256_shuffle_pd(t0, x2, 0xde);
     double4 r2 = x2; r2.lo = t1.lo;
-#else // SIMD_NEON
+#else
+    // super slow transpose
+    double3 r0 = { x0[0], x1[0], x2[0] };
+    double3 r1 = { x0[1], x1[1], x2[1] };
+    double3 r2 = { x0[2], x1[2], x2[2] };
+#endif
+#endif // SIMD_SSE
+    
+#if SIMD_NEON
     double2 padding = { 0 };
     double4 r0,r1,r2;
     r0.lo = vzip1q_f64(x0.lo,x1.lo);
@@ -1474,7 +1509,7 @@ double3x3 transpose(const double3x3& x) {
     r0.hi = vzip1q_f64(x2.lo,padding);
     r1.hi = vzip2q_f64(x2.lo,padding);
     r2.hi = vzip1q_f64(x2.hi,padding);
-#endif
+#endif // SIMD_NEON
     return (double3x3){r0.xyz, r1.xyz, r2.xyz};
 }
 
@@ -1483,16 +1518,51 @@ double4x4 transpose(const double4x4& x) {
     // but old Neon didn't really have shuffle.
 
 #if SIMD_SSE
-    double4 t0 = _mm_unpacklo_pd(x[0],x[2]);
-    double4 t1 = _mm_unpackhi_pd(x[0],x[2]);
-    double4 t2 = _mm_unpacklo_pd(x[1],x[3]);
-    double4 t3 = _mm_unpackhi_pd(x[1],x[3]);
-    double4 r0 = _mm_unpacklo_pd(t0,t2);
-    double4 r1 = _mm_unpackhi_pd(t0,t2);
-    double4 r2 = _mm_unpacklo_pd(t1,t3);
-    double4 r3 = _mm_unpackhi_pd(t1,t3);
-#else // SIMD_NEON
-    simd_double4 r0,r1,r2,r3;
+#ifdef __AVX2__
+    
+// using shuffles + permute
+//    double4 tmp0, tmp1, tmp2, tmp3;
+//    tmp0 = _mm256_shuffle_pd(row0, row1, 0x0);
+//    tmp2 = _mm256_shuffle_pd(row0, row1, 0xF);
+//    tmp1 = _mm256_shuffle_pd(row2, row3, 0x0);
+//    tmp3 = _mm256_shuffle_pd(row2, row3, 0xF);
+//
+//    double4 x0, x1, x2, x3;
+//    r0 = _mm256_permute2f128_pd(tmp0, tmp1, 0x20);
+//    r1 = _mm256_permute2f128_pd(tmp2, tmp3, 0x20);
+//    r2 = _mm256_permute2f128_pd(tmp0, tmp1, 0x31);
+//    r3 = _mm256_permute2f128_pd(tmp2, tmp3, 0x31);
+    
+// or unpack
+    
+    double4 t0 = _mm256_unpacklo_pd(x[0],x[2]);
+    double4 t1 = _mm256_unpackhi_pd(x[0],x[2]);
+    double4 t2 = _mm256_unpacklo_pd(x[1],x[3]);
+    double4 t3 = _mm256_unpackhi_pd(x[1],x[3]);
+
+    double4 r0 = _mm256_unpacklo_pd(t0,t2);
+    double4 r1 = _mm256_unpackhi_pd(t0,t2);
+    double4 r2 = _mm256_unpacklo_pd(t1,t3);
+    double4 r3 = _mm256_unpackhi_pd(t1,t3);
+    
+#else
+    // super slow transpose
+    double4 x0, x1, x2, x3;
+    x0 = x[0];
+    x1 = x[1];
+    x2 = x[2];
+    x3 = x[2];
+    
+    // TODO: avx2 probably has double shuffle
+    double4 r0 = { x0[0], x1[0], x2[0], x3[0] };
+    double4 r1 = { x0[1], x1[1], x2[1], x3[1] };
+    double4 r2 = { x0[2], x1[2], x2[2], x3[2] };
+    double4 r3 = { x0[3], x1[3], x2[3], x3[3] };
+#endif
+#endif // SIMD_SSE
+    
+#if  SIMD_NEON
+    double4 r0,r1,r2,r3;
     r0.lo = vzip1q_f64(x[0].lo,x[1].lo);
     r1.lo = vzip2q_f64(x[0].lo,x[1].lo);
     r2.lo = vzip1q_f64(x[0].hi,x[1].hi);

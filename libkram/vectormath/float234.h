@@ -175,7 +175,7 @@ SIMD_CALL float3 reduce_addv(float3 x) {
 // SSE4.1
 SIMD_CALL float4 round(float4 vv) {
     // round to nearest | exc
-    return _mm_round_ps(vv, _MM_FROUND_NO_EXC);
+    return _mm_round_ps(vv, _MM_FROUND_NO_EXC); // TODO: _MM_FROUND_TO_NEAREST_INT
 }
 SIMD_CALL float2 round(float2 x) {
     return vec4to2(round(vec2to4(x)));

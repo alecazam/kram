@@ -141,12 +141,11 @@ SIMD_CALL double3 reduce_addv(double3 x) {
     return reduce_addv(zeroext(x)).x;
 }
 
+// round to nearest | exc
 SIMD_CALL double2 round(double2 vv) {
-    // round to nearest | exc
-    return vrndnq_f64(vv); // _MM_FROUND_NO_EXC
+    return vrndnq_f64(vv);
 }
 SIMD_CALL double4 round(double4 vv) {
-    // round to nearest | exc
     return double4m(round(vv.lo),round(vv.hi));
 }
 
@@ -170,9 +169,18 @@ SIMD_CALL double4 floor(double4 vv) {
 
 #if SIMD_SSE
 
+// TODO: double3/4 impl would benefit from AVX2 calls (32B)
+
 // x64 doesn't seem to have a simd op for min/max reduce
+SIMD_CALL double reduce_min(double2 x) {
+    return fmin(x.x,x.y);
+}
 SIMD_CALL double reduce_min(double4 x) {
     return fmin(fmin(x.x,x.y), fmin(x.z,x.w));
+}
+
+SIMD_CALL double reduce_max(double2 x) {
+    return fmax(x.x,x.y);
 }
 SIMD_CALL double reduce_max(double4 x) {
     return fmax(fmax(x.x,x.y), fmax(x.z,x.w));
@@ -193,11 +201,12 @@ SIMD_CALL double2 min(double2 x, double2 y) {
 SIMD_CALL double4 min(double4 x, double4 y) {
     return double4m(min(x.lo,y.lo), min(x.hi,y.hi));
 }
+
 SIMD_CALL double2 max(double2 x, double2 y) {
     return bitselect_forminmax(_mm_max_pd(x, y), x, y != y);
 }
 SIMD_CALL double4 max(double4 x, double4 y) {
-    return double4m(max(x.lo,y.lo), min(x.hi,y.hi));
+    return double4m(max(x.lo,y.lo), max(x.hi,y.hi));
 }
 
 SIMD_CALL double2 muladd(double2 x, double2 y, double2 t) {
@@ -243,30 +252,27 @@ SIMD_CALL double3 reduce_addv(double3 x) {
 
 // SSE4.1
 // single ops in AVX/2
-
-SIMD_CALL double4 round(double4 vv) {
-    // round to nearest | exc
-    return double4m(_mm_round_pd(vv.lo, _MM_FROUND_NO_EXC),
-                    _mm_round_pd(vv.hi, _MM_FROUND_NO_EXC));
-}
+// round to nearest | exc
 SIMD_CALL double2 round(double2 x) {
-    return vec4to2(round(vec2to4(x)));
+    return _mm_round_pd(x, _MM_FROUND_NO_EXC); // TODO: _MM_FROUND_TO_NEAREST_INT |
+}
+SIMD_CALL double4 round(double4 vv) {
+    return double4m(round(vv.lo), round(vv.hi));
 }
 
-SIMD_CALL double4 ceil(double4 vv) {
-    return double4m(_mm_ceil_pd(vv.lo),_mm_ceil_pd(vv.hi));
-}
 SIMD_CALL double2 ceil(double2 x) {
-    return vec4to2(ceil(vec2to4(x)));
+    return _mm_ceil_pd(x);
+}
+SIMD_CALL double4 ceil(double4 vv) {
+    return double4m(ceil(vv.lo),ceil(vv.hi));
 }
 
-SIMD_CALL double4 floor(double4 vv) {
-    return double4m(_mm_floor_pd(vv.lo),_mm_floor_pd(vv.hi));
-}
 SIMD_CALL double2 floor(double2 x) {
-    return vec4to2(floor(vec2to4(x)));
+    return _mm_floor_pd(x);
 }
-
+SIMD_CALL double4 floor(double4 vv) {
+    return double4m(floor(vv.lo),floor(vv.hi));
+}
 
 #endif // SIMD_SSE
 
@@ -339,7 +345,6 @@ SIMD_CALL double4 clamp(double4 x, double4 minv, double4 maxv) {
 SIMD_CALL double2 saturate(double2 x) { return clamp(x, 0, (double2)1); }
 SIMD_CALL double3 saturate(double3 x) { return clamp(x, 0, (double3)1); }
 SIMD_CALL double4 saturate(double4 x) { return clamp(x, 0, (double4)1); }
-
 
 // lerp - another easy one
 SIMD_CALL double2 lerp(double2 x, double2 y, double2 t) { return x + t*(y - x); }
