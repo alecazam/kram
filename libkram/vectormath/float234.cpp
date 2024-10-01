@@ -201,13 +201,13 @@ float3x4 float3x4m(const float4x4& m) {
 
 // These should not be used often.  So can stay buried
 float2x2::float2x2(float2 diag)
-: float2x2s((const float2x2s&)diagonal_matrix(diag)) { }
+: base((const base&)diagonal_matrix(diag)) { }
 float3x3::float3x3(float3 diag)
-: float3x3s((const float3x3s&)diagonal_matrix(diag)) { }
+: base((const base&)diagonal_matrix(diag)) { }
 float3x4::float3x4(float3 diag)
-: float3x4s((const float3x4s&)diagonal_matrix3x4(diag)) { }
+: base((const base&)diagonal_matrix3x4(diag)) { }
 float4x4::float4x4(float4 diag)
-: float4x4s((const float4x4s&)diagonal_matrix(diag)) { }
+: base((const base&)diagonal_matrix(diag)) { }
 
 //---------------------------
 

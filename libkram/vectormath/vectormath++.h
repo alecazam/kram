@@ -200,14 +200,14 @@ type##4 cppfunc(type##4 x); \
 //------------
 
 // aligned
-#define macroVector1TypesStorage(type, name) \
-typedef type name##1s; \
-typedef __attribute__((__ext_vector_type__(2)))  type name##2s; \
-typedef __attribute__((__ext_vector_type__(3)))  type name##3s; \
-typedef __attribute__((__ext_vector_type__(4)))  type name##4s; \
-typedef __attribute__((__ext_vector_type__(8)))  type name##8s; \
-typedef __attribute__((__ext_vector_type__(16))) type name##16s; \
-typedef __attribute__((__ext_vector_type__(32),__aligned__(16))) type name##32s; \
+#define macroVector1TypesAligned(type, name) \
+typedef type name##1a; \
+typedef __attribute__((__ext_vector_type__(2)))  type name##2a; \
+typedef __attribute__((__ext_vector_type__(3)))  type name##3a; \
+typedef __attribute__((__ext_vector_type__(4)))  type name##4a; \
+typedef __attribute__((__ext_vector_type__(8)))  type name##8a; \
+typedef __attribute__((__ext_vector_type__(16))) type name##16a; \
+typedef __attribute__((__ext_vector_type__(32),__aligned__(16))) type name##32a; \
 
 // packed
 #define macroVector1TypesPacked(type, name) \
@@ -221,24 +221,24 @@ typedef __attribute__((__ext_vector_type__(32),__aligned__(1))) type name##32p; 
 
 // cpp rename for u/char
 #define macroVector1TypesStorageRenames(cname, cppname) \
-typedef ::cname##1s cppname##1; \
-typedef ::cname##2s cppname##2; \
-typedef ::cname##3s cppname##3; \
-typedef ::cname##4s cppname##4; \
-typedef ::cname##8s cppname##8; \
-typedef ::cname##16s cppname##16; \
-typedef ::cname##32s cppname##32; \
+typedef ::cname##1a cppname##1; \
+typedef ::cname##2a cppname##2; \
+typedef ::cname##3a cppname##3; \
+typedef ::cname##4a cppname##4; \
+typedef ::cname##8a cppname##8; \
+typedef ::cname##16a cppname##16; \
+typedef ::cname##32a cppname##32; \
 
 //------------
 
 // aligned
-#define macroVector2TypesStorage(type, name) \
-typedef type name##1s; \
-typedef __attribute__((__ext_vector_type__(2)))  type name##2s; \
-typedef __attribute__((__ext_vector_type__(3)))  type name##3s; \
-typedef __attribute__((__ext_vector_type__(4)))  type name##4s; \
-typedef __attribute__((__ext_vector_type__(8)))  type name##8s; \
-typedef __attribute__((__ext_vector_type__(16),__aligned__(16))) type name##16s; \
+#define macroVector2TypesAligned(type, name) \
+typedef type name##1a; \
+typedef __attribute__((__ext_vector_type__(2)))  type name##2a; \
+typedef __attribute__((__ext_vector_type__(3)))  type name##3a; \
+typedef __attribute__((__ext_vector_type__(4)))  type name##4a; \
+typedef __attribute__((__ext_vector_type__(8)))  type name##8a; \
+typedef __attribute__((__ext_vector_type__(16),__aligned__(16))) type name##16a; \
 
 // packed
 #define macroVector2TypesPacked(type, name) \
@@ -251,22 +251,22 @@ typedef __attribute__((__ext_vector_type__(16),__aligned__(2))) type name##16p; 
 
 // cpp rename for half, u/short
 #define macroVector2TypesStorageRenames(cname, cppname) \
-typedef ::cname##1s cppname##1; \
-typedef ::cname##2s cppname##2; \
-typedef ::cname##3s cppname##3; \
-typedef ::cname##4s cppname##4; \
-typedef ::cname##8s cppname##8; \
-typedef ::cname##16s cppname##16; \
+typedef ::cname##1a cppname##1; \
+typedef ::cname##2a cppname##2; \
+typedef ::cname##3a cppname##3; \
+typedef ::cname##4a cppname##4; \
+typedef ::cname##8a cppname##8; \
+typedef ::cname##16a cppname##16; \
 
 //------------
 
 // aligned
-#define macroVector4TypesStorage(type, name) \
-typedef type name##1s; \
-typedef __attribute__((__ext_vector_type__(2)))  type name##2s; \
-typedef __attribute__((__ext_vector_type__(3)))  type name##3s; \
-typedef __attribute__((__ext_vector_type__(4)))  type name##4s; \
-typedef __attribute__((__ext_vector_type__(8),__aligned__(16)))  type name##8s; \
+#define macroVector4TypesAligned(type, name) \
+typedef type name##1a; \
+typedef __attribute__((__ext_vector_type__(2)))  type name##2a; \
+typedef __attribute__((__ext_vector_type__(3)))  type name##3a; \
+typedef __attribute__((__ext_vector_type__(4)))  type name##4a; \
+typedef __attribute__((__ext_vector_type__(8),__aligned__(16)))  type name##8a; \
 
 // typedef __attribute__((__ext_vector_type__(16),__aligned__(16))) type name##16s;
 
@@ -282,22 +282,22 @@ typedef __attribute__((__ext_vector_type__(8),__aligned__(4)))  type name##8p; \
 
 // cpp rename for float, u/int
 #define macroVector4TypesStorageRenames(cname, cppname) \
-typedef ::cname##1s cppname##1; \
-typedef ::cname##2s cppname##2; \
-typedef ::cname##3s cppname##3; \
-typedef ::cname##4s cppname##4; \
-typedef ::cname##8s cppname##8; \
+typedef ::cname##1a cppname##1; \
+typedef ::cname##2a cppname##2; \
+typedef ::cname##3a cppname##3; \
+typedef ::cname##4a cppname##4; \
+typedef ::cname##8a cppname##8; \
 
 // typedef ::cname##16s cppname##16; \
 
 //------------
 
 // aligned
-#define macroVector8TypesStorage(type, name) \
-typedef type name##1s; \
-typedef __attribute__((__ext_vector_type__(2))) type name##2s; \
-typedef __attribute__((__ext_vector_type__(3),__aligned__(16))) type name##3s; \
-typedef __attribute__((__ext_vector_type__(4),__aligned__(16))) type name##4s; \
+#define macroVector8TypesAligned(type, name) \
+typedef type name##1a; \
+typedef __attribute__((__ext_vector_type__(2))) type name##2a; \
+typedef __attribute__((__ext_vector_type__(3),__aligned__(16))) type name##3a; \
+typedef __attribute__((__ext_vector_type__(4),__aligned__(16))) type name##4a; \
 
 // typedef __attribute__((__ext_vector_type__(8),__aligned__(16))) type name##8s;
 
@@ -312,10 +312,10 @@ typedef __attribute__((__ext_vector_type__(4),__aligned__(8))) type name##4p; \
 
 // cpp rename for double, u/long
 #define macroVector8TypesStorageRenames(cname, cppname) \
-typedef ::cname##1s cppname##1; \
-typedef ::cname##2s cppname##2; \
-typedef ::cname##3s cppname##3; \
-typedef ::cname##4s cppname##4; \
+typedef ::cname##1a cppname##1; \
+typedef ::cname##2a cppname##2; \
+typedef ::cname##3a cppname##3; \
+typedef ::cname##4a cppname##4; \
 
 // typedef ::cname##8s cppname##8;
 
@@ -406,7 +406,7 @@ extern "C" {
 #endif
 
 // define c vector types
-macroVector1TypesStorage(char, char)
+macroVector1TypesAligned(char, char)
 macroVector1TypesPacked(char, char)
 
 #if SIMD_ACCELERATE_MATH_NAMES
@@ -430,7 +430,7 @@ extern "C" {
 #endif
 
 // define c vector types
-macroVector2TypesStorage(short, short)
+macroVector2TypesAligned(short, short)
 macroVector2TypesPacked(short, short)
 
 #if SIMD_ACCELERATE_MATH_NAMES

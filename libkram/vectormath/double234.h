@@ -12,14 +12,14 @@ extern "C" {
 #endif
 
 // define c vector/matrix types
-macroVector8TypesStorage(double, double)
+macroVector8TypesAligned(double, double)
 macroVector8TypesPacked(double, double)
 
 // storage type for matrix
-typedef struct { double2s columns[2]; } double2x2s;
-typedef struct { double3s columns[3]; } double3x3s;
-typedef struct { double4s columns[3]; } double3x4s;
-typedef struct { double4s columns[4]; } double4x4s;
+typedef struct { double2a columns[2]; } double2x2a;
+typedef struct { double3a columns[3]; } double3x3a;
+typedef struct { double4a columns[3]; } double3x4a;
+typedef struct { double4a columns[4]; } double4x4a;
 
 // glue to Accelerate
 #if SIMD_ACCELERATE_MATH_NAMES
@@ -565,13 +565,14 @@ const double4& double4_negzw();
 //-------------------
 // Matrix
 
-struct double2x2 : double2x2s
+struct double2x2 : double2x2a
 {
     // can be split out to traits
     static constexpr int col = 2;
     static constexpr int row = 2;
     using column_t = double2;
     using scalar_t = double;
+    using base = double2x2a;
     
     static const double2x2& zero();
     static const double2x2& identity();
@@ -579,21 +580,22 @@ struct double2x2 : double2x2s
     double2x2() { }  // no default init
     explicit double2x2(double2 diag);
     double2x2(double2 c0, double2 c1)
-    : double2x2s((double2x2s){c0, c1}) { }
-    double2x2(const double2x2s& m)
-    : double2x2s(m) { }
+    : base((base){c0, c1}) { }
+    double2x2(const base& m)
+    : base(m) { }
     
     // simd lacks these ops
     double2& operator[](int idx) { return columns[idx]; }
     const double2& operator[](int idx) const { return columns[idx]; }
 };
 
-struct double3x3 : double3x3s
+struct double3x3 : double3x3a
 {
     static constexpr int col = 3;
     static constexpr int row = 3;
     using column_t = double3;
     using scalar_t = double;
+    using base = double3x3a;
     
     // Done as wordy c funcs otherwize.  Funcs allow statics to init.
     static const double3x3& zero();
@@ -602,9 +604,9 @@ struct double3x3 : double3x3s
     double3x3() { }  // no default init
     explicit double3x3(double3 diag);
     double3x3(double3 c0, double3 c1, double3 c2)
-    : double3x3s((double3x3s){c0, c1, c2}) { }
-    double3x3(const double3x3s& m)
-    : double3x3s(m) { }
+    : base((base){c0, c1, c2}) { }
+    double3x3(const base& m)
+    : base(m) { }
     
     double3& operator[](int idx) { return columns[idx]; }
     const double3& operator[](int idx) const { return columns[idx]; }
@@ -612,12 +614,13 @@ struct double3x3 : double3x3s
 
 // This is mostly a transposed holder for a 4x4, so very few ops defined
 // Can also serve as a SOA for some types of cpu math.
-struct double3x4 : double3x4s
+struct double3x4 : double3x4a
 {
     static constexpr int col = 3;
     static constexpr int row = 4;
     using column_t = double4;
     using scalar_t = double;
+    using base = double3x4a;
     
     static const double3x4& zero();
     static const double3x4& identity();
@@ -625,20 +628,21 @@ struct double3x4 : double3x4s
     double3x4() { } // no default init
     explicit double3x4(double3 diag);
     double3x4(double4 c0, double4 c1, double4 c2)
-    : double3x4s((double3x4s){c0, c1, c2}) { }
-    double3x4(const double3x4s& m)
-    : double3x4s(m) { }
+    : base((base){c0, c1, c2}) { }
+    double3x4(const base& m)
+    : base(m) { }
     
     double4& operator[](int idx) { return columns[idx]; }
     const double4& operator[](int idx) const { return columns[idx]; }
 };
 
-struct double4x4 : double4x4s
+struct double4x4 : double4x4a
 {
     static constexpr int col = 4;
     static constexpr int row = 4;
     using column_t = double4;
     using scalar_t = double;
+    using base = double4x4a;
     
     static const double4x4& zero();
     static const double4x4& identity();
@@ -646,9 +650,9 @@ struct double4x4 : double4x4s
     double4x4() { } // no default init
     explicit double4x4(double4 diag);
     double4x4(double4 c0, double4 c1, double4 c2, double4 c3)
-    : double4x4s((double4x4s){c0, c1, c2, c3}) { }
-    double4x4(const double4x4s& m)
-    : double4x4s(m) { }
+    : base((base){c0, c1, c2, c3}) { }
+    double4x4(const base& m)
+    : base(m) { }
     
     double4& operator[](int idx) { return columns[idx]; }
     const double4& operator[](int idx) const { return columns[idx]; }

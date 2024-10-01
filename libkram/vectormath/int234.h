@@ -12,8 +12,7 @@ extern "C" {
 #endif // __cplusplus
 
 // define c vector types
-// Apple uses int type here (32-bit) instead of int32_t
-macroVector4TypesStorage(int, int)
+macroVector4TypesAligned(int, int)
 macroVector4TypesPacked(int, int)
 
 #if SIMD_ACCELERATE_MATH_NAMES

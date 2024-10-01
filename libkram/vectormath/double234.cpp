@@ -156,13 +156,13 @@ const double4x4& double4x4::identity() { return kdouble4x4_identity; }
 
 // These should not be used often.  So can stay buried
 double2x2::double2x2(double2 diag)
-: double2x2s((const double2x2s&)diagonal_matrix(diag)) { }
+: base((const base&)diagonal_matrix(diag)) { }
 double3x3::double3x3(double3 diag)
-: double3x3s((const double3x3s&)diagonal_matrix(diag)) { }
+: base((const base&)diagonal_matrix(diag)) { }
 double3x4::double3x4(double3 diag)
-: double3x4s((const double3x4s&)diagonal_matrix3x4(diag)) { }
+: base((const base&)diagonal_matrix3x4(diag)) { }
 double4x4::double4x4(double4 diag)
-: double4x4s((const double4x4s&)diagonal_matrix(diag)) { }
+: base((const base&)diagonal_matrix(diag)) { }
 
 //---------------------------
 

@@ -13,14 +13,14 @@ extern "C" {
 #endif
 
 // define c++ vector/matrix types
-macroVector4TypesStorage(float, float)
+macroVector4TypesAligned(float, float)
 macroVector4TypesPacked(float, float)
 
 // storage type for matrix
-typedef struct { float2s columns[2]; } float2x2s;
-typedef struct { float3s columns[3]; } float3x3s;
-typedef struct { float4s columns[3]; } float3x4s;
-typedef struct { float4s columns[4]; } float4x4s;
+typedef struct { float2a columns[2]; } float2x2a;
+typedef struct { float3a columns[3]; } float3x3a;
+typedef struct { float4a columns[3]; } float3x4a;
+typedef struct { float4a columns[4]; } float4x4a;
 
 // glue to Accelerate
 #if SIMD_ACCELERATE_MATH_NAMES
@@ -563,13 +563,14 @@ const float4& float4_negzw();
 // column matrix, so postmul vectors
 // (projToCamera * cameraToWorld * worldToModel) * modelVec
 
-struct float2x2 : float2x2s
+struct float2x2 : float2x2a
 {
     // can be split out to traits
     static constexpr int col = 2;
     static constexpr int row = 2;
     using column_t = float2;
     using scalar_t = float;
+    using base = float2x2a;
     
     static const float2x2& zero();
     static const float2x2& identity();
@@ -577,21 +578,22 @@ struct float2x2 : float2x2s
     float2x2() { }  // default uninit
     explicit float2x2(float2 diag);
     float2x2(float2 c0, float2 c1)
-    : float2x2s((float2x2s){c0, c1}) { }
-    float2x2(const float2x2s& m)
-    : float2x2s(m) { }
+    : base((base){c0, c1}) { }
+    float2x2(const base& m)
+    : base(m) { }
     
     // simd lacks these ops
     float2& operator[](int idx) { return columns[idx]; }
     const float2& operator[](int idx) const { return columns[idx]; }
 };
 
-struct float3x3 : float3x3s
+struct float3x3 : float3x3a
 {
     static constexpr int col = 3;
     static constexpr int row = 3;
     using column_t = float3;
     using scalar_t = float;
+    using base = float3x3a;
     
     // Done as wordy c funcs otherwize.  Funcs allow statics to init.
     static const float3x3& zero();
@@ -600,9 +602,9 @@ struct float3x3 : float3x3s
     float3x3() { }  // default uninit
     explicit float3x3(float3 diag);
     float3x3(float3 c0, float3 c1, float3 c2)
-    : float3x3s((float3x3s){c0, c1, c2}) { }
-    float3x3(const float3x3s& m)
-    : float3x3s(m) { }
+    : base((base){c0, c1, c2}) { }
+    float3x3(const base& m)
+    : base(m) { }
     
     float3& operator[](int idx) { return columns[idx]; }
     const float3& operator[](int idx) const { return columns[idx]; }
@@ -610,12 +612,13 @@ struct float3x3 : float3x3s
 
 // This is mostly a transposed holder for a 4x4, so very few ops defined
 // Can also serve as a SOA for some types of cpu math.
-struct float3x4 : float3x4s
+struct float3x4 : float3x4a
 {
     static constexpr int col = 3;
     static constexpr int row = 4;
     using column_t = float4;
     using scalar_t = float;
+    using base = float3x4a;
     
     static const float3x4& zero();
     static const float3x4& identity();
@@ -623,20 +626,21 @@ struct float3x4 : float3x4s
     float3x4() { } // default uninit
     explicit float3x4(float3 diag);
     float3x4(float4 c0, float4 c1, float4 c2)
-    : float3x4s((float3x4s){c0, c1, c2}) { }
-    float3x4(const float3x4s& m)
-    : float3x4s(m) { }
+    : base((base){c0, c1, c2}) { }
+    float3x4(const float3x4a& m)
+    : base(m) { }
     
     float4& operator[](int idx) { return columns[idx]; }
     const float4& operator[](int idx) const { return columns[idx]; }
 };
 
-struct float4x4 : float4x4s
+struct float4x4 : float4x4a
 {
     static constexpr int col = 4;
     static constexpr int row = 4;
     using column_t = float4;
     using scalar_t = float;
+    using base = float4x4a;
     
     static const float4x4& zero();
     static const float4x4& identity();
@@ -644,9 +648,9 @@ struct float4x4 : float4x4s
     float4x4() { } // default uninit
     explicit float4x4(float4 diag);
     float4x4(float4 c0, float4 c1, float4 c2, float4 c3)
-    : float4x4s((float4x4s){c0, c1, c2, c3}) { }
-    float4x4(const float4x4s& m)
-    : float4x4s(m) { }
+    : base((base){c0, c1, c2, c3}) { }
+    float4x4(const base& m)
+    : base(m) { }
     
     float4& operator[](int idx) { return columns[idx]; }
     const float4& operator[](int idx) const { return columns[idx]; }

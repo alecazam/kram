@@ -20,7 +20,7 @@ extern "C" {
 
 // define c vector types
 // Apple uses long type here (32-bit) instead of long32_t
-macroVector8TypesStorage(long1, long)
+macroVector8TypesAligned(long1, long)
 macroVector8TypesPacked(long1, long)
 
 #if SIMD_ACCELERATE_MATH_NAMES

@@ -37,7 +37,7 @@ typedef short half;
 // fp16x4 <-> fp32x4 conversions are.
 
 // define c vector types
-macroVector2TypesStorage(half, half)
+macroVector2TypesAligned(half, half)
 macroVector2TypesPacked(half, half)
 
 // No matrix type defined right now.
