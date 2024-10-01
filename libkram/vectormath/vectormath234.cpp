@@ -64,8 +64,7 @@
 //
 //-----------------
 //
-// TODO: rename in README, and name of .cpp/h (simdk?)
-// TODO: build an optimized library that is a clang module
+// DONE: rename in README, and name of .cpp/h
 // DONE: split up files into types, float ops, double ops
 // DONE: limit !SIMD_FLOAT_EXT to only 32B vector types?  Have 64B vecs.
 //
@@ -75,24 +74,26 @@
 // These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
 // which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
 //
-// TODO: ryg on 32B ops on AVX systems
+// DONE: ryg on 32B ops on AVX systems
 //   These often only have 16B simd units, so running 32B ops isn't efficient.
 //   This could apply say to PS4/AMD chips too.
 //
 // DONE: bring over fast inverses (RTS, RTU, etc)
 // DONE: need translation, rotation, scale
+// DONE: verify size/alignments are same across Win/macOS
+// DONE: add optimized vec2 ops on Neon
+// DONE: add AVX2 for double4
+
+// TODO: build an optimized Xcode library that is a clang module or framework
+// TODO: build an optimized VS library with cmake, clang module too?
 // TODO: need fast post-translation, post-rotation, post-scale
 // TODO: need euler <-> matrix
 // TODO: here's a decomp
 // https://github.com/erich666/GraphicsGems/blob/master/gemsii/unmatrix.c
 //
 // TODO: saturating conversions would be useful to, and prevent overflow
-// see the conversion.h code, bit select to clamp values.
-//
+//   see the conversion.h code, bit select to clamp values.
 // TODO: need natvis and lldb formatting of math classes.
-//
-// DONE: add optimized vec2 ops on Neon
-// DONE: add AVX2 for double4
 
 // intrinsic tables
 // https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html
@@ -234,6 +235,7 @@ string vecf::simd_configs() const {
     
     FMT_SEP();
     
+    FMT_CONFIG(SIMD_CMATH_MATH);
     FMT_CONFIG(SIMD_ACCELERATE_MATH);
 #if SIMD_ACCELERATE_MATH
     FMT_CONFIG(SIMD_LIBRARY_VERSION);
@@ -247,9 +249,11 @@ string vecf::simd_configs() const {
     FMT_CONFIG(SIMD_DOUBLE);
    
     FMT_CONFIG(SIMD_INT);
-    FMT_CONFIG(SIMD_CHAR);
-    FMT_CONFIG(SIMD_SHORT);
     FMT_CONFIG(SIMD_LONG);
+    
+    // don't have these implemented yet
+    //FMT_CONFIG(SIMD_CHAR);
+    //FMT_CONFIG(SIMD_SHORT);
     
 #undef FMT_CONFIG
     
