@@ -123,11 +123,17 @@
 #endif // SIMD_NAMESPACE
 
 // only support avx2 and Neon, no avx-512 at first
-#if defined __ARM_NEON
+#if defined __ARM_NEON__
 #define SIMD_SSE  0
+#define SIMD_AVX2 0
 #define SIMD_NEON 1
 #elif defined __AVX2__ // x64 AVX2 or higher, can lower to AVX
 #define SIMD_SSE  1
+#define SIMD_AVX2 1
+#define SIMD_NEON 0
+#elif defined __SSE4_1__ // SSE 4.1+
+#define SIMD_SSE  1
+#define SIMD_AVX2 0
 #define SIMD_NEON 0
 #else
 #warning unuspported simd arch

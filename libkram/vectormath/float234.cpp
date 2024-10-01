@@ -63,6 +63,8 @@ static const float2 kfloat2_negy = kfloat2_negx.yx;
 static const float2 kfloat2_ones = kfloat2_posx.xx;
 static const float2 kfloat2_zero = {};
 
+//----
+
 static const float3 kfloat3_posx = {1.0f, 0.0f, 0.0f};
 static const float3 kfloat3_posy = kfloat3_posx.yxy;
 static const float3 kfloat3_posz = kfloat3_posx.yyx;
@@ -73,6 +75,8 @@ static const float3 kfloat3_negz = kfloat3_negx.yyx;
 
 static const float3 kfloat3_ones = kfloat3_posx.xxx;
 static const float3 kfloat3_zero = {};
+
+//----
 
 static const float4 kfloat4_posx = {1.0f, 0.0f, 0.0f, 0.0f};
 static const float4 kfloat4_posy = kfloat4_posx.yxyy;
@@ -106,6 +110,75 @@ static const float2x2 kfloat2x2_identity = diagonal_matrix(kfloat2_ones);
 static const float3x3 kfloat3x3_identity = diagonal_matrix(kfloat3_ones);
 static const float3x4 kfloat3x4_identity = diagonal_matrix3x4(kfloat3_ones);
 static const float4x4 kfloat4x4_identity = diagonal_matrix(kfloat4_ones);
+
+//----
+
+const float2& float2_zero(){ return kfloat2_zero; }
+const float2& float2_ones(){ return kfloat2_ones; }
+
+const float2& float2_posx(){ return kfloat2_posx; }
+const float2& float2_posy(){ return kfloat2_posy; }
+
+const float2& float2_negx(){ return kfloat2_negx; }
+const float2& float2_negy(){ return kfloat2_negy; }
+
+//----
+
+const float3& float3_zero(){ return kfloat3_zero; }
+const float3& float3_ones(){ return kfloat3_ones; }
+
+const float3& float3_posx(){ return kfloat3_posx; }
+const float3& float3_posy(){ return kfloat3_posy; }
+const float3& float3_posz(){ return kfloat3_posz; }
+
+const float3& float3_negx(){ return kfloat3_negx; }
+const float3& float3_negy(){ return kfloat3_negy; }
+const float3& float3_negz(){ return kfloat3_negz; }
+
+//----
+
+const float4& float4_zero(){ return kfloat4_zero; }
+const float4& float4_ones(){ return kfloat4_ones; }
+
+const float4& float4_posx(){ return kfloat4_posx; }
+const float4& float4_posy(){ return kfloat4_posy; }
+const float4& float4_posz(){ return kfloat4_posz; }
+const float4& float4_posw(){ return kfloat4_posw; }
+
+const float4& float4_negx(){ return kfloat4_negx; }
+const float4& float4_negy(){ return kfloat4_negy; }
+const float4& float4_negz(){ return kfloat4_negz; }
+const float4& float4_negw(){ return kfloat4_negw; }
+
+const float4& float4_posxw(){ return kfloat4_posxw; }
+const float4& float4_posyw(){ return kfloat4_posyw; }
+const float4& float4_poszw(){ return kfloat4_poszw; }
+
+const float4& float4_negxw(){ return kfloat4_negxw; }
+const float4& float4_negyw(){ return kfloat4_negyw; }
+const float4& float4_negzw(){ return kfloat4_negzw; }
+
+//---------------
+
+const float2x2& float2x2::zero() { return kfloat2x2_zero; }
+const float2x2& float2x2::identity() { return kfloat2x2_identity; }
+
+const float3x3& float3x3::zero() { return kfloat3x3_zero; }
+const float3x3& float3x3::identity() { return kfloat3x3_identity; }
+
+const float3x4& float3x4::zero() { return kfloat3x4_zero; }
+const float3x4& float3x4::identity() { return kfloat3x4_identity; }
+
+const float4x4& float4x4::zero() { return kfloat4x4_zero; }
+const float4x4& float4x4::identity() { return kfloat4x4_identity; }
+
+//----------------------------------
+
+static quatf quatf_zero(0.0f, 0.0f, 0.0f, 0.0f);
+static quatf quatf_identity(0.0f, 0.0f, 0.0f, 1.0f);
+
+const quatf& quatf::zero() { return quatf_zero; }
+const quatf& quatf::identity() { return quatf_identity; }
 
 //---------------------------
 
@@ -535,75 +608,7 @@ bool equal_rel(const float4x4& x, const float4x4& y, float tol) {
                (abs(x[3] - y[3]) <= tol * abs(x[3])));
 }
 
-//----
-
-const float2& float2_zero(){ return kfloat2_zero; }
-const float2& float2_ones(){ return kfloat2_ones; }
-
-const float2& float2_posx(){ return kfloat2_posx; }
-const float2& float2_posy(){ return kfloat2_posy; }
-
-const float2& float2_negx(){ return kfloat2_negx; }
-const float2& float2_negy(){ return kfloat2_negy; }
-
-//----
-
-const float3& float3_zero(){ return kfloat3_zero; }
-const float3& float3_ones(){ return kfloat3_ones; }
-
-const float3& float3_posx(){ return kfloat3_posx; }
-const float3& float3_posy(){ return kfloat3_posy; }
-const float3& float3_posz(){ return kfloat3_posz; }
-
-const float3& float3_negx(){ return kfloat3_negx; }
-const float3& float3_negy(){ return kfloat3_negy; }
-const float3& float3_negz(){ return kfloat3_negz; }
-
-//----
-
-const float4& float4_zero(){ return kfloat4_zero; }
-const float4& float4_ones(){ return kfloat4_ones; }
-
-const float4& float4_posx(){ return kfloat4_posx; }
-const float4& float4_posy(){ return kfloat4_posy; }
-const float4& float4_posz(){ return kfloat4_posz; }
-const float4& float4_posw(){ return kfloat4_posw; }
-
-const float4& float4_negx(){ return kfloat4_negx; }
-const float4& float4_negy(){ return kfloat4_negy; }
-const float4& float4_negz(){ return kfloat4_negz; }
-const float4& float4_negw(){ return kfloat4_negw; }
-
-const float4& float4_posxw(){ return kfloat4_posxw; }
-const float4& float4_posyw(){ return kfloat4_posyw; }
-const float4& float4_poszw(){ return kfloat4_poszw; }
-
-const float4& float4_negxw(){ return kfloat4_negxw; }
-const float4& float4_negyw(){ return kfloat4_negyw; }
-const float4& float4_negzw(){ return kfloat4_negzw; }
-
-//---------------
-
-const float2x2& float2x2::zero() { return kfloat2x2_zero; }
-const float2x2& float2x2::identity() { return kfloat2x2_identity; }
-
-const float3x3& float3x3::zero() { return kfloat3x3_zero; }
-const float3x3& float3x3::identity() { return kfloat3x3_identity; }
-
-const float3x4& float3x4::zero() { return kfloat3x4_zero; }
-const float3x4& float3x4::identity() { return kfloat3x4_identity; }
-
-const float4x4& float4x4::zero() { return kfloat4x4_zero; }
-const float4x4& float4x4::identity() { return kfloat4x4_identity; }
-
-
-//----------------------------------
-
-static quatf quatf_zero(0.0f, 0.0f, 0.0f, 0.0f);
-static quatf quatf_identity(0.0f, 0.0f, 0.0f, 1.0f);
-
-const quatf& quatf::zero() { return quatf_zero; }
-const quatf& quatf::identity() { return quatf_identity; }
+//-----------------
 
 // can negate w, or xyz with -kCross
 static const float4 kCross = {1.0f,1.0f,1.0f,-1.0f};

@@ -230,7 +230,7 @@ SIMD_CALL double2 floor(double2 x) {
 }
 
 // now avx/avx2 can do 4 doubles in one call
-#if defined(__AVX2__)
+#if SIMD_AVX2
 
 SIMD_CALL double4 min(double4 x, double4 y) {
     return bitselect_forminmax(_mm256_min_pd(x, y), x, y != y);
@@ -513,6 +513,54 @@ macroVectorRepeatFnDecl(double, tan)
 SIMD_CALL double2 pow(double2 x, double2 y) { return exp(log(x) * y); }
 SIMD_CALL double3 pow(double3 x, double3 y) { return exp(log(x) * y); }
 SIMD_CALL double4 pow(double4 x, double4 y) { return exp(log(x) * y); }
+
+//-------------------
+// constants
+
+const double2& double2_zero();
+const double2& double2_ones();
+
+const double2& double2_posx();
+const double2& double2_posy();
+
+const double2& double2_negx();
+const double2& double2_negy();
+
+//----
+
+const double3& double3_zero();
+const double3& double3_ones();
+
+const double3& double3_posx();
+const double3& double3_posy();
+const double3& double3_posz();
+
+const double3& double3_negx();
+const double3& double3_negy();
+const double3& double3_negz();
+
+//----
+
+const double4& double4_zero();
+const double4& double4_ones();
+
+const double4& double4_posx();
+const double4& double4_posy();
+const double4& double4_posz();
+const double4& double4_posw();
+
+const double4& double4_negx();
+const double4& double4_negy();
+const double4& double4_negz();
+const double4& double4_negw();
+
+const double4& double4_posxw();
+const double4& double4_posyw();
+const double4& double4_poszw();
+
+const double4& double4_negxw();
+const double4& double4_negyw();
+const double4& double4_negzw();
 
 //-------------------
 // Matrix

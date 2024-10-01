@@ -4,7 +4,7 @@
 #include "vectormath++.h"
 
 // This has to include this, not double234.h
-#if USE_SIMDLIB && USE_DOUBLE
+#if USE_SIMDLIB && SIMD_DOUBLE
 
 #if SIMD_ACCELERATE_MATH
 // TODO: reduce this header to just calls use (f.e. geometry, etc)
@@ -34,6 +34,53 @@ macroVectorRepeatFnImpl(double, tan, ::tan)
 
 //---------------------------
 
+static const double2 kdouble2_posx = {1.0f, 0.0f};
+static const double2 kdouble2_posy = kdouble2_posx.yx;
+
+static const double2 kdouble2_negx = {-1.0f, 0.0f};
+static const double2 kdouble2_negy = kdouble2_negx.yx;
+
+static const double2 kdouble2_ones = kdouble2_posx.xx;
+static const double2 kdouble2_zero = {};
+
+//----
+
+static const double3 kdouble3_posx = {1.0f, 0.0f, 0.0f};
+static const double3 kdouble3_posy = kdouble3_posx.yxy;
+static const double3 kdouble3_posz = kdouble3_posx.yyx;
+
+static const double3 kdouble3_negx = {-1.0f, 0.0f, 0.0f};
+static const double3 kdouble3_negy = kdouble3_negx.yxy;
+static const double3 kdouble3_negz = kdouble3_negx.yyx;
+
+static const double3 kdouble3_ones = kdouble3_posx.xxx;
+static const double3 kdouble3_zero = {};
+
+//----
+
+static const double4 kdouble4_posx = {1.0f, 0.0f, 0.0f, 0.0f};
+static const double4 kdouble4_posy = kdouble4_posx.yxyy;
+static const double4 kdouble4_posz = kdouble4_posx.yyxy;
+static const double4 kdouble4_posw = kdouble4_posx.yyyx;
+
+static const double4 kdouble4_negxw = {-1.0f, 0.0f, 0.0f, 1.0f};
+static const double4 kdouble4_negyw = kdouble4_negxw.yxyw;
+static const double4 kdouble4_negzw = kdouble4_negxw.yyxw;
+
+static const double4 kdouble4_posxw = {1.0f, 0.0f, 0.0f, 1.0f};
+static const double4 kdouble4_posyw = kdouble4_posxw.yxyw;
+static const double4 kdouble4_poszw = kdouble4_posxw.yyxw;
+
+static const double4 kdouble4_negx = {-1.0f, 0.0f, 0.0f, 0.0f};
+static const double4 kdouble4_negy = kdouble4_negx.yxyy;
+static const double4 kdouble4_negz = kdouble4_negx.yyxy;
+static const double4 kdouble4_negw = kdouble4_negx.yyyx;
+
+static const double4 kdouble4_ones = kdouble4_posx.xxxx;
+static const double4 kdouble4_zero = {};
+
+//---------------------------
+
 static const double2x2 kdouble2x2_zero = {}; // what is this value 0, or default ctor
 static const double3x3 kdouble3x3_zero = {};
 static const double3x4 kdouble3x4_zero = {};
@@ -43,6 +90,53 @@ static const double2x2 kdouble2x2_identity = diagonal_matrix((double2)1);
 static const double3x3 kdouble3x3_identity = diagonal_matrix((double3)1);
 static const double3x4 kdouble3x4_identity = diagonal_matrix3x4((double3)1);
 static const double4x4 kdouble4x4_identity = diagonal_matrix((double4)1);
+
+//----
+
+const double2& double2_zero(){ return kdouble2_zero; }
+const double2& double2_ones(){ return kdouble2_ones; }
+
+const double2& double2_posx(){ return kdouble2_posx; }
+const double2& double2_posy(){ return kdouble2_posy; }
+
+const double2& double2_negx(){ return kdouble2_negx; }
+const double2& double2_negy(){ return kdouble2_negy; }
+
+//----
+
+const double3& double3_zero(){ return kdouble3_zero; }
+const double3& double3_ones(){ return kdouble3_ones; }
+
+const double3& double3_posx(){ return kdouble3_posx; }
+const double3& double3_posy(){ return kdouble3_posy; }
+const double3& double3_posz(){ return kdouble3_posz; }
+
+const double3& double3_negx(){ return kdouble3_negx; }
+const double3& double3_negy(){ return kdouble3_negy; }
+const double3& double3_negz(){ return kdouble3_negz; }
+
+//----
+
+const double4& double4_zero(){ return kdouble4_zero; }
+const double4& double4_ones(){ return kdouble4_ones; }
+
+const double4& double4_posx(){ return kdouble4_posx; }
+const double4& double4_posy(){ return kdouble4_posy; }
+const double4& double4_posz(){ return kdouble4_posz; }
+const double4& double4_posw(){ return kdouble4_posw; }
+
+const double4& double4_negx(){ return kdouble4_negx; }
+const double4& double4_negy(){ return kdouble4_negy; }
+const double4& double4_negz(){ return kdouble4_negz; }
+const double4& double4_negw(){ return kdouble4_negw; }
+
+const double4& double4_posxw(){ return kdouble4_posxw; }
+const double4& double4_posyw(){ return kdouble4_posyw; }
+const double4& double4_poszw(){ return kdouble4_poszw; }
+
+const double4& double4_negxw(){ return kdouble4_negxw; }
+const double4& double4_negyw(){ return kdouble4_negyw; }
+const double4& double4_negzw(){ return kdouble4_negzw; }
 
 //---------------------------
 
@@ -100,7 +194,7 @@ double2x2 transpose(const double2x2& x) {
     
     // std::swap would seem faster here?
 #if SIMD_SSE
-#ifdef __AVX2__
+#if SIMD_AVX2
     double4 x0, x1;
     x0.xy = x[0];
     x1.xy = x[1];
@@ -133,7 +227,7 @@ double3x3 transpose(const double3x3& x) {
     x2.xyz = x[2];
     
 #if SIMD_SSE
-#if defined( __AVX2__) && 0
+#if SIMD_AVX2 && 0
     double4 t0 = _mm256_unpacklo_pd(x0, x1);
     double4 t1 = _mm256_unpackhi_pd(x0, x1);
     
@@ -175,7 +269,7 @@ double4x4 transpose(const double4x4& x) {
     // but old Neon didn't really have shuffle.
 
 #if SIMD_SSE
-#ifdef __AVX2__
+#if SIMD_AVX2
     
 // using shuffles + permute
 //    double4 tmp0, tmp1, tmp2, tmp3;

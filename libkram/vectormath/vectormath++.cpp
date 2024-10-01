@@ -184,13 +184,13 @@ string vecf::simd_configs() const {
     bool hasF16C = false;
     bool hasFMA = false;
     
-    #ifdef __SSE42__
+    #if SIMD_SSE
     hasSSE42 = true;
     #endif
     #ifdef __AVX__
     hasAVX = true;
     #endif
-    #ifdef __AVX2__
+    #if SIMD_AVX2
     hasAVX2 = true;
     #endif
     
