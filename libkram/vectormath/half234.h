@@ -84,6 +84,12 @@ SIMD_CALL half4 half4m(half3 v, float w = (half)1.0) {
     half4 r; r.xyz = v; r.w = w; return r;
 }
 
+SIMD_CALL half4 zeroext(half2 x) {
+    half4 v; v.xy = x; v.zw = 0; return v;
+}
+SIMD_CALL half4 zeroext(half3 x) {
+    half4 v; v.xyz = x; v.w = 0; return v;
+}
 
 }
 #endif // __cplusplus

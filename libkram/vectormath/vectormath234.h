@@ -560,6 +560,28 @@ struct vecf {
     // no packed double support
 #endif // SIMD_DOUBLE
 
+#if SIMD_HALF
+    // vector
+    string str(half2 v) const;
+    string str(half3 v) const;
+    string str(half4 v) const;
+#endif
+    
+#if SIMD_LONG
+    // vector
+    string str(long2 v) const;
+    string str(long3 v) const;
+    string str(long4 v) const;
+#endif
+
+#if SIMD_INT
+    // vector
+    string str(int2 v) const;
+    string str(int3 v) const;
+    string str(int4 v) const;
+#endif
+
+    
     // Just stuffing this here for now
     string simd_configs() const;
     string simd_alignments() const;

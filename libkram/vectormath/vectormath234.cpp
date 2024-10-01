@@ -12,8 +12,8 @@
 // These two version seem to be significant changes in output.
 //
 // v14 fma
-// v16 better fma
-// v18 Intel APX support
+// v16 better fma?
+// v18 Intel APX support (still no chip)
 //
 // -Og can't unroll small loops for some reason. -O2 and -O3 do.
 // https://godbolt.org/z/KMPa8bchb
@@ -68,12 +68,7 @@
 // DONE: split up files into types, float ops, double ops
 // DONE: limit !SIMD_FLOAT_EXT to only 32B vector types?  Have 64B vecs.
 //
-// TODO: ryg on fp16 <-> fp32
-// Not the right gist, you want the RTNE one (nm: that only matters for float->half,
-// this was the half->float one. FWIW, other dir is https://gist.github.com/rygorous/eb3a019b99fdaa9c3064.
-// These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
-// which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
-//
+
 // DONE: ryg on 32B ops on AVX systems
 //   These often only have 16B simd units, so running 32B ops isn't efficient.
 //   This could apply say to PS4/AMD chips too.
@@ -84,16 +79,27 @@
 // DONE: add optimized vec2 ops on Neon
 // DONE: add AVX2 for double4
 
+//-----------------
+
+// TODO: ryg on fp16 <-> fp32
+// Not the right gist, you want the RTNE one (nm: that only matters for float->half,
+// this was the half->float one. FWIW, other dir is https://gist.github.com/rygorous/eb3a019b99fdaa9c3064.
+// These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
+// which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
 // TODO: build an optimized Xcode library that is a clang module or framework
 // TODO: build an optimized VS library with cmake, clang module too?
 // TODO: need fast post-translation, post-rotation, post-scale
 // TODO: need euler <-> matrix
-// TODO: here's a decomp
-// https://github.com/erich666/GraphicsGems/blob/master/gemsii/unmatrix.c
-//
 // TODO: saturating conversions would be useful to, and prevent overflow
 //   see the conversion.h code, bit select to clamp values.
 // TODO: need natvis and lldb formatting of math classes.
+
+//-----------------
+// Links
+
+// here's a decomp
+// https://github.com/erich666/GraphicsGems/blob/master/gemsii/unmatrix.c
+//
 
 // intrinsic tables
 // https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html
@@ -164,6 +170,71 @@ string vecf::str(const float4x4& m) const {
 }
 
 #endif // SIMD_FLOAT
+
+// TODO: add formatters for the other types.
+// What is printf for half?
+#if SIMD_HALF
+
+#if SIMD_HALF_FLOAT16
+
+string vecf::str(half2 v) const {
+    return kram::format("(%f %f)", (double)v.x, (double)v.y);
+}
+string vecf::str(half3 v) const {
+    return kram::format("(%f %f %f)", (double)v.x, (double)v.y, (double)v.z);
+}
+string vecf::str(half4 v) const {
+    return kram::format("(%f %f %f %f)", (double)v.x, (double)v.y, (double)v.z, (double)v.w);
+}
+
+#elif SIMD_HALF4_ONLY
+
+string vecf::str(half2 v) const {
+    float4 vv = float4m(zeroext(v));
+    return kram::format("(%f %f)", vv.x, vv.y);
+}
+string vecf::str(half3 v) const {
+    float4 vv = float4m(zeroext(v));
+    return kram::format("(%f %f %f)", vv.x, vv.y, vv.z);
+}
+string vecf::str(half4 v) const {
+    float4 vv = float4m(v);
+    return kram::format("(%f %f %f %f)", vv.x, vv.y, vv.z, vv.w);
+}
+
+#endif // SIMD_HALF_FLOAT16
+
+#endif // SIMD_HALF
+
+#if SIMD_INT
+string vecf::str(int2 v) const {
+    return kram::format("(%d %d)", v.x, v.y);
+}
+string vecf::str(int3 v) const {
+    return kram::format("(%d %d %d)", v.x, v.y, v.z);
+}
+string vecf::str(int4 v) const {
+    return kram::format("(%d %d %d %d)", v.x, v.y, v.z, v.w);
+}
+#endif
+
+#if SIMD_LONG
+
+// This works across Win and macOS, so don't need to use PRId64.
+#define long1cast long long
+
+string vecf::str(long2 v) const {
+    return kram::format("(%lld %lld)", (long1cast)v.x, (long1cast)v.y);
+}
+string vecf::str(long3 v) const {
+    return kram::format("(%lld %lld %lld)", (long1cast)v.x, (long1cast)v.y, (long1cast)v.z);
+}
+string vecf::str(long4 v) const {
+    return kram::format("(%lld %lld %lld %lld)", (long1cast)v.x, (long1cast)v.y, (long1cast)v.z, (long1cast)v.w);
+}
+#endif
+
+
 
 //-----------------------------
 
