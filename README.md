@@ -1,5 +1,9 @@
 The suite of kram tools below.  I hope these improve your game, app, and art development.
 
+# vectormath
+Fast vector math based around clang vector extensions.  Requires clang but accelerated for ARM or AVX2.
+https://github.com/alecazam/kram/tree/main/libkram/vectormath
+
 # kram-profile
 Display profile traces (f.e. Perfetto) quickly in an application for optimizing memory, builds, and cpu/gpu timings
 https://github.com/alecazam/kram/tree/main/kram-profile

@@ -1,7 +1,6 @@
 vectormath
 ==========
 
- 
 * Simd: 
 *   arm64 Neon
 *   x64 AVX2, AVX, SSE4.2
@@ -38,26 +37,25 @@ Clang vector extensions provide:
 
 Types
 
+* all types come in three flavors
+* float4a - aligned type
+* float4p - packed type
+* float   - c++ type omits the "a"
+
+* int2/3/4/8
+* long2/3/4
+
 * half2/3/4/8/16
-
-* float2/3/4/8/16
+* float2/3/4/8
 * float2x2/3x3/3x4/4x4
-
-* int2/3/4/8/16
-* int2x2, int3x3, int3x4, int4x4
-
-* double type should replicate float code
-* double2/3/4/8/16
-* doublet2x2/3x3/3x4/4x4
-
-* didn't really need a half matrix yet
-* - half2x2/3x3/3x4/4x4
+* double2/3/4
+* double2x2/3x3/3x4/4x4
 
 * optional vector only types with only default vector ops
 *  note macOS/iOS is signed char, so should compile same for Win/Linux/etc
-* - u/char2...16
+* - u/char2...32
 * - u/short2...16
-* - u/long2...8
+* - ulong2...16
 
 ---
 
@@ -71,40 +69,37 @@ max vec size per register
 
 ---
 
-TODO: 
-* Finish double2 ops and double2x2...
-* Add quatf/d, and conversions
-* Add affine inverses
-* Add row vector support (vs. columns)
-* Split file into float, double, half sub-headers
-* Add 2-element Neon vec ops.
-* Tests of the calls.
-* Disassembly of the calls (MSVC?)
-* Formatting in print support
-* Move to release Xcode library project and CMakeLists.txt file. 
-* Look into how to individually optimize .cpp files that include it
-* Rename to simdk.h
+* DONE: Finish double2 ops and double2x2...
+* DONE: Add quatf, and conversions
+* DONE: Add affine inverses
+* DONE: Split file into float, double, half sub-headers
+* DONE: Add float2/double2 Neon vec ops.
+* DONE: Add double2 SSE ops
+* DONE: Add AVX2 double4 ops
+* DONE: Formatting in print support
+* DONE: Move to release Xcode library project and CMakeLists.txt file. 
+
+* TODO: Tests of the calls.
+* TODO: Add row vector support (vs. columns)
+* SOME: Disassembly of the calls (MSVC?)
 
 ---
 
-Small implementation kernel (just using the float4 simd ops), so is easy to add double versions with _pd or whatever Neon has.  I would not recommend using with C, but there are C types for ObjC storage and default math and comparison ops.
+Small implementation kernel (just using the float2/4 and double2/4 simd ops).  I would not recommend using with C.  All types have base C types for ObjC and these provide default math and comparison ops.
 
 You can also bury the impls with a little work, and avoid the simd headers getting pulled into code, but the whole point is to inline the calls for speed and stay in register.  So can drop to SSE4.2, but give up F16C.  And AVX2 provides fma to line up with arm64.  So going between arm64 and AVX2 seems like a good parallel if your systems support it.
 
-Written so many of these libs over the years, but this one is based around the gcc/clang vector extensions.   The vecs extend from 2, 4, 8, 16, 32.   They all use more 4 ops to do so.   I'm tempted to limit counts to 32B for AVX2.   So no ctors or member functions on the vectors (see float4m, half4m - make ops), and some derived structs on the matrices.  You can further wrap these under your own vector math code, but you then have a lot of forwarding and conversion.  I recommend using the make ctors for the vectors.   The curly brace init is easy to mistake for what it does.
+Based around the gcc/clang vector extensions.  These provide a lot of opimtized base ops.  The vecs extend to 2, 4, 8, 16, 32 operands.   On larger types, these use multiple 4 operand instructions to do so.   I've limited vector counts to 32B for AVX2 for now.   These are c types for the vectors, so no ctors or member functions.  You can further wrap these under your own vector math code, but you then have a lot of forwarding and conversion.  I recommend using the make ctors for the vectors.   But the curly brace init is misuse for what it does.
 
 ```
-float4 v = {1.0f};    v = 1,xxx
+float4 v = {1.0f};        v = 1,xxx
 float4 v = float4m(1.0f); v = 1,1,1,1
 float4 v = 1.0f.          v = 1,1,1,1
 ```
 
 Matrices are 2x2, 3x3, 3x4, and 4x4 column only.  Matrices have a C++ type with operators and calls.  Chop out with defines float, double, half, but keep int for the conditional tests.   Easy to add more types with the macros - u/char, u/long, u/short. 
 
-I gutted the arrmv7 stuff from sse2Neon.h, so that's readable, and updated sse_mathfun for the cos/sin/log ops.  I had the fp16 <-> fp32 calls, since that's all Android has.  Apple has similar calls and structs, but the Accelerate lib holds many of the optimized calls for sin, cos, log, inverse.  And you only get them if you're on a new enough iOS/macOS.   And that api is so much code, that for some things it's not using the best methods.  Mine probably isn't either.  A lot of this was cobbled together out of an old vec math lib for my personal apps.  And there's still more I can salvage.
+I gutted the arrmv7 stuff from sse2neon.h so that's readable.  But this is only needed for an _mm_shuffle_ps.  Updated sse_mathfun for the cos/sin/log ops, but it's currently only reference fp32 SSE.  I added the fp16 <-> fp32 calls, since that's all Android has.  
 
-Followed Fabian's suggestions.   So div and sqrt instead of recip and rsqrt approximations that take many ops.  This is meant to follow naming to match HLSL/MSL/GLSL where possible.
-
-I have a lib Xcode project not yet checked in, so then could optimize whatever calls are buried, but most calls are light and force inline, so need to be in a header, or move your ops into an optimized or -Og call.   That may reduce call overhead.   I haven't looked at the disassembly this generates yet.  But VS is good at dumping that.  Xcode less so. 
-
+Apple Accelerate has similar calls and structs.  The lib holds the optimized calls for sin, cos, log, inverse, but you only get them if you're on a new enough iOS/macOS.   And that api is so much code, that for some things it's not using the best methods.  
 
