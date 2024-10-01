@@ -206,7 +206,7 @@
 
 #if USE_SIMDLIB
 // new vector math
-#include "vectormath++.h"
+#include "vectormath234.h"
 #else
 // old vector math, using simd/simd.h
 #include "float4a.h"

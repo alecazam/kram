@@ -4,7 +4,7 @@
 
 #pragma once
 
-// This is not yet standalone.  vectormath++.h includes it.
+// This is not yet standalone.  vectormath234.h includes it.
 #if USE_SIMDLIB && SIMD_INT
 
 #ifdef __cplusplus

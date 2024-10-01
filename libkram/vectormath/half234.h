@@ -4,7 +4,7 @@
 
 #pragma once
 
-// This is not yet standalone.  vectormath++.h includes it.
+// This is not yet standalone.  vectormath234.h includes it.
 #if USE_SIMDLIB && SIMD_HALF
 
 // Android doesn't really have _Float16, so would need a u/int16_t mapped placeholder

@@ -6,7 +6,7 @@
 
 #if USE_SIMDLIB && SIMD_FLOAT
 
-// This is not yet standalone.  vectormath++.h includes it.
+// This is not yet standalone.  vectormath234.h includes it.
 
 #ifdef __cplusplus
 extern "C" {

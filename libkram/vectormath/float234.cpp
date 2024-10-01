@@ -3,7 +3,7 @@
 // in all copies or substantial portions of the Software.
 
 // This has to include this, not float234.h
-#include "vectormath++.h"
+#include "vectormath234.h"
 
 #if USE_SIMDLIB && SIMD_FLOAT
 

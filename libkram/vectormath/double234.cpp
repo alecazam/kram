@@ -1,7 +1,7 @@
 // kram - Copyright 2020-2024 by Alec Miller. - MIT License
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
-#include "vectormath++.h"
+#include "vectormath234.h"
 
 // This has to include this, not double234.h
 #if USE_SIMDLIB && SIMD_DOUBLE
