@@ -169,8 +169,6 @@ SIMD_CALL double4 floor(double4 vv) {
 
 #if SIMD_SSE
 
-// TODO: double3/4 impl would benefit from AVX2 calls (32B)
-
 // x64 doesn't seem to have a simd op for min/max reduce
 SIMD_CALL double reduce_min(double2 x) {
     return fmin(x.x,x.y);
@@ -192,23 +190,19 @@ SIMD_CALL double reduce_max(double4 x) {
 SIMD_CALL double2 bitselect_forminmax(double2 x, double2 y, long2 mask) {
     return (double2)(((long2)x & ~mask) | ((long2)y & mask));
 }
+// may only want to use this on AVX2
+SIMD_CALL double4 bitselect_forminmax(double4 x, double4 y, long4 mask) {
+    return (double4)(((long4)x & ~mask) | ((long4)y & mask));
+}
 #endif // SIMD_LONG
 
 // precise returns x on Nan
 SIMD_CALL double2 min(double2 x, double2 y) {
     return bitselect_forminmax(_mm_min_pd(x, y), x, y != y);
 }
-SIMD_CALL double4 min(double4 x, double4 y) {
-    return double4m(min(x.lo,y.lo), min(x.hi,y.hi));
-}
-
 SIMD_CALL double2 max(double2 x, double2 y) {
     return bitselect_forminmax(_mm_max_pd(x, y), x, y != y);
 }
-SIMD_CALL double4 max(double4 x, double4 y) {
-    return double4m(max(x.lo,y.lo), max(x.hi,y.hi));
-}
-
 SIMD_CALL double2 muladd(double2 x, double2 y, double2 t) {
 #ifdef __FMA__
     return _mm_fmadd_pd(x,y,t);
@@ -216,6 +210,74 @@ SIMD_CALL double2 muladd(double2 x, double2 y, double2 t) {
     // fallback with not same characteristics
     return x * y + t;
 #endif
+}
+
+SIMD_CALL double2 sqrt(double2 x) {
+    return _mm_sqrt_pd(x);
+}
+SIMD_CALL double2 reduce_addv(double2 x) {
+    x = _mm_hadd_pd(x, x);
+    return x.x;
+}
+SIMD_CALL double2 round(double2 x) {
+    return _mm_round_pd(x, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+}
+SIMD_CALL double2 ceil(double2 x) {
+    return _mm_ceil_pd(x);
+}
+SIMD_CALL double2 floor(double2 x) {
+    return _mm_floor_pd(x);
+}
+
+// now avx/avx2 can do 4 doubles in one call
+#if defined(__AVX2__)
+
+SIMD_CALL double4 min(double4 x, double4 y) {
+    return bitselect_forminmax(_mm256_min_pd(x, y), x, y != y);
+}
+SIMD_CALL double4 max(double4 x, double4 y) {
+    return bitselect_forminmax(_mm256_max_pd(x, y), x, y != y);
+}
+SIMD_CALL double4 muladd(double4 x, double4 y, double4 t) {
+#ifdef __FMA__
+    return _mm256_fmadd_pd(x,y,t);
+#else
+    // fallback with not same characteristics
+    return x * y + t;
+#endif
+}
+
+SIMD_CALL double4 sqrt(double4 x) {
+    return _mm256_sqrt_pd(x);
+}
+
+SIMD_CALL double4 reduce_addv(double4 x) {
+    x = _mm256_hadd_ps(x, x); // xy = x+y,z+w
+    x = _mm256_hadd_ps(x, x); // x  = x+y
+    return x.x; // repeat x to all values
+}
+SIMD_CALL double3 reduce_addv(double3 x) {
+    return reduce_addv(zeroext(x)).x;
+}
+
+SIMD_CALL double4 round(double4 vv) {
+    return _mm256_round_pd(vv, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+}
+SIMD_CALL double4 ceil(double4 vv) {
+    return _mm256_ceil_pd(vv);
+}
+SIMD_CALL double4 floor(double4 vv) {
+    return _mm256_floor_pd(vv);
+}
+
+#else
+
+// SSE4 ops as a fallback.  These have to make 2+ calls.
+SIMD_CALL double4 min(double4 x, double4 y) {
+    return double4m(min(x.lo,y.lo), min(x.hi,y.hi));
+}
+SIMD_CALL double4 max(double4 x, double4 y) {
+    return double4m(max(x.lo,y.lo), max(x.hi,y.hi));
 }
 SIMD_CALL double4 muladd(double4 x, double4 y, double4 t) {
 #ifdef __FMA__
@@ -227,18 +289,10 @@ SIMD_CALL double4 muladd(double4 x, double4 y, double4 t) {
 #endif
 }
 
-
-SIMD_CALL double2 sqrt(double2 x) {
-    return _mm_sqrt_pd(x);
-}
 SIMD_CALL double4 sqrt(double4 x) {
     return double4m(sqrt(x.lo), sqrt(x.hi));
 }
 
-SIMD_CALL double2 reduce_addv(double2 x) {
-    x = _mm_hadd_pd(x, x);
-    return x.x;
-}
 SIMD_CALL double4 reduce_addv(double4 x) {
     // 4:1 reduction
     x.lo = _mm_hadd_pd(x.lo, x.lo);
@@ -250,30 +304,17 @@ SIMD_CALL double3 reduce_addv(double3 x) {
     return reduce_addv(zeroext(x)).x;
 }
 
-// SSE4.1
-// single ops in AVX/2
-// round to nearest | exc
-SIMD_CALL double2 round(double2 x) {
-    return _mm_round_pd(x, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-}
 SIMD_CALL double4 round(double4 vv) {
     return double4m(round(vv.lo), round(vv.hi));
 }
-
-SIMD_CALL double2 ceil(double2 x) {
-    return _mm_ceil_pd(x);
-}
 SIMD_CALL double4 ceil(double4 vv) {
     return double4m(ceil(vv.lo),ceil(vv.hi));
-}
-
-SIMD_CALL double2 floor(double2 x) {
-    return _mm_floor_pd(x);
 }
 SIMD_CALL double4 floor(double4 vv) {
     return double4m(floor(vv.lo),floor(vv.hi));
 }
 
+#endif
 #endif // SIMD_SSE
 
 

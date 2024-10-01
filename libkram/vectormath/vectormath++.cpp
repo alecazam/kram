@@ -96,6 +96,11 @@
 //
 // TODO: add optimized vec2 ops on Neon, but may not be worth kernal mods
 
+// intrinsic tables
+// https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html
+
+// older but good talk on simd
+// https://people.inf.ethz.ch/markusp/teaching/263-2300-ETH-spring14/slides/11-simd.pdf
 
 //-----------------
 
