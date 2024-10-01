@@ -68,11 +68,9 @@ SIMD_CALL bool any(long2 x) {
     return _mm_movemask_pd(x) & 0x3; // 2 bits
 }
 SIMD_CALL bool any(long3 x) {
-    // avx/2 have double4 op
     return (x.x | x.y) & 0x8000000000000000U;
 }
 SIMD_CALL bool any(long4 x) {
-    // avx/2 have double4 op
     return any(x.lo | x.hi);
 }
 
@@ -80,11 +78,9 @@ SIMD_CALL bool all(long2 x) {
     return (_mm_movemask_pd(x) & 0x3) == 0x3; // 2 bits
 }
 SIMD_CALL bool all(long3 x) {
-    // avx/2 have double4 op
     return (x.x & x.y & x.z) & 0x8000000000000000U;
 }
 SIMD_CALL bool all(long4 x) {
-    // avx/2 have double4 op
     return any(x.lo & x.hi);
 }
 #endif // SIMD_SSE

@@ -158,6 +158,15 @@
 // Whether to support > 4 length vecs with some ops
 #define SIMD_FLOAT_EXT 0
 
+// controls over acclerate vs. func calls
+#ifdef __APPLE__
+#define SIMD_ACCELERATE_MATH 1
+#define SIMD_CMATH_MATH      0
+#else
+#define SIMD_ACCELERATE_MATH 0
+#define SIMD_CMATH_MATH      1
+#endif
+
 // This means simd_float4 will come from this file instead of simd.h
 #define SIMD_ACCELERATE_MATH_NAMES 0
 
@@ -318,6 +327,36 @@ SIMD_CALL type operator+(const type& x, const type& y) { return add(x,y); } \
 SIMD_CALL type operator*(const type& x, const type& y) { return mul(x,y); } \
 SIMD_CALL type::column_t operator*(const type::column_t& v, const type& y) { return mul(v,y); } \
 SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { return mul(x,v); } \
+
+//-----------------------------------
+
+#if SIMD_ACCELERATE_MATH
+
+// remap simdk to simd namespace
+#define macroVectorRepeatFnImpl(type, cppfunc) \
+type##2 cppfunc(type##2 x) { return simd::cppfunc(x); } \
+type##3 cppfunc(type##3 x) { return simd::cppfunc(x); } \
+type##4 cppfunc(type##4 x) { return simd::cppfunc(x); } \
+
+#endif // SIMD_ACCELERATE_MATH
+
+// These are large functions that can be buried and optimized in the .cpp
+// Has alternate cmath form it uses for now.  Look into ISPC calls to
+// replace some of this.
+
+//-----------------------------------
+
+#if SIMD_CMATH_MATH
+
+// This calls function repeatedly, then returns as vector.
+// These don't call to the 4 version since it's so much more work.
+#define macroVectorRepeatFnImpl(type, cppfunc, func) \
+type##1 cppfunc(type##1 x) { return func(x); } \
+type##2 cppfunc(type##2 x) { return {func(x.x), func(x.y)}; } \
+type##3 cppfunc(type##3 x) { return {func(x.x), func(x.y), func(x.z)}; } \
+type##4 cppfunc(type##4 x) { return {func(x.x), func(x.y), func(x.z), func(x.w)}; } \
+
+#endif // SIMD_CMATH_MATH
 
 //-----------------------------------
 

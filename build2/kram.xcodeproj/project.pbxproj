@@ -398,6 +398,10 @@
 		70B563AA2C857B360089A64F /* KramZipStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B563A62C857B360089A64F /* KramZipStream.h */; };
 		70B686E32CAA3409007ACA58 /* long234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686E22CAA3405007ACA58 /* long234.h */; };
 		70B686E42CAA3409007ACA58 /* long234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686E22CAA3405007ACA58 /* long234.h */; };
+		70B686E62CABB415007ACA58 /* float234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686E52CABB40F007ACA58 /* float234.cpp */; };
+		70B686E72CABB415007ACA58 /* float234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686E52CABB40F007ACA58 /* float234.cpp */; };
+		70B686E92CABB420007ACA58 /* double234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686E82CABB41A007ACA58 /* double234.cpp */; };
+		70B686EA2CABB420007ACA58 /* double234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686E82CABB41A007ACA58 /* double234.cpp */; };
 		70CDB65027A1382700A546C1 /* KramDDSHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 70CDB64E27A1382600A546C1 /* KramDDSHelper.h */; };
 		70CDB65127A1382700A546C1 /* KramDDSHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 70CDB64E27A1382600A546C1 /* KramDDSHelper.h */; };
 		70CDB65227A1382700A546C1 /* KramDDSHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */; };
@@ -767,6 +771,8 @@
 		70B563A52C857B360089A64F /* KramZipStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramZipStream.cpp; sourceTree = "<group>"; };
 		70B563A62C857B360089A64F /* KramZipStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramZipStream.h; sourceTree = "<group>"; };
 		70B686E22CAA3405007ACA58 /* long234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = long234.h; sourceTree = "<group>"; };
+		70B686E52CABB40F007ACA58 /* float234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = float234.cpp; sourceTree = "<group>"; };
+		70B686E82CABB41A007ACA58 /* double234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = double234.cpp; sourceTree = "<group>"; };
 		70CDB64E27A1382600A546C1 /* KramDDSHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KramDDSHelper.h; sourceTree = "<group>"; };
 		70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = KramDDSHelper.cpp; sourceTree = "<group>"; };
 		70D222D62AC800AC00B9EA23 /* json11.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = json11.h; sourceTree = "<group>"; };
@@ -816,6 +822,8 @@
 				7013AD4E2CAA0818007E5554 /* float234.h */,
 				7013AD572CAA0934007E5554 /* double234.h */,
 				705F7F032C9FF42700E377B7 /* vectormath++.cpp */,
+				70B686E52CABB40F007ACA58 /* float234.cpp */,
+				70B686E82CABB41A007ACA58 /* double234.cpp */,
 			);
 			path = vectormath;
 			sourceTree = "<group>";
@@ -1747,6 +1755,7 @@
 				70D222E42AD22BED00B9EA23 /* BlockedLinearAllocator.cpp in Sources */,
 				706EEF8126D1595D001C950E /* EtcDifferentialTrys.cpp in Sources */,
 				706EEF8226D1595D001C950E /* EtcMath.cpp in Sources */,
+				70B686E62CABB415007ACA58 /* float234.cpp in Sources */,
 				706EEF8326D1595D001C950E /* EtcBlock4x4Encoding_RGBA8.cpp in Sources */,
 				706EEF8426D1595D001C950E /* EtcBlock4x4Encoding_RG11.cpp in Sources */,
 				706EEF8526D1595D001C950E /* EtcBlock4x4Encoding_RGB8A1.cpp in Sources */,
@@ -1789,6 +1798,7 @@
 				706EEFB126D1595D001C950E /* KramImage.cpp in Sources */,
 				706EEFB226D1595D001C950E /* KramLog.cpp in Sources */,
 				706EEFB326D1595D001C950E /* KramSDFMipper.cpp in Sources */,
+				70B686E92CABB420007ACA58 /* double234.cpp in Sources */,
 				706EEFB426D1595D001C950E /* KramMmapHelper.cpp in Sources */,
 				709B8D3928D7BCAD0081BD1F /* format.cpp in Sources */,
 				70D222DE2AD2132300B9EA23 /* ImmutableString.cpp in Sources */,
@@ -1847,6 +1857,8 @@
 				706EF19A26D166C5001C950E /* EtcDifferentialTrys.cpp in Sources */,
 				706EF19B26D166C5001C950E /* EtcMath.cpp in Sources */,
 				706EF19C26D166C5001C950E /* EtcBlock4x4Encoding_RGBA8.cpp in Sources */,
+				70B686EA2CABB420007ACA58 /* double234.cpp in Sources */,
+				70B686E72CABB415007ACA58 /* float234.cpp in Sources */,
 				706EF19D26D166C5001C950E /* EtcBlock4x4Encoding_RG11.cpp in Sources */,
 				706EF19E26D166C5001C950E /* EtcBlock4x4Encoding_RGB8A1.cpp in Sources */,
 				706EF19F26D166C5001C950E /* EtcIndividualTrys.cpp in Sources */,
