@@ -501,11 +501,19 @@ SIMD_CALL double4 double4m(float4 x) { return __builtin_convertvector(x, double4
 SIMD_CALL float2 float2m(double2 x) { return __builtin_convertvector(x, float2); }
 SIMD_CALL float3 float3m(double3 x) { return __builtin_convertvector(x, float3); }
 SIMD_CALL float4 float4m(double4 x) { return __builtin_convertvector(x, float4); }
+
+SIMD_CALL float2x2 float2x2m(const double2x2& x) { return float2x2(float2m(x[0]),float2m(x[1])); }
+SIMD_CALL float3x3 float3x3m(const double3x3& x) { return float3x3(float3m(x[0]),float3m(x[1]),float3m(x[2])); }
+SIMD_CALL float3x4 float3x4m(const double3x4& x) { return float3x4(float4m(x[0]),float4m(x[1]),float4m(x[2])); }
+SIMD_CALL float4x4 float4x4m(const double4x4& x) { return float4x4(float4m(x[0]),float4m(x[1]),float4m(x[2]),float4m(x[3])); }
+
 #endif // SIMD_DOUBLE
 
 #endif // SIMD_FLOAT
 
-#if SIMD_DOUBLE && SIMD_LONG
+#if SIMD_DOUBLE
+
+#if SIMD_LONG
 SIMD_CALL double2 double2m(long2 x) { return __builtin_convertvector(x, double2); }
 SIMD_CALL double3 double3m(long3 x) { return __builtin_convertvector(x, double3); }
 SIMD_CALL double4 double4m(long4 x) { return __builtin_convertvector(x, double4); }
@@ -514,6 +522,7 @@ SIMD_CALL long2 long2m(double2 x) { return __builtin_convertvector(x, long2); }
 SIMD_CALL long3 long3m(double3 x) { return __builtin_convertvector(x, long3); }
 SIMD_CALL long4 long4m(double4 x) { return __builtin_convertvector(x, long4); }
 #endif // SIMD_LONG
+#endif // SIMD_DOUBLE
 
 //---------------------------
 // formatting
