@@ -27,7 +27,7 @@ https://github.com/alecazam/kram/tree/main/kram-thumb-win
 ObjC++ viewer for PNG/KTX/KTX2/DDS supported files from kram.  Uses Metal compute and shaders, eyedropper, grids, debugging, preview.  Supports HDR and all texture types.  Mip, face, volume, and array access.  No dmg yet, just drop onto /Applications folder.  Runs on macOS (arm64/x64).  Generates Finder thumbnails and QuickLook previews via modern macOS app extension mechanisms.
 
 Diagrams and screenshots can be located here:
-https://www.figma.com/file/bPmPSpBGTi2xTVnBDqVEq0/kram
+https://www.figma.com/design/bPmPSpBGTi2xTVnBDqVEq0/kram?node-id=0-1&t=OnP0wHcDOmg7b7Vg-1
 
 #### Releases includes builds for macOS (Xcode 14.3 - arm64/x64/clang) and Windows x64 (VS 2022 - x64/clang).  kramv for macOS, kram for macOS/Win, libkram for macOS/iOS/Win, win-thumb-kram for Win.  Android library via NDK is possible, but f16 support is spotty on devices.
 
