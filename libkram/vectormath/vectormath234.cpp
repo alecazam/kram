@@ -112,6 +112,9 @@
 #include <simd/base.h>
 #endif // SIMD_ACCELERATE_MATH
 
+// make win happy for va_copy in format call
+#include <stdarg.h>
+
 //#if SIMD_LIBRARY_VERSION >= 6
 //blarg
 //#endif
