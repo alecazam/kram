@@ -164,16 +164,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70B687222CAD1962007ACA58 /* libvectormath.a in Frameworks */,
+				70871D4327CAD3EA00D0B9E1 /* libkram.a in Frameworks */,
+				706EF26726D17DFA001C950E /* libate.tbd in Frameworks */,
 				706EF24D26D17C30001C950E /* ModelIO.framework in Frameworks */,
 				706EF25226D17C6F001C950E /* MetalKit.framework in Frameworks */,
-				70871D4327CAD3EA00D0B9E1 /* libkram.a in Frameworks */,
 				70B5BFF828F5254000CD83D8 /* CoreText.framework in Frameworks */,
 				706EF25526D17C85001C950E /* Metal.framework in Frameworks */,
 				7099CFBD28E8319C008D4ABF /* UniformTypeIdentifiers.framework in Frameworks */,
 				706EF25726D17C9D001C950E /* AppKit.framework in Frameworks */,
 				70833669271575EA0077BCB6 /* GLTFMTL.framework in Frameworks */,
-				70B687222CAD1962007ACA58 /* libvectormath.a in Frameworks */,
-				706EF26726D17DFA001C950E /* libate.tbd in Frameworks */,
 				706EF24F26D17C43001C950E /* Foundation.framework in Frameworks */,
 				70833665271575E50077BCB6 /* GLTF.framework in Frameworks */,
 				705F68FA2BA2DD4800437FAA /* libcompression.tbd in Frameworks */,
@@ -184,11 +184,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70B687242CAD1976007ACA58 /* libvectormath.a in Frameworks */,
+				70E33ED826E5377000CBA422 /* libkram.a in Frameworks */,
 				70E33EC826E536BF00CBA422 /* QuickLookThumbnailing.framework in Frameworks */,
 				705F68FB2BA2DD5900437FAA /* libcompression.tbd in Frameworks */,
-				70B687242CAD1976007ACA58 /* libvectormath.a in Frameworks */,
 				70E33ECA26E536BF00CBA422 /* Quartz.framework in Frameworks */,
-				70E33ED826E5377000CBA422 /* libkram.a in Frameworks */,
 				70E33EDD26E537AD00CBA422 /* Accelerate.framework in Frameworks */,
 				70E33EDB26E5379900CBA422 /* CoreGraphics.framework in Frameworks */,
 				70E33ED926E5378800CBA422 /* libate.tbd in Frameworks */,
@@ -199,13 +199,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70B687262CAD197E007ACA58 /* libvectormath.a in Frameworks */,
+				70E33EF326E548C700CBA422 /* libkram.a in Frameworks */,
 				70E33EF526E548D800CBA422 /* CoreGraphics.framework in Frameworks */,
 				705F68FC2BA2DD6200437FAA /* libcompression.tbd in Frameworks */,
-				70B687262CAD197E007ACA58 /* libvectormath.a in Frameworks */,
 				70E33EF426E548CF00CBA422 /* libate.tbd in Frameworks */,
 				70E33EF626E548E200CBA422 /* Accelerate.framework in Frameworks */,
 				70E33EF726E553B900CBA422 /* AppKit.framework in Frameworks */,
-				70E33EF326E548C700CBA422 /* libkram.a in Frameworks */,
 				70E33EE326E5478900CBA422 /* Quartz.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
