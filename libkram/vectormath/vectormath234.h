@@ -395,7 +395,7 @@ type##4 cppfunc(type##4 a, type##4 b) { return {func(a.x, b.x), func(a.y, b.y), 
 #include <inttypes.h> // for u/long
 #include <math.h>     // for sqrt, sqrtf
 
-#include <string>     // for formatter (only works for std::string)
+#include <string>     // for formatter (only works using std::string, not eastl)
 
 #if SIMD_NEON
 // neon types and intrinsics, 16B

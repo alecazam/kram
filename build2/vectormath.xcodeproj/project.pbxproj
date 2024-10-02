@@ -7,6 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		701AF17E2CAD27CB00BD0886 /* vectormath234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687082CAD1072007ACA58 /* vectormath234.h */; };
+		701AF17F2CAD27CB00BD0886 /* long234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687032CAD1072007ACA58 /* long234.h */; };
+		701AF1802CAD27CB00BD0886 /* sse2neon.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687062CAD1072007ACA58 /* sse2neon.h */; };
+		701AF1812CAD27CB00BD0886 /* sse_mathfun.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687052CAD1072007ACA58 /* sse_mathfun.h */; };
+		701AF1822CAD27CB00BD0886 /* float234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FF2CAD1072007ACA58 /* float234.h */; };
+		701AF1832CAD27CB00BD0886 /* half234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687012CAD1072007ACA58 /* half234.h */; };
+		701AF1842CAD27CB00BD0886 /* int234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687022CAD1072007ACA58 /* int234.h */; };
+		701AF1852CAD27CB00BD0886 /* float4a.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FD2CAD1072007ACA58 /* float4a.h */; };
+		701AF1862CAD27CB00BD0886 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687072CAD1072007ACA58 /* sse2neon-arm64.h */; };
+		701AF1872CAD27CB00BD0886 /* double234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FB2CAD1072007ACA58 /* double234.h */; };
+		701AF1892CAD27CB00BD0886 /* float234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687002CAD1072007ACA58 /* float234.cpp */; };
+		701AF18A2CAD27CB00BD0886 /* double234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FC2CAD1072007ACA58 /* double234.cpp */; };
+		701AF18B2CAD27CB00BD0886 /* vectormath234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687092CAD1072007ACA58 /* vectormath234.cpp */; };
+		701AF18C2CAD27CB00BD0886 /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FE2CAD1072007ACA58 /* float4a.cpp */; };
 		70B6870B2CAD1072007ACA58 /* float234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687002CAD1072007ACA58 /* float234.cpp */; };
 		70B6870C2CAD1072007ACA58 /* double234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FC2CAD1072007ACA58 /* double234.cpp */; };
 		70B6870D2CAD1072007ACA58 /* vectormath234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687092CAD1072007ACA58 /* vectormath234.cpp */; };
@@ -24,6 +38,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		701AF1912CAD27CB00BD0886 /* libvectormath-ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libvectormath-ios.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		70B686F42CAD1026007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		70B686FB2CAD1072007ACA58 /* double234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = double234.h; sourceTree = "<group>"; };
 		70B686FC2CAD1072007ACA58 /* double234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = double234.cpp; sourceTree = "<group>"; };
@@ -43,6 +58,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		701AF18D2CAD27CB00BD0886 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		70B686F22CAD1026007ACA58 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -65,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				70B686F42CAD1026007ACA58 /* libvectormath.a */,
+				701AF1912CAD27CB00BD0886 /* libvectormath-ios.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,6 +118,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
+		701AF17D2CAD27CB00BD0886 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				701AF17E2CAD27CB00BD0886 /* vectormath234.h in Headers */,
+				701AF17F2CAD27CB00BD0886 /* long234.h in Headers */,
+				701AF1802CAD27CB00BD0886 /* sse2neon.h in Headers */,
+				701AF1812CAD27CB00BD0886 /* sse_mathfun.h in Headers */,
+				701AF1822CAD27CB00BD0886 /* float234.h in Headers */,
+				701AF1832CAD27CB00BD0886 /* half234.h in Headers */,
+				701AF1842CAD27CB00BD0886 /* int234.h in Headers */,
+				701AF1852CAD27CB00BD0886 /* float4a.h in Headers */,
+				701AF1862CAD27CB00BD0886 /* sse2neon-arm64.h in Headers */,
+				701AF1872CAD27CB00BD0886 /* double234.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		70B686F02CAD1026007ACA58 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +155,25 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		701AF17C2CAD27CB00BD0886 /* vectormath-ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 701AF18E2CAD27CB00BD0886 /* Build configuration list for PBXNativeTarget "vectormath-ios" */;
+			buildPhases = (
+				701AF17D2CAD27CB00BD0886 /* Headers */,
+				701AF1882CAD27CB00BD0886 /* Sources */,
+				701AF18D2CAD27CB00BD0886 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "vectormath-ios";
+			packageProductDependencies = (
+			);
+			productName = vectormath;
+			productReference = 701AF1912CAD27CB00BD0886 /* libvectormath-ios.a */;
+			productType = "com.apple.product-type.library.static";
+		};
 		70B686F32CAD1026007ACA58 /* vectormath */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 70B686F82CAD1026007ACA58 /* Build configuration list for PBXNativeTarget "vectormath" */;
@@ -163,11 +222,23 @@
 			projectRoot = "";
 			targets = (
 				70B686F32CAD1026007ACA58 /* vectormath */,
+				701AF17C2CAD27CB00BD0886 /* vectormath-ios */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		701AF1882CAD27CB00BD0886 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				701AF1892CAD27CB00BD0886 /* float234.cpp in Sources */,
+				701AF18A2CAD27CB00BD0886 /* double234.cpp in Sources */,
+				701AF18B2CAD27CB00BD0886 /* vectormath234.cpp in Sources */,
+				701AF18C2CAD27CB00BD0886 /* float4a.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		70B686F12CAD1026007ACA58 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -182,6 +253,30 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		701AF18F2CAD27CB00BD0886 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+			};
+			name = Debug;
+		};
+		701AF1902CAD27CB00BD0886 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+			};
+			name = Release;
+		};
 		70B686F62CAD1026007ACA58 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -235,8 +330,9 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -296,8 +392,9 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_CFLAGS = (
@@ -314,7 +411,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -325,7 +421,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -334,6 +429,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		701AF18E2CAD27CB00BD0886 /* Build configuration list for PBXNativeTarget "vectormath-ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				701AF18F2CAD27CB00BD0886 /* Debug */,
+				701AF1902CAD27CB00BD0886 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		70B686EF2CAD1026007ACA58 /* Build configuration list for PBXProject "vectormath" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

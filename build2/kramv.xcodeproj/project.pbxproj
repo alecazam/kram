@@ -590,6 +590,7 @@
 					"$(PROJECT_DIR)/../libkram/eastl/include",
 					"$(PROJECT_DIR)/../libkram/vectormath",
 				);
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -666,6 +667,7 @@
 					"$(PROJECT_DIR)/../libkram/eastl/include",
 					"$(PROJECT_DIR)/../libkram/vectormath",
 				);
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;

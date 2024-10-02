@@ -112,6 +112,32 @@
 #include <simd/base.h>
 #endif // SIMD_ACCELERATE_MATH
 
+//#if SIMD_LIBRARY_VERSION >= 6
+//blarg
+//#endif
+
+// NOTE: this reports 5 for macOS 13 minspec, but SIMD_LIBRARY_VERSION is set to 6.
+//   This is a problem, since some lib code only exists on macOS 15 and iOS 18 then.
+   
+#if SIMD_ACCELERATE_MATH
+# if SIMD_COMPILER_HAS_REQUIRED_FEATURES
+#  if __has_include(<TargetConditionals.h>) && __has_include(<Availability.h>)
+#   include <TargetConditionals.h>
+#   include <Availability.h>
+#   if TARGET_OS_RTKIT
+#    define SIMD_LIBRARY_VERSION SIMD_CURRENT_LIBRARY_VERSION
+#   elif __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_15_0   || \
+        __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_18_0
+#    define SIMD_LIBRARY_VERSION_TEST 6
+#   elif __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_13_0   || \
+        __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_16_0
+#    define SIMD_LIBRARY_VERSION_TEST 5
+#   endif
+#  endif
+#endif
+#endif
+// */
+
 namespace SIMD_NAMESPACE {
 
 // was using kram::format, but wanted to decouple this lib
@@ -331,7 +357,9 @@ string vecf::simd_configs() const {
     FMT_CONFIG(SIMD_CMATH_MATH);
     FMT_CONFIG(SIMD_ACCELERATE_MATH);
 #if SIMD_ACCELERATE_MATH
-    FMT_CONFIG(SIMD_LIBRARY_VERSION);
+    FMT_CONFIG(SIMD_LIBRARY_VERSION); // lib based on min os target
+    FMT_CONFIG(SIMD_CURRENT_LIBRARY_VERSION); // max lib based on sdk
+    FMT_CONFIG(SIMD_LIBRARY_VERSION_TEST);
     FMT_CONFIG(SIMD_ACCELERATE_MATH_NAMES);
 #endif
     
