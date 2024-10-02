@@ -59,16 +59,16 @@ Types
 * float4a - aligned type
 * float4p - packed type
 * float   - c++ type omits the "a"
-
+*
 * int2/3/4/8
 * long2/3/4
-
+*
 * half2/3/4/8/16
 * float2/3/4/8
 * float2x2/3x3/3x4/4x4
 * double2/3/4
 * double2x2/3x3/3x4/4x4
-
+*
 * - u/char2...32
 * - u/short2...16
 * - ulong2...16

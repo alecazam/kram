@@ -1,0 +1,358 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		70B6870B2CAD1072007ACA58 /* float234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687002CAD1072007ACA58 /* float234.cpp */; };
+		70B6870C2CAD1072007ACA58 /* double234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FC2CAD1072007ACA58 /* double234.cpp */; };
+		70B6870D2CAD1072007ACA58 /* vectormath234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687092CAD1072007ACA58 /* vectormath234.cpp */; };
+		70B6870E2CAD1072007ACA58 /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FE2CAD1072007ACA58 /* float4a.cpp */; };
+		70B6870F2CAD1072007ACA58 /* vectormath234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687082CAD1072007ACA58 /* vectormath234.h */; };
+		70B687102CAD1072007ACA58 /* long234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687032CAD1072007ACA58 /* long234.h */; };
+		70B687112CAD1072007ACA58 /* sse2neon.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687062CAD1072007ACA58 /* sse2neon.h */; };
+		70B687122CAD1072007ACA58 /* sse_mathfun.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687052CAD1072007ACA58 /* sse_mathfun.h */; };
+		70B687132CAD1072007ACA58 /* float234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FF2CAD1072007ACA58 /* float234.h */; };
+		70B687142CAD1072007ACA58 /* half234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687012CAD1072007ACA58 /* half234.h */; };
+		70B687152CAD1072007ACA58 /* int234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687022CAD1072007ACA58 /* int234.h */; };
+		70B687162CAD1072007ACA58 /* float4a.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FD2CAD1072007ACA58 /* float4a.h */; };
+		70B687172CAD1072007ACA58 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687072CAD1072007ACA58 /* sse2neon-arm64.h */; };
+		70B687182CAD1072007ACA58 /* double234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FB2CAD1072007ACA58 /* double234.h */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		70B686F42CAD1026007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		70B686FB2CAD1072007ACA58 /* double234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = double234.h; sourceTree = "<group>"; };
+		70B686FC2CAD1072007ACA58 /* double234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = double234.cpp; sourceTree = "<group>"; };
+		70B686FD2CAD1072007ACA58 /* float4a.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = float4a.h; sourceTree = "<group>"; };
+		70B686FE2CAD1072007ACA58 /* float4a.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = float4a.cpp; sourceTree = "<group>"; };
+		70B686FF2CAD1072007ACA58 /* float234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = float234.h; sourceTree = "<group>"; };
+		70B687002CAD1072007ACA58 /* float234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = float234.cpp; sourceTree = "<group>"; };
+		70B687012CAD1072007ACA58 /* half234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = half234.h; sourceTree = "<group>"; };
+		70B687022CAD1072007ACA58 /* int234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = int234.h; sourceTree = "<group>"; };
+		70B687032CAD1072007ACA58 /* long234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = long234.h; sourceTree = "<group>"; };
+		70B687042CAD1072007ACA58 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		70B687052CAD1072007ACA58 /* sse_mathfun.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse_mathfun.h; sourceTree = "<group>"; };
+		70B687062CAD1072007ACA58 /* sse2neon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse2neon.h; sourceTree = "<group>"; };
+		70B687072CAD1072007ACA58 /* sse2neon-arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "sse2neon-arm64.h"; sourceTree = "<group>"; };
+		70B687082CAD1072007ACA58 /* vectormath234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vectormath234.h; sourceTree = "<group>"; };
+		70B687092CAD1072007ACA58 /* vectormath234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vectormath234.cpp; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		70B686F22CAD1026007ACA58 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		70B686EB2CAD1026007ACA58 = {
+			isa = PBXGroup;
+			children = (
+				70B6870A2CAD1072007ACA58 /* vectormath */,
+				70B686F52CAD1026007ACA58 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		70B686F52CAD1026007ACA58 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				70B686F42CAD1026007ACA58 /* libvectormath.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		70B6870A2CAD1072007ACA58 /* vectormath */ = {
+			isa = PBXGroup;
+			children = (
+				70B687042CAD1072007ACA58 /* README.md */,
+				70B686FB2CAD1072007ACA58 /* double234.h */,
+				70B686FC2CAD1072007ACA58 /* double234.cpp */,
+				70B686FD2CAD1072007ACA58 /* float4a.h */,
+				70B686FE2CAD1072007ACA58 /* float4a.cpp */,
+				70B686FF2CAD1072007ACA58 /* float234.h */,
+				70B687002CAD1072007ACA58 /* float234.cpp */,
+				70B687012CAD1072007ACA58 /* half234.h */,
+				70B687022CAD1072007ACA58 /* int234.h */,
+				70B687032CAD1072007ACA58 /* long234.h */,
+				70B687052CAD1072007ACA58 /* sse_mathfun.h */,
+				70B687062CAD1072007ACA58 /* sse2neon.h */,
+				70B687072CAD1072007ACA58 /* sse2neon-arm64.h */,
+				70B687082CAD1072007ACA58 /* vectormath234.h */,
+				70B687092CAD1072007ACA58 /* vectormath234.cpp */,
+			);
+			name = vectormath;
+			path = ../libkram/vectormath;
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		70B686F02CAD1026007ACA58 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70B6870F2CAD1072007ACA58 /* vectormath234.h in Headers */,
+				70B687102CAD1072007ACA58 /* long234.h in Headers */,
+				70B687112CAD1072007ACA58 /* sse2neon.h in Headers */,
+				70B687122CAD1072007ACA58 /* sse_mathfun.h in Headers */,
+				70B687132CAD1072007ACA58 /* float234.h in Headers */,
+				70B687142CAD1072007ACA58 /* half234.h in Headers */,
+				70B687152CAD1072007ACA58 /* int234.h in Headers */,
+				70B687162CAD1072007ACA58 /* float4a.h in Headers */,
+				70B687172CAD1072007ACA58 /* sse2neon-arm64.h in Headers */,
+				70B687182CAD1072007ACA58 /* double234.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		70B686F32CAD1026007ACA58 /* vectormath */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70B686F82CAD1026007ACA58 /* Build configuration list for PBXNativeTarget "vectormath" */;
+			buildPhases = (
+				70B686F02CAD1026007ACA58 /* Headers */,
+				70B686F12CAD1026007ACA58 /* Sources */,
+				70B686F22CAD1026007ACA58 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = vectormath;
+			packageProductDependencies = (
+			);
+			productName = vectormath;
+			productReference = 70B686F42CAD1026007ACA58 /* libvectormath.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		70B686EC2CAD1026007ACA58 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					70B686F32CAD1026007ACA58 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 70B686EF2CAD1026007ACA58 /* Build configuration list for PBXProject "vectormath" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 70B686EB2CAD1026007ACA58;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 70B686F52CAD1026007ACA58 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				70B686F32CAD1026007ACA58 /* vectormath */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		70B686F12CAD1026007ACA58 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70B6870B2CAD1072007ACA58 /* float234.cpp in Sources */,
+				70B6870C2CAD1072007ACA58 /* double234.cpp in Sources */,
+				70B6870D2CAD1072007ACA58 /* vectormath234.cpp in Sources */,
+				70B6870E2CAD1072007ACA58 /* float4a.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		70B686F62CAD1026007ACA58 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"-DUSE_SIMDLIB=1",
+					"-mfma",
+					"-mf16c",
+				);
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		70B686F72CAD1026007ACA58 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				OTHER_CFLAGS = (
+					"-DUSE_SIMDLIB=1",
+					"-mfma",
+					"-mf16c",
+				);
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		70B686F92CAD1026007ACA58 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = lib;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		70B686FA2CAD1026007ACA58 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = lib;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		70B686EF2CAD1026007ACA58 /* Build configuration list for PBXProject "vectormath" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70B686F62CAD1026007ACA58 /* Debug */,
+				70B686F72CAD1026007ACA58 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		70B686F82CAD1026007ACA58 /* Build configuration list for PBXNativeTarget "vectormath" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70B686F92CAD1026007ACA58 /* Debug */,
+				70B686FA2CAD1026007ACA58 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 70B686EC2CAD1026007ACA58 /* Project object */;
+}

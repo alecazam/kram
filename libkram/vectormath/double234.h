@@ -503,12 +503,17 @@ SIMD_CALL double4 fract(double4 x) {
 // power series
 macroVectorRepeatFnDecl(double, log)
 macroVectorRepeatFnDecl(double, exp)
-//macroVectorRepeatFnDecl(double, pow)
 
 // trig
 macroVectorRepeatFnDecl(double, cos)
 macroVectorRepeatFnDecl(double, sin)
 macroVectorRepeatFnDecl(double, tan)
+
+macroVectorRepeatFnDecl(double, acos)
+macroVectorRepeatFnDecl(double, asin)
+macroVectorRepeatFnDecl(double, atan)
+
+macroVectorRepeatFn2Decl(double, atan2)
 
 SIMD_CALL double2 pow(double2 x, double2 y) { return exp(log(x) * y); }
 SIMD_CALL double3 pow(double3 x, double3 y) { return exp(log(x) * y); }

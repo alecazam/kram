@@ -21,6 +21,13 @@ macroVectorRepeatFnImpl(double, exp)
 macroVectorRepeatFnImpl(double, sin)
 macroVectorRepeatFnImpl(double, cos)
 macroVectorRepeatFnImpl(double, tan)
+
+macroVectorRepeatFnImpl(double, asin)
+macroVectorRepeatFnImpl(double, acos)
+macroVectorRepeatFnImpl(double, atan)
+
+macroVectorRepeatFn2Impl(double, atan2)
+
 #endif // SIMD_ACCELERATE_MATH
 
 #if SIMD_CMATH_MATH
@@ -30,6 +37,11 @@ macroVectorRepeatFnImpl(double, exp, ::exp)
 macroVectorRepeatFnImpl(double, sin, ::sin)
 macroVectorRepeatFnImpl(double, cos, ::cos)
 macroVectorRepeatFnImpl(double, tan, ::tan)
+
+macroVectorRepeatFnImpl(double, asin, ::asin)
+macroVectorRepeatFnImpl(double, acos, ::acos)
+macroVectorRepeatFnImpl(double, atan, ::atan)
+
 #endif // SIMD_CMATH_MATH
 
 //---------------------------

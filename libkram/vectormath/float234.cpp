@@ -857,7 +857,7 @@ float4x4 inverse_tru(const float4x4& mtx)
         inverse[3] = inverse * (-mtx[3]);
         
         success = true;
-        macroUnusedVar(success);
+        (void)(success);
     }
     
     return inverse;
@@ -912,7 +912,7 @@ float4x4 inverse_trs(const float4x4& mtx)
         inverse[3] = inverse * (-mtx[3]);
         
         success = true;
-    macroUnusedVar(success);
+    (void)(success);
     //}
     
     return inverse;

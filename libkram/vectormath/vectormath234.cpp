@@ -67,31 +67,29 @@
 // DONE: rename in README, and name of .cpp/h
 // DONE: split up files into types, float ops, double ops
 // DONE: limit !SIMD_FLOAT_EXT to only 32B vector types?  Have 64B vecs.
-//
-
 // DONE: ryg on 32B ops on AVX systems
 //   These often only have 16B simd units, so running 32B ops isn't efficient.
 //   This could apply say to PS4/AMD chips too.
-//
 // DONE: bring over fast inverses (RTS, RTU, etc)
 // DONE: need translation, rotation, scale
 // DONE: verify size/alignments are same across Win/macOS
 // DONE: add optimized vec2 ops on Neon
 // DONE: add AVX2 for double4
+// DONE: build an optimized Xcode library
 
 //-----------------
 
 // TODO: ryg on fp16 <-> fp32
-// Not the right gist, you want the RTNE one (nm: that only matters for float->half,
-// this was the half->float one. FWIW, other dir is https://gist.github.com/rygorous/eb3a019b99fdaa9c3064.
-// These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
-// which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
-// TODO: build an optimized Xcode library that is a clang module or framework
+//   Not the right gist, you want the RTNE one (nm: that only matters for float->half,
+//   this was the half->float one. FWIW, other dir is https://gist.github.com/rygorous/eb3a019b99fdaa9c3064.
+//   These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
+//   which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
+// TODO: build Xcode library that is a clang module or framework
 // TODO: build an optimized VS library with cmake, clang module too?
 // TODO: need fast post-translation, post-rotation, post-scale
 // TODO: need euler <-> matrix
-// TODO: saturating conversions would be useful to, and prevent overflow
-//   see the conversion.h code, bit select to clamp values.
+// TODO: saturating conversions would be useful too and prevent overflow
+//   bit select to clamp values.
 // TODO: need natvis and lldb formatting of math classes.
 
 //-----------------
@@ -107,34 +105,59 @@
 // older but good talk on simd
 // https://people.inf.ethz.ch/markusp/teaching/263-2300-ETH-spring14/slides/11-simd.pdf
 
+// aarch64
+// https://en.wikipedia.org/wiki/AArch64
+
 #if SIMD_ACCELERATE_MATH
 #include <simd/base.h>
 #endif // SIMD_ACCELERATE_MATH
 
 namespace SIMD_NAMESPACE {
 
+// was using kram::format, but wanted to decouple this lib
+inline string format(const char* format, ...) {
+    string str;
+    
+    va_list args;
+    va_start(args, format);
+    
+    // format once to get length (without NULL at end)
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+    int32_t len = vsnprintf(NULL, 0, format, argsCopy);
+    va_end(argsCopy);
+
+    // replace string
+    str.resize(len, 0);
+    vsnprintf((char*)str.c_str(), len + 1, format, args);
+    
+    va_end(args);
+    
+    return str;
+}
+
 #if SIMD_DOUBLE
 
 string vecf::str(double2 v) const {
-    return kram::format("(%f %f)", v.x, v.y);
+    return format("(%f %f)", v.x, v.y);
 }
 string vecf::str(double3 v) const {
-    return kram::format("(%f %f %f)", v.x, v.y, v.z);
+    return format("(%f %f %f)", v.x, v.y, v.z);
 }
 string vecf::str(double4 v) const {
-    return kram::format("(%f %f %f %f)", v.x, v.y, v.z, v.w);
+    return format("(%f %f %f %f)", v.x, v.y, v.z, v.w);
 }
  
 string vecf::str(const double2x2& m) const {
-    return kram::format("%s\n%s\n",
+    return format("%s\n%s\n",
         str(m[0]).c_str(), str(m[1]).c_str());
 }
 string vecf::str(const double3x3& m) const {
-    return kram::format("%s\n%s\n%s\n",
+    return format("%s\n%s\n%s\n",
         str(m[0]).c_str(), str(m[1]).c_str(), str(m[2]).c_str());
 }
 string vecf::str(const double4x4& m) const {
-  return kram::format("%s\n%s\n%s\n%s\n",
+  return format("%s\n%s\n%s\n%s\n",
       str(m[0]).c_str(), str(m[1]).c_str(),
       str(m[2]).c_str(), str(m[3]).c_str());
 }
@@ -146,60 +169,59 @@ string vecf::str(const double4x4& m) const {
 #if SIMD_FLOAT
 
 string vecf::str(float2 v) const {
-    return kram::format("(%f %f)", v.x, v.y);
+    return format("(%f %f)", v.x, v.y);
 }
 string vecf::str(float3 v) const {
-    return kram::format("(%f %f %f)", v.x, v.y, v.z);
+    return format("(%f %f %f)", v.x, v.y, v.z);
 }
 string vecf::str(float4 v) const {
-    return kram::format("(%f %f %f %f)", v.x, v.y, v.z, v.w);
+    return format("(%f %f %f %f)", v.x, v.y, v.z, v.w);
 }
  
 string vecf::str(const float2x2& m) const {
-    return kram::format("%s\n%s\n",
+    return format("%s\n%s\n",
         str(m[0]).c_str(), str(m[1]).c_str());
 }
 string vecf::str(const float3x3& m) const {
-    return kram::format("%s\n%s\n%s\n",
+    return format("%s\n%s\n%s\n",
         str(m[0]).c_str(), str(m[1]).c_str(), str(m[2]).c_str());
 }
 string vecf::str(const float4x4& m) const {
-  return kram::format("%s\n%s\n%s\n%s\n",
+  return format("%s\n%s\n%s\n%s\n",
       str(m[0]).c_str(), str(m[1]).c_str(),
       str(m[2]).c_str(), str(m[3]).c_str());
 }
 
 #endif // SIMD_FLOAT
 
-// TODO: add formatters for the other types.
-// What is printf for half?
 #if SIMD_HALF
 
 #if SIMD_HALF_FLOAT16
 
 string vecf::str(half2 v) const {
-    return kram::format("(%f %f)", (double)v.x, (double)v.y);
+    return format("(%f %f)", (double)v.x, (double)v.y);
 }
 string vecf::str(half3 v) const {
-    return kram::format("(%f %f %f)", (double)v.x, (double)v.y, (double)v.z);
+    return format("(%f %f %f)", (double)v.x, (double)v.y, (double)v.z);
 }
 string vecf::str(half4 v) const {
-    return kram::format("(%f %f %f %f)", (double)v.x, (double)v.y, (double)v.z, (double)v.w);
+    return format("(%f %f %f %f)", (double)v.x, (double)v.y, (double)v.z, (double)v.w);
 }
 
 #elif SIMD_HALF4_ONLY
 
+// this converts half4 to float, then just prints that
 string vecf::str(half2 v) const {
     float4 vv = float4m(zeroext(v));
-    return kram::format("(%f %f)", vv.x, vv.y);
+    return format("(%f %f)", vv.x, vv.y);
 }
 string vecf::str(half3 v) const {
     float4 vv = float4m(zeroext(v));
-    return kram::format("(%f %f %f)", vv.x, vv.y, vv.z);
+    return format("(%f %f %f)", vv.x, vv.y, vv.z);
 }
 string vecf::str(half4 v) const {
     float4 vv = float4m(v);
-    return kram::format("(%f %f %f %f)", vv.x, vv.y, vv.z, vv.w);
+    return format("(%f %f %f %f)", vv.x, vv.y, vv.z, vv.w);
 }
 
 #endif // SIMD_HALF_FLOAT16
@@ -208,13 +230,13 @@ string vecf::str(half4 v) const {
 
 #if SIMD_INT
 string vecf::str(int2 v) const {
-    return kram::format("(%d %d)", v.x, v.y);
+    return format("(%d %d)", v.x, v.y);
 }
 string vecf::str(int3 v) const {
-    return kram::format("(%d %d %d)", v.x, v.y, v.z);
+    return format("(%d %d %d)", v.x, v.y, v.z);
 }
 string vecf::str(int4 v) const {
-    return kram::format("(%d %d %d %d)", v.x, v.y, v.z, v.w);
+    return format("(%d %d %d %d)", v.x, v.y, v.z, v.w);
 }
 #endif
 
@@ -224,13 +246,13 @@ string vecf::str(int4 v) const {
 #define long1cast long long
 
 string vecf::str(long2 v) const {
-    return kram::format("(%lld %lld)", (long1cast)v.x, (long1cast)v.y);
+    return format("(%lld %lld)", (long1cast)v.x, (long1cast)v.y);
 }
 string vecf::str(long3 v) const {
-    return kram::format("(%lld %lld %lld)", (long1cast)v.x, (long1cast)v.y, (long1cast)v.z);
+    return format("(%lld %lld %lld)", (long1cast)v.x, (long1cast)v.y, (long1cast)v.z);
 }
 string vecf::str(long4 v) const {
-    return kram::format("(%lld %lld %lld %lld)", (long1cast)v.x, (long1cast)v.y, (long1cast)v.z, (long1cast)v.w);
+    return format("(%lld %lld %lld %lld)", (long1cast)v.x, (long1cast)v.y, (long1cast)v.z, (long1cast)v.w);
 }
 #endif
 
@@ -243,7 +265,7 @@ string vecf::str(long4 v) const {
 string vecf::simd_configs() const {
     string s;
     
-#define FMT_CONFIG(val) s += kram::format("%s: %d\n", #val, val);
+#define FMT_CONFIG(val) s += format("%s: %d\n", #val, val);
     
     FMT_CONFIG(SIMD_SSE);
     FMT_CONFIG(SIMD_NEON);
@@ -277,14 +299,14 @@ string vecf::simd_configs() const {
     #endif
     
     if (hasAVX2)
-        s += kram::format("%s: %d\n", "AVX2 ", hasAVX2);
+        s += format("%s: %d\n", "AVX2 ", hasAVX2);
     else if (hasAVX)
-        s += kram::format("%s: %d\n", "AVX  ", hasAVX);
+        s += format("%s: %d\n", "AVX  ", hasAVX);
     else if (hasSSE42)
-        s += kram::format("%s: %d\n", "SSE42 ", hasSSE42);
+        s += format("%s: %d\n", "SSE42 ", hasSSE42);
     
-    s += kram::format("%s: %d\n", "F16C  ", hasF16C);
-    s += kram::format("%s: %d\n", "FMA   ", hasFMA);
+    s += format("%s: %d\n", "F16C  ", hasF16C);
+    s += format("%s: %d\n", "FMA   ", hasFMA);
     
     // fp-contract, etc ?
     // CRC (may not be worth it)
@@ -334,7 +356,7 @@ string vecf::simd_configs() const {
 string vecf::simd_alignments() const {
     string s;
     
-#define FMT_CONFIG(val) s += kram::format("%s: %zu %zu\n", #val, sizeof(val), __alignof(val));
+#define FMT_CONFIG(val) s += format("%s: %zu %zu\n", #val, sizeof(val), __alignof(val));
     
     // TODO: add other types int, half?
     

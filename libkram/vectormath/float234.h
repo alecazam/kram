@@ -492,9 +492,20 @@ macroVectorRepeatFnDecl(float, log)
 macroVectorRepeatFnDecl(float, exp)
 
 // trig
+// TODO: more accurate cospi, sinpi, ...
 macroVectorRepeatFnDecl(float, cos)
 macroVectorRepeatFnDecl(float, sin)
 macroVectorRepeatFnDecl(float, tan)
+
+macroVectorRepeatFnDecl(float, acos)
+macroVectorRepeatFnDecl(float, asin)
+macroVectorRepeatFnDecl(float, atan)
+
+macroVectorRepeatFn2Decl(float, atan2)
+
+// sincos requires accel 5 lib, and takes 2 ptrs
+// may need math fallback for some calls
+// macroVectorRepeatFn2Decl(float, sincos)
 
 // pow
 // can xy be <= 0 ?, no will return Nan in log/exp approx

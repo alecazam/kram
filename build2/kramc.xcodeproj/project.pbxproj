@@ -12,6 +12,7 @@
 		706EF28526D1825D001C950E /* libate.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF28426D18257001C950E /* libate.tbd */; };
 		706EF28726D18290001C950E /* KramMain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EF28026D18223001C950E /* KramMain.cpp */; };
 		706EF28B26D182CB001C950E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF28A26D182CB001C950E /* Foundation.framework */; };
+		70B687282CAD1996007ACA58 /* libvectormath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B687272CAD1996007ACA58 /* libvectormath.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -33,6 +34,7 @@
 		706EF28226D18251001C950E /* libkram.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libkram.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EF28426D18257001C950E /* libate.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libate.tbd; path = usr/lib/libate.tbd; sourceTree = SDKROOT; };
 		706EF28A26D182CB001C950E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		70B687272CAD1996007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +46,7 @@
 				706EF28B26D182CB001C950E /* Foundation.framework in Frameworks */,
 				706EF28526D1825D001C950E /* libate.tbd in Frameworks */,
 				705F68F82BA2DD2000437FAA /* libcompression.tbd in Frameworks */,
+				70B687282CAD1996007ACA58 /* libvectormath.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +82,7 @@
 		706EF28126D18251001C950E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				70B687272CAD1996007ACA58 /* libvectormath.a */,
 				705F68F72BA2DD1100437FAA /* libcompression.tbd */,
 				706EF28A26D182CB001C950E /* Foundation.framework */,
 				706EF28426D18257001C950E /* libate.tbd */,

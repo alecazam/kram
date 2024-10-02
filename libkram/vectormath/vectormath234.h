@@ -89,9 +89,7 @@
 // double2,3,4
 //
 //------------
-// APX first introduced in 10th gen has APX extension
-//   expands general purpose registers from 16 to 32.
-//
+
 // Intel chips
 //  1 Nehalem,
 //  2 Sandy Bridge,
@@ -102,10 +100,11 @@
 //  7 Kaby Lake,
 //  8 Coffee Lake,
 //  9 Coffee Lake Refresh
-// 10 Comet Lake,    APX
+// 10 Comet Lake,
 // 11 Rocket Lake,
 // 12 Alder Lake,
 // 13 Raptor Lake
+//                  APX?  AVX10?
 //
 // AMD chips
 //
@@ -120,6 +119,11 @@
 // Can override the namespace to your own.  This avoids collision with Apple simd.
 #ifndef SIMD_NAMESPACE
 #define SIMD_NAMESPACE simdk
+#endif // SIMD_NAMESPACE
+
+// Can use std or eastl
+#ifndef STL_NAMESPACE
+#define STL_NAMESPACE std
 #endif // SIMD_NAMESPACE
 
 // only support avx2 and Neon, no avx-512 at first
@@ -188,14 +192,6 @@
 
 // op *=, +=, -=, /= mods the calling object, so can't be const
 #define SIMD_CALL_OP static inline __attribute__((__always_inline__,__nodebug__))
-
-// TODO: type1 simdk::log(float1)
-// type##1 cppfunc(type##1 x);
-
-#define macroVectorRepeatFnDecl(type, cppfunc) \
-type##2 cppfunc(type##2 x); \
-type##3 cppfunc(type##3 x); \
-type##4 cppfunc(type##4 x); \
 
 //------------
 
@@ -336,13 +332,36 @@ SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { ret
 
 //-----------------------------------
 
+// TODO: type1 simdk::log(float1)
+// type##1 cppfunc(type##1 x);
+
+// define functions that don't map to typical simd ops
+#define macroVectorRepeatFnDecl(type, cppfunc) \
+type##2 cppfunc(type##2 x); \
+type##3 cppfunc(type##3 x); \
+type##4 cppfunc(type##4 x); \
+
+#define macroVectorRepeatFn2Decl(type, cppfunc) \
+type##2 cppfunc(type##2 x, type##2 y); \
+type##3 cppfunc(type##3 x, type##3 y); \
+type##4 cppfunc(type##4 x, type##4 y); \
+
+
+//------------
+
+
 #if SIMD_ACCELERATE_MATH
 
 // remap simdk to simd namespace
 #define macroVectorRepeatFnImpl(type, cppfunc) \
-type##2 cppfunc(type##2 x) { return simd::cppfunc(x); } \
-type##3 cppfunc(type##3 x) { return simd::cppfunc(x); } \
-type##4 cppfunc(type##4 x) { return simd::cppfunc(x); } \
+type##2 cppfunc(type##2 a) { return simd::cppfunc(a); } \
+type##3 cppfunc(type##3 a) { return simd::cppfunc(a); } \
+type##4 cppfunc(type##4 a) { return simd::cppfunc(a); } \
+
+#define macroVectorRepeatFn2Impl(type, cppfunc) \
+type##2 cppfunc(type##2 a, type##2 b) { return simd::cppfunc(a,b); } \
+type##3 cppfunc(type##3 a, type##3 b) { return simd::cppfunc(a,b); } \
+type##4 cppfunc(type##4 a, type##4 b) { return simd::cppfunc(a,b); } \
 
 #endif // SIMD_ACCELERATE_MATH
 
@@ -354,13 +373,20 @@ type##4 cppfunc(type##4 x) { return simd::cppfunc(x); } \
 
 #if SIMD_CMATH_MATH
 
+// TODO: add this back
+// type##1 cppfunc(type##1 x) { return func(x); } \
+
 // This calls function repeatedly, then returns as vector.
 // These don't call to the 4 version since it's so much more work.
 #define macroVectorRepeatFnImpl(type, cppfunc, func) \
-type##1 cppfunc(type##1 x) { return func(x); } \
-type##2 cppfunc(type##2 x) { return {func(x.x), func(x.y)}; } \
-type##3 cppfunc(type##3 x) { return {func(x.x), func(x.y), func(x.z)}; } \
-type##4 cppfunc(type##4 x) { return {func(x.x), func(x.y), func(x.z), func(x.w)}; } \
+type##2 cppfunc(type##2 a) { return {func(a.x), func(a.y)}; } \
+type##3 cppfunc(type##3 a) { return {func(a.x), func(a.y), func(a.z)}; } \
+type##4 cppfunc(type##4 a) { return {func(a.x), func(a.y), func(a.z), func(a.w)}; } \
+
+#define macroVectorRepeatFn2Impl(type, cppfunc, func) \
+type##2 cppfunc(type##2 a, type##2 b) { return {func(a.x, b.x), func(a.y, b.y)}; } \
+type##3 cppfunc(type##3 a, type##3 b) { return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z)}; } \
+type##4 cppfunc(type##4 a, type##4 b) { return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z), func(a.w, z.w)}; } \
 
 #endif // SIMD_CMATH_MATH
 
@@ -368,6 +394,8 @@ type##4 cppfunc(type##4 x) { return {func(x.x), func(x.y), func(x.z), func(x.w)}
 
 #include <inttypes.h> // for u/long
 #include <math.h>     // for sqrt, sqrtf
+
+#include <string>     // for formatter (only works for std::string)
 
 #if SIMD_NEON
 // neon types and intrinsics, 16B
@@ -383,7 +411,7 @@ type##4 cppfunc(type##4 x) { return {func(x.x), func(x.y), func(x.z), func(x.w)}
 #include <immintrin.h>
 #endif // SIMD_NEON
 
-// using macros here cuts the ifdefs a lot
+// using macros here cuts the ifdefs a lot, leaked out of this into .cpp files
 #define vec2to4(x) (x).xyyy
 #define vec3to4(x) (x).xyzz
 #define vec4to2(x) (x).xy
@@ -535,8 +563,8 @@ using namespace STL_NAMESPACE;
 // This may seem extreme to pass string, but it has SSO and keeps temp alive to printf.
 struct vecf {
     // TODO: add formatting options too
-    vecf() {
-    }
+    // no packed float support
+    vecf() {}
    
 #if SIMD_FLOAT
     // vector
@@ -550,9 +578,7 @@ struct vecf {
     string str(const float4x4& m) const;
     
     // quat
-    string quat(quatf q) { return str(q.v); }
-    
-    // no packed float support
+    string quat(quatf q) const { return str(q.v); }
 #endif // SIMD_FLOAT
     
 #if SIMD_DOUBLE
@@ -565,8 +591,6 @@ struct vecf {
     string str(const double2x2& m) const;
     string str(const double3x3& m) const;
     string str(const double4x4& m) const;
-    
-    // no packed double support
 #endif // SIMD_DOUBLE
 
 #if SIMD_HALF
@@ -590,12 +614,9 @@ struct vecf {
     string str(int4 v) const;
 #endif
 
-    
     // Just stuffing this here for now
     string simd_configs() const;
     string simd_alignments() const;
-    
-    // TODO: add double, int, half printing
 };
 
 } // namespace SIMD_NAMESPACE

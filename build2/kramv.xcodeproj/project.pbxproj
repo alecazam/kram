@@ -37,6 +37,9 @@
 		708D44D5272FA4C800783DCE /* piazza_san_marco.ktx in Resources */ = {isa = PBXBuildFile; fileRef = 708D44D3272FA4C800783DCE /* piazza_san_marco.ktx */; };
 		7099CFBD28E8319C008D4ABF /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */; };
 		70B5BFF828F5254000CD83D8 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B5BFF728F5253F00CD83D8 /* CoreText.framework */; };
+		70B687222CAD1962007ACA58 /* libvectormath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B687212CAD1962007ACA58 /* libvectormath.a */; };
+		70B687242CAD1976007ACA58 /* libvectormath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B687232CAD1976007ACA58 /* libvectormath.a */; };
+		70B687262CAD197E007ACA58 /* libvectormath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B687252CAD197E007ACA58 /* libvectormath.a */; };
 		70E33EC826E536BF00CBA422 /* QuickLookThumbnailing.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC726E536BF00CBA422 /* QuickLookThumbnailing.framework */; };
 		70E33ECA26E536BF00CBA422 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70E33EC926E536BF00CBA422 /* Quartz.framework */; };
 		70E33ECE26E536BF00CBA422 /* KramThumbnailProvider.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70E33ECD26E536BF00CBA422 /* KramThumbnailProvider.mm */; };
@@ -136,6 +139,9 @@
 		708D44D3272FA4C800783DCE /* piazza_san_marco.ktx */ = {isa = PBXFileReference; lastKnownFileType = file; path = piazza_san_marco.ktx; sourceTree = "<group>"; };
 		7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
 		70B5BFF728F5253F00CD83D8 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
+		70B687212CAD1962007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		70B687232CAD1976007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		70B687252CAD197E007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E33EC626E536BF00CBA422 /* kram-thumb.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "kram-thumb.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E33EC726E536BF00CBA422 /* QuickLookThumbnailing.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLookThumbnailing.framework; path = System/Library/Frameworks/QuickLookThumbnailing.framework; sourceTree = SDKROOT; };
 		70E33EC926E536BF00CBA422 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
@@ -166,6 +172,7 @@
 				7099CFBD28E8319C008D4ABF /* UniformTypeIdentifiers.framework in Frameworks */,
 				706EF25726D17C9D001C950E /* AppKit.framework in Frameworks */,
 				70833669271575EA0077BCB6 /* GLTFMTL.framework in Frameworks */,
+				70B687222CAD1962007ACA58 /* libvectormath.a in Frameworks */,
 				706EF26726D17DFA001C950E /* libate.tbd in Frameworks */,
 				706EF24F26D17C43001C950E /* Foundation.framework in Frameworks */,
 				70833665271575E50077BCB6 /* GLTF.framework in Frameworks */,
@@ -179,6 +186,7 @@
 			files = (
 				70E33EC826E536BF00CBA422 /* QuickLookThumbnailing.framework in Frameworks */,
 				705F68FB2BA2DD5900437FAA /* libcompression.tbd in Frameworks */,
+				70B687242CAD1976007ACA58 /* libvectormath.a in Frameworks */,
 				70E33ECA26E536BF00CBA422 /* Quartz.framework in Frameworks */,
 				70E33ED826E5377000CBA422 /* libkram.a in Frameworks */,
 				70E33EDD26E537AD00CBA422 /* Accelerate.framework in Frameworks */,
@@ -193,6 +201,7 @@
 			files = (
 				70E33EF526E548D800CBA422 /* CoreGraphics.framework in Frameworks */,
 				705F68FC2BA2DD6200437FAA /* libcompression.tbd in Frameworks */,
+				70B687262CAD197E007ACA58 /* libvectormath.a in Frameworks */,
 				70E33EF426E548CF00CBA422 /* libate.tbd in Frameworks */,
 				70E33EF626E548E200CBA422 /* Accelerate.framework in Frameworks */,
 				70E33EF726E553B900CBA422 /* AppKit.framework in Frameworks */,
@@ -249,6 +258,9 @@
 		706EF24726D17BC2001C950E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				70B687252CAD197E007ACA58 /* libvectormath.a */,
+				70B687232CAD1976007ACA58 /* libvectormath.a */,
+				70B687212CAD1962007ACA58 /* libvectormath.a */,
 				705F68F92BA2DD3E00437FAA /* libcompression.tbd */,
 				70B5BFF728F5253F00CD83D8 /* CoreText.framework */,
 				7099CFBC28E8319B008D4ABF /* UniformTypeIdentifiers.framework */,
