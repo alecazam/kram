@@ -108,21 +108,18 @@
 // aarch64
 // https://en.wikipedia.org/wiki/AArch64
 
-#if SIMD_ACCELERATE_MATH
-#include <simd/base.h>
-#endif // SIMD_ACCELERATE_MATH
-
 // make win happy for va_copy in format call
 #include <stdarg.h>
 
-//#if SIMD_LIBRARY_VERSION >= 6
-//blarg
-//#endif
+#if SIMD_ACCELERATE_MATH
+#   include <TargetConditionals.h>
+#   include <Availability.h>
+
+#include <simd/base.h>
 
 // NOTE: this reports 5 for macOS 13 minspec, but SIMD_LIBRARY_VERSION is set to 6.
 //   This is a problem, since some lib code only exists on macOS 15 and iOS 18 then.
-   
-#if SIMD_ACCELERATE_MATH
+// Can remove this once SIMD_LIBRARY_VERSION is correct.
 # if SIMD_COMPILER_HAS_REQUIRED_FEATURES
 #  if __has_include(<TargetConditionals.h>) && __has_include(<Availability.h>)
 #   include <TargetConditionals.h>
@@ -135,16 +132,51 @@
 #   elif __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_13_0   || \
         __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_16_0
 #    define SIMD_LIBRARY_VERSION_TEST 5
+#   elif   __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_12_0   || \
+        __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_15_0
+#    define SIMD_LIBRARY_VERSION_TEST 4
 #   endif
 #  endif
 #endif
+
+#if 0
+// SIMD_LIBRARY_VERSION is set to 6 regadless of the minspec
+// iOS 15 = 4, and macOS 13 = 5
+#if TARGET_OS_OSX
+    #if SIMD_LIBRARY_VERSION_TEST != 5
+    blarg1
+    #endif
+
+    #if SIMD_LIBRARY_VERSION != 5
+    blarg2 // this fires
+    #endif
+#else
+    #if SIMD_LIBRARY_VERSION_TEST != 4
+    blarg1
+    #endif
+
+    #if SIMD_LIBRARY_VERSION != 4
+    blarg2 // this fires
+    #endif
 #endif
-// */
+#endif
+
+#endif // SIMD_ACCELERATE_MATH
+
+
 
 namespace SIMD_NAMESPACE {
 
+// Check format arguments.
+#ifndef __printflike
+#define __printflike(fmtIndex, varargIndex)
+#endif
+
+inline string format(const char* format, ...) __printflike(1, 2);
+
 // was using kram::format, but wanted to decouple this lib
-inline string format(const char* format, ...) {
+inline string format(const char* format, ...)
+{
     string str;
     
     va_list args;
