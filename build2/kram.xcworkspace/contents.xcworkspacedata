@@ -8,9 +8,6 @@
       location = "group:../gtlf/GLTF/GLTF.xcodeproj">
    </FileRef>
    <FileRef
-      location = "absolute:/Users/Alec/devref/kram/build2/vectormath.xcodeproj">
-   </FileRef>
-   <FileRef
       location = "group:kram.xcodeproj">
    </FileRef>
    <FileRef
@@ -18,5 +15,8 @@
    </FileRef>
    <FileRef
       location = "container:kramv.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:vectormath.xcodeproj">
    </FileRef>
 </Workspace>
