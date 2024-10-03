@@ -7,12 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		701AF1922CAE4F2300BD0886 /* libvectormath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B687272CAD1996007ACA58 /* libvectormath.a */; };
 		705F68F82BA2DD2000437FAA /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 705F68F72BA2DD1100437FAA /* libcompression.tbd */; };
 		706EF28326D18251001C950E /* libkram.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF28226D18251001C950E /* libkram.a */; };
 		706EF28526D1825D001C950E /* libate.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF28426D18257001C950E /* libate.tbd */; };
 		706EF28726D18290001C950E /* KramMain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EF28026D18223001C950E /* KramMain.cpp */; };
 		706EF28B26D182CB001C950E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 706EF28A26D182CB001C950E /* Foundation.framework */; };
-		70B687282CAD1996007ACA58 /* libvectormath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B687272CAD1996007ACA58 /* libvectormath.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -42,7 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70B687282CAD1996007ACA58 /* libvectormath.a in Frameworks */,
+				701AF1922CAE4F2300BD0886 /* libvectormath.a in Frameworks */,
 				706EF28326D18251001C950E /* libkram.a in Frameworks */,
 				706EF28B26D182CB001C950E /* Foundation.framework in Frameworks */,
 				706EF28526D1825D001C950E /* libate.tbd in Frameworks */,
