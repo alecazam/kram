@@ -70,10 +70,19 @@ if [[ $buildType == macos ]]; then
 	# build libraries
 	# see here about destination arg
 	# https://github.com/appcelerator/titanium_mobile/pull/13098
+ 
+    echo "::group::vectormath-ios"
+    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme vectormath-ios -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    echo "::endgroup::"
+ 
+    echo "::group::vectormath"
+    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    echo "::endgroup::"
+ 
     echo "::group::kram-ios"
     xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
- 
+    
     echo "::group::kram"
     xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
