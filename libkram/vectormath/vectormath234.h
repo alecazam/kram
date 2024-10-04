@@ -150,9 +150,11 @@
 #define SIMD_INT    1
 #define SIMD_LONG   1
 
-// don't need these yet, doing math, not string processing
-#define SIMD_CHAR   0
-#define SIMD_SHORT  0
+// apple is signed-char, so make sure to set on -fsigned-char on other platforms
+#define SIMD_CHAR   1
+#define SIMD_SHORT  1
+
+// don't need these yet, but easy to add with macros
 //#define SIMD_UCHAR  0
 //#define SIMD_USHORT 0
 //#define SIMD_ULONG  0
