@@ -269,23 +269,11 @@ float3x3 transpose(const float3x3& x) {
 }
 
 float4x4 transpose(const float4x4& x) {
-    // NOTE: also _MM_TRANSPOSE4_PS using shuffles
-    // but old Neon didn't really have shuffle, but
-    // and sse2neon is using combine instead of shuffle.
-    
-    //    float4x4 xt(x);
-    //    _MM_TRANSPOSE4_PS(xt[0], xt[1], xt[2], xt[3]);
-    //    return xt;
-    
 #if SIMD_SSE
-    float4 t0 = _mm_unpacklo_ps(x[0],x[2]);
-    float4 t1 = _mm_unpackhi_ps(x[0],x[2]);
-    float4 t2 = _mm_unpacklo_ps(x[1],x[3]);
-    float4 t3 = _mm_unpackhi_ps(x[1],x[3]);
-    float4 r0 = _mm_unpacklo_ps(t0,t2);
-    float4 r1 = _mm_unpackhi_ps(t0,t2);
-    float4 r2 = _mm_unpacklo_ps(t1,t3);
-    float4 r3 = _mm_unpackhi_ps(t1,t3);
+    // shuffles are faster than unpack
+    float4x4 xt(x);
+    _MM_TRANSPOSE4_PS(xt[0], xt[1], xt[2], xt[3]);
+    return xt;
 #else
     float4 t0 = vzip1q_f32(x[0],x[2]);
     float4 t1 = vzip2q_f32(x[0],x[2]);
@@ -295,8 +283,8 @@ float4x4 transpose(const float4x4& x) {
     float4 r1 = vzip2q_f32(t0,t2);
     float4 r2 = vzip1q_f32(t1,t3);
     float4 r3 = vzip2q_f32(t1,t3);
-#endif
     return (float4x4){r0,r1,r2,r3};
+#endif
 }
 
 // inverse

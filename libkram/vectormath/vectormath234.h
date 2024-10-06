@@ -94,7 +94,7 @@
 //  1 Nehalem,
 //  2 Sandy Bridge,
 //  3 Ivy Bridge,
-//  4 Haswell,       AVX2
+//  4 Haswell,       AVX2, FMA3 (not Pentiums/Celerons)
 //  5 Broadwell,
 //  6 Sky Lake,
 //  7 Kaby Lake,
@@ -107,7 +107,10 @@
 //                  APX?  AVX10?
 //
 // AMD chips
-//
+// Jaguar           AVX
+// Piledriver       AVX2?  FMA3
+// Ryzen
+// Zen
 //
 // Apple Silicon
 // iPhone 5S has arm64 arm64-v?

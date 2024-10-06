@@ -76,6 +76,7 @@
 // DONE: add optimized vec2 ops on Neon
 // DONE: add AVX2 for double4
 // DONE: build an optimized Xcode library
+// DONE: check if packed to aligned conversions are automatic
 
 //-----------------
 
@@ -85,10 +86,10 @@
 //   These days I use a variant of the RTNE/RN version that also preserves NaN payload bits,
 //   which is slightly more ops but matches hardware conversions exactly for every input, including all NaNs.
 // TODO: build Xcode library that is a clang module or framework
-// TODO: build an optimized VS library with cmake, clang module too?
+// TODO: build VisualStudio library with cmake, clang module too?
 // TODO: need fast post-translation, post-rotation, post-scale
 // TODO: need euler <-> matrix
-// TODO: saturating conversions would be useful too and prevent overflow
+// TODO: saturating conversions (esp. integer) would be useful too and prevent overflow
 //   bit select to clamp values.
 // TODO: need natvis and lldb formatting of math classes.
 
@@ -166,6 +167,18 @@
 
 
 namespace SIMD_NAMESPACE {
+
+void TestCalls()
+{
+#if SIMD_FLOAT
+    float4a va = 0;
+    float4p vp = (float)1;
+    
+    va = vp;
+    vp = va;
+#endif
+    
+}
 
 // Check format arguments.
 #ifndef __printflike

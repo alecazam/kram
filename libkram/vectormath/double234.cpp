@@ -277,37 +277,27 @@ double3x3 transpose(const double3x3& x) {
 }
 
 double4x4 transpose(const double4x4& x) {
-    // NOTE: also _MM_TRANSPOSE4_PS using shuffles
-    // but old Neon didn't really have shuffle.
-
+    
 #if SIMD_SSE
 #if SIMD_AVX2
     
-// using shuffles + permute
-//    double4 tmp0, tmp1, tmp2, tmp3;
-//    tmp0 = _mm256_shuffle_pd(row0, row1, 0x0);
-//    tmp2 = _mm256_shuffle_pd(row0, row1, 0xF);
-//    tmp1 = _mm256_shuffle_pd(row2, row3, 0x0);
-//    tmp3 = _mm256_shuffle_pd(row2, row3, 0xF);
-//
-//    double4 x0, x1, x2, x3;
-//    r0 = _mm256_permute2f128_pd(tmp0, tmp1, 0x20);
-//    r1 = _mm256_permute2f128_pd(tmp2, tmp3, 0x20);
-//    r2 = _mm256_permute2f128_pd(tmp0, tmp1, 0x31);
-//    r3 = _mm256_permute2f128_pd(tmp2, tmp3, 0x31);
-    
-// or unpack
-    
-    double4 t0 = _mm256_unpacklo_pd(x[0],x[2]);
-    double4 t1 = _mm256_unpackhi_pd(x[0],x[2]);
-    double4 t2 = _mm256_unpacklo_pd(x[1],x[3]);
-    double4 t3 = _mm256_unpackhi_pd(x[1],x[3]);
+     // NOTE: similar to _MM_TRANSPOSE4_PS using shuffles
+     // but old Neon didn't really have shuffle.
 
-    double4 r0 = _mm256_unpacklo_pd(t0,t2);
-    double4 r1 = _mm256_unpackhi_pd(t0,t2);
-    double4 r2 = _mm256_unpacklo_pd(t1,t3);
-    double4 r3 = _mm256_unpackhi_pd(t1,t3);
-    
+     // using shuffles + permute
+     // unpack runs slower
+     double4 tmp0, tmp1, tmp2, tmp3;
+     tmp0 = _mm256_shuffle_pd(x[0], x[1], 0x0);
+     tmp2 = _mm256_shuffle_pd(x[0], x[1], 0xF);
+     tmp1 = _mm256_shuffle_pd(x[2], x[3], 0x0);
+     tmp3 = _mm256_shuffle_pd(x[2], x[3], 0xF);
+ 
+     double4 r0, r1, r2, r3;
+     r0 = _mm256_permute2f128_pd(tmp0, tmp1, 0x20);
+     r1 = _mm256_permute2f128_pd(tmp2, tmp3, 0x20);
+     r2 = _mm256_permute2f128_pd(tmp0, tmp1, 0x31);
+     r3 = _mm256_permute2f128_pd(tmp2, tmp3, 0x31);
+        
 #else
     // super slow transpose
     double4 x0, x1, x2, x3;
@@ -324,7 +314,7 @@ double4x4 transpose(const double4x4& x) {
 #endif
 #endif // SIMD_SSE
     
-#if  SIMD_NEON
+#if SIMD_NEON
     double4 r0,r1,r2,r3;
     r0.lo = vzip1q_f64(x[0].lo,x[1].lo);
     r1.lo = vzip2q_f64(x[0].lo,x[1].lo);
