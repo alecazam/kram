@@ -304,9 +304,8 @@ double4x4 transpose(const double4x4& x) {
     x0 = x[0];
     x1 = x[1];
     x2 = x[2];
-    x3 = x[2];
+    x3 = x[3];
     
-    // TODO: avx2 probably has double shuffle
     double4 r0 = { x0[0], x1[0], x2[0], x3[0] };
     double4 r1 = { x0[1], x1[1], x2[1], x3[1] };
     double4 r2 = { x0[2], x1[2], x2[2], x3[2] };
