@@ -416,9 +416,9 @@ SIMD_CALL double distance(double4 x, double4 y) { return length(x - y); }
 // normalize
 // optimized by staying in reg
 // x * invlength(x)
-SIMD_CALL double4 normalize(double4 x) { return x * rsqrt(reduce_addv(x * x)).x; }
-SIMD_CALL double2 normalize(double2 x) { return x * rsqrt(reduce_addv(x * x)).x; }
-SIMD_CALL double3 normalize(double3 x) { return x * rsqrt(reduce_addv(x * x)).x; }
+SIMD_CALL double4 normalize(double4 x) { return x / sqrt(reduce_addv(x * x)).x; }
+SIMD_CALL double2 normalize(double2 x) { return x / sqrt(reduce_addv(x * x)).x; }
+SIMD_CALL double3 normalize(double3 x) { return x / sqrt(reduce_addv(x * x)).x; }
 
 // abs
 SIMD_CALL double2 abs(double2 x) {

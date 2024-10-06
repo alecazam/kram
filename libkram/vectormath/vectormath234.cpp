@@ -7,23 +7,6 @@
 
 // Tests with godbolt are here to show code comparsions with optimizations.
 
-//-----------------
-// clang version matters to codegen.
-// These two version seem to be significant changes in output.
-//
-// v14 fma
-// v16 better fma?
-// v18 Intel APX support (still no chip)
-//
-// -Og can't unroll small loops for some reason. -O2 and -O3 do.
-// https://godbolt.org/z/KMPa8bchb
-//
-// As optimal as it gets
-// https://godbolt.org/z/YxzobGM17
-//
-// optimized quake rcp, rsqrt, sqrt
-// https://michaldrobot.files.wordpress.com/2014/05/gcn_alu_opt_digitaldragons2014.pdf
-//
 // ---------------
 // Note: float4a.h has a rcp and rsqrt ops, but they are approximate.
 // Have real div and sqrt ops now.
@@ -113,9 +96,6 @@
 #include <stdarg.h>
 
 #if SIMD_ACCELERATE_MATH
-#   include <TargetConditionals.h>
-#   include <Availability.h>
-
 #include <simd/base.h>
 
 // NOTE: this reports 5 for macOS 13 minspec, but SIMD_LIBRARY_VERSION is set to 6.
@@ -140,8 +120,9 @@
 #  endif
 #endif
 
+
 #if 0
-// SIMD_LIBRARY_VERSION is set to 6 regadless of the minspec
+// SIMD_LIBRARY_VERSION is set to 6 regardless of the minspec
 // iOS 15 = 4, and macOS 13 = 5
 #if TARGET_OS_OSX
     #if SIMD_LIBRARY_VERSION_TEST != 5
@@ -405,6 +386,15 @@ string vecf::simd_configs() const {
     FMT_CONFIG(SIMD_CMATH_MATH);
     FMT_CONFIG(SIMD_ACCELERATE_MATH);
 #if SIMD_ACCELERATE_MATH
+    // Dump the min version. This is supposed to control SIMD_LIBRARY_VERSION
+    #if __APPLE__
+    #if TARGET_OS_OSX
+        FMT_CONFIG(__MAC_OS_X_VERSION_MIN_REQUIRED);
+    #else
+        FMD_CONFIG(__IPHONE_OS_VERSION_MIN_REQUIRED);
+    #endif
+    #endif
+    
     FMT_CONFIG(SIMD_LIBRARY_VERSION); // lib based on min os target
     FMT_CONFIG(SIMD_CURRENT_LIBRARY_VERSION); // max lib based on sdk
     FMT_CONFIG(SIMD_LIBRARY_VERSION_TEST);

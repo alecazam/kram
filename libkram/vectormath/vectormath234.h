@@ -115,6 +115,26 @@
 // Apple Silicon
 // iPhone 5S has arm64 arm64-v?
 //
+//-----------------
+// clang version matters to codegen.
+// These two version seem to be significant changes in output.
+//
+// v14 fma
+// v16 better fma?
+// v18 Intel APX support (still no chip)
+//
+// -Og can't unroll small loops for some reason. -O2 and -O3 do.
+// https://godbolt.org/z/KMPa8bchb
+//
+// As optimal as it gets
+// https://godbolt.org/z/YxzobGM17
+//
+// optimized quake rcp, rsqrt, sqrt
+// https://michaldrobot.files.wordpress.com/2014/05/gcn_alu_opt_digitaldragons2014.pdf
+//
+// transpose examples
+// https://godbolt.org/z/TYcvrP7Y3
+
 
 //-----------------------------------
 // config

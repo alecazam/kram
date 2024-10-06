@@ -302,9 +302,9 @@ SIMD_CALL float distance(float4 x, float4 y) { return length(x - y); }
 // normalize
 // optimized by staying in reg
 // x * invlength(x)
-SIMD_CALL float4 normalize(float4 x) { return x * rsqrt(reduce_addv(x * x)).x; }
-SIMD_CALL float2 normalize(float2 x) { return x * rsqrt(reduce_addv(x * x)).x; }
-SIMD_CALL float3 normalize(float3 x) { return x * rsqrt(reduce_addv(x * x)).x; }
+SIMD_CALL float4 normalize(float4 x) { return x / sqrt(reduce_addv(x * x)).x; }
+SIMD_CALL float2 normalize(float2 x) { return x / sqrt(reduce_addv(x * x)).x; }
+SIMD_CALL float3 normalize(float3 x) { return x / sqrt(reduce_addv(x * x)).x; }
 
 // abs
 SIMD_CALL float2 abs(float2 x) {
