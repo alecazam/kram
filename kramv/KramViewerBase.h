@@ -174,9 +174,6 @@ public:
     // whether to use normal to tangent (false), or vertex tangents (true)
     bool useTangent = true;
 
-    // draw with reverseZ to better match perspective
-    bool isReverseZ = true;
-
     // image vs. gltf model
     bool isModel = false;
     

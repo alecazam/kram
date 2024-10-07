@@ -982,11 +982,16 @@ float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ)
     //if (isReverseZ) {
         // zs drops out since zs = inf / -inf = 1, 1-1 = 0
         // z' = near / -z
-        if (farZ == FLT_MAX)
-            m22 = -nearZ / farZ;
-        else
+    
+        if (farZ == FLT_MAX) {
             m22 = 0;
-        m23 = nearZ;
+            m23 = nearZ;
+        }
+        else {
+            m22 = -nearZ / farZ; // TODO: check these
+            m23 = nearZ;
+        }
+        
 //    }
 //    else {
 //        float zs = farZ / (nearZ - farZ);

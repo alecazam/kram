@@ -666,7 +666,7 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
 
     self.clearColor = MTLClearColorMake(0.005f, 0.005f, 0.005f, 0.0f);
 
-    self.clearDepth = _showSettings->isReverseZ ? 0.0f : 1.0f;
+    self.clearDepth = 0.0f;
 
     // only re-render when changes are made
     // Note: this breaks ability to gpu capture, since display link not running.

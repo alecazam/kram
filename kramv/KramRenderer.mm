@@ -503,15 +503,11 @@ struct ViewFramebufferData {
 
     MTLDepthStencilDescriptor *depthStateDesc =
         [[MTLDepthStencilDescriptor alloc] init];
-    depthStateDesc.depthCompareFunction = _showSettings->isReverseZ
-                                              ? MTLCompareFunctionGreaterEqual
-                                              : MTLCompareFunctionLessEqual;
+    depthStateDesc.depthCompareFunction = MTLCompareFunctionGreaterEqual;
     depthStateDesc.depthWriteEnabled = YES;
     _depthStateFull = [_device newDepthStencilStateWithDescriptor:depthStateDesc];
 
-    depthStateDesc.depthCompareFunction = _showSettings->isReverseZ
-                                              ? MTLCompareFunctionGreaterEqual
-                                              : MTLCompareFunctionLessEqual;
+    depthStateDesc.depthCompareFunction = MTLCompareFunctionGreaterEqual;
     depthStateDesc.depthWriteEnabled = NO;
     _depthStateNone = [_device newDepthStencilStateWithDescriptor:depthStateDesc];
 
