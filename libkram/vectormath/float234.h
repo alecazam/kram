@@ -383,6 +383,28 @@ SIMD_CALL float4 fract(float4 x) {
     return min(x - floor(x), 0x1.fffffep-1f);
 }
 
+SIMD_CALL bool is_nan(float2 x) {
+    return any(x != x);
+}
+SIMD_CALL bool is_nan(float3 x) {
+    return any(x != x);
+}
+SIMD_CALL bool is_nan(float4 x) {
+    return any(x != x);
+}
+
+SIMD_CALL float2 fix_nan(float2 x, float2 replace) {
+    return min(replace, x);
+}
+SIMD_CALL float3 fix_nan(float3 x, float3 replace) {
+    return min(replace, x);
+}
+SIMD_CALL float4 fix_nan(float4 x, float4 replace) {
+    return min(replace, x);
+}
+
+
+
 /* this is just to show examples of extended vector types, float8 should move out
    
 #if SIMD_FLOAT_EXT
@@ -813,10 +835,10 @@ float4x4 inverse_tr(const float4x4& mtx);
 float4x4 inverse_tru(const float4x4& mtx);
 float4x4 inverse_trs(const float4x4& mtx);
 
-float4x4 float4x4m(char axis, float angleInRadians);
+float4x4 float4x4m(char axis, float radians);
 
-SIMD_CALL float4x4 float4x4m(float3 axis, float angleInRadians) {
-    return float4x4m(quatf(axis, angleInRadians));
+SIMD_CALL float4x4 float4x4m(float3 axis, float radians) {
+    return float4x4m(quatf(axis, radians));
 }
 
 float3x3 float3x3m(quatf qq);
@@ -824,6 +846,23 @@ float3x3 float3x3m(quatf qq);
 float4x4 float4x4_tr(float3 t, quatf r);
 float4x4 float4x4_trs(float3 t, quatf r, float3 scale);
 float4x4 float4x4_tru(float3 t, quatf r, float scale);
+
+float4x4 perspective_rhcs(float fovyRadians, float aspectXtoY, float nearZ, float farZ = FLT_MAX);
+float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ = FLT_MAX);
+float4x4 orthographic_rhcs(float width, float height, float nearZ, float farZ);
+
+SIMD_CALL float4x4 rotation(float3 axis, float radians) {
+    quatf q(axis, radians);
+    return float4x4m(q);
+}
+SIMD_CALL float4x4 scale(float3 scale) {
+    return float4x4(float4m(scale,1.0f));
+}
+SIMD_CALL float4x4 translation(float3 t) {
+    float4x4 m(float4x4::identity());
+    m[3] = float4m(t,1);
+    return m;
+}
 
 } // SIMD_NAMESPACE
 

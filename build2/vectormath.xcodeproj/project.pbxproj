@@ -21,6 +21,10 @@
 		701AF18A2CAD27CB00BD0886 /* double234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FC2CAD1072007ACA58 /* double234.cpp */; };
 		701AF18B2CAD27CB00BD0886 /* vectormath234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687092CAD1072007ACA58 /* vectormath234.cpp */; };
 		701AF18C2CAD27CB00BD0886 /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FE2CAD1072007ACA58 /* float4a.cpp */; };
+		70570FE52CB378EE005692BB /* bounds234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70570FE42CB378E7005692BB /* bounds234.h */; };
+		70570FE62CB378EE005692BB /* bounds234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70570FE42CB378E7005692BB /* bounds234.h */; };
+		70570FE82CB379C9005692BB /* bounds234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70570FE72CB37997005692BB /* bounds234.cpp */; };
+		70570FE92CB379C9005692BB /* bounds234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70570FE72CB37997005692BB /* bounds234.cpp */; };
 		70B6870B2CAD1072007ACA58 /* float234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687002CAD1072007ACA58 /* float234.cpp */; };
 		70B6870C2CAD1072007ACA58 /* double234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FC2CAD1072007ACA58 /* double234.cpp */; };
 		70B6870D2CAD1072007ACA58 /* vectormath234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687092CAD1072007ACA58 /* vectormath234.cpp */; };
@@ -39,6 +43,8 @@
 
 /* Begin PBXFileReference section */
 		701AF1912CAD27CB00BD0886 /* libvectormath-ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libvectormath-ios.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		70570FE42CB378E7005692BB /* bounds234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bounds234.h; sourceTree = "<group>"; };
+		70570FE72CB37997005692BB /* bounds234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = bounds234.cpp; sourceTree = "<group>"; };
 		70B686F42CAD1026007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		70B686FB2CAD1072007ACA58 /* double234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = double234.h; sourceTree = "<group>"; };
 		70B686FC2CAD1072007ACA58 /* double234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = double234.cpp; sourceTree = "<group>"; };
@@ -102,6 +108,8 @@
 				70B686FE2CAD1072007ACA58 /* float4a.cpp */,
 				70B686FF2CAD1072007ACA58 /* float234.h */,
 				70B687002CAD1072007ACA58 /* float234.cpp */,
+				70570FE42CB378E7005692BB /* bounds234.h */,
+				70570FE72CB37997005692BB /* bounds234.cpp */,
 				70B687012CAD1072007ACA58 /* half234.h */,
 				70B687022CAD1072007ACA58 /* int234.h */,
 				70B687032CAD1072007ACA58 /* long234.h */,
@@ -123,6 +131,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				701AF17E2CAD27CB00BD0886 /* vectormath234.h in Headers */,
+				70570FE62CB378EE005692BB /* bounds234.h in Headers */,
 				701AF17F2CAD27CB00BD0886 /* long234.h in Headers */,
 				701AF1802CAD27CB00BD0886 /* sse2neon.h in Headers */,
 				701AF1812CAD27CB00BD0886 /* sse_mathfun.h in Headers */,
@@ -140,6 +149,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				70B6870F2CAD1072007ACA58 /* vectormath234.h in Headers */,
+				70570FE52CB378EE005692BB /* bounds234.h in Headers */,
 				70B687102CAD1072007ACA58 /* long234.h in Headers */,
 				70B687112CAD1072007ACA58 /* sse2neon.h in Headers */,
 				70B687122CAD1072007ACA58 /* sse_mathfun.h in Headers */,
@@ -235,6 +245,7 @@
 				701AF1892CAD27CB00BD0886 /* float234.cpp in Sources */,
 				701AF18A2CAD27CB00BD0886 /* double234.cpp in Sources */,
 				701AF18B2CAD27CB00BD0886 /* vectormath234.cpp in Sources */,
+				70570FE82CB379C9005692BB /* bounds234.cpp in Sources */,
 				701AF18C2CAD27CB00BD0886 /* float4a.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -246,6 +257,7 @@
 				70B6870B2CAD1072007ACA58 /* float234.cpp in Sources */,
 				70B6870C2CAD1072007ACA58 /* double234.cpp in Sources */,
 				70B6870D2CAD1072007ACA58 /* vectormath234.cpp in Sources */,
+				70570FE92CB379C9005692BB /* bounds234.cpp in Sources */,
 				70B6870E2CAD1072007ACA58 /* float4a.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

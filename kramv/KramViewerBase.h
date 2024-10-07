@@ -295,16 +295,6 @@ public:
     vector<Atlas> atlas;
 };
 
-float4x4 matrix4x4_translation(float tx, float ty, float tz);
-
-float4x4 perspective_rhs(float fovyRadians, float aspect, float nearZ, float
-                         farZ, bool isReverseZ);
-
-float4x4 orthographic_rhs(float width, float height, float nearZ, float farZ,
-                          bool isReverseZ);
-
-float4x4 matrix4x4_rotation(float radians, float3 axis);
-
 void printChannels(string &tmp, const string &label, float4 c,
                    int32_t numChannels, bool isFloat, bool isSigned);
 

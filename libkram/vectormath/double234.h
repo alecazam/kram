@@ -497,6 +497,28 @@ SIMD_CALL double4 fract(double4 x) {
     return min(x - floor(x), 0x1.fffffffffffffp-1);
 }
 
+SIMD_CALL bool is_nan(double2 x) {
+    return any(x != x);
+}
+SIMD_CALL bool is_nan(double3 x) {
+    return any(x != x);
+}
+SIMD_CALL bool is_nan(double4 x) {
+    return any(x != x);
+}
+
+SIMD_CALL double2 fix_nan(double2 x, double2 replace) {
+    return min(replace, x);
+}
+SIMD_CALL double3 fix_nan(double3 x, double3 replace) {
+    return min(replace, x);
+}
+SIMD_CALL double4 fix_nan(double4 x, double4 replace) {
+    return min(replace, x);
+}
+
+
+
 //-------------------
 // Functions
 

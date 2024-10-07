@@ -101,6 +101,7 @@
 // NOTE: this reports 5 for macOS 13 minspec, but SIMD_LIBRARY_VERSION is set to 6.
 //   This is a problem, since some lib code only exists on macOS 15 and iOS 18 then.
 // Can remove this once SIMD_LIBRARY_VERSION is correct.
+// Also unclear what XR_OS_1_0 library support there is.  It's not in the comparisons.
 # if SIMD_COMPILER_HAS_REQUIRED_FEATURES
 #  if __has_include(<TargetConditionals.h>) && __has_include(<Availability.h>)
 #   include <TargetConditionals.h>
@@ -108,7 +109,8 @@
 #   if TARGET_OS_RTKIT
 #    define SIMD_LIBRARY_VERSION SIMD_CURRENT_LIBRARY_VERSION
 #   elif __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_15_0   || \
-        __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_18_0
+        __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_18_0 || \
+        __XR_OS_VERSION_MIN_REQUIRED     >= __XROS_2_0
 #    define SIMD_LIBRARY_VERSION_TEST 6
 #   elif __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_13_0   || \
         __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_16_0
@@ -390,8 +392,10 @@ string vecf::simd_configs() const {
     #if __APPLE__
     #if TARGET_OS_OSX
         FMT_CONFIG(__MAC_OS_X_VERSION_MIN_REQUIRED);
+    #elif TARGET_OS_VISION
+        FMT_CONFIG(__XR_OS_VERSION_MIN_REQUIRED);
     #else
-        FMD_CONFIG(__IPHONE_OS_VERSION_MIN_REQUIRED);
+        FMT_CONFIG(__IPHONE_OS_VERSION_MIN_REQUIRED);
     #endif
     #endif
     

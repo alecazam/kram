@@ -418,9 +418,13 @@ type##4 cppfunc(type##4 a, type##4 b) { return {func(a.x, b.x), func(a.y, b.y), 
 //-----------------------------------
 
 #include <inttypes.h> // for u/long
-#include <math.h>     // for sqrt, sqrtf
 
 #include <string>     // for formatter (only works using std::string, not eastl)
+
+#include <math.h>     // for sqrt, sqrtf
+#if SIMD_FLOAT
+#include <float.h>    // for FLT_MAX
+#endif
 
 #if SIMD_NEON
 // neon types and intrinsics, 16B
@@ -449,6 +453,13 @@ type##4 cppfunc(type##4 a, type##4 b) { return {func(a.x, b.x), func(a.y, b.y), 
 #include "half234.h"
 #include "float234.h"
 #include "double234.h"
+
+//---------------------------
+
+// This may not belong in here.  But just want to use the lib to build
+// some helpers.  
+
+#include "bounds234.h"
 
 //---------------------------
 

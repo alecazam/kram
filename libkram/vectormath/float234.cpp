@@ -45,9 +45,9 @@ macroVectorRepeatFnImpl(float, tan, ::tanf)
 #endif // SIMD_CMATH_MATH
 
 // Wish cmath had this
-inline void sincosf(float angleInRadians, float& s, float& c) {
-    s = sinf(angleInRadians);
-    c = cosf(angleInRadians);
+inline void sincosf(float radians, float& s, float& c) {
+    s = sinf(radians);
+    c = cosf(radians);
 }
 
 // These aren't embedded in function, so may have pre-init ordering issues.
@@ -604,10 +604,10 @@ static const float4 kCross = {1.0f,1.0f,1.0f,-1.0f};
 // can eliminate 4 shufs by using 4 constants, 2 q swizzles are dupes
 static const float4 kConvertToMatrix = {0.0f,1.0f,2.0f,-2.0f};
 
-quatf::quatf(float3 axis, float angleInRadians)
+quatf::quatf(float3 axis, float radians)
 {
     float s, c;
-    sincosf(angleInRadians * 0.5f, s, c);
+    sincosf(radians * 0.5f, s, c);
     v = float4m(s * axis, c);
 }
 
@@ -906,10 +906,10 @@ float4x4 inverse_trs(const float4x4& mtx)
     return inverse;
 }
 
-float4x4 float4x4m(char axis, float angleInRadians)
+float4x4 float4x4m(char axis, float radians)
 {
     float    sinTheta, cosTheta;
-    sincosf(angleInRadians, sinTheta, cosTheta);
+    sincosf(radians, sinTheta, cosTheta);
             
     float4x4 m;
     m[3] = float4_posw();
@@ -939,6 +939,99 @@ float4x4 float4x4m(char axis, float angleInRadians)
             break;
         }
     }
+    return m;
+}
+
+float4x4 perspective_rhcs(float fovyRadians, float aspectXtoY, float nearZ, float farZ)
+{
+    // form tangents
+    float tanY = tanf(fovyRadians * 0.5f);
+    float tanX = tanY * aspectXtoY;
+    
+    // currently symmetric
+    // all postive values from center
+    float4 tangents = { -tanX, tanY, tanX, -tanY }; // l,t,r,b
+    
+    return perspective_rhcs(tangents, nearZ, farZ);
+}
+
+float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ)
+{
+    tangents *= nearZ;
+    
+    float l = tangents.x;
+    float t = tangents.y;
+    float r = tangents.z;
+    float b = tangents.w;
+    
+    float dx = (r - l);
+    float dy = (t - b);
+    
+    float xs = 2.0f * nearZ / dx;
+    float ys = 2.0f * nearZ / dy;
+    
+    // 0.5x?
+    float xoff = (r + l) / dx;
+    float yoff = (t + b) / dy;
+    
+    float m22;
+    float m23;
+  
+    // TODO: handle farZ when not inf
+
+    //if (isReverseZ) {
+        // zs drops out since zs = inf / -inf = 1, 1-1 = 0
+        // z' = near / -z
+        if (farZ == FLT_MAX)
+            m22 = -nearZ / farZ;
+        else
+            m22 = 0;
+        m23 = nearZ;
+//    }
+//    else {
+//        float zs = farZ / (nearZ - farZ);
+//        
+//        m22 = zs;
+//        m23 = zs * nearZ;
+//    }
+    
+    float4x4 m(
+        (float4){ xs,       0,   0,  0 },
+        (float4){  0,      ys,   0,  0 },
+        (float4){  xoff, yoff, m22, -1 },
+        (float4){  0,       0, m23,  0 }
+    );
+    
+    return m;
+}
+
+float4x4 orthographic_rhcs(float width, float height, float nearZ, float farZ)
+{
+    // float aspectRatio = width / height;
+    float xs = 2.0f / width;
+    float ys = 2.0f / height;
+    
+    float xoff = 0.0f;  // -0.5f * width;
+    float yoff = 0.0f;  // -0.5f * height;
+    
+    float dz = -(farZ - nearZ);
+    float zs = 1.0f / dz;
+    
+    float m22 = zs;
+    float m23 = zs * nearZ;
+    
+    // revZ, can't use infiniteZ with ortho view
+    //if (isReverseZ) {
+        m22 = -m22;
+        m23 = 1.0f - m23;
+    //}
+    
+    float4x4 m(
+        (float4){xs, 0, 0, 0},
+        (float4){0, ys, 0, 0},
+        (float4){0, 0, m22, 0},
+        (float4){xoff, yoff, m23, 1}
+    );
     return m;
 }
 

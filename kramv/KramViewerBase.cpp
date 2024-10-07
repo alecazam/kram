@@ -566,116 +566,7 @@ string ShowSettings::windowTitleString(const char* filename) const
     return title;
 }
 
-float4x4 matrix4x4_translation(float tx, float ty, float tz)
-{
-    float4x4 m = {(float4){1, 0, 0, 0},
-        (float4){0, 1, 0, 0},
-        (float4){0, 0, 1, 0},
-        (float4){tx, ty, tz, 1}};
-    return m;
-}
 
-float4x4 matrix4x4_rotation(float radians, float3 axis)
-{
-    axis = normalize(axis);
-    float ct = cosf(radians);
-    float st = sinf(radians);
-    float ci = 1 - ct;
-    float x = axis.x, y = axis.y, z = axis.z;
-    
-    float4x4 m = {
-        (float4){ ct + x * x * ci,     y * x * ci + z * st, z * x * ci - y * st, 0},
-        (float4){ x * y * ci - z * st,     ct + y * y * ci, z * y * ci + x * st, 0},
-        (float4){ x * z * ci + y * st, y * z * ci - x * st,     ct + z * z * ci, 0},
-        (float4){                   0,                   0,                   0, 1}
-    };
-    return m;
-}
-
-float4x4 perspective_rhs(float fovyRadians, float aspectXtoY, float nearZ, float farZ, bool isReverseZ)
-{
-    // form tangents
-    float tanY = tanf(fovyRadians * 0.5f);
-    float tanX = tanY * aspectXtoY;
-    
-    // currently symmetric
-    // all postive values from center
-    float4 tangents = { tanY, tanY, tanX, tanX };
-    tangents *= nearZ;
-    
-    float t =  tangents.x;
-    float b = -tangents.y;
-    float r =  tangents.z;
-    float l = -tangents.w;
-    
-    float dx = (r - l);
-    float dy = (t - b);
-    
-    float xs = 2.0f * nearZ / dx;
-    float ys = 2.0f * nearZ / dy;
-    
-    // 0.5x?
-    float xoff = (r + l) / dx;
-    float yoff = (t + b) / dy;
-    
-    float m22;
-    float m23;
-    
-    if (isReverseZ) {
-        // zs drops out since zs = inf / -inf = 1, 1-1 = 0
-        // z' = near / -z
-        
-        m22 = 0;
-        m23 = nearZ;
-    }
-    else {
-        float zs = farZ / (nearZ - farZ);
-        
-        m22 = zs;
-        m23 = zs * nearZ;
-    }
-    
-    float4x4 m = {
-        (float4){ xs,       0,   0,  0 },
-        (float4){  0,      ys,   0,  0 },
-        (float4){  xoff, yoff, m22, -1 },
-        (float4){  0,       0, m23,  0 }
-    };
-    
-    return m;
-}
-
-float4x4 orthographic_rhs(float width, float height, float nearZ, float farZ,
-                          bool isReverseZ)
-{
-    // float aspectRatio = width / height;
-    float xs = 2.0f / width;
-    float ys = 2.0f / height;
-    
-    float xoff = 0.0f;  // -0.5f * width;
-    float yoff = 0.0f;  // -0.5f * height;
-    
-    float dz = -(farZ - nearZ);
-    float zs = 1.0f / dz;
-    
-    float m22 = zs;
-    float m23 = zs * nearZ;
-    
-    // revZ, can't use infiniteZ with ortho view
-    if (isReverseZ) {
-        m22 = -m22;
-        m23 = 1.0f - m23;
-    }
-    
-    float4x4 m = {
-        (float4){xs, 0, 0, 0},
-        (float4){0, ys, 0, 0},
-        (float4){0, 0, m22, 0},
-        (float4){xoff, yoff, m23, 1}
-    };
-    return m;
-    
-}
 
 //--------------------------------
 
@@ -3025,7 +2916,7 @@ void Data::updateProjTransform()
     // to work out to keep zoom to cursor working.
 #if USE_PERSPECTIVE
     float aspect = _showSettings->viewSizeX /  (float)_showSettings->viewSizeY;
-    _projectionMatrix = perspective_rhs(90.0f * (M_PI / 180.0f), aspect, 0.1f, 100000.0f, _showSettings->isReverseZ);
+    _projectionMatrix = perspective_rhcs(90.0f * (M_PI / 180.0f), aspect, 0.1f);
 
     // This was used to reset zoom to a baseline that had a nice zoom.  But little connected to it now.
     // Remember with rotation, the bounds can hit the nearClip.  Note all shapes are 0.5 radius,
@@ -3037,14 +2928,13 @@ void Data::updateProjTransform()
 
     if (_showSettings->isModel) {
         float aspect = _showSettings->viewSizeX /  (float)_showSettings->viewSizeY;
-        _projectionMatrix = perspective_rhs(90.0f * (M_PI / 180.0f), aspect, 0.1f, 100000.0f, _showSettings->isReverseZ);
+        _projectionMatrix = perspective_rhcs(90.0f * (M_PI / 180.0f), aspect, 0.1f);
 
         _showSettings->zoomFit = 1;
     }
     else {
         _projectionMatrix =
-            orthographic_rhs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f,
-                             100000.0f, _showSettings->isReverseZ);
+            orthographic_rhcs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f, 100000.0f);
 
         // DONE: adjust zoom to fit the entire image to the window
         _showSettings->zoomFit =
@@ -3118,7 +3008,7 @@ void Data::resetSomeImageSettings(bool isNewFile)
     _modelMatrix2D =
     float4x4(float4m(scaleX, scaleY, scaleZ, 1.0f)); // uniform scale
     _modelMatrix2D = _modelMatrix2D *
-    matrix4x4_translation(0.0f, 0.0f, -1.0);  // set z=-1 unit back
+    translation(float3m(0.0f, 0.0f, -1.0));  // set z=-1 unit back
     
     // uniform scaled 3d primitive
     float scale = scaleY; // MAX(scaleX, scaleY);
@@ -3135,7 +3025,7 @@ void Data::resetSomeImageSettings(bool isNewFile)
     _modelMatrix3D = float4x4(float4m(scale, scale, scale, 1.0f));  // uniform scale
     _modelMatrix3D =
     _modelMatrix3D *
-    matrix4x4_translation(0.0f, 0.0f, -1.0f);  // set z=-1 unit back
+    translation(float3m(0.0f, 0.0f, -1.0f));  // set z=-1 unit back
 }
 
 void Data::updateTransforms()
@@ -3145,7 +3035,7 @@ void Data::updateTransforms()
     
     // translate
     float4x4 panTransform =
-        matrix4x4_translation(-_showSettings->panX, _showSettings->panY, 0.0);
+        translation(float3m(-_showSettings->panX, _showSettings->panY, 0.0));
 
     if (_showSettings->is3DView) {
         _viewMatrix3D = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));  // non-uniform
@@ -3183,7 +3073,7 @@ void Data::updateTransforms()
 float4x4 Data::computeImageTransform(float panX, float panY, float zoom)
 {
     // translate
-    float4x4 panTransform = matrix4x4_translation(-panX, panY, 0.0);
+    float4x4 panTransform = translation(float3m(-panX, panY, 0.0));
 
     // non-uniform scale is okay here, only affects ortho volume
     // setting this to uniform zoom and object is not visible, zoom can be 20x in
