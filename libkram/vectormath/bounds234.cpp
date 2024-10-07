@@ -111,19 +111,36 @@ bsphere culler::transformSphereTRU(bsphere sphere, const float4x4& modelTfm) {
     // May be better to convert to box with non-uniform scale
     // sphere gets huge otherwise.  Cache these too.
     
+#if 0
+    // not sure which code is smaller, still have to add t
     float size = reduce_max(decomposeScale(modelTfm));
     float radius = sphere.radius() * size;
     float4 sphereCenter = float4m(sphere.center(), 1);
     sphereCenter = modelTfm * sphereCenter;
-    
+
     sphere = bsphere(sphereCenter.xyz, radius);
     return sphere;
+#else
+    // really just a 3x3 and translation
+    const float3x3& m = as_float3x3(modelTfm);
+    float3 t = m[3];
+    
+    float size = reduce_max(decomposeScale(modelTfm));
+    float radius = sphere.radius() * size;
+    float3 sphereCenter = m * sphere.center();
+    sphereCenter += t;
+    
+    sphere = bsphere(sphereCenter, radius);
+    return sphere;
+#endif
 }
 
 bbox culler::transformBoxTRS(bbox box, const float4x4& modelTfm) {
     // Woth doing on cpu and caching.  So can still process an array
     // but should transform only ones thatt didn't change transform or bound.
     
+#if 0
+    // This is for a full general 4x4, but want a simpler affine version
     float4 min1 = float4m(box.min, 1);
     float4 max1 = float4m(box.max, 1);
     
@@ -144,9 +161,59 @@ bbox culler::transformBoxTRS(bbox box, const float4x4& modelTfm) {
     
     box.setInvalid();
     for (int i = 0; i < 8; ++i) {
-        float3 v = (pt[i] * modelTfm).xyz;
+        float3 v = (modelTfm * pt[i]).xyz;
         box.unionWith(v);
     }
+    
+#elif 0
+    
+    float3 min1 = box.min;
+    float3 max1 = box.max;
+    
+    // really just a 3x3 and translation
+    const float3x3& m = as_float3x3(modelTfm);
+    float3 t = m[3];
+    
+    // convert the box to 8 pts first
+    float3 pt[8];
+   
+    pt[0] = min1;
+    pt[1] = max1;
+        
+    pt[2] = float3m(min1.xy, max1.z);
+    pt[3] = float3m(max1.xy, min1.z);
+    
+    pt[4] = min1; pt[4].y = max1.y;
+    pt[5] = max1; pt[5].x = min1.x;
+        
+    pt[6] = max1; pt[6].y = min1.y;
+    pt[7] = min1; pt[7].x = max1.x;
+    
+    box.setInvalid();
+    for (int i = 0; i < 8; ++i) {
+        float3 v = m * pt[i];
+        box.unionWith(v);
+    }
+    box.offset(t);
+    
+#else
+    // This is way less setup on the points, and only 2 transformed points
+    // instead of 8.  At least the inspiration for code below.
+    // https://github.com/erich666/GraphicsGems/blob/master/gems/TransBox.c
+   
+    const float3x3& m = as_float3x3(modelTfm);
+    float3 t = m[3];
+   
+    box.min = m * box.min;
+    box.max = m * box.max;
+    
+    // swap back extrema that flipped due to rot/invert
+    box.fix();
+    
+    box.offset(t);
+    
+#endif
+    
     return box;
 }
 

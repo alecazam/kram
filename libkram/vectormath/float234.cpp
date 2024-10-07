@@ -977,8 +977,7 @@ float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ)
     float m22;
     float m23;
   
-    // TODO: handle farZ when not inf
-
+    
     //if (isReverseZ) {
         // zs drops out since zs = inf / -inf = 1, 1-1 = 0
         // z' = near / -z
@@ -988,7 +987,8 @@ float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ)
             m23 = nearZ;
         }
         else {
-            m22 = -nearZ / farZ; // TODO: check these
+            // TODO: handle farZ when not inf, check these
+            m22 = -nearZ / farZ;
             m23 = nearZ;
         }
         
