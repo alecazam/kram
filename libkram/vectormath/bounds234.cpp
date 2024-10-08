@@ -45,7 +45,6 @@ culler::culler(const float4x4& projView) {
 }
 
 bool culler::cullBox(float3 min, float3 max) const {
-    int count = 0;
     
     // Note: make sure box min <= max, or this call will fail
     
@@ -61,6 +60,8 @@ bool culler::cullBox(float3 min, float3 max) const {
     float4 max1 = float4m(max,1);
 
     // test the min/max against the x planes
+    int count = 0;
+    
     for (int i = 0; i < _planeCount; ++i) {
         count += dot(_planes[i], select(min1, max1, _selectionMasks[i])) > 0;
     }
@@ -69,7 +70,6 @@ bool culler::cullBox(float3 min, float3 max) const {
 }
             
 bool culler::cullSphere(float4 sphere) const {
-    int count = 0;
             
     // TODO: convert this from dot to a mul of 4, then finish plane 5,6
     // keep everything in simd reg.
@@ -78,11 +78,9 @@ bool culler::cullSphere(float4 sphere) const {
     float4 sphere1 = float4m(sphere.xyz,1);
     float radius = sphere.w;
     
+    int count = 0;
     for (int i = 0; i < _planeCount; ++i) {
-        count += dot(_planes[i], sphere1) < radius;
-            
-        // note: gpu can cull and do occlusion lookup
-        // cpu can just do frustum culls
+        count += dot(_planes[i], sphere1) > radius;
     }
                      
     return count == _planeCount;
@@ -95,9 +93,6 @@ void culler::cullBoxes(const float3* boxes, int count, uint8_t* results) const {
         float3 max = boxes[2*i+1];
         
         results[i] = cullBox(min, max);
-        
-        // note: gpu can cull and do occlusion lookup
-        // cpu can just do frustum culls
     }
 }
 
@@ -111,7 +106,7 @@ bsphere culler::transformSphereTRU(bsphere sphere, const float4x4& modelTfm) {
     // May be better to convert to box with non-uniform scale
     // sphere gets huge otherwise.  Cache these too.
     
-#if 0
+#if 1
     // not sure which code is smaller, still have to add t
     float size = reduce_max(decomposeScale(modelTfm));
     float radius = sphere.radius() * size;
@@ -197,21 +192,41 @@ bbox culler::transformBoxTRS(bbox box, const float4x4& modelTfm) {
     box.offset(t);
     
 #else
-    // This is way less setup on the points, and only 2 transformed points
-    // instead of 8.  At least the inspiration for code below.
-    // https://github.com/erich666/GraphicsGems/blob/master/gems/TransBox.c
-   
+    // This is way less setup on the points.
+    
     const float3x3& m = as_float3x3(modelTfm);
     float3 t = m[3];
    
-    box.min = m * box.min;
-    box.max = m * box.max;
-    
+    // what about this
+    // box.min = m * box.min;
+    // box.max = m * box.max;
     // swap back extrema that flipped due to rot/invert
-    box.fix();
+    // box.fix();
+    // box.offset(t);
     
-    box.offset(t);
+    // Inspiration for code below.
+    // https://github.com/erich666/GraphicsGems/blob/master/gems/TransBox.c
+    float3 min1 = box.min;
+    float3 max1 = box.max;
     
+    box.min = t;
+    box.max = t;
+    
+    float3 a,b;
+    for (int i = 0; i < 3; ++i) {
+        // these are muls, not dots
+        a = m[i] * min1;
+        b = m[i] * max1;
+        
+        int3 test = a < b;
+        
+        box.min += select(0, a, test);
+        box.max += select(0, a, !test);
+        
+        box.max += select(0, b, test);
+        box.min += select(0, b, !test);
+    }
+
 #endif
     
     return box;
