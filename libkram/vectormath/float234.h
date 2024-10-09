@@ -325,6 +325,18 @@ SIMD_CALL float3 cross(float3 x, float3 y) {
     return x.yzx * y.zxy - x.zxy * y.yzx;
 }
 
+// equal
+// == and != return a int234 vector, so need these to match other vecs
+SIMD_CALL bool equal(float2 x, float2 y) {
+    return all(x == y);
+}
+SIMD_CALL bool equal(float3 x, float3 y) {
+    return all(x == y);
+}
+SIMD_CALL bool equal(float4 x, float4 y) {
+    return all(x == y);
+}
+
 // equal_abs
 SIMD_CALL bool equal_abs(float2 x, float2 y, float tol) {
     return all((abs(x - y) <= tol));
@@ -505,9 +517,18 @@ SIMD_CALL float4 float4m(float3 v, float w = 1.0f) {
 }
 
 // fast conversions where possible
+// need non-const too
 SIMD_CALL const float3& as_float3(const float4& m) {
     return reinterpret_cast<const float3&>(m);
 }
+SIMD_CALL const float3* as_float3(const float4* m) {
+    return reinterpret_cast<const float3*>(m);
+}
+
+// this one is dangerous, since w is undefined
+//SIMD_CALL const float4& as_float4(const float3& m) {
+//    return reinterpret_cast<const float4&>(m);
+//}
 
 // power series
 macroVectorRepeatFnDecl(float, log)
@@ -840,6 +861,20 @@ float4x4 float4x4m(char axis, float radians);
 SIMD_CALL float4x4 float4x4m(float3 axis, float radians) {
     return float4x4m(quatf(axis, radians));
 }
+
+// These sizes are positive and do not include inversion
+SIMD_CALL float decompose_size(const float4x4& m) {
+    return length(m[0]);
+}
+SIMD_CALL float3 decompose_scale(const float4x4& m) {
+    return float3m(length(m[0]),
+                   length(m[1]),
+                   length(m[2]));
+}
+SIMD_CALL float decompose_scale_max(const float4x4& m) {
+    return reduce_max(decomposeScale(m));
+}
+
 
 float3x3 float3x3m(quatf qq);
 

@@ -439,6 +439,18 @@ SIMD_CALL double3 cross(double3 x, double3 y) {
     return x.yzx * y.zxy - x.zxy * y.yzx;
 }
 
+// equal
+// == and != return a int234 vector, so need these to match other vecs
+SIMD_CALL bool equal(double2 x, double2 y) {
+    return all(x == y);
+}
+SIMD_CALL bool equal(double3 x, double3 y) {
+    return all(x == y);
+}
+SIMD_CALL bool equal(double4 x, double4 y) {
+    return all(x == y);
+}
+
 // equal_abs
 SIMD_CALL bool equal_abs(double2 x, double2 y, double tol) {
     return all((abs(x - y) <= tol));
@@ -517,6 +529,20 @@ SIMD_CALL double4 fix_nan(double4 x, double4 replace) {
     return min(replace, x);
 }
 
+
+// fast conversions where possible
+// need non-const too
+SIMD_CALL const double3& as_double3(const double4& m) {
+    return reinterpret_cast<const double3&>(m);
+}
+SIMD_CALL const double3* as_double3(const double4* m) {
+    return reinterpret_cast<const double3*>(m);
+}
+
+// this one is dangerous, since w is undefined
+//SIMD_CALL const double4& as_double4(const double3& m) {
+//    return reinterpret_cast<const double4&>(m);
+//}
 
 
 //-------------------
@@ -756,6 +782,9 @@ macroMatrixOps(double4x4);
 // fast conversions where possible
 SIMD_CALL const double3x3& as_double3x3(const double4x4& m) {
     return reinterpret_cast<const double3x3&>(m);
+}
+SIMD_CALL const double3x3* as_double3x3(const double4x4* m) {
+    return reinterpret_cast<const double3x3*>(m);
 }
 
 } // SIMD_NAMESPACE
