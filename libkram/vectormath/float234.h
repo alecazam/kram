@@ -808,13 +808,25 @@ struct quatf {
     static const quatf& zero();
     static const quatf& identity();
     
+    // image = axis * sin(theta/2), real = cos(theta/2)
+    const float3& imag() const { return as_float3(v); }
+    float real() const { return v.w; }
+    
     float4 v;
 };
 
-SIMD_CALL float3 operator*(quatf q, float3 v) {
+// this is conjugate, so only axis is inverted
+SIMD_CALL quatf operator-(quatf q) {
     float4 qv = q.v;
-    float3 t = qv.w * cross(qv.xyz, v);
-    return v + 2.0f * t + cross(q.v.xyz, t);
+    qv.xyz = -qv.xyz;
+    return quatf(qv);
+}
+
+SIMD_CALL float3 operator*(quatf q, float3 v) {
+    // see https://fgiesen.wordpress.com/2019/02/09/rotating-a-single-vector-using-a-quaternion/
+    float4 qv = q.v;
+    float3 t = 2.0f * cross(qv.xyz, v);
+    return v + qv.w * t + cross(qv.xyz, t);
 }
 
 float4x4 float4x4m(quatf q);
@@ -827,7 +839,7 @@ float4x4 float4x4m(quatf q);
 
 SIMD_CALL quatf lerp(quatf q0, quatf q1, float t) {
     if (dot(q0.v, q1.v) < 0.0f)
-        q1.v.xyz = -q1.v.xyz;
+        q1 = -q1; // conjugate
     
     float4 v = lerp(q0.v, q1.v, t);
     return quatf(v);
@@ -872,19 +884,20 @@ SIMD_CALL float3 decompose_scale(const float4x4& m) {
                    length(m[2]));
 }
 SIMD_CALL float decompose_scale_max(const float4x4& m) {
-    return reduce_max(decomposeScale(m));
+    return reduce_max(decompose_scale(m));
 }
 
 
 float3x3 float3x3m(quatf qq);
 
-float4x4 float4x4_tr(float3 t, quatf r);
-float4x4 float4x4_trs(float3 t, quatf r, float3 scale);
-float4x4 float4x4_tru(float3 t, quatf r, float scale);
+// m in here?
+float4x4 float4x4m_tr(float3 t, quatf r);
+float4x4 float4x4m_tru(float3 t, quatf r, float scale);
+float4x4 float4x4m_trs(float3 t, quatf r, float3 scale);
 
 float4x4 perspective_rhcs(float fovyRadians, float aspectXtoY, float nearZ, float farZ = FLT_MAX);
 float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ = FLT_MAX);
-float4x4 orthographic_rhcs(float width, float height, float nearZ, float farZ);
+float4x4 orthographic_rhcs(float4 rect, float nearZ, float farZ);
 
 SIMD_CALL float4x4 rotation(float3 axis, float radians) {
     quatf q(axis, radians);

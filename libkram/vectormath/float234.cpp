@@ -851,7 +851,7 @@ float4x4 inverse_tru(const float4x4& mtx)
     return inverse;
 }
 
-float4x4 float4x4_tr(float3 t, quatf r) {
+float4x4 float4x4m_tr(float3 t, quatf r) {
     float4x4 m(float4x4::identity());
     m[3].xyz = t;
     
@@ -860,7 +860,7 @@ float4x4 float4x4_tr(float3 t, quatf r) {
 }
 
 // TODO: there are faster ways to apply post rot, post scale
-float4x4 float4x4_trs(float3 t, quatf r, float3 scale) {
+float4x4 float4x4m_trs(float3 t, quatf r, float3 scale) {
     float4x4 m(float4x4::identity());
     m[3].xyz = t;
     m = m * float4x4m(r);
@@ -870,8 +870,8 @@ float4x4 float4x4_trs(float3 t, quatf r, float3 scale) {
 }
 
 // leaving this in here, since it can be further optimized
-float4x4 float4x4_tru(float3 t, quatf r, float scale) {
-    return float4x4_trs(t, r, float3m(scale));
+float4x4 float4x4m_tru(float3 t, quatf r, float scale) {
+    return float4x4m_trs(t, r, float3m(scale));
 }
 
 float4x4 inverse_trs(const float4x4& mtx)
@@ -974,32 +974,22 @@ float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ)
     float xoff = (r + l) / dx;
     float yoff = (t + b) / dy;
     
+    // zs drops out since zs = inf / -inf = 1, 1-1 = 0
+    // z' = near / -z
+
     float m22;
     float m23;
   
-    
-    //if (isReverseZ) {
-        // zs drops out since zs = inf / -inf = 1, 1-1 = 0
-        // z' = near / -z
-    
-        if (farZ == FLT_MAX) {
-            m22 = 0;
-            m23 = nearZ;
-        }
-        else {
-            // TODO: handle farZ when not inf, check these
-            m22 = -nearZ / farZ;
-            m23 = nearZ;
-        }
+    if (farZ == FLT_MAX) {
+        m22 = 0;
+        m23 = nearZ;
+    }
+    else {
+        // TODO: handle farZ when not inf, check these
+        m22 = -nearZ / farZ;
+        m23 = nearZ;
+    }
         
-//    }
-//    else {
-//        float zs = farZ / (nearZ - farZ);
-//        
-//        m22 = zs;
-//        m23 = zs * nearZ;
-//    }
-    
     float4x4 m(
         (float4){ xs,       0,   0,  0 },
         (float4){  0,      ys,   0,  0 },
@@ -1010,14 +1000,22 @@ float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ)
     return m;
 }
 
-float4x4 orthographic_rhcs(float width, float height, float nearZ, float farZ)
+float4x4 orthographic_rhcs(float4 rect, float nearZ, float farZ)
 {
-    // float aspectRatio = width / height;
-    float xs = 2.0f / width;
-    float ys = 2.0f / height;
+    // l,t,r,b
+    float l = rect.x;
+    float t = rect.y;
+    float r = rect.z;
+    float b = rect.w;
     
-    float xoff = 0.0f;  // -0.5f * width;
-    float yoff = 0.0f;  // -0.5f * height;
+    float dx = (r-l);
+    float dy = (t-b);
+    
+    float m00 = 2.0f / dx;
+    float m11 = 2.0f / dy;
+    
+    float m03 = (r+l) / dx;
+    float m13 = (t+b) / dy;
     
     float dz = -(farZ - nearZ);
     float zs = 1.0f / dz;
@@ -1026,16 +1024,14 @@ float4x4 orthographic_rhcs(float width, float height, float nearZ, float farZ)
     float m23 = zs * nearZ;
     
     // revZ, can't use infiniteZ with ortho view
-    //if (isReverseZ) {
-        m22 = -m22;
-        m23 = 1.0f - m23;
-    //}
-    
+    m22 = -m22;
+    m23 = 1.0f - m23;
+
     float4x4 m(
-        (float4){xs, 0, 0, 0},
-        (float4){0, ys, 0, 0},
-        (float4){0, 0, m22, 0},
-        (float4){xoff, yoff, m23, 1}
+        (float4){m00,   0,   0, 0},
+        (float4){  0, m11,   0, 0},
+        (float4){  0,   0, m22, 0},
+        (float4){m03, m13, m23, 1}
     );
     return m;
 }
