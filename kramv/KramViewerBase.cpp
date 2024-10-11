@@ -2933,8 +2933,13 @@ void Data::updateProjTransform()
         _showSettings->zoomFit = 1;
     }
     else {
+        // ltrb
+        float2 rectDims = 0.5f * float2m(_showSettings->viewSizeX,_showSettings->viewSizeY);
+        float4 rect = float4m(-rectDims.x,  rectDims.y,
+                               rectDims.x, -rectDims.y);
+        
         _projectionMatrix =
-            orthographic_rhcs(_showSettings->viewSizeX, _showSettings->viewSizeY, 0.1f, 100000.0f);
+            orthographic_rhcs(rect, 0.1f, 1e6f);
 
         // DONE: adjust zoom to fit the entire image to the window
         _showSettings->zoomFit =
