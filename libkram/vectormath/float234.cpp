@@ -861,19 +861,24 @@ float4x4 float4x4m_tr(float3 t, quatf r) {
 
 // TODO: there are faster ways to apply post rot, post scale
 float4x4 float4x4m_trs(float3 t, quatf r, float3 scale) {
-    float4x4 m(float4x4::identity());
-    m[3].xyz = t;
-    m = m * float4x4m(r);
-    
-    m *= float4x4(float4m(scale,1.0f));
-    return m;
+    return translation(t) * float4x4m(r) * float4x4(float4m(scale,1.0f));
 }
+
+float4x4 float4x4m_inverse_trs(float3 t, quatf r, float3 scale) {
+    // 1/S * RT * -T
+    return float4x4(recip(float4m(scale,1.0f))) * transpose(float4x4m(r)) * translation(-t);
+}
+
 
 // leaving this in here, since it can be further optimized
 float4x4 float4x4m_tru(float3 t, quatf r, float scale) {
     return float4x4m_trs(t, r, float3m(scale));
 }
 
+float4x4 float4x4m_tru_inverse(float3 t, quatf r, float scale) {
+    return float4x4m_inverse_trs(t, r, float3m(scale));
+}
+    
 float4x4 inverse_trs(const float4x4& mtx)
 {
     bool success = false;

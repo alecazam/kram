@@ -895,6 +895,10 @@ float4x4 float4x4m_tr(float3 t, quatf r);
 float4x4 float4x4m_tru(float3 t, quatf r, float scale);
 float4x4 float4x4m_trs(float3 t, quatf r, float3 scale);
 
+// can build inverse from same data
+float4x4 float4x4m_trs(float3 t, quatf r, float3 scale);
+float4x4 float4x4m_inverse_trs(float3 t, quatf r, float3 scale);
+
 float4x4 perspective_rhcs(float fovyRadians, float aspectXtoY, float nearZ, float farZ = FLT_MAX);
 float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ = FLT_MAX);
 float4x4 orthographic_rhcs(float4 rect, float nearZ, float farZ);

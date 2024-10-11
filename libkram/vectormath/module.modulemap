@@ -1,0 +1,16 @@
+module vectormath {
+    // All headers are pulled in by this.
+    
+    // This defaults to namespace simdk
+    header "vectormath234.h"
+    
+    // These aren't yet independent includes.
+    // header "int234.h"
+    // header "long234.h"
+    // header "float234.h"
+    // header "double234.h"
+    // header "bounds234.h"
+    
+    export *
+}
+

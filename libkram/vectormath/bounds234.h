@@ -8,7 +8,7 @@
 
 namespace SIMD_NAMESPACE {
 
-// TODO: may want a 2d box/rect as well
+// TODO: may want a rect, circle, capsule as well.
 
 struct bbox {
     bbox() {} // nothing
@@ -76,9 +76,12 @@ public:
 // Fast cpu culler per frustum.  Easy port to gpu which can do occlusion.
 // This only tests 5 or 6 planes.
 struct culler {
-    culler(const float4x4& projView);
+    culler();
+    
+    void update(const float4x4& projView);
     
     // TODO: should pass bitmask instead of uint8_t array
+    // caller must zero the results array, and visible state sets only low bit
     
     void cullBoxes(const float3* boxes, int count, uint8_t* results) const;
     void cullSpheres(const float4* sphere, int count, uint8_t* results) const;
@@ -100,27 +103,33 @@ struct culler {
         return cullSphere(sphere.centerRadius);
     }
     
-    // TODO: move this to vectormath affine ops
-    static float decomposeSize(const float4x4& m) {
-        return length(m[0]);
-    }
-    static float3 decomposeScale(const float4x4& m) {
-        // TODO: this length is unsigned, so need to fix that for inversion
-        return float3m(length(m[0]),
-                       length(m[1]),
-                       length(m[2]));
-    }
+    // should probably move these
+    static bsphere transformSphereTRS(bsphere sphere, const float4x4& modelTfm);
+    static bbox transformBoxTRS(bbox box, const float4x4& modelTfm);
     
-    bsphere transformSphereTRU(bsphere sphere, const float4x4& modelTfm);
-    bbox transformBoxTRS(bbox box, const float4x4& modelTfm);
-    
+    void boxCorners(bbox box, float3 pt[8]) const;
+    void boxCorners(bbox box, float4 pt[8]) const;
+   
+    bool isFrustumInBox(bbox box) const;
+    bool isFrustumOutsideBox(bbox box) const;
+
+    const float4* frustumCorners4() const {
+        return _corners;
+    }
+    const float3* frustumCorners() const {
+        return as_float3(_corners);
+    }
+
 private:
     float4 _planes[6];
     // This won't work if SIMD_INT is not defined.
 #if SIMD_INT
     int4 _selectionMasks[6];
 #endif
-    uint32_t _planeCount = 0;
+    uint32_t _planeCount;
+    
+    // 8 corners of frustum
+    float4 _corners[8];
 };
 
 } // namespace SIMD_NAMESPACE

@@ -4,11 +4,14 @@
 
 namespace SIMD_NAMESPACE {
 
-culler::culler(const float4x4& projView) {
+culler::culler(): _planeCount(0) {
+}
+
+void culler::update(const float4x4& projView) {
     // build a worldspace frustum
     // https://fgiesen.wordpress.com/2010/10/17/view-frustum-culling/
     // but don't test farZ plane if infFarZ
-
+    
     float4x4 m = transpose(projView);
     const float4& x = m[0];
     const float4& y = m[1];
@@ -41,6 +44,36 @@ culler::culler(const float4x4& projView) {
     // select min or max based on normal direction
     for (int i = 0; i < _planeCount; ++i) {
         _selectionMasks[i] = _planes[i] < 0;
+    }
+    
+    // Nathan Reed - If you represent the frustum corners in homogeneous coordinates,
+    // with w=0 for points at infinity, this just falls out of the usual
+    // point vs plane test, where you dot the homogeneous point against the plane equation.
+    
+    // generate 8 corners of frustum from the inverse
+    float4x4 projViewInv = inverse(projView); // TODO: can pass down
+    float nearClip = 1;
+    
+    // inset so division can occur
+    float farClip  = isInfFarPlane ? 1e-6f : 0;
+    
+    static float4 clipCorners[8] = {
+        {-1,-1,nearClip,1},
+        {-1, 1,nearClip,1},
+        { 1,-1,nearClip,1},
+        { 1, 1,nearClip,1},
+        
+        {-1,-1,farClip,1},
+        {-1, 1,farClip,1},
+        { 1,-1,farClip,1},
+        { 1, 1,farClip,1},
+    };
+    
+    // These are homogenous coords, so w may be 0
+    for (int i = 0; i < 8; ++i) {
+        float4 cornerHomog = projViewInv * clipCorners[i];
+        _corners[i] = cornerHomog / cornerHomog.w;
+        _corners[i].w = 1;
     }
 }
 
@@ -92,23 +125,58 @@ void culler::cullBoxes(const float3* boxes, int count, uint8_t* results) const {
         float3 min = boxes[2*i];
         float3 max = boxes[2*i+1];
         
-        results[i] = cullBox(min, max);
+        if (cullBox(min, max))
+            results[i] |= 1;
     }
 }
 
 void culler::cullSpheres(const float4* sphere, int count, uint8_t* results) const {
-    for(int i = 0; i < count; ++i) {
-        results[i] = cullSphere(sphere[i]);
+    for (int i = 0; i < count; ++i) {
+        if (cullSphere(sphere[i]))
+            results[i] |= 1;
     }
 }
     
-bsphere culler::transformSphereTRU(bsphere sphere, const float4x4& modelTfm) {
+bool culler::isFrustumInBox(bbox box) const {
+    // See if all 8 verts of the frustum are in the box.
+    // This becomes a false negative for non-inf far (skips box while inside)
+    const float3* corners = frustumCorners();
+    
+    int3 count = 0;
+    for (int i = 0; i < 8; ++i) {
+        float3 c = corners[i];
+        count += c >= box.min &
+                 c <= box.max;
+    }
+    
+    // high-bit set is -1
+    return all(count == (int3)-8);
+}
+
+bool culler::isFrustumOutsideBox(bbox box) const {
+    // See if all 8 verts of the frustum are outside box.
+    // This becomes a false positive (draws box even though outside)
+    const float3* corners = frustumCorners();
+                                        
+    int3 countMin = 0;
+    int3 countMax = 0;
+    for (int i = 0; i < 8; ++i) {
+        float3 c = corners[i];
+        countMin += c < box.min;
+        countMax += c > box.max;
+    }
+    
+    // high-bit set is -1
+    return any(countMin == (int3)-8 | countMax == (int3)-8);
+}
+
+bsphere culler::transformSphereTRS(bsphere sphere, const float4x4& modelTfm) {
     // May be better to convert to box with non-uniform scale
     // sphere gets huge otherwise.  Cache these too.
     
 #if 1
     // not sure which code is smaller, still have to add t
-    float size = reduce_max(decomposeScale(modelTfm));
+    float size = decompose_scale_max(modelTfm);
     float radius = sphere.radius() * size;
     float4 sphereCenter = float4m(sphere.center(), 1);
     sphereCenter = modelTfm * sphereCenter;
@@ -120,7 +188,7 @@ bsphere culler::transformSphereTRU(bsphere sphere, const float4x4& modelTfm) {
     const float3x3& m = as_float3x3(modelTfm);
     float3 t = m[3];
     
-    float size = reduce_max(decomposeScale(modelTfm));
+    float size = decompose_scale_max(modelTfm);
     float radius = sphere.radius() * size;
     float3 sphereCenter = m * sphere.center();
     sphereCenter += t;
@@ -130,30 +198,56 @@ bsphere culler::transformSphereTRU(bsphere sphere, const float4x4& modelTfm) {
 #endif
 }
 
+// Note: if doing infFar, may want float4 in homogenous space w = 0
+// then the points are accurate.
+    
+void culler::boxCorners(bbox box, float3 pt[8]) const {
+    // TODO: fix these so order is 000 to 111 in bits
+    
+    float3 min1 = box.min;
+    float3 max1 = box.max;
+    
+    pt[0] = min1;
+    pt[1] = max1;
+    
+    pt[2] = float3m(min1.xy, max1.z);
+    pt[3] = float3m(max1.xy, min1.z);
+    
+    pt[4] = min1; pt[4].y = max1.y;
+    pt[5] = max1; pt[5].x = min1.x;
+    
+    pt[6] = max1; pt[6].y = min1.y;
+    pt[7] = min1; pt[7].x = max1.x;
+}
+
+void culler::boxCorners(bbox box, float4 pt[8]) const {
+    float4 min1 = float4m(box.min, 1);
+    float4 max1 = float4m(box.max, 1);
+    
+    pt[0] = min1;
+    pt[1] = max1;
+    
+    pt[2] = float4m(min1.xy, max1.zw);
+    pt[3] = float4m(max1.xy, min1.zw);
+    
+    pt[4] = min1; pt[4].y = max1.y; // float4m(min1.x, max1.y, min1.zw),
+    pt[5] = max1; pt[5].x = min1.x; // float4m(min1.x, max1.yzw),
+    
+    pt[6] = max1; pt[6].y = min1.y; // float4m(max1.x, min1.y, max1.zw),
+    pt[7] = min1; pt[7].x = max1.x; // float4m(max1.x, min1.yzw),
+}
+
+
 bbox culler::transformBoxTRS(bbox box, const float4x4& modelTfm) {
     // Woth doing on cpu and caching.  So can still process an array
     // but should transform only ones thatt didn't change transform or bound.
     
 #if 0
     // This is for a full general 4x4, but want a simpler affine version
-    float4 min1 = float4m(box.min, 1);
-    float4 max1 = float4m(box.max, 1);
-    
     // convert the box to 8 pts first
     float4 pt[8];
-   
-    pt[0] = min1;
-    pt[1] = max1;
-        
-    pt[2] = float4m(min1.xy, max1.zw);
-    pt[3] = float4m(max1.xy, min1.zw);
-    
-    pt[4] = min1; pt[4].y = max1.y; // float4m(min1.x, max1.y, min1.zw),
-    pt[5] = max1; pt[5].x = min1.x; // float4m(min1.x, max1.yzw),
-        
-    pt[6] = max1; pt[6].y = min1.y; // float4m(max1.x, min1.y, max1.zw),
-    pt[7] = min1; pt[7].x = max1.x; // float4m(max1.x, min1.yzw),
-    
+    boxCorners(box, pt)
+
     box.setInvalid();
     for (int i = 0; i < 8; ++i) {
         float3 v = (modelTfm * pt[i]).xyz;
@@ -161,29 +255,14 @@ bbox culler::transformBoxTRS(bbox box, const float4x4& modelTfm) {
     }
     
 #elif 0
-    
-    float3 min1 = box.min;
-    float3 max1 = box.max;
-    
     // really just a 3x3 and translation
     const float3x3& m = as_float3x3(modelTfm);
     float3 t = m[3];
     
     // convert the box to 8 pts first
     float3 pt[8];
+    boxCorners(box, ptr);
    
-    pt[0] = min1;
-    pt[1] = max1;
-        
-    pt[2] = float3m(min1.xy, max1.z);
-    pt[3] = float3m(max1.xy, min1.z);
-    
-    pt[4] = min1; pt[4].y = max1.y;
-    pt[5] = max1; pt[5].x = min1.x;
-        
-    pt[6] = max1; pt[6].y = min1.y;
-    pt[7] = min1; pt[7].x = max1.x;
-    
     box.setInvalid();
     for (int i = 0; i < 8; ++i) {
         float3 v = m * pt[i];

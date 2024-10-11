@@ -45,6 +45,7 @@
 		701AF1912CAD27CB00BD0886 /* libvectormath-ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libvectormath-ios.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		70570FE42CB378E7005692BB /* bounds234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bounds234.h; sourceTree = "<group>"; };
 		70570FE72CB37997005692BB /* bounds234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = bounds234.cpp; sourceTree = "<group>"; };
+		70570FEF2CB8C5C6005692BB /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		70B686F42CAD1026007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		70B686FB2CAD1072007ACA58 /* double234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = double234.h; sourceTree = "<group>"; };
 		70B686FC2CAD1072007ACA58 /* double234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = double234.cpp; sourceTree = "<group>"; };
@@ -101,6 +102,7 @@
 		70B6870A2CAD1072007ACA58 /* vectormath */ = {
 			isa = PBXGroup;
 			children = (
+				70570FEF2CB8C5C6005692BB /* module.modulemap */,
 				70B687042CAD1072007ACA58 /* README.md */,
 				70B686FB2CAD1072007ACA58 /* double234.h */,
 				70B686FC2CAD1072007ACA58 /* double234.cpp */,
@@ -325,6 +327,8 @@
 				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEFINES_MODULE = YES;
+				ENABLE_MODULE_VERIFIER = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -345,6 +349,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MODULEMAP_FILE = ../libkram/vectormath/;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c c++";
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -393,6 +399,8 @@
 				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEFINES_MODULE = YES;
+				ENABLE_MODULE_VERIFIER = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -407,6 +415,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MODULEMAP_FILE = ../libkram/vectormath/;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c c++";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_CFLAGS = (

@@ -199,14 +199,25 @@
 #if KRAM_MAC || KRAM_IOS
 // can use old or new
 #define USE_SIMDLIB 1
+
+// maybe this doesn't work with C++ pch,
+#define USE_SIMDLIBMODULE 0
 #else
-// have to use new
+// have to use new on all other platforms
 #define USE_SIMDLIB 1
+#define USE_SIMDLIBMODULE 0
 #endif
 
 #if USE_SIMDLIB
+
 // new vector math
+#if USE_SIMDLIBMODULE
+// import this as a clang module now
+import vectormath
+#else
 #include "vectormath234.h"
+#endif
+
 #else
 // old vector math, using simd/simd.h
 #include "float4a.h"
