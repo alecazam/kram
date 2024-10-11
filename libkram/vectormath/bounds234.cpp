@@ -8,7 +8,7 @@ culler::culler(): _planesCount(0) {
 }
 
 void culler::update(const float4x4& projView) {
-    // build a worldspace frustum
+    // build a worldspace cameraa volume
     // https://fgiesen.wordpress.com/2010/10/17/view-frustum-culling/
     // but don't test farZ plane if infFarZ
     
@@ -50,7 +50,7 @@ void culler::update(const float4x4& projView) {
     // with w=0 for points at infinity, this just falls out of the usual
     // point vs plane test, where you dot the homogeneous point against the plane equation.
     
-    // generate 8 corners of frustum from the inverse
+    // generate 8 corners of camera volume from the inverse
     float4x4 projViewInv = inverse(projView); // TODO: can pass down
     float nearClip = 1;
     
@@ -119,28 +119,42 @@ bool culler::cullSphere(float4 sphere) const {
     return count == _planesCount;
 }
             
-void culler::cullBoxes(const float3* boxes, int count, uint8_t* results) const {
+void culler::cullBoxes(const float3* boxes, int count, uint8_t shift, uint8_t* results) const {
     // box array is 2x count
+    uint8_t bit = (1 << shift);
+    uint8_t skipBit = (1 << 7);
+   
     for (int i = 0; i < count; ++i) {
+        uint8_t& res8 = results[i];
+        if ((res8 & skipBit) != 0)
+            continue;
+        
         float3 min = boxes[2*i];
         float3 max = boxes[2*i+1];
         
         if (cullBox(min, max))
-            results[i] |= 1;
+            res8 |= bit;
     }
 }
 
-void culler::cullSpheres(const float4* sphere, int count, uint8_t* results) const {
+void culler::cullSpheres(const float4* sphere, int count, uint8_t shift, uint8_t* results) const {
+    uint8_t bit = (1 << shift);
+    uint8_t skipBit = (1 << 7);
+   
     for (int i = 0; i < count; ++i) {
+        uint8_t& res8 = results[i];
+        if ((res8 & skipBit) != 0)
+            continue;
+        
         if (cullSphere(sphere[i]))
-            results[i] |= 1;
+            res8 |= bit;
     }
 }
     
-bool culler::isFrustumInBox(bbox box) const {
+bool culler::isCameraInBox(bbox box) const {
     // See if all 8 verts of the frustum are in the box.
     // This becomes a false negative for non-inf far (skips box while inside)
-    const float3* corners = frustumCorners();
+    const float3* corners = cameraCorners();
     
     int3 count = 0;
     for (int i = 0; i < 8; ++i) {
@@ -153,10 +167,10 @@ bool culler::isFrustumInBox(bbox box) const {
     return all(count == (int3)-8);
 }
 
-bool culler::isFrustumOutsideBox(bbox box) const {
-    // See if all 8 verts of the frustum are outside box.
+bool culler::isCameraOutsideBox(bbox box) const {
+    // See if all 8 verts of the camera are outside box.
     // This becomes a false positive (draws box even though outside)
-    const float3* corners = frustumCorners();
+    const float3* corners = cameraCorners();
                                         
     int3 countMin = 0;
     int3 countMax = 0;

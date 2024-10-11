@@ -80,38 +80,40 @@ struct culler {
     
     void update(const float4x4& projView);
     
-    // TODO: should pass bitmask instead of uint8_t array
-    // caller must zero the results array, and visible state sets only low bit
-    
-    void cullBoxes(const float3* boxes, int count, uint8_t* results) const;
-    void cullSpheres(const float4* sphere, int count, uint8_t* results) const;
-    
+    // can use the helper types instead
     bool cullSphere(float4 sphere) const;
     bool cullBox(float3 min, float3 max) const;
     
-    // can use the helper types instead
-    void cullBoxes(const bbox* boxes, int count, uint8_t* results) const {
-        cullBoxes((const float3*)boxes, count, results);
-    }
-    bool cullBoxes(const bbox& box) const {
+    bool cullBox(const bbox& box) const {
         return cullBox(box.min, box.max);
-    }
-    void cullSpheres(const bsphere* spheres, int count, uint8_t* results) const {
-        cullSpheres((const float4*)spheres, count, results);
     }
     bool cullSphere(const bsphere& sphere) const {
         return cullSphere(sphere.centerRadius);
     }
     
-    // should probably move these
+    // Caller must zero the results array, and visible state sets only low bit
+    // These store a bit (with shift) in the results array.
+    // If high bit is set in results, then test is skipped.
+    void cullBoxes(const float3* boxes, int count, uint8_t shift, uint8_t* results) const;
+    void cullSpheres(const float4* sphere, int count, uint8_t shift, uint8_t* results) const;
+    
+    void cullBoxes(const bbox* boxes, int count, uint8_t shift, uint8_t* results) const {
+        cullBoxes((const float3*)boxes, count, shift, results);
+    }
+    void cullSpheres(const bsphere* spheres, int count, uint8_t shift, uint8_t* results) const {
+        cullSpheres((const float4*)spheres, count, shift, results);
+    }
+    
+    // move these out?
     static bsphere transformSphereTRS(bsphere sphere, const float4x4& modelTfm);
     static bbox transformBoxTRS(bbox box, const float4x4& modelTfm);
     
+    // bbox corners
     void boxCorners(bbox box, float3 pt[8]) const;
     void boxCorners(bbox box, float4 pt[8]) const;
    
-    bool isFrustumInBox(bbox box) const;
-    bool isFrustumOutsideBox(bbox box) const;
+    bool isCameraInBox(bbox box) const;
+    bool isCameraOutsideBox(bbox box) const;
 
     // Camera corners in world space
     const float3* cameraCorners() const {
@@ -124,14 +126,18 @@ struct culler {
     int cameraPlanesCount() const { return _planesCount; }
     
 private:
+    // camera planes in world space
     float4 _planes[6];
+    
     // This won't work if SIMD_INT is not defined.
 #if SIMD_INT
+    // cached tests of which planes are positive/negative
     int4 _selectionMasks[6];
 #endif
+    
     uint32_t _planesCount;
     
-    // 8 corners of frustum
+    // 8 corners of camera volume
     float4 _corners[8];
 };
 
