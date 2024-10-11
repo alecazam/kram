@@ -4,7 +4,7 @@
 
 namespace SIMD_NAMESPACE {
 
-culler::culler(): _planeCount(0) {
+culler::culler(): _planesCount(0) {
 }
 
 void culler::update(const float4x4& projView) {
@@ -39,10 +39,10 @@ void culler::update(const float4x4& projView) {
     
     // anyway to always use 6 for unrolling?
     // f.e. above use 0,0,-1,FLT_MAX, instead of 0
-    _planeCount = isInfFarPlane ? 5 : 6;
+    _planesCount = isInfFarPlane ? 5 : 6;
     
     // select min or max based on normal direction
-    for (int i = 0; i < _planeCount; ++i) {
+    for (int i = 0; i < _planesCount; ++i) {
         _selectionMasks[i] = _planes[i] < 0;
     }
     
@@ -95,11 +95,11 @@ bool culler::cullBox(float3 min, float3 max) const {
     // test the min/max against the x planes
     int count = 0;
     
-    for (int i = 0; i < _planeCount; ++i) {
+    for (int i = 0; i < _planesCount; ++i) {
         count += dot(_planes[i], select(min1, max1, _selectionMasks[i])) > 0;
     }
             
-    return count == _planeCount;
+    return count == _planesCount;
 }
             
 bool culler::cullSphere(float4 sphere) const {
@@ -112,11 +112,11 @@ bool culler::cullSphere(float4 sphere) const {
     float radius = sphere.w;
     
     int count = 0;
-    for (int i = 0; i < _planeCount; ++i) {
+    for (int i = 0; i < _planesCount; ++i) {
         count += dot(_planes[i], sphere1) > radius;
     }
                      
-    return count == _planeCount;
+    return count == _planesCount;
 }
             
 void culler::cullBoxes(const float3* boxes, int count, uint8_t* results) const {

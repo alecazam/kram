@@ -113,20 +113,23 @@ struct culler {
     bool isFrustumInBox(bbox box) const;
     bool isFrustumOutsideBox(bbox box) const;
 
-    const float4* frustumCorners4() const {
-        return _corners;
-    }
-    const float3* frustumCorners() const {
+    // Camera corners in world space
+    const float3* cameraCorners() const {
         return as_float3(_corners);
     }
-
+    int cameraCornersCount() const { return 8; }
+    
+    // Camera clip planes in world space
+    const float4* cameraPlanes() const { return _planes; }
+    int cameraPlanesCount() const { return _planesCount; }
+    
 private:
     float4 _planes[6];
     // This won't work if SIMD_INT is not defined.
 #if SIMD_INT
     int4 _selectionMasks[6];
 #endif
-    uint32_t _planeCount;
+    uint32_t _planesCount;
     
     // 8 corners of frustum
     float4 _corners[8];
