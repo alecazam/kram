@@ -26,6 +26,13 @@ namespace SIMD_NAMESPACE {
 
 macroVector4TypesStorageRenames(int, int)
 
+SIMD_CALL int4 zeroext(int2 x) {
+    int4 v = 0; v.xy = x; return v;
+}
+SIMD_CALL int4 zeroext(int3 x) {
+    int4 v = 0; v.xyz = x; return v;
+}
+
 //-----------------------------------
 // imlementation - only code simd arch specific
 
@@ -43,6 +50,20 @@ SIMD_CALL bool all(int2 x) {
 }
 SIMD_CALL bool all(int4 x) {
     return vminvq_u32(x) & 0x80000000;
+}
+
+SIMD_CALL int reduce_add(int2 x) {
+    x = vpadd_s32(x, x);
+    return x.x; // repeat x to all values
+}
+SIMD_CALL int reduce_add(int4 x) {
+    // 4:1 reduction
+    x = vpaddq_s32(x, x); // xy = x+y,z+w
+    x = vpaddq_s32(x, x); // x  = x+y
+    return x.x; // repeat x to all values
+}
+SIMD_CALL int reduce_add(int3 x) {
+    return reduce_add(zeroext(x));
 }
 
 #endif // SIMD_NEON
@@ -63,6 +84,19 @@ SIMD_CALL bool all(int2 x) {
 SIMD_CALL bool all(int4 x) {
     return _mm_movemask_ps((__m128)x) == 0xf; // 4 bits
 }
+
+// TODO: need SSE ops for this,
+SIMD_CALL int reduce_add(int4 x) {
+    int2 r = x.lo + x.hi;
+    return r.x + r.y;
+}
+SIMD_CALL int reduce_add(int2 x) {
+    return x.x + x.y;
+}
+SIMD_CALL int reduce_add(int3 x) {
+    return x.x + x.y + x.z;
+}
+
 #endif // SIMD_SSE
        
 // any-all

@@ -89,6 +89,9 @@
 // older but good talk on simd
 // https://people.inf.ethz.ch/markusp/teaching/263-2300-ETH-spring14/slides/11-simd.pdf
 
+// another article
+// https://www.cs.uaf.edu/courses/cs441/notes/sse-avx/
+
 // aarch64
 // https://en.wikipedia.org/wiki/AArch64
 

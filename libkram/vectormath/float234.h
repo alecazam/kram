@@ -279,6 +279,11 @@ SIMD_CALL float2 lerp(float2 x, float2 y, float2 t) { return x + t*(y - x); }
 SIMD_CALL float3 lerp(float3 x, float3 y, float3 t) { return x + t*(y - x); }
 SIMD_CALL float4 lerp(float4 x, float4 y, float4 t) { return x + t*(y - x); }
 
+SIMD_CALL float2 lerp(float2 x, float2 y, float t) { return x + t*(y - x); }
+SIMD_CALL float3 lerp(float3 x, float3 y, float t) { return x + t*(y - x); }
+SIMD_CALL float4 lerp(float4 x, float4 y, float t) { return x + t*(y - x); }
+
+
 // dot
 SIMD_CALL float dot(float2 x, float2 y) { return reduce_add(x * y); }
 SIMD_CALL float dot(float3 x, float3 y) { return reduce_add(x * y); }
@@ -827,6 +832,13 @@ SIMD_CALL float3 operator*(quatf q, float3 v) {
     float4 qv = q.v;
     float3 t = 2.0f * cross(qv.xyz, v);
     return v + qv.w * t + cross(qv.xyz, t);
+}
+
+SIMD_CALL bool equal(quatf x, quatf y) {
+    return all(x.v == y.v);
+}
+SIMD_CALL bool operator==(quatf x, quatf y) {
+    return all(x.v == y.v);
 }
 
 float4x4 float4x4m(quatf q);
