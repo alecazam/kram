@@ -7,7 +7,7 @@ AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: Left
 AlignOperands:   true
-AlignTrailingComments: true
+AlignTrailingComments: false
 AllowAllArgumentsOnNextLine: true
 AllowAllConstructorInitializersOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
@@ -130,6 +130,8 @@ RawStringFormats:
 ReflowComments:  true
 SortIncludes:    true
 SortUsingDeclarations: true
+
+# spaces
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: true
@@ -140,12 +142,19 @@ SpaceBeforeInheritanceColon: true
 SpaceBeforeParens: ControlStatements
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceInEmptyParentheses: false
-SpacesBeforeTrailingComments: 2
+SpacesBeforeTrailingComments: 1
 SpacesInAngles:  false
 SpacesInContainerLiterals: true
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
+
+# https://stackoverflow.com/questions/67396557/adding-space-after-in-clang-format
+# this is to allow both // and //space commants to be unmangled
+SpacesInLineCommentPrefix:
+  Minimum: 0
+  Maximum: 1
+
 Standard:        Auto
 StatementMacros: 
   - Q_UNUSED

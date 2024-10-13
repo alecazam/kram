@@ -14,7 +14,7 @@ gltf/*
 #kramv
 
 libkram/allocate/*
-libkram/astcencoder/*
+libkram/astc-encoder/*
 libkram/bc7enc/*
 libkram/cgltf/*
 libkram/compressonator/*
