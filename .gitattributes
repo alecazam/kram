@@ -1,8 +1,34 @@
-# Make all line endings match macOS/linux, even on Windows.  This allows bash to run.
-* text eol=lf
-
+#-------------
 # commit various binary file types to git-lfs
+# see here https://rehansaeed.com/gitattributes-best-practices/
+# -text means it's not a text file and is binary
+
+# Archives
+*.7z filter=lfs diff=lfs merge=lfs -text
+*.gz filter=lfs diff=lfs merge=lfs -text
+*.tar filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+
+*.ico filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
 *.ktx filter=lfs diff=lfs merge=lfs -text
 *.ktx2 filter=lfs diff=lfs merge=lfs -text
 *.dds filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+
+# Documents
+*.pdf filter=lfs diff=lfs merge=lfs -text
+
+# Models
+*.obj filter=lfs diff=lfs merge=lfs
+*.gltf filter=lfs diff=lfs merge=lfs
+*.glb filter=lfs diff=lfs merge=lfs -text
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.usda filter=lfs diff=lfs merge=lfs -text
+*.usdc filter=lfs diff=lfs merge=lfs -text
+*.usdz filter=lfs diff=lfs merge=lfs -text
+*.rkassets filter=lfs diff=lfs merge=lfs -text
+
+# Other
+*.exe filter=lfs diff=lfs merge=lfs -text
