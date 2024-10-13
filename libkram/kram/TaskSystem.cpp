@@ -11,8 +11,11 @@
 #include <pthread/qos.h>
 #include <sys/sysctl.h>
 #elif KRAM_WIN
-#include <processthreadsapi.h>
+// annoying thata windows.h has to be ordered first
+// clang-format off
 #include <windows.h>
+// clang-format off
+#include <processthreadsapi.h>
 #elif KRAM_ANDROID
 #include <sys/resource.h>
 #else
