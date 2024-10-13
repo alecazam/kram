@@ -39,6 +39,7 @@
 // TODO: combine the constants into fewer registers, reference .x,..
 
 #pragma once
+// clang-format off
 
 #include <math.h>
 

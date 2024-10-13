@@ -99,6 +99,7 @@
 #include <stdarg.h>
 
 #if SIMD_ACCELERATE_MATH
+// clang-format off
 #include <simd/base.h>
 
 // NOTE: this reports 5 for macOS 13 minspec, but SIMD_LIBRARY_VERSION is set to 6.
@@ -148,6 +149,7 @@
 #endif
 #endif
 
+// clang-format on
 #endif // SIMD_ACCELERATE_MATH
 
 

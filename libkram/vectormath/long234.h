@@ -18,6 +18,8 @@ typedef long long1;
 extern "C" {
 #endif // __cplusplus
 
+// clang-format off
+
 // define c vector types
 // Apple uses long type here (32-bit) instead of long32_t
 macroVector8TypesAligned(long1, long)
@@ -33,6 +35,8 @@ macroVector8TypesStorageRenames(long, simd_long)
 namespace SIMD_NAMESPACE {
 
 macroVector8TypesStorageRenames(long, long)
+
+// clang-format on
 
 //-----------------------------------
 // imlementation - only code simd arch specific

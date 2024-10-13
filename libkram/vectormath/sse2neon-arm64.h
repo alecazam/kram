@@ -1,4 +1,5 @@
 #pragma once
+// clang-format off
 
 #ifndef SSE2NEON_H
 #define SSE2NEON_H

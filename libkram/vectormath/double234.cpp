@@ -13,6 +13,8 @@
 
 namespace SIMD_NAMESPACE {
 
+// clang-format off
+
 #if SIMD_ACCELERATE_MATH
 // These will get inlined here from the template
 macroVectorRepeatFnImpl(double, log)
@@ -43,6 +45,8 @@ macroVectorRepeatFnImpl(double, acos, ::acos)
 macroVectorRepeatFnImpl(double, atan, ::atan)
 
 #endif // SIMD_CMATH_MATH
+
+// clang-format on
 
 //---------------------------
 

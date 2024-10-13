@@ -31,6 +31,8 @@ typedef short half;
 // This means math and conversions don't work, so have to use simd ops
 #define SIMD_HALF4_ONLY !SIMD_HALF_FLOAT16
 
+// clang-format off
+
 // Half isn't something that should have math ops yet.  Just useful as packed type.
 // This does math, but really needs _Float16 to work properly for the operators.
 // That's not available on Android devices like it should be, but the Neon
@@ -53,6 +55,8 @@ macroVector8TypesStorageRenames(half, simd_half)
 namespace SIMD_NAMESPACE {
 
 macroVector2TypesStorageRenames(half, half)
+
+// clang-format on
 
 SIMD_CALL half2 half2m(half x) {
     return x;

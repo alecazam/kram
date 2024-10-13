@@ -7,6 +7,8 @@
 // This is not yet standalone.  vectormath234.h includes it.
 #if USE_SIMDLIB && SIMD_DOUBLE
 
+// clang-format off
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,6 +36,8 @@ macroVector8TypesStorageRenames(double, simd_double)
 namespace SIMD_NAMESPACE {
 
 macroVector8TypesStorageRenames(double, double)
+
+// clang-format on
 
 SIMD_CALL double2 double2m(double x) {
     return x;
@@ -548,6 +552,8 @@ SIMD_CALL const double3* as_double3(const double4* m) {
 //-------------------
 // Functions
 
+// clang-format off
+
 // power series
 macroVectorRepeatFnDecl(double, log)
 macroVectorRepeatFnDecl(double, exp)
@@ -562,6 +568,8 @@ macroVectorRepeatFnDecl(double, asin)
 macroVectorRepeatFnDecl(double, atan)
 
 macroVectorRepeatFn2Decl(double, atan2)
+
+// clang-format on
 
 SIMD_CALL double2 pow(double2 x, double2 y) { return exp(log(x) * y); }
 SIMD_CALL double3 pow(double3 x, double3 y) { return exp(log(x) * y); }
@@ -771,6 +779,7 @@ bool equal_rel(const double2x2& x, const double2x2& y, double tol);
 bool equal_rel(const double3x3& x, const double3x3& y, double tol);
 bool equal_rel(const double4x4& x, const double4x4& y, double tol);
 
+// clang-format off
 
 // operators for C++
 macroMatrixOps(double2x2);
@@ -778,6 +787,8 @@ macroMatrixOps(double3x3);
 // TODO: no mat ops yet on storage type double3x4
 // macroMatrixOps(double3x4);
 macroMatrixOps(double4x4);
+
+// clang-format on
 
 // fast conversions where possible
 SIMD_CALL const double3x3& as_double3x3(const double4x4& m) {

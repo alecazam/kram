@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+// clang-format off
+
 // define c++ vector/matrix types
 macroVector4TypesAligned(float, float)
 macroVector4TypesPacked(float, float)
@@ -27,12 +29,16 @@ typedef struct { float4a columns[4]; } float4x4a;
 macroVector4TypesStorageRenames(float, simd_float)
 #endif // SIMD_ACCELERATE_MATH_NAMES
 
+// clang-format on
+
 #ifdef __cplusplus
 }
 
 namespace SIMD_NAMESPACE {
 
+// clang-format off
 macroVector4TypesStorageRenames(float, float)
+// clang-format on
 
 //-----------------------------------
 // start of implementation
@@ -535,6 +541,8 @@ SIMD_CALL const float3* as_float3(const float4* m) {
 //    return reinterpret_cast<const float4&>(m);
 //}
 
+// clang-format off
+
 // power series
 macroVectorRepeatFnDecl(float, log)
 macroVectorRepeatFnDecl(float, exp)
@@ -550,6 +558,8 @@ macroVectorRepeatFnDecl(float, asin)
 macroVectorRepeatFnDecl(float, atan)
 
 macroVectorRepeatFn2Decl(float, atan2)
+
+// clang-format on
 
 // sincos requires accel 5 lib, and takes 2 ptrs
 // may need math fallback for some calls
@@ -787,12 +797,16 @@ bool equal_rel(const float4x4& x, const float4x4& y, float tol);
 
 // TODO: these think they are all member functions
 
+// clang-format off
+
 // operators for C++
 macroMatrixOps(float2x2);
 macroMatrixOps(float3x3);
 // TODO: no mat ops on storage type float3x4
 // macroMatrixOps(float3x4s);
 macroMatrixOps(float4x4);
+
+// clang-format on
 
 // fast conversions where possible
 SIMD_CALL const float3x3& as_float3x3(const float4x4& m) {

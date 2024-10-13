@@ -7,6 +7,8 @@
 // This is not yet standalone.  vectormath234.h includes it.
 #if USE_SIMDLIB && SIMD_INT
 
+// clang-format off
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -25,6 +27,8 @@ macroVector4TypesStorageRenames(int, simd_int)
 namespace SIMD_NAMESPACE {
 
 macroVector4TypesStorageRenames(int, int)
+
+// clang-format on
 
 SIMD_CALL int4 zeroext(int2 x) {
     int4 v = 0; v.xy = x; return v;

@@ -23,6 +23,8 @@
 
 namespace SIMD_NAMESPACE {
 
+// clang-format off
+
 #if SIMD_ACCELERATE_MATH
 // These will get inlined here from the template
 macroVectorRepeatFnImpl(float, log)
@@ -43,6 +45,8 @@ macroVectorRepeatFnImpl(float, cos, ::cosf)
 macroVectorRepeatFnImpl(float, tan, ::tanf)
 
 #endif // SIMD_CMATH_MATH
+
+// clang-format off
 
 // Wish cmath had this
 inline void sincosf(float radians, float& s, float& c) {

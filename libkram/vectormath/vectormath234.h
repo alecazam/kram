@@ -417,6 +417,8 @@ type##4 cppfunc(type##4 a, type##4 b) { return {func(a.x, b.x), func(a.y, b.y), 
 
 //-----------------------------------
 
+// clang-format off
+
 #include <inttypes.h> // for u/long
 
 #include <string>     // for formatter (only works using std::string, not eastl)
@@ -454,11 +456,8 @@ type##4 cppfunc(type##4 a, type##4 b) { return {func(a.x, b.x), func(a.y, b.y), 
 #include "float234.h"
 #include "double234.h"
 
-//---------------------------
-
 // This may not belong in here.  But just want to use the lib to build
-// some helpers.  
-
+// some helpers.
 #include "bounds234.h"
 
 //---------------------------
@@ -509,6 +508,8 @@ macroVector2TypesStorageRenames(short, short)
 }
 #endif // __cplusplus
 #endif // SIMD_SHORT
+
+// clang-format on
 
 //-------------------
 #ifdef __cplusplus
