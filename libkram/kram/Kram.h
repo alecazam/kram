@@ -74,8 +74,7 @@ string kramInfoToString(const string& srcFilename, bool isVerbose);
 // this is entry point to library for cli app
 int32_t kramAppMain(int32_t argc, char* argv[]);
 
-enum TexContentType
-{
+enum TexContentType {
     TexContentTypeUnknown = 0,
     TexContentTypeAlbedo,
     TexContentTypeNormal,
@@ -92,5 +91,4 @@ void fixPixelFormat(KTXImage& image, const char* filename);
 // This is using naming conventions on filenames, but KTX/KTX2 hold channel props
 TexContentType findContentTypeFromFilename(const char* filename);
 
-
-}  // namespace kram
+} // namespace kram

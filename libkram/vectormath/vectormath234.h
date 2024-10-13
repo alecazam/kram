@@ -135,7 +135,6 @@
 // transpose examples
 // https://godbolt.org/z/TYcvrP7Y3
 
-
 //-----------------------------------
 // config
 
@@ -151,15 +150,15 @@
 
 // only support avx2 and Neon, no avx-512 at first
 #if defined __ARM_NEON__
-#define SIMD_SSE  0
+#define SIMD_SSE 0
 #define SIMD_AVX2 0
 #define SIMD_NEON 1
 #elif defined __AVX2__ // x64 AVX2 or higher, can lower to AVX
-#define SIMD_SSE  1
+#define SIMD_SSE 1
 #define SIMD_AVX2 1
 #define SIMD_NEON 0
 #elif defined __SSE4_1__ // SSE 4.1+
-#define SIMD_SSE  1
+#define SIMD_SSE 1
 #define SIMD_AVX2 0
 #define SIMD_NEON 0
 #else
@@ -170,12 +169,12 @@
 #ifndef SIMD_CONFIG
 
 // fp comparisons gen a corresponding signed integer type
-#define SIMD_INT    1
-#define SIMD_LONG   1
+#define SIMD_INT 1
+#define SIMD_LONG 1
 
 // apple is signed-char, so make sure to set on -fsigned-char on other platforms
-#define SIMD_CHAR   1
-#define SIMD_SHORT  1
+#define SIMD_CHAR 1
+#define SIMD_SHORT 1
 
 // don't need these yet, but easy to add with macros
 //#define SIMD_UCHAR  0
@@ -186,8 +185,8 @@
 // SIMD_INT must be kept on for conditional tests.
 // SIMD_HALF for bitselect would need SIMD_SHORT or SIMD_INT?
 // #define SIMD_HALF   (1 && SIMD_SHORT)
-#define SIMD_HALF   (1)
-#define SIMD_FLOAT  (1 && SIMD_INT)
+#define SIMD_HALF (1)
+#define SIMD_FLOAT (1 && SIMD_INT)
 #define SIMD_DOUBLE (1 && SIMD_LONG)
 
 // Whether to support > 4 length vecs with some ops
@@ -196,10 +195,10 @@
 // controls over acclerate vs. func calls
 #ifdef __APPLE__
 #define SIMD_ACCELERATE_MATH 1
-#define SIMD_CMATH_MATH      0
+#define SIMD_CMATH_MATH 0
 #else
 #define SIMD_ACCELERATE_MATH 0
-#define SIMD_CMATH_MATH      1
+#define SIMD_CMATH_MATH 1
 #endif
 
 // This means simd_float4 will come from this file instead of simd.h
@@ -213,147 +212,159 @@
 // const means it doesn't pull from global changing state (what about constants)
 // and inline is needed or get unused static calls, always_inline forces inline
 // of these mostly wrapper calls.
-#define SIMD_CALL static inline __attribute__((__always_inline__,__const__,__nodebug__))
+#define SIMD_CALL static inline __attribute__((__always_inline__, __const__, __nodebug__))
 
 // op *=, +=, -=, /= mods the calling object, so can't be const
-#define SIMD_CALL_OP static inline __attribute__((__always_inline__,__nodebug__))
+#define SIMD_CALL_OP static inline __attribute__((__always_inline__, __nodebug__))
 
 //------------
 
 // aligned
-#define macroVector1TypesAligned(type, name) \
-typedef type name##1a; \
-typedef __attribute__((__ext_vector_type__(2)))  type name##2a; \
-typedef __attribute__((__ext_vector_type__(3)))  type name##3a; \
-typedef __attribute__((__ext_vector_type__(4)))  type name##4a; \
-typedef __attribute__((__ext_vector_type__(8)))  type name##8a; \
-typedef __attribute__((__ext_vector_type__(16))) type name##16a; \
-typedef __attribute__((__ext_vector_type__(32),__aligned__(16))) type name##32a; \
+#define macroVector1TypesAligned(type, name)                         \
+    typedef type name##1a;                                           \
+    typedef __attribute__((__ext_vector_type__(2))) type name##2a;   \
+    typedef __attribute__((__ext_vector_type__(3))) type name##3a;   \
+    typedef __attribute__((__ext_vector_type__(4))) type name##4a;   \
+    typedef __attribute__((__ext_vector_type__(8))) type name##8a;   \
+    typedef __attribute__((__ext_vector_type__(16))) type name##16a; \
+    typedef __attribute__((__ext_vector_type__(32), __aligned__(16))) type name##32a;
 
 // packed
-#define macroVector1TypesPacked(type, name) \
-typedef type name##1p; \
-typedef __attribute__((__ext_vector_type__(2),__aligned__(1)))  type name##2p; \
-typedef __attribute__((__ext_vector_type__(3),__aligned__(1)))  type name##3p; \
-typedef __attribute__((__ext_vector_type__(4),__aligned__(1)))  type name##4p; \
-typedef __attribute__((__ext_vector_type__(8),__aligned__(1)))  type name##8p; \
-typedef __attribute__((__ext_vector_type__(16),__aligned__(1))) type name##16p; \
-typedef __attribute__((__ext_vector_type__(32),__aligned__(1))) type name##32p; \
+#define macroVector1TypesPacked(type, name)                                          \
+    typedef type name##1p;                                                           \
+    typedef __attribute__((__ext_vector_type__(2), __aligned__(1))) type name##2p;   \
+    typedef __attribute__((__ext_vector_type__(3), __aligned__(1))) type name##3p;   \
+    typedef __attribute__((__ext_vector_type__(4), __aligned__(1))) type name##4p;   \
+    typedef __attribute__((__ext_vector_type__(8), __aligned__(1))) type name##8p;   \
+    typedef __attribute__((__ext_vector_type__(16), __aligned__(1))) type name##16p; \
+    typedef __attribute__((__ext_vector_type__(32), __aligned__(1))) type name##32p;
 
 // cpp rename for u/char
 #define macroVector1TypesStorageRenames(cname, cppname) \
-typedef ::cname##1a cppname##1; \
-typedef ::cname##2a cppname##2; \
-typedef ::cname##3a cppname##3; \
-typedef ::cname##4a cppname##4; \
-typedef ::cname##8a cppname##8; \
-typedef ::cname##16a cppname##16; \
-typedef ::cname##32a cppname##32; \
+    typedef ::cname##1a cppname##1;                     \
+    typedef ::cname##2a cppname##2;                     \
+    typedef ::cname##3a cppname##3;                     \
+    typedef ::cname##4a cppname##4;                     \
+    typedef ::cname##8a cppname##8;                     \
+    typedef ::cname##16a cppname##16;                   \
+    typedef ::cname##32a cppname##32;
 
 //------------
 
 // aligned
-#define macroVector2TypesAligned(type, name) \
-typedef type name##1a; \
-typedef __attribute__((__ext_vector_type__(2)))  type name##2a; \
-typedef __attribute__((__ext_vector_type__(3)))  type name##3a; \
-typedef __attribute__((__ext_vector_type__(4)))  type name##4a; \
-typedef __attribute__((__ext_vector_type__(8)))  type name##8a; \
-typedef __attribute__((__ext_vector_type__(16),__aligned__(16))) type name##16a; \
+#define macroVector2TypesAligned(type, name)                       \
+    typedef type name##1a;                                         \
+    typedef __attribute__((__ext_vector_type__(2))) type name##2a; \
+    typedef __attribute__((__ext_vector_type__(3))) type name##3a; \
+    typedef __attribute__((__ext_vector_type__(4))) type name##4a; \
+    typedef __attribute__((__ext_vector_type__(8))) type name##8a; \
+    typedef __attribute__((__ext_vector_type__(16), __aligned__(16))) type name##16a;
 
 // packed
-#define macroVector2TypesPacked(type, name) \
-typedef type name##1p; \
-typedef __attribute__((__ext_vector_type__(2),__aligned__(2)))  type name##2p; \
-typedef __attribute__((__ext_vector_type__(3),__aligned__(2)))  type name##3p; \
-typedef __attribute__((__ext_vector_type__(4),__aligned__(2)))  type name##4p; \
-typedef __attribute__((__ext_vector_type__(8),__aligned__(2)))  type name##8p; \
-typedef __attribute__((__ext_vector_type__(16),__aligned__(2))) type name##16p; \
+#define macroVector2TypesPacked(type, name)                                        \
+    typedef type name##1p;                                                         \
+    typedef __attribute__((__ext_vector_type__(2), __aligned__(2))) type name##2p; \
+    typedef __attribute__((__ext_vector_type__(3), __aligned__(2))) type name##3p; \
+    typedef __attribute__((__ext_vector_type__(4), __aligned__(2))) type name##4p; \
+    typedef __attribute__((__ext_vector_type__(8), __aligned__(2))) type name##8p; \
+    typedef __attribute__((__ext_vector_type__(16), __aligned__(2))) type name##16p;
 
 // cpp rename for half, u/short
 #define macroVector2TypesStorageRenames(cname, cppname) \
-typedef ::cname##1a cppname##1; \
-typedef ::cname##2a cppname##2; \
-typedef ::cname##3a cppname##3; \
-typedef ::cname##4a cppname##4; \
-typedef ::cname##8a cppname##8; \
-typedef ::cname##16a cppname##16; \
+    typedef ::cname##1a cppname##1;                     \
+    typedef ::cname##2a cppname##2;                     \
+    typedef ::cname##3a cppname##3;                     \
+    typedef ::cname##4a cppname##4;                     \
+    typedef ::cname##8a cppname##8;                     \
+    typedef ::cname##16a cppname##16;
 
 //------------
 
 // aligned
-#define macroVector4TypesAligned(type, name) \
-typedef type name##1a; \
-typedef __attribute__((__ext_vector_type__(2)))  type name##2a; \
-typedef __attribute__((__ext_vector_type__(3)))  type name##3a; \
-typedef __attribute__((__ext_vector_type__(4)))  type name##4a; \
-typedef __attribute__((__ext_vector_type__(8),__aligned__(16)))  type name##8a; \
+#define macroVector4TypesAligned(type, name)                       \
+    typedef type name##1a;                                         \
+    typedef __attribute__((__ext_vector_type__(2))) type name##2a; \
+    typedef __attribute__((__ext_vector_type__(3))) type name##3a; \
+    typedef __attribute__((__ext_vector_type__(4))) type name##4a; \
+    typedef __attribute__((__ext_vector_type__(8), __aligned__(16))) type name##8a;
 
 // typedef __attribute__((__ext_vector_type__(16),__aligned__(16))) type name##16s;
 
 // packed
-#define macroVector4TypesPacked(type, name) \
-typedef type name##1p; \
-typedef __attribute__((__ext_vector_type__(2),__aligned__(4)))  type name##2p; \
-typedef __attribute__((__ext_vector_type__(3),__aligned__(4)))  type name##3p; \
-typedef __attribute__((__ext_vector_type__(4),__aligned__(4)))  type name##4p; \
-typedef __attribute__((__ext_vector_type__(8),__aligned__(4)))  type name##8p; \
+#define macroVector4TypesPacked(type, name)                                        \
+    typedef type name##1p;                                                         \
+    typedef __attribute__((__ext_vector_type__(2), __aligned__(4))) type name##2p; \
+    typedef __attribute__((__ext_vector_type__(3), __aligned__(4))) type name##3p; \
+    typedef __attribute__((__ext_vector_type__(4), __aligned__(4))) type name##4p; \
+    typedef __attribute__((__ext_vector_type__(8), __aligned__(4))) type name##8p;
 
 // typedef __attribute__((__ext_vector_type__(16),__aligned__(4))) type name##16p; \
 
 // cpp rename for float, u/int
 #define macroVector4TypesStorageRenames(cname, cppname) \
-typedef ::cname##1a cppname##1; \
-typedef ::cname##2a cppname##2; \
-typedef ::cname##3a cppname##3; \
-typedef ::cname##4a cppname##4; \
-typedef ::cname##8a cppname##8; \
+    typedef ::cname##1a cppname##1;                     \
+    typedef ::cname##2a cppname##2;                     \
+    typedef ::cname##3a cppname##3;                     \
+    typedef ::cname##4a cppname##4;                     \
+    typedef ::cname##8a cppname##8;
 
 // typedef ::cname##16s cppname##16; \
 
 //------------
 
 // aligned
-#define macroVector8TypesAligned(type, name) \
-typedef type name##1a; \
-typedef __attribute__((__ext_vector_type__(2))) type name##2a; \
-typedef __attribute__((__ext_vector_type__(3),__aligned__(16))) type name##3a; \
-typedef __attribute__((__ext_vector_type__(4),__aligned__(16))) type name##4a; \
+#define macroVector8TypesAligned(type, name)                                        \
+    typedef type name##1a;                                                          \
+    typedef __attribute__((__ext_vector_type__(2))) type name##2a;                  \
+    typedef __attribute__((__ext_vector_type__(3), __aligned__(16))) type name##3a; \
+    typedef __attribute__((__ext_vector_type__(4), __aligned__(16))) type name##4a;
 
 // typedef __attribute__((__ext_vector_type__(8),__aligned__(16))) type name##8s;
 
 // packed
-#define macroVector8TypesPacked(type, name) \
-typedef type name##1p; \
-typedef __attribute__((__ext_vector_type__(2),__aligned__(8))) type name##2p; \
-typedef __attribute__((__ext_vector_type__(3),__aligned__(8))) type name##3p; \
-typedef __attribute__((__ext_vector_type__(4),__aligned__(8))) type name##4p; \
+#define macroVector8TypesPacked(type, name)                                        \
+    typedef type name##1p;                                                         \
+    typedef __attribute__((__ext_vector_type__(2), __aligned__(8))) type name##2p; \
+    typedef __attribute__((__ext_vector_type__(3), __aligned__(8))) type name##3p; \
+    typedef __attribute__((__ext_vector_type__(4), __aligned__(8))) type name##4p;
 
 //typedef __attribute__((__ext_vector_type__(8),__aligned__(8))) type name##8p;
 
 // cpp rename for double, u/long
 #define macroVector8TypesStorageRenames(cname, cppname) \
-typedef ::cname##1a cppname##1; \
-typedef ::cname##2a cppname##2; \
-typedef ::cname##3a cppname##3; \
-typedef ::cname##4a cppname##4; \
+    typedef ::cname##1a cppname##1;                     \
+    typedef ::cname##2a cppname##2;                     \
+    typedef ::cname##3a cppname##3;                     \
+    typedef ::cname##4a cppname##4;
 
 // typedef ::cname##8s cppname##8;
 
 //-----------------------------------
 
-#define macroMatrixOps(type) \
-SIMD_CALL_OP type& operator*=(type& x, const type& y) { x = mul(x, y); return x; } \
-SIMD_CALL_OP type& operator+=(type& x, const type& y) { x = add(x, y); return x; } \
-SIMD_CALL_OP type& operator-=(type& x, const type& y) { x = sub(x, y); return x; } \
-SIMD_CALL bool operator==(const type& x, const type& y) { return equal(x, y); } \
-SIMD_CALL bool operator!=(const type& x, const type& y) { return !(x == y); } \
-\
-SIMD_CALL type operator-(const type& x, const type& y) { return sub(x,y); } \
-SIMD_CALL type operator+(const type& x, const type& y) { return add(x,y); } \
-SIMD_CALL type operator*(const type& x, const type& y) { return mul(x,y); } \
-SIMD_CALL type::column_t operator*(const type::column_t& v, const type& y) { return mul(v,y); } \
-SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { return mul(x,v); } \
+#define macroMatrixOps(type)                                                                         \
+    SIMD_CALL_OP type& operator*=(type& x, const type& y)                                            \
+    {                                                                                                \
+        x = mul(x, y);                                                                               \
+        return x;                                                                                    \
+    }                                                                                                \
+    SIMD_CALL_OP type& operator+=(type& x, const type& y)                                            \
+    {                                                                                                \
+        x = add(x, y);                                                                               \
+        return x;                                                                                    \
+    }                                                                                                \
+    SIMD_CALL_OP type& operator-=(type& x, const type& y)                                            \
+    {                                                                                                \
+        x = sub(x, y);                                                                               \
+        return x;                                                                                    \
+    }                                                                                                \
+    SIMD_CALL bool operator==(const type& x, const type& y) { return equal(x, y); }                  \
+    SIMD_CALL bool operator!=(const type& x, const type& y) { return !(x == y); }                    \
+                                                                                                     \
+    SIMD_CALL type operator-(const type& x, const type& y) { return sub(x, y); }                     \
+    SIMD_CALL type operator+(const type& x, const type& y) { return add(x, y); }                     \
+    SIMD_CALL type operator*(const type& x, const type& y) { return mul(x, y); }                     \
+    SIMD_CALL type::column_t operator*(const type::column_t& v, const type& y) { return mul(v, y); } \
+    SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { return mul(x, v); }
 
 //-----------------------------------
 
@@ -362,31 +373,29 @@ SIMD_CALL type::column_t operator*(const type& x, const type::column_t& v) { ret
 
 // define functions that don't map to typical simd ops
 #define macroVectorRepeatFnDecl(type, cppfunc) \
-type##2 cppfunc(type##2 x); \
-type##3 cppfunc(type##3 x); \
-type##4 cppfunc(type##4 x); \
+    type##2 cppfunc(type##2 x);                \
+    type##3 cppfunc(type##3 x);                \
+    type##4 cppfunc(type##4 x);
 
 #define macroVectorRepeatFn2Decl(type, cppfunc) \
-type##2 cppfunc(type##2 x, type##2 y); \
-type##3 cppfunc(type##3 x, type##3 y); \
-type##4 cppfunc(type##4 x, type##4 y); \
-
+    type##2 cppfunc(type##2 x, type##2 y);      \
+    type##3 cppfunc(type##3 x, type##3 y);      \
+    type##4 cppfunc(type##4 x, type##4 y);
 
 //------------
-
 
 #if SIMD_ACCELERATE_MATH
 
 // remap simdk to simd namespace
-#define macroVectorRepeatFnImpl(type, cppfunc) \
-type##2 cppfunc(type##2 a) { return simd::cppfunc(a); } \
-type##3 cppfunc(type##3 a) { return simd::cppfunc(a); } \
-type##4 cppfunc(type##4 a) { return simd::cppfunc(a); } \
+#define macroVectorRepeatFnImpl(type, cppfunc)              \
+    type##2 cppfunc(type##2 a) { return simd::cppfunc(a); } \
+    type##3 cppfunc(type##3 a) { return simd::cppfunc(a); } \
+    type##4 cppfunc(type##4 a) { return simd::cppfunc(a); }
 
-#define macroVectorRepeatFn2Impl(type, cppfunc) \
-type##2 cppfunc(type##2 a, type##2 b) { return simd::cppfunc(a,b); } \
-type##3 cppfunc(type##3 a, type##3 b) { return simd::cppfunc(a,b); } \
-type##4 cppfunc(type##4 a, type##4 b) { return simd::cppfunc(a,b); } \
+#define macroVectorRepeatFn2Impl(type, cppfunc)                           \
+    type##2 cppfunc(type##2 a, type##2 b) { return simd::cppfunc(a, b); } \
+    type##3 cppfunc(type##3 a, type##3 b) { return simd::cppfunc(a, b); } \
+    type##4 cppfunc(type##4 a, type##4 b) { return simd::cppfunc(a, b); }
 
 #endif // SIMD_ACCELERATE_MATH
 
@@ -403,15 +412,15 @@ type##4 cppfunc(type##4 a, type##4 b) { return simd::cppfunc(a,b); } \
 
 // This calls function repeatedly, then returns as vector.
 // These don't call to the 4 version since it's so much more work.
-#define macroVectorRepeatFnImpl(type, cppfunc, func) \
-type##2 cppfunc(type##2 a) { return {func(a.x), func(a.y)}; } \
-type##3 cppfunc(type##3 a) { return {func(a.x), func(a.y), func(a.z)}; } \
-type##4 cppfunc(type##4 a) { return {func(a.x), func(a.y), func(a.z), func(a.w)}; } \
+#define macroVectorRepeatFnImpl(type, cppfunc, func)                         \
+    type##2 cppfunc(type##2 a) { return {func(a.x), func(a.y)}; }            \
+    type##3 cppfunc(type##3 a) { return {func(a.x), func(a.y), func(a.z)}; } \
+    type##4 cppfunc(type##4 a) { return {func(a.x), func(a.y), func(a.z), func(a.w)}; }
 
-#define macroVectorRepeatFn2Impl(type, cppfunc, func) \
-type##2 cppfunc(type##2 a, type##2 b) { return {func(a.x, b.x), func(a.y, b.y)}; } \
-type##3 cppfunc(type##3 a, type##3 b) { return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z)}; } \
-type##4 cppfunc(type##4 a, type##4 b) { return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z), func(a.w, z.w)}; } \
+#define macroVectorRepeatFn2Impl(type, cppfunc, func)                                                  \
+    type##2 cppfunc(type##2 a, type##2 b) { return {func(a.x, b.x), func(a.y, b.y)}; }                 \
+    type##3 cppfunc(type##3 a, type##3 b) { return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z)}; } \
+    type##4 cppfunc(type##4 a, type##4 b) { return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z), func(a.w, z.w)}; }
 
 #endif // SIMD_CMATH_MATH
 
@@ -567,10 +576,10 @@ SIMD_CALL float2 float2m(double2 x) { return __builtin_convertvector(x, float2);
 SIMD_CALL float3 float3m(double3 x) { return __builtin_convertvector(x, float3); }
 SIMD_CALL float4 float4m(double4 x) { return __builtin_convertvector(x, float4); }
 
-SIMD_CALL float2x2 float2x2m(const double2x2& x) { return float2x2(float2m(x[0]),float2m(x[1])); }
-SIMD_CALL float3x3 float3x3m(const double3x3& x) { return float3x3(float3m(x[0]),float3m(x[1]),float3m(x[2])); }
-SIMD_CALL float3x4 float3x4m(const double3x4& x) { return float3x4(float4m(x[0]),float4m(x[1]),float4m(x[2])); }
-SIMD_CALL float4x4 float4x4m(const double4x4& x) { return float4x4(float4m(x[0]),float4m(x[1]),float4m(x[2]),float4m(x[3])); }
+SIMD_CALL float2x2 float2x2m(const double2x2& x) { return float2x2(float2m(x[0]), float2m(x[1])); }
+SIMD_CALL float3x3 float3x3m(const double3x3& x) { return float3x3(float3m(x[0]), float3m(x[1]), float3m(x[2])); }
+SIMD_CALL float3x4 float3x4m(const double3x4& x) { return float3x4(float4m(x[0]), float4m(x[1]), float4m(x[2])); }
+SIMD_CALL float4x4 float4x4m(const double4x4& x) { return float4x4(float4m(x[0]), float4m(x[1]), float4m(x[2]), float4m(x[3])); }
 
 #endif // SIMD_DOUBLE
 
@@ -602,28 +611,28 @@ struct vecf {
     // TODO: add formatting options too
     // no packed float support
     vecf() {}
-   
+
 #if SIMD_FLOAT
     // vector
     string str(float2 v) const;
     string str(float3 v) const;
     string str(float4 v) const;
-    
+
     // matrix
     string str(const float2x2& m) const;
     string str(const float3x3& m) const;
     string str(const float4x4& m) const;
-    
+
     // quat
     string quat(quatf q) const { return str(q.v); }
 #endif // SIMD_FLOAT
-    
+
 #if SIMD_DOUBLE
     // vector
     string str(double2 v) const;
     string str(double3 v) const;
     string str(double4 v) const;
-    
+
     // matrix
     string str(const double2x2& m) const;
     string str(const double3x3& m) const;
@@ -636,7 +645,7 @@ struct vecf {
     string str(half3 v) const;
     string str(half4 v) const;
 #endif
-    
+
 #if SIMD_LONG
     // vector
     string str(long2 v) const;
@@ -661,4 +670,3 @@ struct vecf {
 #endif // __cplusplus
 
 #endif
-

@@ -9,7 +9,7 @@
 
 //#include "KramConfig.h"
 #include "KTXImage.h"
-#include "KramMipper.h"  // for Color
+#include "KramMipper.h" // for Color
 
 namespace kram {
 class Image;
@@ -19,18 +19,18 @@ using namespace STL_NAMESPACE;
 
 // each encoder has it's own set of outputs, can request encoder if overlap
 enum TexEncoder {
-    kTexEncoderUnknown = 0,  // pick best encoder
+    kTexEncoderUnknown = 0, // pick best encoder
 
-    kTexEncoderExplicit,  // r,rg,rgba 8|16f|32f
+    kTexEncoderExplicit, // r,rg,rgba 8|16f|32f
 
-    kTexEncoderATE,  // bc1,3,4,5,7,  and astc4x4,8x8 (macOS/iOS only),
-                     // different lib versions and support based on OS version
+    kTexEncoderATE, // bc1,3,4,5,7,  and astc4x4,8x8 (macOS/iOS only),
+                    // different lib versions and support based on OS version
 
-    kTexEncoderSquish,  // bc1,2,3,4,5
+    kTexEncoderSquish, // bc1,2,3,4,5
 
-    kTexEncoderBcenc,  // bc1,3,4,5,7
+    kTexEncoderBcenc, // bc1,3,4,5,7
 
-    kTexEncoderEtcenc,  // etc-r,rg11, etc2, no HDR format
+    kTexEncoderEtcenc, // etc-r,rg11, etc2, no HDR format
 
     kTexEncoderAstcenc,
 };
@@ -41,28 +41,28 @@ public:
     MyMTLTextureType textureType = MyMTLTextureType2D;
     TexEncoder textureEncoder = kTexEncoderUnknown;
     MyMTLPixelFormat pixelFormat = MyMTLPixelFormatInvalid;
-    string formatString = "";  // will convert to pixelFormat
+    string formatString = ""; // will convert to pixelFormat
 
     int32_t mipMinSize = 1;
     int32_t mipMaxSize = 32 * 1024;
     int32_t mipSkip = 0;
 
-    int32_t quality = 49;  // may want float
+    int32_t quality = 49; // may want float
 
     // ktx2 has a compression type and level
     KTX2Compressor compressor;
     bool isKTX2 = false;
 
-    bool doMipmaps = true;  // default to mips on
+    bool doMipmaps = true; // default to mips on
     bool doMipflood = false;
     bool isVerbose = false;
     bool doSDF = false;
-    
+
     bool isSourcePremultiplied = false; // skip further premul of src
     bool isPremultiplied = false;
     bool isPrezero = false;
-    
-    bool isNormal = false;  // signed, but may be stored unorm and swizzled (f.e. astc/bc3nm gggr or rrrg)
+
+    bool isNormal = false; // signed, but may be stored unorm and swizzled (f.e. astc/bc3nm gggr or rrrg)
 
     // can pick a smaller format if alpha = 1 (only for bc and etc)
     bool optimizeFormatForOpaque = false;
@@ -73,10 +73,10 @@ public:
     bool isSRGBSrc = false;
     bool isSRGBSrcFlag = false;
     bool isSRGBDst = false;
-    
+
     // For dst. TODO: could have signed source passed in
     bool isSigned = false;
-    
+
     // Applies to src.  But also have hdr specific output formats.
     bool isHDR = false;
 
@@ -92,7 +92,7 @@ public:
     int32_t chunksX = 0;
     int32_t chunksY = 0;
     int32_t chunksCount = 0;
-    
+
     int32_t sdfThreshold = 120;
 };
 
@@ -142,14 +142,14 @@ public:
     bool hasAlpha = false;
     bool isSRGBSrc = false;
     bool isSRGBSrcFlag = false;
-    
+
     // output image state
     bool isSRGBDst = false;
     bool isSigned = false;
     bool isNormal = false;
     bool isColorWeighted = false;
     bool isSourcePremultiplied = false;
-    bool isPremultiplied = false;  // don't premul
+    bool isPremultiplied = false; // don't premul
     bool isPrezero = false;
     bool isHDR = false;
 
@@ -157,7 +157,7 @@ public:
     bool doMipmaps = false;
     bool doMipflood = false;
     bool optimizeFormatForOpaque = false;
-    
+
     bool isVerbose = false;
 
     // compression format
@@ -183,12 +183,12 @@ public:
 
     int32_t mipMinSize = 1;
     int32_t mipMaxSize = 32 * 1024;
-    int32_t mipSkip = 0;  // count of large mips to skip
+    int32_t mipSkip = 0; // count of large mips to skip
 
     int32_t chunksX = 0;
     int32_t chunksY = 0;
     int32_t chunksCount = 0;
-    
+
     // This converts incoming image channel to bitmap
     int32_t sdfThreshold = 120;
 };
@@ -215,4 +215,4 @@ bool isEncoderAvailable(TexEncoder encoder);
 
 const char* encoderName(TexEncoder encoder);
 
-}  // namespace kram
+} // namespace kram

@@ -6,7 +6,7 @@
 
 #include "miniz.h"
 
-// test for perf of this compared to one in miniz also see 
+// test for perf of this compared to one in miniz also see
 // comments about faster algs.
 // libcompress can only encode lvl 5, but here it's only decompress.
 // This is failing on various ktx2 files in the mac archive
@@ -114,13 +114,13 @@ void ZipHelper::initZipEntryTables()
 
         ZipEntry& zipEntry = _zipEntrys[index];
         zipEntry.fileIndex = stat.m_file_index;
-        zipEntry.filename = filename;  // can alias
+        zipEntry.filename = filename; // can alias
         zipEntry.uncompressedSize = stat.m_uncomp_size;
         zipEntry.compressedSize = stat.m_comp_size;
-        zipEntry.modificationDate = (int32_t)stat.m_time;  // really a time_t
+        zipEntry.modificationDate = (int32_t)stat.m_time; // really a time_t
 #undef crc32
         zipEntry.crc32 = stat.m_crc32;
-        
+
         // TODO: stat.m_time, state.m_crc32
 
         index++;
@@ -222,9 +222,9 @@ bool ZipHelper::extract(const ZipEntry& entry, void* buffer, uint64_t bufferSize
     // https://dougallj.wordpress.com/2022/08/20/faster-zlib-deflate-decompression-on-the-apple-m1-and-x86/
 
     // https://developer.apple.com/documentation/compression/1481000-compression_decode_buffer?language=objc
-    
+
     // This call is internal, so caller has already tested failure cases.
-    
+
 #if USE_LIBCOMPRESSION
     const uint8_t* data = mz_zip_reader_get_raw_data(zip.get(), entry.fileIndex);
     if (!data) {
@@ -232,20 +232,19 @@ bool ZipHelper::extract(const ZipEntry& entry, void* buffer, uint64_t bufferSize
     }
     // need to extract data and header
     char scratchBuffer[compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)];
-    
+
     uint64_t bytesDecoded = compression_decode_buffer(
         (uint8_t*)buffer, entry.uncompressedSize,
         (const uint8_t*)data, entry.compressedSize,
-        scratchBuffer, 
+        scratchBuffer,
         COMPRESSION_ZLIB);
-    
+
     bool success = false;
-    if (bytesDecoded == entry.uncompressedSize)
-    {
+    if (bytesDecoded == entry.uncompressedSize) {
         success = true;
     }
 #else
-    
+
     // this pulls pages from mmap, no allocations
     mz_bool success = mz_zip_reader_extract_to_mem(
         zip.get(), entry.fileIndex, buffer, bufferSize, 0);
@@ -275,7 +274,7 @@ bool ZipHelper::extractRaw(const char* filename, const uint8_t** bufferData, uin
     }
 
     *bufferData = data;
-    
+
     // This isn't correct, need to return comp_size.
     // Caller may need the uncompressed size though to decompress fully into.
     //bufferDataSize = stat.m_uncomp_size;
@@ -284,4 +283,4 @@ bool ZipHelper::extractRaw(const char* filename, const uint8_t** bufferData, uin
     return true;
 }
 
-}  // namespace kram
+} // namespace kram

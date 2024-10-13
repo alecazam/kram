@@ -118,29 +118,25 @@
 #define STL_NAMESPACE eastl
 
 // this probably breaks all STL debugging
-#include <EASTL/algorithm.h>  // for max
+#include <EASTL/algorithm.h> // for max
 //#include "EASTL/atomic.h"
-#include <EASTL/functional.h>
-
-#include <EASTL/deque.h>
-#include <EASTL/iterator.h>    // for copy_if on Win
-#include <EASTL/sort.h>
-#include <EASTL/basic_string.h>
-
 #include <EASTL/array.h>
+#include <EASTL/basic_string.h>
+#include <EASTL/deque.h>
+#include <EASTL/functional.h>
+#include <EASTL/initializer_list.h>
+#include <EASTL/iterator.h> // for copy_if on Win
 #include <EASTL/map.h>
+#include <EASTL/shared_ptr.h> // includes thread/mutex
+#include <EASTL/sort.h>
+#include <EASTL/unique_ptr.h>
 #include <EASTL/unordered_map.h>
 #include <EASTL/vector.h>
-
-#include <EASTL/shared_ptr.h>  // includes thread/mutex
-#include <EASTL/unique_ptr.h>
-#include <EASTL/initializer_list.h>
 
 // std - simpler than using eastl version
 #include <atomic>
 
 #else
-
 
 // in Xcode 14, C++20 Modules have "partial" support... whatever that means.
 // These imports are taken from MSVC which has a full implementation.
@@ -153,34 +149,29 @@
 #define STL_NAMESPACE std
 
 // all std
-#include <algorithm>  // for max
-#include <functional>
-
-#include <deque>
-#include <iterator>  // for copy_if on Win
-#include <string>
-
-#include <atomic>
-#include <memory>    // for shared_ptr
-#include <initializer_list>
-
+#include <algorithm> // for max
 #include <array>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <cstdlib>
+#include <deque>
+#include <functional>
+#include <initializer_list>
+#include <iterator> // for copy_if on Win
 #include <map>
+#include <memory> // for shared_ptr
+#include <mutex>
+#include <random>
+#include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
-
-#include <mutex>
-#include <condition_variable>
-#include <thread>
-#include <chrono>
-#include <random>
-
-#include <cstdlib>
 //#include <exception>
+#include <filesystem>
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
-#include <filesystem>
 #include <variant>
 
 #endif
@@ -222,7 +213,7 @@ import vectormath
 // old vector math, using simd/simd.h
 #include "float4a.h"
 #endif
- 
+
 //---------------------------------------
 
 // this just strips args
@@ -231,10 +222,10 @@ import vectormath
 // this just strips args
 #define macroUnusedVar(x) (void)x
 
-//---------------------------------------
+    //---------------------------------------
 
-namespace kram {
-using namespace STL_NAMESPACE;
+    namespace kram {
+        using namespace STL_NAMESPACE;
 
 // Use this on vectors
 template <typename T>
@@ -242,4 +233,4 @@ inline size_t vsizeof(const vector<T>& v)
 {
     return sizeof(T) * v.size();
 }
-}  // namespace kram
+} // namespace kram

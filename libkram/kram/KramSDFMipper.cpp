@@ -6,7 +6,7 @@
 
 //#include <algorithm>
 
-#include "KTXImage.h"  // for mipDown
+#include "KTXImage.h" // for mipDown
 #include "KramMipper.h"
 #include "hedistance.h"
 
@@ -22,15 +22,15 @@ void SDFMipper::init(ImageData& srcImage, uint8_t sdfThreshold, bool isVerbose_)
     maxD = 0.0;
     isVerbose = isVerbose_;
     threshold = sdfThreshold;
-    
+
     int32_t w = srcImage.width;
     int32_t h = srcImage.height;
 
     srcBitmap.resize(w * h);
 
     // store bitmap in 8-bit grayscale
-    const Color* pixels = srcImage.pixels;               // 4 bytes
-    uint8_t* dstImageData = (uint8_t*)srcBitmap.data();  // 1 byte
+    const Color* pixels = srcImage.pixels; // 4 bytes
+    uint8_t* dstImageData = (uint8_t*)srcBitmap.data(); // 1 byte
 
     for (int32_t y = 0; y < h; y++) {
         int32_t y0 = y * w;
@@ -65,7 +65,7 @@ void SDFMipper::mipmap(ImageData& dstImage, int32_t mipLevel)
     dstImage.width = w;
     dstImage.height = h;
 
-    Color* pixels = dstImage.pixels;  // 4 bytes
+    Color* pixels = dstImage.pixels; // 4 bytes
 
     // stuff back into the rgb channel of the dst texture to feed to encoder
     // have to do in reverse, since we're expanding 1 channel to 4
@@ -74,7 +74,7 @@ void SDFMipper::mipmap(ImageData& dstImage, int32_t mipLevel)
 
     heman_distance_create_sdf((const heman::my_image*)&srcBitmapImage, (heman::my_image*)&dst, maxD, isVerbose);
 
-    const uint8_t* srcImageData = (const uint8_t*)pixels;  // 1 byte
+    const uint8_t* srcImageData = (const uint8_t*)pixels; // 1 byte
 
     for (int32_t y = h - 1; y >= 0; y--) {
         int32_t y0 = y * w;
@@ -93,4 +93,4 @@ void SDFMipper::mipmap(ImageData& dstImage, int32_t mipLevel)
     }
 }
 
-}  // namespace kram
+} // namespace kram

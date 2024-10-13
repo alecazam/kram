@@ -1,7 +1,7 @@
 /*
     Copyright 2015 Adobe Systems Incorporated
     Distributed under the MIT License (see license at http://stlab.adobe.com/licenses.html)
-    
+
     This file is intended as example code and is not production quality.
 */
 
@@ -15,13 +15,11 @@
 
 // TODO: get these three out of header, they pull in basic_string via system_errror header
 // but this file isn't included in many places.
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
 #include <thread>
 
 //#include <vector>
-
-
 
 /**************************************************************************************************/
 
@@ -59,7 +57,7 @@ public:
     {
         mylock lock{_mutex};
         while (_q.empty() && !_done) {
-            _ready.wait(lock);  // this is what blocks a given thread to avoid spin loop
+            _ready.wait(lock); // this is what blocks a given thread to avoid spin loop
         }
 
         // handle done state
@@ -107,7 +105,7 @@ public:
     // has queue been marked done or not
     bool is_done() const
     {
-        mylock lock{const_cast<mymutex&>(_mutex)};  // ugh
+        mylock lock{const_cast<mymutex&>(_mutex)}; // ugh
         bool done_ = _done;
         return done_;
     }
@@ -134,10 +132,8 @@ public:
 // limiting cores to say 4/16, then can run 4 processes faster w/o affinity.
 #define SUPPORT_AFFINITY (KRAM_ANDROID || KRAM_WIN)
 
-
 // only for ioS/macOS
-enum class ThreadPriority
-{
+enum class ThreadPriority {
     //Low = 1,
     //Medium = 2,
     Default = 3,
@@ -173,10 +169,10 @@ class task_system {
 
     const int32_t _count;
     vector<std::thread> _threads;
-    
+
     // want to store with thread itself, but no field.  Also have affinity, priority data.
     vector<string> _threadNames;
-    
+
     // currently one queue to each thread, but can steal from other queues
     vector<notification_queue> _q;
     std::atomic<int32_t> _index;
@@ -186,17 +182,17 @@ class task_system {
 #if SUPPORT_AFFINITY
     static void set_current_affinity(uint32_t threadIndex);
 #endif
-    
+
     static void set_current_priority(ThreadPriority priority);
-    
+
     void log_threads();
-    
+
 public:
     task_system(int32_t count = 1);
     ~task_system();
 
     int32_t num_threads() const { return _count; }
-    
+
     template <typename F>
     void async_(F&& f)
     {
@@ -218,5 +214,4 @@ public:
     }
 };
 
-
-}  // namespace kram
+} // namespace kram

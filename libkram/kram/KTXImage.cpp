@@ -58,110 +58,109 @@ const uint32_t DXGI_FORMAT_ETC2_OFFSET = 50;
 // enum based on dxgiformat.h, but added astc ldr/hdr from obscure docs
 // and added etc2/eac by just making up constants since those aren't public
 // Copyright (C) Microsoft.  All rights reserved.
-enum MyDXGIFormat : uint32_t
-{
-    DXGI_FORMAT_UNKNOWN                                 = 0,
-    
+enum MyDXGIFormat : uint32_t {
+    DXGI_FORMAT_UNKNOWN = 0,
+
     //DXGI_FORMAT_R32G32B32A32_TYPELESS                   = 1,
-    DXGI_FORMAT_R32G32B32A32_FLOAT                      = 2,
-    DXGI_FORMAT_R32G32B32A32_UINT                       = 3,
-    DXGI_FORMAT_R32G32B32A32_SINT                       = 4,
+    DXGI_FORMAT_R32G32B32A32_FLOAT = 2,
+    DXGI_FORMAT_R32G32B32A32_UINT = 3,
+    DXGI_FORMAT_R32G32B32A32_SINT = 4,
     //DXGI_FORMAT_R32G32B32_TYPELESS                      = 5,
-    DXGI_FORMAT_R32G32B32_FLOAT                         = 6,
-    DXGI_FORMAT_R32G32B32_UINT                          = 7,
-    DXGI_FORMAT_R32G32B32_SINT                          = 8,
-    
+    DXGI_FORMAT_R32G32B32_FLOAT = 6,
+    DXGI_FORMAT_R32G32B32_UINT = 7,
+    DXGI_FORMAT_R32G32B32_SINT = 8,
+
     //DXGI_FORMAT_R16G16B16A16_TYPELESS                   = 9,
-    DXGI_FORMAT_R16G16B16A16_FLOAT                      = 10,
-    DXGI_FORMAT_R16G16B16A16_UNORM                      = 11,
-    DXGI_FORMAT_R16G16B16A16_UINT                       = 12,
-    DXGI_FORMAT_R16G16B16A16_SNORM                      = 13,
-    DXGI_FORMAT_R16G16B16A16_SINT                       = 14,
-    
+    DXGI_FORMAT_R16G16B16A16_FLOAT = 10,
+    DXGI_FORMAT_R16G16B16A16_UNORM = 11,
+    DXGI_FORMAT_R16G16B16A16_UINT = 12,
+    DXGI_FORMAT_R16G16B16A16_SNORM = 13,
+    DXGI_FORMAT_R16G16B16A16_SINT = 14,
+
     //DXGI_FORMAT_R32G32_TYPELESS                         = 15,
-    DXGI_FORMAT_R32G32_FLOAT                            = 16,
-    DXGI_FORMAT_R32G32_UINT                             = 17,
-    DXGI_FORMAT_R32G32_SINT                             = 18,
+    DXGI_FORMAT_R32G32_FLOAT = 16,
+    DXGI_FORMAT_R32G32_UINT = 17,
+    DXGI_FORMAT_R32G32_SINT = 18,
     //DXGI_FORMAT_R32G8X24_TYPELESS                       = 19,
     //DXGI_FORMAT_D32_FLOAT_S8X24_UINT                    = 20,
     //DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS                = 21,
     //DXGI_FORMAT_X32_TYPELESS_G8X24_UINT                 = 22,
-    
+
     //DXGI_FORMAT_R10G10B10A2_TYPELESS                    = 23,
     //DXGI_FORMAT_R10G10B10A2_UNORM                       = 24,
     //DXGI_FORMAT_R10G10B10A2_UINT                        = 25,
     //DXGI_FORMAT_R11G11B10_FLOAT                         = 26,
-    
+
     //DXGI_FORMAT_R8G8B8A8_TYPELESS                       = 27,
-    DXGI_FORMAT_R8G8B8A8_UNORM                          = 28,
-    DXGI_FORMAT_R8G8B8A8_UNORM_SRGB                     = 29,
-    DXGI_FORMAT_R8G8B8A8_UINT                           = 30,
-    DXGI_FORMAT_R8G8B8A8_SNORM                          = 31,
-    DXGI_FORMAT_R8G8B8A8_SINT                           = 32,
-    
+    DXGI_FORMAT_R8G8B8A8_UNORM = 28,
+    DXGI_FORMAT_R8G8B8A8_UNORM_SRGB = 29,
+    DXGI_FORMAT_R8G8B8A8_UINT = 30,
+    DXGI_FORMAT_R8G8B8A8_SNORM = 31,
+    DXGI_FORMAT_R8G8B8A8_SINT = 32,
+
     //DXGI_FORMAT_R16G16_TYPELESS                         = 33,
-    DXGI_FORMAT_R16G16_FLOAT                            = 34,
-    DXGI_FORMAT_R16G16_UNORM                            = 35,
-    DXGI_FORMAT_R16G16_UINT                             = 36,
-    DXGI_FORMAT_R16G16_SNORM                            = 37,
-    DXGI_FORMAT_R16G16_SINT                             = 38,
-    
+    DXGI_FORMAT_R16G16_FLOAT = 34,
+    DXGI_FORMAT_R16G16_UNORM = 35,
+    DXGI_FORMAT_R16G16_UINT = 36,
+    DXGI_FORMAT_R16G16_SNORM = 37,
+    DXGI_FORMAT_R16G16_SINT = 38,
+
     //DXGI_FORMAT_R32_TYPELESS                            = 39,
     //DXGI_FORMAT_D32_FLOAT                               = 40,
-    DXGI_FORMAT_R32_FLOAT                               = 41,
-    DXGI_FORMAT_R32_UINT                                = 42,
-    DXGI_FORMAT_R32_SINT                                = 43,
-    
+    DXGI_FORMAT_R32_FLOAT = 41,
+    DXGI_FORMAT_R32_UINT = 42,
+    DXGI_FORMAT_R32_SINT = 43,
+
     //DXGI_FORMAT_R24G8_TYPELESS                          = 44,
     //DXGI_FORMAT_D24_UNORM_S8_UINT                       = 45,
     //DXGI_FORMAT_R24_UNORM_X8_TYPELESS                   = 46,
     //DXGI_FORMAT_X24_TYPELESS_G8_UINT                    = 47,
     //DXGI_FORMAT_R8G8_TYPELESS                           = 48,
-    
-    DXGI_FORMAT_R8G8_UNORM                              = 49,
-    DXGI_FORMAT_R8G8_UINT                               = 50,
-    DXGI_FORMAT_R8G8_SNORM                              = 51,
-    DXGI_FORMAT_R8G8_SINT                               = 52,
-    
-    DXGI_FORMAT_R16_FLOAT                               = 54,
+
+    DXGI_FORMAT_R8G8_UNORM = 49,
+    DXGI_FORMAT_R8G8_UINT = 50,
+    DXGI_FORMAT_R8G8_SNORM = 51,
+    DXGI_FORMAT_R8G8_SINT = 52,
+
+    DXGI_FORMAT_R16_FLOAT = 54,
     //DXGI_FORMAT_D16_UNORM                               = 55,
-    DXGI_FORMAT_R16_UNORM                               = 56,
-    DXGI_FORMAT_R16_UINT                                = 57,
-    DXGI_FORMAT_R16_SNORM                               = 58,
-    DXGI_FORMAT_R16_SINT                                = 59,
-    
-    DXGI_FORMAT_R8_UNORM                                = 61,
-    DXGI_FORMAT_R8_UINT                                 = 62,
-    DXGI_FORMAT_R8_SNORM                                = 63,
-    DXGI_FORMAT_R8_SINT                                 = 64,
-    
+    DXGI_FORMAT_R16_UNORM = 56,
+    DXGI_FORMAT_R16_UINT = 57,
+    DXGI_FORMAT_R16_SNORM = 58,
+    DXGI_FORMAT_R16_SINT = 59,
+
+    DXGI_FORMAT_R8_UNORM = 61,
+    DXGI_FORMAT_R8_UINT = 62,
+    DXGI_FORMAT_R8_SNORM = 63,
+    DXGI_FORMAT_R8_SINT = 64,
+
     //DXGI_FORMAT_A8_UNORM                                = 65,
     //DXGI_FORMAT_R1_UNORM                                = 66,
     //DXGI_FORMAT_R9G9B9E5_SHAREDEXP                      = 67,
-    
+
     //DXGI_FORMAT_R8G8_B8G8_UNORM                         = 68,
     //DXGI_FORMAT_G8R8_G8B8_UNORM                         = 69,
-    
-    DXGI_FORMAT_BC1_UNORM                               = 71,
-    DXGI_FORMAT_BC1_UNORM_SRGB                          = 72,
-    DXGI_FORMAT_BC3_UNORM                               = 77,
-    DXGI_FORMAT_BC3_UNORM_SRGB                          = 78,
-    DXGI_FORMAT_BC4_UNORM                               = 80,
-    DXGI_FORMAT_BC4_SNORM                               = 81,
-    DXGI_FORMAT_BC5_UNORM                               = 83,
-    DXGI_FORMAT_BC5_SNORM                               = 84,
-    DXGI_FORMAT_BC6H_UF16                               = 95,
-    DXGI_FORMAT_BC6H_SF16                               = 96,
-    DXGI_FORMAT_BC7_UNORM                               = 98,
-    DXGI_FORMAT_BC7_UNORM_SRGB                          = 99,
-    
-    DXGI_FORMAT_B8G8R8A8_UNORM                          = 87,
-    DXGI_FORMAT_B8G8R8X8_UNORM                          = 88,
+
+    DXGI_FORMAT_BC1_UNORM = 71,
+    DXGI_FORMAT_BC1_UNORM_SRGB = 72,
+    DXGI_FORMAT_BC3_UNORM = 77,
+    DXGI_FORMAT_BC3_UNORM_SRGB = 78,
+    DXGI_FORMAT_BC4_UNORM = 80,
+    DXGI_FORMAT_BC4_SNORM = 81,
+    DXGI_FORMAT_BC5_UNORM = 83,
+    DXGI_FORMAT_BC5_SNORM = 84,
+    DXGI_FORMAT_BC6H_UF16 = 95,
+    DXGI_FORMAT_BC6H_SF16 = 96,
+    DXGI_FORMAT_BC7_UNORM = 98,
+    DXGI_FORMAT_BC7_UNORM_SRGB = 99,
+
+    DXGI_FORMAT_B8G8R8A8_UNORM = 87,
+    DXGI_FORMAT_B8G8R8X8_UNORM = 88,
     //DXGI_FORMAT_B8G8R8A8_TYPELESS                       = 90,
-    DXGI_FORMAT_B8G8R8A8_UNORM_SRGB                     = 91,
+    DXGI_FORMAT_B8G8R8A8_UNORM_SRGB = 91,
     //DXGI_FORMAT_B8G8R8X8_TYPELESS                       = 92,
-    DXGI_FORMAT_B8G8R8X8_UNORM_SRGB                     = 93,
-    
+    DXGI_FORMAT_B8G8R8X8_UNORM_SRGB = 93,
+
     // Astc constants are taken from here.
     // HDR constant weren't too hard to guess from gap, but are a guess.
     // Not officially in DX now that Windows Mobile was killed off.
@@ -221,7 +220,7 @@ enum MyDXGIFormat : uint32_t
     DXGI_FORMAT_ASTC_12X12_UNORM = 186,
     DXGI_FORMAT_ASTC_12X12_UNORM_SRGB = 187,
     DXGI_FORMAT_ASTC_12X12_HDR = 188,
-    
+
     // These are fabricated by kram.  See here for RFI on formats
     // and extensibility on DDS format.  Use at own risk.
     // Set to DXGI_FORMAT_UNKNOWN if don't like this hack.
@@ -393,7 +392,7 @@ enum GLFormatBase {
     GL_RG = 0x8227,
     GL_RGB = 0x1907,
     GL_RGBA = 0x1908,
-    GL_SRGB = 0x8C40,  // only for BC1
+    GL_SRGB = 0x8C40, // only for BC1
     GL_SRGB_ALPHA = 0x8C42,
 };
 
@@ -419,7 +418,7 @@ enum MyVKFormat {
 
     // distinguish HDR from LDR formats
     // Provided by VK_EXT_texture_compression_astc_hdr
-    VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK_EXT = 1000066000,  // large decimal
+    VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK_EXT = 1000066000, // large decimal
     VK_FORMAT_ASTC_5x4_SFLOAT_BLOCK_EXT = 1000066001,
     VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK_EXT = 1000066002,
     VK_FORMAT_ASTC_6x5_SFLOAT_BLOCK_EXT = 1000066003,
@@ -481,18 +480,18 @@ enum MyVKFormat {
 //    VK_FORMAT_ASTC_8x6_UNORM_BLOCK = 169,
 //    VK_FORMAT_ASTC_8x6_SRGB_BLOCK = 170,
 
-//    VK_FORMAT_ASTC_10x5_UNORM_BLOCK = 173,
-//    VK_FORMAT_ASTC_10x5_SRGB_BLOCK = 174,
-//    VK_FORMAT_ASTC_10x6_UNORM_BLOCK = 175,
-//    VK_FORMAT_ASTC_10x6_SRGB_BLOCK = 176,
-//    VK_FORMAT_ASTC_10x8_UNORM_BLOCK = 177,
-//    VK_FORMAT_ASTC_10x8_SRGB_BLOCK = 178,
-//    VK_FORMAT_ASTC_10x10_UNORM_BLOCK = 179,
-//    VK_FORMAT_ASTC_10x10_SRGB_BLOCK = 180,
-//    VK_FORMAT_ASTC_12x10_UNORM_BLOCK = 181,
-//    VK_FORMAT_ASTC_12x10_SRGB_BLOCK = 182,
-//    VK_FORMAT_ASTC_12x12_UNORM_BLOCK = 183,
-//    VK_FORMAT_ASTC_12x12_SRGB_BLOCK = 184,
+// VK_FORMAT_ASTC_10x5_UNORM_BLOCK = 173,
+// VK_FORMAT_ASTC_10x5_SRGB_BLOCK = 174,
+// VK_FORMAT_ASTC_10x6_UNORM_BLOCK = 175,
+// VK_FORMAT_ASTC_10x6_SRGB_BLOCK = 176,
+// VK_FORMAT_ASTC_10x8_UNORM_BLOCK = 177,
+// VK_FORMAT_ASTC_10x8_SRGB_BLOCK = 178,
+// VK_FORMAT_ASTC_10x10_UNORM_BLOCK = 179,
+// VK_FORMAT_ASTC_10x10_SRGB_BLOCK = 180,
+// VK_FORMAT_ASTC_12x10_UNORM_BLOCK = 181,
+// VK_FORMAT_ASTC_12x10_SRGB_BLOCK = 182,
+// VK_FORMAT_ASTC_12x12_UNORM_BLOCK = 183,
+// VK_FORMAT_ASTC_12x12_SRGB_BLOCK = 184,
 
 #if SUPPORT_RGB
     // import only
@@ -553,9 +552,9 @@ public:
         constexpr uint32_t glNameStart = sizeof("GL_") - 1;
         constexpr uint32_t dxNameStart = sizeof("DXGI_FORMAT_") - 1;
         constexpr uint32_t metalNameStart = sizeof("MyMTLPixelFormat") - 1;
-        
+
         formatName = formatName_;
-        
+
         // skip the redunant part
         metalName = metalName_ + metalNameStart;
         vulkanName = vulkanName_ + vulkanNameStart;
@@ -638,27 +637,27 @@ static bool initFormatsIfNeeded()
     if (gFormatTable) {
         return true;
     }
-    
+
     mylock lock(gFormatTableMutex);
-    
+
     if (gFormatTable) {
         return true;
     }
-    
+
     mymap* formatTable = new unordered_map<uint32_t /*MyMTLPixelFormat*/, KTXFormatInfo>();
 
 // the following table could be included multiple ties to build switch statements, but instead use a hashmap
 #define KTX_FORMAT(fmt, metalType, vulkanType, directxType, glType, glBase, x, y, blockSize, numChannels, flags) \
-    (*formatTable)[(uint32_t)metalType] = KTXFormatInfo(             \
-        #fmt, #metalType, #vulkanType, #directxType, #glType,        \
-        metalType, vulkanType, directxType, glType, glBase,          \
+    (*formatTable)[(uint32_t)metalType] = KTXFormatInfo(                                                         \
+        #fmt, #metalType, #vulkanType, #directxType, #glType,                                                    \
+        metalType, vulkanType, directxType, glType, glBase,                                                      \
         x, y, blockSize, numChannels, (flags));
 
     KTX_FORMAT(Invalid, MyMTLPixelFormatInvalid, VK_FORMAT_UNDEFINED, DXGI_FORMAT_UNKNOWN, GL_UNKNOWN, GL_RGBA, 1, 1, 0, 0, 0)
 
     // BC
     KTX_FORMAT(BC1, MyMTLPixelFormatBC1_RGBA, VK_FORMAT_BC1_RGB_UNORM_BLOCK, DXGI_FORMAT_BC1_UNORM, GL_COMPRESSED_RGB_S3TC_DXT1_EXT, GL_RGB, 4, 4, 8, 3, FLAG_ENC_BC)
-    KTX_FORMAT(BC1s, MyMTLPixelFormatBC1_RGBA_sRGB, VK_FORMAT_BC1_RGB_SRGB_BLOCK, DXGI_FORMAT_BC1_UNORM_SRGB,GL_COMPRESSED_SRGB_S3TC_DXT1_EXT, GL_SRGB, 4, 4, 8, 3, FLAG_ENC_BC | FLAG_SRGB)
+    KTX_FORMAT(BC1s, MyMTLPixelFormatBC1_RGBA_sRGB, VK_FORMAT_BC1_RGB_SRGB_BLOCK, DXGI_FORMAT_BC1_UNORM_SRGB, GL_COMPRESSED_SRGB_S3TC_DXT1_EXT, GL_SRGB, 4, 4, 8, 3, FLAG_ENC_BC | FLAG_SRGB)
 
     KTX_FORMAT(BC3, MyMTLPixelFormatBC3_RGBA, VK_FORMAT_BC3_UNORM_BLOCK, DXGI_FORMAT_BC3_UNORM, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, GL_RGBA, 4, 4, 16, 4, FLAG_ENC_BC)
     KTX_FORMAT(BC3s, MyMTLPixelFormatBC3_RGBA_sRGB, VK_FORMAT_BC3_SRGB_BLOCK, DXGI_FORMAT_BC3_UNORM_SRGB, GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT, GL_SRGB_ALPHA, 4, 4, 16, 4, FLAG_ENC_BC | FLAG_SRGB)
@@ -691,23 +690,23 @@ static bool initFormatsIfNeeded()
     // ASTC
     KTX_FORMAT(ASTC4x4, MyMTLPixelFormatASTC_4x4_LDR, VK_FORMAT_ASTC_4x4_UNORM_BLOCK, DXGI_FORMAT_ASTC_4X4_UNORM, GL_COMPRESSED_RGBA_ASTC_4x4_KHR, GL_RGBA, 4, 4, 16, 4, FLAG_ENC_ASTC)
     KTX_FORMAT(ASTC4x4s, MyMTLPixelFormatASTC_4x4_sRGB, VK_FORMAT_ASTC_4x4_SRGB_BLOCK, DXGI_FORMAT_ASTC_4X4_UNORM_SRGB, GL_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR, GL_SRGB_ALPHA, 4, 4, 16, 4, FLAG_ENC_ASTC | FLAG_SRGB)
-    KTX_FORMAT(ASTC4x4h, MyMTLPixelFormatASTC_4x4_HDR, VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK_EXT, DXGI_FORMAT_UNKNOWN, GL_COMPRESSED_RGBA_ASTC_4x4_KHR, GL_RGBA, 4, 4, 16, 4, FLAG_ENC_ASTC | FLAG_16F)  // gl type same as LDR
+    KTX_FORMAT(ASTC4x4h, MyMTLPixelFormatASTC_4x4_HDR, VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK_EXT, DXGI_FORMAT_UNKNOWN, GL_COMPRESSED_RGBA_ASTC_4x4_KHR, GL_RGBA, 4, 4, 16, 4, FLAG_ENC_ASTC | FLAG_16F) // gl type same as LDR
 
     KTX_FORMAT(ASTC5x5, MyMTLPixelFormatASTC_5x5_LDR, VK_FORMAT_ASTC_5x5_UNORM_BLOCK, DXGI_FORMAT_ASTC_5X5_UNORM, GL_COMPRESSED_RGBA_ASTC_5x5_KHR, GL_RGBA, 5, 5, 16, 4, FLAG_ENC_ASTC)
     KTX_FORMAT(ASTC5x5s, MyMTLPixelFormatASTC_5x5_sRGB, VK_FORMAT_ASTC_5x5_SRGB_BLOCK, DXGI_FORMAT_ASTC_5X5_UNORM_SRGB, GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR, GL_SRGB_ALPHA, 5, 5, 16, 4, FLAG_ENC_ASTC | FLAG_SRGB)
-    KTX_FORMAT(ASTC5x5h, MyMTLPixelFormatASTC_5x5_HDR, VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK_EXT, DXGI_FORMAT_ASTC_5X5_HDR, GL_COMPRESSED_RGBA_ASTC_5x5_KHR, GL_RGBA, 5, 5, 16, 4, FLAG_ENC_ASTC | FLAG_16F)  // gl type same as LDR
+    KTX_FORMAT(ASTC5x5h, MyMTLPixelFormatASTC_5x5_HDR, VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK_EXT, DXGI_FORMAT_ASTC_5X5_HDR, GL_COMPRESSED_RGBA_ASTC_5x5_KHR, GL_RGBA, 5, 5, 16, 4, FLAG_ENC_ASTC | FLAG_16F) // gl type same as LDR
 
     KTX_FORMAT(ASTC6x6, MyMTLPixelFormatASTC_6x6_LDR, VK_FORMAT_ASTC_6x6_UNORM_BLOCK, DXGI_FORMAT_ASTC_6X6_UNORM, GL_COMPRESSED_RGBA_ASTC_6x6_KHR, GL_RGBA, 6, 6, 16, 4, FLAG_ENC_ASTC)
     KTX_FORMAT(ASTC6x6s, MyMTLPixelFormatASTC_6x6_sRGB, VK_FORMAT_ASTC_6x6_SRGB_BLOCK, DXGI_FORMAT_ASTC_6X6_UNORM_SRGB, GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR, GL_SRGB_ALPHA, 6, 6, 16, 4, FLAG_ENC_ASTC | FLAG_SRGB)
-    KTX_FORMAT(ASTC6x6h, MyMTLPixelFormatASTC_6x6_HDR, VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK_EXT, DXGI_FORMAT_ASTC_6X6_HDR, GL_COMPRESSED_RGBA_ASTC_6x6_KHR, GL_RGBA, 6, 6, 16, 4, FLAG_ENC_ASTC | FLAG_16F)  // gl type same as LDR
+    KTX_FORMAT(ASTC6x6h, MyMTLPixelFormatASTC_6x6_HDR, VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK_EXT, DXGI_FORMAT_ASTC_6X6_HDR, GL_COMPRESSED_RGBA_ASTC_6x6_KHR, GL_RGBA, 6, 6, 16, 4, FLAG_ENC_ASTC | FLAG_16F) // gl type same as LDR
 
     KTX_FORMAT(ASTC8x8, MyMTLPixelFormatASTC_8x8_LDR, VK_FORMAT_ASTC_8x8_UNORM_BLOCK, DXGI_FORMAT_ASTC_8X8_UNORM, GL_COMPRESSED_RGBA_ASTC_8x8_KHR, GL_RGBA, 8, 8, 16, 4, FLAG_ENC_ASTC)
     KTX_FORMAT(ASTC8x8s, MyMTLPixelFormatASTC_8x8_sRGB, VK_FORMAT_ASTC_8x8_SRGB_BLOCK, DXGI_FORMAT_ASTC_8X8_UNORM_SRGB, GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR, GL_SRGB_ALPHA, 8, 8, 16, 4, FLAG_ENC_ASTC | FLAG_SRGB)
-    KTX_FORMAT(ASTC8x8h, MyMTLPixelFormatASTC_8x8_HDR, VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK_EXT, DXGI_FORMAT_ASTC_8X8_HDR, GL_COMPRESSED_RGBA_ASTC_8x8_KHR, GL_RGBA, 8, 8, 16, 4, FLAG_ENC_ASTC | FLAG_16F)  // gl type same as LDR
+    KTX_FORMAT(ASTC8x8h, MyMTLPixelFormatASTC_8x8_HDR, VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK_EXT, DXGI_FORMAT_ASTC_8X8_HDR, GL_COMPRESSED_RGBA_ASTC_8x8_KHR, GL_RGBA, 8, 8, 16, 4, FLAG_ENC_ASTC | FLAG_16F) // gl type same as LDR
 
     // Explicit
     KTX_FORMAT(EXPr8, MyMTLPixelFormatR8Unorm, VK_FORMAT_R8_UNORM, DXGI_FORMAT_R8_UNORM, GL_R8, GL_RED, 1, 1, 1, 1, 0)
-    KTX_FORMAT(EXPrg8, MyMTLPixelFormatRG8Unorm,  VK_FORMAT_R8G8_UNORM, DXGI_FORMAT_R8G8_UNORM,GL_RG8, GL_RG, 1, 1, 2, 2, 0)
+    KTX_FORMAT(EXPrg8, MyMTLPixelFormatRG8Unorm, VK_FORMAT_R8G8_UNORM, DXGI_FORMAT_R8G8_UNORM, GL_RG8, GL_RG, 1, 1, 2, 2, 0)
     KTX_FORMAT(EXPrgba8, MyMTLPixelFormatRGBA8Unorm, VK_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, GL_RGBA8, GL_RGBA, 1, 1, 4, 4, 0)
     KTX_FORMAT(EXPsrgba8, MyMTLPixelFormatRGBA8Unorm_sRGB, VK_FORMAT_R8G8B8A8_SRGB, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, GL_SRGB8_ALPHA8, GL_SRGB_ALPHA, 1, 1, 4, 4, FLAG_SRGB)
 
@@ -729,7 +728,7 @@ static bool initFormatsIfNeeded()
 #endif
 
     gFormatTable = formatTable;
-    
+
     return true;
 }
 
@@ -867,7 +866,6 @@ uint32_t directxType(MyMTLPixelFormat format)
     return it.directxType;
 }
 
-
 const char* vulkanTypeName(MyMTLPixelFormat format)
 {
     const auto& it = formatInfo(format);
@@ -897,7 +895,7 @@ MyMTLPixelFormat glToMetalFormat(uint32_t format)
     if (format == 0) {
         return MyMTLPixelFormatInvalid;
     }
-    
+
     initFormatsIfNeeded();
 
     for (const auto& it : *gFormatTable) {
@@ -916,7 +914,7 @@ MyMTLPixelFormat vulkanToMetalFormat(uint32_t format)
     if (format == 0) {
         return MyMTLPixelFormatInvalid;
     }
-    
+
     initFormatsIfNeeded();
 
     for (const auto& it : *gFormatTable) {
@@ -935,7 +933,7 @@ MyMTLPixelFormat directxToMetalFormat(uint32_t format)
     if (format == 0) {
         return MyMTLPixelFormatInvalid;
     }
-    
+
     initFormatsIfNeeded();
 
     for (const auto& it : *gFormatTable) {
@@ -1185,22 +1183,24 @@ MyMTLTextureType KTXHeader::metalTextureType() const
 
 //---------------------------------------------------
 
-inline bool isKTX2File(const uint8_t* data, size_t dataSize) {
+inline bool isKTX2File(const uint8_t* data, size_t dataSize)
+{
     if (dataSize < sizeof(kKTX2Identifier)) {
         return false;
     }
-    
+
     if (memcmp(data, kKTX2Identifier, sizeof(kKTX2Identifier)) != 0) {
         return false;
     }
     return true;
 }
 
-inline bool isKTX1File(const uint8_t* data, size_t dataSize) {
+inline bool isKTX1File(const uint8_t* data, size_t dataSize)
+{
     if (dataSize < sizeof(kKTXIdentifier)) {
         return false;
     }
-    
+
     if (memcmp(data, kKTXIdentifier, sizeof(kKTXIdentifier)) != 0) {
         return false;
     }
@@ -1289,9 +1289,8 @@ void KTXImage::initProps(const uint8_t* propsData, size_t propDataSize)
             //LOGD("KTXImage", "KTXProp '%s': %s\n", keyStart, valueStart);
             auto propPair = STL_NAMESPACE::make_pair(
                 string((const char*)keyStart),
-                string((const char*)valueStart)
-            );
-                          
+                string((const char*)valueStart));
+
             props.emplace_back(propPair);
 
             // pad to 4 byte alignment
@@ -1311,8 +1310,7 @@ void KTXImage::addProp(const char* name, const char* value)
     }
     auto propPair = STL_NAMESPACE::make_pair(
         string(name),
-        string(value)
-    );
+        string(value));
     props.emplace_back(propPair);
 }
 
@@ -1440,7 +1438,7 @@ void KTXImage::initMipLevels(bool doMipmaps, int32_t mipMinSize, int32_t mipMaxS
 
     bool needsDownsample = (numSkippedMips > 0) || (w > mipMaxSize || h > mipMaxSize);
 
-    int32_t maxMipLevels = 16;  // 64K x 64K
+    int32_t maxMipLevels = 16; // 64K x 64K
 
     // can still downsample src multiple times even with only 1 level exported
     if ((!doMipmaps) && needsDownsample) {
@@ -1821,8 +1819,8 @@ bool KTXImage::openKTX2(const uint8_t* imageData, size_t imageDataLength, bool i
 
             // uncompressed level
             auto& level1 = mipLevels[i];
-            level1.lengthCompressed = level2.lengthCompressed;      // need this for copyLevel to have enough data
-            uint8_t* dstData = (uint8_t*)fileData + level1.offset;  // can const_cast, since class owns data
+            level1.lengthCompressed = level2.lengthCompressed; // need this for copyLevel to have enough data
+            uint8_t* dstData = (uint8_t*)fileData + level1.offset; // can const_cast, since class owns data
 
             if (!unpackLevel(i, srcData, dstData)) {
                 return false;
@@ -1880,7 +1878,7 @@ bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* 
 #if USE_LIBCOMPRESSION
                 // TODO: see if this is faster
                 char scratchBuffer[compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)];
-                
+
                 size_t dstDataSizeMiniz = compression_decode_buffer(
                     (uint8_t*)dstData, dstDataSize,
                     (const uint8_t*)srcData, srcDataSize,
@@ -1894,7 +1892,7 @@ bool KTXImage::unpackLevel(uint32_t mipNumber, const uint8_t* srcData, uint8_t* 
                     return false;
                 }
 #endif
-              if (dstDataSizeMiniz != dstDataSize) {
+                if (dstDataSizeMiniz != dstDataSize) {
                     KLOGE("kram", "decode mip zlib size not expected");
                     return false;
                 }
@@ -1949,4 +1947,4 @@ void KTXImage::reserveImageData(size_t totalSize)
     fileData = _imageData.data();
 }
 
-}  // namespace kram
+} // namespace kram

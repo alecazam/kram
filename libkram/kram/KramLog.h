@@ -80,7 +80,6 @@ int32_t append_vsprintf(string& str, const char* format, va_list args);
 // ugh - name conflict if format or format_string or format_str
 string format(const char* format, ...) __printflike(1, 2);
 
-
 bool startsWith(const char* str, const string& substring);
 
 bool endsWithExtension(const char* str, const string& substring);
@@ -118,5 +117,4 @@ inline uint32_t StringToUInt32(const char* num)
     return (int32_t)StringToUInt64(num);
 }
 
-
-}  // namespace kram
+} // namespace kram

@@ -35,4 +35,4 @@ private:
     vector<uint8_t> srcBitmap;
 };
 
-}  // namespace kram
+} // namespace kram

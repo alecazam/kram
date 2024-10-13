@@ -18,17 +18,17 @@
  */
 
 #include <io.h>
-#include <windows.h>
 #include <sys/types.h>
+#include <windows.h>
 
-#define PROT_READ     0x1
-#define PROT_WRITE    0x2
-#define PROT_EXEC     0x4
+#define PROT_READ 0x1
+#define PROT_WRITE 0x2
+#define PROT_EXEC 0x4
 
-#define MAP_SHARED    0x01
-#define MAP_PRIVATE   0x02
-#define MAP_ANON      0x20
-#define MAP_FAILED    ((void *) -1)
+#define MAP_SHARED 0x01
+#define MAP_PRIVATE 0x02
+#define MAP_ANON 0x20
+#define MAP_FAILED ((void *)-1)
 
 // off_t is 32-bit, which isn't great
 using myoff_t = int64_t;
@@ -42,7 +42,6 @@ using myoff_t = int64_t;
 //#define DWORD_LO(x) (x)
 //#endif
 
-
 static void *mmap(void *start, size_t length, int prot, int flags, int fd, myoff_t offset)
 {
     if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC))
@@ -50,7 +49,8 @@ static void *mmap(void *start, size_t length, int prot, int flags, int fd, myoff
     if (fd == -1) {
         if (!(flags & MAP_ANON) || offset)
             return MAP_FAILED;
-    } else if (flags & MAP_ANON)
+    }
+    else if (flags & MAP_ANON)
         return MAP_FAILED;
 
     DWORD flProtect = PAGE_READONLY;
@@ -59,12 +59,13 @@ static void *mmap(void *start, size_t length, int prot, int flags, int fd, myoff
             flProtect = PAGE_EXECUTE_READWRITE;
         else
             flProtect = PAGE_READWRITE;
-    } else if (prot & PROT_EXEC) {
+    }
+    else if (prot & PROT_EXEC) {
         if (prot & PROT_READ)
             flProtect = PAGE_EXECUTE_READ;
         else if (prot & PROT_EXEC)
             flProtect = PAGE_EXECUTE;
-    } 
+    }
 
     myoff_t end = length + offset;
     HANDLE mmap_fd, h;
@@ -86,14 +87,14 @@ static void *mmap(void *start, size_t length, int prot, int flags, int fd, myoff
     if (flags & MAP_PRIVATE)
         dwDesiredAccess |= FILE_MAP_COPY;
     void *ret = MapViewOfFile(h, dwDesiredAccess, DWORD_HI(offset), DWORD_LO(offset), length);
-   
+
     // can free the file mapping, mmap will hold it
     CloseHandle(h);
-    
+
     if (ret == NULL) {
         ret = MAP_FAILED;
     }
-    
+
     return ret;
 }
 

@@ -10,7 +10,6 @@
 //#include "KramConfig.h"
 
 #include "KramLog.h"
-
 #include "core.h" // really fmt/core.h
 #include "format.h" // really fmt/format.h - for FMT_STRING
 
@@ -20,8 +19,8 @@
 namespace kram {
 
 int32_t logMessage(const char* group, int32_t logLevel,
-                const char* file, int32_t line, const char* func,
-                fmt::string_view format, fmt::format_args args);
+                   const char* file, int32_t line, const char* func,
+                   fmt::string_view format, fmt::format_args args);
 
 // This is a way to convert to single function call, so handling
 // can be buriend within that.
@@ -66,4 +65,4 @@ int32_t append_sprintf_fmt(string& s, const S& format, Args&&... args)
     return append_sprintf_impl(s, format, fmt::make_format_args(args...));
 }
 
-}  // namespace kram
+} // namespace kram

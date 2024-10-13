@@ -152,8 +152,6 @@
 // clang-format on
 #endif // SIMD_ACCELERATE_MATH
 
-
-
 namespace SIMD_NAMESPACE {
 
 void TestCalls()
@@ -161,11 +159,10 @@ void TestCalls()
 #if SIMD_FLOAT
     float4a va = 0;
     float4p vp = (float)1;
-    
+
     va = vp;
     vp = va;
 #endif
-    
 }
 
 // Check format arguments.
@@ -179,10 +176,10 @@ inline string format(const char* format, ...) __printflike(1, 2);
 inline string format(const char* format, ...)
 {
     string str;
-    
+
     va_list args;
     va_start(args, format);
-    
+
     // format once to get length (without NULL at end)
     va_list argsCopy;
     va_copy(argsCopy, args);
@@ -192,36 +189,42 @@ inline string format(const char* format, ...)
     // replace string
     str.resize(len, 0);
     vsnprintf((char*)str.c_str(), len + 1, format, args);
-    
+
     va_end(args);
-    
+
     return str;
 }
 
 #if SIMD_DOUBLE
 
-string vecf::str(double2 v) const {
+string vecf::str(double2 v) const
+{
     return format("(%f %f)", v.x, v.y);
 }
-string vecf::str(double3 v) const {
+string vecf::str(double3 v) const
+{
     return format("(%f %f %f)", v.x, v.y, v.z);
 }
-string vecf::str(double4 v) const {
+string vecf::str(double4 v) const
+{
     return format("(%f %f %f %f)", v.x, v.y, v.z, v.w);
 }
- 
-string vecf::str(const double2x2& m) const {
+
+string vecf::str(const double2x2& m) const
+{
     return format("%s\n%s\n",
-        str(m[0]).c_str(), str(m[1]).c_str());
+                  str(m[0]).c_str(), str(m[1]).c_str());
 }
-string vecf::str(const double3x3& m) const {
+string vecf::str(const double3x3& m) const
+{
     return format("%s\n%s\n%s\n",
-        str(m[0]).c_str(), str(m[1]).c_str(), str(m[2]).c_str());
+                  str(m[0]).c_str(), str(m[1]).c_str(), str(m[2]).c_str());
 }
-string vecf::str(const double4x4& m) const {
-  return format("%s\n%s\n%s\n%s\n",
-      str(m[0]).c_str(), str(m[1]).c_str(),
-      str(m[2]).c_str(), str(m[3]).c_str());
+string vecf::str(const double4x4& m) const
+{
+    return format("%s\n%s\n%s\n%s\n",
+                  str(m[0]).c_str(), str(m[1]).c_str(),
+                  str(m[2]).c_str(), str(m[3]).c_str());
 }
 
 #endif
@@ -230,28 +233,34 @@ string vecf::str(const double4x4& m) const {
 
 #if SIMD_FLOAT
 
-string vecf::str(float2 v) const {
+string vecf::str(float2 v) const
+{
     return format("(%f %f)", v.x, v.y);
 }
-string vecf::str(float3 v) const {
+string vecf::str(float3 v) const
+{
     return format("(%f %f %f)", v.x, v.y, v.z);
 }
-string vecf::str(float4 v) const {
+string vecf::str(float4 v) const
+{
     return format("(%f %f %f %f)", v.x, v.y, v.z, v.w);
 }
- 
-string vecf::str(const float2x2& m) const {
+
+string vecf::str(const float2x2& m) const
+{
     return format("%s\n%s\n",
-        str(m[0]).c_str(), str(m[1]).c_str());
+                  str(m[0]).c_str(), str(m[1]).c_str());
 }
-string vecf::str(const float3x3& m) const {
+string vecf::str(const float3x3& m) const
+{
     return format("%s\n%s\n%s\n",
-        str(m[0]).c_str(), str(m[1]).c_str(), str(m[2]).c_str());
+                  str(m[0]).c_str(), str(m[1]).c_str(), str(m[2]).c_str());
 }
-string vecf::str(const float4x4& m) const {
-  return format("%s\n%s\n%s\n%s\n",
-      str(m[0]).c_str(), str(m[1]).c_str(),
-      str(m[2]).c_str(), str(m[3]).c_str());
+string vecf::str(const float4x4& m) const
+{
+    return format("%s\n%s\n%s\n%s\n",
+                  str(m[0]).c_str(), str(m[1]).c_str(),
+                  str(m[2]).c_str(), str(m[3]).c_str());
 }
 
 #endif // SIMD_FLOAT
@@ -260,28 +269,34 @@ string vecf::str(const float4x4& m) const {
 
 #if SIMD_HALF_FLOAT16
 
-string vecf::str(half2 v) const {
+string vecf::str(half2 v) const
+{
     return format("(%f %f)", (double)v.x, (double)v.y);
 }
-string vecf::str(half3 v) const {
+string vecf::str(half3 v) const
+{
     return format("(%f %f %f)", (double)v.x, (double)v.y, (double)v.z);
 }
-string vecf::str(half4 v) const {
+string vecf::str(half4 v) const
+{
     return format("(%f %f %f %f)", (double)v.x, (double)v.y, (double)v.z, (double)v.w);
 }
 
 #elif SIMD_HALF4_ONLY
 
 // this converts half4 to float, then just prints that
-string vecf::str(half2 v) const {
+string vecf::str(half2 v) const
+{
     float4 vv = float4m(zeroext(v));
     return format("(%f %f)", vv.x, vv.y);
 }
-string vecf::str(half3 v) const {
+string vecf::str(half3 v) const
+{
     float4 vv = float4m(zeroext(v));
     return format("(%f %f %f)", vv.x, vv.y, vv.z);
 }
-string vecf::str(half4 v) const {
+string vecf::str(half4 v) const
+{
     float4 vv = float4m(v);
     return format("(%f %f %f %f)", vv.x, vv.y, vv.z, vv.w);
 }
@@ -291,13 +306,16 @@ string vecf::str(half4 v) const {
 #endif // SIMD_HALF
 
 #if SIMD_INT
-string vecf::str(int2 v) const {
+string vecf::str(int2 v) const
+{
     return format("(%d %d)", v.x, v.y);
 }
-string vecf::str(int3 v) const {
+string vecf::str(int3 v) const
+{
     return format("(%d %d %d)", v.x, v.y, v.z);
 }
-string vecf::str(int4 v) const {
+string vecf::str(int4 v) const
+{
     return format("(%d %d %d %d)", v.x, v.y, v.z, v.w);
 }
 #endif
@@ -307,193 +325,194 @@ string vecf::str(int4 v) const {
 // This works across Win and macOS, so don't need to use PRId64.
 #define long1cast long long
 
-string vecf::str(long2 v) const {
+string vecf::str(long2 v) const
+{
     return format("(%lld %lld)", (long1cast)v.x, (long1cast)v.y);
 }
-string vecf::str(long3 v) const {
+string vecf::str(long3 v) const
+{
     return format("(%lld %lld %lld)", (long1cast)v.x, (long1cast)v.y, (long1cast)v.z);
 }
-string vecf::str(long4 v) const {
+string vecf::str(long4 v) const
+{
     return format("(%lld %lld %lld %lld)", (long1cast)v.x, (long1cast)v.y, (long1cast)v.z, (long1cast)v.w);
 }
 #endif
-
-
 
 //-----------------------------
 
 #define FMT_SEP() s += "-----------\n"
 
-string vecf::simd_configs() const {
+string vecf::simd_configs() const
+{
     string s;
-    
+
 #define FMT_CONFIG(val) s += format("%s: %d\n", #val, val);
-    
+
     FMT_CONFIG(SIMD_SSE);
     FMT_CONFIG(SIMD_NEON);
-    
+
 #if SIMD_SSE
     bool hasSSE42 = false;
     bool hasAVX = false;
     bool hasAVX2 = false;
-    
+
     bool hasF16C = false;
     bool hasFMA = false;
-    
-    #if SIMD_SSE
+
+#if SIMD_SSE
     hasSSE42 = true;
-    #endif
-    #ifdef __AVX__
+#endif
+#ifdef __AVX__
     hasAVX = true;
-    #endif
-    #if SIMD_AVX2
+#endif
+#if SIMD_AVX2
     hasAVX2 = true;
-    #endif
-    
+#endif
+
     // TODO: AVX-512 flags (combine into one?)
     // (__AVX512F__) && (__AVX512DQ__) && (__AVX512CD__) && (__AVX512BW__) && (__AVX512VL__) && (__AVX512VBMI2__)
-   
-    #ifdef __F16C__
+
+#ifdef __F16C__
     hasF16C = true;
-    #endif
-    #ifdef __FMA__
+#endif
+#ifdef __FMA__
     hasFMA = true;
-    #endif
-    
+#endif
+
     if (hasAVX2)
         s += format("%s: %d\n", "AVX2 ", hasAVX2);
     else if (hasAVX)
         s += format("%s: %d\n", "AVX  ", hasAVX);
     else if (hasSSE42)
         s += format("%s: %d\n", "SSE42 ", hasSSE42);
-    
+
     s += format("%s: %d\n", "F16C  ", hasF16C);
     s += format("%s: %d\n", "FMA   ", hasFMA);
-    
+
     // fp-contract, etc ?
     // CRC (may not be worth it)
-                                                    
+
 #endif
-    
+
 #if SIMD_NEON
     // any neon setting, arm64 version
     // __ARM_VFPV4__
     // CRC (may not be worth it)
-    
+
 #endif
-    
+
     FMT_CONFIG(SIMD_FLOAT_EXT);
     FMT_CONFIG(SIMD_HALF_FLOAT16);
 #if SIMD_HALF
     FMT_CONFIG(SIMD_HALF4_ONLY);
 #endif
-    
+
     FMT_SEP();
-    
+
     FMT_CONFIG(SIMD_CMATH_MATH);
     FMT_CONFIG(SIMD_ACCELERATE_MATH);
 #if SIMD_ACCELERATE_MATH
-    // Dump the min version. This is supposed to control SIMD_LIBRARY_VERSION
-    #if __APPLE__
-    #if TARGET_OS_OSX
-        FMT_CONFIG(__MAC_OS_X_VERSION_MIN_REQUIRED);
-    #elif TARGET_OS_VISION
-        FMT_CONFIG(__XR_OS_VERSION_MIN_REQUIRED);
-    #else
-        FMT_CONFIG(__IPHONE_OS_VERSION_MIN_REQUIRED);
-    #endif
-    #endif
-    
+// Dump the min version. This is supposed to control SIMD_LIBRARY_VERSION
+#if __APPLE__
+#if TARGET_OS_OSX
+    FMT_CONFIG(__MAC_OS_X_VERSION_MIN_REQUIRED);
+#elif TARGET_OS_VISION
+    FMT_CONFIG(__XR_OS_VERSION_MIN_REQUIRED);
+#else
+    FMT_CONFIG(__IPHONE_OS_VERSION_MIN_REQUIRED);
+#endif
+#endif
+
     FMT_CONFIG(SIMD_LIBRARY_VERSION); // lib based on min os target
     FMT_CONFIG(SIMD_CURRENT_LIBRARY_VERSION); // max lib based on sdk
     FMT_CONFIG(SIMD_LIBRARY_VERSION_TEST);
     FMT_CONFIG(SIMD_ACCELERATE_MATH_NAMES);
 #endif
-    
+
     FMT_SEP();
-    
+
     FMT_CONFIG(SIMD_HALF);
     FMT_CONFIG(SIMD_FLOAT);
     FMT_CONFIG(SIMD_DOUBLE);
-   
+
     FMT_CONFIG(SIMD_INT);
     FMT_CONFIG(SIMD_LONG);
-    
+
     // don't have these implemented yet
     //FMT_CONFIG(SIMD_CHAR);
     //FMT_CONFIG(SIMD_SHORT);
-    
+
 #undef FMT_CONFIG
-    
+
     return s;
 }
 
-string vecf::simd_alignments() const {
+string vecf::simd_alignments() const
+{
     string s;
-    
+
 #define FMT_CONFIG(val) s += format("%s: %zu %zu\n", #val, sizeof(val), __alignof(val));
-    
+
     // TODO: add other types int, half?
-    
+
 #if SIMD_FLOAT
     FMT_SEP();
-    
+
     FMT_CONFIG(float2);
     FMT_CONFIG(float3);
     FMT_CONFIG(float4);
     FMT_CONFIG(float8);
     //FMT_CONFIG(float16);
-    
+
     FMT_CONFIG(float2x2);
     FMT_CONFIG(float3x3);
     FMT_CONFIG(float3x4);
     FMT_CONFIG(float4x4);
 #endif
-    
+
 #if SIMD_DOUBLE
     FMT_SEP();
-    
+
     FMT_CONFIG(double2);
     FMT_CONFIG(double3);
     FMT_CONFIG(double4);
     // FMT_CONFIG(double8);
-    
+
     FMT_CONFIG(double2x2);
     FMT_CONFIG(double3x3);
     FMT_CONFIG(double3x4);
     FMT_CONFIG(double4x4);
 #endif
-    
+
 #if SIMD_INT
     FMT_SEP();
-    
+
     FMT_CONFIG(int2);
     FMT_CONFIG(int3);
     FMT_CONFIG(int4);
     FMT_CONFIG(int8);
     //FMT_CONFIG(int16);
 #endif
-    
+
 #if SIMD_LONG
     FMT_SEP();
-    
+
     FMT_CONFIG(long2);
     FMT_CONFIG(long3);
     FMT_CONFIG(long4);
     //FMT_CONFIG(long8);
 #endif
 
-    
 #undef FMT_CONFIG
-    
+
     return s;
 }
-    
 
 //---------------
 
 #if SIMD_HALF4_ONLY
- 
+
 #if SIMD_NEON
 
 float4 float4m(half4 vv)
@@ -515,24 +534,24 @@ float4 float4m(half4 vv)
     // https://gcc.gnu.org/onlinedocs/gcc-7.5.0/gcc/Half-Precision.html
     // https://developer.arm.com/documentation/dui0491/i/Using-NEON-Support/Converting-vectors
     __m128i reg16 = _mm_setzero_si128();
-    
+
     // TODO: switch to load low 64-bits, but don't know which one _mm_cvtsi32_si128(&vv.reg); ?
     // want 0 extend here, sse overuses int32_t when really unsigned and zero extended value
     reg16 = _mm_insert_epi16(reg16, vv[0], 0);
     reg16 = _mm_insert_epi16(reg16, vv[1], 1);
     reg16 = _mm_insert_epi16(reg16, vv[2], 2);
     reg16 = _mm_insert_epi16(reg16, vv[3], 3);
-    
+
     return simd::float4(_mm_cvtph_ps(reg16));
 }
 
 half4 half4m(float4 vv)
 {
-    __m128i reg16 = _mm_cvtps_ph(*(const __m128*)&vv, 0);  // 4xfp32-> 4xfp16,  round to nearest-even
-    
+    __m128i reg16 = _mm_cvtps_ph(*(const __m128*)&vv, 0); // 4xfp32-> 4xfp16,  round to nearest-even
+
     // TODO: switch to store/steam, but don't know which one _mm_storeu_epi16 ?
-    half4 val;  // = 0;
-    
+    half4 val; // = 0;
+
     // 0 extended
     val[0] = (half)_mm_extract_epi16(reg16, 0);
     val[1] = (half)_mm_extract_epi16(reg16, 1);
@@ -546,5 +565,3 @@ half4 half4m(float4 vv)
 
 } // namespace SIMD_NAMESPACE
 #endif // USE_SIMDLIB
-
-

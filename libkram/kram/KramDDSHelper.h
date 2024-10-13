@@ -31,4 +31,4 @@ public:
     bool save(const KTXImage& image, FileHelper& fileHelper);
 };
 
-}  // namespace kram
+} // namespace kram

@@ -36,9 +36,9 @@ MyMTLTextureType parseTextureType(const char* typeName)
     else if (isStringEqual(typeName, "2d")) {
         type = MyMTLTextureType2D;
     }
-    //    else if (isStringEqual(typeName, "1d")) {
-    //        type = MyMTLTextureType1D;
-    //    }
+    // else if (isStringEqual(typeName, "1d")) {
+    //     type = MyMTLTextureType1D;
+    // }
     else if (isStringEqual(typeName, "cube")) {
         type = MyMTLTextureTypeCube;
     }
@@ -62,11 +62,11 @@ TexEncoder parseEncoder(const char* encoder)
         textureEncoder = kTexEncoderBcenc;
     }
     else if (isStringEqual(encoder,
-                           "ate")) {  // platform specific, no sources
+                           "ate")) { // platform specific, no sources
         textureEncoder = kTexEncoderATE;
     }
     else if (isStringEqual(encoder,
-                           "astcenc")) {  // platform specific, no sources
+                           "astcenc")) { // platform specific, no sources
         textureEncoder = kTexEncoderAstcenc;
     }
 
@@ -77,16 +77,16 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
 {
     MyMTLPixelFormat format = MyMTLPixelFormatInvalid;
     const char* formatString = infoArgs.formatString.c_str();
-    
+
     bool isSRGBDst = infoArgs.isSRGBDst;
-    
+
     // bc
     if (isStringEqual(formatString, "bc1")) {
         format = isSRGBDst ? MyMTLPixelFormatBC1_RGBA_sRGB : MyMTLPixelFormatBC1_RGBA;
     }
-    //    else if (isStringEqual(formatString, "bc2")) {
-    //        format = MyMTLPixelFormatBC2_RGBA;
-    //    }
+    // else if (isStringEqual(formatString, "bc2")) {
+    //     format = MyMTLPixelFormatBC2_RGBA;
+    // }
     else if (isStringEqual(formatString, "bc3")) {
         format = isSRGBDst ? MyMTLPixelFormatBC3_RGBA_sRGB : MyMTLPixelFormatBC3_RGBA;
     }
@@ -113,7 +113,7 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
     else if (isStringEqual(formatString, "etc2rgb")) {
         format = isSRGBDst ? MyMTLPixelFormatETC2_RGB8_sRGB : MyMTLPixelFormatETC2_RGB8;
     }
-    else if (isStringEqual(formatString, "etc2rgba")) {  // for rgb/rgba
+    else if (isStringEqual(formatString, "etc2rgba")) { // for rgb/rgba
         format = isSRGBDst ? MyMTLPixelFormatEAC_RGBA8_sRGB : MyMTLPixelFormatEAC_RGBA8;
     }
 
@@ -121,16 +121,20 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
     // or RGBA to save endpoint storage dual plane can occur for more than just
     // RGB+A, any one channel can be a plane to itself if encoder supports
     else if (isStringEqual(formatString, "astc4x4")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_4x4_HDR : isSRGBDst ? MyMTLPixelFormatASTC_4x4_sRGB : MyMTLPixelFormatASTC_4x4_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_4x4_HDR : isSRGBDst ? MyMTLPixelFormatASTC_4x4_sRGB
+                                                                           : MyMTLPixelFormatASTC_4x4_LDR;
     }
     else if (isStringEqual(formatString, "astc5x5")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_5x5_HDR : isSRGBDst ? MyMTLPixelFormatASTC_5x5_sRGB : MyMTLPixelFormatASTC_5x5_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_5x5_HDR : isSRGBDst ? MyMTLPixelFormatASTC_5x5_sRGB
+                                                                           : MyMTLPixelFormatASTC_5x5_LDR;
     }
     else if (isStringEqual(formatString, "astc6x6")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_6x6_HDR : isSRGBDst ? MyMTLPixelFormatASTC_6x6_sRGB : MyMTLPixelFormatASTC_6x6_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_6x6_HDR : isSRGBDst ? MyMTLPixelFormatASTC_6x6_sRGB
+                                                                           : MyMTLPixelFormatASTC_6x6_LDR;
     }
     else if (isStringEqual(formatString, "astc8x8")) {
-        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_8x8_HDR : isSRGBDst ? MyMTLPixelFormatASTC_8x8_sRGB : MyMTLPixelFormatASTC_8x8_LDR;
+        format = infoArgs.isHDR ? MyMTLPixelFormatASTC_8x8_HDR : isSRGBDst ? MyMTLPixelFormatASTC_8x8_sRGB
+                                                                           : MyMTLPixelFormatASTC_8x8_LDR;
     }
 
     // explicit formats
@@ -143,7 +147,7 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
         format = // isSRGBDst ? MyMTLPixelFormatRG8Unorm_sRGB :
             MyMTLPixelFormatRG8Unorm;
     }
-    else if (isStringEqual(formatString, "rgba8")) {  // for rgb/rgba
+    else if (isStringEqual(formatString, "rgba8")) { // for rgb/rgba
         format = isSRGBDst ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
     }
 
@@ -153,7 +157,7 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
     else if (isStringEqual(formatString, "rg16f")) {
         format = MyMTLPixelFormatRG16Float;
     }
-    else if (isStringEqual(formatString, "rgba16f")) {  // for rgb/rgba
+    else if (isStringEqual(formatString, "rgba16f")) { // for rgb/rgba
         format = MyMTLPixelFormatRGBA16Float;
     }
 
@@ -163,7 +167,7 @@ static MyMTLPixelFormat parseFormat(ImageInfoArgs& infoArgs)
     else if (isStringEqual(formatString, "rg32f")) {
         format = MyMTLPixelFormatRG32Float;
     }
-    else if (isStringEqual(formatString, "rgba32f")) {  // for rgb/rgba
+    else if (isStringEqual(formatString, "rgba32f")) { // for rgb/rgba
         format = MyMTLPixelFormatRGBA32Float;
     }
 
@@ -345,7 +349,7 @@ static const MyMTLPixelFormat kEncodingFormatsBcenc[] =
         MyMTLPixelFormatBC6H_RGBUfloat,
         MyMTLPixelFormatBC6H_RGBFloat,
 #endif
-        
+
         MyMTLPixelFormatBC7_RGBAUnorm,
         MyMTLPixelFormatBC7_RGBAUnorm_sRGB,
 };
@@ -564,11 +568,11 @@ bool validateFormatAndEncoder(ImageInfoArgs& infoArgs)
 
     // check arguments
     // flag unsupported formats
-//    if (format == MyMTLPixelFormatBC6H_RGBUfloat ||
-//        format == MyMTLPixelFormatBC6H_RGBFloat) {
-//        KLOGE("ImageInfo", "bc6 not supported\n");
-//        error = true;
-//    }
+    // if (format == MyMTLPixelFormatBC6H_RGBUfloat ||
+    //     format == MyMTLPixelFormatBC6H_RGBFloat) {
+    //     KLOGE("ImageInfo", "bc6 not supported\n");
+    //     error = true;
+    // }
 
     infoArgs.pixelFormat = format;
 
@@ -718,7 +722,7 @@ bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
             if (w != (int32_t)(h * numSlices)) {
                 return false;
             }
-            w = h;  // assume square
+            w = h; // assume square
 
             for (int32_t i = 0; i < (int32_t)numSlices; ++i) {
                 Int2 chunkOffset = {w * i, 0};
@@ -731,7 +735,7 @@ bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
             if (h != (int32_t)(w * numSlices)) {
                 return false;
             }
-            h = w;  // assume square
+            h = w; // assume square
 
             for (int32_t i = 0; i < (int32_t)numSlices; ++i) {
                 Int2 chunkOffset = {0, h * i};
@@ -788,7 +792,7 @@ bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
                     return false;
                 }
 
-                w = h;  // assume square
+                w = h; // assume square
                 for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
                     Int2 chunkOffset = {w * i, 0};
                     chunkOffsets.push_back(chunkOffset);
@@ -800,7 +804,7 @@ bool validateTextureType(MyMTLTextureType textureType, int32_t& w, int32_t& h,
                     return false;
                 }
 
-                h = w;  // assume square
+                h = w; // assume square
                 for (int32_t i = 0; i < (int32_t)header.numberOfArrayElements; ++i) {
                     Int2 chunkOffset = {0, h * i};
                     chunkOffsets.push_back(chunkOffset);
@@ -1011,19 +1015,19 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     isPrezero = false;
     isPremultiplied = false;
     isSourcePremultiplied = false;
-    
+
     if (args.isSourcePremultiplied)
         isSourcePremultiplied = true;
     else if (args.isPremultiplied)
         isPremultiplied = true;
     else if (args.isPrezero)
         isPrezero = true;
-    
+
     isNormal = args.isNormal;
 
     doSDF = args.doSDF;
     sdfThreshold = args.sdfThreshold;
-    
+
     //skipImageLength = args.skipImageLength;
 
     // mips
@@ -1075,7 +1079,7 @@ void ImageInfo::initWithArgs(const ImageInfoArgs& args)
     isSRGBSrc = args.isSRGBSrc;
     isSRGBSrcFlag = args.isSRGBSrcFlag;
     isSRGBDst = isSrgbFormat(pixelFormat);
-    
+
     hasAlpha = true;
     hasColor = true;
     if (!isAlphaFormat(pixelFormat))
@@ -1184,9 +1188,9 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
     // Note: srgb flags are unreliable in png since most tools use linear
     // RGBA8 blends and just write out the pixel as is (f.e. Photoshop, figma, etc).
     // TODO: offer mode to use srg image srgb state if author has fixed up
-     if (isSRGBSrcFlag)
+    if (isSRGBSrcFlag)
         isSRGBSrc = sourceImage.isSrgb();
-    
+
     // this implies color is stored in rgb
     if (isSRGBDst) {
         isColorWeighted = hasColor;
@@ -1209,15 +1213,15 @@ void ImageInfo::initWithSourceImage(Image& sourceImage)
 
         // averaging all the values in 8-bit space, so only apply to lin. rgbs
         switch (pixelFormat) {
-            case MyMTLPixelFormatETC2_RGB8:  // 3 channel
-            case MyMTLPixelFormatEAC_RGBA8:  // 4 channel
+            case MyMTLPixelFormatETC2_RGB8: // 3 channel
+            case MyMTLPixelFormatEAC_RGBA8: // 4 channel
 
             case MyMTLPixelFormatASTC_4x4_LDR:
             case MyMTLPixelFormatASTC_5x5_LDR:
             case MyMTLPixelFormatASTC_6x6_LDR:
             case MyMTLPixelFormatASTC_8x8_LDR:
 
-            case MyMTLPixelFormatBC1_RGBA:  // 3 channel RGB only
+            case MyMTLPixelFormatBC1_RGBA: // 3 channel RGB only
             case MyMTLPixelFormatBC3_RGBA:
             // case MyMTLPixelFormatBC6H_RGBFloat:
             // case MyMTLPixelFormatBC6H_RGBUfloat:
@@ -1275,8 +1279,8 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
 
     // 2.0 is distance betwen +1 and -1
     // don't scale by this, want caller to be able to pass 1.0 as default scale not 2.0
-    float scaleX = scale;  // / 2.0;
-    float scaleY = scale;  // / 2.0;
+    float scaleX = scale; // / 2.0;
+    float scaleY = scale; // / 2.0;
 
     if (!isFloat) {
         scaleX /= 255.0f;
@@ -1366,7 +1370,7 @@ void ImageInfo::heightToNormals(int32_t w, int32_t h,
             else {
                 // cross pattern
                 // height channel is in x
-                uint8_t cN = srcPixels8[ym + x].r;  // assumes first elem (.r) is height channel
+                uint8_t cN = srcPixels8[ym + x].r; // assumes first elem (.r) is height channel
                 uint8_t cS = srcPixels8[yp + x].r;
                 uint8_t cE = srcPixels8[y0 + xp].r;
                 uint8_t cW = srcPixels8[y0 + xm].r;
@@ -1418,8 +1422,8 @@ const char* encoderName(TexEncoder encoder)
         case kTexEncoderUnknown:
             return "Unknown";
         default:
-            return "Unknown";  // to fix Visual Studio C4715
+            return "Unknown"; // to fix Visual Studio C4715
     }
 }
 
-}  // namespace kram
+} // namespace kram

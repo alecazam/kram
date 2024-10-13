@@ -12,10 +12,10 @@
 
 // only support avx2 and Neon, no avx-512 at first
 #if defined __ARM_NEON
-#define SIMD_SSE  0
+#define SIMD_SSE 0
 #define SIMD_NEON 1
 #elif defined __AVX2__ // x64 AVX2 or higher, can lower to AVX
-#define SIMD_SSE  1
+#define SIMD_SSE 1
 #define SIMD_NEON 0
 #else
 #warning unuspported simd arch
@@ -32,29 +32,36 @@
 namespace SIMD_NAMESPACE {
 
 // functional ctor
-inline float4 float4m(float3 v, float w) {
+inline float4 float4m(float3 v, float w)
+{
     return vector4(v, w);
 }
 
-inline float2 float2m(float x, float y) {
+inline float2 float2m(float x, float y)
+{
     return {x, y};
 }
-inline float3 float3m(float x, float y, float z) {
+inline float3 float3m(float x, float y, float z)
+{
     return {x, y, z};
 }
-inline float4 float4m(float x, float y, float z, float w) {
+inline float4 float4m(float x, float y, float z, float w)
+{
     return {x, y, z, w};
 }
 
-inline float2 float2m(float x) {
+inline float2 float2m(float x)
+{
     return x;
 }
 
-inline float3 float3m(float x) {
+inline float3 float3m(float x)
+{
     return x;
 }
 
-inline float4 float4m(float x) {
+inline float4 float4m(float x)
+{
     return x;
 }
 
@@ -64,13 +71,16 @@ inline float4 float4m(float x) {
 //inline double saturate(double v) {
 //    return std::clamp(v, 0.0, 1.0);
 //}
-inline float2 saturate(float2 v) {
+inline float2 saturate(float2 v)
+{
     return simd_clamp(v, 0.0f, 1.0f);
 }
-inline float3 saturate(float3 v) {
+inline float3 saturate(float3 v)
+{
     return simd_clamp(v, 0.0f, 1.0f);
 }
-inline float4 saturate(float4 v) {
+inline float4 saturate(float4 v)
+{
     return simd_clamp(v, 0.0f, 1.0f);
 }
 

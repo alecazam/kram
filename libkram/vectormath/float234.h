@@ -38,17 +38,23 @@ namespace SIMD_NAMESPACE {
 
 // clang-format off
 macroVector4TypesStorageRenames(float, float)
-// clang-format on
+    // clang-format on
 
-//-----------------------------------
-// start of implementation
+    //-----------------------------------
+    // start of implementation
 
-// zeroext - internal helper
-SIMD_CALL float4 zeroext(float2 x) {
-    float4 v = 0; v.xy = x; return v;
+    // zeroext - internal helper
+    SIMD_CALL float4 zeroext(float2 x)
+{
+    float4 v = 0;
+    v.xy = x;
+    return v;
 }
-SIMD_CALL float4 zeroext(float3 x) {
-    float4 v = 0; v.xyz = x; return v;
+SIMD_CALL float4 zeroext(float3 x)
+{
+    float4 v = 0;
+    v.xyz = x;
+    return v;
 }
 
 #if SIMD_NEON
@@ -72,23 +78,26 @@ SIMD_CALL float4 max(float4 x, float4 y) { return vmaxnmq_f32(x, y); }
 
 // requires __ARM_VFPV4__
 // t passed first unlike sse
-SIMD_CALL float2 muladd(float2 x, float2 y, float2 t) { return vfma_f32(t, x,y); }
-SIMD_CALL float4 muladd(float4 x, float4 y, float4 t) { return vfmaq_f32(t, x,y); }
+SIMD_CALL float2 muladd(float2 x, float2 y, float2 t) { return vfma_f32(t, x, y); }
+SIMD_CALL float4 muladd(float4 x, float4 y, float4 t) { return vfmaq_f32(t, x, y); }
 
 SIMD_CALL float2 sqrt(float2 x) { return vsqrt_f32(x); }
 SIMD_CALL float4 sqrt(float4 x) { return vsqrtq_f32(x); }
 
-SIMD_CALL float2 reduce_addv(float2 x) {
+SIMD_CALL float2 reduce_addv(float2 x)
+{
     x = vpadd_f32(x, x);
     return x.x; // repeat x to all values
 }
-SIMD_CALL float4 reduce_addv(float4 x) {
+SIMD_CALL float4 reduce_addv(float4 x)
+{
     // 4:1 reduction
     x = vpaddq_f32(x, x); // xy = x+y,z+w
     x = vpaddq_f32(x, x); // x  = x+y
     return x.x; // repeat x to all values
 }
-SIMD_CALL float3 reduce_addv(float3 x) {
+SIMD_CALL float3 reduce_addv(float3 x)
+{
     return reduce_addv(zeroext(x)).x; // repeat
 }
 
@@ -107,103 +116,123 @@ SIMD_CALL float4 floor(float4 vv) { return vrndmq_f32(vv); }
 #if SIMD_SSE
 
 // x64 doesn't seem to have a simd op for min/max reduce
-SIMD_CALL float reduce_min(float4 x) {
-    return fmin(fmin(x.x,x.y), fmin(x.z,x.w));
+SIMD_CALL float reduce_min(float4 x)
+{
+    return fmin(fmin(x.x, x.y), fmin(x.z, x.w));
 }
-SIMD_CALL float reduce_min(float2 x) {
+SIMD_CALL float reduce_min(float2 x)
+{
     return reduce_min(vec2to4(x));
 }
 
-SIMD_CALL float reduce_max(float4 x) {
-    return fmax(fmax(x.x,x.y), fmax(x.z,x.w));
+SIMD_CALL float reduce_max(float4 x)
+{
+    return fmax(fmax(x.x, x.y), fmax(x.z, x.w));
 }
-SIMD_CALL float reduce_max(float2 x) {
+SIMD_CALL float reduce_max(float2 x)
+{
     return reduce_max(vec2to4(x));
 }
 
 // needs SIMD_INT
 // needed for precise min/max calls below
 #if SIMD_INT
-SIMD_CALL float4 bitselect_forminmax(float4 x, float4 y, int4 mask) {
+SIMD_CALL float4 bitselect_forminmax(float4 x, float4 y, int4 mask)
+{
     return (float4)(((int4)x & ~mask) | ((int4)y & mask));
 }
 #endif
 
-SIMD_CALL float4 min(float4 x, float4 y) {
+SIMD_CALL float4 min(float4 x, float4 y)
+{
     // precise returns x on Nan
     return bitselect_forminmax(_mm_min_ps(x, y), x, y != y);
 }
-SIMD_CALL float2 min(float2 x, float2 y) {
+SIMD_CALL float2 min(float2 x, float2 y)
+{
     return vec4to2(min(vec2to4(x), vec2to4(y)));
 }
 
-SIMD_CALL float4 max(float4 x, float4 y) {
+SIMD_CALL float4 max(float4 x, float4 y)
+{
     // precise returns x on Nan
     return bitselect_forminmax(_mm_max_ps(x, y), x, y != y);
 }
-SIMD_CALL float2 max(float2 x, float2 y) {
+SIMD_CALL float2 max(float2 x, float2 y)
+{
     return vec4to2(max(vec2to4(x), vec2to4(y)));
 }
 
-SIMD_CALL float4 muladd(float4 x, float4 y, float4 t) {
+SIMD_CALL float4 muladd(float4 x, float4 y, float4 t)
+{
     // can't get Xcode to set -mfma with AVX2 set
 #ifdef __FMA__
-    return _mm_fmadd_ps(x,y,t);
+    return _mm_fmadd_ps(x, y, t);
 #else
     // fallback with not same characteristics
     return x * y + t;
 #endif
 }
-SIMD_CALL float2 muladd(float2 x, float2 y, float2 t) {
+SIMD_CALL float2 muladd(float2 x, float2 y, float2 t)
+{
     return vec4to2(muladd(vec2to4(x), vec2to4(y), vec2to4(t)));
 }
 
-SIMD_CALL float4 sqrt(float4 x) {
+SIMD_CALL float4 sqrt(float4 x)
+{
     return _mm_sqrt_ps(x);
 }
-SIMD_CALL float2 sqrt(float2 x) {
+SIMD_CALL float2 sqrt(float2 x)
+{
     return vec4to2(sqrt(vec2to4(x)));
 }
 
-SIMD_CALL float4 reduce_addv(float4 x) {
+SIMD_CALL float4 reduce_addv(float4 x)
+{
     // 4:1 reduction
     x = _mm_hadd_ps(x, x); // xy = x+y,z+w
     x = _mm_hadd_ps(x, x); // x  = x+y
     return x.x; // repeat x to all values
 }
-SIMD_CALL float2 reduce_addv(float2 x) {
+SIMD_CALL float2 reduce_addv(float2 x)
+{
     return reduce_addv(zeroext(x)).x;
 }
-SIMD_CALL float3 reduce_addv(float3 x) {
+SIMD_CALL float3 reduce_addv(float3 x)
+{
     return reduce_addv(zeroext(x)).x;
 }
 
 // SSE4.1
-SIMD_CALL float4 round(float4 vv) {
+SIMD_CALL float4 round(float4 vv)
+{
     // round to nearest | exc
     return _mm_round_ps(vv, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
-SIMD_CALL float2 round(float2 x) {
+SIMD_CALL float2 round(float2 x)
+{
     return vec4to2(round(vec2to4(x)));
 }
 
-SIMD_CALL float4 ceil(float4 vv) {
+SIMD_CALL float4 ceil(float4 vv)
+{
     return _mm_ceil_ps(vv);
 }
-SIMD_CALL float2 ceil(float2 x) {
+SIMD_CALL float2 ceil(float2 x)
+{
     return vec4to2(ceil(vec2to4(x)));
 }
 
-SIMD_CALL float4 floor(float4 vv) {
+SIMD_CALL float4 floor(float4 vv)
+{
     return _mm_floor_ps(vv);
 }
-SIMD_CALL float2 floor(float2 x) {
+SIMD_CALL float2 floor(float2 x)
+{
     return vec4to2(floor(vec2to4(x)));
 }
 
 #endif // SIMD_INT && SIMD_SSE
-
-
 
 // end of implementation
 //-----------------------------------
@@ -212,24 +241,30 @@ SIMD_CALL float2 floor(float2 x) {
 // bitselect
 // Hoping these casts float2 -> int2 don't truncate
 //  want this to map to _mm_cast calls
-SIMD_CALL float2 bitselect(float2 x, float2 y, int2 mask) {
+SIMD_CALL float2 bitselect(float2 x, float2 y, int2 mask)
+{
     return (float2)bitselect((int2)x, (int2)y, mask);
 }
-SIMD_CALL float3 bitselect(float3 x, float3 y, int3 mask) {
+SIMD_CALL float3 bitselect(float3 x, float3 y, int3 mask)
+{
     return (float3)bitselect((int3)x, (int3)y, mask);
 }
-SIMD_CALL float4 bitselect(float4 x, float4 y, int4 mask) {
+SIMD_CALL float4 bitselect(float4 x, float4 y, int4 mask)
+{
     return (float4)bitselect((int4)x, (int4)y, mask);
 }
 
 // select
-SIMD_CALL float2 select(float2 x, float2 y, int2 mask) {
+SIMD_CALL float2 select(float2 x, float2 y, int2 mask)
+{
     return bitselect(x, y, mask >> 31);
 }
-SIMD_CALL float3 select(float3 x, float3 y, int3 mask) {
+SIMD_CALL float3 select(float3 x, float3 y, int3 mask)
+{
     return bitselect(x, y, mask >> 31);
 }
-SIMD_CALL float4 select(float4 x, float4 y, int4 mask) {
+SIMD_CALL float4 select(float4 x, float4 y, int4 mask)
+{
     return bitselect(x, y, mask >> 31);
 }
 
@@ -250,14 +285,14 @@ SIMD_CALL float3 floor(float3 x) { return vec4to3(floor(vec3to4(x))); }
 SIMD_CALL float3 sqrt(float3 x) { return vec4to3(sqrt(vec3to4(x))); }
 
 // rsqrt
-SIMD_CALL float4 rsqrt(float4 x) { return 1.0f/sqrt(x); }
-SIMD_CALL float2 rsqrt(float2 x) { return 1.0f/sqrt(x); }
-SIMD_CALL float3 rsqrt(float3 x) { return 1.0f/sqrt(x); }
+SIMD_CALL float4 rsqrt(float4 x) { return 1.0f / sqrt(x); }
+SIMD_CALL float2 rsqrt(float2 x) { return 1.0f / sqrt(x); }
+SIMD_CALL float3 rsqrt(float3 x) { return 1.0f / sqrt(x); }
 
 // recip
-SIMD_CALL float4 recip(float4 x) { return 1.0f/x; }
-SIMD_CALL float2 recip(float2 x) { return 1.0f/x; }
-SIMD_CALL float3 recip(float3 x) { return 1.0f/x; }
+SIMD_CALL float4 recip(float4 x) { return 1.0f / x; }
+SIMD_CALL float2 recip(float2 x) { return 1.0f / x; }
+SIMD_CALL float3 recip(float3 x) { return 1.0f / x; }
 
 SIMD_CALL float reduce_add(float2 x) { return reduce_addv(x).x; }
 SIMD_CALL float reduce_add(float3 x) { return reduce_addv(x).x; }
@@ -265,13 +300,16 @@ SIMD_CALL float reduce_add(float4 x) { return reduce_addv(x).x; }
 
 // clamp
 // order matters here for Nan, left op returned on precise min/max
-SIMD_CALL float2 clamp(float2 x, float2 minv, float2 maxv) {
+SIMD_CALL float2 clamp(float2 x, float2 minv, float2 maxv)
+{
     return min(maxv, max(minv, x));
 }
-SIMD_CALL float3 clamp(float3 x, float3 minv, float3 maxv) {
+SIMD_CALL float3 clamp(float3 x, float3 minv, float3 maxv)
+{
     return min(maxv, max(minv, x));
 }
-SIMD_CALL float4 clamp(float4 x, float4 minv, float4 maxv) {
+SIMD_CALL float4 clamp(float4 x, float4 minv, float4 maxv)
+{
     return min(maxv, max(minv, x));
 }
 
@@ -281,14 +319,13 @@ SIMD_CALL float3 saturate(float3 x) { return clamp(x, 0, (float3)1); }
 SIMD_CALL float4 saturate(float4 x) { return clamp(x, 0, (float4)1); }
 
 // lerp - another easy one, could use muladd(t, y-x, x)
-SIMD_CALL float2 lerp(float2 x, float2 y, float2 t) { return x + t*(y - x); }
-SIMD_CALL float3 lerp(float3 x, float3 y, float3 t) { return x + t*(y - x); }
-SIMD_CALL float4 lerp(float4 x, float4 y, float4 t) { return x + t*(y - x); }
+SIMD_CALL float2 lerp(float2 x, float2 y, float2 t) { return x + t * (y - x); }
+SIMD_CALL float3 lerp(float3 x, float3 y, float3 t) { return x + t * (y - x); }
+SIMD_CALL float4 lerp(float4 x, float4 y, float4 t) { return x + t * (y - x); }
 
-SIMD_CALL float2 lerp(float2 x, float2 y, float t) { return x + t*(y - x); }
-SIMD_CALL float3 lerp(float3 x, float3 y, float t) { return x + t*(y - x); }
-SIMD_CALL float4 lerp(float4 x, float4 y, float t) { return x + t*(y - x); }
-
+SIMD_CALL float2 lerp(float2 x, float2 y, float t) { return x + t * (y - x); }
+SIMD_CALL float3 lerp(float3 x, float3 y, float t) { return x + t * (y - x); }
+SIMD_CALL float4 lerp(float4 x, float4 y, float t) { return x + t * (y - x); }
 
 // dot
 SIMD_CALL float dot(float2 x, float2 y) { return reduce_add(x * y); }
@@ -318,118 +355,145 @@ SIMD_CALL float2 normalize(float2 x) { return x / sqrt(reduce_addv(x * x)).x; }
 SIMD_CALL float3 normalize(float3 x) { return x / sqrt(reduce_addv(x * x)).x; }
 
 // abs
-SIMD_CALL float2 abs(float2 x) {
+SIMD_CALL float2 abs(float2 x)
+{
     return bitselect(0.0, x, 0x7fffffff);
 }
-SIMD_CALL float3 abs(float3 x) {
+SIMD_CALL float3 abs(float3 x)
+{
     return bitselect(0.0, x, 0x7fffffff);
 }
-SIMD_CALL float4 abs(float4 x) {
+SIMD_CALL float4 abs(float4 x)
+{
     return bitselect(0.0, x, 0x7fffffff);
 }
 
 // cross
-SIMD_CALL float cross(float2 x, float2 y) {
+SIMD_CALL float cross(float2 x, float2 y)
+{
     return x.x * y.y - x.y * y.x;
 }
-SIMD_CALL float3 cross(float3 x, float3 y) {
+SIMD_CALL float3 cross(float3 x, float3 y)
+{
     return x.yzx * y.zxy - x.zxy * y.yzx;
 }
 
 // equal
 // == and != return a int234 vector, so need these to match other vecs
-SIMD_CALL bool equal(float2 x, float2 y) {
+SIMD_CALL bool equal(float2 x, float2 y)
+{
     return all(x == y);
 }
-SIMD_CALL bool equal(float3 x, float3 y) {
+SIMD_CALL bool equal(float3 x, float3 y)
+{
     return all(x == y);
 }
-SIMD_CALL bool equal(float4 x, float4 y) {
+SIMD_CALL bool equal(float4 x, float4 y)
+{
     return all(x == y);
 }
 
 // equal_abs
-SIMD_CALL bool equal_abs(float2 x, float2 y, float tol) {
+SIMD_CALL bool equal_abs(float2 x, float2 y, float tol)
+{
     return all((abs(x - y) <= tol));
 }
-SIMD_CALL bool equal_abs(float3 x, float3 y, float tol) {
+SIMD_CALL bool equal_abs(float3 x, float3 y, float tol)
+{
     return all((abs(x - y) <= tol));
 }
-SIMD_CALL bool equal_abs(float4 x, float4 y, float tol) {
+SIMD_CALL bool equal_abs(float4 x, float4 y, float tol)
+{
     return all((abs(x - y) <= tol));
 }
 
 // equal_rel
-SIMD_CALL bool equal_rel(float2 x, float2 y, float tol) {
+SIMD_CALL bool equal_rel(float2 x, float2 y, float tol)
+{
     return all((abs(x - y) <= tol * ::abs(x.x)));
 }
-SIMD_CALL bool equal_rel(float3 x, float3 y, float tol) {
+SIMD_CALL bool equal_rel(float3 x, float3 y, float tol)
+{
     return all((abs(x - y) <= tol * ::abs(x.x)));
 }
-SIMD_CALL bool equal_rel(float4 x, float4 y, float tol) {
+SIMD_CALL bool equal_rel(float4 x, float4 y, float tol)
+{
     return all((abs(x - y) <= tol * ::abs(x.x)));
 }
 
 // step
-SIMD_CALL float2 step(float2 edge, float2 x) {
+SIMD_CALL float2 step(float2 edge, float2 x)
+{
     return bitselect((float2)1, 0, x < edge);
 }
-SIMD_CALL float3 step(float3 edge, float3 x) {
+SIMD_CALL float3 step(float3 edge, float3 x)
+{
     return bitselect((float3)1, 0, x < edge);
 }
-SIMD_CALL float4 step(float4 edge, float4 x) {
+SIMD_CALL float4 step(float4 edge, float4 x)
+{
     return bitselect((float4)1, 0, x < edge);
 }
 
 // smoothstep
-SIMD_CALL float2 smoothstep(float2 edge0, float2 edge1, float2 x) {
-    float2 t = saturate((x-edge0)/(edge0-edge1));
-    return t*t*(3 - 2*t);
+SIMD_CALL float2 smoothstep(float2 edge0, float2 edge1, float2 x)
+{
+    float2 t = saturate((x - edge0) / (edge0 - edge1));
+    return t * t * (3 - 2 * t);
 }
-SIMD_CALL float3 smoothstep(float3 edge0, float3 edge1, float3 x) {
-    float3 t = saturate((x-edge0)/(edge0-edge1));
-    return t*t*(3 - 2*t);
+SIMD_CALL float3 smoothstep(float3 edge0, float3 edge1, float3 x)
+{
+    float3 t = saturate((x - edge0) / (edge0 - edge1));
+    return t * t * (3 - 2 * t);
 }
-SIMD_CALL float4 smoothstep(float4 edge0, float4 edge1, float4 x) {
-    float4 t = saturate((x-edge0)/(edge0-edge1));
-    return t*t*(3 - 2*t);
+SIMD_CALL float4 smoothstep(float4 edge0, float4 edge1, float4 x)
+{
+    float4 t = saturate((x - edge0) / (edge0 - edge1));
+    return t * t * (3 - 2 * t);
 }
 
 // fract
-SIMD_CALL float2 fract(float2 x) {
+SIMD_CALL float2 fract(float2 x)
+{
     return min(x - floor(x), 0x1.fffffep-1f);
 }
-SIMD_CALL float3 fract(float3 x) {
+SIMD_CALL float3 fract(float3 x)
+{
     return min(x - floor(x), 0x1.fffffep-1f);
 }
-SIMD_CALL float4 fract(float4 x) {
+SIMD_CALL float4 fract(float4 x)
+{
     return min(x - floor(x), 0x1.fffffep-1f);
 }
 
-SIMD_CALL bool is_nan(float2 x) {
+SIMD_CALL bool is_nan(float2 x)
+{
     return any(x != x);
 }
-SIMD_CALL bool is_nan(float3 x) {
+SIMD_CALL bool is_nan(float3 x)
+{
     return any(x != x);
 }
-SIMD_CALL bool is_nan(float4 x) {
+SIMD_CALL bool is_nan(float4 x)
+{
     return any(x != x);
 }
 
-SIMD_CALL float2 fix_nan(float2 x, float2 replace) {
+SIMD_CALL float2 fix_nan(float2 x, float2 replace)
+{
     return min(replace, x);
 }
-SIMD_CALL float3 fix_nan(float3 x, float3 replace) {
+SIMD_CALL float3 fix_nan(float3 x, float3 replace)
+{
     return min(replace, x);
 }
-SIMD_CALL float4 fix_nan(float4 x, float4 replace) {
+SIMD_CALL float4 fix_nan(float4 x, float4 replace)
+{
     return min(replace, x);
 }
-
-
 
 /* this is just to show examples of extended vector types, float8 should move out
-   
+
 #if SIMD_FLOAT_EXT
 
 // These are cpu only math.  None of the gpus support these long types.
@@ -442,8 +506,8 @@ SIMD_CALL float4 fix_nan(float4 x, float4 replace) {
 
 // how important are 8/16 ops for float and 8 for double?  Could reduce with only doing up to 4.
 // can see doing more ops on smaller types.  Slower when these have to route through simd4.
- 
- 
+
+
 SIMD_CALL float8 clamp(float8 x, float8 min, float8 max) {
     return min(max(x, min), max);
 }
@@ -465,7 +529,7 @@ SIMD_CALL float reduce_add(float8 x) {
 SIMD_CALL float normalize(float8 x) {
      return x / length(x);
 }
- 
+
 // float16 calling up to float8
 SIMD_CALL float16 clamp(float16 x, float16 min, float16 max) {
     return min(max(x, min), max);
@@ -497,42 +561,62 @@ SIMD_CALL float normalize(float16 x) {
 // Be careful with initializers = { val }, only sets first element of vector
 // and not all the values.  Use = val; or one of the calls below to be safe.
 
-SIMD_CALL float2 float2m(float x) {
+SIMD_CALL float2 float2m(float x)
+{
     return x;
 }
-SIMD_CALL float2 float2m(float x, float y) {
-    return {x,y};
+SIMD_CALL float2 float2m(float x, float y)
+{
+    return {x, y};
 }
 
-SIMD_CALL float3 float3m(float x) {
+SIMD_CALL float3 float3m(float x)
+{
     return x;
 }
-SIMD_CALL float3 float3m(float x, float y, float z) {
-    return {x,y,z};
+SIMD_CALL float3 float3m(float x, float y, float z)
+{
+    return {x, y, z};
 }
-SIMD_CALL float3 float3m(float2 v, float z) {
-    float3 r; r.xy = v; r.z = z; return r;
+SIMD_CALL float3 float3m(float2 v, float z)
+{
+    float3 r;
+    r.xy = v;
+    r.z = z;
+    return r;
 }
 
-SIMD_CALL float4 float4m(float x) {
+SIMD_CALL float4 float4m(float x)
+{
     return x;
 }
-SIMD_CALL float4 float4m(float2 xy, float2 zw) {
-    float4 r; r.xy = xy; r.zw = zw; return r;
+SIMD_CALL float4 float4m(float2 xy, float2 zw)
+{
+    float4 r;
+    r.xy = xy;
+    r.zw = zw;
+    return r;
 }
-SIMD_CALL float4 float4m(float x, float y, float z, float w = 1.0f) {
-    return {x,y,z,w};
+SIMD_CALL float4 float4m(float x, float y, float z, float w = 1.0f)
+{
+    return {x, y, z, w};
 }
-SIMD_CALL float4 float4m(float3 v, float w = 1.0f) {
-    float4 r; r.xyz = v; r.w = w; return r;
+SIMD_CALL float4 float4m(float3 v, float w = 1.0f)
+{
+    float4 r;
+    r.xyz = v;
+    r.w = w;
+    return r;
 }
 
 // fast conversions where possible
 // need non-const too
-SIMD_CALL const float3& as_float3(const float4& m) {
+SIMD_CALL const float3& as_float3(const float4& m)
+{
     return reinterpret_cast<const float3&>(m);
 }
-SIMD_CALL const float3* as_float3(const float4* m) {
+SIMD_CALL const float3* as_float3(const float4* m)
+{
     return reinterpret_cast<const float3*>(m);
 }
 
@@ -559,21 +643,24 @@ macroVectorRepeatFnDecl(float, atan)
 
 macroVectorRepeatFn2Decl(float, atan2)
 
-// clang-format on
+    // clang-format on
 
-// sincos requires accel 5 lib, and takes 2 ptrs
-// may need math fallback for some calls
-// macroVectorRepeatFn2Decl(float, sincos)
+    // sincos requires accel 5 lib, and takes 2 ptrs
+    // may need math fallback for some calls
+    // macroVectorRepeatFn2Decl(float, sincos)
 
-// pow
-// can xy be <= 0 ?, no will return Nan in log/exp approx
-SIMD_CALL float2 pow(float2 x, float2 y) {
+    // pow
+    // can xy be <= 0 ?, no will return Nan in log/exp approx
+    SIMD_CALL float2 pow(float2 x, float2 y)
+{
     return exp(log(x) * y);
 }
-SIMD_CALL float3 pow(float3 x, float3 y) {
+SIMD_CALL float3 pow(float3 x, float3 y)
+{
     return exp(log(x) * y);
 }
-SIMD_CALL float4 pow(float4 x, float4 y) {
+SIMD_CALL float4 pow(float4 x, float4 y)
+{
     return exp(log(x) * y);
 }
 
@@ -632,95 +719,91 @@ const float4& float4_negzw();
 // column matrix, so postmul vectors
 // (projToCamera * cameraToWorld * worldToModel) * modelVec
 
-struct float2x2 : float2x2a
-{
+struct float2x2 : float2x2a {
     // can be split out to traits
     static constexpr int col = 2;
     static constexpr int row = 2;
     using column_t = float2;
     using scalar_t = float;
     using base = float2x2a;
-    
+
     static const float2x2& zero();
     static const float2x2& identity();
-    
-    float2x2() { }  // default uninit
+
+    float2x2() {} // default uninit
     explicit float2x2(float2 diag);
     float2x2(float2 c0, float2 c1)
-    : base((base){c0, c1}) { }
+        : base((base){c0, c1}) {}
     float2x2(const base& m)
-    : base(m) { }
-    
+        : base(m) {}
+
     // simd lacks these ops
     float2& operator[](int idx) { return columns[idx]; }
     const float2& operator[](int idx) const { return columns[idx]; }
 };
 
-struct float3x3 : float3x3a
-{
+struct float3x3 : float3x3a {
     static constexpr int col = 3;
     static constexpr int row = 3;
     using column_t = float3;
     using scalar_t = float;
     using base = float3x3a;
-    
+
     // Done as wordy c funcs otherwize.  Funcs allow statics to init.
     static const float3x3& zero();
     static const float3x3& identity();
-    
-    float3x3() { }  // default uninit
+
+    float3x3() {} // default uninit
     explicit float3x3(float3 diag);
     float3x3(float3 c0, float3 c1, float3 c2)
-    : base((base){c0, c1, c2}) { }
+        : base((base){c0, c1, c2}) {}
     float3x3(const base& m)
-    : base(m) { }
-    
+        : base(m) {}
+
     float3& operator[](int idx) { return columns[idx]; }
     const float3& operator[](int idx) const { return columns[idx]; }
 };
 
 // This is mostly a transposed holder for a 4x4, so very few ops defined
 // Can also serve as a SOA for some types of cpu math.
-struct float3x4 : float3x4a
-{
+struct float3x4 : float3x4a {
     static constexpr int col = 3;
     static constexpr int row = 4;
     using column_t = float4;
     using scalar_t = float;
     using base = float3x4a;
-    
+
     static const float3x4& zero();
     static const float3x4& identity();
-    
-    float3x4() { } // default uninit
+
+    float3x4() {} // default uninit
     explicit float3x4(float3 diag);
     float3x4(float4 c0, float4 c1, float4 c2)
-    : base((base){c0, c1, c2}) { }
+        : base((base){c0, c1, c2}) {}
     float3x4(const float3x4a& m)
-    : base(m) { }
-    
+        : base(m) {}
+
     float4& operator[](int idx) { return columns[idx]; }
     const float4& operator[](int idx) const { return columns[idx]; }
 };
 
-struct float4x4 : float4x4a
-{
+struct float4x4 : float4x4a {
     static constexpr int col = 4;
     static constexpr int row = 4;
     using column_t = float4;
     using scalar_t = float;
     using base = float4x4a;
-    
+
     static const float4x4& zero();
     static const float4x4& identity();
-    
-    float4x4() { } // default uninit
+
+    float4x4() {} // default uninit
     explicit float4x4(float4 diag);
     float4x4(float4 c0, float4 c1, float4 c2, float4 c3)
-    : base((base){c0, c1, c2, c3}) { }
+        : base((base){c0, c1, c2, c3}) {}
     float4x4(const base& m)
-    : base(m) { }
-    
+        : base(m) {}
+
     float4& operator[](int idx) { return columns[idx]; }
     const float4& operator[](int idx) const { return columns[idx]; }
 };
@@ -809,7 +892,8 @@ macroMatrixOps(float4x4);
 // clang-format on
 
 // fast conversions where possible
-SIMD_CALL const float3x3& as_float3x3(const float4x4& m) {
+SIMD_CALL const float3x3& as_float3x3(const float4x4& m)
+{
     return reinterpret_cast<const float3x3&>(m);
 }
 
@@ -819,39 +903,43 @@ SIMD_CALL const float3x3& as_float3x3(const float4x4& m) {
 // Only need a fp32 quat.  double/half are pretty worthless.
 struct quatf {
     // TODO: should all ctor be SIMD_CALL ?
-    quatf() : v{0.0f,0.0f,0.0f,1.0f} {}
-    quatf(float x, float y, float z, float w) : v{x,y,z,w} {}
+    quatf() : v{0.0f, 0.0f, 0.0f, 1.0f} {}
+    quatf(float x, float y, float z, float w) : v{x, y, z, w} {}
     quatf(float3 vv, float angle);
-    explicit quatf(float4 vv): v(vv) {}
-    
+    explicit quatf(float4 vv) : v(vv) {}
+
     static const quatf& zero();
     static const quatf& identity();
-    
+
     // image = axis * sin(theta/2), real = cos(theta/2)
     const float3& imag() const { return as_float3(v); }
     float real() const { return v.w; }
-    
+
     float4 v;
 };
 
 // this is conjugate, so only axis is inverted
-SIMD_CALL quatf operator-(quatf q) {
+SIMD_CALL quatf operator-(quatf q)
+{
     float4 qv = q.v;
     qv.xyz = -qv.xyz;
     return quatf(qv);
 }
 
-SIMD_CALL float3 operator*(quatf q, float3 v) {
+SIMD_CALL float3 operator*(quatf q, float3 v)
+{
     // see https://fgiesen.wordpress.com/2019/02/09/rotating-a-single-vector-using-a-quaternion/
     float4 qv = q.v;
     float3 t = 2.0f * cross(qv.xyz, v);
     return v + qv.w * t + cross(qv.xyz, t);
 }
 
-SIMD_CALL bool equal(quatf x, quatf y) {
+SIMD_CALL bool equal(quatf x, quatf y)
+{
     return all(x.v == y.v);
 }
-SIMD_CALL bool operator==(quatf x, quatf y) {
+SIMD_CALL bool operator==(quatf x, quatf y)
+{
     return all(x.v == y.v);
 }
 
@@ -863,10 +951,11 @@ float4x4 float4x4m(quatf q);
 // TODO: need negate (or conjuagate?)
 // TODO: what about math ops
 
-SIMD_CALL quatf lerp(quatf q0, quatf q1, float t) {
+SIMD_CALL quatf lerp(quatf q0, quatf q1, float t)
+{
     if (dot(q0.v, q1.v) < 0.0f)
         q1 = -q1; // conjugate
-    
+
     float4 v = lerp(q0.v, q1.v, t);
     return quatf(v);
 }
@@ -879,7 +968,8 @@ quatf quat_bezer_slerp(quatf a, quatf b, quatf c, quatf d, float t);
 
 quatf inverse(quatf q);
 
-SIMD_CALL quatf normalize(quatf q) {
+SIMD_CALL quatf normalize(quatf q)
+{
     return quatf(normalize(q.v));
 }
 
@@ -896,23 +986,26 @@ float4x4 inverse_trs(const float4x4& mtx);
 
 float4x4 float4x4m(char axis, float radians);
 
-SIMD_CALL float4x4 float4x4m(float3 axis, float radians) {
+SIMD_CALL float4x4 float4x4m(float3 axis, float radians)
+{
     return float4x4m(quatf(axis, radians));
 }
 
 // These sizes are positive and do not include inversion
-SIMD_CALL float decompose_size(const float4x4& m) {
+SIMD_CALL float decompose_size(const float4x4& m)
+{
     return length(m[0]);
 }
-SIMD_CALL float3 decompose_scale(const float4x4& m) {
+SIMD_CALL float3 decompose_scale(const float4x4& m)
+{
     return float3m(length(m[0]),
                    length(m[1]),
                    length(m[2]));
 }
-SIMD_CALL float decompose_scale_max(const float4x4& m) {
+SIMD_CALL float decompose_scale_max(const float4x4& m)
+{
     return reduce_max(decompose_scale(m));
 }
-
 
 float3x3 float3x3m(quatf qq);
 
@@ -929,20 +1022,23 @@ float4x4 perspective_rhcs(float fovyRadians, float aspectXtoY, float nearZ, floa
 float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ = FLT_MAX);
 float4x4 orthographic_rhcs(float4 rect, float nearZ, float farZ);
 
-SIMD_CALL float4x4 rotation(float3 axis, float radians) {
+SIMD_CALL float4x4 rotation(float3 axis, float radians)
+{
     quatf q(axis, radians);
     return float4x4m(q);
 }
-SIMD_CALL float4x4 scale(float3 scale) {
-    return float4x4(float4m(scale,1.0f));
+SIMD_CALL float4x4 scale(float3 scale)
+{
+    return float4x4(float4m(scale, 1.0f));
 }
-SIMD_CALL float4x4 translation(float3 t) {
+SIMD_CALL float4x4 translation(float3 t)
+{
     float4x4 m(float4x4::identity());
-    m[3] = float4m(t,1);
+    m[3] = float4m(t, 1);
     return m;
 }
 
-} // SIMD_NAMESPACE
+} //namespace SIMD_NAMESPACE
 
 #endif // __cplusplus
 

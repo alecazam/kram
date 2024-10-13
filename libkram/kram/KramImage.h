@@ -7,7 +7,7 @@
 //#include <string>
 //#include <vector>
 
-#include "KTXImage.h"  // for MyMTLTextureType
+#include "KTXImage.h" // for MyMTLTextureType
 //#include "KramConfig.h"
 #include "KramImageInfo.h"
 #include "KramMipper.h"
@@ -42,11 +42,11 @@ public:
     bool loadImageFromPixels(const vector<Color>& pixels,
                              int32_t width, int32_t height,
                              bool hasColor, bool hasAlpha);
-    
+
     // set state off png blocks
     void setSrgbState(bool isSrgb, bool hasSrgbBlock, bool hasNonSrgbBlocks);
     void setBackgroundState(bool hasBlackBackground) { _hasBlackBackground = hasBlackBackground; }
-    
+
     // convert mip level of explicit format to single-image
     bool loadImageFromKTX(const KTXImage& image, uint32_t mipNumber = 0);
 
@@ -72,9 +72,9 @@ public:
     bool isSrgb() const { return _isSrgb; }
     bool hasSrgbBlock() const { return _hasSrgbBlock; }
     bool hasNonSrgbBlocks() const { return _hasNonSrgbBlocks; }
-    
+
     bool hasBlackBackground() const { return _hasBlackBackground; }
-    
+
     // if converted a KTX/2 image to Image, then this field will be non-zero
     uint32_t chunksY() const { return _chunksY; }
     void setChunksY(uint32_t chunksY) { _chunksY = chunksY; }
@@ -100,10 +100,10 @@ private:
     bool _isSrgb = false;
     bool _hasNonSrgbBlocks = false;
     bool _hasSrgbBlock = false;
-    
+
     // track to fix Apple Finder previews that are always white background
     bool _hasBlackBackground = false;
-    
+
     // this is the entire strip data, float version can be passed for HDR
     // sources always 4 channels RGBA for 8 and 32f data.  16f promoted to 32f.
     vector<Color> _pixels;
@@ -115,7 +115,7 @@ private:
 
 class KramDecoderParams {
 public:
-    TexEncoder decoder = kTexEncoderUnknown;  // will pick best available from format
+    TexEncoder decoder = kTexEncoderUnknown; // will pick best available from format
     bool isVerbose = false;
     string swizzleText;
 };
@@ -132,7 +132,7 @@ public:
     bool decodeBlocks(
         int32_t w, int32_t h,
         const uint8_t* blockData, uint32_t numBlocks, MyMTLPixelFormat blockFormat,
-        vector<uint8_t>& dstPixels,  // currently Color
+        vector<uint8_t>& dstPixels, // currently Color
         const KramDecoderParams& params) const;
 
 private:
@@ -155,7 +155,7 @@ public:
 
     // can save out to ktx2 directly, this can supercompress mips
     bool saveKTX2(const KTXImage& srcImage, const KTX2Compressor& compressor, FILE* dstFile) const;
-    
+
 private:
     bool encodeImpl(ImageInfo& info, Image& singleImage, FILE* dstFile, KTXImage& dstImage) const;
 
@@ -187,4 +187,4 @@ private:
     void addBaseProps(const ImageInfo& info, KTXImage& dstImage) const;
 };
 
-}  // namespace kram
+} // namespace kram

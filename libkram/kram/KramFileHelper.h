@@ -21,9 +21,9 @@ class FileHelper {
 public:
     ~FileHelper();
     bool isOpen() const { return _fp != nullptr; }
-    
+
     bool isDirectory(const char* filename) const;
-    
+
     bool exists(const char* filename) const;
 
     bool open(const char* filename, const char* access);
@@ -54,7 +54,7 @@ public:
     static uint64_t modificationTimestamp(const char* filename);
 
     static size_t pagesize();
-    
+
     // Can retreive if open called (even on failure)
     const string& filename() const { return _filename; }
 
@@ -64,4 +64,4 @@ private:
     bool _isTmpFile = false;
 };
 
-}  // namespace kram
+} // namespace kram

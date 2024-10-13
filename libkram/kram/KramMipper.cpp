@@ -7,7 +7,7 @@
 //#include <algorithm>
 #include <cassert>
 
-#include "KTXImage.h"  // for mipDown
+#include "KTXImage.h" // for mipDown
 
 namespace kram {
 
@@ -36,7 +36,7 @@ int32_t nextPow2(int32_t num)
 
 inline uint8_t floatToUint8(float value)
 {
-    return (uint8_t)roundf(value * 255.0f);  // or use 255.1f ?
+    return (uint8_t)roundf(value * 255.0f); // or use 255.1f ?
 }
 
 // same as ColorFromUnormFloat4
@@ -161,8 +161,8 @@ void Mipper::initTables()
         lin = srgbToLinearFunc(linearToSRGBFunc(lin));
 
         float s = 0.5;
-        s = srgbToLinearFunc(s);  // 0.21404
-        s = linearToSRGBFunc(s);  // back to 0.5
+        s = srgbToLinearFunc(s); // 0.21404
+        s = linearToSRGBFunc(s); // back to 0.5
     }
 #endif
 }
@@ -171,7 +171,7 @@ void Mipper::initPixelsHalfIfNeeded(ImageData& srcImage, bool doPremultiply, boo
                                     vector<half4>& halfImage) const
 {
     Color zeroColor = {0, 0, 0, 0};
-    float4 zeroColorf = float4m(0.0f);  // need a constant for this
+    float4 zeroColorf = float4m(0.0f); // need a constant for this
     half4 zeroColorh = half4m(zeroColorf);
 
     int32_t w = srcImage.width;
@@ -352,43 +352,43 @@ void mipfloodBigMip(const ImageData& smallMip, ImageData& bigMip)
     // horizontal or vertically, so lower mip mapping not so easy
     // if we assume pow2, then simpler.  Could still have non-square
     // pow2, which don't want to read off end of buffer.
-    
+
     uint32_t w = bigMip.width;
     uint32_t h = bigMip.height;
-    
+
     uint32_t wDst = smallMip.width;
     uint32_t hDst = smallMip.height;
-    
+
     const uint8_t kAlphaThreshold = 0;
-    
+
     // now run through the pixels with 0 alpha, and flood them with pixel from below
     for (uint32_t y = 0; y < h; ++y) {
-       Color* srcRow = &bigMip.pixels[y * w];
-        uint32_t yDst = y/2;
+        Color* srcRow = &bigMip.pixels[y * w];
+        uint32_t yDst = y / 2;
         if (yDst >= hDst)
             yDst = hDst - 1;
-        
+
         const Color* dstRow = &smallMip.pixels[yDst * wDst];
-        
+
         for (uint32_t x = 0; x < w; ++x) {
             // skip any pixels above threshold
             Color& srcPixel = srcRow[x];
             if (srcPixel.a > kAlphaThreshold) continue;
-            
+
             // replace the rest
-            uint32_t xDst = x/2;
+            uint32_t xDst = x / 2;
             if (xDst == wDst)
                 xDst = wDst - 1;
-            
+
             Color dstPixel = dstRow[xDst];
             dstPixel.a = srcPixel.a;
-            
+
             // an invalid premul color with rgb > a, may want valid non-premul
             srcPixel = dstPixel;
         }
     }
 }
-         
+
 // Propogate up from bottom so that every 0 pixel gets a non-zero value.
 void Mipper::mipflood(vector<ImageData>& mips) const
 {
@@ -398,16 +398,14 @@ void Mipper::mipflood(vector<ImageData>& mips) const
     // Unclear why they didn't use premul instead, but maybe compression
     // quality was better.  So this masks the filtering errors of black halos.
     // https://www.youtube.com/watch?v=MKX45_riWQA?t=2991
-    
+
     int32_t numMipLevels = mips.size();
-        
+
     // this overwrites the existing mips
-    for (int32_t i = numMipLevels-1; i >= 1; --i)
-    {
-        mipfloodBigMip(mips[i], mips[i-1]);
+    for (int32_t i = numMipLevels - 1; i >= 1; --i) {
+        mipfloodBigMip(mips[i], mips[i - 1]);
     }
 }
-
 
 void Mipper::mipmap(const ImageData& srcImage, ImageData& dstImage) const
 {
@@ -454,7 +452,7 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
     // After linear combine, convert back to srgb
     // mip source is always linear to build all levels.
     bool isSRGBDst = dstImage.isSRGB;
-    
+
     for (int32_t y = isOddY ? 1 : 0; y < height; y += 2) {
         int32_t ym = y - 1;
         int32_t y0 = y;
@@ -467,7 +465,7 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
         float y1w = mipY * invHeight;
 
         if (!isOddY) {
-            ym = y;  // weight is 0
+            ym = y; // weight is 0
 
             ymw = 0.0f;
             y0w = 0.5f;
@@ -496,7 +494,7 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
             float x1w = mipX * invWidth;
 
             if (!isOddX) {
-                xm = x;  // weight is 0
+                xm = x; // weight is 0
 
                 xmw = 0.0f;
                 x0w = 0.5f;
@@ -649,11 +647,11 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
     const half4* srcHalf = srcImage.pixelsHalf;
 
     // Note the ptrs above may point to same memory
-    
+
     // After linear combine, convert back to srgb
     // mip source is always linear to build all levels.
     bool isSRGBDst = dstImage.isSRGB;
-    
+
     int32_t dstIndex = 0;
 
     for (int32_t y = 0; y < height; y += 2) {
@@ -746,4 +744,4 @@ void Mipper::mipmapLevel(const ImageData& srcImage, ImageData& dstImage) const
     }
 }
 
-}  // namespace kram
+} // namespace kram

@@ -18,7 +18,7 @@
 #include "KTXImage.h"
 #include "KramDDSHelper.h"
 #include "KramFileHelper.h"
-#include "KramImage.h"  // has config defines, move them out
+#include "KramImage.h" // has config defines, move them out
 #include "KramMmapHelper.h"
 #include "KramTimer.h"
 #define KRAM_VERSION "1.0"
@@ -44,7 +44,7 @@ void* __cdecl operator new[](size_t size, const char* name, int flags, unsigned 
 
 void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
 {
-    return new uint8_t[size];  // TODO: honor alignment
+    return new uint8_t[size]; // TODO: honor alignment
 }
 
 #endif
@@ -148,11 +148,11 @@ bool KTXImageData::open(const char* filename, KTXImage& image, bool isInfoOnly_)
     _name = toFilenameShort(filename);
 
     if (isPNGFilename(filename)) {
-       bool success = openPNG(filename, image);
-        
+        bool success = openPNG(filename, image);
+
         if (success)
             fixPixelFormat(image, filename);
-        
+
         return success;
     }
 
@@ -265,10 +265,10 @@ bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image
     // This is returned by LoadPng.  Note that many png have this set
     // by default and not controllable by artists.
     bool isSrgb = false;
-    
+
     Image singleImage;
     bool isLoaded = LoadPng(data, dataSize, false, false, isSrgb, singleImage);
-    
+
     // don't need png data anymore
     close();
 
@@ -298,7 +298,7 @@ bool KTXImageData::openPNG(const uint8_t* data, size_t dataSize, KTXImage& image
 
     // TODO: png has 16u format useful for heights
 
-    image.initMipLevels(sizeof(KTXHeader));  // TODO: could also make this ktx2 with zstd compress
+    image.initMipLevels(sizeof(KTXHeader)); // TODO: could also make this ktx2 with zstd compress
     image.reserveImageData();
     memcpy((uint8_t*)image.fileData, &image.header, sizeof(KTXHeader));
 
@@ -314,7 +314,7 @@ bool KTXImageData::open(const uint8_t* data, size_t dataSize, KTXImage& image, b
 
     if (isPNGFile(data, dataSize)) {
         // data stored in image
-        return openPNG(data, dataSize, image);  // TODO: pass isInfoOnly
+        return openPNG(data, dataSize, image); // TODO: pass isInfoOnly
     }
     else if (isDDSFile(data, dataSize)) {
         // converts dds to ktx, data stored in image
@@ -385,13 +385,13 @@ private:
 // https://en.wikipedia.org/wiki/Grayscale
 inline Color toGrayscaleRec709(Color c, const Mipper& mipper)
 {
-    const float4 kRec709Conversion = float4m(0.2126f, 0.7152f, 0.0722f, 0.0f);  // really a float3
+    const float4 kRec709Conversion = float4m(0.2126f, 0.7152f, 0.0722f, 0.0f); // really a float3
 
     // convert to linear, do luminance, then back to srgb primary
 
     float4 clin = mipper.toLinear(c);
     float luminance = dot(clin, kRec709Conversion);
-    luminance = std::min(luminance, 1.0f);  // to avoid assert if math goes above 1.0
+    luminance = std::min(luminance, 1.0f); // to avoid assert if math goes above 1.0
 
     c.r = (uint8_t)(roundf(linearToSRGBFunc(luminance) * 255.0f));
 
@@ -424,21 +424,21 @@ unsigned LodepngDecompressUsingMiniz(
 {
     // mz_ulong doesn't line up with size_t on Windows, but does on macOS
     KASSERT(*dstDataSize != 0);
-    
+
 #if USE_LIBCOMPRESSION
-    // this returns 121 dstSize instead of 16448 on 126 srcSize.  
+    // this returns 121 dstSize instead of 16448 on 126 srcSize.
     // Open src dir to see this.  Have to advance by 2 to fix this.
     if (srcDataSize <= 2) {
         return MZ_DATA_ERROR;
     }
-    
+
     char scratchBuffer[compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)];
     size_t bytesDecoded = compression_decode_buffer(
-         (uint8_t*)*dstData, *dstDataSize,
-         (const uint8_t*)srcData + 2, srcDataSize - 2,
-        scratchBuffer, 
-         COMPRESSION_ZLIB);
-    
+        (uint8_t*)*dstData, *dstDataSize,
+        (const uint8_t*)srcData + 2, srcDataSize - 2,
+        scratchBuffer,
+        COMPRESSION_ZLIB);
+
     int result = MZ_OK;
     if (bytesDecoded != *dstDataSize) {
         result = MZ_DATA_ERROR;
@@ -449,7 +449,7 @@ unsigned LodepngDecompressUsingMiniz(
     mz_ulong bytesDecoded = *dstDataSize;
     int result = mz_uncompress(*dstData, &bytesDecoded,
                                srcData, srcDataSize);
-    
+
     if (result != MZ_OK || bytesDecoded != *dstDataSize) {
         *dstDataSize = 0;
     }
@@ -469,18 +469,17 @@ unsigned LodepngCompressUsingMiniz(
 {
     // TODO: no setting for compression level in settings?
     // TODO: libCompression can only encode zlib to quality 5
-    
+
     // mz_ulong doesn't line up with size_t on Windows, but does on macOS
     mz_ulong dstDataSizeUL = *dstDataSize;
 
     int result = mz_compress2(*dstData, &dstDataSizeUL,
-                               srcData, srcDataSize, MZ_DEFAULT_COMPRESSION);
+                              srcData, srcDataSize, MZ_DEFAULT_COMPRESSION);
 
     *dstDataSize = dstDataSizeUL;
-    
+
     return result;
 }
-
 
 //-----------------------
 
@@ -489,33 +488,34 @@ unsigned LodepngCompressUsingMiniz(
 // have code for this.˜
 static const bool doParseIccProfile = false;
 
-struct IccProfileTag
-{
+struct IccProfileTag {
     uint32_t type, offset, size;
 };
 
-static void swapEndianUint32(uint32_t& x) {
-    x =  ((x << 24) & 0xff000000 ) |
-         ((x <<  8) & 0x00ff0000 ) |
-         ((x >>  8) & 0x0000ff00 ) |
-         ((x >> 24) & 0x000000ff );
+static void swapEndianUint32(uint32_t& x)
+{
+    x = ((x << 24) & 0xff000000) |
+        ((x << 8) & 0x00ff0000) |
+        ((x >> 8) & 0x0000ff00) |
+        ((x >> 24) & 0x000000ff);
 }
 
 // https://github.com/lvandeve/lodepng/blob/master/pngdetail.cpp
-static int getICCInt32(const unsigned char* icc, size_t size, size_t pos) {
-  if (pos + 4 > size) return 0;
-    
-  // this is just swapEndianUint32 in byte form
-  return (int)((icc[pos] << 24) | (icc[pos + 1] << 16) | (icc[pos + 2] << 8) | (icc[pos + 3] << 0));
+static int getICCInt32(const unsigned char* icc, size_t size, size_t pos)
+{
+    if (pos + 4 > size) return 0;
+
+    // this is just swapEndianUint32 in byte form
+    return (int)((icc[pos] << 24) | (icc[pos + 1] << 16) | (icc[pos + 2] << 8) | (icc[pos + 3] << 0));
 }
 
-static float getICC15Fixed16(const unsigned char* icc, size_t size, size_t pos) {
-  return getICCInt32(icc, size, pos) / 65536.0;
+static float getICC15Fixed16(const unsigned char* icc, size_t size, size_t pos)
+{
+    return getICCInt32(icc, size, pos) / 65536.0;
 }
 
 // this is all big-endian, so needs swapped, 132 bytes total
-struct IccProfileHeader
-{
+struct IccProfileHeader {
     uint32_t size; // 0
     uint32_t cmmType; // 4 - 'appl'
     uint32_t version; // 8
@@ -536,29 +536,28 @@ struct IccProfileHeader
     uint32_t padding[7]; // 100
     uint32_t numTags; // 128
 };
-static_assert( sizeof(IccProfileHeader) == 132, "invalid IccProfileHeader");
+static_assert(sizeof(IccProfileHeader) == 132, "invalid IccProfileHeader");
 
-#define MAKEFOURCC(str)                                                       \
-    ((uint32_t)(uint8_t)(str[0]) | ((uint32_t)(uint8_t)(str[1]) << 8) |       \
-    ((uint32_t)(uint8_t)(str[2]) << 16) | ((uint32_t)(uint8_t)(str[3]) << 24 ))
-
+#define MAKEFOURCC(str)                                                 \
+    ((uint32_t)(uint8_t)(str[0]) | ((uint32_t)(uint8_t)(str[1]) << 8) | \
+     ((uint32_t)(uint8_t)(str[2]) << 16) | ((uint32_t)(uint8_t)(str[3]) << 24))
 
 // this must be run after deflate if profile is compressed
 bool parseIccProfile(const uint8_t* data, uint32_t dataSize, bool& isSrgb)
 {
     isSrgb = false;
-    
+
     // should look at other blocks if this is false
     if (dataSize < sizeof(IccProfileHeader)) {
         return false;
     }
-    
+
     // copy header so can endianSwap it
     IccProfileHeader header = *(const IccProfileHeader*)data;
     // convert big to little endian
     swapEndianUint32(header.size);
     swapEndianUint32(header.numTags);
-    
+
     if (header.signature != MAKEFOURCC("acsp")) {
         return false;
     }
@@ -567,20 +566,20 @@ bool parseIccProfile(const uint8_t* data, uint32_t dataSize, bool& isSrgb)
         isSrgb = true;
         return true;
     }
-    
+
     IccProfileTag* tags = (IccProfileTag*)(data + sizeof(IccProfileHeader));
 
     for (uint32_t i = 0; i < header.numTags; ++i) {
         IccProfileTag tag = tags[i];
         swapEndianUint32(tag.offset);
         swapEndianUint32(tag.size);
-        
+
         // There's also tag.name which is 'wtpt' and others.
         // Open a .icc profile to see all these names
-        
+
         uint32_t datatype = *(const uint32_t*)(data + tag.offset);
-        
-        switch(datatype) {
+
+        switch (datatype) {
             case MAKEFOURCC("XYZ "): {
                 if (tag.type == MAKEFOURCC("wtpt")) {
                     float x = getICC15Fixed16(data, dataSize, tag.offset + 8);
@@ -620,14 +619,14 @@ bool parseIccProfile(const uint8_t* data, uint32_t dataSize, bool& isSrgb)
             case MAKEFOURCC("sf32"):
                 // chad - chromatic adaptation matrix
                 break;
-                
+
             case MAKEFOURCC("mAB "):
                 // A2B0, A2B1 - Intent-0/1, device to PCS table
             case MAKEFOURCC("mBA "):
                 // B2A0, B2A1 - Intent-0/1, PCS to device table
             case MAKEFOURCC("sig "):
                 // rig0
-                
+
             case MAKEFOURCC("text"):
             case MAKEFOURCC("mluc"):
                 // muti-localizaed description strings
@@ -638,11 +637,12 @@ bool parseIccProfile(const uint8_t* data, uint32_t dataSize, bool& isSrgb)
                 break;
         }
     }
-    
+
     return true;
 }
-   
-bool isIccProfileSrgb(const uint8_t* data, uint32_t dataSize) {
+
+bool isIccProfileSrgb(const uint8_t* data, uint32_t dataSize)
+{
     bool isSrgb = false;
     parseIccProfile(data, dataSize, isSrgb);
     return isSrgb;
@@ -673,12 +673,12 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     }
 
     isSrgb = false;
-   
+
     // Stop at the idat, or if not present the end of the file
     const uint8_t* end = lodepng_chunk_find_const(data, data + dataSize, "IDAT");
     if (!end)
         end = data + dataSize;
-    
+
     bool hasNonSrgbBlocks = false;
     bool hasSrgbBlock = false;
     {
@@ -687,46 +687,44 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
             lodepng_chunk_find_const(data, end, "iCCP") != nullptr ||
             lodepng_chunk_find_const(data, end, "gAMA") != nullptr ||
             lodepng_chunk_find_const(data, end, "cHRM") != nullptr;
-        
+
         // Apps like Figma always set this
         hasSrgbBlock = lodepng_chunk_find_const(data, end, "sRGB") != nullptr;
     }
-    
+
     const uint8_t* chunkData = lodepng_chunk_find_const(data, end, "sRGB");
     if (chunkData) {
-        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+        lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
         isSrgb = state.info_png.srgb_defined;
         //state.info_png.srgb_intent; // 0-3
     }
-    
+
     if (doParseIccProfile && !chunkData) {
         chunkData = lodepng_chunk_find_const(data, end, "iCCP");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
             if (state.info_png.iccp_defined) {
                 if (!isSrgb)
                     isSrgb = isIccProfileSrgb(state.info_png.iccp_profile, state.info_png.iccp_profile_size);
             }
-                
         }
     }
-    
+
     if (!chunkData) {
         chunkData = lodepng_chunk_find_const(data, end, "gAMA");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
             if (state.info_png.gama_defined) {
                 if (!isSrgb)
                     isSrgb = state.info_png.gama_gamma == 45455; // 1/2.2 x 100000
             }
-                
         }
     }
-    
+
     if (!chunkData) {
         chunkData = lodepng_chunk_find_const(data, end, "cHRM");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
             if (state.info_png.chrm_defined) {
                 if (!isSrgb)
                     isSrgb =
@@ -741,7 +739,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
             }
         }
     }
-    
+
     // because Apple finder thumbnails can't be overridden with custom thumbanailer
     // and defaults to white bkgd (making white icons impossible to see).
     // track the bkgd block, and set/re-define as all black.  Maybe will honor that.
@@ -749,7 +747,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
     bool hasBlackBackground = false;
     chunkData = lodepng_chunk_find_const(data, data + dataSize, "bKGD");
     if (chunkData) {
-        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+        lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
         if (state.info_png.background_defined) {
             hasBackground = true;
             hasBlackBackground =
@@ -758,7 +756,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
                 state.info_png.background_b == 0;
         }
     }
-    
+
     // don't convert png bit depths, but can convert pallete data
     //    if (state.info_png.color.bitdepth != 8) {
     //        return false;
@@ -775,7 +773,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
         case LCT_MAX_OCTET_VALUE:
         case LCT_RGB:
         case LCT_RGBA:
-        case LCT_PALETTE:  // ?
+        case LCT_PALETTE: // ?
             hasColor = true;
             break;
     }
@@ -788,12 +786,11 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
         case LCT_MAX_OCTET_VALUE:
         case LCT_RGBA:
         case LCT_GREY_ALPHA:
-        case LCT_PALETTE:  // ?
+        case LCT_PALETTE: // ?
             hasAlpha = true;
             break;
     }
-    
-    
+
     // this inserts onto end of array, it doesn't resize
     vector<uint8_t> pixelsPNG;
     pixelsPNG.clear();
@@ -834,7 +831,7 @@ bool LoadPng(const uint8_t* data, size_t dataSize, bool isPremulRgb, bool isGray
 
     sourceImage.setSrgbState(isSrgb, hasSrgbBlock, hasNonSrgbBlocks);
     sourceImage.setBackgroundState(hasBlackBackground);
-    
+
     return sourceImage.loadImageFromPixels(pixels, width, height, hasColor, hasAlpha);
 }
 
@@ -851,7 +848,7 @@ bool SavePNG(Image& image, const char* filename)
     // Then if srgb, see if that matches content type srgb state below.
     TexContentType contentType = findContentTypeFromFilename(filename);
     bool isSrgb = contentType == TexContentTypeAlbedo;
-    
+
     // Skip file if it has srgb block, and none of the other block types.
     // This code will also strip the sRGB block from apps like Figma that always set it.
     if (image.hasBlackBackground()) {
@@ -870,7 +867,7 @@ bool SavePNG(Image& image, const char* filename)
         state.info_png.srgb_defined = 1;
         state.info_png.srgb_intent = 0;
     }
-    
+
     // always redefine background to black, so Finder thumbnails are not white
     // this makes viewing any white icons nearly impossible.  Make suer lodepng
     // ignores this background on import, want the stored pixels not ones composited.
@@ -880,13 +877,13 @@ bool SavePNG(Image& image, const char* filename)
     state.info_png.background_r = 0;
     state.info_png.background_g = 0;
     state.info_png.background_b = 0;
-    
+
     // TODO: could write other data into Txt block
     // or try to preserve those
-    
+
     // TODO: image converted to 32-bit, so will save out large ?
     // Can we write out L, LA, RGB, RGBA based on image state?
- 
+
     // use miniz as the encoder
     auto& settings = lodepng_default_compress_settings;
     if (useMiniZ)
@@ -895,25 +892,25 @@ bool SavePNG(Image& image, const char* filename)
     // encode to png
     vector<unsigned char> outputData;
     unsigned error = lodepng::encode(outputData, (const uint8_t*)(image.pixels().data()), image.width(), image.height(), state);
-    
+
     if (error) {
         return false;
     }
-    
+
     FileHelper fileHelper;
     if (!fileHelper.open(filename, "wb+")) {
         return false;
     }
-    
+
     // this is overrwriting the source file currently
     // TODO: could use tmp file, and then replace existing
     // this could destroy original png on failure otherwise
     if (!fileHelper.write((const uint8_t*)outputData.data(), outputData.size())) {
         return false;
     }
-    
+
     KLOGI("Kram", "saved %s %s sRGB block", filename, isSrgb ? "with" : "without");
-    
+
     return true;
 }
 
@@ -985,12 +982,12 @@ bool SetupSourceImage(const string& srcFilename, Image& sourceImage,
     if (isPNG) {
         bool isSrgb = false;
         if (!LoadPng(data, dataSize, isPremulSrgb, isGray, isSrgb, sourceImage)) {
-            return false;  // error
+            return false; // error
         }
     }
     else {
         if (!LoadKtx(data, dataSize, sourceImage)) {
-            return false;  // error
+            return false; // error
         }
     }
 
@@ -1161,7 +1158,7 @@ static const char* formatFormat(MyMTLPixelFormat format)
             break;
 
         default:
-            assert(false);  // unknown format
+            assert(false); // unknown format
             break;
     }
 
@@ -1271,7 +1268,7 @@ string formatInputAndOutput(int32_t testNumber, const char* srcFilename, MyMTLPi
     assert(extSeparatorStr != nullptr);
     size_t extSeparator = extSeparatorStr - dst.c_str();
     dst.erase(extSeparator);
-    dst.append(".ktx");  // TODO: test ktx2 too
+    dst.append(".ktx"); // TODO: test ktx2 too
 
     cmd += dst;
 
@@ -1292,9 +1289,9 @@ bool kramTestCommand(int32_t testNumber,
     //#define SwizzleA " -swizzle 000r"
     //#define SwizzleLA " -swizzle rrrg"
 
-#define ASTCSwizzle2nm " -swizzle gggr"  // store as L+A, decode to snorm with .ag * 2 - 1
-#define ASTCSwizzleL1 " -swizzle rrr1"   // store as L
-#define ASTCSwizzle2 " -swizzle gggr"    // store as L+A, decode to snorm with .ag
+#define ASTCSwizzle2nm " -swizzle gggr" // store as L+A, decode to snorm with .ag * 2 - 1
+#define ASTCSwizzleL1 " -swizzle rrr1" // store as L
+#define ASTCSwizzle2 " -swizzle gggr" // store as L+A, decode to snorm with .ag
 
     // TODO: these are all run at default quality
     bool isNotPremul = true;
@@ -1467,7 +1464,7 @@ bool kramTestCommand(int32_t testNumber,
             testNumber = 3003;
             encoder = kTexEncoderEtcenc;
             cmd += " -sdf";
-            cmd +=   formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatEAC_R11Unorm, encoder);
+            cmd += formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatEAC_R11Unorm, encoder);
 
             break;
 
@@ -1475,7 +1472,7 @@ bool kramTestCommand(int32_t testNumber,
             testNumber = 3004;
             encoder = kTexEncoderATE;
             cmd += " -sdf" ASTCSwizzleL1;
-            cmd +=     formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatASTC_4x4_LDR, encoder, isNotPremul);
+            cmd += formatInputAndOutput(testNumber, "flipper-sdf.png", MyMTLPixelFormatASTC_4x4_LDR, encoder, isNotPremul);
             break;
 
         default:
@@ -1650,7 +1647,6 @@ void kramFixupUsage(bool showVersion = true)
           showVersion ? usageName : "");
 }
 
-
 void kramInfoUsage(bool showVersion = true)
 {
     KLOGI("Kram",
@@ -1750,22 +1746,22 @@ void kramEncodeUsage(bool showVersion = true)
 
           // can force an encoder when there is overlap
           "\t-encoder squish"
-          "\tbc[1,3,4,5] %s\n"  // can be disabled
+          "\tbc[1,3,4,5] %s\n" // can be disabled
 
           "\t-encoder bcenc"
-          "\tbc[1,3,4,5,7] %s\n"  // can be disabled
+          "\tbc[1,3,4,5,7] %s\n" // can be disabled
 
           "\t-encoder ate"
-          "\tbc[1,4,5,7] %s\n"  // can be disabled
+          "\tbc[1,4,5,7] %s\n" // can be disabled
 
           "\t-encoder ate"
-          "\tastc[4x4,8x8] %s\n"  // can be disabled
+          "\tastc[4x4,8x8] %s\n" // can be disabled
 
           "\t-encoder astcenc"
-          "\tastc[4x4,5x5,6x6,8x8] ldr/hdr support %s\n"  // can be disabled
+          "\tastc[4x4,5x5,6x6,8x8] ldr/hdr support %s\n" // can be disabled
 
           "\t-encoder etcenc"
-          "\tetc2[r,rg,rgb,rgba] %s\n"  // can be disabled
+          "\tetc2[r,rg,rgb,rgba] %s\n" // can be disabled
 
           "\t-encoder explicit"
           "\tr|rg|rgba[8|16f|32f]\n"
@@ -1806,19 +1802,19 @@ void kramEncodeUsage(bool showVersion = true)
           "\tsrc set to linear\n"
           "\t-srcsrgbimage"
           "\tsrc set to png flag (unreliable) or container format\n"
-          
+
           // normals and snorm data
           "\t-signed"
           "\tSigned r or rg for etc/bc formats, astc doesn't have signed format.\n"
           "\t-normal"
           "\tNormal map rg storage signed for etc/bc (rg01), only unsigned astc L+A (gggr).\n"
-          
+
           // sdf
           "\t-sdf"
           "\tGenerate single-channel SDF from a bitmap, can mip and drop large mips. Encode to r8, bc4, etc2r, astc4x4 (Unorm LLL1) to encode\n"
           "\t-sdfThreshold 120"
           "\tSDF generation uses bitmap converted from 8-bit red channel\n"
-          
+
           "\t-gray"
           "\tConvert to grayscale before premul\n"
 
@@ -2081,51 +2077,49 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
         KLOGE("Kram", "info couldn't open png file");
         return "";
     }
-    
+
     // TODO: also gama 2.2 block sometimes used in older files
     bool isSrgb = false;
-    
+
     const uint8_t* end = lodepng_chunk_find_const(data, data + dataSize, "IDAT");
     if (!end)
         end = data + dataSize;
-    
+
     const uint8_t* chunkData = lodepng_chunk_find_const(data, end, "sRGB");
     if (chunkData) {
-        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+        lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
         isSrgb = state.info_png.srgb_defined;
         //state.info_png.srgb_intent; // 0-3
     }
-    
+
     // Adobe Photoshop 2022 only sets iccp + gama instead of sRGB flag, but iccp takes
     // priority to gama block.
     if (doParseIccProfile && !chunkData) {
         chunkData = lodepng_chunk_find_const(data, end, "iCCP");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
             if (state.info_png.iccp_defined) {
                 if (!isSrgb)
                     isSrgb = isIccProfileSrgb(state.info_png.iccp_profile, state.info_png.iccp_profile_size);
             }
-                
         }
     }
-    
+
     if (!chunkData) {
         chunkData = lodepng_chunk_find_const(data, end, "gAMA");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
             if (state.info_png.gama_defined) {
                 if (!isSrgb)
                     isSrgb = state.info_png.gama_gamma == 45455; // 1/2.2 x 100000
             }
-                
         }
     }
-    
+
     if (!chunkData) {
         chunkData = lodepng_chunk_find_const(data, data + dataSize, "cHRM");
         if (chunkData) {
-            lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+            lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
             if (state.info_png.chrm_defined) {
                 if (!isSrgb)
                     isSrgb =
@@ -2140,7 +2134,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
             }
         }
     }
-    
+
     // because Apple finder thumbnails can't be overridden with custom thumbanailer
     // and defaults to white bkgd (making white icons impossible to see).
     // track the bkgd block, and set/re-define as all black.  Maybe will honor that.
@@ -2148,7 +2142,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
     bool hasBlackBackground = false;
     chunkData = lodepng_chunk_find_const(data, data + dataSize, "bKGD");
     if (chunkData) {
-        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
+        lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
         if (state.info_png.background_defined) {
             hasBackground = true;
             hasBlackBackground =
@@ -2157,7 +2151,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
                 state.info_png.background_b == 0;
         }
     }
-    
+
     string info;
 
     bool hasColor = true;
@@ -2172,7 +2166,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
         case LCT_MAX_OCTET_VALUE:
         case LCT_RGB:
         case LCT_RGBA:
-        case LCT_PALETTE:  // ?
+        case LCT_PALETTE: // ?
             hasColor = true;
             break;
     }
@@ -2185,7 +2179,7 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
         case LCT_MAX_OCTET_VALUE:
         case LCT_RGBA:
         case LCT_GREY_ALPHA:
-        case LCT_PALETTE:  // ?
+        case LCT_PALETTE: // ?
             hasAlpha = true;
             break;
     }
@@ -2221,15 +2215,14 @@ string kramInfoPNGToString(const string& srcFilename, const uint8_t* data, uint6
             hasAlpha ? "y" : "n",
             hasPalette ? "y" : "n",
             isSrgb ? "y" : "n",
-            hasBackground ? "y" : "n"
-            );
+            hasBackground ? "y" : "n");
     info += tmp;
 
     // optional block with ppi
     chunkData = lodepng_chunk_find_const(data, end, "pHYs");
     if (chunkData) {
-        lodepng_inspect_chunk(&state, chunkData - data, data, end-data);
-    
+        lodepng_inspect_chunk(&state, chunkData - data, data, end - data);
+
         if (state.info_png.phys_defined && state.info_png.phys_unit == 1) {
             float metersToInches = 39.37;
             // TODO: there is info_pgn.phys_unit (0 - unknown, 1 - meters)
@@ -2297,7 +2290,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
     numPixels *= (float)numChunks;
 
     if (srcImage.mipCount() > 1) {
-        numPixels *= 4.0 / 3.0f;  // TODO: estimate for now
+        numPixels *= 4.0 / 3.0f; // TODO: estimate for now
     }
 
     // to megapixels
@@ -2405,7 +2398,7 @@ string kramInfoKTXToString(const string& srcFilename, const KTXImage& srcImage, 
                 append_sprintf(info,
                                "%" PRIu64 ",%" PRIu64 "\n",
                                mip.offset,
-                               mip.length  // only size of one mip right now, not mip * numChunks
+                               mip.length // only size of one mip right now, not mip * numChunks
                 );
             }
         }
@@ -2543,10 +2536,10 @@ static int32_t kramAppDecode(vector<const char*>& args)
     }
 
     const char* dstExt = ".ktx";
-    //    if (isDstKTX2)
-    //        dstExt = ".ktx2";
-    //    if (isDstDDS)
-    //        dstExt = ".dds";
+    // if (isDstKTX2)
+    //     dstExt = ".ktx2";
+    // if (isDstDDS)
+    //     dstExt = ".dds";
 
     KTXImage srcImage;
     KTXImageData srcImageData;
@@ -2578,7 +2571,7 @@ static int32_t kramAppDecode(vector<const char*>& args)
     params.decoder = textureDecoder;
     params.swizzleText = swizzleText;
 
-    KramDecoder decoder;  // just to call decode
+    KramDecoder decoder; // just to call decode
     success = decoder.decode(srcImage, tmpFileHelper.pointer(), params);
 
     // rename to dest filepath, note this only occurs if above succeeded
@@ -2601,7 +2594,7 @@ int32_t kramAppFixup(vector<const char*>& args)
     string srcFilename;
     bool doFixupSrgb = false;
     bool error = false;
-    
+
     for (int32_t i = 0; i < argc; ++i) {
         // check for options
         const char* word = args[i];
@@ -2611,9 +2604,9 @@ int32_t kramAppFixup(vector<const char*>& args)
             error = true;
             break;
         }
-        
+
         // TDOO: may want to add output command too
-        
+
         if (isStringEqual(word, "-srgb")) {
             doFixupSrgb = true;
         }
@@ -2635,12 +2628,12 @@ int32_t kramAppFixup(vector<const char*>& args)
             break;
         }
     }
-        
+
     if (srcFilename.empty()) {
         KLOGE("Kram", "no input file given\n");
         error = true;
     }
-        
+
     if (doFixupSrgb) {
         bool isPNG = isPNGFilename(srcFilename);
 
@@ -2648,11 +2641,11 @@ int32_t kramAppFixup(vector<const char*>& args)
             KLOGE("Kram", "fixup srgb only supports png input");
             error = true;
         }
-        
+
         bool success = !error;
-        
+
         Image srcImage;
-        
+
         // load the png, this doesn't return srgb state of original png
         if (success)
             success = SetupSourceImage(srcFilename, srcImage);
@@ -2660,16 +2653,16 @@ int32_t kramAppFixup(vector<const char*>& args)
         // stuff srgb block based on filename to content conversion for now
         if (success) {
             success = SavePNG(srcImage, srcFilename.c_str());
-            
+
             if (!success) {
                 KLOGE("Kram", "fixup srgb could not save to file");
             }
         }
-        
+
         if (!success)
             error = true;
     }
-    
+
     return error ? -1 : 0;
 }
 
@@ -2713,7 +2706,7 @@ static int32_t kramAppEncode(vector<const char*>& args)
                 error = true;
                 break;
             }
-            
+
             infoArgs.sdfThreshold = StringToInt32(args[i]);
             if (infoArgs.sdfThreshold < 1 || infoArgs.sdfThreshold > 255) {
                 KLOGE("Kram", "sdfThreshold arg invalid");
@@ -2929,12 +2922,12 @@ static int32_t kramAppEncode(vector<const char*>& args)
         else if (isStringEqual(word, "-srgb")) {
             // not validating format for whether it's srgb or not
             infoArgs.isSRGBSrc = true;
-            
+
             // The format may override this setting.  Not all formats
             // have an srgb varient.
             infoArgs.isSRGBDst = true;
         }
-        
+
         // This means ignore the srgb state on the src image
         // This has to be specified after -srgb
         else if (isStringEqual(word, "-srclin")) {
@@ -3271,9 +3264,6 @@ static int32_t kramAppEncode(vector<const char*>& args)
     return success ? 0 : -1;
 }
 
-
-                   
-                   
 int32_t kramAppScript(vector<const char*>& args)
 {
     // this is help
@@ -3366,7 +3356,7 @@ int32_t kramAppScript(vector<const char*>& args)
 
     // as a global this auto allocates 16 threads, and don't want that unless actually
     // using scripting.  And even then want control over the number of threads.
-    std::atomic<int32_t> errorCounter(0);  // doesn't initialize to 0 otherwise
+    std::atomic<int32_t> errorCounter(0); // doesn't initialize to 0 otherwise
     std::atomic<int32_t> skippedCounter(0);
     int32_t commandCounter = 0;
 
@@ -3406,7 +3396,7 @@ int32_t kramAppScript(vector<const char*>& args)
                 // stop any new work when not "continue on error"
                 if (isHaltedOnError && int32_t(errorCounter) > 0) {
                     skippedCounter++;
-                    return 0;  // not really success, just skipping command
+                    return 0; // not really success, just skipping command
                 }
 
                 Timer commandTimer;
@@ -3633,12 +3623,13 @@ int32_t kramAppMain(int32_t argc, char* argv[])
     return kramAppCommand(args);
 }
 
-bool isSupportedFilename(const char* filename) {
+bool isSupportedFilename(const char* filename)
+{
     if (isPNGFilename(filename) ||
         isKTXFilename(filename) ||
         isKTX2Filename(filename) ||
         isDDSFilename(filename)) {
-    return true;
+        return true;
     }
     return false;
 }
@@ -3652,13 +3643,13 @@ void fixPixelFormat(KTXImage& image, const char* filename)
     static bool doReplacePixelFormatFromContentType = true;
     if (!doReplacePixelFormatFromContentType)
         return;
-    
+
     bool isPNG = isPNGFilename(filename);
     if (!isPNG)
         return;
-    
+
     TexContentType contentType = findContentTypeFromFilename(filename);
-    
+
     bool isSrgb = contentType == TexContentTypeAlbedo;
     image.pixelFormat = isSrgb ? MyMTLPixelFormatRGBA8Unorm_sRGB : MyMTLPixelFormatRGBA8Unorm;
 }
@@ -3668,12 +3659,12 @@ void fixPixelFormat(KTXImage& image, const char* filename)
 TexContentType findContentTypeFromFilename(const char* filename)
 {
     string filenameShort = filename;
-    
+
     const char* dotPosStr = strrchr(filenameShort.c_str(), '.');
     if (dotPosStr == nullptr)
         return TexContentTypeUnknown;
     auto dotPos = dotPosStr - filenameShort.c_str();
-    
+
     // now chop off the extension
     filenameShort = filenameShort.substr(0, dotPos);
 
@@ -3686,36 +3677,28 @@ TexContentType findContentTypeFromFilename(const char* filename)
     }
     else if (endsWith(filenameShort, "-n") ||
              endsWith(filenameShort, "_normal") ||
-             endsWith(filenameShort, "_Normal")
-             )
-    {
+             endsWith(filenameShort, "_Normal")) {
         return TexContentTypeNormal;
     }
     else if (endsWith(filenameShort, "-a") ||
              endsWith(filenameShort, "-d") ||
              endsWith(filenameShort, "_baseColor") ||
-             endsWith(filenameShort, "_Color")
-             )
-    {
+             endsWith(filenameShort, "_Color")) {
         return TexContentTypeAlbedo;
     }
     else if (endsWith(filenameShort, "-ao") ||
-             endsWith(filenameShort, "_AO")
-             )
-    {
+             endsWith(filenameShort, "_AO")) {
         return TexContentTypeAO;
     }
     else if (endsWith(filenameShort, "-mr") ||
              endsWith(filenameShort, "_Metallic") ||
              endsWith(filenameShort, "_Roughness") ||
-             endsWith(filenameShort, "_MetaliicRoughness")
-             )
-    {
+             endsWith(filenameShort, "_MetaliicRoughness")) {
         return TexContentTypeMetallicRoughness;
     }
-    
+
     // fallback to albedo for now
     return TexContentTypeAlbedo;
 }
 
-}  // namespace kram
+} // namespace kram
