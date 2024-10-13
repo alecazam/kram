@@ -3,20 +3,18 @@
 #include "CodeWriter.h"
 #include "HLSLTree.h"
 
-namespace M4
-{
+namespace M4 {
 
-class  HLSLTree;
+class HLSLTree;
 struct HLSLFunction;
 struct HLSLStruct;
-    
-struct MSLOptions
-{
+
+struct MSLOptions {
     int (*attributeCallback)(const char* name, uint32_t index) = NULL;
-    
+
     // no CLI to set offset
     uint32_t bufferRegisterOffset = 0;
-    
+
     bool writeFileLine = false;
     bool treatHalfAsFloat = false;
 };
@@ -24,8 +22,7 @@ struct MSLOptions
 /**
  * This class is used to generate MSL shaders.
  */
-class MSLGenerator
-{
+class MSLGenerator {
 public:
     MSLGenerator();
 
@@ -33,32 +30,29 @@ public:
     const char* GetResult() const;
 
 private:
-    
     // @@ Rename class argument. Add buffers & textures.
-    struct ClassArgument
-    {
+    struct ClassArgument {
         const char* name;
         HLSLType type;
         //const char* typeName;     // @@ Do we need more than the type name?
         const char* registerName;
         bool isRef;
-        
-        ClassArgument * nextArg;
-        
-        ClassArgument(const char* name, HLSLType type, const char * registerName, bool isRef) :
-            name(name), type(type), registerName(registerName), isRef(isRef)
-		{
-			nextArg = NULL;
-		}
+
+        ClassArgument* nextArg;
+
+        ClassArgument(const char* name, HLSLType type, const char* registerName, bool isRef) : name(name), type(type), registerName(registerName), isRef(isRef)
+        {
+            nextArg = NULL;
+        }
     };
 
-    void AddClassArgument(ClassArgument * arg);
+    void AddClassArgument(ClassArgument* arg);
 
     void Prepass(HLSLTree* tree, HLSLTarget target, HLSLFunction* entryFunction);
     void CleanPrepass();
-    
+
     void PrependDeclarations();
-    
+
     void OutputStaticDeclarations(int indent, HLSLStatement* statement);
     void OutputStatements(int indent, HLSLStatement* statement);
     void OutputAttributes(int indent, HLSLAttribute* attribute);
@@ -68,9 +62,9 @@ private:
     void OutputFunction(int indent, HLSLFunction* function);
     void OutputExpression(HLSLExpression* expression, HLSLExpression* parentExpression);
     void OutputTypedExpression(const HLSLType& type, HLSLExpression* expression, HLSLExpression* parentExpression);
-    bool NeedsCast(const HLSLType & target, const HLSLType & source);
+    bool NeedsCast(const HLSLType& target, const HLSLType& source);
     void OutputCast(const HLSLType& type);
-    
+
     void OutputArguments(HLSLArgument* argument);
     void OutputDeclaration(const HLSLType& type, const char* name, HLSLExpression* assignment, bool isRef = false, bool isConst = false, int alignment = 0);
     void OutputDeclarationType(const HLSLType& type, bool isConst = false, bool isRef = false, int alignment = 0, bool isTypeCast = false);
@@ -78,36 +72,34 @@ private:
     void OutputExpressionList(HLSLExpression* expression);
     void OutputExpressionList(const HLSLType& type, HLSLExpression* expression);
     void OutputExpressionList(HLSLArgument* argument, HLSLExpression* expression);
-    
+
     void OutputFunctionCallStatement(int indent, HLSLFunctionCall* functionCall, HLSLDeclaration* assingmentExpression);
-    void OutputFunctionCall(HLSLFunctionCall* functionCall, HLSLExpression * parentExpression);
+    void OutputFunctionCall(HLSLFunctionCall* functionCall, HLSLExpression* parentExpression);
 
     const char* TranslateInputSemantic(const char* semantic);
     const char* TranslateOutputSemantic(const char* semantic);
 
     const char* GetTypeName(const HLSLType& type, bool exactType);
     const char* GetAddressSpaceName(HLSLBaseType baseType, HLSLAddressSpace addressSpace) const;
-    
+
     bool CanSkipWrittenStatement(const HLSLStatement* statement) const;
-    
+
     void Error(const char* format, ...) const M4_PRINTF_ATTR(2, 3);
 
 private:
+    CodeWriter m_writer;
 
-    CodeWriter      m_writer;
+    HLSLTree* m_tree;
+    const char* m_entryName;
+    HLSLTarget m_target;
+    MSLOptions m_options;
 
-    HLSLTree*       m_tree;
-    const char*     m_entryName;
-    HLSLTarget      m_target;
-    MSLOptions      m_options;
+    mutable bool m_error;
 
-    mutable bool            m_error;
+    ClassArgument* m_firstClassArgument;
+    ClassArgument* m_lastClassArgument;
 
-    ClassArgument * m_firstClassArgument;
-    ClassArgument * m_lastClassArgument;
-    
-    HLSLFunction *  m_currentFunction;
+    HLSLFunction* m_currentFunction;
 };
 
-} // M4
-
+} //namespace M4

@@ -16,7 +16,7 @@
 namespace kram {
 class KTXImage;
 class KTXImageData;
-}
+} //namespace kram
 
 // This loads KTX/2 and PNG data.  Moving towards KTX/2 files only, with a PNG
 // to KTX/2 conversion.
@@ -38,7 +38,7 @@ class KTXImageData;
 - (nullable id<MTLTexture>)loadTextureFromImage:(const kram::KTXImage &)image
                                  originalFormat:
                                      (nullable MTLPixelFormat *)originalFormat
-                                name:(nonnull const char*)name;
+                                           name:(nonnull const char *)name;
 
 // load into KTXImage and KTXImageData, can use with loadTextureFromImage
 - (BOOL)loadImageFromURL:(nonnull NSURL *)url
@@ -73,4 +73,4 @@ using namespace STL_NAMESPACE;
 
 // provide access to lowercase strings
 string toLower(const string &text);
-}
+} //namespace kram

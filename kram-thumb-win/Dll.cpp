@@ -1,19 +1,20 @@
 // based on QOI Thumbnail Provider for Windows Explorer
 // Written by iOrange in 2021
-// 
+//
 // Based on Microsoft's example
 // https://github.com/microsoft/windows-classic-samples/tree/main/Samples/Win7Samples/winui/shell/appshellintegration/RecipeThumbnailProvider
-// 
+//
 // Also more info here:
 // https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/cc144118(v=vs.85)
 
 #include <objbase.h>
+#include <shlobj.h> // For SHChangeNotify
 #include <shlwapi.h>
 #include <thumbcache.h> // For IThumbnailProvider.
-#include <shlobj.h>     // For SHChangeNotify
-#include <new>
+
 #include <atomic>
-#include <vector>       // For std::size
+#include <new>
+#include <vector> // For std::size
 
 // from KramThumbProvider.cpp
 extern HRESULT KramThumbProvider_CreateInstance(REFIID riid, void** ppv);
@@ -27,49 +28,53 @@ extern HRESULT KramThumbProvider_CreateInstance(REFIID riid, void** ppv);
 #define SZ_CLSID_KramTHUMBHANDLER L"{a9a47ef5-c238-42a9-a4e6-a85558811dac}"
 constexpr CLSID kCLSID_KramThumbHandler = {0xa9a47ef5, 0xc238, 0x42a9, {0xa4, 0xe6, 0xa8, 0x55, 0x58, 0x81, 0x1d, 0xac}};
 
-
-typedef HRESULT(*PFNCREATEINSTANCE)(REFIID riid, void** ppvObject);
+typedef HRESULT (*PFNCREATEINSTANCE)(REFIID riid, void** ppvObject);
 struct CLASS_OBJECT_INIT {
-    const CLSID*        pClsid;
-    PFNCREATEINSTANCE   pfnCreate;
+    const CLSID* pClsid;
+    PFNCREATEINSTANCE pfnCreate;
 };
 
 // add classes supported by this module here
 constexpr CLASS_OBJECT_INIT kClassObjectInit[] = {
-    { &kCLSID_KramThumbHandler, KramThumbProvider_CreateInstance }
-};
+    {&kCLSID_KramThumbHandler, KramThumbProvider_CreateInstance}};
 
-
-std::atomic_long    gModuleReferences(0);
-HINSTANCE           gModuleInstance = nullptr;
+std::atomic_long gModuleReferences(0);
+HINSTANCE gModuleInstance = nullptr;
 
 // Standard DLL functions
-STDAPI_(BOOL) DllMain(HINSTANCE hInstance, DWORD dwReason, void*) {
+STDAPI_(BOOL)
+DllMain(HINSTANCE hInstance, DWORD dwReason, void*)
+{
     if (DLL_PROCESS_ATTACH == dwReason) {
         gModuleInstance = hInstance;
         ::DisableThreadLibraryCalls(hInstance);
-    } else if (DLL_PROCESS_DETACH == dwReason) {
+    }
+    else if (DLL_PROCESS_DETACH == dwReason) {
         gModuleInstance = nullptr;
     }
     return TRUE;
 }
 
-STDAPI DllCanUnloadNow() {
+STDAPI DllCanUnloadNow()
+{
     // Only allow the DLL to be unloaded after all outstanding references have been released
     return (gModuleReferences > 0) ? S_FALSE : S_OK;
 }
 
-void DllAddRef() {
+void DllAddRef()
+{
     ++gModuleReferences;
 }
 
-void DllRelease() {
+void DllRelease()
+{
     --gModuleReferences;
 }
 
 class CClassFactory : public IClassFactory {
 public:
-    static HRESULT CreateInstance(REFCLSID clsid, const CLASS_OBJECT_INIT* pClassObjectInits, size_t cClassObjectInits, REFIID riid, void** ppv) {
+    static HRESULT CreateInstance(REFCLSID clsid, const CLASS_OBJECT_INIT* pClassObjectInits, size_t cClassObjectInits, REFIID riid, void** ppv)
+    {
         *ppv = NULL;
         HRESULT hr = CLASS_E_CLASSNOTAVAILABLE;
         for (size_t i = 0; i < cClassObjectInits; ++i) {
@@ -87,29 +92,34 @@ public:
     }
 
     CClassFactory(PFNCREATEINSTANCE pfnCreate)
-        : mReferences(1)
-        , mCreateFunc(pfnCreate) {
+        : mReferences(1), mCreateFunc(pfnCreate)
+    {
         DllAddRef();
     }
 
-    virtual ~CClassFactory() {
+    virtual ~CClassFactory()
+    {
         DllRelease();
     }
 
     // IUnknown
-    IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) {
+    IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv)
+    {
         static const QITAB qit[] = {
             QITABENT(CClassFactory, IClassFactory),
-            { 0 }
-        };
+            {0}};
         return QISearch(this, qit, riid, ppv);
     }
 
-    IFACEMETHODIMP_(ULONG) AddRef() {
+    IFACEMETHODIMP_(ULONG)
+    AddRef()
+    {
         return ++mReferences;
     }
 
-    IFACEMETHODIMP_(ULONG) Release() {
+    IFACEMETHODIMP_(ULONG)
+    Release()
+    {
         const long refs = --mReferences;
         if (!refs) {
             delete this;
@@ -118,38 +128,43 @@ public:
     }
 
     // IClassFactory
-    IFACEMETHODIMP CreateInstance(IUnknown* punkOuter, REFIID riid, void** ppv) {
+    IFACEMETHODIMP CreateInstance(IUnknown* punkOuter, REFIID riid, void** ppv)
+    {
         return punkOuter ? CLASS_E_NOAGGREGATION : mCreateFunc(riid, ppv);
     }
 
-    IFACEMETHODIMP LockServer(BOOL fLock) {
+    IFACEMETHODIMP LockServer(BOOL fLock)
+    {
         if (fLock) {
             DllAddRef();
-        } else {
+        }
+        else {
             DllRelease();
         }
         return S_OK;
     }
 
 private:
-    std::atomic_long    mReferences;
-    PFNCREATEINSTANCE   mCreateFunc;
+    std::atomic_long mReferences;
+    PFNCREATEINSTANCE mCreateFunc;
 };
 
-STDAPI DllGetClassObject(REFCLSID clsid, REFIID riid, void** ppv) {
+STDAPI DllGetClassObject(REFCLSID clsid, REFIID riid, void** ppv)
+{
     return CClassFactory::CreateInstance(clsid, kClassObjectInit, std::size(kClassObjectInit), riid, ppv);
 }
 
 // A struct to hold the information required for a registry entry
 struct REGISTRY_ENTRY {
-    HKEY   hkeyRoot;
+    HKEY hkeyRoot;
     PCWSTR pszKeyName;
     PCWSTR pszValueName;
     PCWSTR pszData;
 };
 
 // Creates a registry key (if needed) and sets the default value of the key
-HRESULT CreateRegKeyAndSetValue(const REGISTRY_ENTRY* pRegistryEntry) {
+HRESULT CreateRegKeyAndSetValue(const REGISTRY_ENTRY* pRegistryEntry)
+{
     HKEY hKey;
     HRESULT hr = HRESULT_FROM_WIN32(RegCreateKeyExW(pRegistryEntry->hkeyRoot,
                                                     pRegistryEntry->pszKeyName,
@@ -166,28 +181,30 @@ HRESULT CreateRegKeyAndSetValue(const REGISTRY_ENTRY* pRegistryEntry) {
 }
 
 // Registers this COM server
-STDAPI DllRegisterServer() {
+STDAPI DllRegisterServer()
+{
     HRESULT hr;
-    WCHAR szModuleName[MAX_PATH] = { 0 };
+    WCHAR szModuleName[MAX_PATH] = {0};
 
     if (!GetModuleFileNameW(gModuleInstance, szModuleName, ARRAYSIZE(szModuleName))) {
         hr = HRESULT_FROM_WIN32(GetLastError());
-    } else {
+    }
+    else {
         // List of registry entries we want to create
         const REGISTRY_ENTRY registryEntries[] = {
             // RootKey          KeyName                                                                      ValueName          Data
-            {HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" SZ_CLSID_KramTHUMBHANDLER,                      nullptr,           SZ_KramTHUMBHANDLER},
-            {HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" SZ_CLSID_KramTHUMBHANDLER L"\\InProcServer32",  nullptr,           szModuleName},
-            {HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" SZ_CLSID_KramTHUMBHANDLER L"\\InProcServer32",  L"ThreadingModel", L"Apartment"},
+            {HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" SZ_CLSID_KramTHUMBHANDLER, nullptr, SZ_KramTHUMBHANDLER},
+            {HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" SZ_CLSID_KramTHUMBHANDLER L"\\InProcServer32", nullptr, szModuleName},
+            {HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" SZ_CLSID_KramTHUMBHANDLER L"\\InProcServer32", L"ThreadingModel", L"Apartment"},
 
             // libkram can decode any of these and create a thumbnail
             // The Vista GUID for the thumbnail handler Shell extension is E357FCCD-A995-4576-B01F-234630154E96.
-            {HKEY_CURRENT_USER, L"Software\\Classes\\.ktx",                                                  L"PerceivedType",  L"image"},
-            {HKEY_CURRENT_USER, L"Software\\Classes\\.ktx\\ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}", nullptr,           SZ_CLSID_KramTHUMBHANDLER},
-            {HKEY_CURRENT_USER, L"Software\\Classes\\.ktx2",                                                  L"PerceivedType",  L"image"},
-            {HKEY_CURRENT_USER, L"Software\\Classes\\.ktx2\\ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}", nullptr,           SZ_CLSID_KramTHUMBHANDLER},
-            {HKEY_CURRENT_USER, L"Software\\Classes\\.dds",                                                  L"PerceivedType",  L"image"},
-            {HKEY_CURRENT_USER, L"Software\\Classes\\.dds\\ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}", nullptr,           SZ_CLSID_KramTHUMBHANDLER},
+            {HKEY_CURRENT_USER, L"Software\\Classes\\.ktx", L"PerceivedType", L"image"},
+            {HKEY_CURRENT_USER, L"Software\\Classes\\.ktx\\ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}", nullptr, SZ_CLSID_KramTHUMBHANDLER},
+            {HKEY_CURRENT_USER, L"Software\\Classes\\.ktx2", L"PerceivedType", L"image"},
+            {HKEY_CURRENT_USER, L"Software\\Classes\\.ktx2\\ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}", nullptr, SZ_CLSID_KramTHUMBHANDLER},
+            {HKEY_CURRENT_USER, L"Software\\Classes\\.dds", L"PerceivedType", L"image"},
+            {HKEY_CURRENT_USER, L"Software\\Classes\\.dds\\ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}", nullptr, SZ_CLSID_KramTHUMBHANDLER},
             //{HKEY_CURRENT_USER, L"Software\\Classes\\.png",                                                  L"PerceivedType", L"image"},
             //{HKEY_CURRENT_USER, L"Software\\Classes\\.png\\ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}", nullptr, SZ_CLSID_KramTHUMBHANDLER},
         };
@@ -208,7 +225,8 @@ STDAPI DllRegisterServer() {
 }
 
 // Unregisters this COM server
-STDAPI DllUnregisterServer() {
+STDAPI DllUnregisterServer()
+{
     HRESULT hr = S_OK;
 
     const PCWSTR regKeys[] = {
@@ -216,7 +234,7 @@ STDAPI DllUnregisterServer() {
         L"Software\\Classes\\.ktx",
         L"Software\\Classes\\.ktx2",
         L"Software\\Classes\\.dds",
-       // L"Software\\Classes\\.png", // only need this if Win png bg is bad
+        // L"Software\\Classes\\.png", // only need this if Win png bg is bad
     };
 
     // Delete the registry entries

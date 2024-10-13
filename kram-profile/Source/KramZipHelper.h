@@ -8,8 +8,8 @@
 #include <stdint.h>
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 // from miniz
 // had to change miniz from anonymous struct typedef, or can't fwd declare
@@ -21,7 +21,7 @@ namespace kram {
 using namespace STL_NAMESPACE;
 
 struct ZipEntry {
-    const char* filename;  // max 512, aliased
+    const char* filename; // max 512, aliased
     int32_t fileIndex;
 
     // attributes
@@ -75,8 +75,8 @@ private:
     std::unique_ptr<mz_zip_archive> zip;
     vector<ZipEntry> _zipEntrys;
 
-    const uint8_t* zipData;  // aliased
+    const uint8_t* zipData; // aliased
 
     vector<char> allFilenames;
 };
-}  // namespace kram
+} // namespace kram

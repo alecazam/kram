@@ -33,12 +33,12 @@ clang-format -style=file -i kram/*.(cpp|h)
 clang-format -style=file -i vectormath/*.(cpp|h)
 popd
 
-# pushd ..
-# clang-format -style=file -i kramv/*.*
-# clang-format -style=file -i kramc/*.*
-# clang-format -style=file -i kram-thumb/*.(cpp|h)
-# clang-format -style=file -i kram-thumb-win/*.*
-# clang-format -style=file -i kram-profile/*.*
-# clang-format -style=file -i kram-preview/*.*
-# clang-format -style=file -i hlslparser/*.*
-# popd
+pushd ..
+clang-format -style=file -i kramv/*.(cpp|h||mm)
+clang-format -style=file -i kramc/*.(cpp|h)
+clang-format -style=file -i kram-thumb/*.(cpp|h|mm)
+clang-format -style=file -i kram-thumb-win/*.(cpp|h)
+clang-format -style=file -i kram-profile/Source/*.(cpp|h|mm)
+clang-format -style=file -i kram-preview/*.(cpp|h|mm)
+clang-format -style=file -i hlslparser/src/*.(cpp|h)
+popd

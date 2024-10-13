@@ -8,7 +8,7 @@
 #import <MetalKit/MetalKit.h>
 
 #include "KramLib.h"
-#import "KramShaders.h"  // for TextureChannels
+#import "KramShaders.h" // for TextureChannels
 
 // Turn on GLTF loading support for 3d models.  This relies on Warren Moore's first GLTFKit
 // which only handles import and synchronous loading.
@@ -28,18 +28,16 @@
 //@import GLTFMTL;
 #endif
 
-
 namespace kram {
 class ShowSettings;
 class Data;
 class KTXImage;
-}
+} //namespace kram
 
 // Need renderer to be able to call back up to view to update hud.
 @protocol MyMTKViewUpdates <NSObject>
 - (void)updateEyedropperText;
 @end
-
 
 // Our platform independent renderer class.   Implements the MTKViewDelegate
 // protocol which
@@ -53,7 +51,7 @@ class KTXImage;
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view
                                     settings:
                                         (nonnull kram::ShowSettings *)settings
-                                    data:(nonnull kram::Data *)data;
+                                        data:(nonnull kram::Data *)data;
 
 - (BOOL)loadTextureFromImage:(nonnull const char *)fullFilenameString
                    timestamp:(double)timestamp
@@ -66,18 +64,17 @@ class KTXImage;
 
 - (BOOL)hotloadShaders:(nonnull const char *)filename;
 
-
 // unload textures and gltf model textures
 - (void)releaseAllPendingTextures;
 
 // load a gltf model
-- (BOOL)loadModel:(nonnull const char*)url;
+- (BOOL)loadModel:(nonnull const char *)url;
 
 // unload gltf model
 - (void)unloadModel;
 
 // called from view and renderer in render loop
-- (void)updateAnimationState:(nonnull MTKView*)view;
+- (void)updateAnimationState:(nonnull MTKView *)view;
 
 // So caller can respond to completed callback
 - (void)setEyedropperDelegate:(nullable id)delegate;
@@ -86,13 +83,12 @@ class KTXImage;
 - (void)setFramePacingEnabled:(bool)enable;
 
 // can play animations in gltf models
-@property (nonatomic) BOOL playAnimations;
+@property(nonatomic) BOOL playAnimations;
 
 // can toggle on/off srgb if that is psosible
-@property (nonatomic) BOOL isToggleView;
+@property(nonatomic) BOOL isToggleView;
 
 // true if a toggle is present
-@property (nonatomic) BOOL hasToggleView;
+@property(nonatomic) BOOL hasToggleView;
 
 @end
-

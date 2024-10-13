@@ -18,7 +18,7 @@
 
 // C++
 #include "KramLib.h"
-#include "KramVersion.h"  // keep kramv version in sync with libkram
+#include "KramVersion.h" // keep kramv version in sync with libkram
 #include "TaskSystem.h"
 
 //#include "KramMipper.h"
@@ -29,10 +29,9 @@
 //#include "KramZipHelper.h"
 
 //#include "KramImage.h"
-#include "KramViewerBase.h"
-
-
 #include <mutex> // for recursive_mutex
+
+#include "KramViewerBase.h"
 
 using mymutex = std::recursive_mutex;
 using mylock = std::unique_lock<mymutex>;
@@ -43,115 +42,112 @@ using namespace SIMD_NAMESPACE;
 using namespace kram;
 using namespace STL_NAMESPACE;
 
-
 // ktx, ktx2, png, and dds for images
 // zip, metallib
 // gltf, glb files for models
 NSArray<NSString*>* utis = @[
-  @"public.directory",
-    
-  [UTType typeWithFilenameExtension: @"png"].identifier,
-  [UTType typeWithFilenameExtension: @"ktx"].identifier,
-  [UTType typeWithFilenameExtension: @"ktx2"].identifier,
-  [UTType typeWithFilenameExtension: @"dds"].identifier,
-  
-  [UTType typeWithFilenameExtension: @"zip"].identifier,
-  [UTType typeWithFilenameExtension: @"metallib"].identifier,
-  
+    @"public.directory",
+
+    [UTType typeWithFilenameExtension:@"png"].identifier,
+    [UTType typeWithFilenameExtension:@"ktx"].identifier,
+    [UTType typeWithFilenameExtension:@"ktx2"].identifier,
+    [UTType typeWithFilenameExtension:@"dds"].identifier,
+
+    [UTType typeWithFilenameExtension:@"zip"].identifier,
+    [UTType typeWithFilenameExtension:@"metallib"].identifier,
+
 #if USE_GLTF
-  [UTType typeWithFilenameExtension: @"gltf"].identifier,
-  [UTType typeWithFilenameExtension: @"glb"].identifier,
-  //@"model/gltf+json",
-  //@"model/gltf+binary"
+    [UTType typeWithFilenameExtension:@"gltf"].identifier,
+    [UTType typeWithFilenameExtension:@"glb"].identifier,
+//@"model/gltf+json",
+//@"model/gltf+binary"
 #endif
 #if USE_USD
-  [UTType typeWithFilenameExtension: @"usd"].identifier,
-  [UTType typeWithFilenameExtension: @"usd"].identifier,
-  [UTType typeWithFilenameExtension: @"usda"].identifier,
+    [UTType typeWithFilenameExtension:@"usd"].identifier,
+    [UTType typeWithFilenameExtension:@"usd"].identifier,
+    [UTType typeWithFilenameExtension:@"usda"].identifier,
 #endif
-  
-  // read -atlas.json files
-  [UTType typeWithFilenameExtension: @"json"].identifier
+
+    // read -atlas.json files
+    [UTType typeWithFilenameExtension:@"json"].identifier
 ];
 NSDictionary* pasteboardOptions = @{
     // This means only these uti can be droped.
-    NSPasteboardURLReadingContentsConformToTypesKey: utis
-    
+    NSPasteboardURLReadingContentsConformToTypesKey : utis
+
     // Don't use this it prevents folder urls
     //, NSPasteboardURLReadingFileURLsOnlyKey: @YES
 };
 
-
-struct MouseData
-{
+struct MouseData {
     NSPoint originPoint;
     NSPoint oldPoint;
     NSPoint newPoint;
-    
+
     NSPoint pan;
 };
 
 //-------------
 
-
-void Action::setHighlight(bool enable) {
+void Action::setHighlight(bool enable)
+{
     isHighlighted = enable;
-    
+
     auto On = 1; // NSControlStateValueOn;
     auto Off = 0; // NSControlStateValueOff;
-    
+
     if (!isButtonDisabled) {
         ((__bridge NSButton*)button).state = enable ? On : Off;
     }
     ((__bridge NSMenuItem*)menuItem).state = enable ? On : Off;
 }
 
-void Action::setHidden(bool enable) {
+void Action::setHidden(bool enable)
+{
     isHidden = enable;
-    
+
     if (!isButtonDisabled) {
         ((__bridge NSButton*)button).hidden = enable;
     }
     ((__bridge NSMenuItem*)menuItem).hidden = enable;
 }
 
-void Action::disableButton() {
+void Action::disableButton()
+{
     ((__bridge NSButton*)button).hidden = true;
     isButtonDisabled = true;
 }
-
 
 // These are using NSFileManager to list files, so must be ObjC
 void Data::listArchivesInFolder(const string& folderFilename, vector<File>& archiveFiles, bool skipSubdirs)
 {
     NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:folderFilename.c_str()]];
-        
+
     NSDirectoryEnumerationOptions options = NSDirectoryEnumerationSkipsHiddenFiles;
     if (skipSubdirs)
         options |= NSDirectoryEnumerationSkipsSubdirectoryDescendants;
-    
+
     NSDirectoryEnumerator* directoryEnumerator =
-    [[NSFileManager defaultManager]
-     enumeratorAtURL:url
-     includingPropertiesForKeys:[NSArray array]
-     options:options
-     errorHandler:  // nil
-     ^BOOL(NSURL *urlArg, NSError *error) {
-        macroUnusedVar(urlArg);
-        macroUnusedVar(error);
-        
-        // handle error
-        return false;
-    }];
-    
+        [[NSFileManager defaultManager]
+                       enumeratorAtURL:url
+            includingPropertiesForKeys:[NSArray array]
+                               options:options
+                          errorHandler: // nil
+                              ^BOOL(NSURL* urlArg, NSError* error) {
+                                  macroUnusedVar(urlArg);
+                                  macroUnusedVar(error);
+
+                                  // handle error
+                                  return false;
+                              }];
+
     // only display models in folder if found, ignore the png/jpg files
     while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
         const char* name = fileOrDirectoryURL.fileSystemRepresentation;
-        
+
         bool isArchive = isSupportedArchiveFilename(name);
-        if (isArchive)
-        {
-            archiveFiles.emplace_back(File(name,0));
+        if (isArchive) {
+            archiveFiles.emplace_back(File(name, 0));
         }
     }
 }
@@ -160,30 +156,30 @@ void Data::listFilesInFolder(const string& archiveFilename, int32_t urlIndex, bo
 {
     // Hope this hsas same permissions
     NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:archiveFilename.c_str()]];
-    
+
     NSDirectoryEnumerationOptions options = NSDirectoryEnumerationSkipsHiddenFiles;
     if (skipSubdirs)
         options |= NSDirectoryEnumerationSkipsSubdirectoryDescendants;
-    
+
     NSDirectoryEnumerator* directoryEnumerator =
-    [[NSFileManager defaultManager]
-     enumeratorAtURL:url
-     includingPropertiesForKeys:[NSArray array]
-     options:options
-     errorHandler:  // nil
-     ^BOOL(NSURL *urlArg, NSError *error) {
-        macroUnusedVar(urlArg);
-        macroUnusedVar(error);
-        
-        // handle error - don't change to folder if devoid of valid content
-        return false;
-    }];
-    
+        [[NSFileManager defaultManager]
+                       enumeratorAtURL:url
+            includingPropertiesForKeys:[NSArray array]
+                               options:options
+                          errorHandler: // nil
+                              ^BOOL(NSURL* urlArg, NSError* error) {
+                                  macroUnusedVar(urlArg);
+                                  macroUnusedVar(error);
+
+                                  // handle error - don't change to folder if devoid of valid content
+                                  return false;
+                              }];
+
     while (NSURL* fileOrDirectoryURL = [directoryEnumerator nextObject]) {
         const char* name = fileOrDirectoryURL.fileSystemRepresentation;
-        
+
         bool isValid = isSupportedFilename(name);
-        
+
 #if USE_GLTF || USE_USD
         // note: many gltf reference jpg which will load via GltfAsset, but
         // kram and kramv do not import jpg files.
@@ -191,12 +187,12 @@ void Data::listFilesInFolder(const string& archiveFilename, int32_t urlIndex, bo
             isValid = isSupportedModelFilename(name);
         }
 #endif
-        
+
         if (!isValid) {
             isValid = isSupportedJsonFilename(name);
         }
         if (isValid) {
-            _files.emplace_back(File(name,urlIndex));
+            _files.emplace_back(File(name, urlIndex));
         }
     }
 }
@@ -210,9 +206,7 @@ void Data::listFilesInFolder(const string& archiveFilename, int32_t urlIndex, bo
 
 @end
 
-@implementation MyNSTextField
-{
-    
+@implementation MyNSTextField {
 }
 
 // override to allow clickthrough
@@ -228,7 +222,7 @@ void Data::listFilesInFolder(const string& archiveFilename, int32_t urlIndex, bo
 @interface MyMTKView : MTKView
 
 @property(retain, nonatomic, readwrite, nullable)
-    NSMagnificationGestureRecognizer *zoomGesture;
+    NSMagnificationGestureRecognizer* zoomGesture;
 
 @property(nonatomic, readwrite) double lastArchiveTimestamp;
 
@@ -240,12 +234,11 @@ void Data::listFilesInFolder(const string& archiveFilename, int32_t urlIndex, bo
 @property(nonatomic, readwrite) float validMagnification;
 @property(nonatomic, readwrite) MouseData mouseData;
 
-
 - (BOOL)loadTextureFromURLs:(NSArray<NSURL*>*)url;
 
-- (void)setHudText:(const char *)text;
+- (void)setHudText:(const char*)text;
 
-- (void)tableViewSelectionDidChange:(NSNotification *)notification;
+- (void)tableViewSelectionDidChange:(NSNotification*)notification;
 
 - (void)addNotifications;
 
@@ -259,27 +252,28 @@ void Data::listFilesInFolder(const string& archiveFilename, int32_t urlIndex, bo
 
 // https://medium.com/@kevingutowski/how-to-setup-a-tableview-in-2019-obj-c-c7dece203333
 @interface TableViewController : NSObject <NSTableViewDataSource, NSTableViewDelegate>
-@property (nonatomic, strong) NSMutableArray<NSAttributedString*>* items;
+@property(nonatomic, strong) NSMutableArray<NSAttributedString*>* items;
 @end
 
 @implementation TableViewController
 
-- (instancetype)init {
+- (instancetype)init
+{
     self = [super init];
-    
+
     _items = [[NSMutableArray alloc] init];
-    
+
     return self;
 }
 
 // NSTableViewDataSource
-- (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView
+- (NSInteger)numberOfRowsInTableView:(NSTableView*)tableView
 {
     return self.items.count;
 }
 
 // NSTableViewDelegate
--(NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
+- (NSView*)tableView:(NSTableView*)tableView viewForTableColumn:(NSTableColumn*)tableColumn row:(NSInteger)row
 {
     NSString* identifier = tableColumn.identifier;
     NSTableCellView* cell = [tableView makeViewWithIdentifier:identifier owner:self];
@@ -288,18 +282,18 @@ void Data::listFilesInFolder(const string& archiveFilename, int32_t urlIndex, bo
 }
 
 // NSTableViewDelegate
-- (BOOL)tableView:(NSTableView *)tableView
-shouldTypeSelectForEvent:(NSEvent *)event
-withCurrentSearchString:(NSString *)searchString
+- (BOOL)tableView:(NSTableView*)tableView
+    shouldTypeSelectForEvent:(NSEvent*)event
+     withCurrentSearchString:(NSString*)searchString
 {
     // Return NO to prevent type select (otherwise S or N key will search that key)
     // This is nice on long lists though.
     return NO;
 }
 
-- (void)tableViewSelectionDidChange:(NSNotification *)notification
+- (void)tableViewSelectionDidChange:(NSNotification*)notification
 {
-   // does not need to respond, have a listener on this notification
+    // does not need to respond, have a listener on this notification
 }
 @end
 
@@ -326,7 +320,7 @@ withCurrentSearchString:(NSString *)searchString
 
 + (BOOL)autosavesInPlace
 {
-    return NO;  // YES;
+    return NO; // YES;
 }
 
 // call when "new" called
@@ -339,8 +333,8 @@ withCurrentSearchString:(NSString *)searchString
     //addWindowController:controller];
 }
 
-- (NSData *)dataOfType:(nonnull NSString *)typeName
-                 error:(NSError *_Nullable __autoreleasing *)outError
+- (NSData*)dataOfType:(nonnull NSString*)typeName
+                error:(NSError* _Nullable __autoreleasing*)outError
 {
     // Insert code here to write your document to data of the specified type. If
     // outError != NULL, ensure that you create and set an appropriate error if
@@ -352,18 +346,18 @@ withCurrentSearchString:(NSString *)searchString
     return nil;
 }
 
-- (BOOL)readFromURL:(nonnull NSURL *)url
-             ofType:(nonnull NSString *)typeName
-              error:(NSError *_Nullable __autoreleasing *)outError
+- (BOOL)readFromURL:(nonnull NSURL*)url
+             ofType:(nonnull NSString*)typeName
+              error:(NSError* _Nullable __autoreleasing*)outError
 {
     // called from OpenRecent documents menu
-    
+
     // throw into an array
-    NSArray<NSURL*>* urls = @[url];
-    
+    NSArray<NSURL*>* urls = @[ url ];
+
     NSApplication* app = [NSApplication sharedApplication];
     MyMTKView* view = app.mainWindow.contentView;
-    
+
     BOOL success = [view loadTextureFromURLs:urls];
     if (success) {
         // Note: if I return NO from this call then a dialog pops up that image
@@ -393,24 +387,24 @@ withCurrentSearchString:(NSString *)searchString
 
 @implementation AppDelegate
 
-- (void)applicationDidFinishLaunching:(NSNotification *)aNotification
+- (void)applicationDidFinishLaunching:(NSNotification*)aNotification
 {
     // Insert code here to initialize your application
 }
 
-- (void)applicationWillTerminate:(NSNotification *)aNotification
+- (void)applicationWillTerminate:(NSNotification*)aNotification
 {
     // Insert code here to tear down your application
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:
-    (NSApplication *)sender
+    (NSApplication*)sender
 {
     return YES;
 }
 
-- (void)application:(NSApplication *)sender
-           openURLs:(nonnull NSArray<NSURL *> *)urls
+- (void)application:(NSApplication*)sender
+           openURLs:(nonnull NSArray<NSURL*>*)urls
 {
     // this is called from "Open In..."
     MyMTKView* view = sender.mainWindow.contentView;
@@ -422,7 +416,7 @@ withCurrentSearchString:(NSString *)searchString
 - (void)exportDocument:(NSString*)name toType:(NSString*)typeUTI
 {
    NSWindow* window = [[[self windowControllers] objectAtIndex:0] window];
- 
+
    // Build a new name for the file using the current name and
    // the filename extension associated with the specified UTI.
    CFStringRef newExtension = UTTypeCopyPreferredTagWithClass((CFStringRef)typeUTI,
@@ -430,7 +424,7 @@ withCurrentSearchString:(NSString *)searchString
    NSString* newName = [[name stringByDeletingPathExtension]
                        stringByAppendingPathExtension:(NSString*)newExtension];
    CFRelease(newExtension);
- 
+
    // Set the default name for the file and show the panel.
    NSSavePanel*    panel = [NSSavePanel savePanel];
    [panel setNameFieldStringValue:newName];
@@ -438,9 +432,9 @@ withCurrentSearchString:(NSString *)searchString
         if (result == NSFileHandlingPanelOKButton)
         {
             NSURL*  theFile = [panel URL];
- 
+
             // Write the contents in the new format.
-            
+
         }
     }];
 }
@@ -452,7 +446,7 @@ withCurrentSearchString:(NSString *)searchString
 {
     // need to implement, or default NSOpenPanel can't specify a directory
     NSDocumentController* controller = [NSDocumentController sharedDocumentController];
- 
+
 #if 0
     // Would be nice, but doesn't allow directory.
     // How is NSDocument aware of directory, from Info.plist?
@@ -462,35 +456,33 @@ withCurrentSearchString:(NSString *)searchString
 //        
 //    }
 #else
-    
+
     NSOpenPanel* panel = [NSOpenPanel openPanel];
     [panel setCanChooseFiles:YES];
     [panel setCanChooseDirectories:YES];
     [panel setAllowsMultipleSelection:NO];
 
-    if ([controller runModalOpenPanel:panel forTypes:utis] == NSModalResponseOK)
-    {
+    if ([controller runModalOpenPanel:panel forTypes:utis] == NSModalResponseOK) {
         NSArray<NSURL*>* urls = [panel URLs];
         NSURL* url = [urls objectAtIndex:0];
-        
+
         // This gets a file:// urls, and then openDocument won't open it if
         // it's a folder.
-        
+
         bool isDirectory = false;
         if (url.isFileURL) {
             BOOL isDir = NO;
             // Verify that the file exists
             // and is indeed a directory (isDirectory is an out parameter)
-            if ([[NSFileManager defaultManager] fileExistsAtPath: url.path isDirectory: &isDir]
-                && isDir) {
+            if ([[NSFileManager defaultManager] fileExistsAtPath:url.path isDirectory:&isDir] && isDir) {
                 isDirectory = true;
             }
         }
-        
+
         if (isDirectory) {
             // have to open this directory URL directly
             //[self openURLs:[NSApplication sharedApplication] urls:urls];
-            
+
             // this is called from "Open In..."
             NSApplication* app = [NSApplication sharedApplication];
             MyMTKView* view = app.mainWindow.contentView;
@@ -501,12 +493,11 @@ withCurrentSearchString:(NSString *)searchString
             [controller openDocumentWithContentsOfURL:url
                                               display:YES
                                     completionHandler:
-                 ^(NSDocument* doc, BOOL isAlreadOpen, NSError* error ) {
-                if (!error) {
-                    // what should this do?
-                }
-            }
-            ];
+                                        ^(NSDocument* doc, BOOL isAlreadOpen, NSError* error) {
+                                            if (!error) {
+                                                // what should this do?
+                                            }
+                                        }];
         }
     }
 #endif
@@ -567,16 +558,16 @@ withCurrentSearchString:(NSString *)searchString
 
 @end
 
-NSArray<NSString *>* pasteboardTypes = @[
+NSArray<NSString*>* pasteboardTypes = @[
     // don't really want generic urls, but need folders to drop
     //NSPasteboardTypeURL
-    
+
     // this is preventing folder drops ?
     NSPasteboardTypeFileURL
 ];
 
 /* correlates with
- 
+
 public.directory.
 public.png,
 org.khronos.ktx,
@@ -586,33 +577,26 @@ public.zip-archive,
 dyn.ah62d4rv4ge8043pyqf0g24pc, // ick - metallib
 dyn.ah62d4rv4ge80s5dyq2,       // ick - gltf
 dyn.ah62d4rv4ge80s5dc          // ick - glb
- 
+
 */
-
-
-
-
-
-
 
 //----------------------------------------------------
 
-
 @implementation MyMTKView {
-    NSMenu* _viewMenu;  // really the items
+    NSMenu* _viewMenu; // really the items
     NSStackView* _buttonStack;
-    NSMutableArray<NSButton *>* _buttonArray;
+    NSMutableArray<NSButton*>* _buttonArray;
     NSTextField* _hudLabel;
     NSTextField* _hudLabel2;
-    
+
     // Offer list of files in archives
     // TODO: move to NSOutlineView since that can show archive folders with content inside
     IBOutlet NSTableView* _tableView;
     IBOutlet TableViewController* _tableViewController;
-    
+
     // copy of modifier flags, can tie drop actions to this
     NSEventModifierFlags _modifierFlags;
-    
+
     ShowSettings* _showSettings;
     Data _data;
 }
@@ -620,23 +604,23 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
 - (void)awakeFromNib
 {
     [super awakeFromNib];
-    
+
     // vertical offset of table down so hud can display info
     NSScrollView* scrollView = [_tableView enclosingScrollView];
     CGRect rect = scrollView.frame;
     rect.origin.y += 50;
     scrollView.frame = rect;
-    
+
     // C++ delegate
     _data._delegate.view = (__bridge void*)self;
-    
+
     // this is sandbox or root if not sandboxed
     // This is objC call...
     // This has to be in a .mm file to call
     std::string traceDir = [NSHomeDirectory() UTF8String];
     traceDir += "/traces/";
     _data.setPerfDirectory(traceDir.c_str());
-    
+
     // TODO: see if can only open this
     // KLOGI("Viewer", "AwakeFromNIB");
 }
@@ -658,7 +642,7 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
 // TODO: Sometimes getting panels from right side popping in when trying to pan
 // on macOS without using pan gesture.
 
-- (instancetype)initWithCoder:(NSCoder *)coder
+- (instancetype)initWithCoder:(NSCoder*)coder
 {
     self = [super initWithCoder:coder];
 
@@ -677,7 +661,7 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
 
     // added for drag-drop support
     [self registerForDraggedTypes:pasteboardTypes];
-    
+
     // This gesture only works for trackpad
     _zoomGesture = [[NSMagnificationGestureRecognizer alloc]
         initWithTarget:self
@@ -693,32 +677,32 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     // hide until image loaded
     _showSettings->isHideUI = true;
     _buttonStack.hidden = YES;
-    
+
     _hudLabel2 = [self _addHud:YES];
     _hudLabel = [self _addHud:NO];
     [self setHudText:""];
-    
+
     return self;
 }
 
-- (nonnull ShowSettings *)showSettings
+- (nonnull ShowSettings*)showSettings
 {
     return _showSettings;
 }
 
-- (nonnull kram::Data *)data
+- (nonnull kram::Data*)data
 {
     return &_data;
 }
 
--(void)fixupDocumentList
+- (void)fixupDocumentList
 {
     // DONE: this recent menu only seems to work the first time
     // and not in subsequent calls to the same entry.  readFromUrl isn't even
     // called. So don't get a chance to switch back to a recent texture. Maybe
     // there's some list of documents created and so it doesn't think the file
     // needs to be reloaded.
-   
+
     // Clear the document list so readFromURL keeps getting called
     // Can't remove currentDoc, so have to skip that
     NSDocumentController* dc = [NSDocumentController sharedDocumentController];
@@ -734,17 +718,15 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     }
 }
 
-
-
-- (NSStackView *)_addButtons
+- (NSStackView*)_addButtons
 {
     _data.initActions();
-    
+
     NSRect rect = NSMakeRect(0, 10, 30, 30);
 
     vector<Action>& actions = _data.actions();
     int32_t numActions = actions.size();
-    
+
     NSMutableArray* buttons = [[NSMutableArray alloc] init];
 
     for (int32_t i = 0; i < numActions; ++i) {
@@ -769,40 +751,40 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
         [button setFrame:rect];
 
         // https://stackoverflow.com/questions/4467597/how-do-you-stroke-the-outside-of-an-nsattributedstring
-        
+
         NSMutableDictionary* attribsOff = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-            //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
-            [NSColor whiteColor],NSForegroundColorAttributeName,
-            [NSNumber numberWithFloat:-2.0],NSStrokeWidthAttributeName,
-            [NSColor blackColor],NSStrokeColorAttributeName,
-            nil];
+                                                                   //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
+                                                                   [NSColor whiteColor], NSForegroundColorAttributeName,
+                                                                   [NSNumber numberWithFloat:-2.0], NSStrokeWidthAttributeName,
+                                                                   [NSColor blackColor], NSStrokeColorAttributeName,
+                                                                   nil];
         NSMutableDictionary* attribsOn = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-            //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
-            [NSColor systemBlueColor],NSForegroundColorAttributeName,
-            [NSNumber numberWithFloat:-2.0],NSStrokeWidthAttributeName,
-            [NSColor blackColor],NSStrokeColorAttributeName,
-            nil];
+                                                                  //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
+                                                                  [NSColor systemBlueColor], NSForegroundColorAttributeName,
+                                                                  [NSNumber numberWithFloat:-2.0], NSStrokeWidthAttributeName,
+                                                                  [NSColor blackColor], NSStrokeColorAttributeName,
+                                                                  nil];
         button.attributedTitle = [[NSMutableAttributedString alloc] initWithString:name attributes:attribsOff];
-        
+
         // Have to set this too, or button doesn't go blue
         button.attributedAlternateTitle = [[NSMutableAttributedString alloc] initWithString:name attributes:attribsOn];
-        
+
         // stackView seems to disperse the items evenly across the area, so this
         // doesn't work
         bool isSeparator = icon[0] == 0;
-        
+
         if (isSeparator) {
             // rect.origin.y += 11;
             button.enabled = NO;
         }
         else {
             action.button = (__bridge void*)button;
-            
+
             // rect.origin.y += 25;
 
             // TODO: add icons
             //button.image = ...;
-            
+
             // keep all buttons, since stackView will remove and pack the stack
             [_buttonArray addObject:button];
         }
@@ -813,7 +795,7 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     NSStackView* stackView = [NSStackView stackViewWithViews:buttons];
     stackView.orientation = NSUserInterfaceLayoutOrientationVertical;
     stackView.detachesHiddenViews =
-        YES;  // default, but why have to have _buttonArrary
+        YES; // default, but why have to have _buttonArrary
     [self addSubview:stackView];
 
     // Want menus, so user can define their own shortcuts to commands
@@ -830,41 +812,41 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
 
     for (int32_t i = 0; i < numActions; ++i) {
         Action& action = actions[i];
-        const char* icon = action.icon;  // single char
+        const char* icon = action.icon; // single char
         const char* title = action.tip;
 
         NSString* toolTip = [NSString stringWithUTF8String:icon];
         NSString* name = [NSString stringWithUTF8String:title];
         bool isSeparator = icon[0] == 0;
-        
+
         if (isSeparator) {
             [_viewMenu addItem:[NSMenuItem separatorItem]];
         }
         else {
             // NSString *shortcut = @"";  // for now, or AppKit turns key int cmd+shift+key
             NSString* shortcut = [NSString stringWithUTF8String:icon];
-            
+
             NSMenuItem* menuItem =
                 [[NSMenuItem alloc] initWithTitle:name
                                            action:@selector(handleAction:)
                                     keyEquivalent:shortcut];
             menuItem.toolTip = toolTip;
-            
+
             // All key-equivalents assume cmd, so unset cmd
             // still leaves shift next to keys, but better than nothing
             menuItem.keyEquivalentModifierMask = (NSEventModifierFlags)0;
-            
+
             // TODO: add icons, also onStateImage, offStageImage, mixedStateImage
             //menuItem.image = ...;
-             
+
             // can set an integer constant that represents menu that avoid testing string (actionID)
             //menuItem.tag = ...;
-            
+
             // TODO: menus and buttons should reflect any toggle state
             // menuItem.state = Mixed/Off/On;
 
             [_viewMenu addItem:menuItem];
-            
+
             action.menuItem = (__bridge void*)menuItem;
         }
     }
@@ -872,27 +854,25 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     [_viewMenu addItem:[NSMenuItem separatorItem]];
 
     //----------------------
-    
+
     // don't want some buttons showing up, menu only
     _data.initDisabledButtons();
-    
+
     return stackView;
 }
 
-
-
-- (NSTextField *)_addHud:(BOOL)isShadow
+- (NSTextField*)_addHud:(BOOL)isShadow
 {
     // TODO: This text field is clamping to the height, so have it set to 1200.
     // really want field to expand to fill the window height for large output
     uint32_t w = 800;
     uint32_t h = 1220;
-    
+
     // add a label for the hud
     NSTextField* label = [[MyNSTextField alloc]
         initWithFrame:NSMakeRect(isShadow ? 21 : 20, isShadow ? 21 : 20, w,
                                  h)];
-    
+
     label.preferredMaxLayoutWidth = w;
 
     label.drawsBackground = NO;
@@ -903,12 +883,12 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     label.editable = NO;
     label.selectable = NO;
     label.lineBreakMode = NSLineBreakByClipping;
-    label.maximumNumberOfLines = 0;  // fill to height
+    label.maximumNumberOfLines = 0; // fill to height
 
     // important or interferes with table view
     label.refusesFirstResponder = YES;
     label.enabled = NO;
-    
+
     label.cell.scrollable = NO;
     label.cell.wraps = NO;
 
@@ -923,14 +903,13 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     return label;
 }
 
-
-- (void)handleGesture:(NSGestureRecognizer *)gestureRecognizer
+- (void)handleGesture:(NSGestureRecognizer*)gestureRecognizer
 {
     // skip until image loaded
     if (_showSettings->imageBoundsX == 0) {
         return;
     }
-    
+
     // https://cocoaosxrevisited.wordpress.com/2018/01/06/chapter-18-mouse-events/
     if (gestureRecognizer != _zoomGesture) {
         return;
@@ -941,10 +920,10 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     float zoom = _zoomGesture.magnification;
     if (isFirstGesture) {
         _zoomGesture.magnification = 1.0f;
-        
+
         _validMagnification = 1.0f;
         _originalZoom = _showSettings->zoom;
-        
+
         zoom = _originalZoom;
     }
     else if (zoom * _originalZoom < 0.1f) {
@@ -952,7 +931,7 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
         zoom = 0.1f / _originalZoom;
         _zoomGesture.magnification = zoom;
     }
-    
+
     if (!isFirstGesture) {
         // try expontental (this causes a jump, comparison avoids an initial jump
         // zoom = powf(zoom, 1.05f);
@@ -960,29 +939,28 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
         // doing multiply instead of equals here, also does exponential zom
         zoom *= _originalZoom;
     }
-    
+
     [self updateZoom:zoom];
 }
 
--(void)updateZoom:(float)zoom
+- (void)updateZoom:(float)zoom
 {
     // https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/handling_uikit_gestures/handling_pinch_gestures?language=objc
     // need to sync up the zoom when action begins or zoom will jump
-    
 
     // https://stackoverflow.com/questions/30002361/image-zoom-centered-on-mouse-position
 
     // DONE: rect is now ar:1 for rect case, so these x values need to be half ar
     // and that's only if it's not rotated.  box/cube/ellipse make also not correspond
     float ar = _showSettings->imageAspectRatio();
-    
+
     // find the cursor location with respect to the image
     float4 bottomLeftCorner = float4m(-0.5f * ar, -0.5f, 0.0f, 1.0f);
     float4 topRightCorner = float4m(0.5f * ar, 0.5f, 0.0f, 1.0f);
 
     float4x4 newMatrix = _data.computeImageTransform(_showSettings->panX,
-                                                    _showSettings->panY,
-                                                    zoom);
+                                                     _showSettings->panY,
+                                                     zoom);
 
     // don't allow panning the entire image off the view boundary
     // transform the upper left and bottom right corner of the image
@@ -1023,23 +1001,23 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     //float minZoom = std::min(1.0f/8.0f, _showSettings->zoomFit);
 
     // TODO: 3d models have imageBoundsY of 1, so the limits are hit immediately
-    
+
     int32_t gap = _showSettings->showAllPixelGap;
-    
+
     // Note this includes chunks and mips even if those are not shown
     // so image could be not visible.
     float2 maxZoomXY;
     maxZoomXY.x = maxZoom * (_showSettings->imageBoundsX + gap) * numTexturesX;
     maxZoomXY.y = maxZoom * (_showSettings->imageBoundsY + gap) * numTexturesY;
-    
+
     float minPixelSize = 4;
     float2 minZoomXY;
     minZoomXY.x = minPixelSize; // minZoom * (_showSettings->imageBoundsX + gap) * numTexturesX;
     minZoomXY.y = minPixelSize; // minZoom * (_showSettings->imageBoundsY + gap) * numTexturesY;
-   
+
     // don't allow image to get too big
     bool isZoomChanged = true;
-    
+
     if (visibleWidth > maxZoomXY.x || visibleHeight > maxZoomXY.y) {
         isZoomChanged = false;
     }
@@ -1053,7 +1031,7 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     if (!rectIntersectsRect(imageRect, viewRect)) {
         isZoomChanged = false;
     }
-    
+
     if (!isZoomChanged) {
         _zoomGesture.magnification = _validMagnification; // objC
         return;
@@ -1074,47 +1052,46 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
         _showSettings->panX = newPan.x;
         _showSettings->panY = newPan.y;
 
-//        if (doPrintPanZoom) {
-//            string text;
-//            sprintf(text,
-//                    "Pan %.3f,%.3f\n"
-//                    "Zoom %.2fx\n",
-//                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-//            [self setHudText:text.c_str()];
-//        }
+        // if (doPrintPanZoom) {
+        //     string text;
+        //     sprintf(text,
+        //             "Pan %.3f,%.3f\n"
+        //             "Zoom %.2fx\n",
+        //             _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+        //     [self setHudText:text.c_str()];
+        // }
 
         // Cause a new sample for eyedropper
         _data.updateEyedropper();
-        
+
         self.needsDisplay = YES; // objC
     }
 }
 
-
 // left mouse button down
-- (void)mouseDown:(NSEvent *)event
+- (void)mouseDown:(NSEvent*)event
 {
     // skip until image loaded
     if (_showSettings->imageBoundsX == 0) {
         return;
     }
-    
+
     _mouseData.originPoint =
-    _mouseData.oldPoint =
-    _mouseData.newPoint = [self convertPoint:[event locationInWindow] fromView:nil];
+        _mouseData.oldPoint =
+            _mouseData.newPoint = [self convertPoint:[event locationInWindow] fromView:nil];
 
     // capture pan value and cursor value
     _mouseData.pan = NSMakePoint(_showSettings->panX, _showSettings->panY);
 }
 
 // drag is mouse movement with left button down
-- (void)mouseDragged:(NSEvent *)event
+- (void)mouseDragged:(NSEvent*)event
 {
     // skip until image loaded
     if (_showSettings->imageBoundsX == 0) {
         return;
     }
-    
+
     _mouseData.oldPoint = _mouseData.newPoint;
     _mouseData.newPoint = [self convertPoint:[event locationInWindow] fromView:nil];
 
@@ -1124,38 +1101,37 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     delta.y = _mouseData.newPoint.y - _mouseData.originPoint.y;
     delta.x = -delta.x;
     delta.y = -delta.y;
-    
+
     // scale to actual px or mouse cursor doesn't track drag
     delta.x *= _showSettings->viewContentScaleFactor;
     delta.y *= _showSettings->viewContentScaleFactor;
-    
+
     // This is correct, but scale to image so cursor tracks the pick location
     // might be over a different mip/chunk though.
     float panX = _mouseData.pan.x + delta.x;
     float panY = _mouseData.pan.y + delta.y;
-    
+
     [self updatePan:panX panY:panY];
 }
 
-- (void)mouseUp:(NSEvent *)event
+- (void)mouseUp:(NSEvent*)event
 {
     // ignore up even though cursor may have moved
-
 }
 
-- (void)mouseMoved:(NSEvent *)event
+- (void)mouseMoved:(NSEvent*)event
 {
     // skip until image loaded
     if (_showSettings->imageBoundsX == 0) {
         return;
     }
-    
+
     // pixel in non-square window coords, run through inverse to get texel space
     // I think magnofication of zoom gesture is affecting coordinates reported by
     // this
 
     NSPoint point = [event locationInWindow];
-    
+
     // This flips so upper left corner is 0,0, vs. bottom left
     point = [self convertPoint:point fromView:nil];
 
@@ -1165,35 +1141,32 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     _showSettings->cursorY = (int32_t)point.y;
 
     _data.updateEyedropper();
-    
+
     // Cause a new sample for eyedropper (will run in Metal CompletedHandler)
     self.needsDisplay = YES;
 }
 
-
-
-
--(void)updateEyedropperText
+- (void)updateEyedropperText
 {
     if (_showSettings->imageBoundsX == 0) return;
-    
+
     float2 uv;
     uv.x = _showSettings->textureLookupX / (float)_showSettings->imageBoundsX;
     uv.y = _showSettings->textureLookupY / (float)_showSettings->imageBoundsY;
-    
+
     // convert data to text
     _data.showEyedropperData(uv);
-    
+
     const Atlas* atlas = _data.findAtlasAtUV(uv);
     if (atlas) {
         // convert back to pixels in the current mip
         float mipBoundsX = std::max(1, _showSettings->imageBoundsX >> _showSettings->mipNumber);
         float mipBoundsY = std::max(1, _showSettings->imageBoundsY >> _showSettings->mipNumber);
-        
+
         float4 rect = atlas->rect();
         rect.xz *= mipBoundsX;
         rect.yw *= mipBoundsY;
-        
+
         string atlasText;
         sprintf(atlasText, "%d,%d %dx%d %s",
                 (int32_t)rect.x, (int32_t)rect.y,
@@ -1208,13 +1181,13 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     [self updateHudText];
 }
 
-- (void)setEyedropperText:(const char *)text
+- (void)setEyedropperText:(const char*)text
 {
     _data.setEyedropperText(text);
     [self updateHudText];
 }
 
-- (void)setHudText:(const char *)text
+- (void)setHudText:(const char*)text
 {
     _data.setTextSlot(kTextSlotHud, text);
     [self updateHudText];
@@ -1225,29 +1198,29 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     // combine textSlots
     string text = _data.textFromSlots(_tableView.hidden);
 
-    NSString *textNS = [NSString stringWithUTF8String:text.c_str()];
-    
+    NSString* textNS = [NSString stringWithUTF8String:text.c_str()];
+
     // This is drop shadowed by drawing same text twice
     _hudLabel2.stringValue = textNS;
     _hudLabel2.needsDisplay = YES;
-    
+
     _hudLabel.stringValue = textNS;
     _hudLabel.needsDisplay = YES;
 }
 
-- (void)scrollWheel:(NSEvent *)event
+- (void)scrollWheel:(NSEvent*)event
 {
     // skip until image loaded
     if (_showSettings->imageBoundsX == 0) {
         return;
     }
-    
+
     // From ImGui notes:
     // From macOS 12.1, scrolling with two fingers and then decelerating
     // by tapping two fingers results in two events appearing.
     if (event.phase == NSEventPhaseCancelled)
         return;
-    
+
     double wheelX = [event scrollingDeltaX];
     double wheelY = [event scrollingDeltaY];
 
@@ -1256,20 +1229,20 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
     //   and trackpad fires on that too causing the image to zoom away to nothing (inertia maybe)
     // https://stackoverflow.com/questions/6642058/mac-cocoa-how-can-i-detect-trackpad-scroll-gestures
     bool isMouse = ![event hasPreciseScrollingDeltas];
-    
+
     if (isMouse) {
         // zoom with mouse
         float zoom = _zoomGesture.magnification;
         if (wheelY != 0.0) {
             wheelY *= 0.01;
             wheelY = std::clamp(wheelY, -0.1, 0.1);
-            
+
             zoom *= 1.0 + wheelY;
-            
+
             // here have to modify the magnfication, since gesture isn't driving it
             _zoomGesture.magnification = zoom;
-            
-            [self updateZoom: zoom];
+
+            [self updateZoom:zoom];
         }
     }
     else {
@@ -1279,7 +1252,7 @@ dyn.ah62d4rv4ge80s5dc          // ick - glb
 
         float panX = _showSettings->panX + wheelX;
         float panY = _showSettings->panY + wheelY;
-        
+
         [self updatePan:panX panY:(float)panY];
     }
 }
@@ -1289,12 +1262,12 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     // convert rect from (origin, size) to (min, max)
     float4 lRect = lhs.xyxy;
     lRect.zw += lhs.zw;
-    
+
     float4 rRect = rhs.xyxy;
     rRect.zw += rhs.zw;
-    
+
     return all(lRect.xy <= rRect.zw) && // min <= max
-           all(lRect.zw >= rRect.xy);   // max >= min
+           all(lRect.zw >= rRect.xy); // max >= min
 }
 
 // TODO: move to data, but eliminate CGRect usage
@@ -1303,15 +1276,15 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     //Renderer* renderer = (Renderer *)self.delegate;
     float4x4 projectionViewModelMatrix =
         _data.computeImageTransform(panX,
-                                   panY,
-                                   _showSettings->zoom);
+                                    panY,
+                                    _showSettings->zoom);
 
     // don't allow panning the entire image off the view boundary
     // transform the upper left and bottom right corner or the image
 
     // what if zoom moves it outside?
     float ar = _showSettings->imageAspectRatio();
-    
+
     float4 pt0 = projectionViewModelMatrix * float4m(-0.5f * ar, -0.5f, 0.0f, 1.0f);
     float4 pt1 = projectionViewModelMatrix * float4m(0.5f * ar, 0.5f, 0.0f, 1.0f);
 
@@ -1344,14 +1317,14 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
         _showSettings->panX = panX;
         _showSettings->panY = panY;
 
-//        if (doPrintPanZoom) {
-//            string text;
-//            sprintf(text,
-//                    "Pan %.3f,%.3f\n"
-//                    "Zoom %.2fx\n",
-//                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-//            [self setHudText:text.c_str()];
-//        }
+        // if (doPrintPanZoom) {
+        //     string text;
+        //     sprintf(text,
+        //             "Pan %.3f,%.3f\n"
+        //             "Zoom %.2fx\n",
+        //             _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+        //     [self setHudText:text.c_str()];
+        // }
 
         // Cause a new sample from Metal to eyeDropper
         _data.updateEyedropper();
@@ -1372,9 +1345,6 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     return YES;
 }
 
-
-
-
 - (IBAction)handleAction:(id)sender
 {
     NSEvent* theEvent = [NSApp currentEvent];
@@ -1388,21 +1358,21 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     else if ([sender isKindOfClass:[NSMenuItem class]]) {
         action = _data.actionFromMenu(senderPtr);
     }
-    
+
     if (!action) {
         KLOGE("kram", "unknown UI element");
         return;
     }
-    
+
     [self handleEventAction:action isShiftKeyDown:isShiftKeyDown];
 }
 
-- (void)flagsChanged:(NSEvent *)theEvent
+- (void)flagsChanged:(NSEvent*)theEvent
 {
     _modifierFlags = theEvent.modifierFlags;
 }
 
-- (void)keyDown:(NSEvent *)theEvent
+- (void)keyDown:(NSEvent*)theEvent
 {
     bool isShiftKeyDown = theEvent.modifierFlags & NSEventModifierFlagShift;
     uint32_t keyCode = theEvent.keyCode;
@@ -1410,19 +1380,19 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     // for now hit esc to hide the table views
     if (keyCode == Key::Escape) {
         [self hideFileTable];
-        
+
         _hudHidden = false;
         [self updateHudVisibility];
         return;
     }
-    
+
     const Action* action = _data.actionFromKey(keyCode);
     if (!action) {
         [super keyDown:theEvent];
         //KLOGE("kram", "unknown UI element");
         return;
     }
-    
+
     bool isHandled = [self handleEventAction:action isShiftKeyDown:isShiftKeyDown];
     if (!isHandled) {
         // this will bonk
@@ -1452,20 +1422,19 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     _hudLabel2.hidden = _hudHidden || !_showSettings->isHudShown;
 }
 
-
 - (bool)handleEventAction:(const Action*)action isShiftKeyDown:(bool)isShiftKeyDown
 {
     Renderer* renderer = (Renderer*)self.delegate;
-   
+
     ActionState actionState;
     if (!_data.handleEventAction(action, isShiftKeyDown, actionState))
         return false;
-        
+
     // Do the leftover action work to call ObjC
     if (action == _data._actionVertical) {
         _buttonStack.orientation = _showSettings->isVerticalUI
-            ? NSUserInterfaceLayoutOrientationVertical
-            : NSUserInterfaceLayoutOrientationHorizontal;
+                                       ? NSUserInterfaceLayoutOrientationVertical
+                                       : NSUserInterfaceLayoutOrientationHorizontal;
     }
     else if (action == _data._actionHideUI) {
         _buttonStack.hidden = _showSettings->isHideUI;
@@ -1475,7 +1444,6 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     }
     else if (action == _data._actionInfo) {
         if (_showSettings->isHudShown) {
-            
             // also hide the file table, since this can be long
             [self hideFileTable];
         }
@@ -1489,7 +1457,7 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
         // tell the renderer to show one or other view
         renderer.isToggleView = !_showSettings->isSRGBShown;
     }
-    
+
     //-------------
     // Update everything
     if (!actionState.hudText.empty()) {
@@ -1506,10 +1474,6 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     return true;
 }
 
-
-
-
-
 // Note: docs state that drag&drop should be handled automatically by UTI setup
 // via openURLs but I find these calls are needed, or it doesn't work.  Maybe
 // need to register for NSURL instead of NSPasteboardTypeFileURL.  For example,
@@ -1521,7 +1485,7 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     if (([sender draggingSourceOperationMask] & NSDragOperationGeneric) ==
         NSDragOperationGeneric) {
         NSPasteboard* pasteboard = [sender draggingPasteboard];
-        
+
         bool canReadPasteboardObjects =
             [pasteboard canReadObjectForClasses:@[ [NSURL class] ]
                                         options:pasteboardOptions];
@@ -1544,9 +1508,9 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
 - (BOOL)performDragOperation:(id)sender
 {
     NSPasteboard* pasteboard = [sender draggingPasteboard];
-    
-    NSArray<NSURL*>* urls = [pasteboard readObjectsForClasses:@[[NSURL class]]
-                                                      options: pasteboardOptions];
+
+    NSArray<NSURL*>* urls = [pasteboard readObjectsForClasses:@[ [NSURL class] ]
+                                                      options:pasteboardOptions];
     int filesCount = [urls count];
     if (filesCount > 0) {
         if ([self loadTextureFromURLs:urls]) {
@@ -1558,10 +1522,6 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     return NO;
 }
 
-
-
-
-
 - (void)updateFileSelection
 {
     // set selection
@@ -1570,18 +1530,20 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     [_tableView scrollRowToVisible:fileIndex];
 }
 
-- (BOOL)setImageFromSelection:(NSInteger)index {
+- (BOOL)setImageFromSelection:(NSInteger)index
+{
     if (!_data._files.empty()) {
         if (_data._fileIndex != index) {
             _data._fileIndex = index;
             return [self loadFile];
         }
     }
-    
+
     return NO;
 }
 
-- (BOOL)setShapeFromSelection:(NSInteger)index {
+- (BOOL)setShapeFromSelection:(NSInteger)index
+{
     if (_showSettings->meshNumber != index) {
         _showSettings->meshNumber = index;
         self.needsDisplay = YES;
@@ -1590,137 +1552,130 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     return NO;
 }
 
-
-
-
--(BOOL)loadFile
+- (BOOL)loadFile
 {
     if (_data._files.empty())
         return NO;
-    
+
     // lookup the filename and data at that entry
     const File& file = _data._files[_data._fileIndex];
     const char* filename = file.nameShort.c_str();
-    
-    setErrorLogCapture( true );
-    
+
+    setErrorLogCapture(true);
+
     bool success = _data.loadFile();
-    
+
     // Update these settings
-    
+
     if (!success) {
         string errorText;
         getErrorLogCaptureText(errorText);
         setErrorLogCapture(false);
-        
+
         string finalErrorText;
         // this does have previous filename set
         _data.setFailedText(file.name.c_str(), finalErrorText);
         finalErrorText += errorText;
-        
+
         [self setHudText:finalErrorText.c_str()];
         return NO;
     }
-    setErrorLogCapture( false );
-    
+    setErrorLogCapture(false);
+
     //-------
     Renderer* renderer = (Renderer*)self.delegate;
-    
+
     _showSettings->isSRGBShown = false;
     if (success && renderer.hasToggleView) {
         _showSettings->isSRGBShown = isSrgbFormat(_showSettings->originalFormat);
     }
-    
+
     renderer.playAnimations = _showSettings->isPlayAnimations;
     renderer.isToggleView = !_showSettings->isSRGBShown;
-    
+
     // -------------
     string title = _showSettings->windowTitleString(filename);
     self.window.title = [NSString stringWithUTF8String:title.c_str()];
-    
+
     // doesn't set imageURL or update the recent document menu
-    
+
     // show the controls
     if (_data._noImageLoaded) {
         _showSettings->isHideUI = false;
-        _buttonStack.hidden = NO;  // show controls
+        _buttonStack.hidden = NO; // show controls
         _data._noImageLoaded = false;
     }
-    
+
     // show/hide button
     _data.updateUIAfterLoad();
-    
+
     self.needsDisplay = YES;
     return YES;
 }
 
-
-
--(void)loadFilesFromUrls:(NSArray<NSURL*>*)urls skipSubdirs:(BOOL)skipSubdirs
+- (void)loadFilesFromUrls:(NSArray<NSURL*>*)urls skipSubdirs:(BOOL)skipSubdirs
 {
     // convert urls to vector<string> for C++
     vector<string> urlStrings;
     for (NSURL* url in urls) {
         urlStrings.push_back(url.fileSystemRepresentation);
     }
-    
+
     // C++ to build list
     _data.loadFilesFromUrls(urlStrings, skipSubdirs);
-    
+
     //-------------------
-    
+
     NSMutableDictionary* attribsOff = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-        //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
-        [NSColor whiteColor],NSForegroundColorAttributeName,
-        [NSNumber numberWithFloat:-2.0],NSStrokeWidthAttributeName,
-        [NSColor blackColor],NSStrokeColorAttributeName,
-        nil];
-    
+                                                               //[NSFont systemFontOfSize:64.0],NSFontAttributeName,
+                                                               [NSColor whiteColor], NSForegroundColorAttributeName,
+                                                               [NSNumber numberWithFloat:-2.0], NSStrokeWidthAttributeName,
+                                                               [NSColor blackColor], NSStrokeColorAttributeName,
+                                                               nil];
+
     // add the files into the file list
     [_tableViewController.items removeAllObjects];
-    for (const auto& file: _data._files) {
+    for (const auto& file : _data._files) {
         const char* filenameShort = file.nameShort.c_str();
-        
-        NSString* fileMenuText = [NSString stringWithUTF8String: filenameShort];
+
+        NSString* fileMenuText = [NSString stringWithUTF8String:filenameShort];
         NSMutableAttributedString* fileMenuStr = [[NSMutableAttributedString alloc] initWithString:fileMenuText attributes:attribsOff];
-        
+
         [_tableViewController.items addObject:fileMenuStr];
     }
-    
+
     // reloadData calls selectionDidChange which then sets _fileIndex = 0;
     uint32_t fileIndex = _data._fileIndex;
     [_tableView reloadData];
     _data._fileIndex = fileIndex;
-    
+
     [self updateFileSelection];
     [self hideFileTable];
-    
+
     // add it to recent docs (only 10 slots)
     if (urls.count == 1) {
         NSDocumentController* dc =
-        [NSDocumentController sharedDocumentController];
+            [NSDocumentController sharedDocumentController];
         [dc noteNewRecentDocumentURL:urls[0]];
     }
 }
-
 
 - (BOOL)loadTextureFromURLs:(NSArray<NSURL*>*)urls
 {
     // turn back on the hud if was in a list view
     _hudHidden = false;
     [self updateHudVisibility];
-    
+
     const char* filename = "";
     NSURL* url = urls[0];
-    if ([url.scheme isEqualToString:@"kram"])
-    {
+    if ([url.scheme isEqualToString:@"kram"]) {
         // the resource specifier has port and other data
         // for now treat this as a local file path.
-        
+
         // kram://filename.ktx
         filename = [url.resourceSpecifier UTF8String];
         filename = filename + 2; // skip the //
-        
+
         // can't get Slack to honor links like these
         // with a kram:///Users/...
         // or with kram://~/blah
@@ -1729,44 +1684,43 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
         // also need this same treatment instead
         // of relying on url.fileSystemRepresentation
     }
-    else
-    {
+    else {
         filename = url.fileSystemRepresentation;
     }
     bool isSingleFile = urls.count == 1;
-    
-    Renderer* renderer = (Renderer *)self.delegate;
-    
+
+    Renderer* renderer = (Renderer*)self.delegate;
+
     // Handle shader hotload
     if (isSingleFile && endsWithExtension(filename, ".metallib")) {
         if ([renderer hotloadShaders:filename]) {
             NSURL* metallibFileURL =
-            [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
-            
+                [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
+
             // add to recent docs, so can reload quickly
             NSDocumentController* dc =
-            [NSDocumentController sharedDocumentController];
+                [NSDocumentController sharedDocumentController];
             [dc noteNewRecentDocumentURL:metallibFileURL];
-            
+
             return YES;
         }
         return NO;
     }
-    
+
     // don't leave archive table open
     if (isSingleFile)
         [self hideFileTable];
 
     // only recurse down subdirs if cmd key held during drop or recent menu item selection
-    bool skipSubdirs = ( _modifierFlags & NSEventModifierFlagCommand ) == 0;
-    
+    bool skipSubdirs = (_modifierFlags & NSEventModifierFlagCommand) == 0;
+
     [self loadFilesFromUrls:urls skipSubdirs:skipSubdirs];
-    
+
     BOOL success = [self loadFile];
     return success;
 }
-   
--(BOOL)loadModelFile:(const char*)filename
+
+- (BOOL)loadModelFile:(const char*)filename
 {
 #if USE_GLTF
     // Right now can only load these if they are embedded, since sandbox will
@@ -1774,32 +1728,32 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     // related items, but they must all be named the same.  I think if folder
     // instead of the file is selected, then could search and find the gltf files
     // and the other files.
-    
+
     //----------------------
     // These assets should be combined into a single hierarchy, and be able to
     // save out a scene with all of them in a single scene.  But that should
     // probably reference original content in case it's updated.
-    
+
     // const char* filenameShort = toFilenameShort(filename);
     //double timestamp = FileHelper::modificationTimestamp(filename);
-    
+
     // TODO: this used to compare filename timestamp?
-    
+
     // This code only takes url, so construct one
-    Renderer* renderer = (Renderer *)self.delegate;
+    Renderer* renderer = (Renderer*)self.delegate;
     [renderer releaseAllPendingTextures];
     BOOL success = [renderer loadModel:filename];
-    
+
     // TODO: split this off to a completion handler, since loadModel is async
     // and should probably also have a cancellation (or counter)
-    
+
     // show/hide button
     _data.updateUIAfterLoad();
-    
+
     if (!success) {
         return NO;
     }
-    
+
     return success;
 #else
     return NO;
@@ -1816,10 +1770,9 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     // did setNeedsDisplay, but already doing that in loadTextureFromURL
 }
 
-- (void)tableViewSelectionDidChange:(NSNotification *)notification
+- (void)tableViewSelectionDidChange:(NSNotification*)notification
 {
-    if (notification.object == _tableView)
-    {
+    if (notification.object == _tableView) {
         // image
         NSInteger selectedRow = [_tableView selectedRow];
         [self setImageFromSelection:selectedRow];
@@ -1830,8 +1783,9 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
 {
     // listen for the selection change messages
     [[NSNotificationCenter defaultCenter] addObserver:self
-                                              selector:@selector(tableViewSelectionDidChange:)
-                                                  name:NSTableViewSelectionDidChangeNotification object:nil];
+                                             selector:@selector(tableViewSelectionDidChange:)
+                                                 name:NSTableViewSelectionDidChangeNotification
+                                               object:nil];
 }
 
 - (void)removeNotifications
@@ -1839,7 +1793,6 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     // listen for the selection change messages
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
-
 
 - (BOOL)acceptsFirstResponder
 {
@@ -1872,7 +1825,7 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
 {
     [super viewDidLoad];
 
-    _view = (MyMTKView *)self.view;
+    _view = (MyMTKView*)self.view;
 
     // have to disable this since reading back from textures
     // that slows the blit to the screen
@@ -1886,9 +1839,8 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
 
     _renderer = [[Renderer alloc] initWithMetalKitView:_view
                                               settings:_view.showSettings
-                                              data:_view.data];
+                                                  data:_view.data];
 
-    
     // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/TrackingAreaObjects/TrackingAreaObjects.html
     // this is better than requesting mousemoved events, they're only sent when
     // cursor is inside
@@ -1905,7 +1857,7 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
     [_view addTrackingArea:_trackingArea];
 
     [_view addNotifications];
-    
+
     [_view setupUI];
 
     // original sample code was sending down _view.bounds.size, but need
@@ -1914,30 +1866,28 @@ bool rectIntersectsRect(float4 lhs, float4 rhs)
 
     // ObjC++ delegate
     _view.delegate = _renderer;
-    
+
     [_renderer setEyedropperDelegate:_view];
 }
-
-
 
 @end
 
 bool DataDelegate::loadFile(bool clear)
 {
     MyMTKView* view_ = (__bridge MyMTKView*)view;
-    
+
     if (clear) {
         // set selection
         [view_ updateFileSelection];
-        
+
         // want it to respond to arrow keys
         //[self.window makeFirstResponder: _tableView];
-        
+
         // show the files table
         [view_ showFileTable];
         [view_ setEyedropperText:""];
     }
-    
+
     return [view_ loadFile];
 }
 
@@ -1950,9 +1900,9 @@ bool DataDelegate::loadModelFile(const char* filename)
 bool DataDelegate::loadTextureFromImage(const char* fullFilename, double timestamp, KTXImage& image, KTXImage* imageNormal, KTXImage* imageDiff, bool isArchive)
 {
     MyMTKView* view_ = (__bridge MyMTKView*)view;
-    Renderer* renderer = (Renderer *)view_.delegate;
+    Renderer* renderer = (Renderer*)view_.delegate;
     [renderer releaseAllPendingTextures];
-    
+
     if (![renderer loadTextureFromImage:fullFilename
                               timestamp:timestamp
                                   image:image
@@ -1961,18 +1911,17 @@ bool DataDelegate::loadTextureFromImage(const char* fullFilename, double timesta
                               isArchive:isArchive]) {
         return false;
     }
-    
+
     return true;
 }
 
-
 //-------------
 
-int main(int argc, const char *argv[])
+int main(int argc, const char* argv[])
 {
-    ThreadInfo infoMain = { "Main", ThreadPriority::Interactive, 0 };
+    ThreadInfo infoMain = {"Main", ThreadPriority::Interactive, 0};
     setThreadInfo(infoMain);
-    
+
     @autoreleasepool {
         // Setup code that might create autoreleased objects goes here.
     }

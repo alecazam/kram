@@ -45,12 +45,12 @@ struct KramBlit {
 @implementation KramLoader {
     // only one of these for now
     id<MTLBuffer> _buffer;
-    uint8_t* _data;
+    uint8_t *_data;
     uint32_t _bufferOffset;
 
     vector<KramBlit> _blits;
-    NSMutableArray<id<MTLTexture>>* _blitTextures;
-    NSMutableArray<id<MTLTexture>>* _mipgenTextures;
+    NSMutableArray<id<MTLTexture>> *_blitTextures;
+    NSMutableArray<id<MTLTexture>> *_mipgenTextures;
 }
 
 - (instancetype)init
@@ -71,8 +71,6 @@ struct KramBlit {
                      imageDataLength:(int32_t)imageData.length
                       originalFormat:originalFormat];
 }
-
-
 
 // this means format isnt supported on platform, but can be decoded to rgba to
 // display
@@ -99,7 +97,7 @@ bool decodeImage(const KTXImage &image, KTXImage &imageDecoded)
 {
     KramDecoderParams decoderParams;
     KramDecoder decoder;
-    
+
     // macOS Intel only had BC support, and already have macOS arm64 build
 #if SIMD_SSE
     if (isETCFormat(image.pixelFormat)) {
@@ -120,7 +118,7 @@ bool decodeImage(const KTXImage &image, KTXImage &imageDecoded)
     }
 #endif
     else {
-        KASSERT(false);  // don't call this routine if decode not needed
+        KASSERT(false); // don't call this routine if decode not needed
     }
 
     // TODO: decode BC format on iOS when not supported, but viewer only on macOS
@@ -180,27 +178,23 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
     KTXImage image;
 
     if (imageDataLength > 3 &&
-        imageData[0] == 0xff && imageData[1] == 0xd8 && imageData[2] == 0xff )
-    {
+        imageData[0] == 0xff && imageData[1] == 0xd8 && imageData[2] == 0xff) {
         KLOGE("kramv", "loader does not support jpg files");
         return nil;
     }
-        
+
     // if png, then need to load from KTXImageData which uses loadpng
     // \x89, P, N, G
     if (imageDataLength > 4 &&
-        imageData[0] == 137 && imageData[1] == 'P' && imageData[2] == 'N' && imageData[3] == 'G')
-    {
+        imageData[0] == 137 && imageData[1] == 'P' && imageData[2] == 'N' && imageData[3] == 'G') {
         KTXImageData imageDataReader;
         if (!imageDataReader.open(imageData, imageDataLength, image)) {
             return nil;
         }
-        
+
         return [self loadTextureFromImage:image originalFormat:originalFormat name:""];
     }
-    else
-    {
-    
+    else {
         // isInfoOnly = true keeps compressed mips on KTX2 and aliases original mip
         // data but have decode etc2/astc path below that uncompressed mips and the
         // rgb conversion path below as well in the viewer. games would want to
@@ -219,7 +213,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
 - (nullable id<MTLTexture>)loadTextureFromImage:(const KTXImage &)image
                                  originalFormat:
                                      (nullable MTLPixelFormat *)originalFormat
-                                           name:(const char*)name
+                                           name:(const char *)name
 {
 #if SUPPORT_RGB
     if (isInternalRGBFormat(image.pixelFormat)) {
@@ -236,7 +230,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
         dstImageInfoArgs.textureType = image.textureType;
         dstImageInfoArgs.pixelFormat = remapInternalRGBFormat(image.pixelFormat);
         dstImageInfoArgs.doMipmaps =
-            image.mipCount() > 1;  // ignore 0
+            image.mipCount() > 1; // ignore 0
         dstImageInfoArgs.textureEncoder = kTexEncoderExplicit;
 
         // set chunk count, so it's explicit
@@ -257,7 +251,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
         if (originalFormat != nullptr) {
             *originalFormat =
                 (MTLPixelFormat)rbgaImage2
-                    .pixelFormat;  // TODO: should this return rgbaImage.pixelFormat ?
+                    .pixelFormat; // TODO: should this return rgbaImage.pixelFormat ?
         }
 
         return [self blitTextureFromImage:rbgaImage2 name:name];
@@ -276,18 +270,17 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
 
         return [self blitTextureFromImage:imageDecoded name:name];
     }
-    else
-    {
+    else {
         // fast load path directly from mmap'ed data, decompress direct to staging
         return [self blitTextureFromImage:image name:name];
     }
 }
 
 - (BOOL)loadImageFromURL:(nonnull NSURL *)url
-                   image:(KTXImage&)image
-               imageData:(KTXImageData&)imageData
+                   image:(KTXImage &)image
+               imageData:(KTXImageData &)imageData
 {
-    const char* path = url.absoluteURL.path.UTF8String;
+    const char *path = url.absoluteURL.path.UTF8String;
     if (!imageData.open(path, image)) {
         return NO;
     }
@@ -295,9 +288,9 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
     return YES;
 }
 
-- (nullable id<MTLTexture>)loadTextureFromURL:(nonnull NSURL*)url
+- (nullable id<MTLTexture>)loadTextureFromURL:(nonnull NSURL *)url
                                originalFormat:
-                                   (nullable MTLPixelFormat*)originalFormat
+                                   (nullable MTLPixelFormat *)originalFormat
 {
     KTXImage image;
     KTXImageData imageData;
@@ -312,7 +305,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
 - (nullable id<MTLTexture>)createTexture:(const KTXImage &)image
                                isPrivate:(bool)isPrivate
 {
-    MTLTextureDescriptor* textureDescriptor = [[MTLTextureDescriptor alloc] init];
+    MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
 
     // Indicate that each pixel has a blue, green, red, and alpha channel, where
     // each channel is an 8-bit unsigned normalized value (i.e. 0 maps to 0.0 and
@@ -330,10 +323,10 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
     // This is inefficient to set, but needed for viewwer.
     // Only set if texture type is toggleable.
     // only need this if changing components, type, etc.
-//    {
-//        textureDescriptor.usage |= MTLTextureUsagePixelFormatView;
-//    }
-    
+    // {
+    //     textureDescriptor.usage |= MTLTextureUsagePixelFormatView;
+    // }
+
     // ignoring 0 (auto mip), but might need to support for explicit formats
     // must have hw filtering support for format, and 32f filtering only first
     // appeared on A14/M1 and only get box filtering in API-level filters.  But
@@ -385,13 +378,13 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
                  commandBuffer:(id<MTLCommandBuffer>)commandBuffer
 {
     mylock lock(gTextureLock);
-    
+
     if (!_blits.empty()) {
         // now upload from staging MTLBuffer to private MTLTexture
-        for (const auto& blit : _blits) {
+        for (const auto &blit : _blits) {
             MTLRegion region = {
-                {0, 0, 0},                                   // MTLOrigin
-                {(NSUInteger)blit.w, (NSUInteger)blit.h, 1}  // MTLSize
+                {0, 0, 0}, // MTLOrigin
+                {(NSUInteger)blit.w, (NSUInteger)blit.h, 1} // MTLSize
             };
 
             uint32_t chunkNum = blit.chunkNum;
@@ -430,7 +423,7 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
                 self->_bufferOffset = 0;
         }];
     }
-    
+
     // mipgen possible after initial blit above
     if (_mipgenTextures.count > 0) {
         for (id<MTLTexture> texture in _mipgenTextures) {
@@ -447,11 +440,11 @@ inline MyMTLPixelFormat remapInternalRGBFormat(MyMTLPixelFormat format)
 - (void)releaseAllPendingTextures
 {
     mylock lock(gTextureLock);
-    
+
     _bufferOffset = 0;
-    
+
     _blits.clear();
-    
+
     [_mipgenTextures removeAllObjects];
     [_blitTextures removeAllObjects];
 }
@@ -465,14 +458,14 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
 // (f.e. ktx), and another path for private that uses a blitEncoder and must
 // have block aligned data (f.e. ktxa, ktx2). Could repack ktx data into ktxa
 // before writing to temporary file, or when copying NSData into MTLBuffer.
-- (nullable id<MTLTexture>)blitTextureFromImage:(const KTXImage &)image name:(const char*)name
+- (nullable id<MTLTexture>)blitTextureFromImage:(const KTXImage &)image name:(const char *)name
 {
     mylock lock(gTextureLock);
-    
+
     if (_buffer == nil) {
         // Was set to 128, but models like FlightHelmet.gltf exceeded that buffer
         static const size_t kStagingBufferSize = 256 * 1024 * 1024;
-        
+
         // this is enough to upload 4k x 4x @ RGBA8u with mips, 8k x 8k compressed
         // with mips @96MB
         [self createStagingBufffer:kStagingBufferSize];
@@ -488,10 +481,10 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
     id<MTLTexture> texture = [self createTexture:image isPrivate:true];
     if (!texture)
         return nil;
-    
+
     // set a label so can identify in captures
     texture.label = [NSString stringWithUTF8String:name];
-    
+
     // this is index where texture will be added
     uint32_t textureIndex = (uint32_t)_blitTextures.count;
 
@@ -517,8 +510,8 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
     size_t blockSize = image.blockSize();
 
     vector<uint64_t> bufferOffsets;
-    uint8_t* bufferData = (uint8_t*)_buffer.contents;
-    const uint8_t* mipData = (const uint8_t*)image.fileData;
+    uint8_t *bufferData = (uint8_t *)_buffer.contents;
+    const uint8_t *mipData = (const uint8_t *)image.fileData;
     bufferOffsets.resize(image.mipLevels.size());
 
     uint32_t numChunks = image.totalChunks();
@@ -536,8 +529,7 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
             KLOGE("kramv", "Ran out of buffer space to upload images");
             return nil;
         }
-        
-        
+
         // this may have to decompress the level data
         if (!image.unpackLevel(i, mipData + mipLevel.offset,
                                bufferData + bufferOffset)) {
@@ -570,7 +562,7 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
                     uint32_t bytesPerRow = 0;
 
                     // 1D/1DArray textures set bytesPerRow to 0
-                    if (  // image.textureType != MyMTLTextureType1D &&
+                    if ( // image.textureType != MyMTLTextureType1D &&
                         image.textureType != MyMTLTextureType1DArray) {
                         // for compressed, bytesPerRow needs to be multiple of block size
                         // so divide by the number of blocks making up the height
@@ -618,7 +610,7 @@ inline uint64_t alignOffset(uint64_t offset, uint64_t alignment)
                             mipLevelNumber, mipStorageSize, mipOffset,
 
                             textureIndex, bytesPerRow,
-                            is3D  // could derive from textureIndex lookup
+                            is3D // could derive from textureIndex lookup
                         });
                     }
                 }

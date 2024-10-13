@@ -26,14 +26,14 @@ using namespace STL_NAMESPACE;
 
 // Writing out to rgba32 for sampling, but unorm formats like ASTC and RGBA8
 // are still off and need to use the following.
-float  toSnorm8(float c)  { return (255.0f / 127.0f) * c - (128.0f / 127.0f); }
+float toSnorm8(float c) { return (255.0f / 127.0f) * c - (128.0f / 127.0f); }
 float2 toSnorm8(float2 c) { return (255.0f / 127.0f) * c - (128.0f / 127.0f); }
 float3 toSnorm8(float3 c) { return (255.0f / 127.0f) * c - (128.0f / 127.0f); }
 float4 toSnorm8(float4 c) { return (255.0f / 127.0f) * c - (128.0f / 127.0f); }
 
-float4 toSnorm(float4 c)  { return 2.0f * c - 1.0f; }
+float4 toSnorm(float4 c) { return 2.0f * c - 1.0f; }
 
-inline float4 toPremul(const float4 &c)
+inline float4 toPremul(const float4& c)
 {
     // premul with a
     float4 cpremul = c;
@@ -48,28 +48,28 @@ inline bool almost_equal_elements(float3 v, float tol)
     return (fabs(v.x - v.y) < tol) && (fabs(v.x - v.z) < tol);
 }
 
-inline const float3x3& toFloat3x3(const float4x4 &m) { return (const float3x3 &)m; }
+inline const float3x3& toFloat3x3(const float4x4& m) { return (const float3x3&)m; }
 
-float4 inverseScaleSquared(const float4x4 &m)
+float4 inverseScaleSquared(const float4x4& m)
 {
     float3 scaleSquared = float3m(length_squared(m.columns[0].xyz),
                                   length_squared(m.columns[1].xyz),
                                   length_squared(m.columns[2].xyz));
-    
+
     // if uniform, then set scaleSquared all to 1
     if (almost_equal_elements(scaleSquared, 1e-5f)) {
         scaleSquared = float3m(1.0f);
     }
-    
+
     // don't divide by 0
     float3 invScaleSquared =
-    recip(SIMD_NAMESPACE::max(float3m(0.0001 * 0.0001), scaleSquared));
-    
+        recip(SIMD_NAMESPACE::max(float3m(0.0001 * 0.0001), scaleSquared));
+
     // identify determinant here for flipping orientation
     // all shapes with negative determinant need orientation flipped for
     // backfacing and need to be grouned together if rendering with instancing
     float det = determinant(toFloat3x3(m));
-    
+
     return float4m(invScaleSquared, det);
 }
 
@@ -79,7 +79,7 @@ static string filenameNoExtension(const char* filename)
     if (dotPosStr == nullptr)
         return filename;
     auto dotPos = dotPosStr - filename;
-    
+
     // now chop off the extension
     string filenameNoExt = filename;
     return filenameNoExt.substr(0, dotPos);
@@ -88,47 +88,48 @@ static string filenameNoExtension(const char* filename)
 static void findPossibleNormalMapFromAlbedoFilename(const char* filename, vector<string>& normalFilenames)
 {
     normalFilenames.clear();
-    
+
     string filenameShort = filename;
-    
+
     const char* ext = strrchr(filename, '.');
-    
+
     const char* dotPosStr = strrchr(filenameShort.c_str(), '.');
     if (dotPosStr == nullptr)
         return;
-    
+
     auto dotPos = dotPosStr - filenameShort.c_str();
-    
+
     // now chop off the extension
     filenameShort = filenameShort.substr(0, dotPos);
-    
-    const char* searches[] = { "-a", "-d", "_Color", "_baseColor" };
-    
+
+    const char* searches[] = {"-a", "-d", "_Color", "_baseColor"};
+
     for (uint32_t i = 0; i < ArrayCount(searches); ++i) {
         const char* search = searches[i];
         if (endsWith(filenameShort, search)) {
-            filenameShort = filenameShort.substr(0, filenameShort.length()-strlen(search));
+            filenameShort = filenameShort.substr(0, filenameShort.length() - strlen(search));
             break;
         }
     }
-    
-    const char* suffixes[] = { "-n", "_normal", "_Normal" };
-    
+
+    const char* suffixes[] = {"-n", "_normal", "_Normal"};
+
     string normalFilename;
     for (uint32_t i = 0; i < ArrayCount(suffixes); ++i) {
         const char* suffix = suffixes[i];
-        
+
         // may need to try various names, and see if any exist
         normalFilename = filenameShort;
         normalFilename += suffix;
         normalFilename += ext;
-        
+
         normalFilenames.push_back(normalFilename);
     }
 }
 
 // this aliases the existing string, so can't chop extension
-inline const char* toFilenameShort(const char* filename) {
+inline const char* toFilenameShort(const char* filename)
+{
     const char* filenameShort = strrchr(filename, '/');
     if (filenameShort == nullptr) {
         filenameShort = filename;
@@ -150,24 +151,27 @@ static const vector<const char*> supportedModelExt = {
 #endif
 };
 
-
-bool isSupportedModelFilename(const char* filename) {
-    for (const char* ext: supportedModelExt) {
+bool isSupportedModelFilename(const char* filename)
+{
+    for (const char* ext : supportedModelExt) {
         if (endsWithExtension(filename, ext)) {
             return true;
         }
     }
     return false;
 }
-bool isSupportedArchiveFilename(const char* filename) {
+bool isSupportedArchiveFilename(const char* filename)
+{
     return endsWithExtension(filename, ".zip");
 }
 
-bool isSupportedJsonFilename(const char* filename) {
+bool isSupportedJsonFilename(const char* filename)
+{
     return endsWith(filename, "-atlas.json");
 }
 
-bool isDirectory(const char* filename) {
+bool isDirectory(const char* filename)
+{
     FileHelper fileHelper;
     return fileHelper.isDirectory(filename);
 }
@@ -176,19 +180,19 @@ int32_t ShowSettings::totalChunks() const
 {
     int32_t one = 1;
     return std::max(one, faceCount) *
-    std::max(one, arrayCount) *
-    std::max(one, sliceCount);
+           std::max(one, arrayCount) *
+           std::max(one, sliceCount);
 }
 
 File::File(const char* name_, int32_t urlIndex_)
-: name(name_), urlIndex(urlIndex_), nameShort(toFilenameShort(name_))
+    : name(name_), urlIndex(urlIndex_), nameShort(toFilenameShort(name_))
 {
 }
 
-const char *ShowSettings::meshNumberName(uint32_t meshNumber_) const
+const char* ShowSettings::meshNumberName(uint32_t meshNumber_) const
 {
-    const char *text = "";
-    
+    const char* text = "";
+
     switch (meshNumber_) {
         case 0:
             text = "Plane";
@@ -208,14 +212,14 @@ const char *ShowSettings::meshNumberName(uint32_t meshNumber_) const
         default:
             break;
     }
-    
+
     return text;
 }
 
-const char *ShowSettings::meshNumberText() const
+const char* ShowSettings::meshNumberText() const
 {
-    const char *text = "";
-    
+    const char* text = "";
+
     switch (meshNumber) {
         case 0:
             text = "Shape Plane";
@@ -235,14 +239,14 @@ const char *ShowSettings::meshNumberText() const
         default:
             break;
     }
-    
+
     return text;
 }
 
-const char *ShowSettings::shapeChannelText() const
+const char* ShowSettings::shapeChannelText() const
 {
-    const char *text = "";
-    
+    const char* text = "";
+
     switch (shapeChannel) {
         case ShapeChannelNone:
             text = "Show Off";
@@ -272,14 +276,14 @@ const char *ShowSettings::shapeChannelText() const
         default:
             break;
     }
-    
+
     return text;
 }
 
-const char *ShowSettings::debugModeText() const
+const char* ShowSettings::debugModeText() const
 {
-    const char *text = "";
-    
+    const char* text = "";
+
     switch (debugMode) {
         case DebugModeNone:
             text = "Debug Off";
@@ -314,10 +318,10 @@ const char *ShowSettings::debugModeText() const
     return text;
 }
 
-const char *ShowSettings::lightingModeText() const
+const char* ShowSettings::lightingModeText() const
 {
-    const char *text = "";
-    
+    const char* text = "";
+
     switch (lightingMode) {
         case LightingModeDiffuse:
             text = "Light Diffuse";
@@ -337,7 +341,7 @@ const char *ShowSettings::lightingModeText() const
 bool ShowSettings::isEyedropperFromDrawable()
 {
     return meshNumber > 0 || isPreview || isShowingAllLevelsAndMips ||
-    shapeChannel > 0;
+           shapeChannel > 0;
 }
 
 void ShowSettings::advanceMeshNumber(bool decrement)
@@ -350,7 +354,7 @@ void ShowSettings::advanceMeshNumber(bool decrement)
     else {
         number += 1;
     }
-    
+
     meshNumber = number % numEnums;
 }
 
@@ -364,9 +368,9 @@ void ShowSettings::advanceShapeChannel(bool decrement)
     else {
         mode += 1;
     }
-    
+
     shapeChannel = (ShapeChannel)(mode % numEnums);
-    
+
     // skip this channel for now, in ortho it's mostly pure white
     if (shapeChannel == ShapeChannelDepth) {
         advanceShapeChannel(decrement);
@@ -383,7 +387,7 @@ void ShowSettings::advanceLightingMode(bool decrement)
     else {
         number += 1;
     }
-    
+
     lightingMode = (LightingMode)(number % numEnums);
 }
 
@@ -397,40 +401,40 @@ void ShowSettings::advanceDebugMode(bool decrement)
     else {
         mode += 1;
     }
-    
+
     debugMode = (DebugMode)(mode % numEnums);
-    
+
     MyMTLPixelFormat format = (MyMTLPixelFormat)originalFormat;
     bool isHdr = isHdrFormat(format);
-    
+
     // DONE: work on skipping some of these based on image
     bool isAlpha = isAlphaFormat(format);
     bool isColor = isColorFormat(format);
-    
+
     if (debugMode == DebugModeTransparent && (numChannels <= 3 || !isAlpha)) {
         advanceDebugMode(decrement);
     }
-    
+
     // 2 channel textures don't really have color or grayscale pixels
     if (debugMode == DebugModeColor && (numChannels <= 2 || !isColor)) {
         advanceDebugMode(decrement);
     }
-    
+
     if (debugMode == DebugModeGray && numChannels <= 2) {
         advanceDebugMode(decrement);
     }
-    
+
     if (debugMode == DebugModeHDR && !isHdr) {
         advanceDebugMode(decrement);
     }
-    
+
     // for 3 and for channel textures could skip these with more info about image
     // (hasColor) if (_showSettings->debugMode == DebugModeGray && !hasColor)
     // advanceDebugMode(isShiftKeyDown);
-    
+
     bool isNormal = texContentType == TexContentTypeNormal;
     bool isSDF = texContentType == TexContentTypeSDF;
-    
+
     // for normals show directions
     if (debugMode == DebugModePosX && !(isNormal || isSDF)) {
         advanceDebugMode(decrement);
@@ -441,7 +445,7 @@ void ShowSettings::advanceDebugMode(bool decrement)
     if (debugMode == DebugModeCircleXY && !(isNormal)) {
         advanceDebugMode(decrement);
     }
-    
+
     // TODO: have a clipping mode against a variable range too, only show pixels
     // within that range to help isolate problem pixels.  Useful for depth, and
     // have auto-range scaling for it and hdr. make sure to ignore 0 or 1 for
@@ -456,12 +460,11 @@ void ShowSettings::updateUVPreviewState()
                 if (uvPreview < 1.0)
                     uvPreview += uvPreviewStep;
             }
-            else
-            {
+            else {
                 if (uvPreview > 0.0)
                     uvPreview -= uvPreviewStep;
             }
-            
+
             uvPreview = std::clamp(uvPreview, 0.0f, 1.0f);
         }
     }
@@ -469,14 +472,14 @@ void ShowSettings::updateUVPreviewState()
         // This hides the uvView even when switchig back to 3d shape
         //uvPreview = 0.0;
     }
-    
+
     // stop the frame update
     if (uvPreview == 0.0f || uvPreview == 1.0f) {
         uvPreviewFrames = 0;
     }
 }
 
-void printChannels(string &tmp, const string &label, float4 c,
+void printChannels(string& tmp, const string& label, float4 c,
                    int32_t numChannels, bool isFloat, bool isSigned)
 {
     if (isFloat || isSigned) {
@@ -499,7 +502,7 @@ void printChannels(string &tmp, const string &label, float4 c,
     else {
         // unorm data, 8-bit values displayed
         c *= 255.1f;
-        
+
         switch (numChannels) {
             case 1:
                 sprintf(tmp, "%s%.0f\n", label.c_str(), c.r);
@@ -528,9 +531,9 @@ string ShowSettings::windowTitleString(const char* filename) const
     else {
         filenameShort += 1;
     }
-    
+
     string title = "kramv - ";
-    
+
     if (isModel) {
         title += formatTypeName(originalFormat);
         title += " - ";
@@ -540,33 +543,44 @@ string ShowSettings::windowTitleString(const char* filename) const
         // was using subtitle, but that's macOS 11.0 feature.
         title += formatTypeName(originalFormat);
         title += " - ";
-        
+
         // identify what we think the content type is
         const char* typeText = "";
-        switch(texContentType) {
-            case TexContentTypeAlbedo: typeText = "a"; break;
-            case TexContentTypeNormal: typeText = "n"; break;
-            case TexContentTypeAO: typeText = "ao"; break;
-            case TexContentTypeMetallicRoughness: typeText = "mr"; break;
-            case TexContentTypeSDF: typeText = "sdf"; break;
-            case TexContentTypeHeight: typeText = "h"; break;
-            case TexContentTypeUnknown: typeText = ""; break;
+        switch (texContentType) {
+            case TexContentTypeAlbedo:
+                typeText = "a";
+                break;
+            case TexContentTypeNormal:
+                typeText = "n";
+                break;
+            case TexContentTypeAO:
+                typeText = "ao";
+                break;
+            case TexContentTypeMetallicRoughness:
+                typeText = "mr";
+                break;
+            case TexContentTypeSDF:
+                typeText = "sdf";
+                break;
+            case TexContentTypeHeight:
+                typeText = "h";
+                break;
+            case TexContentTypeUnknown:
+                typeText = "";
+                break;
         }
         title += typeText;
         // add some info about the texture to avoid needing to go to info
         // srgb src would be useful too.
         if (texContentType == TexContentTypeAlbedo && isPremul) {
             title += ",p";
-            
         }
         title += " - ";
         title += filenameShort;
     }
-    
+
     return title;
 }
-
-
 
 //--------------------------------
 
@@ -576,14 +590,14 @@ Data::Data()
 {
 #if USE_SIMDLIB && 1
     vecf vfmt;
-    
+
     // want to see the simd config
     KLOGI("SIMDK", "%s", vfmt.simd_configs().c_str());
     KLOGI("SIMDK", "%s", vfmt.simd_alignments().c_str());
 #endif
-    
+
     _showSettings = new ShowSettings();
-    
+
     _textSlots.resize(kTextSlotCount);
 }
 Data::~Data()
@@ -591,7 +605,8 @@ Data::~Data()
     delete _showSettings;
 }
 
-void Data::clearAtlas() {
+void Data::clearAtlas()
+{
     _showSettings->atlas.clear();
     _showSettings->lastAtlas = nullptr;
 }
@@ -601,50 +616,50 @@ void Data::clearAtlas() {
 bool Data::loadAtlasFile(const char* filename)
 {
     using namespace simdjson;
-    
+
     clearAtlas();
-    
+
     Timer timer;
-    
+
     // can just mmap the json
     MmapHelper mmap;
     if (!mmap.open(filename)) {
         KLOGE("kramv", "Failed to open %s", filename);
         return false;
     }
-    
+
     ondemand::parser parser;
-    
+
     padded_string json((const char*)mmap.data(), mmap.dataLength());
     auto atlasProps = parser.iterate(json);
-    
+
     // can we get at memory use numbers to do the parse?
     KLOGI("kramv", "parsed %.0f KB of json in %.3fms",
           (double)mmap.dataLength() / 1024.0,
           timer.timeElapsedMillis());
-    
+
     // Can use hover or a show all on these entries and names.
     // Draw names on screen using system text in the upper left corner if 1
     // if showing all, then show names across each mip level.  May want to
     // snap to pixels on each mip level so can see overlap.
-    
+
     {
         std::vector<double> values;
         //string_view atlasName = atlasProps["name"].get_string().value_unsafe();
-        
+
         uint64_t width = atlasProps["width"].get_uint64().value_unsafe();
         uint64_t height = atlasProps["height"].get_uint64().value_unsafe();
-        
+
         uint64_t slice = atlasProps["slice"].get_uint64().value_unsafe();
-        
+
         float uPad = 0.0f;
         float vPad = 0.0f;
-        
+
         if (atlasProps["paduv"].get_array().error() != NO_SUCH_FIELD) {
             values.clear();
             for (auto value : atlasProps["paduv"])
                 values.push_back(value.get_double().value_unsafe());
-            
+
             uPad = values[0];
             vPad = values[1];
         }
@@ -652,29 +667,27 @@ bool Data::loadAtlasFile(const char* filename)
             values.clear();
             for (auto value : atlasProps["padpx"])
                 values.push_back(value.get_double().value_unsafe());
-            
+
             uPad = values[0];
             vPad = values[1];
-            
+
             uPad /= width;
             vPad /= height;
         }
-        
-        for (auto regionProps: atlasProps["regions"])
-        {
+
+        for (auto regionProps : atlasProps["regions"]) {
             string_view name = regionProps["name"].get_string().value_unsafe();
-            
+
             float x = 0.0f;
             float y = 0.0f;
             float w = 0.0f;
             float h = 0.0f;
-            
-            if (regionProps["ruv"].get_array().error() != NO_SUCH_FIELD)
-            {
+
+            if (regionProps["ruv"].get_array().error() != NO_SUCH_FIELD) {
                 values.clear();
                 for (auto value : regionProps["ruv"])
                     values.push_back(value.get_double().value_unsafe());
-                
+
                 // Note: could convert pixel and mip0 size to uv.
                 // normalized uv make these easier to draw across all mips
                 x = values[0];
@@ -682,37 +695,36 @@ bool Data::loadAtlasFile(const char* filename)
                 w = values[2];
                 h = values[3];
             }
-            else if (regionProps["rpx"].get_array().error() != NO_SUCH_FIELD)
-            {
+            else if (regionProps["rpx"].get_array().error() != NO_SUCH_FIELD) {
                 values.clear();
                 for (auto value : regionProps["rpx"])
                     values.push_back(value.get_double().value_unsafe());
-                
+
                 x = values[0];
                 y = values[1];
                 w = values[2];
                 h = values[3];
-                
+
                 // normalize to uv using the width/height
                 x /= width;
                 y /= height;
                 w /= width;
                 h /= height;
             }
-            
+
             const char* verticalProp = "f"; // regionProps["rot"];
             bool isVertical = verticalProp && verticalProp[0] == 't';
-            
-            Atlas atlas = {(string)name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
+
+            Atlas atlas = {(string)name, x, y, w, h, uPad, vPad, isVertical, (uint32_t)slice};
             _showSettings->atlas.emplace_back(std::move(atlas));
         }
     }
-    
+
     // TODO: also need to be able to bring in vector shapes
     // maybe from svg or files written out from figma or photoshop.
     // Can triangulate those, and use xatlas to pack those.
     // Also xatlas can flatten out a 3d model into a chart.
-    
+
     return true;
 }
 
@@ -721,16 +733,16 @@ bool Data::loadAtlasFile(const char* filename)
 bool Data::loadAtlasFile(const char* filename)
 {
     using namespace json11;
-    
+
     clearAtlas();
-    
+
     // can just mmap the json
     MmapHelper mmap;
     if (!mmap.open(filename)) {
         KLOGE("kramv", "Failed to open %s", filename);
         return false;
     }
-    
+
     Timer timer;
     JsonReader jsonReader;
     const Json* root = jsonReader.read((const char*)mmap.data(), mmap.dataLength());
@@ -740,37 +752,36 @@ bool Data::loadAtlasFile(const char* filename)
         return false;
     }
     timer.stop();
-    
+
     KLOGI("kramv", "parsed %.0f KB of json using %.0f KB of memory in %.3fms",
           (double)mmap.dataLength() / 1024.0,
           (double)jsonReader.memoryUse() / 1024.0,
           timer.timeElapsedMillis());
-    
+
     const Json& atlasProps = (*root)[(uint32_t)0];
-    
+
     // Can use hover or a show all on these entries and names.
     // Draw names on screen using system text in the upper left corner if 1
     // if showing all, then show names across each mip level.  May want to
     // snap to pixels on each mip level so can see overlap.
-    
-    
+
     {
         std::vector<double> values;
         // string_view atlasName = atlasProps["name"].get_string().value_unsafe();
-        
+
         int width = atlasProps["width"].int_value();
         int height = atlasProps["height"].int_value();
-        
+
         int slice = atlasProps["slice"].int_value();
-        
+
         float uPad = 0.0f;
         float vPad = 0.0f;
-        
+
         if (atlasProps["paduv"].is_array()) {
             values.clear();
             for (const auto& value : atlasProps["paduv"])
                 values.push_back(value.number_value());
-            
+
             uPad = values[0];
             vPad = values[1];
         }
@@ -778,30 +789,28 @@ bool Data::loadAtlasFile(const char* filename)
             values.clear();
             for (const auto& value : atlasProps["padpx"])
                 values.push_back(value.number_value());
-            
+
             uPad = values[0];
             vPad = values[1];
-            
+
             uPad /= width;
             vPad /= height;
         }
-        
+
         string decodedName;
-        for (auto regionProps: atlasProps["regions"])
-        {
+        for (auto regionProps : atlasProps["regions"]) {
             const char* name = regionProps["name"].string_value(decodedName);
-            
+
             float x = 0.0f;
             float y = 0.0f;
             float w = 0.0f;
             float h = 0.0f;
-            
-            if (regionProps["ruv"].is_array())
-            {
+
+            if (regionProps["ruv"].is_array()) {
                 values.clear();
                 for (auto value : regionProps["ruv"])
                     values.push_back(value.number_value());
-                
+
                 // Note: could convert pixel and mip0 size to uv.
                 // normalized uv make these easier to draw across all mips
                 x = values[0];
@@ -809,60 +818,59 @@ bool Data::loadAtlasFile(const char* filename)
                 w = values[2];
                 h = values[3];
             }
-            else if (regionProps["rpx"].is_array())
-            {
+            else if (regionProps["rpx"].is_array()) {
                 values.clear();
                 for (auto value : regionProps["rpx"])
                     values.push_back(value.number_value());
-                
+
                 x = values[0];
                 y = values[1];
                 w = values[2];
                 h = values[3];
-                
+
                 // normalize to uv using the width/height
                 x /= width;
                 y /= height;
                 w /= width;
                 h /= height;
             }
-            
+
             const char* verticalProp = "f"; // regionProps["rot"];
             bool isVertical = verticalProp && verticalProp[0] == 't';
-            
-            Atlas atlas = {name, x,y, w,h, uPad,vPad, isVertical, (uint32_t)slice};
+
+            Atlas atlas = {name, x, y, w, h, uPad, vPad, isVertical, (uint32_t)slice};
             _showSettings->atlas.emplace_back(std::move(atlas));
         }
     }
-    
+
     // TODO: also need to be able to bring in vector shapes
     // maybe from svg or files written out from figma or photoshop.
     // Can triangulate those, and use xatlas to pack those.
     // Also xatlas can flatten out a 3d model into a chart.
-    
+
     return true;
 }
 
 #endif
 
 // opens archive
-bool Data::openArchive(const char * zipFilename, int32_t urlIndex)
+bool Data::openArchive(const char* zipFilename, int32_t urlIndex)
 {
     // grow the array, ptrs so that existing mmaps aren't destroyed
     if (urlIndex >= _containers.size()) {
         _containers.resize(urlIndex + 1, nullptr);
     }
-    
+
     if (_containers[urlIndex] == nullptr)
         _containers[urlIndex] = new FileContainer;
-    
+
     FileContainer& container = *_containers[urlIndex];
     MmapHelper& zipMmap = container.zipMmap;
     ZipHelper& zip = container.zip;
-    
+
     // close any previous zip
     zipMmap.close();
-    
+
     // open the mmap again
     if (!zipMmap.open(zipFilename)) {
         return false;
@@ -878,116 +886,119 @@ bool Data::listFilesInArchive(int32_t urlIndex)
 {
     FileContainer& container = *_containers[urlIndex];
     ZipHelper& zip = container.zip;
-    
+
     // filter out unsupported extensions
     vector<string> extensions = {
-        ".ktx", ".ktx2", ".png",  // textures
+        ".ktx", ".ktx2", ".png", // textures
         ".dds", ".DDS" // allow caps for dds
 #if USE_GLTF
-        // TODO: can't support these until have a loader from memory block
-        // GLTFAsset requires a URL.
-        //, ".glb", ".gltf" // models
+    // TODO: can't support these until have a loader from memory block
+    // GLTFAsset requires a URL.
+    //, ".glb", ".gltf" // models
 #endif
 #if USE_USD
-        , ".usd", ".usda", ".usb"
+        ,
+        ".usd", ".usda", ".usb"
 #endif
     };
-    
+
     container.zip.filterExtensions(extensions);
-    
+
     // don't switch to empty archive
     if (zip.zipEntrys().empty()) {
         return false;
     }
-    
-    for (const auto& entry: zip.zipEntrys()) {
+
+    for (const auto& entry : zip.zipEntrys()) {
         _files.emplace_back(File(entry.filename, urlIndex));
     }
-    
+
     return true;
 }
 
 // TODO: can simplify by storing counterpart id when file list is created
-bool Data::hasCounterpart(bool increment) {
+bool Data::hasCounterpart(bool increment)
+{
     if (_files.size() <= 1) {
         return false;
     }
-    
+
     const File& file = _files[_fileIndex];
     string currentFilename = filenameNoExtension(file.nameShort.c_str());
-    
+
     uint32_t nextFileIndex = _fileIndex;
-    
+
     size_t numEntries = _files.size();
     if (increment)
         nextFileIndex++;
     else
-        nextFileIndex += numEntries - 1;  // back 1
-    
+        nextFileIndex += numEntries - 1; // back 1
+
     nextFileIndex = nextFileIndex % numEntries;
-    
+
     const File& nextFile = _files[nextFileIndex];
     string nextFilename = filenameNoExtension(nextFile.nameShort.c_str());
-    
+
     // if short name matches (no ext) then it's a counterpart
     if (currentFilename != nextFilename)
         return false;
-    
+
     return true;
 }
 
-bool Data::advanceCounterpart(bool increment) {
-    
+bool Data::advanceCounterpart(bool increment)
+{
     if (_files.size() <= 1) {
         return false;
     }
-    
+
     // see if file has counterparts
     const File& file = _files[_fileIndex];
     string currentFilename = filenameNoExtension(file.nameShort.c_str());
-    
+
     // TODO: this should cycle through only the counterparts
     uint32_t nextFileIndex = _fileIndex;
-    
+
     size_t numEntries = _files.size();
     if (increment)
         nextFileIndex++;
     else
-        nextFileIndex += numEntries - 1;  // back 1
-    
+        nextFileIndex += numEntries - 1; // back 1
+
     nextFileIndex = nextFileIndex % numEntries;
-    
+
     const File& nextFile = _files[nextFileIndex];
     string nextFilename = filenameNoExtension(nextFile.nameShort.c_str());
-    
+
     if (currentFilename != nextFilename)
         return false;
-    
+
     _fileIndex = nextFileIndex;
-    
+
     return _delegate.loadFile(true);
 }
 
-bool Data::advanceFile(bool increment) {
+bool Data::advanceFile(bool increment)
+{
     if (_files.empty()) {
         return false;
     }
-    
+
     size_t numEntries = _files.size();
     if (increment)
         _fileIndex++;
     else
-        _fileIndex += numEntries - 1;  // back 1
-    
+        _fileIndex += numEntries - 1; // back 1
+
     _fileIndex = _fileIndex % numEntries;
-    
+
     return _delegate.loadFile(true);
 }
 
 bool Data::findFilename(const string& filename)
 {
     bool isFound = false;
-    
+
     // linear search
     for (const auto& search : _files) {
         if (search.name == filename) {
@@ -1001,7 +1012,7 @@ bool Data::findFilename(const string& filename)
 bool Data::findFilenameShort(const string& filename)
 {
     bool isFound = false;
-    
+
     // linear search
     for (const auto& search : _files) {
         if (search.nameShort == filename) {
@@ -1033,20 +1044,20 @@ const Atlas* Data::findAtlasAtUV(float2 pt)
 {
     if (_showSettings->atlas.empty()) return nullptr;
     if (_showSettings->imageBoundsX == 0) return nullptr;
-    
+
     const Atlas* atlas = nullptr;
-    
+
     // Note: rects are in uv
-    
+
     // This might need to become an atlas array index instead of ptr
     const Atlas* lastAtlas = _showSettings->lastAtlas;
-    
+
     if (lastAtlas) {
         if (isPtInRect(pt, lastAtlas->rect())) {
             atlas = lastAtlas;
         }
     }
-    
+
     if (!atlas) {
         // linear search
         for (const auto& search : _showSettings->atlas) {
@@ -1055,20 +1066,19 @@ const Atlas* Data::findAtlasAtUV(float2 pt)
                 break;
             }
         }
-        
+
         _showSettings->lastAtlas = atlas;
     }
-    
+
     return atlas;
 }
-
 
 bool Data::isArchive() const
 {
     //NSArray<NSURL*>* urls_ = (NSArray<NSURL*>*)_delegate._urls;
     //NSURL* url = urls_[_files[_fileIndex].urlIndex];
     //const char* filename = url.fileSystemRepresentation;
-    
+
     string filename = _urls[_files[_fileIndex].urlIndex];
     return isSupportedArchiveFilename(filename.c_str());
 }
@@ -1084,77 +1094,77 @@ bool Data::loadFile()
     if (isArchive()) {
         return loadFileFromArchive();
     }
-    
+
     // now lookup the filename and data at that entry
     const File& file = _files[_fileIndex];
     const char* filename = file.name.c_str();
-    
+
     string fullFilename = filename;
     auto timestamp = FileHelper::modificationTimestamp(filename);
-    
+
     bool isTextureChanged = _showSettings->isFileChanged(filename, timestamp);
     if (!isTextureChanged) {
         return true;
     }
-    
+
 #if USE_GLTF || USE_USD
     bool isModel = isSupportedModelFilename(filename);
     if (isModel) {
         bool success = _delegate.loadModelFile(filename);
-        
+
         if (success) {
             // store the filename
             _showSettings->lastFilename = filename;
             _showSettings->lastTimestamp = timestamp;
         }
-        
+
         return success;
     }
 #endif
-    
+
     // have already filtered filenames out, so this should never get hit
     if (!isSupportedFilename(filename)) {
         return false;
     }
-    
+
     // Note: better to extract from filename instead of root of folder dropped
     // or just keep displaying full path of filename.
-    
+
     _archiveName.clear();
-    
+
     vector<string> possibleNormalFilenames;
     string normalFilename;
     bool hasNormal = false;
-    
+
     TexContentType texContentType = findContentTypeFromFilename(filename);
     if (texContentType == TexContentTypeAlbedo) {
         findPossibleNormalMapFromAlbedoFilename(filename, possibleNormalFilenames);
-        
-        for (const auto& name: possibleNormalFilenames) {
+
+        for (const auto& name : possibleNormalFilenames) {
             hasNormal = findFilename(name);
-            
+
             if (hasNormal) {
                 normalFilename = name;
                 break;
             }
         }
     }
-    
+
     // see if there is an atlas file too, and load the rectangles for preview
     // note sidecar atlas files are a pain to view with a sandbox, may want to
     // splice into ktx/ktx2 files, but no good metadata for png/dds.
     _showSettings->atlas.clear();
-    
+
     string atlasFilename = filenameNoExtension(filename);
     bool hasAtlas = false;
-    
+
     // replace -a, -d, with -atlas.json
     const char* dashPosStr = strrchr(atlasFilename.c_str(), '-');
     if (dashPosStr != nullptr) {
         atlasFilename = atlasFilename.substr(0, dashPosStr - atlasFilename.c_str());
     }
     atlasFilename += "-atlas.json";
-    if ( findFilename(atlasFilename.c_str())) {
+    if (findFilename(atlasFilename.c_str())) {
         if (loadAtlasFile(atlasFilename.c_str())) {
             hasAtlas = true;
         }
@@ -1163,20 +1173,20 @@ bool Data::loadFile()
         clearAtlas();
         atlasFilename.clear();
     }
-    
+
     // If it's a compressed file, then set a diff target if a corresponding png
     // is found.  Eventually see if a src dds/ktx/ktx2 exists.  Want to stop
     // using png as source images.  Note png don't have custom mips, unless
     // flattened to one image.  So have to fabricate mips here.  KTXImage
     // can already load up striped png into slices, etc.
-    
+
     bool hasDiff = false;
     string diffFilename;
-    
+
     if (!isPNGFilename(filename)) {
         diffFilename = filenameNoExtension(filename);
         diffFilename += ".png";
-        
+
         diffFilename = toFilenameShort(diffFilename.c_str());
         if (diffFilename != filename) {
             const File* diffFile = findFileShort(diffFilename.c_str());
@@ -1185,44 +1195,41 @@ bool Data::loadFile()
                 hasDiff = true;
             }
         }
-        
+
         if (!hasDiff)
             diffFilename.clear();
     }
-    
+
     //-------------------------------
-    
+
     KTXImage image;
     KTXImageData imageDataKTX;
-    
+
     KTXImage imageNormal;
     KTXImageData imageNormalDataKTX;
-    
+
     KTXImage imageDiff;
     KTXImageData imageDiffDataKTX;
-    
+
     // this requires decode and conversion to RGBA8u
     if (!imageDataKTX.open(fullFilename.c_str(), image)) {
         return false;
     }
-    
+
     // load up the diff, but would prefer to defer this
     if (hasDiff && !imageDiffDataKTX.open(diffFilename.c_str(), imageDiff)) {
         hasDiff = false;
-        
+
         // TODO: could also compare dimensions to see if same
-        
+
         if (imageDiff.textureType == image.textureType &&
-            (imageDiff.textureType == MyMTLTextureType2D) )
-        {
-            
+            (imageDiff.textureType == MyMTLTextureType2D)) {
         }
-        else
-        {
+        else {
             hasDiff = false;
         }
     }
-    
+
     if (hasNormal &&
         imageNormalDataKTX.open(normalFilename.c_str(), imageNormal)) {
         // shaders only pull from albedo + normal on these texture types
@@ -1235,22 +1242,21 @@ bool Data::loadFile()
             hasNormal = false;
         }
     }
-    
+
     //---------------------------------
-    
+
     if (!_delegate.loadTextureFromImage(fullFilename.c_str(), (double)timestamp,
-        image,
-        hasNormal ? &imageNormal : nullptr,
-        hasDiff ? &imageDiff : nullptr,
-        false))
-    {
+                                        image,
+                                        hasNormal ? &imageNormal : nullptr,
+                                        hasDiff ? &imageDiff : nullptr,
+                                        false)) {
         return false;
     }
-    
+
     // store the filename
     _showSettings->lastFilename = filename;
     _showSettings->lastTimestamp = timestamp;
-    
+
     return true;
 }
 
@@ -1260,7 +1266,7 @@ bool Data::loadFileFromArchive()
     const File& file = _files[_fileIndex];
     FileContainer& container = *_containers[file.urlIndex];
     ZipHelper& zip = container.zip;
-    
+
     const char* filename = file.name.c_str();
     const auto* entry = zip.zipEntry(filename);
     string fullFilename = entry->filename;
@@ -1270,20 +1276,20 @@ bool Data::loadFileFromArchive()
     if (!isTextureChanged) {
         return true;
     }
-    
-// TODO: don't have a version which loads gltf model from memory block
-//    bool isModel = isSupportedModelFilename(filename);
-//    if (isModel)
-//        return [self loadModelFile:filename];
-    
+
+    // TODO: don't have a version which loads gltf model from memory block
+    //    bool isModel = isSupportedModelFilename(filename);
+    //    if (isModel)
+    //        return [self loadModelFile:filename];
+
     //--------
-    
+
     if (!isSupportedFilename(filename)) {
         return false;
     }
-    
+
     KPERFT("loadFileFromArchive");
-    
+
     const uint8_t* imageData = nullptr;
     uint64_t imageDataLength = 0;
 
@@ -1292,66 +1298,65 @@ bool Data::loadFileFromArchive()
     // zip that compressed png files.  So then the raw ptr/size
     // needs deflated.
     bool isFileUncompressed = entry->compressedSize == entry->uncompressedSize;
-    
+
     vector<uint8_t> bufferForImage;
-    
+
     if (isFileUncompressed) {
         KPERFT("ZipExtractRaw");
-        
+
         // search for main file - can be albedo or normal
         if (!zip.extractRaw(filename, &imageData, imageDataLength)) {
             return false;
         }
-
     }
     else {
         KPERFT("ZipExtract");
-        
+
         // need to decompress first
         if (!zip.extract(filename, bufferForImage)) {
             return false;
         }
-        
+
         imageData = bufferForImage.data();
         imageDataLength = bufferForImage.size();
     }
-    
+
     vector<uint8_t> bufferForNormal;
-    
+
     const uint8_t* imageNormalData = nullptr;
     uint64_t imageNormalDataLength = 0;
-    
+
     string normalFilename;
     bool hasNormal = false;
     vector<string> normalFilenames;
-    
+
     TexContentType texContentType = findContentTypeFromFilename(filename);
     if (texContentType == TexContentTypeAlbedo) {
         findPossibleNormalMapFromAlbedoFilename(filename, normalFilenames);
-     
-        for (const auto& name: normalFilenames) {
+
+        for (const auto& name : normalFilenames) {
             const auto* normalEntry = zip.zipEntry(name.c_str());
-            
+
             hasNormal = normalEntry != nullptr;
             if (hasNormal) {
                 normalFilename = name;
-                
+
                 bool isNormalUncompressed = normalEntry->compressedSize == normalEntry->uncompressedSize;
-                
+
                 if (isNormalUncompressed) {
                     KPERFT("ZipExtractRawNormal");
-                    
+
                     zip.extractRaw(name.c_str(), &imageNormalData,
                                    imageNormalDataLength);
                 }
                 else {
                     KPERFT("ZipExtractNormal");
-                    
+
                     // need to decompress first
                     if (!zip.extract(filename, bufferForNormal)) {
                         return false;
                     }
-                    
+
                     imageNormalData = bufferForNormal.data();
                     imageNormalDataLength = bufferForNormal.size();
                 }
@@ -1371,144 +1376,134 @@ bool Data::loadFileFromArchive()
     KTXImageData imageNormalDataKTX;
 
     // TODO: do imageDiff here?
-    
+
     KPERFT_START(1, "KTXOpen");
-    
+
     if (!imageDataKTX.open(imageData, imageDataLength, image)) {
         return false;
     }
 
     KPERFT_STOP(1);
-   
-    
+
     if (hasNormal) {
         KPERFT("KTXOpenNormal");
-       
+
         if (imageNormalDataKTX.open(
-            imageNormalData, imageNormalDataLength, imageNormal)) {
-                // shaders only pull from albedo + normal on these texture types
-                if (imageNormal.textureType == image.textureType &&
-                    (imageNormal.textureType == MyMTLTextureType2D ||
-                     imageNormal.textureType == MyMTLTextureType2DArray)) {
-                    // hasNormal = true;
-                }
-                else {
-                    hasNormal = false;
-                }
+                imageNormalData, imageNormalDataLength, imageNormal)) {
+            // shaders only pull from albedo + normal on these texture types
+            if (imageNormal.textureType == image.textureType &&
+                (imageNormal.textureType == MyMTLTextureType2D ||
+                 imageNormal.textureType == MyMTLTextureType2DArray)) {
+                // hasNormal = true;
             }
+            else {
+                hasNormal = false;
+            }
+        }
     }
 
-    
     //---------------------------------
-    
+
     KPERFT_START(3, "KTXLoad");
-   
+
     if (!_delegate.loadTextureFromImage(fullFilename.c_str(), (double)timestamp, image, hasNormal ? &imageNormal : nullptr, nullptr, true)) {
         return false;
     }
 
     KPERFT_STOP(3);
-   
+
     //---------------------------------
-    
+
     string archiveURL = _urls[file.urlIndex];
     _archiveName = toFilenameShort(archiveURL.c_str());
-    
+
     return true;
 }
-
-
-
 
 void Data::loadFilesFromUrls(vector<string>& urls, bool skipSubdirs)
 {
     // Using a member for archives, so limited to one archive in a drop
     // but that's probably okay for now.  Add a separate array of open
     // archives if want > 1.
-    
+
     // copy the existing files list
     string existingFilename;
     if (_fileIndex < (int32_t)_files.size())
         existingFilename = _files[_fileIndex].name;
-    
+
     // Fill this out again
     _files.clear();
-    
+
     // clear pointers
-    for (FileContainer* container: _containers)
+    for (FileContainer* container : _containers)
         delete container;
     _containers.clear();
-    
+
     // this will flatten the list
     int32_t urlIndex = 0;
-    
+
     vector<string> urlsExtracted;
-    
-    for (const auto& url: urls) {
+
+    for (const auto& url : urls) {
         // These will flatten out to a list of files
         const char* filename = url.c_str();
-        
+
         if (isSupportedArchiveFilename(filename) &&
             openArchive(filename, urlIndex) &&
-            listFilesInArchive(urlIndex))
-        {
+            listFilesInArchive(urlIndex)) {
             urlsExtracted.push_back(filename);
             urlIndex++;
         }
         else if (isDirectory(filename)) {
-            
             // this first loads only models, then textures if only those
             listFilesInFolder(url, urlIndex, skipSubdirs);
-            
+
             // could skip if nothing added
             urlsExtracted.push_back(url);
             urlIndex++;
-            
+
             // handle archives within folder
             vector<File> archiveFiles;
             listArchivesInFolder(url, archiveFiles, skipSubdirs);
-            
-            for (const File& archiveFile: archiveFiles) {
+
+            for (const File& archiveFile : archiveFiles) {
                 const char* archiveFilename = archiveFile.name.c_str();
                 if (openArchive(archiveFilename, urlIndex) &&
                     listFilesInArchive(urlIndex)) {
-                    
                     //NSURL* urlArchive = [NSURL fileURLWithPath:[NSString stringWithUTF8String:archiveFilename]];
                     //[urlsExtracted addObject:urlArchive];
                     urlsExtracted.push_back(archiveFilename);
                     urlIndex++;
                 }
-                
             }
         }
         else if (isSupportedFilename(filename)
 #if USE_GLTF
                  || isSupportedModelFilename(filename)
 #endif
-                 ) {
+        ) {
             _files.emplace_back(File(filename, urlIndex));
-            
+
             //[urlsExtracted addObject:url];
             urlsExtracted.push_back(filename);
             urlIndex++;
         }
         else if (isSupportedJsonFilename(filename)) {
             _files.emplace_back(File(filename, urlIndex));
-            
+
             //[urlsExtracted addObject:url];
             urlsExtracted.push_back(filename);
             urlIndex++;
         }
-        
     }
-    
+
     // sort them by short filename
 #if USE_EASTL
     STL_NAMESPACE::quick_sort(_files.begin(), _files.end());
 #else
     STL_NAMESPACE::sort(_files.begin(), _files.end());
 #endif
-    
+
     // preserve filename before load, and restore that index, by finding
     // that name in refreshed folder list
     _fileIndex = 0;
@@ -1520,7 +1515,7 @@ void Data::loadFilesFromUrls(vector<string>& urls, bool skipSubdirs)
             }
         }
     }
-    
+
     // preserve old file selection
     _urls = urlsExtracted;
 }
@@ -1533,7 +1528,7 @@ void Data::showEyedropperData(const float2& uv)
     float4 c = _showSettings->textureResult;
     int32_t x = _showSettings->textureResultX;
     int32_t y = _showSettings->textureResultY;
-    
+
     // DONE: use these to format the text
     MyMTLPixelFormat format = _showSettings->originalFormat;
     bool isSrgb = isSrgbFormat(format);
@@ -1557,18 +1552,18 @@ void Data::showEyedropperData(const float2& uv)
         // interpret based on shapeChannel, debugMode, etc
         switch (_showSettings->shapeChannel) {
             case ShapeChannelDepth:
-                isSigned = false;  // using fract on uv
+                isSigned = false; // using fract on uv
 
                 isValue = true;
                 isFloat = true;
                 numChannels = 1;
                 break;
             case ShapeChannelUV0:
-                isSigned = false;  // using fract on uv
+                isSigned = false; // using fract on uv
 
                 isValue = true;
                 isFloat = true;
-                numChannels = 2;  // TODO: fix for 3d uvw
+                numChannels = 2; // TODO: fix for 3d uvw
                 break;
 
             case ShapeChannelFaceNormal:
@@ -1597,7 +1592,7 @@ void Data::showEyedropperData(const float2& uv)
         }
 
         // TODO: indicate px, mip, etc (f.e. showAll)
-        
+
         // debug mode
 
         // preview vs. not
@@ -1606,7 +1601,6 @@ void Data::showEyedropperData(const float2& uv)
         // this will be out of sync with gpu eval, so may want to only display px
         // from returned lookup this will always be a linear color
 
-        
         // show uv, so can relate to gpu coordinates stored in geometry and find
         // atlas areas
         append_sprintf(text, "uv:%0.3f %0.3f\n",
@@ -1747,12 +1741,12 @@ void Data::showEyedropperData(const float2& uv)
     // TODO: Stuff these on clipboard with a click, or use cmd+C?
 }
 
-void Data::setEyedropperText(const char * text)
+void Data::setEyedropperText(const char* text)
 {
     setTextSlot(kTextSlotEyedropper, text);
 }
 
-void Data::setAtlasText(const char * text)
+void Data::setAtlasText(const char* text)
 {
     setTextSlot(kTextSlotAtlas, text);
 }
@@ -1763,18 +1757,16 @@ string Data::textFromSlots(bool isFileListHidden) const
     string text = _textSlots[kTextSlotHud];
     if (!text.empty() && text.back() != '\n')
         text += "\n";
-        
+
     // don't show eyedropper text with table up, it's many lines and overlaps
-    if (!isFileListHidden)
-    {
+    if (!isFileListHidden) {
         text += _textSlots[kTextSlotEyedropper];
         if (!text.empty() && text.back() != '\n')
             text += "\n";
-        
+
         text += _textSlots[kTextSlotAtlas];
     }
-    
-    
+
     return text;
 }
 
@@ -1798,19 +1790,19 @@ void Data::updateUIAfterLoad()
     bool isMipHidden = _showSettings->mipCount <= 1;
 
     bool isJumpToNextHidden = _files.size() <= 1;
-    
+
     bool isJumpToCounterpartHidden = true;
     bool isJumpToPrevCounterpartHidden = true;
-    
-    if ( _files.size() > 1) {
+
+    if (_files.size() > 1) {
         isJumpToCounterpartHidden = !hasCounterpart(true);
-        isJumpToPrevCounterpartHidden  = !hasCounterpart(false);
+        isJumpToPrevCounterpartHidden = !hasCounterpart(false);
     }
-    
+
     bool isRedHidden = _showSettings->numChannels == 0; // models don't show rgba
     bool isGreenHidden = _showSettings->numChannels <= 1;
     bool isBlueHidden = _showSettings->numChannels <= 2 &&
-                        _showSettings->texContentType != TexContentTypeNormal;  // reconstruct z = b on normals
+                        _showSettings->texContentType != TexContentTypeNormal; // reconstruct z = b on normals
 
     // TODO: also need a hasAlpha for pixels, since many compressed formats like
     // ASTC always have 4 channels but internally store R,RG01,... etc.  Can get
@@ -1828,7 +1820,7 @@ void Data::updateUIAfterLoad()
 
     bool isSignedHidden = !isSignedFormat(_showSettings->originalFormat);
     bool isPlayHidden = !_showSettings->isModel; // only for models
-    
+
     bool isDiffHidden = false; // only for images
     if (!_showSettings->isModel && _showSettings->hasDiffTexture) {
         isDiffHidden = false;
@@ -1838,28 +1830,28 @@ void Data::updateUIAfterLoad()
     _actionFace->setHidden(isFaceSliceHidden);
     _actionMip->setHidden(isMipHidden);
     _actionShowAll->setHidden(isShowAllHidden);
-    
+
     _actionDiff->setHidden(isDiffHidden);
     _actionItem->setHidden(isJumpToNextHidden);
     _actionPrevItem->setHidden(isJumpToNextHidden);
-    
+
     _actionCounterpart->setHidden(isJumpToCounterpartHidden);
     _actionPrevCounterpart->setHidden(isJumpToPrevCounterpartHidden);
-    
+
     _actionR->setHidden(isRedHidden);
     _actionG->setHidden(isGreenHidden);
     _actionB->setHidden(isBlueHidden);
     _actionA->setHidden(isAlphaHidden);
-    
+
     _actionPremul->setHidden(isPremulHidden);
     _actionSigned->setHidden(isSignedHidden);
     _actionChecker->setHidden(isCheckerboardHidden);
-    
+
     // only allow srgb to be disabled, not toggle on if off at load
     MyMTLPixelFormat format = _showSettings->originalFormat;
     bool isSrgb = isSrgbFormat(format);
     _actionSrgb->setHidden(!isSrgb);
-    
+
     // also need to call after each toggle
     updateUIControlState();
 }
@@ -1869,7 +1861,7 @@ void Data::updateUIControlState()
     // there is also mixed state, but not using that
     auto On = true;
     auto Off = false;
-    
+
 #define toState(x) (x) ? On : Off
 
     auto showAllState = toState(_showSettings->isShowingAllLevelsAndMips);
@@ -1881,8 +1873,8 @@ void Data::updateUIControlState()
     auto wrapState = toState(_showSettings->isWrap);
     auto debugState = toState(_showSettings->debugMode != DebugModeNone);
     auto hudState = toState(_showSettings->isHudShown);
-    
-    TextureChannels &channels = _showSettings->channels;
+
+    TextureChannels& channels = _showSettings->channels;
 
     auto redState = toState(channels == TextureChannels::ModeR001);
     auto greenState = toState(channels == TextureChannels::Mode0G01);
@@ -1905,36 +1897,36 @@ void Data::updateUIControlState()
     auto verticalState = toState(_showSettings->isVerticalUI);
     auto uiState = toState(_showSettings->isHideUI);
     auto diffState = toState(_showSettings->isDiff && _showSettings->hasDiffTexture);
-    
+
     auto srgbState = toState(_showSettings->isSRGBShown);
     auto perfState = toState(_showSettings->isPerf);
-   
+
     _actionVertical->setHighlight(verticalState);
-    
+
     // TODO: pass boolean, and change in the call
     _actionPlay->setHighlight(playState);
     _actionHelp->setHighlight(Off);
     _actionInfo->setHighlight(Off);
     _actionHud->setHighlight(hudState);
-    
+
     _actionArray->setHighlight(arrayState);
     _actionFace->setHighlight(faceState);
     _actionMip->setHighlight(mipState);
-    
+
     // these never show check state
     _actionItem->setHighlight(Off);
     _actionPrevItem->setHighlight(Off);
-    
+
     _actionCounterpart->setHighlight(Off);
     _actionPrevCounterpart->setHighlight(Off);
-    
+
     _actionHideUI->setHighlight(uiState); // note below button always off, menu has state
-    
+
     _actionR->setHighlight(redState);
     _actionG->setHighlight(greenState);
     _actionB->setHighlight(blueState);
     _actionA->setHighlight(alphaState);
-    
+
     _actionShowAll->setHighlight(showAllState);
     _actionPreview->setHighlight(previewState);
     _actionDiff->setHighlight(diffState);
@@ -1945,11 +1937,11 @@ void Data::updateUIControlState()
     _actionGrid->setHighlight(gridState);
     _actionDebug->setHighlight(debugState);
     _actionTangent->setHighlight(tangentState);
-    
+
     _actionPremul->setHighlight(premulState);
     _actionSigned->setHighlight(signedState);
     _actionChecker->setHighlight(checkerboardState);
-    
+
     _actionSrgb->setHighlight(srgbState);
     _actionPerf->setHighlight(perfState);
 }
@@ -1960,42 +1952,42 @@ void Data::updateUIControlState()
 const Action* Data::actionFromMenu(kram_id menuItem) const
 {
     const Action* action = nullptr;
-    
-    for (const auto& search: _actions) {
+
+    for (const auto& search : _actions) {
         if (search.menuItem == menuItem) {
             action = &search;
             break;
         }
     }
-    
+
     return action;
 }
 
 const Action* Data::actionFromButton(kram_id button) const
 {
     const Action* action = nullptr;
-    
-    for (const auto& search: _actions) {
+
+    for (const auto& search : _actions) {
         if (search.button == button) {
             action = &search;
             break;
         }
     }
-    
+
     return action;
 }
 
 const Action* Data::actionFromKey(uint32_t keyCode) const
 {
     const Action* action = nullptr;
-    
-    for (const auto& search: _actions) {
+
+    for (const auto& search : _actions) {
         if (search.keyCode == keyCode) {
             action = &search;
             break;
         }
     }
-    
+
     return action;
 }
 
@@ -2030,7 +2022,7 @@ void Data::setFailedText(const string& filename, string& text)
 
     // This doesn't advance with failure
     //string filename = _showSettings->lastFilename;
-    
+
     text += toFilenameShort(filename.c_str());
 
     // archives and file systems have folders, split that off
@@ -2049,7 +2041,6 @@ void Data::setFailedText(const string& filename, string& text)
         text += " from archive ";
         text += _archiveName;
     }
-
 }
 
 void Data::initActions()
@@ -2066,14 +2057,14 @@ void Data::initActions()
         Action("D", "Debug", Key::D),
         Action("G", "Grid", Key::G),
         Action("B", "Checkerboard", Key::B),
-        
+
         Action("", "", Key::A), // sep
 
         Action("P", "Preview", Key::P),
         Action("W", "Wrap", Key::W),
         Action("8", "Premul", Key::Num8),
         Action("7", "Signed", Key::Num7),
-        
+
         Action("", "", Key::A), // sep
 
         Action("A", "Show All", Key::A),
@@ -2082,12 +2073,12 @@ void Data::initActions()
         Action("Y", "Array", Key::Y),
         Action("9", "Srgb", Key::Num9),
         Action("5", "Perf", Key::Num5), // really a debug action
-        
+
         Action("↑", "Prev Item", Key::UpArrow),
         Action("↓", "Next Item", Key::DownArrow),
         Action("←", "Prev Counterpart", Key::LeftArrow),
         Action("→", "Next Counterpart", Key::RightArrow),
-        
+
         Action("R", "Reload", Key::R),
         Action("0", "Fit", Key::Num0),
 
@@ -2108,7 +2099,7 @@ void Data::initActions()
         Action("3", "Blue", Key::Num3),
         Action("4", "Alpha", Key::Num4),
     };
-    
+
     // These have to be in same order as above.  May want to go back to search for text above.
     Action** actionPtrs[] = {
         &_actionHelp,
@@ -2116,39 +2107,39 @@ void Data::initActions()
         &_actionHud,
         &_actionHideUI,
         &_actionVertical,
-       
+
         &_actionDiff,
         &_actionDebug,
         &_actionGrid,
         &_actionChecker,
-        
+
         &_actionPreview,
         &_actionWrap,
         &_actionPremul,
         &_actionSigned,
-        
+
         &_actionShowAll,
         &_actionMip,
         &_actionFace,
         &_actionArray,
         &_actionSrgb,
         &_actionPerf,
-       
+
         &_actionPrevItem,
         &_actionItem,
         &_actionPrevCounterpart,
         &_actionCounterpart,
-        
+
         &_actionReload,
         &_actionFit,
-        
+
         &_actionPlay,
         &_actionShapeUVPreview,
         &_actionShapeMesh,
         &_actionShapeChannel,
         &_actionLighting,
         &_actionTangent,
-        
+
         &_actionR,
         &_actionG,
         &_actionB,
@@ -2156,7 +2147,7 @@ void Data::initActions()
     };
 
     uint32_t numActions = ArrayCount(actions);
-    
+
     // copy all of them to a vector, and then assign the action ptrs
     for (int32_t i = 0; i < numActions; ++i) {
         Action& action = actions[i];
@@ -2168,10 +2159,10 @@ void Data::initActions()
     for (int32_t i = 0; i < _actions.size(); ++i) {
         // skip separators
         Action& action = _actions[i];
-        const char* icon = action.icon;  // single char
+        const char* icon = action.icon; // single char
         bool isSeparator = icon[0] == 0;
         if (isSeparator) continue;
-        
+
         *(actionPtrs[counter++]) = &_actions[i];
     }
     KASSERT(counter == ArrayCount(actionPtrs));
@@ -2208,7 +2199,7 @@ void Data::updateEyedropper()
         _showSettings->lastCursorY == _showSettings->cursorY) {
         return;
     }
-    
+
     if (_showSettings->isEyedropperFromDrawable()) {
         _showSettings->lastCursorX = _showSettings->cursorX;
         _showSettings->lastCursorY = _showSettings->cursorY;
@@ -2221,8 +2212,8 @@ void Data::updateEyedropper()
     // don't wait on renderer to update this matrix
     float4x4 projectionViewModelMatrix =
         computeImageTransform(_showSettings->panX,
-                                   _showSettings->panY,
-                                   _showSettings->zoom);
+                              _showSettings->panY,
+                              _showSettings->zoom);
 
     // convert to clip space, or else need to apply additional viewport transform
     float halfX = _showSettings->viewSizeX * 0.5f;
@@ -2235,37 +2226,37 @@ void Data::updateEyedropper()
     halfY /= (float)_showSettings->viewContentScaleFactor;
 
     float4 cursor = float4m(_showSettings->cursorX, _showSettings->cursorY, 0.0f, 1.0f);
-    
+
     float4x4 pixelToClipTfm =
-    {
-        (float4){ halfX,      0, 0, 0 },
-        (float4){ 0,     -halfY, 0, 0 },
-        (float4){ 0,          0, 1, 0 },
-        (float4){ halfX,  halfY, 0, 1 },
-    };
+        {
+            (float4){halfX, 0, 0, 0},
+            (float4){0, -halfY, 0, 0},
+            (float4){0, 0, 1, 0},
+            (float4){halfX, halfY, 0, 1},
+        };
     pixelToClipTfm = inverse(pixelToClipTfm);
-    
+
     cursor = pixelToClipTfm * cursor;
-    
+
     //float4 clipPoint;
     //clipPoint.x = (point.x - halfX) / halfX;
     //clipPoint.y = -(point.y - halfY) / halfY;
 
     // convert point in window to point in texture
     float4x4 mInv = inverse(projectionViewModelMatrix);
-    
+
     float4 pixel = mInv * float4m(cursor.x, cursor.y, 1.0f, 1.0f);
     pixel.xyz /= pixel.w; // in case perspective used
 
     float ar = _showSettings->imageAspectRatio();
-    
+
     // that's in model space (+/0.5f * ar, +/0.5f), so convert to texture space
     pixel.x = (pixel.x / ar + 0.5f);
     pixel.y = (-pixel.y + 0.5f);
 
     //pixel.x *= 0.999f;
     //pixel.y *= 0.999f;
-    
+
     float2 uv = pixel.xy;
 
     // pixels are 0 based
@@ -2287,33 +2278,33 @@ void Data::updateEyedropper()
     bool outsideImageBounds =
         pixel.x < 0.0f || pixel.x >= (float)_showSettings->imageBoundsX ||
         pixel.y < 0.0f || pixel.y >= (float)_showSettings->imageBoundsY;
-    
+
     // only display pixel if over image
     if (outsideImageBounds) {
         sprintf(text, "canvas: %d %d\n", (int32_t)pixel.x, (int32_t)pixel.y);
-        setEyedropperText(text.c_str());  // ick
+        setEyedropperText(text.c_str()); // ick
         _showSettings->outsideImageBounds = true;
     }
     else {
         // Note: fromView: nil returns isFlipped coordinate, fromView:self flips it
         // back.
-        
+
         int32_t newX = (int32_t)pixel.x;
         int32_t newY = (int32_t)pixel.y;
-        
+
         if (_showSettings->outsideImageBounds ||
             (_showSettings->textureLookupX != newX ||
              _showSettings->textureLookupY != newY)) {
             // Note: this only samples from the original texture via compute shaders
             // so preview mode pixel colors are not conveyed.  But can see underlying
             // data driving preview.
-            
+
             _showSettings->outsideImageBounds = false;
-            
+
             // %.0f rounds the value, but want truncation
             _showSettings->textureLookupX = newX;
             _showSettings->textureLookupY = newY;
-            
+
             // show block num
             int mipLOD = _showSettings->mipNumber;
 
@@ -2332,27 +2323,26 @@ void Data::updateEyedropper()
             // Has to be set in other call, not here
             _showSettings->textureLookupMipX = mipX;
             _showSettings->textureLookupMipY = mipY;
-            
+
             // showEyedropperData(uv);
         }
     }
 }
-
 
 bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionState& actionState)
 {
     // Some data depends on the texture data (isSigned, isNormal, ..)
     bool isChanged = false;
     bool isStateChanged = false;
-    
+
     // TODO: fix isChanged to only be set when value changes
     // f.e. clamped values don't need to re-render
     string text;
-    
+
     if (action == _actionVertical) {
         _showSettings->isVerticalUI = !_showSettings->isVerticalUI;
         text = _showSettings->isVerticalUI ? "Vert UI" : "Horiz UI";
-        
+
         // just to update toggle state to Off
         isStateChanged = true;
     }
@@ -2361,18 +2351,18 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
         if (_noImageLoaded) {
             return true;
         }
-        
+
         _showSettings->isHideUI = !_showSettings->isHideUI;
         text = _showSettings->isHideUI ? "Hide UI" : "Show UI";
-        
+
         // just to update toggle state to Off
         isStateChanged = true;
     }
-    
+
     else if (action == _actionR) {
         if (!action->isHidden) {
             TextureChannels& channels = _showSettings->channels;
-            
+
             if (channels == TextureChannels::ModeR001) {
                 channels = TextureChannels::ModeRGBA;
                 text = "Mask RGBA";
@@ -2383,12 +2373,11 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
             }
             isChanged = true;
         }
-        
     }
     else if (action == _actionG) {
         if (!action->isHidden) {
             TextureChannels& channels = _showSettings->channels;
-            
+
             if (channels == TextureChannels::Mode0G01) {
                 channels = TextureChannels::ModeRGBA;
                 text = "Mask RGBA";
@@ -2403,7 +2392,7 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
     else if (action == _actionB) {
         if (!action->isHidden) {
             TextureChannels& channels = _showSettings->channels;
-            
+
             if (channels == TextureChannels::Mode00B1) {
                 channels = TextureChannels::ModeRGBA;
                 text = "Mask RGBA";
@@ -2412,14 +2401,14 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
                 channels = TextureChannels::Mode00B1;
                 text = "Mask 00B1";
             }
-            
+
             isChanged = true;
         }
     }
     else if (action == _actionA) {
         if (!action->isHidden) {
             TextureChannels& channels = _showSettings->channels;
-            
+
             if (channels == TextureChannels::ModeAAA1) {
                 channels = TextureChannels::ModeRGBA;
                 text = "Mask RGBA";
@@ -2428,60 +2417,57 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
                 channels = TextureChannels::ModeAAA1;
                 text = "Mask AAA1";
             }
-            
+
             isChanged = true;
         }
-        
     }
     else if (action == _actionPerf) {
         Perf* perf = Perf::instance();
-        
+
         bool isCompressed = true;
         if ((!_showSettings->isPerf) && perf->start("kramv", isCompressed)) {
             _showSettings->isPerf = true;
         }
         else {
             _showSettings->isPerf = false;
-            
+
             if (perf->isRunning()) {
                 perf->stop();
-                
+
                 // TODO: Only open in non-sandboxed builds, it calls system("open file")
                 // and this will have quarantine flag set if app not in app store
                 // or notarized, signed, sandboxed for distribution outside of app store
                 perf->openPerftrace();
             }
         }
-        
+
         text = "Perf ";
         text += _showSettings->isPerf ? "On" : "Off";
         isChanged = true;
     }
     else if (action == _actionPlay) {
         if (!action->isHidden) {
-            
-            _showSettings->isPlayAnimations = ! _showSettings->isPlayAnimations;
-            
+            _showSettings->isPlayAnimations = !_showSettings->isPlayAnimations;
+
             //Renderer* renderer = (Renderer*)self.delegate;
             //renderer.playAnimations = !renderer.playAnimations;
-            
+
             text = _showSettings->isPlayAnimations ? "Play" : "Pause";
             isChanged = true;
         }
     }
     else if (action == _actionShapeUVPreview) {
-        
         // toggle state
         _showSettings->isUVPreview = !_showSettings->isUVPreview;
         text = _showSettings->isUVPreview ? "Show UVPreview" : "Hide UvPreview";
         isChanged = true;
-        
+
         _showSettings->uvPreviewFrames = 10;
     }
-    
+
     else if (action == _actionShapeChannel) {
         _showSettings->advanceShapeChannel(isShiftKeyDown);
-        
+
         text = _showSettings->shapeChannelText();
         isChanged = true;
     }
@@ -2506,18 +2492,18 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
     else if (action == _actionHelp) {
         // display the chars for now
         text =
-        "1234-rgba, Preview, Debug, A-show all\n"
-        "Info, Hud, Reload, 0-fit\n"
-        "Checker, Grid\n"
-        "Wrap, 8-signed, 9-premul\n"
-        "Mip, Face, Y-array\n"
-        "↓-next item, →-next counterpart\n"
-        "Lighting, S-shape, C-shape channel\n";
-        
+            "1234-rgba, Preview, Debug, A-show all\n"
+            "Info, Hud, Reload, 0-fit\n"
+            "Checker, Grid\n"
+            "Wrap, 8-signed, 9-premul\n"
+            "Mip, Face, Y-array\n"
+            "↓-next item, →-next counterpart\n"
+            "Lighting, S-shape, C-shape channel\n";
+
         // just to update toggle state to Off
         isStateChanged = true;
     }
-    
+
     else if (action == _actionFit) {
         float zoom;
         // fit image or mip
@@ -2528,54 +2514,54 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
             // fit to topmost image
             zoom = _showSettings->zoomFit;
         }
-        
+
         // This zoom needs to be checked against zoom limits
         // there's a cap on the zoom multiplier.
         // This is reducing zoom which expands the image.
         zoom *= 1.0f / (1 << _showSettings->mipNumber);
-        
+
         // even if zoom same, still do this since it resets the pan
         _showSettings->zoom = zoom;
-        
+
         _showSettings->panX = 0.0f;
         _showSettings->panY = 0.0f;
-        
+
         text = "Scale Image\n";
-//        if (doPrintPanZoom) {
-//            string tmp;
-//            sprintf(tmp,
-//                    "Pan %.3f,%.3f\n"
-//                    "Zoom %.2fx\n",
-//                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-//            text += tmp;
-//        }
-        
+        // if (doPrintPanZoom) {
+        //     string tmp;
+        //     sprintf(tmp,
+        //             "Pan %.3f,%.3f\n"
+        //             "Zoom %.2fx\n",
+        //             _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+        //     text += tmp;
+        // }
+
         isChanged = true;
     }
     // reload key (also a quick way to reset the settings)
     else if (action == _actionReload) {
         //bool success =
         _delegate.loadFile();
-        
+
         // reload at actual size
         if (isShiftKeyDown) {
             _showSettings->zoom = 1.0f;
         }
-        
+
         // Name change if image
         if (_showSettings->isModel)
             text = "Reload Model\n";
         else
             text = "Reload Image\n";
-//        if (doPrintPanZoom) {
-//            string tmp;
-//            sprintf(tmp,
-//                    "Pan %.3f,%.3f\n"
-//                    "Zoom %.2fx\n",
-//                    _showSettings->panX, _showSettings->panY, _showSettings->zoom);
-//            text += tmp;
-//        }
-        
+        // if (doPrintPanZoom) {
+        //     string tmp;
+        //     sprintf(tmp,
+        //             "Pan %.3f,%.3f\n"
+        //             "Zoom %.2fx\n",
+        //             _showSettings->panX, _showSettings->panY, _showSettings->zoom);
+        //     text += tmp;
+        // }
+
         isChanged = true;
     }
     else if (action == _actionPreview) {
@@ -2592,7 +2578,7 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
     }
     // TODO: might switch c to channel cycle, so could just hit that
     // and depending on the content, it cycles through reasonable channel masks
-    
+
     // toggle checkerboard for transparency
     else if (action == _actionChecker) {
         if (!action->isHidden) {
@@ -2602,75 +2588,75 @@ bool Data::handleEventAction(const Action* action, bool isShiftKeyDown, ActionSt
             text += _showSettings->isCheckerboardShown ? "On" : "Off";
         }
     }
-    
+
     else if (action == _actionSrgb) {
         if (!action->isHidden) {
             _showSettings->isSRGBShown = !_showSettings->isSRGBShown;
-            
+
             sprintf(text, "Format srgb %s", _showSettings->isSRGBShown ? "On" : "Off");
-            
+
             isChanged = true;
         }
     }
-    
+
     // toggle pixel grid when magnified above 1 pixel, can happen from mipmap
     // changes too
     else if (action == _actionGrid) {
         static int grid = 0;
         static const int kNumGrids = 7;
-        
+
 #define advanceGrid(g, dec) \
-grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
-        
+    grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
+
         // if block size is 1, then this shouldn't toggle
         _showSettings->isBlockGridShown = false;
         _showSettings->isAtlasGridShown = false;
         _showSettings->isPixelGridShown = false;
-        
+
         advanceGrid(grid, isShiftKeyDown);
-        
+
         static const uint32_t gridSizes[kNumGrids] = {
-            0, 1, 4, 32, 64, 128, 256  // grid sizes
+            0, 1, 4, 32, 64, 128, 256 // grid sizes
         };
-        
+
         if (grid == 0) {
             sprintf(text, "Grid Off");
         }
         else if (grid == 1) {
             _showSettings->isPixelGridShown = true;
-            
+
             sprintf(text, "Pixel Grid 1x1");
         }
         else if (grid == 2 && _showSettings->blockX > 1) {
             _showSettings->isBlockGridShown = true;
-            
+
             sprintf(text, "Block Grid %dx%d", _showSettings->blockX,
                     _showSettings->blockY);
         }
         else {
             _showSettings->isAtlasGridShown = true;
-            
+
             // want to be able to show altases tht have long entries derived from
             // props but right now just a square grid atlas
             _showSettings->gridSizeX = _showSettings->gridSizeY = gridSizes[grid];
-            
+
             sprintf(text, "Atlas Grid %dx%d", _showSettings->gridSizeX,
                     _showSettings->gridSizeY);
         }
-        
+
         isChanged = true;
     }
     else if (action == _actionShowAll) {
         if (!action->isHidden) {
             // TODO: have drawAllMips, drawAllLevels, drawAllLevelsAndMips
             _showSettings->isShowingAllLevelsAndMips =
-            !_showSettings->isShowingAllLevelsAndMips;
+                !_showSettings->isShowingAllLevelsAndMips;
             isChanged = true;
             text = "Show All ";
             text += _showSettings->isShowingAllLevelsAndMips ? "On" : "Off";
         }
     }
-    
+
     // toggle hud that shows name and pixel value under the cursor
     // this may require calling setNeedsDisplay on the UILabel as cursor moves
     else if (action == _actionHud) {
@@ -2681,23 +2667,22 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         text += _showSettings->isHudShown ? "On" : "Off";
         isStateChanged = true;
     }
-    
+
     // info on the texture, could request info from lib, but would want to cache
     // that info
     else if (action == _actionInfo) {
         if (_showSettings->isHudShown) {
-            
             // also hide the file table, since this can be long
             //[self hideFileTable];
-            
+
             sprintf(text, "%s",
                     isShiftKeyDown ? _showSettings->imageInfoVerbose.c_str()
-                    : _showSettings->imageInfo.c_str());
+                                   : _showSettings->imageInfo.c_str());
         }
         // just to update toggle state to Off
         isStateChanged = true;
     }
-    
+
     // toggle wrap/clamp
     else if (action == _actionWrap) {
         // TODO: cycle through all possible modes (clamp, repeat, mirror-once,
@@ -2707,7 +2692,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         text = "Wrap ";
         text += _showSettings->isWrap ? "On" : "Off";
     }
-    
+
     // toggle signed vs. unsigned
     else if (action == _actionSigned) {
         if (!action->isHidden) {
@@ -2717,7 +2702,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             text += _showSettings->isSigned ? "On" : "Off";
         }
     }
-    
+
     // toggle premul alpha vs. unmul
     else if (action == _actionPremul) {
         if (!action->isHidden) {
@@ -2727,26 +2712,26 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             text += _showSettings->doShaderPremul ? "On" : "Off";
         }
     }
-    
+
     else if (action == _actionItem || action == _actionPrevItem) {
         if (!action->isHidden) {
             // invert shift key for prev, since it's reverse
             if (action == _actionPrevItem) {
                 isShiftKeyDown = !isShiftKeyDown;
             }
-            
+
             if (advanceFile(!isShiftKeyDown)) {
                 //_hudHidden = true;
                 //[self updateHudVisibility];
                 //[self setEyedropperText:""];
-                
+
                 isChanged = true;
-            
+
                 setLoadedText(text);
             }
         }
     }
-    
+
     else if (action == _actionCounterpart || action == _actionPrevCounterpart) {
         if (!action->isHidden) {
             // invert shift key for prev, since it's reverse
@@ -2757,14 +2742,14 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
                 //_hudHidden = true;
                 //[self updateHudVisibility];
                 //[self setEyedropperText:""];
-                
+
                 isChanged = true;
-                
+
                 setLoadedText(text);
             }
         }
     }
-    
+
     // test out different shapes
     else if (action == _actionShapeMesh) {
         if (_showSettings->meshCount > 1) {
@@ -2773,9 +2758,9 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             isChanged = true;
         }
     }
-    
+
     // TODO: should probably have these wrap and not clamp to count limits
-    
+
     // mip up/down
     else if (action == _actionMip) {
         if (_showSettings->mipCount > 1) {
@@ -2784,14 +2769,14 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             }
             else {
                 _showSettings->mipNumber =
-                std::min(_showSettings->mipNumber + 1, _showSettings->mipCount - 1);
+                    std::min(_showSettings->mipNumber + 1, _showSettings->mipCount - 1);
             }
             sprintf(text, "Mip %d/%d", _showSettings->mipNumber,
                     _showSettings->mipCount);
             isChanged = true;
         }
     }
-    
+
     else if (action == _actionFace) {
         // cube or cube array, but hit s to pick cubearray
         if (_showSettings->faceCount > 1) {
@@ -2800,14 +2785,14 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             }
             else {
                 _showSettings->faceNumber =
-                std::min(_showSettings->faceNumber + 1, _showSettings->faceCount - 1);
+                    std::min(_showSettings->faceNumber + 1, _showSettings->faceCount - 1);
             }
             sprintf(text, "Face %d/%d", _showSettings->faceNumber,
                     _showSettings->faceCount);
             isChanged = true;
         }
     }
-    
+
     else if (action == _actionArray) {
         // slice
         if (_showSettings->sliceCount > 1) {
@@ -2816,7 +2801,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             }
             else {
                 _showSettings->sliceNumber =
-                std::min(_showSettings->sliceNumber + 1, _showSettings->sliceCount - 1);
+                    std::min(_showSettings->sliceNumber + 1, _showSettings->sliceCount - 1);
             }
             sprintf(text, "Slice %d/%d", _showSettings->sliceNumber,
                     _showSettings->sliceCount);
@@ -2829,7 +2814,7 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
             }
             else {
                 _showSettings->arrayNumber =
-                std::min(_showSettings->arrayNumber + 1, _showSettings->arrayCount - 1);
+                    std::min(_showSettings->arrayNumber + 1, _showSettings->arrayCount - 1);
             }
             sprintf(text, "Array %d/%d", _showSettings->arrayNumber,
                     _showSettings->arrayCount);
@@ -2840,11 +2825,11 @@ grid = (grid + kNumGrids + (dec ? -1 : 1)) % kNumGrids
         // non-handled action
         return false;
     }
-    
+
     actionState.hudText = text;
     actionState.isChanged = isChanged;
     actionState.isStateChanged = isStateChanged;
-    
+
     return true;
 }
 
@@ -2860,7 +2845,7 @@ void Data::updateImageSettings(const string& fullFilename, KTXImage& image, MyMT
     _showSettings->blockY = image.blockDims().y;
 
     _showSettings->isSigned = isSignedFormat(format);
-    
+
     TexContentType texContentType = findContentTypeFromFilename(fullFilename.c_str());
     _showSettings->texContentType = texContentType;
     //_showSettings->isSDF = isSDF;
@@ -2873,7 +2858,7 @@ void Data::updateImageSettings(const string& fullFilename, KTXImage& image, MyMT
     _showSettings->doShaderPremul = false;
     if (texContentType == TexContentTypeAlbedo && isPNG) {
         _showSettings->doShaderPremul =
-            true;  // convert to premul in shader, so can see other channels
+            true; // convert to premul in shader, so can see other channels
     }
 
     int32_t numChannels = numChannelsOfFormat(originalFormat);
@@ -2905,9 +2890,6 @@ void Data::updateImageSettings(const string& fullFilename, KTXImage& image, MyMT
     _showSettings->imageBoundsY = (int32_t)image.height;
 }
 
-
-
-
 float zoom3D = 1.0f;
 
 void Data::updateProjTransform()
@@ -2915,7 +2897,7 @@ void Data::updateProjTransform()
     // Want to move to always using perspective even for 2d images, but still more math
     // to work out to keep zoom to cursor working.
 #if USE_PERSPECTIVE
-    float aspect = _showSettings->viewSizeX /  (float)_showSettings->viewSizeY;
+    float aspect = _showSettings->viewSizeX / (float)_showSettings->viewSizeY;
     _projectionMatrix = perspective_rhcs(90.0f * (M_PI / 180.0f), aspect, 0.1f);
 
     // This was used to reset zoom to a baseline that had a nice zoom.  But little connected to it now.
@@ -2927,17 +2909,17 @@ void Data::updateProjTransform()
 #else
 
     if (_showSettings->isModel) {
-        float aspect = _showSettings->viewSizeX /  (float)_showSettings->viewSizeY;
+        float aspect = _showSettings->viewSizeX / (float)_showSettings->viewSizeY;
         _projectionMatrix = perspective_rhcs(90.0f * (M_PI / 180.0f), aspect, 0.1f);
 
         _showSettings->zoomFit = 1;
     }
     else {
         // ltrb
-        float2 rectDims = 0.5f * float2m(_showSettings->viewSizeX,_showSettings->viewSizeY);
-        float4 rect = float4m(-rectDims.x,  rectDims.y,
-                               rectDims.x, -rectDims.y);
-        
+        float2 rectDims = 0.5f * float2m(_showSettings->viewSizeX, _showSettings->viewSizeY);
+        float4 rect = float4m(-rectDims.x, rectDims.y,
+                              rectDims.x, -rectDims.y);
+
         _projectionMatrix =
             orthographic_rhcs(rect, 0.1f, 1e6f);
 
@@ -2946,7 +2928,7 @@ void Data::updateProjTransform()
             std::min((float)_showSettings->viewSizeX, (float)_showSettings->viewSizeY) /
             std::max(1.0f, std::max((float)_showSettings->imageBoundsX,
                                     (float)_showSettings->imageBoundsY));
-        
+
         static bool useImageAndViewBounds = true;
         if (useImageAndViewBounds) {
             float invWidth = 1.0f / std::max(1.0f, (float)_showSettings->imageBoundsX);
@@ -2955,8 +2937,8 @@ void Data::updateProjTransform()
             // DONE: adjust zoom to fit the entire image to the window
             // the best fit depends on dimension of image and window
             _showSettings->zoomFit =
-                std::min( (float)_showSettings->viewSizeX * invWidth,
-                          (float)_showSettings->viewSizeY * invHeight);
+                std::min((float)_showSettings->viewSizeX * invWidth,
+                         (float)_showSettings->viewSizeY * invHeight);
         }
     }
 #endif
@@ -2971,53 +2953,52 @@ void Data::resetSomeImageSettings(bool isNewFile)
         _showSettings->faceNumber = 0;
         _showSettings->arrayNumber = 0;
         _showSettings->sliceNumber = 0;
-        
+
         _showSettings->channels = TextureChannels::ModeRGBA;
-        
+
         // wish could keep existing setting, but new texture might not
         // be supported debugMode for new texture
         _showSettings->debugMode = DebugMode::DebugModeNone;
-        
+
         _showSettings->shapeChannel = ShapeChannel::ShapeChannelNone;
     }
     else {
         // reloaded file may have different limits
         _showSettings->mipNumber =
-        std::min(_showSettings->mipNumber, _showSettings->mipCount);
+            std::min(_showSettings->mipNumber, _showSettings->mipCount);
         _showSettings->faceNumber =
-        std::min(_showSettings->faceNumber, _showSettings->faceCount);
+            std::min(_showSettings->faceNumber, _showSettings->faceCount);
         _showSettings->arrayNumber =
-        std::min(_showSettings->arrayNumber, _showSettings->arrayCount);
+            std::min(_showSettings->arrayNumber, _showSettings->arrayCount);
         _showSettings->sliceNumber =
-        std::min(_showSettings->sliceNumber, _showSettings->sliceCount);
+            std::min(_showSettings->sliceNumber, _showSettings->sliceCount);
     }
-    
+
     updateProjTransform();
-    
-    
+
     // this controls viewMatrix (global to all visible textures)
     _showSettings->panX = 0.0f;
     _showSettings->panY = 0.0f;
-    
+
     _showSettings->zoom = _showSettings->zoomFit;
-    
+
     // Y is always 1.0 on the plane, so scale to imageBoundsY
     // plane is already a non-uniform size, so can keep uniform scale
-    
+
     // have one of these for each texture added to the viewer
     //float scaleX = MAX(1, _showSettings->imageBoundsX);
     float scaleY = std::max(1, _showSettings->imageBoundsY);
     float scaleX = scaleY;
     float scaleZ = scaleY;
-    
+
     _modelMatrix2D =
-    float4x4(float4m(scaleX, scaleY, scaleZ, 1.0f)); // uniform scale
+        float4x4(float4m(scaleX, scaleY, scaleZ, 1.0f)); // uniform scale
     _modelMatrix2D = _modelMatrix2D *
-    translation(float3m(0.0f, 0.0f, -1.0));  // set z=-1 unit back
-    
+                     translation(float3m(0.0f, 0.0f, -1.0)); // set z=-1 unit back
+
     // uniform scaled 3d primitive
     float scale = scaleY; // MAX(scaleX, scaleY);
-    
+
     // store the zoom into thew view matrix
     // fragment tangents seem to break down at high model scale due to precision
     // differences between worldPos and uv
@@ -3026,50 +3007,50 @@ void Data::resetSomeImageSettings(bool isNewFile)
     //        zoom3D = scale;  // * _showSettings->viewSizeX / 2.0f;
     //        scale = 1.0;
     //    }
-    
-    _modelMatrix3D = float4x4(float4m(scale, scale, scale, 1.0f));  // uniform scale
+
+    _modelMatrix3D = float4x4(float4m(scale, scale, scale, 1.0f)); // uniform scale
     _modelMatrix3D =
-    _modelMatrix3D *
-    translation(float3m(0.0f, 0.0f, -1.0f));  // set z=-1 unit back
+        _modelMatrix3D *
+        translation(float3m(0.0f, 0.0f, -1.0f)); // set z=-1 unit back
 }
 
 void Data::updateTransforms()
 {
     // scale
     float zoom = _showSettings->zoom;
-    
+
     // translate
     float4x4 panTransform =
         translation(float3m(-_showSettings->panX, _showSettings->panY, 0.0));
 
     if (_showSettings->is3DView) {
-        _viewMatrix3D = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));  // non-uniform
+        _viewMatrix3D = float4x4(float4m(zoom, zoom, 1.0f, 1.0f)); // non-uniform
         _viewMatrix3D = panTransform * _viewMatrix3D;
-        
+
         _viewMatrix = _viewMatrix3D;
-        
+
         // obj specific
         _modelMatrix = _modelMatrix3D;
     }
     else {
         _viewMatrix2D = float4x4(float4m(zoom, zoom, 1.0f, 1.0f));
         _viewMatrix2D = panTransform * _viewMatrix2D;
-        
+
         _viewMatrix = _viewMatrix2D;
-        
+
         // obj specific
         _modelMatrix = _modelMatrix2D;
     }
-    
+
     // viewMatrix should typically be the inverse
     //_viewMatrix = simd_inverse(_viewMatrix);
-    
+
     _projectionViewMatrix = _projectionMatrix * _viewMatrix;
-    
+
     // cache the camera position
     _cameraPosition =
-        inverse(_viewMatrix).columns[3].xyz;  // this is all ortho
-    
+        inverse(_viewMatrix).columns[3].xyz; // this is all ortho
+
     // obj specific
     _modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix);
     _showSettings->isInverted = _modelMatrixInvScale2.w < 0.0f;
@@ -3099,45 +3080,44 @@ float4x4 Data::computeImageTransform(float panX, float panY, float zoom)
     }
 }
 
-
 void Data::doZoomMath(float newZoom, float2& newPan)
 {
     // transform the cursor to texture coordinate, or clamped version if outside
     float4x4 projectionViewModelMatrix = computeImageTransform(
-                                    _showSettings->panX,
-                                    _showSettings->panY,
-                                    _showSettings->zoom);
+        _showSettings->panX,
+        _showSettings->panY,
+        _showSettings->zoom);
 
     // convert from pixel to clip space
     float halfX = _showSettings->viewSizeX * 0.5f;
     float halfY = _showSettings->viewSizeY * 0.5f;
-    
+
     // sometimes get viewSizeX that's scaled by retina, and other times not.
     // account for contentScaleFactor (viewSizeX is 2x bigger than cursorX on
     // retina display) now passing down drawableSize instead of view.bounds.size
     halfX /= (float)_showSettings->viewContentScaleFactor;
     halfY /= (float)_showSettings->viewContentScaleFactor;
-    
+
     float4x4 viewportMatrix =
-    {
-        (float4){ halfX,      0, 0, 0 },
-        (float4){ 0,     -halfY, 0, 0 },
-        (float4){ 0,          0, 1, 0 },
-        (float4){ halfX,  halfY, 0, 1 },
-    };
+        {
+            (float4){halfX, 0, 0, 0},
+            (float4){0, -halfY, 0, 0},
+            (float4){0, 0, 1, 0},
+            (float4){halfX, halfY, 0, 1},
+        };
     viewportMatrix = inverse(viewportMatrix);
-    
+
     float4 cursor = float4m(_showSettings->cursorX, _showSettings->cursorY, 0.0f, 1.0f);
-    
+
     cursor = viewportMatrix * cursor;
-    
+
     //NSPoint clipPoint;
     //clipPoint.x = (point.x - halfX) / halfX;
     //clipPoint.y = -(point.y - halfY) / halfY;
 
     // convert point in window to point in model space
     float4x4 mInv = inverse(projectionViewModelMatrix);
-    
+
     float4 pixel = mInv * float4m(cursor.x, cursor.y, 1.0f, 1.0f);
     pixel.xyz /= pixel.w; // in case perspective used
 
@@ -3162,10 +3142,10 @@ void Data::doZoomMath(float newZoom, float2& newPan)
     // normalized coords to pixel coords
     pixel.x *= _showSettings->imageBoundsX;
     pixel.y *= _showSettings->imageBoundsY;
-    
+
     // this fixes pinch-zoom on cube which are 6:1
     pixel.x /= ar;
-    
+
 #if USE_PERSPECTIVE
     // TODO: this doesn't work for perspective
     newPan.x = _showSettings->panX - (_showSettings->zoom - newZoom) * pixel.x;
@@ -3176,6 +3156,4 @@ void Data::doZoomMath(float newZoom, float2& newPan)
 #endif
 }
 
-
-
-}  // namespace kram
+} // namespace kram

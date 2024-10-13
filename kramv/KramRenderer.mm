@@ -16,6 +16,7 @@
 
 // c interface to signposts similar to dtrace on macOS/iOS
 #include <os/signpost.h>
+
 #include <mutex> // for recursive_mutex
 
 using mymutex = std::recursive_mutex;
@@ -23,8 +24,7 @@ using mylock = std::unique_lock<mymutex>;
 
 os_log_t gLogKramv = os_log_create("com.hialec.kramv", "");
 
-class Signpost
-{
+class Signpost {
 public:
     Signpost(const char* name)
         : _name(name), _ended(false)
@@ -34,12 +34,12 @@ public:
         else
             _ended = true;
     }
-    
+
     ~Signpost()
     {
         stop();
     }
-    
+
     void stop()
     {
         if (!_ended) {
@@ -47,12 +47,11 @@ public:
             _ended = true;
         }
     }
-    
+
 private:
     const char* _name;
     bool _ended;
 };
-
 
 #if USE_GLTF
 
@@ -64,12 +63,12 @@ static mymutex gModelLock;
 
 @interface KramGLTFTextureLoader : NSObject <IGLTFMTLTextureLoader>
 - (instancetype)initWithLoader:(KramLoader*)loader;
-- (id<MTLTexture> _Nullable)newTextureWithContentsOfURL:(NSURL *)url options:(NSDictionary * _Nullable)options error:(NSError **)error;
-- (id<MTLTexture> _Nullable)newTextureWithData:(NSData *)data options:(NSDictionary * _Nullable)options error:(NSError **)error;
+- (id<MTLTexture> _Nullable)newTextureWithContentsOfURL:(NSURL*)url options:(NSDictionary* _Nullable)options error:(NSError**)error;
+- (id<MTLTexture> _Nullable)newTextureWithData:(NSData*)data options:(NSDictionary* _Nullable)options error:(NSError**)error;
 @end
 
 @interface KramGLTFTextureLoader ()
-@property (nonatomic, strong) KramLoader* loader;
+@property(nonatomic, strong) KramLoader* loader;
 @end
 
 @implementation KramGLTFTextureLoader
@@ -83,13 +82,13 @@ static mymutex gModelLock;
 }
 
 // TODO: this ignores options and error.  Default png loading may need to request srgb.
-- (id<MTLTexture> _Nullable)newTextureWithContentsOfURL:(NSURL *)url options:(NSDictionary * _Nullable)options error:(NSError * __autoreleasing *)error
+- (id<MTLTexture> _Nullable)newTextureWithContentsOfURL:(NSURL*)url options:(NSDictionary* _Nullable)options error:(NSError* __autoreleasing*)error
 {
     return [_loader loadTextureFromURL:url originalFormat:nil];
 }
 
 // TODO: this ignores options and error.  Default png loading may need to request srgb.
-- (id<MTLTexture> _Nullable)newTextureWithData:(NSData *)data options:(NSDictionary * _Nullable)options error:(NSError * __autoreleasing *)error
+- (id<MTLTexture> _Nullable)newTextureWithData:(NSData*)data options:(NSDictionary* _Nullable)options error:(NSError* __autoreleasing*)error
 {
     return [_loader loadTextureFromData:data originalFormat:nil];
 }
@@ -97,7 +96,6 @@ static mymutex gModelLock;
 @end
 
 #endif
-
 
 static const NSUInteger MaxBuffersInFlight = 3;
 
@@ -126,7 +124,7 @@ struct ViewFramebufferData {
     id<MTLRenderPipelineState> _pipelineStateVolume;
 
     id<MTLRenderPipelineState> _pipelineStateDrawLines;
-    
+
     id<MTLComputePipelineState> _pipelineState1DArrayCS;
     id<MTLComputePipelineState> _pipelineStateImageCS;
     id<MTLComputePipelineState> _pipelineStateImageArrayCS;
@@ -137,7 +135,6 @@ struct ViewFramebufferData {
     id<MTLDepthStencilState> _depthStateFull;
     id<MTLDepthStencilState> _depthStateNone;
 
-    
     MTLVertexDescriptor* _mtlVertexDescriptor;
 
     // TODO: Array< id<MTLTexture> > _textures;
@@ -145,9 +142,9 @@ struct ViewFramebufferData {
     id<MTLTexture> _colorMapView;
     id<MTLTexture> _normalMap;
     id<MTLTexture> _diffMap;
-    
+
     id<MTLTexture> _lastDrawableTexture;
-    
+
     // border is a better edge sample, but at edges it filters in the transparent
     // color around the border which is undesirable.  It would be better if the hw
     // did clamp to edge until uv outside 0 to 1.  This results in having to inset
@@ -168,12 +165,11 @@ struct ViewFramebufferData {
 
     uint8_t _uniformBufferIndex;
 
-   
     // float _rotation;
     KramLoader* _loader;
     MTKMesh* _mesh;
 
-    MDLVertexDescriptor *_mdlVertexDescriptor;
+    MDLVertexDescriptor* _mdlVertexDescriptor;
 
     MTKMesh* _meshRect;
     MTKMesh* _meshBox;
@@ -181,7 +177,7 @@ struct ViewFramebufferData {
     MTKMesh* _meshSphereMirrored;
     // MTKMesh* _meshCylinder;
     MTKMesh* _meshCapsule;
-    MTKMeshBufferAllocator *_metalAllocator;
+    MTKMeshBufferAllocator* _metalAllocator;
 
     id<MTLLibrary> _shaderLibrary;
     NSURL* _metallibFileURL;
@@ -190,22 +186,22 @@ struct ViewFramebufferData {
 
     ShowSettings* _showSettings;
     Data* _data;
-    
+
 #if USE_GLTF
     KramGLTFTextureLoader* _textureLoader;
     id<GLTFBufferAllocator> _bufferAllocator;
     GLTFMTLRenderer* _gltfRenderer;
     GLTFAsset* _asset; // only 1 for now
     double _animationTime;
-    
+
     id<MTLTexture> _environmentTexture;
     bool _environmentNeedsUpdate;
-    
+
     NSURLSession* _urlSession;
 #endif
 
     __weak id _delegateHud;
-    
+
     bool _useFramePacing;
     double _avgGpuTime;
 }
@@ -214,9 +210,9 @@ struct ViewFramebufferData {
 @synthesize isToggleView;
 @synthesize hasToggleView;
 
-- (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view
-                                    settings:(nonnull ShowSettings *)settings
-                                    data:(nonnull Data*)data
+- (nonnull instancetype)initWithMetalKitView:(nonnull MTKView*)view
+                                    settings:(nonnull ShowSettings*)settings
+                                        data:(nonnull Data*)data
 {
     self = [super init];
     if (self) {
@@ -232,25 +228,24 @@ struct ViewFramebufferData {
         _inFlightSemaphore = dispatch_semaphore_create(MaxBuffersInFlight);
         [self _loadMetalWithView:view];
         [self _loadAssets];
-        
+
 #if USE_GLTF
         _bufferAllocator = [[GLTFMTLBufferAllocator alloc] initWithDevice:_device];
         _gltfRenderer = [[GLTFMTLRenderer alloc] initWithDevice:_device];
-        
+
         // This aliases the existing kram loader, can handle png, ktx, ktx2
         _textureLoader = [[KramGLTFTextureLoader alloc] initWithLoader:_loader];
         _gltfRenderer.textureLoader = _textureLoader;
-        
+
         // load the environment from a cube map for now
         // runs this after _shaderLibrary established above
-        _gltfRenderer.lightingEnvironment = [[GLTFMTLLightingEnvironment alloc] initWithLibrary: _shaderLibrary];
-        
+        _gltfRenderer.lightingEnvironment = [[GLTFMTLLightingEnvironment alloc] initWithLibrary:_shaderLibrary];
+
         //NSURL* environmentURL = [[NSBundle mainBundle] URLForResource:@"piazza_san_marco" withExtension:@"ktx"];
         NSURL* environmentURL = [[NSBundle mainBundle] URLForResource:@"tropical_beach" withExtension:@"ktx"];
         _environmentTexture = [_loader loadTextureFromURL:environmentURL originalFormat:nil];
         _environmentNeedsUpdate = true;
 #endif
-
     }
 
     return self;
@@ -258,7 +253,7 @@ struct ViewFramebufferData {
 
 - (void)_createSamplers
 {
-    MTLSamplerDescriptor *samplerDescriptor = [MTLSamplerDescriptor new];
+    MTLSamplerDescriptor* samplerDescriptor = [MTLSamplerDescriptor new];
     samplerDescriptor.minFilter = MTLSamplerMinMagFilterNearest;
     samplerDescriptor.magFilter = MTLSamplerMinMagFilterNearest;
     samplerDescriptor.mipFilter = MTLSamplerMipFilterNearest;
@@ -294,7 +289,7 @@ struct ViewFramebufferData {
     samplerDescriptor.minFilter = MTLSamplerMinMagFilterLinear;
     samplerDescriptor.magFilter = MTLSamplerMinMagFilterLinear;
     samplerDescriptor.mipFilter = MTLSamplerMipFilterLinear;
-    samplerDescriptor.maxAnisotropy = 4;  // 1,2,4,8,16 are choices
+    samplerDescriptor.maxAnisotropy = 4; // 1,2,4,8,16 are choices
 
     samplerDescriptor.sAddressMode = MTLSamplerAddressModeClampToBorderColor;
     samplerDescriptor.tAddressMode = MTLSamplerAddressModeClampToBorderColor;
@@ -332,19 +327,19 @@ struct ViewFramebufferData {
         BufferIndexMeshPosition;
 
     _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].format =
-        MTLVertexFormatFloat2;  // TODO: compress
+        MTLVertexFormatFloat2; // TODO: compress
     _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].offset = 0;
     _mtlVertexDescriptor.attributes[VertexAttributeTexcoord].bufferIndex =
         BufferIndexMeshUV0;
 
     _mtlVertexDescriptor.attributes[VertexAttributeNormal].format =
-        MTLVertexFormatFloat3;  // TODO: compress
+        MTLVertexFormatFloat3; // TODO: compress
     _mtlVertexDescriptor.attributes[VertexAttributeNormal].offset = 0;
     _mtlVertexDescriptor.attributes[VertexAttributeNormal].bufferIndex =
         BufferIndexMeshNormal;
 
     _mtlVertexDescriptor.attributes[VertexAttributeTangent].format =
-        MTLVertexFormatFloat4;  // TODO: compress
+        MTLVertexFormatFloat4; // TODO: compress
     _mtlVertexDescriptor.attributes[VertexAttributeTangent].offset = 0;
     _mtlVertexDescriptor.attributes[VertexAttributeTangent].bufferIndex =
         BufferIndexMeshTangent;
@@ -373,7 +368,7 @@ struct ViewFramebufferData {
         MDLVertexAttributeTangent;
 }
 
-- (void)_loadMetalWithView:(nonnull MTKView *)view
+- (void)_loadMetalWithView:(nonnull MTKView*)view
 {
     /// Load Metal state objects and initialize renderer dependent view properties
 
@@ -382,19 +377,18 @@ struct ViewFramebufferData {
     // true is good for non-srgb -> rgba16f
     CGColorSpaceRef viewColorSpace;
     MTLPixelFormat format = MTLPixelFormatRGBA16Float;
-    
+
     // This doesn't look like Figma or Photoshop for a rgb,a = 255,0 to 255,1 gradient across a 256px wide rect.   The shader is saturating
     // the color to 0,1.  So can get away with SRGB color space for now.
     // This also lines up with Preview.
     //viewColorSpace  = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
-    
-    
+
     //CAMetalLayer* metalLayer = (CAMetalLayer*)[view layer];
-    
+
     // was using 16f so could sample hdr images from it
     //  and also so hdr data went out to the display
     uint32_t colorSpaceChoice = 1;
-    switch(colorSpaceChoice) {
+    switch (colorSpaceChoice) {
         default:
         case 0:
             // This is best so far
@@ -402,88 +396,86 @@ struct ViewFramebufferData {
             viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
             //viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceLinearSRGB);
             break;
-            
+
         case 1: {
             // Display P3 is a standard made by Apple that covers the same colour space as DCI-P3, but uses the more neutral D65 as a white point instead of the green white of the DCI standard.
             // Ideally feed 16-bit color to P3.
-            
+
             // This also works
             // 25% larger than srgb
             format = MTLPixelFormatRGBA16Float;
-           
+
             // This is industry format
             // viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceDCIP3);
-            
+
             // This isn't edr
             // viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceDisplayP3);
-            
+
             // Use this because it exists from 10.14.3+
             viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearDisplayP3);
-           
+
             // don't set this yet.
             // metalLayer.wantsExtendedDynamicRangeContent = YES;
-            
+
             // https://developer.apple.com/videos/play/wwdc2021/10161/
-            
+
             /* Can detect if on HDR display or not
                 user can mod the brightness, or move to another monitor,
                 need to listen for notification when this changes.
-             
+
             NSScreen* screen = NSScreen.mainScreen;
-            
+
             // This reports 1
             CGFloat val1 = screen.maximumExtendedDynamicRangeColorComponentValue;
-            
+
             // This is 16
             CGFloat maxPot =  screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
-            
+
             // This is 0
             CGFloat maxRef = screen.maximumReferenceExtendedDynamicRangeColorComponentValue;
             */
-            
+
             // M1 monitor
-            
-            
+
             break;
         }
         case 2:
             // This doesn't match wnen srgb is turned off on TestColorGradient
             format = MTLPixelFormatRGBA8Unorm_sRGB;
             viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-            
+
             // this looks totally wrong
             //viewColorSpace = CGColorSpaceCreateWithName(kCGColorLinearSpaceSRGB);
             break;
-            
-        /*
-        case 3: {
-            // There is an exrMetadata field on NSView to set as well.
-            // https://developer.apple.com/documentation/metal/hdr_content/using_color_spaces_to_display_hdr_content?language=objc
-            
-            // Rec2020 color primaries, with PQ Transfer function.
-            // Would have to get into Rec2020 colors to set this, also go from 10bit
-            format = MTLPixelFormatBGR10A2Unorm;
-            viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceITUR_2100_PQ);
-            
-            metalLayer.wantsExtendedDynamicRangeContent = YES;
-            
-            // https://developer.apple.com/documentation/metal/hdr_content/using_system_tone_mapping_on_video_content?language=objc
-            // must do os version check on this
-            // 1.0 is 100 nits of output
-            CAEDRMetadata* edrMetaData = [CAEDRMetadata HDR10MetadataWithMinLuminance: 0.005 maxLuminance: 1000 opticalOutputScale: 100];
-            metalLayer.EDRMetadata = edrMetaData;
-            
-            break;
-        }
-        */
+
+            /*
+            case 3: {
+                // There is an exrMetadata field on NSView to set as well.
+                // https://developer.apple.com/documentation/metal/hdr_content/using_color_spaces_to_display_hdr_content?language=objc
+
+                // Rec2020 color primaries, with PQ Transfer function.
+                // Would have to get into Rec2020 colors to set this, also go from 10bit
+                format = MTLPixelFormatBGR10A2Unorm;
+                viewColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceITUR_2100_PQ);
+
+                metalLayer.wantsExtendedDynamicRangeContent = YES;
+
+                // https://developer.apple.com/documentation/metal/hdr_content/using_system_tone_mapping_on_video_content?language=objc
+                // must do os version check on this
+                // 1.0 is 100 nits of output
+                CAEDRMetadata* edrMetaData = [CAEDRMetadata HDR10MetadataWithMinLuminance: 0.005 maxLuminance: 1000 opticalOutputScale: 100];
+                metalLayer.EDRMetadata = edrMetaData;
+
+                break;
+            }
+            */
     }
-    
-    
+
     view.colorPixelFormat = format;
     view.colorspace = viewColorSpace;
-   
+
     CGColorSpaceRelease(viewColorSpace);
-    
+
     view.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
     view.sampleCount = 1;
 
@@ -501,7 +493,7 @@ struct ViewFramebufferData {
 
     //-----------------------
 
-    MTLDepthStencilDescriptor *depthStateDesc =
+    MTLDepthStencilDescriptor* depthStateDesc =
         [[MTLDepthStencilDescriptor alloc] init];
     depthStateDesc.depthCompareFunction = MTLCompareFunctionGreaterEqual;
     depthStateDesc.depthWriteEnabled = YES;
@@ -530,7 +522,7 @@ struct ViewFramebufferData {
     [self _createSampleRender];
 }
 
-- (BOOL)hotloadShaders:(const char *)filename
+- (BOOL)hotloadShaders:(const char*)filename
 {
     _metallibFileURL =
         [NSURL fileURLWithPath:[NSString stringWithUTF8String:filename]];
@@ -549,7 +541,7 @@ struct ViewFramebufferData {
     _metallibFileDate = fileDate;
 
     // Now dynamically load the metallib
-    NSData *dataNS = [NSData dataWithContentsOfURL:_metallibFileURL
+    NSData* dataNS = [NSData dataWithContentsOfURL:_metallibFileURL
                                            options:NSDataReadingMappedIfSafe
                                              error:&err];
     if (dataNS == nil) {
@@ -575,7 +567,7 @@ struct ViewFramebufferData {
     return YES;
 }
 
-- (id<MTLComputePipelineState>)_createComputePipeline:(const char *)name
+- (id<MTLComputePipelineState>)_createComputePipeline:(const char*)name
 {
     NSString* nameNS = [NSString stringWithUTF8String:name];
     NSError* error = nil;
@@ -610,8 +602,8 @@ struct ViewFramebufferData {
         [self _createComputePipeline:"SampleImage1DArrayCS"];
 }
 
-- (id<MTLRenderPipelineState>)_createRenderPipeline:(const char *)vs
-                                                 fs:(const char *)fs
+- (id<MTLRenderPipelineState>)_createRenderPipeline:(const char*)vs
+                                                 fs:(const char*)fs
 {
     NSString* vsNameNS = [NSString stringWithUTF8String:vs];
     NSString* fsNameNS = [NSString stringWithUTF8String:fs];
@@ -629,7 +621,7 @@ struct ViewFramebufferData {
 
     // Note: blending is disabled on color target, all blending done in shader
     // since have checkerboard and other stuff to blend against.
-    
+
     // TODO: could drop these for images, but want a 3D preview of content
     // or might make these memoryless.
     pipelineStateDescriptor.depthAttachmentPixelFormat =
@@ -680,10 +672,9 @@ struct ViewFramebufferData {
                                                        fs:"DrawCubeArrayPS"];
     _pipelineStateVolume = [self _createRenderPipeline:"DrawVolumeVS"
                                                     fs:"DrawVolumePS"];
-    
+
     _pipelineStateDrawLines = [self _createRenderPipeline:"DrawLinesVS"
                                                        fs:"DrawLinesPS"];
-     
 }
 
 - (void)_createSampleRender
@@ -717,9 +708,9 @@ struct ViewFramebufferData {
     }
 }
 
-- (MTKMesh *)_createMeshAsset:(const char *)name
-                      mdlMesh:(MDLMesh *)mdlMesh
-                     doFlipUV:(bool)doFlipUV
+- (MTKMesh*)_createMeshAsset:(const char*)name
+                     mdlMesh:(MDLMesh*)mdlMesh
+                    doFlipUV:(bool)doFlipUV
 {
     NSError* error = nil;
 
@@ -733,10 +724,10 @@ struct ViewFramebufferData {
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
         MDLMeshBufferMap* uvsMap = [uvs map];
 
-        packed_float2* uvData = (packed_float2 *)uvsMap.bytes;
+        packed_float2* uvData = (packed_float2*)uvsMap.bytes;
 
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
-            auto &uv = uvData[i];
+            auto& uv = uvData[i];
 
             uv.x = 1.0f - uv.x;
         }
@@ -754,13 +745,13 @@ struct ViewFramebufferData {
     if (doFlipBitangent) {
         id<MDLMeshBuffer> uvs = mdlMesh.vertexBuffers[BufferIndexMeshTangent];
         MDLMeshBufferMap* uvsMap = [uvs map];
-        packed_float4* uvData = (packed_float4 *)uvsMap.bytes;
+        packed_float4* uvData = (packed_float4*)uvsMap.bytes;
 
         for (uint32_t i = 0; i < mdlMesh.vertexCount; ++i) {
-            //            if (uvData[i].w != -1.0f && uvData[i].w != 1.0f) {
-            //                int bp = 0;
-            //                bp = bp;
-            //            }
+            // if (uvData[i].w != -1.0f && uvData[i].w != 1.0f) {
+            //     int bp = 0;
+            //     bp = bp;
+            // }
 
             uvData[i].w = -uvData[i].w;
         }
@@ -814,12 +805,11 @@ struct packed_float3 {
     float x, y, z;
 };
 
-
 - (void)releaseAllPendingTextures
 {
     @autoreleasepool {
         [_loader releaseAllPendingTextures];
-        
+
         // also release the model and cached textures in the renderer
         [self unloadModel];
     }
@@ -828,15 +818,15 @@ struct packed_float3 {
 - (void)updateAnimationState:(nonnull MTKView*)view
 {
     bool animateDisplay = self.playAnimations;
-    
+
     // animate the uvPreview until it reaches endPoint, no scrubber yet
     _showSettings->updateUVPreviewState();
-    
+
     if (_showSettings->uvPreviewFrames > 0) {
         _showSettings->uvPreviewFrames--;
         animateDisplay = true;
     }
-    
+
     view.enableSetNeedsDisplay = !animateDisplay;
     view.paused = !animateDisplay;
 }
@@ -847,15 +837,15 @@ struct packed_float3 {
     _delegateHud = delegate;
 }
 
-- (void)updateModelSettings:(const string &)fullFilename
+- (void)updateModelSettings:(const string&)fullFilename
 {
     _showSettings->isModel = true;
     _showSettings->numChannels = 0; // hides rgba
-    
+
     // don't want any scale on view, or as little as possible
     _showSettings->imageBoundsX = 1;
     _showSettings->imageBoundsY = 1;
-    
+
     BOOL isNewFile = YES;
     [self resetSomeImageSettings:isNewFile];
 }
@@ -867,15 +857,13 @@ struct packed_float3 {
 
 #if USE_GLTF
 
-        
-    
-        // TODO: move to async version of this, many of these load slow
-        // but is there a way to cancel the load.  Or else move to cgltf which is faster.
-        // see GLTFKit2.
+    // TODO: move to async version of this, many of these load slow
+    // but is there a way to cancel the load.  Or else move to cgltf which is faster.
+    // see GLTFKit2.
 
 #define DO_ASYNC 0
 #if DO_ASYNC
-        // [GLTFAsset loadAssetWithURL:url bufferAllocator:_bufferAllocator delegate:self];
+    // [GLTFAsset loadAssetWithURL:url bufferAllocator:_bufferAllocator delegate:self];
 #else
     @autoreleasepool {
         GLTFAsset* newAsset = [[GLTFAsset alloc] initWithURL:fileURL bufferAllocator:_bufferAllocator];
@@ -905,15 +893,13 @@ struct packed_float3 {
 #endif
 }
 
-
-    
 - (void)_createMeshRect:(float)aspectRatioXToY
 {
     // This is a box that's smashed down to a thin 2d z plane, can get very close to it
     // due to the thinness of the volume without nearZ intersect
-    
+
     /// Load assets into metal objects
-    MDLMesh *mdlMesh;
+    MDLMesh* mdlMesh;
 
     mdlMesh = [MDLMesh newBoxWithDimensions:(vector_float3){aspectRatioXToY, 1, 0.001}
                                    segments:(vector_uint3){1, 1, 1}
@@ -923,7 +909,7 @@ struct packed_float3 {
 
     // for some reason normals are all n = 1,0,0 which doesn't make sense on a box
     // for the side that is being viewed.
-    
+
     // only one of these for now, but really should store per image
     _meshRect = [self _createMeshAsset:"MeshRect" mdlMesh:mdlMesh doFlipUV:false];
 }
@@ -968,19 +954,19 @@ struct packed_float3 {
         id<MDLMeshBuffer> posBuffer =
             mdlMesh.vertexBuffers[BufferIndexMeshPosition];
         MDLMeshBufferMap* posMap = [posBuffer map];
-        packed_float3* posData = (packed_float3 *)posMap.bytes;
+        packed_float3* posData = (packed_float3*)posMap.bytes;
 
         id<MDLMeshBuffer> normalBuffer =
             mdlMesh.vertexBuffers[BufferIndexMeshNormal];
         MDLMeshBufferMap* normalsMap = [normalBuffer map];
-        packed_float3* normalData = (packed_float3 *)normalsMap.bytes;
+        packed_float3* normalData = (packed_float3*)normalsMap.bytes;
 
         // vertexCount reports 306, but vertex 289+ are garbage
-        uint32_t numVertices = 289;  // mdlMesh.vertexCount
+        uint32_t numVertices = 289; // mdlMesh.vertexCount
 
         for (uint32_t i = 0; i < numVertices; ++i) {
             {
-                auto &pos = posData[i];
+                auto& pos = posData[i];
 
                 // dumb rotate about Y-axis
                 auto copy = pos;
@@ -990,7 +976,7 @@ struct packed_float3 {
             }
 
             {
-                auto &normal = normalData[i];
+                auto& normal = normalData[i];
                 auto copy = normal;
                 normal.x = copy.x * cosSin.x - copy.z * cosSin.y;
                 normal.z = copy.x * cosSin.y + copy.z * cosSin.x;
@@ -999,7 +985,7 @@ struct packed_float3 {
 
         // Hack - knock out all bogus tris from ModelIO that lead to garbage tris
         for (uint32_t i = numVertices; i < mdlMesh.vertexCount; ++i) {
-            auto &pos = posData[i];
+            auto& pos = posData[i];
             pos.x = NAN;
         }
     }
@@ -1026,26 +1012,26 @@ struct packed_float3 {
 
         id<MDLMeshBuffer> uvsBuffer = mdlMesh.vertexBuffers[BufferIndexMeshUV0];
         MDLMeshBufferMap* uvsMap = [uvsBuffer map];
-        packed_float2* uvData = (packed_float2 *)uvsMap.bytes;
+        packed_float2* uvData = (packed_float2*)uvsMap.bytes;
 
         // this is all aos
 
         id<MDLMeshBuffer> posBuffer =
             mdlMesh.vertexBuffers[BufferIndexMeshPosition];
         MDLMeshBufferMap* posMap = [posBuffer map];
-        packed_float3 *posData = (packed_float3 *)posMap.bytes;
+        packed_float3* posData = (packed_float3*)posMap.bytes;
 
         id<MDLMeshBuffer> normalsBuffe =
             mdlMesh.vertexBuffers[BufferIndexMeshNormal];
         MDLMeshBufferMap* normalsMap = [normalsBuffe map];
-        packed_float3* normalData = (packed_float3 *)normalsMap.bytes;
+        packed_float3* normalData = (packed_float3*)normalsMap.bytes;
 
         // vertexCount reports 306, but vertex 289+ are garbage
-        uint32_t numVertices = 289;  // mdlMesh.vertexCount
+        uint32_t numVertices = 289; // mdlMesh.vertexCount
 
         for (uint32_t i = 0; i < numVertices; ++i) {
             {
-                auto &pos = posData[i];
+                auto& pos = posData[i];
 
                 // dumb rotate about Y-axis
                 auto copy = pos;
@@ -1054,18 +1040,18 @@ struct packed_float3 {
             }
 
             {
-                auto &normal = normalData[i];
+                auto& normal = normalData[i];
                 auto copy = normal;
                 normal.x = copy.x * cosSin.x - copy.z * cosSin.y;
                 normal.z = copy.x * cosSin.y + copy.z * cosSin.x;
             }
 
-            auto &uv = uvData[i];
+            auto& uv = uvData[i];
 
-            //            if (uv.x < 0.0 || uv.x > 1.0) {
-            //                int bp = 0;
-            //                bp = bp;
-            //            }
+            // if (uv.x < 0.0 || uv.x > 1.0) {
+            //     int bp = 0;
+            //     bp = bp;
+            // }
 
             // this makes it counterclockwise 0 to 1
             float x = uv.x;
@@ -1089,7 +1075,7 @@ struct packed_float3 {
 
         // Hack - knock out all bogus tris from ModelIO that lead to garbage tris
         for (uint32_t i = numVertices; i < mdlMesh.vertexCount; ++i) {
-            auto &pos = posData[i];
+            auto& pos = posData[i];
             pos.x = NAN;
         }
 
@@ -1116,7 +1102,7 @@ struct packed_float3 {
     //    doFlipUV:true];
 
     mdlMesh = [MDLMesh newCapsuleWithHeight:1.0
-                                      radii:(vector_float2){1.0f/3.0f, 1.0f/3.0f} // circle
+                                      radii:(vector_float2){1.0f / 3.0f, 1.0f / 3.0f} // circle
                              // vertical cap subtracted from height
                              radialSegments:16
                            verticalSegments:1
@@ -1134,7 +1120,8 @@ struct packed_float3 {
 }
 
 // this aliases the existing string, so can't chop extension
-inline const char* toFilenameShort(const char* filename) {
+inline const char* toFilenameShort(const char* filename)
+{
     const char* filenameShort = strrchr(filename, '/');
     if (filenameShort == nullptr) {
         filenameShort = filename;
@@ -1145,22 +1132,21 @@ inline const char* toFilenameShort(const char* filename) {
     return filenameShort;
 }
 
-
-- (BOOL)loadTextureFromImage:(nonnull const char *)fullFilenameString
+- (BOOL)loadTextureFromImage:(nonnull const char*)fullFilenameString
                    timestamp:(double)timestamp
-                       image:(kram::KTXImage &)image
-                 imageNormal:(nullable kram::KTXImage *)imageNormal
-                   imageDiff:(nullable kram::KTXImage *)imageDiff
+                       image:(kram::KTXImage&)image
+                 imageNormal:(nullable kram::KTXImage*)imageNormal
+                   imageDiff:(nullable kram::KTXImage*)imageDiff
                    isArchive:(BOOL)isArchive
 {
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
     string fullFilename = fullFilenameString;
     const char* filenameShort = toFilenameShort(fullFilename.c_str());
-    
+
     bool isTextureNew = _showSettings->isFileNew(fullFilename.c_str());
     bool isTextureChanged = _showSettings->isFileChanged(fullFilename.c_str(), timestamp);
-    
+
     if (isTextureChanged) {
         // synchronously cpu upload from ktx file to buffer, with eventual gpu blit
         // from buffer to returned texture.  TODO: If buffer is full, then something
@@ -1174,13 +1160,13 @@ inline const char* toFilenameShort(const char* filename) {
         if (!texture) {
             return NO;
         }
-        
+
         bool isPNG = isPNGFilename(fullFilename.c_str());
-        
+
         // to be able to turn on/off srgb, need to set a view
         id<MTLTexture> textureView;
         MyMTLPixelFormat textureFormat = (MyMTLPixelFormat)image.pixelFormat;
-        
+
         // TODO: may only want to offer on png files, where format is
         MyMTLPixelFormat viewFormat = textureFormat;
         if (isPNG) // && isSrgbFormat(textureFormat))
@@ -1191,7 +1177,7 @@ inline const char* toFilenameShort(const char* filename) {
         else {
             // This may fail.
             textureView = [texture newTextureViewWithPixelFormat:(MTLPixelFormat)viewFormat];
-            
+
             textureView.label = [texture.label stringByAppendingString:@"View"];
         }
 
@@ -1211,13 +1197,13 @@ inline const char* toFilenameShort(const char* filename) {
         if (imageDiff) {
             // Note: this name may not be the same name
             diffTexture = [_loader loadTextureFromImage:*imageDiff
-                                           originalFormat:nil
-                                                     name:filenameShort];
+                                         originalFormat:nil
+                                                   name:filenameShort];
             if (!diffTexture) {
                 return NO;
             }
         }
-        
+
         // if archive contained png, then it's been converted to ktx
         // so the info below may not reflect original data
         // Would need original png data to look at header
@@ -1246,13 +1232,13 @@ inline const char* toFilenameShort(const char* filename) {
             _colorMapView = textureView;
             _normalMap = normalTexture;
             _diffMap = diffTexture;
-            
+
             self.hasToggleView = _colorMapView != nil;
         }
 
         // this is the actual format, may have been decoded
         MyMTLPixelFormat format = (MyMTLPixelFormat)_colorMap.pixelFormat;
-       _data->updateImageSettings(fullFilename, image, format);
+        _data->updateImageSettings(fullFilename, image, format);
     }
 
     [self resetSomeImageSettings:isTextureNew];
@@ -1260,7 +1246,7 @@ inline const char* toFilenameShort(const char* filename) {
     return YES;
 }
 
-- (BOOL)loadTexture:(nonnull NSURL *)url
+- (BOOL)loadTexture:(nonnull NSURL*)url
 {
     string fullFilename = url.path.UTF8String;
 
@@ -1273,10 +1259,10 @@ inline const char* toFilenameShort(const char* filename) {
 
     // DONE: tie this to url and modstamp differences
     double timestamp = fileDate.timeIntervalSince1970;
-    
+
     bool isTextureNew = _showSettings->isFileNew(fullFilename.c_str());
     bool isTextureChanged = _showSettings->isFileChanged(fullFilename.c_str(), timestamp);
-    
+
     // image can be decoded to rgba8u if platform can't display format natively
     // but still want to identify blockSize from original format
     if (isTextureChanged) {
@@ -1289,7 +1275,7 @@ inline const char* toFilenameShort(const char* filename) {
         }
 
         const char* filenameShort = toFilenameShort(fullFilename.c_str());
-        
+
         MTLPixelFormat originalFormatMTL = MTLPixelFormatInvalid;
         id<MTLTexture> texture = [_loader loadTextureFromImage:image
                                                 originalFormat:&originalFormatMTL
@@ -1299,11 +1285,11 @@ inline const char* toFilenameShort(const char* filename) {
         }
 
         bool isPNG = isPNGFilename(fullFilename.c_str());
-        
+
         // to be able to turn on/off srgb, need to set a view
         id<MTLTexture> textureView;
         MyMTLPixelFormat textureFormat = (MyMTLPixelFormat)image.pixelFormat;
-        
+
         // DONE: may only want to offer on png files, where format is
         MyMTLPixelFormat viewFormat = textureFormat;
         if (isPNG) // && isSrgbFormat(textureFormat))
@@ -1314,10 +1300,10 @@ inline const char* toFilenameShort(const char* filename) {
         else {
             // This may fail.
             textureView = [texture newTextureViewWithPixelFormat:(MTLPixelFormat)viewFormat];
-            
+
             textureView.label = [texture.label stringByAppendingString:@"View"];
         }
-        
+
         // This doesn't look for or load corresponding normal map, but should
 
         // this is not the png data, but info on converted png to ktx level
@@ -1343,13 +1329,13 @@ inline const char* toFilenameShort(const char* filename) {
         // TODO: should archive work with diff?
         id<MTLTexture> diffTexture = nil;
         _showSettings->hasDiffTexture = diffTexture != nil;
-        
+
         @autoreleasepool {
             _colorMap = texture;
             _colorMapView = textureView;
             _normalMap = nil;
             _diffMap = nil;
-            
+
             self.hasToggleView = _colorMapView != nil;
         }
 
@@ -1362,44 +1348,41 @@ inline const char* toFilenameShort(const char* filename) {
     return YES;
 }
 
-
 - (void)resetSomeImageSettings:(BOOL)isNewFile
 {
     _data->resetSomeImageSettings(isNewFile);
-    
+
     // the rect is ar:1 for images
     float aspectRatioXtoY = _showSettings->imageAspectRatio();
     [self _createMeshRect:aspectRatioXtoY];
 }
 
-
-
 - (void)_updateGameState
 {
     /// Update any game state before encoding rendering commands to our drawable
-    
-    Uniforms &uniforms =
-    *(Uniforms *)_dynamicUniformBuffer[_uniformBufferIndex].contents;
-    
+
+    Uniforms& uniforms =
+        *(Uniforms*)_dynamicUniformBuffer[_uniformBufferIndex].contents;
+
     uniforms.isNormal = _showSettings->texContentType == TexContentTypeNormal;
     uniforms.doShaderPremul = _showSettings->doShaderPremul;
     uniforms.isSrgbInput = _showSettings->isSRGBShown && isSrgbFormat(_showSettings->originalFormat);
     uniforms.isSigned = _showSettings->isSigned;
     uniforms.isSwizzleAGToRG = _showSettings->isSwizzleAGToRG;
-    
+
     uniforms.isSDF = _showSettings->texContentType == TexContentTypeSDF;
     uniforms.numChannels = _showSettings->numChannels;
     uniforms.lightingMode = (ShaderLightingMode)_showSettings->lightingMode;
-    
+
     MyMTLTextureType textureType = MyMTLTextureType2D;
     MyMTLPixelFormat textureFormat = MyMTLPixelFormatInvalid;
     if (_colorMap) {
         textureType = (MyMTLTextureType)_colorMap.textureType;
         textureFormat = (MyMTLPixelFormat)_colorMap.pixelFormat;
     }
-    
+
     uniforms.isCheckerboardShown = _showSettings->isCheckerboardShown;
-    
+
     // addressing mode
     bool isCube = (textureType == MyMTLTextureTypeCube ||
                    textureType == MyMTLTextureTypeCubeArray);
@@ -1407,27 +1390,27 @@ inline const char* toFilenameShort(const char* filename) {
     bool doEdge = !doWrap;
     bool doZero = !doEdge;
     uniforms.isWrap = doWrap ? _showSettings->isWrap : false;
-    
+
     uniforms.isPreview = _showSettings->isPreview;
     uniforms.isDiff = _showSettings->isDiff;
-    
+
     uniforms.isNormalMapPreview = false;
     if (uniforms.isPreview) {
         uniforms.isNormalMapPreview = uniforms.isNormal || (_normalMap != nil);
-        
+
         if (_normalMap != nil) {
             uniforms.isNormalMapSigned =
-            isSignedFormat((MyMTLPixelFormat)_normalMap.pixelFormat);
-            uniforms.isNormalMapSwizzleAGToRG = false;  // TODO: need a prop for this
+                isSignedFormat((MyMTLPixelFormat)_normalMap.pixelFormat);
+            uniforms.isNormalMapSwizzleAGToRG = false; // TODO: need a prop for this
         }
     }
-    
+
     // a few things to fix before enabling this
     uniforms.useTangent = _showSettings->useTangent;
-    
+
     uniforms.gridX = 0;
     uniforms.gridY = 0;
-    
+
     if (_showSettings->isPixelGridShown) {
         uniforms.gridX = 1;
         uniforms.gridY = 1;
@@ -1442,19 +1425,19 @@ inline const char* toFilenameShort(const char* filename) {
         uniforms.gridX = _showSettings->gridSizeX;
         uniforms.gridY = _showSettings->gridSizeY;
     }
-    
+
     // no debug mode when preview kicks on, make it possible to toggle back and
     // forth more easily
     uniforms.debugMode = (ShaderDebugMode)_showSettings->debugMode;
     uniforms.shapeChannel = (ShaderShapeChannel)_showSettings->shapeChannel;
     uniforms.channels = (ShaderTextureChannels)_showSettings->channels;
-    
+
     // turn these off in preview mode, but they may be useful?
     if (_showSettings->isPreview) {
         uniforms.debugMode = ShaderDebugMode::ShDebugModeNone;
         uniforms.shapeChannel = ShaderShapeChannel::ShShapeChannelNone;
     }
-    
+
     // crude shape experiment
     _showSettings->is3DView = true;
     switch (_showSettings->meshNumber) {
@@ -1477,22 +1460,22 @@ inline const char* toFilenameShort(const char* filename) {
             break;
     }
     uniforms.is3DView = _showSettings->is3DView;
-    
+
     // on small textures can really see missing pixel (3 instead of 4 pixels)
     // so only do this on the sphere/capsule which wrap-around uv space
     uniforms.isInsetByHalfPixel = false;
     if (_showSettings->meshNumber >= 2 && doZero) {
         uniforms.isInsetByHalfPixel = true;
     }
-    
+
     _data->updateTransforms();
-    
+
     // this is an animated effect, that overlays the shape uv wires over the image
     uniforms.isUVPreview = _showSettings->uvPreview > 0.0;
     uniforms.uvPreview = _showSettings->uvPreview;
-    
+
     uniforms.uvToShapeRatio = 1.0f;
-    switch(_showSettings->meshNumber) {
+    switch (_showSettings->meshNumber) {
         case 0:
             if (_showSettings->imageBoundsY)
                 uniforms.uvToShapeRatio = _showSettings->imageBoundsX / (float)_showSettings->imageBoundsY;
@@ -1506,7 +1489,7 @@ inline const char* toFilenameShort(const char* filename) {
     }
     uniforms.projectionViewMatrix = _data->_projectionViewMatrix;
     uniforms.cameraPosition = _data->_cameraPosition;
-   
+
     // This is per object
     uniforms.modelMatrix = _data->_modelMatrix;
     uniforms.modelMatrixInvScale2 = _data->_modelMatrixInvScale2;
@@ -1514,7 +1497,7 @@ inline const char* toFilenameShort(const char* filename) {
     //_rotation += .01;
 }
 
-- (void)_setUniformsLevel:(UniformsLevel &)uniforms mipLOD:(int32_t)mipLOD
+- (void)_setUniformsLevel:(UniformsLevel&)uniforms mipLOD:(int32_t)mipLOD
 {
     uniforms.mipLOD = mipLOD;
 
@@ -1558,14 +1541,14 @@ inline const char* toFilenameShort(const char* filename) {
     }
 }
 
-- (void)drawInMTKView:(nonnull MTKView *)view
+- (void)drawInMTKView:(nonnull MTKView*)view
 {
     @autoreleasepool {
         // Per frame updates here
 
         // update per frame state
         [self updateAnimationState:view];
-        
+
         // TODO: move this out, needs to get called off mouseMove, but don't want to
         // call drawMain
         [self drawSample];
@@ -1574,29 +1557,29 @@ inline const char* toFilenameShort(const char* filename) {
         Signpost postWait("waitOnSemaphore");
         dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
         postWait.stop();
-        
+
         _uniformBufferIndex = (_uniformBufferIndex + 1) % MaxBuffersInFlight;
 
         id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
         commandBuffer.label = @"MyCommand";
 
         __block dispatch_semaphore_t block_sema = _inFlightSemaphore;
-        
-        #if USE_GLTF
-                GLTFMTLRenderer* gltfRenderer = _gltfRenderer;
-                [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */) {
-                    [gltfRenderer signalFrameCompletion];
-        
-                    // increment count
-                    dispatch_semaphore_signal(block_sema);
-                }];
-        
-        #else
-                [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */) {
-                    // increment count
-                    dispatch_semaphore_signal(block_sema);
-                }];
-        #endif
+
+#if USE_GLTF
+        GLTFMTLRenderer* gltfRenderer = _gltfRenderer;
+        [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */) {
+            [gltfRenderer signalFrameCompletion];
+
+            // increment count
+            dispatch_semaphore_signal(block_sema);
+        }];
+
+#else
+        [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> /* buffer */) {
+            // increment count
+            dispatch_semaphore_signal(block_sema);
+        }];
+#endif
 
         [self _updateGameState];
 
@@ -1618,14 +1601,14 @@ inline const char* toFilenameShort(const char* filename) {
         [self drawMain:commandBuffer
                   view:view];
         postDraw.stop();
-        
+
         // hold onto this for sampling from it via eyedropper
         id<CAMetalDrawable> drawable = view.currentDrawable;
         _lastDrawableTexture = drawable.texture;
 
         // These are equivalent
         // [commandBuffer presentDrawable:view.currentDrawable];
-        
+
         typeof(self) __weak weakSelf = self;
         [commandBuffer addScheduledHandler:^(id<MTLCommandBuffer> cmdBuf) {
             if (cmdBuf.error) return;
@@ -1639,28 +1622,31 @@ inline const char* toFilenameShort(const char* filename) {
             double gpuTime = cmdBuf.GPUEndTime - cmdBuf.GPUStartTime;
             [weakSelf _updateFramePacing:gpuTime];
         }];
-            
+
         [commandBuffer commit];
     }
 }
-    
-- (void)_present:(id<CAMetalDrawable>)drawable {
+
+- (void)_present:(id<CAMetalDrawable>)drawable
+{
     if (_useFramePacing)
         [drawable presentAfterMinimumDuration:_avgGpuTime];
     else
         [drawable present];
 }
 
-- (void)_updateFramePacing:(double)gpuTime {
+- (void)_updateFramePacing:(double)gpuTime
+{
     if (_useFramePacing) {
         _avgGpuTime = lerp(_avgGpuTime, gpuTime, 0.25);
     }
 }
 
-- (void)setFramePacingEnabled:(bool)enable {
+- (void)setFramePacingEnabled:(bool)enable
+{
     if (_useFramePacing != enable) {
         _useFramePacing = enable;
-        
+
         // this will get adjusted by updateFramePacing
         _avgGpuTime = 1.0 / 60.0;
     }
@@ -1668,32 +1654,32 @@ inline const char* toFilenameShort(const char* filename) {
 
 #if USE_GLTF
 
-static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
+static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b)
+{
     GLTFBoundingSphere s;
     float3 center = 0.5f * (b.minPoint + b.maxPoint);
     float r = distance(b.maxPoint, center);
-    
+
     s.center = center;
     s.radius = r;
     return s;
 }
 #endif
 
-
 - (void)drawMain:(id<MTLCommandBuffer>)commandBuffer
-            view:(nonnull MTKView *)view
+            view:(nonnull MTKView*)view
 {
     // Delay getting the currentRenderPassDescriptor until absolutely needed. This
     // avoids
     //   holding onto the drawable and blocking the display pipeline any longer
     //   than necessary
     MTLRenderPassDescriptor* renderPassDescriptor = nil;
-    
+
     // This retrieval can take 20ms+ when gpu is busy
     Signpost post("nextDrawable");
     renderPassDescriptor = view.currentRenderPassDescriptor;
     post.stop();
-    
+
     if (renderPassDescriptor == nil) {
         return;
     }
@@ -1702,8 +1688,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
 #if USE_GLTF
         && _asset == nil
 #endif
-    )
-    {
+    ) {
         // this will clear target
         id<MTLRenderCommandEncoder> renderEncoder =
             [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
@@ -1719,9 +1704,8 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
 #if USE_GLTF
     {
         mylock lock(gModelLock);
-    
+
         if (_asset) {
-            
             // TODO: needs to be done in the render loop, since it must run compute
             // This runs compute to generate radiance/irradiance in mip levels
             // Also an equirect version for a 2d image
@@ -1730,14 +1714,13 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                     [_gltfRenderer.lightingEnvironment generateFromCubeTexture:_environmentTexture commandBuffer:commandBuffer];
                 else
                     [_gltfRenderer.lightingEnvironment generateFromEquirectTexture:_environmentTexture commandBuffer:commandBuffer];
-                
+
                 _environmentNeedsUpdate = false;
             }
         }
     }
 #endif
 
-    
     // Final pass rendering code here
     id<MTLRenderCommandEncoder> renderEncoder =
         [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
@@ -1755,18 +1738,18 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
     [renderEncoder setDepthStencilState:_depthStateFull];
 
     bool drawShape = true;
-    
-    #if USE_GLTF
+
+#if USE_GLTF
     {
         mylock lock(gModelLock);
 
         if (_asset) {
             drawShape = false;
-    
+
             // update animations
             if (self.playAnimations) {
-                _animationTime += 1.0/60.0;
-    
+                _animationTime += 1.0 / 60.0;
+
                 NSTimeInterval maxAnimDuration = 0;
                 for (GLTFAnimation* animation in _asset.animations) {
                     for (GLTFAnimationChannel* channel in animation.channels) {
@@ -1775,20 +1758,20 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         }
                     }
                 }
-            
+
                 NSTimeInterval animTime = fmod(_animationTime, maxAnimDuration);
-    
+
                 for (GLTFAnimation* animation in _asset.animations) {
                     [animation runAtTime:animTime];
                 }
             }
-            
+
             // regularization scales the model to 1 unit dimension, may animate out of this box
             // just a scale to diameter 1, and translate back from center and viewer z
             GLTFBoundingSphere bounds = GLTFBoundingSphereFromBox2(_asset.defaultScene.approximateBounds);
             float invScale = (bounds.radius > 0) ? (0.5 / (bounds.radius)) : 1.0;
-            float4x4 centerScale = float4x4(float4m(invScale,invScale,invScale,1));
-            
+            float4x4 centerScale = float4x4(float4m(invScale, invScale, invScale, 1));
+
 #if USE_SIMDLIB
             float4x4 centerTranslation = float4x4::identity();
 #else
@@ -1796,37 +1779,37 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
 #endif
             centerTranslation.columns[3] = vector4(-bounds.center, 1.0f);
             float4x4 regularizationMatrix = centerScale * centerTranslation;
-    
+
             // incorporate the rotation now
-            Uniforms &uniforms =
-                *(Uniforms *)_dynamicUniformBuffer[_uniformBufferIndex].contents;
-    
+            Uniforms& uniforms =
+                *(Uniforms*)_dynamicUniformBuffer[_uniformBufferIndex].contents;
+
             regularizationMatrix = regularizationMatrix * uniforms.modelMatrix;
-    
+
             // TODO: be able to pass regularization to affect root of modelMatrix tree,
             // do not modify viewMatrix here since that messes with world space.
-    
+
             // set the view and projection matrix
             float4x4 m = _data->_viewMatrix * regularizationMatrix;
-            
+
             // TODO: offer conversions to simd/simd.h
             _gltfRenderer.viewMatrix = reinterpret_cast<const simd_float4x4&>(m);
             _gltfRenderer.projectionMatrix = reinterpret_cast<const simd_float4x4&>(_data->_projectionMatrix);
-    
-            RenderScope drawModelScope( renderEncoder, "DrawModel" );
+
+            RenderScope drawModelScope(renderEncoder, "DrawModel");
             [_gltfRenderer renderScene:_asset.defaultScene commandBuffer:commandBuffer commandEncoder:renderEncoder];
         }
     }
-    #endif
-    
+#endif
+
     if (drawShape) {
-        RenderScope drawShapeScope( renderEncoder, "DrawShape" );
-        
+        RenderScope drawShapeScope(renderEncoder, "DrawShape");
+
         // set the mesh shape
         for (NSUInteger bufferIndex = 0; bufferIndex < _mesh.vertexBuffers.count;
              bufferIndex++) {
-            MTKMeshBuffer *vertexBuffer = _mesh.vertexBuffers[bufferIndex];
-            if ((NSNull *)vertexBuffer != [NSNull null]) {
+            MTKMeshBuffer* vertexBuffer = _mesh.vertexBuffers[bufferIndex];
+            if ((NSNull*)vertexBuffer != [NSNull null]) {
                 [renderEncoder setVertexBuffer:vertexBuffer.buffer
                                         offset:vertexBuffer.offset
                                        atIndex:bufferIndex];
@@ -1900,7 +1883,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
             id<MTLTexture> tex = _colorMap;
             if (self.isToggleView && _colorMap && _colorMapView)
                 tex = _colorMapView;
-            
+
             // set the texture up
             [renderEncoder setFragmentTexture:tex atIndex:TextureIndexColor];
 
@@ -1908,7 +1891,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
             if (_normalMap && _showSettings->isPreview) {
                 [renderEncoder setFragmentTexture:_normalMap atIndex:TextureIndexNormal];
             }
-            
+
             if (_diffMap && _showSettings->isDiff) {
                 [renderEncoder setFragmentTexture:_diffMap atIndex:TextureIndexDiff];
             }
@@ -1916,7 +1899,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
             UniformsLevel uniformsLevel;
             uniformsLevel.drawOffset = float2m(0.0f);
             uniformsLevel.passNumber = kPassDefault;
-            
+
             if (_showSettings->isPreview) {
                 // upload this on each face drawn, since want to be able to draw all
                 // mips/levels at once
@@ -1950,14 +1933,14 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                 // by the zoom
                 int32_t gap =
                     _showSettings
-                        ->showAllPixelGap;  // * _showSettings->viewContentScaleFactor;
+                        ->showAllPixelGap; // * _showSettings->viewContentScaleFactor;
 
                 for (int32_t mip = 0; mip < _showSettings->mipCount; ++mip) {
                     // upload this on each face drawn, since want to be able to draw all
                     // mips/levels at once
-                    
+
                     [self _setUniformsLevel:uniformsLevel mipLOD:mip];
-                    
+
                     if (mip == 0) {
                         uniformsLevel.drawOffset.y = 0.0f;
                     }
@@ -1965,13 +1948,13 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         // all mips draw at top mip size currently
                         uniformsLevel.drawOffset.y -= h + gap;
                     }
-                    
+
                     // this its ktxImage.totalChunks()
                     int32_t numLevels = _showSettings->totalChunks();
-                    
+
                     for (int32_t level = 0; level < numLevels; ++level) {
-                        RenderScope drawLevelScope( renderEncoder, "DrawLevel" );
-                        
+                        RenderScope drawLevelScope(renderEncoder, "DrawLevel");
+
                         if (isCube) {
                             uniformsLevel.face = level % 6;
                             uniformsLevel.arrayOrSlice = level / 6;
@@ -1979,7 +1962,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         else {
                             uniformsLevel.arrayOrSlice = level;
                         }
-                        
+
                         // advance x across faces/slices/array elements, 1d array and 2d thin
                         // array are weird though.
                         if (level == 0) {
@@ -1988,25 +1971,25 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         else {
                             uniformsLevel.drawOffset.x += w + gap;
                         }
-                        
+
                         [renderEncoder setVertexBytes:&uniformsLevel
                                                length:sizeof(uniformsLevel)
                                               atIndex:BufferIndexUniformsLevel];
-                        
+
                         [renderEncoder setFragmentBytes:&uniformsLevel
                                                  length:sizeof(uniformsLevel)
                                                 atIndex:BufferIndexUniformsLevel];
-                        
+
                         // force lod, and don't mip
                         [renderEncoder setFragmentSamplerState:sampler
                                                    lodMinClamp:mip
                                                    lodMaxClamp:mip + 1
                                                        atIndex:SamplerIndexColor];
-                        
+
                         // TODO: since this isn't a preview, have mode to display all faces
                         // and mips on on screen faces and arrays and slices go across in a
                         // row, and mips are displayed down from each of those in a column
-                        
+
                         for (MTKSubmesh* submesh in _mesh.submeshes) {
                             [renderEncoder drawIndexedPrimitives:submesh.primitiveType
                                                       indexCount:submesh.indexCount
@@ -2016,11 +1999,11 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         }
                     }
                 }
-                
+
                 for (int32_t mip = 0; mip < _showSettings->mipCount; ++mip) {
                     // upload this on each face drawn, since want to be able to draw all
                     // mips/levels at once
-                    
+
                     [self _setUniformsLevel:uniformsLevel mipLOD:mip];
 
                     if (mip == 0) {
@@ -2042,7 +2025,7 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         else {
                             uniformsLevel.arrayOrSlice = level;
                         }
-                        
+
                         // advance x across faces/slices/array elements, 1d array and 2d thin
                         // array are weird though.
                         if (level == 0) {
@@ -2051,21 +2034,21 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                         else {
                             uniformsLevel.drawOffset.x += w + gap;
                         }
-                        
+
                         [renderEncoder setVertexBytes:&uniformsLevel
                                                length:sizeof(uniformsLevel)
                                               atIndex:BufferIndexUniformsLevel];
-                        
-//                        [renderEncoder setFragmentBytes:&uniformsLevel
-//                                                 length:sizeof(uniformsLevel)
-//                                                atIndex:BufferIndexUniformsLevel];
-                        
+
+                        // [renderEncoder setFragmentBytes:&uniformsLevel
+                        //                          length:sizeof(uniformsLevel)
+                        //                         atIndex:BufferIndexUniformsLevel];
+
                         // force lod, and don't mip
-//                        [renderEncoder setFragmentSamplerState:sampler
-//                                                   lodMinClamp:mip
-//                                                   lodMaxClamp:mip + 1
-//                                                       atIndex:SamplerIndexColor];
-//                        
+                        // [renderEncoder setFragmentSamplerState:sampler
+                        //                            lodMinClamp:mip
+                        //                            lodMaxClamp:mip + 1
+                        //                                atIndex:SamplerIndexColor];
+                        //
                         [self drawAtlas:renderEncoder];
                     }
                 }
@@ -2102,23 +2085,23 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                                              indexBuffer:submesh.indexBuffer.buffer
                                        indexBufferOffset:submesh.indexBuffer.offset];
                 }
-                
+
                 // Draw uv wire overlay
                 if (_showSettings->is3DView && _showSettings->uvPreview > 0.0) {
                     // need to force color in shader or it's still sampling texture
                     // also need to add z offset
-                    
-                    RenderScope drawUVPreviewScope( renderEncoder, "DrawUVPreview" );
-                    
+
+                    RenderScope drawUVPreviewScope(renderEncoder, "DrawUVPreview");
+
                     [renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
-                    
+
                     // only applies to tris, not points/lines, pushes depth away (towards 0), after clip
                     // affects reads/tests and writes.  Could also add in vertex shader.
                     // depthBias * 2^(exp(max abs(z) in primitive) - r) + slopeScale * maxSlope
-                    [renderEncoder setDepthBias:0.015 slopeScale:3.0 clamp: 0.02];
-                    
+                    [renderEncoder setDepthBias:0.015 slopeScale:3.0 clamp:0.02];
+
                     uniformsLevel.passNumber = kPassUVPreview;
-                    
+
                     [renderEncoder setVertexBytes:&uniformsLevel
                                            length:sizeof(uniformsLevel)
                                           atIndex:BufferIndexUniformsLevel];
@@ -2134,15 +2117,14 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
                                                  indexBuffer:submesh.indexBuffer.buffer
                                            indexBufferOffset:submesh.indexBuffer.offset];
                     }
-                    
+
                     uniformsLevel.passNumber = kPassDefault;
-                    
+
                     // restore state, even though this isn't a true state shadow
                     [renderEncoder setDepthBias:0.0 slopeScale:0.0 clamp:0.0];
                     [renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
-                    
                 }
-                
+
                 [self drawAtlas:renderEncoder];
             }
         }
@@ -2154,16 +2136,15 @@ static GLTFBoundingSphere GLTFBoundingSphereFromBox2(const GLTFBoundingBox b) {
     // TODO: environment map preview should be done as fsq
 }
 
-class RenderScope
-{
+class RenderScope {
 public:
     RenderScope(id encoder_, const char* name)
         : encoder(encoder_)
     {
         id<MTLRenderCommandEncoder> enc = (id<MTLRenderCommandEncoder>)encoder;
-        [enc pushDebugGroup: [NSString stringWithUTF8String: name]];
+        [enc pushDebugGroup:[NSString stringWithUTF8String:name]];
     }
-    
+
     void close()
     {
         if (encoder) {
@@ -2172,51 +2153,52 @@ public:
             encoder = nil;
         }
     }
-    
+
     ~RenderScope()
     {
         close();
     }
+
 private:
     id encoder;
 };
 
-- (void)drawAtlas:(nonnull id<MTLRenderCommandEncoder>)renderEncoder {
+- (void)drawAtlas:(nonnull id<MTLRenderCommandEncoder>)renderEncoder
+{
     // draw last since this changes pipeline state
     if (_showSettings->is3DView && _showSettings->atlas.empty())
         return;
-    
+
     //if (!_showSettings->drawAtlas)
     //    return;
-        
-    RenderScope drawAtlasScope( renderEncoder, "DrawAtlas" );
-    
+
+    RenderScope drawAtlasScope(renderEncoder, "DrawAtlas");
+
     [renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
-    [renderEncoder setDepthBias:5.0 slopeScale:0.0 clamp: 0.0];
+    [renderEncoder setDepthBias:5.0 slopeScale:0.0 clamp:0.0];
     [renderEncoder setCullMode:MTLCullModeNone];
-    
+
     [renderEncoder setRenderPipelineState:_pipelineStateDrawLines];
-    
+
     // TODO: draw line strip with prim reset
     // need atlas data in push constants or in vb
-    
+
     // TOOO: also need to hover name or show names on canvas
-    
-//                    [renderEncoder setVertexBytes:&uniformsLevel
-//                                           length:sizeof(uniformsLevel)
-//                                          atIndex:BufferIndexUniformsLevel];
+
+    // [renderEncoder setVertexBytes:&uniformsLevel
+    //                        length:sizeof(uniformsLevel)
+    //                       atIndex:BufferIndexUniformsLevel];
 
     UniformsDebug uniformsDebug;
-    
-    for (const Atlas& atlas: _showSettings->atlas) {
+
+    for (const Atlas& atlas : _showSettings->atlas) {
         // not accounting for slice
         uniformsDebug.rect = float4m(atlas.x, atlas.y, atlas.w, atlas.h);
-        
-        
+
         [renderEncoder setVertexBytes:&uniformsDebug
                                length:sizeof(uniformsDebug)
                               atIndex:BufferIndexUniformsDebug];
-        
+
         // this will draw diagonal
         for (MTKSubmesh* submesh in _mesh.submeshes) {
             [renderEncoder drawIndexedPrimitives:submesh.primitiveType
@@ -2226,7 +2208,7 @@ private:
                                indexBufferOffset:submesh.indexBuffer.offset];
         }
     }
-    
+
     // restore state, even though this isn't a true state shadow
     [renderEncoder setCullMode:MTLCullModeBack];
     [renderEncoder setDepthBias:0.0 slopeScale:0.0 clamp:0.0];
@@ -2253,7 +2235,7 @@ private:
     // this reads directly from compressed texture via a compute shader
     int32_t textureLookupX = _showSettings->textureLookupX;
     int32_t textureLookupY = _showSettings->textureLookupY;
-    
+
     bool isDrawableBlit = _showSettings->isEyedropperFromDrawable();
 
     // TODO: only don't blit for plane + no debug or shape
@@ -2319,14 +2301,14 @@ private:
 
         // copy from texture back to CPU, might be easier using MTLBuffer.contents
         MTLRegion region = {
-            {0, 0, 0},  // MTLOrigin
-            {1, 1, 1}   // MTLSize
+            {0, 0, 0}, // MTLOrigin
+            {1, 1, 1} // MTLSize
         };
 
         if (isDrawableBlit) {
             half4 data16f;
             [texture getBytes:&data16f bytesPerRow:8 fromRegion:region mipmapLevel:0];
-            
+
             data = float4m(data16f);
         }
         else {
@@ -2340,13 +2322,13 @@ private:
             self->_showSettings->textureResult = data;
             self->_showSettings->textureResultX = textureLookupX;
             self->_showSettings->textureResultY = textureLookupY;
-            
+
             [self->_delegateHud updateEyedropperText];
         });
-        
+
         // TODO: This completed handler runs long after the hud has updated
         // so need to invalidate the hud.  So the pixel location is out of date.
-        
+
         // printf("Color %f %f %f %f\n", data.x, data.y, data.z, data.w);
     }];
 
@@ -2365,8 +2347,8 @@ private:
 
     renderEncoder.label = @"SampleCompute";
 
-    RenderScope drawShapeScope( renderEncoder, "DrawShape" );
-    
+    RenderScope drawShapeScope(renderEncoder, "DrawShape");
+
     UniformsCS uniforms;
     uniforms.uv.x = lookupX;
     uniforms.uv.y = lookupY;
@@ -2409,7 +2391,7 @@ private:
     id<MTLTexture> tex = _colorMap;
     if (self.isToggleView && _colorMap && _colorMapView)
         tex = _colorMapView;
-    
+
     // input and output texture
     [renderEncoder setTexture:tex
                       atIndex:TextureIndexColor];
@@ -2427,7 +2409,7 @@ private:
     [renderEncoder endEncoding];
 }
 
-- (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
+- (void)mtkView:(nonnull MTKView*)view drawableSizeWillChange:(CGSize)size
 {
     // Don't crashing trying to readback from the cached drawable during a resize.
     _lastDrawableTexture = nil;
@@ -2445,49 +2427,46 @@ private:
     _showSettings->viewContentScaleFactor = framebufferScale;
 
     _data->updateProjTransform();
-    
+
 #if USE_GLTF
     _gltfRenderer.drawableSize = size;
     _gltfRenderer.colorPixelFormat = view.colorPixelFormat;
     _gltfRenderer.depthStencilPixelFormat = view.depthStencilPixelFormat;
 #endif
-    
+
     _data->updateProjTransform();
 }
 
 #if USE_GLTF
 // @protocol GLTFAssetLoadingDelegate
-- (void)assetWithURL:(NSURL *)assetURL requiresContentsOfURL:(NSURL *)url completionHandler:(void (^)(NSData *_Nullable, NSError *_Nullable))completionHandler
+- (void)assetWithURL:(NSURL*)assetURL requiresContentsOfURL:(NSURL*)url completionHandler:(void (^)(NSData* _Nullable, NSError* _Nullable))completionHandler
 {
     // This can handle remote assets
-    NSURLSessionDataTask *task = [_urlSession dataTaskWithURL:url
-                                                        completionHandler:^(NSData *data, NSURLResponse *response, NSError *error)
-    {
-        completionHandler(data, error);
-    }];
-    
+    NSURLSessionDataTask* task = [_urlSession dataTaskWithURL:url
+                                            completionHandler:^(NSData* data, NSURLResponse* response, NSError* error) {
+                                                completionHandler(data, error);
+                                            }];
+
     [task resume];
 }
 
-- (void)assetWithURL:(NSURL *)assetURL didFinishLoading:(GLTFAsset *)asset
+- (void)assetWithURL:(NSURL*)assetURL didFinishLoading:(GLTFAsset*)asset
 {
     mylock lock(gModelLock);
-    
+
     _asset = asset;
-    
+
     _animationTime = 0.0;
-    
+
     string fullFilename = assetURL.path.UTF8String;
     [self updateModelSettings:fullFilename];
 }
 
-- (void)assetWithURL:(NSURL *)assetURL didFailToLoadWithError:(NSError *)error;
+- (void)assetWithURL:(NSURL*)assetURL didFailToLoadWithError:(NSError*)error;
 {
     // TODO: display this error to the user
     KLOGE("Renderer", "Asset load failed with error: %s", [[error localizedDescription] UTF8String]);
 }
 #endif
-
-
 
 @end

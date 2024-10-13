@@ -10,35 +10,28 @@
 #pragma once
 
 #include "Engine.h"
-
 #include "HLSLTokenizer.h"
 #include "HLSLTree.h"
 
-namespace M4
-{
+namespace M4 {
 
 struct EffectState;
 
 // This wouldn't be needed if could preprocess prior to calling parser.
-struct HLSLParserOptions
-{
+struct HLSLParserOptions {
     bool isHalfst = false;
-    
+
     bool isHalfio = false;
 };
 
-class HLSLParser
-{
-
+class HLSLParser {
 public:
-
     HLSLParser(Allocator* allocator, const char* fileName, const char* buffer, size_t length);
     void SetKeepComments(bool enable) { m_tokenizer.SetKeepComments(enable); }
-    
+
     bool Parse(HLSLTree* tree, const HLSLParserOptions& options = HLSLParserOptions());
 
 private:
-
     bool Accept(int token);
     bool Expect(int token);
 
@@ -53,14 +46,14 @@ private:
     bool AcceptIdentifier(const char*& identifier);
     bool ExpectIdentifier(const char*& identifier);
     bool AcceptFloat(float& value);
-	bool AcceptHalf( float& value );
+    bool AcceptHalf(float& value);
     bool AcceptInt(int& value);
     bool AcceptType(bool allowVoid, HLSLType& type);
     bool ExpectType(bool allowVoid, HLSLType& type);
     bool AcceptBinaryOperator(int priority, HLSLBinaryOp& binaryOp);
     bool AcceptUnaryOperator(bool pre, HLSLUnaryOp& unaryOp);
     bool AcceptAssign(HLSLBinaryOp& binaryOp);
-    bool AcceptTypeModifier(int & typeFlags);
+    bool AcceptTypeModifier(int& typeFlags);
     bool AcceptInterpolationModifier(int& flags);
 
     /**
@@ -85,18 +78,18 @@ private:
     bool ParseDeclarationAssignment(HLSLDeclaration* declaration);
     bool ParsePartialConstructor(HLSLExpression*& expression, HLSLBaseType type, const char* typeName);
 
-    bool ParseStateName(bool isSamplerState, bool isPipelineState, const char*& name, const EffectState *& state);
+    bool ParseStateName(bool isSamplerState, bool isPipelineState, const char*& name, const EffectState*& state);
     bool ParseColorMask(int& mask);
-    
-// FX file
-//    bool ParseStateValue(const EffectState * state, HLSLStateAssignment* stateAssignment);
-//    bool ParseStateAssignment(HLSLStateAssignment*& stateAssignment, bool isSamplerState, bool isPipelineState);
-//    bool ParseSamplerState(HLSLExpression*& expression);
-//    bool ParseTechnique(HLSLStatement*& statement);
-//    bool ParsePass(HLSLPass*& pass);
-//    bool ParsePipeline(HLSLStatement*& pipeline);
-//    bool ParseStage(HLSLStatement*& stage);
-    
+
+    // FX file
+    //    bool ParseStateValue(const EffectState * state, HLSLStateAssignment* stateAssignment);
+    //    bool ParseStateAssignment(HLSLStateAssignment*& stateAssignment, bool isSamplerState, bool isPipelineState);
+    //    bool ParseSamplerState(HLSLExpression*& expression);
+    //    bool ParseTechnique(HLSLStatement*& statement);
+    //    bool ParsePass(HLSLPass*& pass);
+    //    bool ParsePipeline(HLSLStatement*& pipeline);
+    //    bool ParseStage(HLSLStatement*& stage);
+
     bool ParseComment(HLSLStatement*& statement);
 
     bool ParseAttributeList(HLSLAttribute*& attribute);
@@ -111,20 +104,20 @@ private:
 
     void DeclareVariable(const char* name, const HLSLType& type);
 
-    /// Returned pointer is only valid until Declare or Begin/EndScope is called. 
+    /// Returned pointer is only valid until Declare or Begin/EndScope is called.
     const HLSLType* FindVariable(const char* name, bool& global) const;
 
     const HLSLFunction* FindFunction(const char* name) const;
     const HLSLFunction* FindFunction(const HLSLFunction* fun) const;
 
     bool GetIsFunction(const char* name) const;
-    
+
     /// Finds the overloaded function that matches the specified call.
     /// Pass memberType to match member functions.
     const HLSLFunction* MatchFunctionCall(const HLSLFunctionCall* functionCall, const char* name, const HLSLType* memberType = NULL);
 
     /// Gets the type of the named field on the specified object type (fieldName can also specify a swizzle. )
-    bool GetMemberType(const HLSLType& objectType, HLSLMemberAccess * memberAccess);
+    bool GetMemberType(const HLSLType& objectType, HLSLMemberAccess* memberAccess);
 
     bool CheckTypeCast(const HLSLType& srcType, const HLSLType& dstType);
 
@@ -132,33 +125,30 @@ private:
     int GetLineNumber() const;
 
 private:
-
-    struct Variable
-    {
-        const char*     name;
-        HLSLType        type;
+    struct Variable {
+        const char* name;
+        HLSLType type;
     };
 
-    HLSLTokenizer           m_tokenizer;
-    Array<HLSLStruct*>      m_userTypes;
-    Array<Variable>         m_variables;
-    Array<HLSLFunction*>    m_functions;
-    int                     m_numGlobals;
+    HLSLTokenizer m_tokenizer;
+    Array<HLSLStruct*> m_userTypes;
+    Array<Variable> m_variables;
+    Array<HLSLFunction*> m_functions;
+    int m_numGlobals;
 
-    HLSLTree*               m_tree;
-    
-    bool                    m_allowUndeclaredIdentifiers = false;
-    bool                    m_disableSemanticValidation = false;
-    
-    HLSLParserOptions       m_options;
+    HLSLTree* m_tree;
+
+    bool m_allowUndeclaredIdentifiers = false;
+    bool m_disableSemanticValidation = false;
+
+    HLSLParserOptions m_options;
 };
 
-enum NumericType
-{
+enum NumericType {
     NumericType_Float,
     NumericType_Half,
     NumericType_Double, // not in MSL
-    
+
     NumericType_Bool,
     NumericType_Int,
     NumericType_Uint,
@@ -166,13 +156,13 @@ enum NumericType
     NumericType_Ushort,
     NumericType_Ulong,
     NumericType_Long,
-    
+
     // TODO: HLSL doesn't have byte/ubyte, MSL does
     // NumericType_UByte,
     // NumericType_Byte,
-    
+
     NumericType_Count,
-    
+
     NumericType_NaN, // not in count?
 };
 
@@ -226,4 +216,4 @@ HLSLBaseType GetScalarType(HLSLBaseType type);
 // returns 1 for scalar or 2/3/4 for vector types.
 int32_t GetVectorDimension(HLSLBaseType type);
 
-}
+} //namespace M4

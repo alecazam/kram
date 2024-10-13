@@ -1,11 +1,12 @@
-#include "KramLib.h"
-
 #include <shlwapi.h>
 #include <thumbcache.h> // For IThumbnailProvider.
 #include <wrl/client.h> // For ComPtr
-#include <new>
+
 #include <atomic>
+#include <new>
 #include <vector>
+
+#include "KramLib.h"
 
 using namespace kram;
 using namespace std; // or STL_NAMESPACE
@@ -48,32 +49,37 @@ struct ImageToPass {
     KTXImageData imageData;
 };
 
-class KramThumbProvider final : public IInitializeWithStream, public IThumbnailProvider 
-{
+class KramThumbProvider final : public IInitializeWithStream, public IThumbnailProvider {
 public:
     KramThumbProvider()
-        : mReferences(1)
-        , mStream{} {
+        : mReferences(1), mStream{}
+    {
     }
 
-    virtual ~KramThumbProvider() {
+    virtual ~KramThumbProvider()
+    {
     }
 
     // IUnknown
-    IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) {
+    IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv)
+    {
         static const QITAB qit[] = {
             QITABENT(KramThumbProvider, IInitializeWithStream),
             QITABENT(KramThumbProvider, IThumbnailProvider),
-            { 0 },
+            {0},
         };
         return QISearch(this, qit, riid, ppv);
     }
 
-    IFACEMETHODIMP_(ULONG) AddRef() {
+    IFACEMETHODIMP_(ULONG)
+    AddRef()
+    {
         return ++mReferences;
     }
 
-    IFACEMETHODIMP_(ULONG) Release() {
+    IFACEMETHODIMP_(ULONG)
+    Release()
+    {
         long refs = --mReferences;
         if (!refs) {
             delete this;
@@ -82,8 +88,9 @@ public:
     }
 
     // IInitializeWithStream
-    IFACEMETHODIMP Initialize(IStream* pStream, DWORD /*grfMode*/) {
-        HRESULT hr = E_UNEXPECTED;  // can only be inited once
+    IFACEMETHODIMP Initialize(IStream* pStream, DWORD /*grfMode*/)
+    {
+        HRESULT hr = E_UNEXPECTED; // can only be inited once
         if (!mStream) {
             // take a reference to the stream if we have not been inited yet
             hr = pStream->QueryInterface(mStream.ReleaseAndGetAddressOf());
@@ -92,8 +99,8 @@ public:
     }
 
     // IThumbnailProvider
-    IFACEMETHODIMP GetThumbnail(UINT cx, HBITMAP* phbmp, WTS_ALPHATYPE* pdwAlpha) {
-       
+    IFACEMETHODIMP GetThumbnail(UINT cx, HBITMAP* phbmp, WTS_ALPHATYPE* pdwAlpha)
+    {
         // read from stream and create a thumbnail
         if (!ImageToHBITMAP(cx, phbmp)) {
             return E_OUTOFMEMORY;
@@ -101,7 +108,7 @@ public:
 
         // always 4 channels
         *pdwAlpha = WTSAT_ARGB;
-         
+
         return S_OK;
     }
 
@@ -122,10 +129,9 @@ private:
         vector<uint8_t> streamData;
         streamData.resize(streamSize);
         ULONG bytesRead = 0;
-        HRESULT hr = mStream->Read(streamData.data(), streamSize, &bytesRead);  // can only read ULONG
+        HRESULT hr = mStream->Read(streamData.data(), streamSize, &bytesRead); // can only read ULONG
         if (FAILED(hr) || streamSize != bytesRead)
             return false;
-
 
         // https://learn.microsoft.com/en-us/windows/win32/api/thumbcache/nf-thumbcache-ithumbnailprovider-getthumbnail
 
@@ -143,7 +149,7 @@ private:
             }
 
             // This will set decoder
-            auto textureType = MyMTLTextureType2D;  // image.textureType
+            auto textureType = MyMTLTextureType2D; // image.textureType
             if (!validateFormatAndDecoder(textureType, image.pixelFormat, decoderType)) {
                 KLOGF(3, "format decode only supports ktx and ktx2 output");
                 return false;
@@ -162,7 +168,7 @@ private:
             float width;
             float height;
         };
-        NSSize contextSize = { (float)maxSize, (float)maxSize };  
+        NSSize contextSize = {(float)maxSize, (float)maxSize};
 
         // compute w/h from aspect ratio of image
         float requestWidth, requestHeight;
@@ -206,7 +212,7 @@ private:
 
         //-----------------
 
-        uint32_t chunkNum = 0;  // TODO: could embed chunk(s) to gen thumbnail from, cube/array?
+        uint32_t chunkNum = 0; // TODO: could embed chunk(s) to gen thumbnail from, cube/array?
         uint32_t numChunks = image.totalChunks();
 
         vector<uint8_t> mipData;
@@ -294,19 +300,17 @@ private:
             mipData.resize(mipSize);
             memcpy(mipData.data(), image2D.pixels().data(), mipSize);
         }
-        
 
-    
         //---------------------
-        
+
         // create a bitmap, and allocate memory for the pixels
         BITMAPINFO bmi = {};
         bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
         bmi.bmiHeader.biWidth = static_cast<LONG>(w);
-        bmi.bmiHeader.biHeight = -static_cast<LONG>(h);  // -h to be top-down
+        bmi.bmiHeader.biHeight = -static_cast<LONG>(h); // -h to be top-down
         bmi.bmiHeader.biPlanes = 1;
         bmi.bmiHeader.biBitCount = 32;
-        bmi.bmiHeader.biCompression = BI_RGB;  // TODO: use BI_PNG to shrink thumbnails
+        bmi.bmiHeader.biCompression = BI_RGB; // TODO: use BI_PNG to shrink thumbnails
 
         Color* dstPixels = nullptr;
         HBITMAP hbmp = CreateDIBSection(nullptr, &bmi, DIB_RGB_COLORS, reinterpret_cast<void**>(&dstPixels), nullptr, 0);
@@ -329,7 +333,7 @@ private:
 
             // setting to 1 for premul is equivalent of blend to opaque black
             dstPixels[i].a = 255;
-             
+
             if (!isPremul) {
                 uint32_t alpha = srcPixels[i].a;
                 if (alpha < 255) {
@@ -345,11 +349,12 @@ private:
     }
 
 private:
-    std::atomic_long    mReferences;
-    ComPtr<IStream>     mStream;     // provided during initialization.
+    std::atomic_long mReferences;
+    ComPtr<IStream> mStream; // provided during initialization.
 };
 
-HRESULT KramThumbProvider_CreateInstance(REFIID riid, void** ppv) {
+HRESULT KramThumbProvider_CreateInstance(REFIID riid, void** ppv)
+{
     KramThumbProvider* provider = new (std::nothrow) KramThumbProvider();
     HRESULT hr = provider ? S_OK : E_OUTOFMEMORY;
     if (SUCCEEDED(hr)) {

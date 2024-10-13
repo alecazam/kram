@@ -1,23 +1,22 @@
 #include "HLSLParser.h"
 
 //#include "GLSLGenerator.h"
-#include "HLSLGenerator.h"
-#include "MSLGenerator.h"
-
 #include <stdio.h>
 #include <sys/stat.h>
 
 #include <filesystem>
 
+#include "HLSLGenerator.h"
+#include "MSLGenerator.h"
+
 using namespace std;
 
-enum Language
-{
+enum Language {
     Language_MSL,
-	Language_HLSL,
+    Language_HLSL,
 };
 
-bool ReadFile( const char* fileName, string& str )
+bool ReadFile(const char* fileName, string& str)
 {
     struct stat stats = {};
     if (stat(fileName, &stats) < 0) {
@@ -37,17 +36,16 @@ bool ReadFile( const char* fileName, string& str )
 
 void PrintUsage()
 {
-	fprintf(stderr,
-        "usage: hlslparser [-h|-g] -i shader.hlsl -o [shader.hlsl | shader.metal]\n"
-		 "Translate DX9-style HLSL shader to HLSL/MSL shader.\n"
-         " -i          input HLSL\n"
-         " -o          output HLSL or MSL\n"
-		 "optional arguments:\n"
-         " -g          debug mode, preserve comments\n"
-         " -h, --help  show this help message and exit\n"
-         " -line       write #file/line directive\n"
-         " -nohalf     turn half into float"
-		);
+    fprintf(stderr,
+            "usage: hlslparser [-h|-g] -i shader.hlsl -o [shader.hlsl | shader.metal]\n"
+            "Translate DX9-style HLSL shader to HLSL/MSL shader.\n"
+            " -i          input HLSL\n"
+            " -o          output HLSL or MSL\n"
+            "optional arguments:\n"
+            " -g          debug mode, preserve comments\n"
+            " -h, --help  show this help message and exit\n"
+            " -line       write #file/line directive\n"
+            " -nohalf     turn half into float");
 }
 
 // Taken from KrmaLog.cpp
@@ -61,12 +59,12 @@ static bool endsWith(const string& value, const string& ending)
     if (value.size() < ending.size())
         return false;
     uint32_t start = (uint32_t)(value.size() - ending.size());
-        
+
     for (uint32_t i = 0; i < ending.size(); ++i) {
         if (value[start + i] != ending[i])
             return false;
     }
-    
+
     return true;
 }
 
@@ -77,221 +75,193 @@ static string filenameNoExtension(const char* filename)
     if (dotPosStr == nullptr)
         return filename;
     auto dotPos = dotPosStr - filename;
-    
+
     // now chop off the extension
     string filenameNoExt = filename;
     return filenameNoExt.substr(0, dotPos);
 }
 
-int main( int argc, char* argv[] )
+int main(int argc, char* argv[])
 {
-	using namespace M4;
+    using namespace M4;
 
-	// Parse arguments
-	string fileName;
-	const char* entryName = NULL;
+    // Parse arguments
+    string fileName;
+    const char* entryName = NULL;
 
-	// TODO: could we take modern DX12 HLSL and translate to MSL only
-	// That would simplify all this.  What spirv-cross already does though.
-	// Could drop HLSLGenerator then, and just use this to gen MSL.
-	// Much of the glue code can just be in a header, but having it
-	// in parser, lets this only splice code that is needed.
+    // TODO: could we take modern DX12 HLSL and translate to MSL only
+    // That would simplify all this.  What spirv-cross already does though.
+    // Could drop HLSLGenerator then, and just use this to gen MSL.
+    // Much of the glue code can just be in a header, but having it
+    // in parser, lets this only splice code that is needed.
 
-	Language language = Language_MSL;
-	HLSLTarget target = HLSLTarget_PixelShader;
+    Language language = Language_MSL;
+    HLSLTarget target = HLSLTarget_PixelShader;
     string outputFileName;
     bool isDebug = false;
     bool isTreatHalfAsFloat = false;
     bool isWriteFileLine = false;
-    
-	for( int argn = 1; argn < argc; ++argn )
-	{
-		const char* const arg = argv[ argn ];
 
-		if( String_Equal( arg, "-h" ) || String_Equal( arg, "--help" ) )
-		{
-			PrintUsage();
-			return 0;
-		}
-		
-        else if( String_Equal( arg, "-o" ) || String_Equal( arg, "-output" ) )
-        {
-            if ( ++argn < argc )
-                outputFileName = argv[ argn ];
+    for (int argn = 1; argn < argc; ++argn) {
+        const char* const arg = argv[argn];
+
+        if (String_Equal(arg, "-h") || String_Equal(arg, "--help")) {
+            PrintUsage();
+            return 0;
         }
-        else if( String_Equal( arg, "-i" ) || String_Equal( arg, "-input" ) )
-		{
-            if ( ++argn < argc )
-                fileName = argv[ argn ];
-		}
-        else if ( String_Equal( arg, "-g" ))
-        {
+
+        else if (String_Equal(arg, "-o") || String_Equal(arg, "-output")) {
+            if (++argn < argc)
+                outputFileName = argv[argn];
+        }
+        else if (String_Equal(arg, "-i") || String_Equal(arg, "-input")) {
+            if (++argn < argc)
+                fileName = argv[argn];
+        }
+        else if (String_Equal(arg, "-g")) {
             // will preserve double-slash comments where possible
             isDebug = true;
         }
-        else if ( String_Equal( arg, "-nohalf" ))
-        {
+        else if (String_Equal(arg, "-nohalf")) {
             // will preserve double-slash comments where possible
             isTreatHalfAsFloat = true;
         }
-        else if ( String_Equal( arg, "-line" ))
-        {
+        else if (String_Equal(arg, "-line")) {
             // will preserve double-slash comments where possible
             isWriteFileLine = true;
         }
-        
-// This is derived from end characters of entry point
-//        else if( String_Equal( arg, "-vs" ) )
-//        {
-//            target = HLSLTarget_VertexShader;
-//        }
-//        else if( String_Equal( arg, "-fs" ) )
-//        {
-//            target = HLSLTarget_PixelShader;
-//        }
- // TODO: require a arg to set entryName
-//		else if( entryName == NULL )
-//		{
-//			entryName = arg;
-//		}
-		else
-		{
-			Log_Error( "Too many arguments\n" );
-			PrintUsage();
-			return 1;
-		}
-	}
 
-	if( fileName.empty() )
-	{
-		Log_Error( "Missing source filename\n" );
-		PrintUsage();
-		return 1;
-	}
-    if( !endsWith( fileName, "hlsl" ) )
-    {
-        Log_Error( "Input filename must end with .hlsl\n" );
+        // This is derived from end characters of entry point
+        //        else if( String_Equal( arg, "-vs" ) )
+        //        {
+        //            target = HLSLTarget_VertexShader;
+        //        }
+        //        else if( String_Equal( arg, "-fs" ) )
+        //        {
+        //            target = HLSLTarget_PixelShader;
+        //        }
+        // TODO: require a arg to set entryName
+        //		else if( entryName == NULL )
+        //		{
+        //			entryName = arg;
+        //		}
+        else {
+            Log_Error("Too many arguments\n");
+            PrintUsage();
+            return 1;
+        }
+    }
+
+    if (fileName.empty()) {
+        Log_Error("Missing source filename\n");
         PrintUsage();
         return 1;
     }
-    
-    if( outputFileName.empty() )
-    {
-        Log_Error( "Missing dest filename\n" );
+    if (!endsWith(fileName, "hlsl")) {
+        Log_Error("Input filename must end with .hlsl\n");
         PrintUsage();
         return 1;
     }
-    if( endsWith( outputFileName, "hlsl" ) )
-    {
+
+    if (outputFileName.empty()) {
+        Log_Error("Missing dest filename\n");
+        PrintUsage();
+        return 1;
+    }
+    if (endsWith(outputFileName, "hlsl")) {
         language = Language_HLSL;
     }
-    else if( endsWith( outputFileName, "metal" ) )
-    {
+    else if (endsWith(outputFileName, "metal")) {
         language = Language_MSL;
     }
-    else
-    {
-        Log_Error( "Output file must end with .hlsl or msls\n" );
+    else {
+        Log_Error("Output file must end with .hlsl or msls\n");
         PrintUsage();
         return 1;
     }
-    
+
     // replace the extension on the output file
-    outputFileName = filenameNoExtension( outputFileName.c_str() );
-    
+    outputFileName = filenameNoExtension(outputFileName.c_str());
+
     // Allow a mix of shaders in file.
     // Code now finds entry points.
     // outputFileName += (target == HLSLTarget_PixelShader) ? "PS" : "VS";
-    
-    if ( language == Language_MSL )
-    {
+
+    if (language == Language_MSL) {
         outputFileName += ".metal";
     }
-    else if ( language == Language_HLSL )
-    {
+    else if (language == Language_HLSL) {
         outputFileName += ".hlsl";
     }
-    
+
     // Win build on github is failing on this, so skip for now
     // find  full pathname of the fileName, so that errors are logged
     // in way that can be clicked to. absolute includes .. in it, canonical does not.
     std::error_code errorCode; // To shutup exceptions
     auto path = filesystem::path(fileName);
     fileName = filesystem::canonical(path, errorCode).generic_string();
-    
+
     // if this file doesn't exist, then canonical throws exception
     path = filesystem::path(outputFileName);
-    if (filesystem::exists(path))
-    {
+    if (filesystem::exists(path)) {
         outputFileName = filesystem::canonical(path, errorCode).generic_string();
-        
-        if ( outputFileName == fileName )
-        {
-            Log_Error( "Src and Dst filenames match.  Exiting.\n" );
+
+        if (outputFileName == fileName) {
+            Log_Error("Src and Dst filenames match.  Exiting.\n");
             return 1;
         }
     }
-    
+
     //------------------------------------
     // Now start the work
-    
-	// Read input file
+
+    // Read input file
     string source;
-    if (!ReadFile( fileName.c_str(), source ))
-    {
-        Log_Error( "Input file not found\n" );
+    if (!ReadFile(fileName.c_str(), source)) {
+        Log_Error("Input file not found\n");
         return 1;
     }
 
-	// Parse input file
-	Allocator allocator;
-	HLSLParser parser( &allocator, fileName.c_str(), source.data(), source.size() );
-    if (isDebug)
-    {
+    // Parse input file
+    Allocator allocator;
+    HLSLParser parser(&allocator, fileName.c_str(), source.data(), source.size());
+    if (isDebug) {
         parser.SetKeepComments(true);
     }
-	HLSLTree tree( &allocator );
-    
+    HLSLTree tree(&allocator);
+
     // TODO: tie this to CLI, MSL should set both to true
     HLSLParserOptions parserOptions;
     parserOptions.isHalfst = true;
     parserOptions.isHalfio = true;
-    
-	if( !parser.Parse( &tree, parserOptions ) )
-	{
-		Log_Error( "Parsing failed\n" );
-		return 1;
-	}
-    
+
+    if (!parser.Parse(&tree, parserOptions)) {
+        Log_Error("Parsing failed\n");
+        return 1;
+    }
+
     int status = 0;
-    
+
     // build a list of entryPoints
     Array<const char*> entryPoints(&allocator);
-    if (entryName != nullptr)
-    {
+    if (entryName != nullptr) {
         entryPoints.PushBack(entryName);
     }
-    else
-    {
+    else {
         // search all functions with designated endings
         HLSLStatement* statement = tree.GetRoot()->statement;
-        while (statement != NULL)
-        {
-            if (statement->nodeType == HLSLNodeType_Function)
-            {
+        while (statement != NULL) {
+            if (statement->nodeType == HLSLNodeType_Function) {
                 HLSLFunction* function = (HLSLFunction*)statement;
                 const char* name = function->name;
-                
-                if (endsWith(name, "VS"))
-                {
+
+                if (endsWith(name, "VS")) {
                     entryPoints.PushBack(name);
                 }
-                else if (endsWith(name, "PS"))
-                {
+                else if (endsWith(name, "PS")) {
                     entryPoints.PushBack(name);
                 }
-                else if (endsWith(name, "CS"))
-                {
+                else if (endsWith(name, "CS")) {
                     entryPoints.PushBack(name);
                 }
             }
@@ -299,11 +269,10 @@ int main( int argc, char* argv[] )
             statement = statement->nextStatement;
         }
     }
-    
+
     string output;
-    
-    for (uint32_t i = 0; i < (uint32_t)entryPoints.GetSize(); ++i)
-    {
+
+    for (uint32_t i = 0; i < (uint32_t)entryPoints.GetSize(); ++i) {
         const char* entryPoint = entryPoints[i];
         entryName = entryPoint;
         if (endsWith(entryPoint, "VS"))
@@ -312,67 +281,59 @@ int main( int argc, char* argv[] )
             target = HLSLTarget_PixelShader;
         else if (endsWith(entryPoint, "CS"))
             target = HLSLTarget_ComputeShader;
-            
+
         // Generate output
-        if (language == Language_HLSL)
-        {
+        if (language == Language_HLSL) {
             HLSLOptions options;
             options.writeFileLine = isWriteFileLine;
             options.treatHalfAsFloat = isTreatHalfAsFloat;
             options.writeVulkan = true; // TODO: tie to CLI
-            
+
             HLSLGenerator generator;
-            if (generator.Generate( &tree, target, entryName, options))
-            {
+            if (generator.Generate(&tree, target, entryName, options)) {
                 // write the buffer out
                 output += generator.GetResult();
             }
-            else
-            {
-                Log_Error( "Translation failed, aborting\n" );
+            else {
+                Log_Error("Translation failed, aborting\n");
                 status = 1;
             }
         }
-        else if (language == Language_MSL)
-        {
+        else if (language == Language_MSL) {
             MSLOptions options;
             options.writeFileLine = isWriteFileLine;
             options.treatHalfAsFloat = isTreatHalfAsFloat;
-            
+
             MSLGenerator generator;
-            if (generator.Generate(&tree, target, entryName, options))
-            {
+            if (generator.Generate(&tree, target, entryName, options)) {
                 // write the buffer out
                 output += generator.GetResult();
             }
-            else
-            {
-                Log_Error( "Translation failed, aborting\n" );
+            else {
+                Log_Error("Translation failed, aborting\n");
                 status = 1;
             }
         }
-        
+
         if (status != 0)
             break;
     }
-    
-    if (status == 0)
-    {
+
+    if (status == 0) {
         // using wb to avoid having Win convert \n to \r\n
-        FILE* fp = fopen( outputFileName.c_str(), "wb" );
-        if ( !fp )
-        {
-            Log_Error( "Could not open output file %s\n", outputFileName.c_str() );
+        FILE* fp = fopen(outputFileName.c_str(), "wb");
+        if (!fp) {
+            Log_Error("Could not open output file %s\n", outputFileName.c_str());
             return 1;
         }
-        
+
         fprintf(fp, "%s", output.c_str());
-        fclose( fp );
+        fclose(fp);
     }
-        
+
     // It's not enough to return 1 from main, but set exit code.
     if (status)
         exit(status);
-    
+
     return status;
 }

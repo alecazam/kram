@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#include "KramLib.h"  // for MyMTLPixelFormat
+#include "KramLib.h" // for MyMTLPixelFormat
 //#include <string>
 //#include <simd/simd.h>
 
@@ -53,13 +53,13 @@ enum ShapeChannel {
 
     ShapeChannelUV0,
 
-    ShapeChannelFaceNormal,  // gen from dfdx and dfdy
+    ShapeChannelFaceNormal, // gen from dfdx and dfdy
 
-    ShapeChannelNormal,  // vertex normal
+    ShapeChannelNormal, // vertex normal
     ShapeChannelTangent,
     ShapeChannelBitangent,
 
-    ShapeChannelMipLevel,  // can estimate mip chose off dfdx/dfdy, and pseudocolor
+    ShapeChannelMipLevel, // can estimate mip chose off dfdx/dfdy, and pseudocolor
 
     // don't need bump, since can already see it, but what if combined diffuse +
     // normal ShapeChannelBumpNormal,
@@ -68,22 +68,21 @@ enum ShapeChannel {
 };
 
 enum LightingMode {
-    LightingModeDiffuse = 0,   // amb + diffuse
-    LightingModeSpecular = 1,  // amb + diffuse + specular
-    LightingModeNone = 2,      // no lighting, just mips
-    
+    LightingModeDiffuse = 0, // amb + diffuse
+    LightingModeSpecular = 1, // amb + diffuse + specular
+    LightingModeNone = 2, // no lighting, just mips
+
     LightingModeCount,
 };
 
-struct Atlas
-{
+struct Atlas {
     string name;
-    float x,y,w,h;
-    float u,v; // padding - to both or just left or right?
+    float x, y, w, h;
+    float u, v; // padding - to both or just left or right?
     bool isVertical;
     uint32_t level;
-    
-    float4 rect() const { return float4m(x,y,w,h); }
+
+    float4 rect() const { return float4m(x, y, w, h); }
 };
 
 class ShowSettings {
@@ -112,15 +111,15 @@ public:
 
     // DONE: hook all these up to shader and view
     bool isHudShown = true;
-    
+
     bool isHideUI = false;
     bool isVerticalUI = true;
-    
+
     bool isPlayAnimations = false;
-    
+
     // Can get a dump of perf (mostly loading a decode/transcode perf)
     bool isPerf = false;
-    
+
     // transparency checkboard under the image
     bool isCheckerboardShown = false;
 
@@ -147,17 +146,17 @@ public:
     bool isSwizzleAGToRG = false;
     //bool isSDF = false;
     TexContentType texContentType = TexContentTypeUnknown;
-    
+
     // this mode shows the content with lighting or with bilinear/mips active
     bool isPreview = false;
 
     // Can collapse 3d to 2d and overlay the uv
     bool isUVPreview = false;
-    
+
     uint32_t uvPreviewFrames = 0;
     float uvPreviewStep = 1.0f / 10.0f;
     float uvPreview = 0.0f;
-    
+
     // the 2d view doesn't want to inset pixels for clamp, or point sampling is
     // thrown off expecially on small 4x4 textures
 #if USE_PERSPECTIVE
@@ -165,7 +164,7 @@ public:
 #else
     bool is3DView = false;
 #endif
-    
+
     // TODO: Might eliminate this, since mips are either built with or without
     // srgb and disabling with a MTLView caused many flags to have to be set on
     // MTLTexture
@@ -176,13 +175,13 @@ public:
 
     // image vs. gltf model
     bool isModel = false;
-    
+
     // if diff texture available, can show diff against source
     bool isDiff = false;
-    
+
     // currently loading the diff texture if found, this slows loads
     bool hasDiffTexture = false;
-    
+
     // can sample from drawable or from single source texture
     bool isEyedropperFromDrawable();
 
@@ -191,11 +190,11 @@ public:
 
     // this could be boundary of all visible images, so that pan doesn't go flying
     // off to nowhere
-    int32_t imageBoundsX = 0;  // px
-    int32_t imageBoundsY = 0;  // px
+    int32_t imageBoundsX = 0; // px
+    int32_t imageBoundsY = 0; // px
 
     bool outsideImageBounds = false;
-    
+
     // size of the block, used in block grid drawing
     int32_t blockX = 1;
     int32_t blockY = 1;
@@ -220,8 +219,8 @@ public:
     float4 textureResult;
 
     // size of the view and its contentScaleFactor
-    int32_t viewSizeX = 1;  // px
-    int32_t viewSizeY = 1;  // px
+    int32_t viewSizeX = 1; // px
+    int32_t viewSizeY = 1; // px
     float viewContentScaleFactor = 1.0f;
 
     // cursor is in view coordinates, but doesn't include contentScaleFactor
@@ -258,43 +257,45 @@ public:
     void advanceShapeChannel(bool decrement);
     void advanceLightingMode(bool decrement);
 
-    const char *meshNumberText() const;
-    const char *shapeChannelText() const;
-    const char *debugModeText() const;
-    const char *lightingModeText() const;
-    
-    const char *meshNumberName(uint32_t meshNumber) const;
-    
+    const char* meshNumberText() const;
+    const char* shapeChannelText() const;
+    const char* debugModeText() const;
+    const char* lightingModeText() const;
+
+    const char* meshNumberName(uint32_t meshNumber) const;
+
     void updateUVPreviewState();
-    
-    float imageAspectRatio() const {
+
+    float imageAspectRatio() const
+    {
         float ar = 1.0f;
         if (meshNumber == 0 && !isModel && imageBoundsY > 0)
             ar = imageBoundsX / (float)imageBoundsY;
         return ar;
     }
-    
-    bool isFileNew(const char* fullFilename) const {
+
+    bool isFileNew(const char* fullFilename) const
+    {
         return lastFilename != fullFilename;
     }
-    bool isFileChanged(const char* fullFilename, double timestamp) const {
+    bool isFileChanged(const char* fullFilename, double timestamp) const
+    {
         // Note that modstamp can change, but content data hash may be the same
         return isFileNew(fullFilename) || (timestamp != lastTimestamp);
     }
-    
+
     string lastFilename;
     double lastTimestamp = 0.0;
 
     int32_t meshNumber = 0;
     int32_t meshCount = 5;
-    
+
     const Atlas* lastAtlas = nullptr; // Might move to index
     vector<Atlas> atlas;
 };
 
-void printChannels(string &tmp, const string &label, float4 c,
+void printChannels(string& tmp, const string& label, float4 c,
                    int32_t numChannels, bool isFloat, bool isSigned);
-
 
 enum Key {
     A = 0x00,
@@ -352,7 +353,7 @@ enum Key {
     RightArrow = 0x7C,
     DownArrow = 0x7D,
     UpArrow = 0x7E,
-    
+
     Space = 0x31,
     Escape = 0x35,
 };
@@ -364,7 +365,7 @@ class Action {
 public:
     Action(const char* icon_, const char* tip_, Key keyCode_)
         : icon(icon_), tip(tip_), keyCode(keyCode_) {}
-    
+
     const char* icon;
     const char* tip;
 
@@ -372,11 +373,11 @@ public:
     kram_id button; // NSButton*
     kram_id menuItem; // NSMenuItem*
     Key keyCode;
-    
+
     bool isHighlighted = false;
     bool isHidden = false;
     bool isButtonDisabled = false;
-    
+
     // This have platform impl
     void setHighlight(bool enable);
     void setHidden(bool enable);
@@ -387,46 +388,44 @@ public:
 struct FileContainer {
     // allow zip files to be dropped and opened, and can advance through bundle
     // content.
-    
+
     // TODO: Add FileHelper if acrhive file is networked, but would require
     // full load to memory.
-    
+
     ZipHelper zip;
     MmapHelper zipMmap;
 };
 
-struct ActionState
-{
+struct ActionState {
     string hudText;
     bool isChanged;
     bool isStateChanged;
 };
 
-enum TextSlot
-{
+enum TextSlot {
     kTextSlotHud,
     kTextSlotEyedropper,
     kTextSlotAtlas,
-    
+
     kTextSlotCount // not a slot
 };
 
 struct File {
 public:
     File(const char* name_, int32_t urlIndex_);
-    
+
     // Note: not sorting by urlIndex currently
-    bool operator <(const File& rhs) const
+    bool operator<(const File& rhs) const
     {
         // sort by shortname
         int compare = strcasecmp(nameShort.c_str(), rhs.nameShort.c_str());
-        if ( compare != 0 )
+        if (compare != 0)
             return compare < 0;
-        
+
         // if equal, then sort by longname
         return strcasecmp(name.c_str(), rhs.name.c_str()) < 0;
     }
-    
+
 public:
     string name;
     int32_t urlIndex;
@@ -434,14 +433,13 @@ public:
 };
 
 // This allows wrapping all the ObjC stuff
-struct DataDelegate
-{
+struct DataDelegate {
     bool loadFile(bool clear = false);
-    
+
     bool loadModelFile(const char* filename);
-   
+
     bool loadTextureFromImage(const char* fullFilename, double timestamp, KTXImage& image, KTXImage* imageNormal, KTXImage* imageDiff, bool isArchive);
-    
+
 public:
     kram_id view; // MyMTKView*
 };
@@ -449,11 +447,11 @@ public:
 struct Data {
     Data();
     ~Data();
-    
+
     void clearAtlas();
     bool loadAtlasFile(const char* filename);
     bool listFilesInArchive(int32_t urlIndex);
-    bool openArchive(const char * zipFilename, int32_t urlIndex);
+    bool openArchive(const char* zipFilename, int32_t urlIndex);
 
     bool hasCounterpart(bool increment);
     bool advanceCounterpart(bool increment);
@@ -465,7 +463,7 @@ struct Data {
     const Atlas* findAtlasAtUV(float2 uv);
     bool isArchive() const;
     bool loadFile();
-    
+
     bool handleEventAction(const Action* action, bool isShiftKeyDown, ActionState& actionState);
     void updateUIAfterLoad();
     void updateUIControlState();
@@ -476,7 +474,7 @@ struct Data {
 
     void setLoadedText(string& text);
     void setFailedText(const string& filename, string& text);
-    
+
     void initActions();
     vector<Action>& actions() { return _actions; }
     void initDisabledButtons();
@@ -490,9 +488,9 @@ struct Data {
 
     // See these to split off ObjC code
     DataDelegate _delegate;
-    
+
     void updateEyedropper();
-    
+
     float4x4 computeImageTransform(float panX, float panY, float zoom);
     void updateProjTransform();
     void resetSomeImageSettings(bool isNewFile);
@@ -501,22 +499,22 @@ struct Data {
     void doZoomMath(float newZoom, float2& newPan);
 
     void setPerfDirectory(const char* directory);
-    
+
 private:
     bool loadFileFromArchive();
 
 public:
     void showEyedropperData(const float2& uv);
-    void setEyedropperText(const char * text);
-    void setAtlasText(const char * text);
+    void setEyedropperText(const char* text);
+    void setAtlasText(const char* text);
     void updateTransforms();
-   
+
     //----------------
     float4x4 _projectionMatrix;
-    
+
     float4x4 _projectionViewMatrix;
     float3 _cameraPosition;
-    
+
     float4x4 _viewMatrix;
     float4x4 _viewMatrix2D;
     float4x4 _viewMatrix3D;
@@ -528,42 +526,42 @@ public:
     float4x4 _modelMatrix3D;
 
     //----------------
-    
+
     vector<string> _textSlots;
     ShowSettings* _showSettings = nullptr;
 
     bool _noImageLoaded = true;
     string _archiveName; // archive or blank
-    
+
     // folders and archives and multi-drop files are filled into this
     vector<File> _files;
     int32_t _fileIndex = 0;
-   
+
     // One of these per url in _urlss
     vector<FileContainer*> _containers;
     vector<string> _urls;
-    
+
     Action* _actionPlay;
     Action* _actionShapeUVPreview;
     Action* _actionHelp;
     Action* _actionInfo;
     Action* _actionHud;
     Action* _actionShowAll;
-    
+
     Action* _actionPreview;
     Action* _actionWrap;
     Action* _actionPremul;
     Action* _actionSigned;
     Action* _actionSrgb;
     Action* _actionPerf;
-    
+
     Action* _actionDiff;
     Action* _actionDebug;
     Action* _actionGrid;
     Action* _actionChecker;
     Action* _actionHideUI;
     Action* _actionVertical;
-    
+
     Action* _actionMip;
     Action* _actionFace;
     Action* _actionArray;
@@ -573,17 +571,17 @@ public:
     Action* _actionPrevCounterpart;
     Action* _actionReload;
     Action* _actionFit;
-    
+
     Action* _actionShapeMesh;
     Action* _actionShapeChannel;
     Action* _actionLighting;
     Action* _actionTangent;
-    
+
     Action* _actionR;
     Action* _actionG;
     Action* _actionB;
     Action* _actionA;
-    
+
     vector<Action> _actions;
 };
 
@@ -593,4 +591,4 @@ bool isSupportedJsonFilename(const char* filename);
 
 //extern bool doPrintPanZoom;
 
-}  // namespace kram
+} // namespace kram

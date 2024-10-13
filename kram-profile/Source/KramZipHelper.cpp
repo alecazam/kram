@@ -2,10 +2,10 @@
 
 #include <algorithm>
 //#include <iterator> // for copy_if on Win
-#include <vector>
+#include <mutex>
 #include <string>
 #include <unordered_map>
-#include <mutex>
+#include <vector>
 
 #include "miniz.h"
 
@@ -75,19 +75,20 @@ int32_t append_sprintf(string& str, const char* format, ...)
 }
 
 // This is extracted from CBA Analysis.cpp
-extern "C" const char* _Nullable collapseFunctionName(const char* _Nonnull name_) {
+extern "C" const char* _Nullable collapseFunctionName(const char* _Nonnull name_)
+{
     // Adapted from code in Analysis.  Really the only call needed from CBA.
     // serialize to multiple threads
     static mutex sMutex;
     static unordered_map<string, string> sMap;
     lock_guard<mutex> lock(sMutex);
-    
+
     string elt(name_);
     auto it = sMap.find(elt);
     if (it != sMap.end()) {
         return it->second.c_str();
     }
-    
+
     // Parsing op<, op<<, op>, and op>> seems hard.  Just skip'm all
     if (strstr(name_, "operator") != nullptr)
         return nullptr;
@@ -96,9 +97,8 @@ extern "C" const char* _Nullable collapseFunctionName(const char* _Nonnull name_
     retval.reserve(elt.size());
     auto b_range = elt.begin();
     auto e_range = elt.begin();
-    while (b_range != elt.end())
-    {
-       e_range = std::find(b_range, elt.end(), '<');
+    while (b_range != elt.end()) {
+        e_range = std::find(b_range, elt.end(), '<');
         if (e_range == elt.end())
             break;
         ++e_range;
@@ -107,17 +107,13 @@ extern "C" const char* _Nullable collapseFunctionName(const char* _Nonnull name_
         b_range = e_range;
         int open_count = 1;
         // find the matching close angle bracket
-        for (; b_range != elt.end(); ++b_range)
-        {
-            if (*b_range == '<')
-            {
+        for (; b_range != elt.end(); ++b_range) {
+            if (*b_range == '<') {
                 ++open_count;
                 continue;
             }
-            if (*b_range == '>')
-            {
-                if (--open_count == 0)
-                {
+            if (*b_range == '>') {
+                if (--open_count == 0) {
                     break;
                 }
                 continue;
@@ -125,41 +121,40 @@ extern "C" const char* _Nullable collapseFunctionName(const char* _Nonnull name_
         }
         // b_range is now pointing at a close angle, or it is at the end of the string
     }
-    if (b_range > e_range)
-    {
-       // we are in a wacky case where something like op> showed up in a mangled name.
-       // just bail.
-       // TODO: this still isn't correct, but it avoids crashes.
-       return nullptr;
+    if (b_range > e_range) {
+        // we are in a wacky case where something like op> showed up in a mangled name.
+        // just bail.
+        // TODO: this still isn't correct, but it avoids crashes.
+        return nullptr;
     }
     // append the footer
     retval.append(b_range, e_range);
-    
+
     // add it to the map
     sMap[elt] = std::move(retval);
-    
+
     return sMap[elt].c_str();
 }
 
-extern "C" const char* _Nullable demangleSymbolName(const char* _Nonnull symbolName_) {
+extern "C" const char* _Nullable demangleSymbolName(const char* _Nonnull symbolName_)
+{
     // serialize to multiple threads
     static mutex sMutex;
     static unordered_map<string, const char*> sSymbolToDemangleName;
     lock_guard<mutex> lock(sMutex);
-    
+
     string symbolName(symbolName_);
     auto it = sSymbolToDemangleName.find(symbolName);
     if (it != sSymbolToDemangleName.end()) {
         return it->second;
     }
-    
+
     // see CBA if want a generalized demangle for Win/Linux
     size_t size = 0;
     int status = 0;
     char* symbol = abi::__cxa_demangle(symbolName.c_str(), nullptr, &size, &status);
     const char* result = nullptr;
     if (status == 0) {
-        
         sSymbolToDemangleName[symbolName] = symbol;
         result = symbol;
         // not freeing the symbols here
@@ -172,10 +167,10 @@ extern "C" const char* _Nullable demangleSymbolName(const char* _Nonnull symbolN
         // status = -2 on most of the mangled Win clang-cli symbols.  Nice one
         // Microsoft.
         //result = symbolName_;
-        
+
         result = nullptr;
     }
-    
+
     return result;
 }
 
@@ -286,13 +281,13 @@ void ZipHelper::initZipEntryTables()
 
         ZipEntry& zipEntry = _zipEntrys[index];
         zipEntry.fileIndex = stat.m_file_index;
-        zipEntry.filename = filename;  // can alias
+        zipEntry.filename = filename; // can alias
         zipEntry.uncompressedSize = stat.m_uncomp_size;
         zipEntry.compressedSize = stat.m_comp_size;
-        zipEntry.modificationDate = (int32_t)stat.m_time;  // really a time_t
-        #undef crc32
+        zipEntry.modificationDate = (int32_t)stat.m_time; // really a time_t
+#undef crc32
         zipEntry.crc32 = stat.m_crc32;
-        
+
         // TODO: stat.m_time, state.m_crc32
 
         index++;
@@ -356,14 +351,13 @@ bool ZipHelper::extract(const char* filename, uint8_t* bufferData, uint64_t buff
     if (bufferDataSize < entry->uncompressedSize) {
         return false;
     }
-    
+
     if (!extract(*entry, bufferData, bufferDataSize)) {
         return false;
     }
 
     return true;
 }
-
 
 bool ZipHelper::extractPartial(const char* filename, vector<uint8_t>& buffer) const
 {
@@ -399,9 +393,9 @@ bool ZipHelper::extract(const ZipEntry& entry, void* buffer, uint64_t bufferSize
     // https://dougallj.wordpress.com/2022/08/20/faster-zlib-deflate-decompression-on-the-apple-m1-and-x86/
 
     // https://developer.apple.com/documentation/compression/1481000-compression_decode_buffer?language=objc
-    
+
     // This call is internal, so caller has already tested failure cases.
-    
+
 #if USE_LIBCOMPRESSION
     const uint8_t* data = mz_zip_reader_get_raw_data(zip.get(), entry.fileIndex);
     if (!data) {
@@ -409,20 +403,19 @@ bool ZipHelper::extract(const ZipEntry& entry, void* buffer, uint64_t bufferSize
     }
     // need to extra data and header
     char scratchBuffer[compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)];
-    
+
     uint64_t bytesDecoded = compression_decode_buffer(
         (uint8_t*)buffer, entry.uncompressedSize,
         (const uint8_t*)data, entry.compressedSize,
         scratchBuffer,
         COMPRESSION_ZLIB);
-    
+
     bool success = false;
-    if (bytesDecoded == entry.uncompressedSize)
-    {
+    if (bytesDecoded == entry.uncompressedSize) {
         success = true;
     }
 #else
-    
+
     // this pulls pages from mmap, no allocations
     mz_bool success = mz_zip_reader_extract_to_mem(
         zip.get(), entry.fileIndex, buffer, bufferSize, 0);
@@ -452,7 +445,7 @@ bool ZipHelper::extractRaw(const char* filename, const uint8_t** bufferData, uin
     }
 
     *bufferData = data;
-    
+
     // This isn't correct, need to return comp_size.
     // Caller may need the uncompressed size though to decompress fully into.
     //bufferDataSize = stat.m_uncomp_size;
@@ -461,4 +454,4 @@ bool ZipHelper::extractRaw(const char* filename, const uint8_t** bufferData, uin
     return true;
 }
 
-}  // namespace kram
+} // namespace kram
