@@ -39,6 +39,8 @@
 #include <initializer_list>  // std::initializer_list
 #include <limits>            // std::numeric_limits
 #include <memory>            // std::uninitialized_copy
+
+// These use exceptions
 #include <stdexcept>         // std::runtime_error
 #include <system_error>      // std::system_error
 

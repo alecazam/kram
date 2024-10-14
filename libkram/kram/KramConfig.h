@@ -10,8 +10,10 @@
 #include <TargetConditionals.h>
 #if TARGET_OS_OSX
 #define KRAM_MAC 1
-#else
+#elif TARGET_OS_IOS
 #define KRAM_IOS 1
+#elif TARGET_OS_VISION
+#define KRAM_VISION 1
 #endif
 #elif __unix__
 #define KRAM_LINUX 1
@@ -29,6 +31,9 @@
 #endif
 #ifndef KRAM_IOS
 #define KRAM_IOS 0
+#endif
+#ifndef KRAM_VISION
+#define KRAM_VISION 0
 #endif
 
 // TODO: add Profile build (rename RelWithDbgInfo)
@@ -75,7 +80,7 @@
 // SIMD_WORKSPACE is set
 
 // can't have ATE defined to 1 on other platforms
-#if !(KRAM_MAC || KRAM_IOS)
+#if !(KRAM_MAC || KRAM_IOS) // || KRAM_VISION
 #undef COMPILE_ATE
 #endif
 
@@ -187,7 +192,7 @@
 //-------------------------
 // simd
 
-#if KRAM_MAC || KRAM_IOS
+#if KRAM_MAC || KRAM_IOS || KRAM_VISION
 // can use old or new
 #define USE_SIMDLIB 1
 

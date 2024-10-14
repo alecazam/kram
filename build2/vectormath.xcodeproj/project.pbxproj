@@ -39,6 +39,22 @@
 		70B687162CAD1072007ACA58 /* float4a.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FD2CAD1072007ACA58 /* float4a.h */; };
 		70B687172CAD1072007ACA58 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687072CAD1072007ACA58 /* sse2neon-arm64.h */; };
 		70B687182CAD1072007ACA58 /* double234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FB2CAD1072007ACA58 /* double234.h */; };
+		70E3BAC92CBCE81700F11926 /* vectormath234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687082CAD1072007ACA58 /* vectormath234.h */; };
+		70E3BACA2CBCE81700F11926 /* bounds234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70570FE42CB378E7005692BB /* bounds234.h */; };
+		70E3BACB2CBCE81700F11926 /* long234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687032CAD1072007ACA58 /* long234.h */; };
+		70E3BACC2CBCE81700F11926 /* sse2neon.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687062CAD1072007ACA58 /* sse2neon.h */; };
+		70E3BACD2CBCE81700F11926 /* sse_mathfun.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687052CAD1072007ACA58 /* sse_mathfun.h */; };
+		70E3BACE2CBCE81700F11926 /* float234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FF2CAD1072007ACA58 /* float234.h */; };
+		70E3BACF2CBCE81700F11926 /* half234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687012CAD1072007ACA58 /* half234.h */; };
+		70E3BAD02CBCE81700F11926 /* int234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687022CAD1072007ACA58 /* int234.h */; };
+		70E3BAD12CBCE81700F11926 /* float4a.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FD2CAD1072007ACA58 /* float4a.h */; };
+		70E3BAD22CBCE81700F11926 /* sse2neon-arm64.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B687072CAD1072007ACA58 /* sse2neon-arm64.h */; };
+		70E3BAD32CBCE81700F11926 /* double234.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B686FB2CAD1072007ACA58 /* double234.h */; };
+		70E3BAD52CBCE81700F11926 /* float234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687002CAD1072007ACA58 /* float234.cpp */; };
+		70E3BAD62CBCE81700F11926 /* double234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FC2CAD1072007ACA58 /* double234.cpp */; };
+		70E3BAD72CBCE81700F11926 /* vectormath234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B687092CAD1072007ACA58 /* vectormath234.cpp */; };
+		70E3BAD82CBCE81700F11926 /* bounds234.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70570FE72CB37997005692BB /* bounds234.cpp */; };
+		70E3BAD92CBCE81700F11926 /* float4a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B686FE2CAD1072007ACA58 /* float4a.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,6 +78,7 @@
 		70B687072CAD1072007ACA58 /* sse2neon-arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "sse2neon-arm64.h"; sourceTree = "<group>"; };
 		70B687082CAD1072007ACA58 /* vectormath234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vectormath234.h; sourceTree = "<group>"; };
 		70B687092CAD1072007ACA58 /* vectormath234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vectormath234.cpp; sourceTree = "<group>"; };
+		70E3BADE2CBCE81700F11926 /* libvectormath-vos.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libvectormath-vos.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +90,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		70B686F22CAD1026007ACA58 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70E3BADA2CBCE81700F11926 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -95,6 +119,7 @@
 			children = (
 				70B686F42CAD1026007ACA58 /* libvectormath.a */,
 				701AF1912CAD27CB00BD0886 /* libvectormath-ios.a */,
+				70E3BADE2CBCE81700F11926 /* libvectormath-vos.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -164,6 +189,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		70E3BAC82CBCE81700F11926 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70E3BAC92CBCE81700F11926 /* vectormath234.h in Headers */,
+				70E3BACA2CBCE81700F11926 /* bounds234.h in Headers */,
+				70E3BACB2CBCE81700F11926 /* long234.h in Headers */,
+				70E3BACC2CBCE81700F11926 /* sse2neon.h in Headers */,
+				70E3BACD2CBCE81700F11926 /* sse_mathfun.h in Headers */,
+				70E3BACE2CBCE81700F11926 /* float234.h in Headers */,
+				70E3BACF2CBCE81700F11926 /* half234.h in Headers */,
+				70E3BAD02CBCE81700F11926 /* int234.h in Headers */,
+				70E3BAD12CBCE81700F11926 /* float4a.h in Headers */,
+				70E3BAD22CBCE81700F11926 /* sse2neon-arm64.h in Headers */,
+				70E3BAD32CBCE81700F11926 /* double234.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
@@ -205,6 +248,25 @@
 			productReference = 70B686F42CAD1026007ACA58 /* libvectormath.a */;
 			productType = "com.apple.product-type.library.static";
 		};
+		70E3BAC72CBCE81700F11926 /* vectormath-vos */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70E3BADB2CBCE81700F11926 /* Build configuration list for PBXNativeTarget "vectormath-vos" */;
+			buildPhases = (
+				70E3BAC82CBCE81700F11926 /* Headers */,
+				70E3BAD42CBCE81700F11926 /* Sources */,
+				70E3BADA2CBCE81700F11926 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "vectormath-vos";
+			packageProductDependencies = (
+			);
+			productName = vectormath;
+			productReference = 70E3BADE2CBCE81700F11926 /* libvectormath-vos.a */;
+			productType = "com.apple.product-type.library.static";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -235,6 +297,7 @@
 			targets = (
 				70B686F32CAD1026007ACA58 /* vectormath */,
 				701AF17C2CAD27CB00BD0886 /* vectormath-ios */,
+				70E3BAC72CBCE81700F11926 /* vectormath-vos */,
 			);
 		};
 /* End PBXProject section */
@@ -264,6 +327,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		70E3BAD42CBCE81700F11926 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70E3BAD52CBCE81700F11926 /* float234.cpp in Sources */,
+				70E3BAD62CBCE81700F11926 /* double234.cpp in Sources */,
+				70E3BAD72CBCE81700F11926 /* vectormath234.cpp in Sources */,
+				70E3BAD82CBCE81700F11926 /* bounds234.cpp in Sources */,
+				70E3BAD92CBCE81700F11926 /* float4a.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
@@ -275,7 +350,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
 			};
 			name = Debug;
 		};
@@ -287,7 +361,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
 			};
 			name = Release;
 		};
@@ -360,6 +433,7 @@
 					"-mf16c",
 				);
 				SDKROOT = macosx;
+				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
 			name = Debug;
 		};
@@ -425,6 +499,7 @@
 					"-mf16c",
 				);
 				SDKROOT = macosx;
+				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
 			name = Release;
 		};
@@ -444,6 +519,28 @@
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		70E3BADC2CBCE81700F11926 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = xros;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		70E3BADD2CBCE81700F11926 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = xros;
 				SKIP_INSTALL = YES;
 			};
 			name = Release;
@@ -474,6 +571,15 @@
 			buildConfigurations = (
 				70B686F92CAD1026007ACA58 /* Debug */,
 				70B686FA2CAD1026007ACA58 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		70E3BADB2CBCE81700F11926 /* Build configuration list for PBXNativeTarget "vectormath-vos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70E3BADC2CBCE81700F11926 /* Debug */,
+				70E3BADD2CBCE81700F11926 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

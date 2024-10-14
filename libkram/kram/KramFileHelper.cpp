@@ -15,7 +15,7 @@
 
 #include "tmpfileplus.h"
 
-#if KRAM_MAC || KRAM_IOS || KRAM_LINUX
+#if KRAM_MAC || KRAM_IOS || KRAM_VISION || KRAM_LINUX
 #include <unistd.h> // for getpagesize()
 #endif
 
@@ -124,7 +124,7 @@ size_t FileHelper::pagesize()
 {
     static size_t pagesize = 0;
     if (pagesize == 0) {
-#if KRAM_MAC || KRAM_IOS || KRAM_LINUX
+#if KRAM_MAC || KRAM_IOS || KRAM_VISION || KRAM_LINUX
         pagesize = getpagesize();
 #elif KRAM_WIN
         // win has mostly 4k, then 1MB/2MB large page size

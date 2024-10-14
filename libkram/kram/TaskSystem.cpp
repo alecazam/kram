@@ -7,7 +7,7 @@
 #include <pthread/pthread.h>
 #include <pthread/qos.h>
 #include <sys/sysctl.h>
-#elif KRAM_IOS
+#elif KRAM_IOS || KRAM_VISION
 #include <pthread/qos.h>
 #include <sys/sysctl.h>
 #elif KRAM_WIN
@@ -86,7 +86,7 @@ static const CoreInfo& GetCoreInfo()
     coreInfo.logicalCoreCount = std::thread::hardware_concurrency();
     coreInfo.physicalCoreCount = coreInfo.logicalCoreCount;
 
-#if KRAM_IOS || KRAM_MAC
+#if KRAM_MAC || KRAM_IOS || KRAM_VISION
     // get big/little core counts
     // use sysctl -a from command line to see all
     size_t size = sizeof(coreInfo.bigCoreCount);
@@ -319,7 +319,7 @@ void getThreadName(std::thread::native_handle_type threadHandle, char name[kMaxT
 
 void setCurrentThreadName(const char* threadName)
 {
-#if KRAM_MAC || KRAM_IOS
+#if KRAM_MAC || KRAM_IOS || KRAM_VISION
     // can only set thread from thread on macOS, sucks
     int val = pthread_setname_np(threadName);
 #else
@@ -350,7 +350,7 @@ void getCurrentThreadName(char name[kMaxThreadName])
 
 //------------------
 
-#if KRAM_MAC || KRAM_IOS
+#if KRAM_MAC || KRAM_IOS || KRAM_VISION
 
 static void setThreadPriority(std::thread::native_handle_type handle, ThreadPriority priority)
 {
@@ -487,7 +487,7 @@ static void setThreadAffinity(std::thread::native_handle_type handle, uint32_t t
 
     bool success = false;
 
-#if KRAM_MAC || KRAM_IOS
+#if KRAM_MAC || KRAM_IOS || KRAM_VISION
     // no support, don't use thread_policy_set it's not on M1 and just a hint
     success = true;
 
@@ -622,7 +622,7 @@ static ThreadPriority getThreadPriority(std::thread::native_handle_type handle)
 {
     ThreadPriority priority = ThreadPriority::Default;
 
-#if KRAM_MAC || KRAM_IOS || KRAM_ANDROID
+#if KRAM_MAC || KRAM_IOS || KRAM_VISION || KRAM_ANDROID
     // Note: this doesn't handle qOS, and returns default priority
     // on those threads.
 

@@ -2,6 +2,8 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
+#if !KRAM_VISION // this is breaking link on visionOS
+
 #pragma once
 
 #include <cassert>
@@ -66,3 +68,5 @@ int32_t append_sprintf_fmt(string& s, const S& format, Args&&... args)
 }
 
 } // namespace kram
+
+#endif
