@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
-#if KRAM_MAC || KRAM_IOS || KRAM_VISION || KRAM_LINUX
+#if KRAM_APPLE || KRAM_LINUX
 #include <sys/mman.h>
 #include <unistd.h>
 #elif KRAM_WIN
@@ -56,7 +56,7 @@ bool MmapHelper::open(const char *filename)
     // need Windows equilvent of getpagesize() call before putting this back.  This was to use
     // with MTLBuffer no copy which has a strict page alignment requirement on start and size.
     //
-    //#if KRAM_MAC || KRAM_LINUX || KRAM_IOS
+    //#if KRAM_APPLE || KRAM_LINUX
     //    // pad it out to the page size (this can be 4k or 16k)
     //    // need this alignment, or it can't be converted to a MTLBuffer
     //    size_t pageSize = FileHelper::pagesize();

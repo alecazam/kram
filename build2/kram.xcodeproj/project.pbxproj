@@ -659,7 +659,6 @@
 		706EEE1A26D1583F001C950E /* KramTimer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramTimer.cpp; sourceTree = "<group>"; };
 		706EEE1B26D1583F001C950E /* KTXImage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KTXImage.cpp; sourceTree = "<group>"; };
 		706EEE1C26D1583F001C950E /* KramMipper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramMipper.cpp; sourceTree = "<group>"; };
-		706EEE1D26D1583F001C950E /* _clang-format */ = {isa = PBXFileReference; lastKnownFileType = text; path = "_clang-format"; sourceTree = "<group>"; };
 		706EEE1E26D1583F001C950E /* KramZipHelper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramZipHelper.cpp; sourceTree = "<group>"; };
 		706EEE1F26D1583F001C950E /* TaskSystem.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TaskSystem.cpp; sourceTree = "<group>"; };
 		706EEE2026D1583F001C950E /* KramSDFMipper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramSDFMipper.h; sourceTree = "<group>"; };
@@ -1219,7 +1218,6 @@
 				70D222DC2AD2132300B9EA23 /* ImmutableString.cpp */,
 				706EEE3826D1583F001C950E /* TaskSystem.h */,
 				706EEE1F26D1583F001C950E /* TaskSystem.cpp */,
-				706EEE1D26D1583F001C950E /* _clang-format */,
 			);
 			path = kram;
 			sourceTree = "<group>";

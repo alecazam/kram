@@ -6,7 +6,7 @@
 
 //#include <string>
 
-#if KRAM_MAC || KRAM_IOS || KRAM_VISION
+#if KRAM_APPLE
 #define KRAM_LOG_STACKTRACE KRAM_DEBUG
 #elif KRAM_WIN
 // TODO: need to debug code before enabling
@@ -33,7 +33,7 @@
 #elif KRAM_ANDROID
 #include <log.h>
 
-#elif KRAM_MAC || KRAM_IOS || KRAM_VISION
+#elif KRAM_APPLE
 #include <cxxabi.h> // demangle
 #include <dlfcn.h> // address to symbol
 #include <execinfo.h>
@@ -44,9 +44,9 @@
 #include "KramTimer.h"
 #include "TaskSystem.h"
 
-#if !KRAM_VISION // this is breaking link on visionOS
+//#if !KRAM_VISION // this is breaking link on visionOS
 #include "format.h" // really fmt/format.h
-#endif
+//#endif
 
 namespace kram {
 
@@ -442,7 +442,7 @@ string format(const char* format, ...)
 
 //----------------------------------
 
-#if !KRAM_VISION // this is breaking link on visionOS
+#if 1 // !KRAM_VISION // this is breaking link on visionOS
 
 static size_t my_formatted_size(fmt::string_view format, fmt::format_args args)
 {
@@ -929,7 +929,7 @@ static int32_t logMessageImpl(const LogMessage& msg)
     __android_log_write_log_message(msg);
 #else
 
-#if KRAM_MAC || KRAM_IOS || KRAM_VISION
+#if KRAM_APPLE
     // test os_log
 
     static bool useOSLog = true;
@@ -990,7 +990,7 @@ int32_t logMessage(const char* group, int32_t logLevel,
     void* dso = nullptr;
     void* logAddress = nullptr;
 
-#if KRAM_MAC || KRAM_IOS || KRAM_VISION
+#if KRAM_APPLE
     dso = &__dso_handle; // may need to come from call site for the mach_header of .o
     logAddress = __builtin_return_address(0); // or __builtin_frame_address(0))
 #elif KRAM_WIN
@@ -1050,7 +1050,7 @@ int32_t logMessage(const char* group, int32_t logLevel,
 // to have full source to impl to fix things in fmt.
 // https://fmt.dev/latest/api.html#_CPPv4IDpEN3fmt14formatted_sizeE6size_t13format_stringIDp1TEDpRR1T
 
-#if !KRAM_VISION // exceptions causing this not to link
+#if 1 // !KRAM_VISION // exceptions causing this not to link
 
 // TODO: can this use STL_NAMESPACE::string_view instead ?
 int32_t logMessage(const char* group, int32_t logLevel,
@@ -1060,7 +1060,7 @@ int32_t logMessage(const char* group, int32_t logLevel,
     // TODO: size_t size = std::formatted_size(format, args);
     // and then reserve that space in str.  Use that for impl of append_format.
     // can then append to existing string (see vsprintf)
-#if KRAM_MAC || KRAM_IOS || KRAM_VISION
+#if KRAM_APPLE
     void* dso = &__dso_handle;
     void* logAddress = __builtin_return_address(0); // or __builtin_frame_address(0))
 #else

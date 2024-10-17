@@ -8,7 +8,7 @@
 
 #if KRAM_WIN
 #include <windows.h>
-#elif KRAM_MAC || KRAM_IOS || KRAM_VISION
+#elif KRAM_APPLE
 #include <mach/mach_time.h>
 #elif KRAM_ANDROID
 #include <trace.h>
@@ -38,7 +38,7 @@ static uint64_t queryCounter()
     return counter.QuadPart;
 };
 
-#elif KRAM_MAC || KRAM_IOS || KRAM_VISION
+#elif KRAM_APPLE
 
 static double queryPeriod()
 {

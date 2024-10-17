@@ -2,7 +2,7 @@
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
-#if !KRAM_VISION // this is breaking link on visionOS
+#if 1 // !KRAM_VISION // this is breaking link on visionOS
 
 #pragma once
 

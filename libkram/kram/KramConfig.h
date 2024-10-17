@@ -46,6 +46,10 @@
 #define KRAM_DEBUG 1
 #endif
 
+// Don't really need 3 libs.  This means can build one
+// but can't use availability or platforms specifics then.
+#define KRAM_APPLE (KRAM_MAC || KRAM_IOS || KRAM_VISION)
+
 //------------------------
 
 #if KRAM_WIN
@@ -80,7 +84,7 @@
 // SIMD_WORKSPACE is set
 
 // can't have ATE defined to 1 on other platforms
-#if !(KRAM_MAC || KRAM_IOS) // || KRAM_VISION
+#if !KRAM_APPLE
 #undef COMPILE_ATE
 #endif
 
@@ -192,7 +196,7 @@
 //-------------------------
 // simd
 
-#if KRAM_MAC || KRAM_IOS || KRAM_VISION
+#if KRAM_APPLE
 // can use old or new
 #define USE_SIMDLIB 1
 

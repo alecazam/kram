@@ -75,14 +75,24 @@ if [[ $buildType == macos ]]; then
     xcodebuild build -workspace kram.xcworkspace -list
     echo "::endgroup::"
  
+    # vectormath
+    echo "::group::vectormath-vos"
+    xcodebuild build -sdk xros2.0 -workspace kram.xcworkspace -scheme vectormath-vos -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    echo "::endgroup::"
+    
     echo "::group::vectormath-ios"
     xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme vectormath-ios -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
  
     echo "::group::vectormath"
-    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
  
+     # libkram
+    echo "::group::kram-vos"
+    xcodebuild build -sdk xros2.0 -workspace kram.xcworkspace -scheme kram-vos -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    echo "::endgroup::"
+    
     echo "::group::kram-ios"
     xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
@@ -93,24 +103,27 @@ if [[ $buildType == macos ]]; then
  
 	# install apps so they are signed
 	# can't specify empty INSTALL_PATH, or xcodebuild succeeds but copies nothing to bin
+ 
+    # kramc cli
     echo "::group::kramc"
     xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramc -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
       
+    # kramv viewer
     echo "::group::kramv"
 	xcodebuild install -sdk macosx -workspace kram.xcworkspace -scheme kramv -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
     
 	popd
 
-	# build hlslparser to bin directory
+	# hlslparser
 	pushd hlslparser
     echo "::group::hlsl-parser"
     xcodebuild install -sdk macosx -project hlslparser.xcodeproj -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
 	popd
 
-    # build kram-profile to bin directory
+    # kram-profile
     pushd kram-profile
     echo "::group::kram-profiler"
     xcodebuild install -sdk macosx -project kram-profile.xcodeproj -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
