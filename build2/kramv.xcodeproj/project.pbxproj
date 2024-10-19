@@ -604,7 +604,6 @@
 					"-include",
 					KramConfig.h,
 				);
-				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
 			};
@@ -680,7 +679,6 @@
 					"-include",
 					KramConfig.h,
 				);
-				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
 			};
@@ -752,12 +750,6 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				MTL_LANGUAGE_REVISION = Metal30;
-				OTHER_CFLAGS = (
-					"-DNDEBUG=1",
-					"-DCOMPILE_EASTL=0",
-					"-include",
-					KramConfig.h,
-				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hialec.kramv;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

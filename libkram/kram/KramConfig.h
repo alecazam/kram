@@ -15,7 +15,16 @@
 #elif TARGET_OS_VISION
 #define KRAM_VISION 1
 #endif
-#elif __unix__
+// taken from eaplatform.h, need PS5/XboxX
+// make sure to def 0 case after if adding these
+// just for reference
+//#elif defined(__ORBIS__)
+//#define KRAM_PS4 1
+//#elif defined(_XBOX_ONE)
+//#define KRAM_XBOX_ONE
+#elif defined(__ANDROID__)
+#define KRAM_ANDROID 1
+#elif defined(__unix__)
 #define KRAM_LINUX 1
 #endif
 
@@ -31,6 +40,9 @@
 #endif
 #ifndef KRAM_IOS
 #define KRAM_IOS 0
+#endif
+#ifndef KRAM_ANDROID
+#define KRAM_ANDROID 0
 #endif
 #ifndef KRAM_VISION
 #define KRAM_VISION 0
@@ -122,6 +134,9 @@
 // EASTL only seems to define that for Visual Studio natvis, and not lldb
 #define USE_EASTL COMPILE_EASTL
 
+// some code not compiling with size_t otherwise
+#include <stddef.h>
+
 #if USE_EASTL
 
 #define STL_NAMESPACE eastl
@@ -197,7 +212,7 @@
 // simd
 
 // This is now all in kram.xcconfig for KRAM_APPLE
-#if KRAM_WIN
+#if !KRAM_APPLE
 //have to use simdk on non-Apple platforms
 #define USE_SIMDLIB 1
 #define USE_SIMDLIBMODULE 0

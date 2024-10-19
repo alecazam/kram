@@ -40,7 +40,7 @@
 #define ZSTD_STRIP_ERROR_STRINGS
 #define ZSTD_TRACE 0
 
-#if NDEBUG
+#ifdef NDEBUG
 #define assert_or_fallthrough() [[fallthrough]]
 #else
 #define assert_or_fallthrough() assert(false)
