@@ -600,10 +600,9 @@
 				MTL_LANGUAGE_REVISION = UseDeploymentTarget;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
-					"-DCOMPILE_EASTL=0",
+					"$(inherited)",
 					"-include",
 					KramConfig.h,
-					"-mfma",
 				);
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
@@ -677,11 +676,9 @@
 				MTL_FAST_MATH = YES;
 				MTL_LANGUAGE_REVISION = UseDeploymentTarget;
 				OTHER_CFLAGS = (
-					"-DNDEBUG=1",
-					"-DCOMPILE_EASTL=0",
+					"$(inherited)",
 					"-include",
 					KramConfig.h,
-					"-mfma",
 				);
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;

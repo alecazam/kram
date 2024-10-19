@@ -346,7 +346,6 @@
 /* Begin XCBuildConfiguration section */
 		701AF18F2CAD27CB00BD0886 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -358,7 +357,6 @@
 		};
 		701AF1902CAD27CB00BD0886 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -432,7 +430,6 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = "$(KRAM_FLAGS)";
 				SDKROOT = macosx;
 				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
@@ -495,7 +492,6 @@
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c c++";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				OTHER_CFLAGS = "$(KRAM_FLAGS)";
 				SDKROOT = macosx;
 				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
@@ -503,7 +499,6 @@
 		};
 		70B686F92CAD1026007ACA58 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -514,7 +509,6 @@
 		};
 		70B686FA2CAD1026007ACA58 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -525,7 +519,6 @@
 		};
 		70E3BADC2CBCE81700F11926 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -537,7 +530,6 @@
 		};
 		70E3BADD2CBCE81700F11926 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
