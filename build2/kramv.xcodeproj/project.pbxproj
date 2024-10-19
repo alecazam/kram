@@ -126,6 +126,7 @@
 		706EF25426D17C85001C950E /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		706EF25626D17C9D001C950E /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		706EF25926D17CAA001C950E /* libate.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libate.tbd; path = usr/lib/libate.tbd; sourceTree = SDKROOT; };
+		707D4C532CC420E700729BE0 /* kram.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = kram.xcconfig; sourceTree = "<group>"; };
 		7083365D2715642C0077BCB6 /* GLTF.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GLTF.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		70833661271564320077BCB6 /* GLTFMTL.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GLTFMTL.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		70833664271575E50077BCB6 /* GLTF.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GLTF.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -223,6 +224,7 @@
 				70E33EE426E5478900CBA422 /* kram-preview */,
 				706EF21026D17A26001C950E /* Products */,
 				706EF24726D17BC2001C950E /* Frameworks */,
+				707D4C532CC420E700729BE0 /* kram.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -531,6 +533,7 @@
 /* Begin XCBuildConfiguration section */
 		706EF22126D17A2E001C950E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C532CC420E700729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -610,6 +613,7 @@
 		};
 		706EF22226D17A2E001C950E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C532CC420E700729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;

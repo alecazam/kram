@@ -25,6 +25,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		707D4C5B2CC42C1100729BE0 /* kram.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = kram.xcconfig; sourceTree = "<group>"; };
 		839945C91F641E9000642E68 /* GLTFMTLLightingEnvironment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GLTFMTLLightingEnvironment.h; sourceTree = "<group>"; };
 		839945CA1F641E9000642E68 /* GLTFMTLLightingEnvironment.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GLTFMTLLightingEnvironment.m; sourceTree = "<group>"; };
 		83AF30CA1FC4DB4D00053BED /* GLTFMTLTextureLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GLTFMTLTextureLoader.h; sourceTree = "<group>"; };
@@ -75,6 +76,7 @@
 				83D6FFD91F48BDFB00F71E0C /* Info.plist */,
 				83D6FFB21F48BCB500F71E0C /* Products */,
 				83D600341F48C24F00F71E0C /* Frameworks */,
+				707D4C5B2CC42C1100729BE0 /* kram.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -213,6 +215,7 @@
 /* Begin XCBuildConfiguration section */
 		83D6FFB71F48BCB500F71E0C /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C5B2CC42C1100729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
@@ -268,10 +271,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"-ftime-trace",
-					"-mfma",
-				);
+				OTHER_CFLAGS = "$(KRAM_FLAGS)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = "macosx iphoneos";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";
@@ -334,11 +334,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = (
-					"-DNDEBUG=1",
-					"-ftime-trace",
-					"-mfma",
-				);
+				OTHER_CFLAGS = "$(KRAM_FLAGS)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = "macosx iphoneos";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";

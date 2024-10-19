@@ -56,6 +56,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		707D4C5C2CC42C2700729BE0 /* kram.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = kram.xcconfig; sourceTree = "<group>"; };
 		83319297202589FC00B6C7E9 /* GLTFBinaryChunk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GLTFBinaryChunk.h; sourceTree = "<group>"; };
 		8331929B20258A4000B6C7E9 /* GLTFBinaryChunk.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLTFBinaryChunk.m; sourceTree = "<group>"; };
 		8331929E2025911D00B6C7E9 /* GLTFExtensionNames.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GLTFExtensionNames.m; sourceTree = "<group>"; };
@@ -144,6 +145,7 @@
 				83D6FF7E1F48BBFA00F71E0C /* Info.plist */,
 				83D6FF491F48BB3A00F71E0C /* Products */,
 				83D600391F48C2FF00F71E0C /* Frameworks */,
+				707D4C5C2CC42C2700729BE0 /* kram.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -353,6 +355,7 @@
 /* Begin XCBuildConfiguration section */
 		83D6FF4E1F48BB3A00F71E0C /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C5C2CC42C2700729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
@@ -408,10 +411,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"-ftime-trace",
-					"-mfma",
-				);
+				OTHER_CFLAGS = "$(KRAM_FLAGS)";
 				SDKROOT = macosx;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -472,11 +472,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = (
-					"-ftime-trace",
-					"-DNDEBUG=1",
-					"-mfma",
-				);
+				OTHER_CFLAGS = "$(KRAM_FLAGS)";
 				SDKROOT = macosx;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -515,6 +511,7 @@
 		};
 		83D6FF521F48BB3A00F71E0C /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C5C2CC42C2700729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_IDENTITY = "";

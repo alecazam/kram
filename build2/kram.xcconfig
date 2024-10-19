@@ -1,0 +1,26 @@
+// kram - Copyright 2020-2024 by Alec Miller. - MIT License
+// The license and copyright notice shall be included
+// in all copies or substantial portions of the Software.
+
+// Xcode's AVX2 simd setting doesn't set -mfma or -m16c.  So
+// then universal builds throw hundreds of warnings.  Ugh.
+// Xcode doesn't set NDEBUG=1 in Release builds.  Ugh.
+// Also turn on -ftime-trace to review build times in kram-profile.
+
+KRAM_FLAGS_X64 =
+KRAM_FLAGS_X64[arch=x86_64] = -mf16c -mfma
+
+KRAM_FLAGS_REL =
+KRAM_FLAGS_REL[config=Release] = -NDEBUG=1
+
+KRAM_FLAGS = -ftime-trace -DUSE_SIMDLIB=1
+
+// This is killing build times in Xcode16
+ENABLE_MODULE_VERIFIER = NO
+
+// EASTL, etc.
+
+// configuring all the encoders in kram
+// -DCOMPILE_ASTCENC=1 -DCOMPILE_ATE=1 -DCOMPILE_ETCENC=1 -DCOMPILE_SQUISH=1 -DCOMPILE_BCENC=1 -DCOMPILE_COMP=1 -DCOMPILE_BASIS=0 -DCOMPILE_EASTL=0 $(KRAM_FLAGS)
+
+OTHER_FLAGS = $(inherited) $(KRAM_FLAGS) $KRAM_FLAGS_REL) $(KRAM_FLAGS_X64)

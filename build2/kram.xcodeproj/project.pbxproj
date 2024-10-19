@@ -866,6 +866,7 @@
 		707789D42881BA81008A51BC /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		707789EF2881BCE2008A51BC /* rdo_bc_encoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rdo_bc_encoder.cpp; sourceTree = "<group>"; };
 		707789F02881BCE2008A51BC /* rdo_bc_encoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rdo_bc_encoder.h; sourceTree = "<group>"; };
+		707D4C4B2CC41A0300729BE0 /* kram.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = kram.xcconfig; sourceTree = "<group>"; };
 		70871DA727DDDBCC00D0B9E1 /* astcenc_vecmathlib_common_4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = astcenc_vecmathlib_common_4.h; sourceTree = "<group>"; };
 		70871DA827DDDBCC00D0B9E1 /* astcenc_image.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_image.cpp; sourceTree = "<group>"; };
 		70871DA927DDDBCC00D0B9E1 /* astcenc_find_best_partitioning.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_find_best_partitioning.cpp; sourceTree = "<group>"; };
@@ -1181,6 +1182,7 @@
 		706EEE1826D1583F001C950E /* kram */ = {
 			isa = PBXGroup;
 			children = (
+				707D4C4B2CC41A0300729BE0 /* kram.xcconfig */,
 				70CDB64E27A1382600A546C1 /* KramDDSHelper.h */,
 				70CDB64F27A1382600A546C1 /* KramDDSHelper.cpp */,
 				70B563A62C857B360089A64F /* KramZipStream.h */,
@@ -2282,6 +2284,7 @@
 /* Begin XCBuildConfiguration section */
 		706ECDE726D1577A001C950E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C4B2CC41A0300729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
@@ -2371,7 +2374,7 @@
 					"-DCOMPILE_COMP=1",
 					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
-					"-ftime-trace",
+					"$(KRAM_FLAGS)",
 				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
@@ -2382,6 +2385,7 @@
 		};
 		706ECDE826D1577A001C950E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C4B2CC41A0300729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
@@ -2456,7 +2460,6 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_CFLAGS = (
-					"-DNDEBUG=1",
 					"-DCOMPILE_ASTCENC=1",
 					"-DCOMPILE_ATE=1",
 					"-DCOMPILE_ETCENC=1",
@@ -2465,7 +2468,7 @@
 					"-DCOMPILE_COMP=1",
 					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
-					"-ftime-trace",
+					"$(KRAM_FLAGS)",
 				);
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				SDKROOT = macosx;
@@ -2481,19 +2484,6 @@
 				CLANG_WARN_OBJC_REPEATED_USE_OF_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
-				OTHER_CFLAGS = (
-					"-DCOMPILE_ASTCENC=1",
-					"-DCOMPILE_ATE=1",
-					"-DCOMPILE_ETCENC=1",
-					"-DCOMPILE_SQUISH=1",
-					"-DCOMPILE_BCENC=1",
-					"-DCOMPILE_COMP=1",
-					"-DCOMPILE_BASIS=0",
-					"-DCOMPILE_EASTL=0",
-					"-ftime-trace",
-					"-mfma",
-					"-mf16c",
-				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = "";
@@ -2507,20 +2497,6 @@
 				CLANG_WARN_OBJC_REPEATED_USE_OF_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
-				OTHER_CFLAGS = (
-					"-DNDEBUG=1",
-					"-DCOMPILE_ASTCENC=1",
-					"-DCOMPILE_ATE=1",
-					"-DCOMPILE_ETCENC=1",
-					"-DCOMPILE_SQUISH=1",
-					"-DCOMPILE_BCENC=1",
-					"-DCOMPILE_COMP=1",
-					"-DCOMPILE_BASIS=0",
-					"-DCOMPILE_EASTL=0",
-					"-ftime-trace",
-					"-mfma",
-					"-mf16c",
-				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = "";

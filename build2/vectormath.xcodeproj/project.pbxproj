@@ -62,6 +62,7 @@
 		70570FE42CB378E7005692BB /* bounds234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bounds234.h; sourceTree = "<group>"; };
 		70570FE72CB37997005692BB /* bounds234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = bounds234.cpp; sourceTree = "<group>"; };
 		70570FEF2CB8C5C6005692BB /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		707D4C522CC41F3900729BE0 /* kram.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = kram.xcconfig; sourceTree = "<group>"; };
 		70B686F42CAD1026007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		70B686FB2CAD1072007ACA58 /* double234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = double234.h; sourceTree = "<group>"; };
 		70B686FC2CAD1072007ACA58 /* double234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = double234.cpp; sourceTree = "<group>"; };
@@ -111,6 +112,7 @@
 			children = (
 				70B6870A2CAD1072007ACA58 /* vectormath */,
 				70B686F52CAD1026007ACA58 /* Products */,
+				707D4C522CC41F3900729BE0 /* kram.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -344,6 +346,7 @@
 /* Begin XCBuildConfiguration section */
 		701AF18F2CAD27CB00BD0886 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -355,6 +358,7 @@
 		};
 		701AF1902CAD27CB00BD0886 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -366,6 +370,7 @@
 		};
 		70B686F62CAD1026007ACA58 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -427,11 +432,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"-DUSE_SIMDLIB=1",
-					"-mfma",
-					"-mf16c",
-				);
+				OTHER_CFLAGS = "$(KRAM_FLAGS)";
 				SDKROOT = macosx;
 				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
@@ -439,6 +440,7 @@
 		};
 		70B686F72CAD1026007ACA58 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -493,11 +495,7 @@
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c c++";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				OTHER_CFLAGS = (
-					"-DUSE_SIMDLIB=1",
-					"-mfma",
-					"-mf16c",
-				);
+				OTHER_CFLAGS = "$(KRAM_FLAGS)";
 				SDKROOT = macosx;
 				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
@@ -505,6 +503,7 @@
 		};
 		70B686F92CAD1026007ACA58 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -515,6 +514,7 @@
 		};
 		70B686FA2CAD1026007ACA58 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -525,6 +525,7 @@
 		};
 		70E3BADC2CBCE81700F11926 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
@@ -536,6 +537,7 @@
 		};
 		70E3BADD2CBCE81700F11926 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C522CC41F3900729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;

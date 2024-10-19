@@ -34,6 +34,7 @@
 		706EF28226D18251001C950E /* libkram.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libkram.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EF28426D18257001C950E /* libate.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libate.tbd; path = usr/lib/libate.tbd; sourceTree = SDKROOT; };
 		706EF28A26D182CB001C950E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		707D4C542CC420FE00729BE0 /* kram.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = kram.xcconfig; sourceTree = "<group>"; };
 		70B687272CAD1996007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -59,6 +60,7 @@
 				706EF27E26D18223001C950E /* kramc */,
 				706EF27326D18082001C950E /* Products */,
 				706EF28126D18251001C950E /* Frameworks */,
+				707D4C542CC420FE00729BE0 /* kram.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -157,6 +159,7 @@
 /* Begin XCBuildConfiguration section */
 		706EF27726D18082001C950E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C542CC420FE00729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -226,6 +229,7 @@
 		};
 		706EF27826D18082001C950E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 707D4C542CC420FE00729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
