@@ -196,18 +196,12 @@
 //-------------------------
 // simd
 
-// This is now all in kram.xcconfig
-//#if KRAM_APPLE
-//// can use old or new
-//#define USE_SIMDLIB 1
-//
-//// maybe this doesn't work with C++ pch,
-//#define USE_SIMDLIBMODULE 0
-//#else
-//// have to use new on all other platforms
-//#define USE_SIMDLIB 1
-//#define USE_SIMDLIBMODULE 0
-//#endif
+// This is now all in kram.xcconfig for KRAM_APPLE
+#if KRAM_WIN
+//have to use simdk on non-Apple platforms
+#define USE_SIMDLIB 1
+#define USE_SIMDLIBMODULE 0
+#endif
 
 #if USE_SIMDLIB
 
