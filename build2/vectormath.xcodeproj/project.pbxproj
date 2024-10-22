@@ -63,6 +63,7 @@
 		70570FE72CB37997005692BB /* bounds234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = bounds234.cpp; sourceTree = "<group>"; };
 		70570FEF2CB8C5C6005692BB /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		707D4C522CC41F3900729BE0 /* kram.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = kram.xcconfig; sourceTree = "<group>"; };
+		7087895C2CC6C17700E34A6B /* simdk.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; name = simdk.py; path = ../scripts/simdk.py; sourceTree = SOURCE_ROOT; };
 		70B686F42CAD1026007ACA58 /* libvectormath.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libvectormath.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		70B686FB2CAD1072007ACA58 /* double234.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = double234.h; sourceTree = "<group>"; };
 		70B686FC2CAD1072007ACA58 /* double234.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = double234.cpp; sourceTree = "<group>"; };
@@ -129,6 +130,7 @@
 		70B6870A2CAD1072007ACA58 /* vectormath */ = {
 			isa = PBXGroup;
 			children = (
+				7087895C2CC6C17700E34A6B /* simdk.py */,
 				70570FEF2CB8C5C6005692BB /* module.modulemap */,
 				70B687042CAD1072007ACA58 /* README.md */,
 				70B686FB2CAD1072007ACA58 /* double234.h */,
