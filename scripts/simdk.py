@@ -1,5 +1,5 @@
 # add this to your ~/.lldbinit with
-# command script import ~/yourpath/kram/scripts/vectormath_lldbinit.py
+# command script import ~/yourpath/kram/scripts/simdk.py
 
 import lldb
 
@@ -159,6 +159,8 @@ def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand("type summary add -F simdk.float3x3_summary simdk::float3x3")
     debugger.HandleCommand("type summary add -F simdk.float2x2_summary simdk::float2x2")
    
+    debugger.HandleCommand("type summary add -F simdk.float4_summary simdk::quatf")
+    
     # double234
     debugger.HandleCommand("type summary add -F simdk.float2_summary double2a")
     debugger.HandleCommand("type summary add -F simdk.float3_summary double3a")
