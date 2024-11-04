@@ -48,15 +48,62 @@ import Darwin
    2018-04-11 14:59:07.122186-0700 SwiftShot[581:21310] [GameSceneViewController] error text
 */
 
-class Log {
+struct LogState {
     // verbose: Whether os_log or print is used to report logs.
-    static var prints = false
+    let prints = false
     // stacktrace: Whether stack trace is logged on errors.
-    static var stacktraces = false
+    let stacktraces = false
     // timestamp: Show timestamps on all entries when printing statements.
-    static var timestamps = false
+    let timestamps = false
     // absoluteTimestamps: Show relative or absolute timestampes.
-    static var absoluteTimestamps = true
+    let absoluteTimestamps = true
+    
+    // Store data for timestamps.
+    let timestampToSeconds = initTimestampToSeconds()
+    let timestampStart: Double
+    let timestampStartDate = Date()
+    let timestampFormatter = initTimestampFormatter()
+
+    // This can be filtered from command line arguments.
+    let subsystem = Bundle.main.bundleIdentifier!
+    
+    init() {
+        timestampStart = LogState.timestampStartTime(timestampToSeconds)
+    }
+    private static func initTimestampFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.setLocalizedDateFormatFromTemplate("HH:mm:ss.SSS") // ms resolution
+        return formatter
+    }
+    
+    private static func initTimestampToSeconds() -> Double {
+        // Cache the conversion.  Note that clock rate can change with cpu throttling.
+        // These are high-resolution timestamps taken from the system timer.
+        var info = mach_timebase_info(numer: 0, denom: 0)
+        mach_timebase_info(&info)
+        let numer = Double(info.numer)
+        let denom = Double(info.denom)
+        return 1e-9 * (numer / denom) // inverse so we can multiply
+    }
+    
+    static func timestampStartTime(_ timestampToSeconds: Double) -> Double {
+        let timestamp = Double(mach_absolute_time())
+        let time = timestamp * timestampToSeconds
+        return time
+    }
+    
+    // need timestamps in other parts of the app
+    func timestamp() -> Double {
+        let timestamp = Double(mach_absolute_time())
+        let time = timestamp * timestampToSeconds
+        return time
+    }
+}
+
+let logState = LogState()
+
+class Log: @unchecked Sendable {
     
     // Custom logging group - usually based on source filename.
     // This has a very limited output, but does go to console
@@ -66,15 +113,7 @@ class Log {
     private var file: String
     // All logs go to this category for filtering.
     private var category: String
-    // This can be filtered from command line arguments.
-    private static var subsystem = Bundle.main.bundleIdentifier!
-    
-    // Store data for timestamps.
-    private static var timestampToSeconds: Double = 0
-    private static var timestampStart = timestamp()
-    private static var timestampStartDate = Date()
-    private static var timestampFormatter = initTimestampFormatter()
-    
+   
     init(_ category: String = #file, file: String = #file) {
         // Strip the path, but allow hierachical category f.e. "Group/Subgroup" wihtout .swift.
         self.category = category
@@ -85,7 +124,7 @@ class Log {
         // Compute once for use in logs.
         self.file = Log.stripFilePathAndExtension(file)
         
-        self.log = OSLog(subsystem: Log.subsystem, category: self.category)
+        self.log = OSLog(subsystem: logState.subsystem, category: self.category)
     }
     
     // Test whether messages are logged for the given levels
@@ -111,7 +150,7 @@ class Log {
     
     func error(_ message: @autoclosure () -> String, _ function: String = #function, _ line: Int = #line) {
         let text = formatMessage(message(), .error, function, line)
-        if Log.prints {
+        if logState.prints {
             print(text)
         } else {
             logToOSLog(text, .error)
@@ -121,7 +160,7 @@ class Log {
     // os_log left out warnings, so reuse default type for that
     func warn(_ message: @autoclosure () -> String, _ function: String = #function, _ line: Int = #line) {
         let text = formatMessage(message(), .default, function, line)
-        if Log.prints {
+        if logState.prints {
             print(text)
         } else {
             logToOSLog(text, .default) // this doesn't get colored yellow like a warning
@@ -130,7 +169,7 @@ class Log {
     
     func info(_ message: @autoclosure () -> String) {
         let text = formatMessage(message(), .info)
-        if Log.prints {
+        if logState.prints {
             print(text)
         } else {
             logToOSLog(text, .info)
@@ -141,7 +180,7 @@ class Log {
         // debug logs are stripped from release builds
         #if DEBUG
         let text = formatMessage(message(), .debug)
-        if Log.prints {
+        if logState.prints {
             print(text)
         } else {
             logToOSLog(text, .debug)
@@ -165,7 +204,7 @@ class Log {
         
         let levelText = formatLevel(level)
         
-        if Log.prints {
+        if logState.prints {
             let timestamp = Log.formatTimestamp()
             
             // These messages never go out to the system console, just the debugger.
@@ -199,7 +238,7 @@ class Log {
             }
         }
         
-        if Log.stacktraces && (level == .error) {
+        if logState.stacktraces && (level == .error) {
             text += "\n"
             
             // Improve this - these are mangled symbols without file/line of where
@@ -218,8 +257,10 @@ class Log {
             queueName = ":" + queueName
         }
         
-        text += " at \(file):\(line)@\(function)\n"
-        text += " on \(threadName)\(queueName)"
+        text += "\n at \(file):\(line)@\(function)"
+        if !threadName.isEmpty || !queueName.isEmpty {
+            text += "\n on \(threadName)\(queueName)"
+        }
         return text
     }
     
@@ -229,27 +270,22 @@ class Log {
     }
     
     // timestamp support
-    private static func initTimestampFormatter() -> DateFormatter {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.setLocalizedDateFormatFromTemplate("HH:mm:ss.SSS") // ms resolution
-        return formatter
-    }
+    
     
     private static func timeFromStart() -> Double {
-        return max(0.0, Log.timestamp() - Log.timestampStart)
+        return max(0.0, Log.timestamp() - logState.timestampStart)
     }
     
     private static func timeAbsolute() -> String {
         let timestamp = Log.timeFromStart()
-        let date = Date(timeInterval: timestamp, since: Log.timestampStartDate)
-        return timestampFormatter.string(from: date)
+        let date = Date(timeInterval: timestamp, since: logState.timestampStartDate)
+        return logState.timestampFormatter.string(from: date)
     }
     
     private static func formatTimestamp() -> String {
         var timestamp = ""
-        if Log.timestamps {
-            if Log.absoluteTimestamps {
+        if logState.timestamps {
+            if logState.absoluteTimestamps {
                 timestamp = Log.timeAbsolute() + " "
             } else {
                 timestamp = String(format: "%.3fs ", Log.timeFromStart())
@@ -258,21 +294,8 @@ class Log {
         return timestamp
     }
     
-    // need timestamps in other parts of the app
     static func timestamp() -> Double {
-        if Log.timestampToSeconds == 0 {
-            // Cache the conversion.  Note that clock rate can change with cpu throttling.
-            // These are high-resolution timestamps taken from the system timer.
-            var info = mach_timebase_info(numer: 0, denom: 0)
-            mach_timebase_info(&info)
-            let numer = Double(info.numer)
-            let denom = Double(info.denom)
-            Log.timestampToSeconds = 1e-9 * (numer / denom) // inverse so we can multiply
-        }
-        
-        let timestamp = Double(mach_absolute_time())
-        let time = timestamp * Log.timestampToSeconds
-        return time
+        return logState.timestamp()
     }
 }
 

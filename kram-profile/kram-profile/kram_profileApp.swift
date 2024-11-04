@@ -390,7 +390,7 @@ class MyWebView : WKWebView {
     */
 }
 
-
+@MainActor
 func newWebView(request: URLRequest) -> WKWebView {
     // set preference to run javascript on the view, can then do PostMessage
     let preferences = WKPreferences()
@@ -492,7 +492,7 @@ struct MTKViewWrapper: NSViewRepresentable {
 */
 
 // https to work for some reason, but all data is previewed locally
-var ORIGIN = "https://ui.perfetto.dev"
+let ORIGIN = "https://ui.perfetto.dev"
 
 // https://gist.github.com/pwightman/64c57076b89c5d7f8e8c
 extension String {
@@ -942,6 +942,7 @@ func updateFileBuildTimings(_ events: [PerfettoEvent]) -> [String:BuildTiming] {
     return buildTimings
 }
 
+@MainActor
 func findFilesForBuildTimings(files: [File], selection: String) -> [File] {
     let selectedFile = lookupFile(url:URL(string:selection)!)
     let isArchive = selectedFile.archive != nil
@@ -1466,7 +1467,7 @@ func computeEventParentsAndDurSub(_ events: inout [PerfettoEvent]) {
 
 
 class Timer {
-    private static var kTickToSeconds = updateTimebase()
+    private static let kTickToSeconds = updateTimebase()
     private var time: Double = -Timer.getTime()
     
     deinit {
@@ -1563,6 +1564,7 @@ func updateBuildTimingsTask(_ files: [File]) {
         timer.stop()
         log.info("finished updating build timings in \(double:timer.timeElapsed(), decimals:3)s")
     })
+    
     #endif
 }
 

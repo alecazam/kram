@@ -76,7 +76,7 @@ class BuildStats {
     }
 }
 
-class File: Identifiable, Hashable, Equatable, Comparable
+class File: Identifiable, Hashable, Equatable, Comparable, @unchecked Sendable
 {
     // TODO: archive url relative to archive so not unique if multiple archives dropped
     // but currently all lookup is by url, and not url + archive.  Just make sure to
@@ -248,6 +248,7 @@ func generateTotalDuration(_ file: File, _ buildFiles: [File]) -> String {
     return text
 }
 
+@MainActor
 func generateNavigationTitle(_ sel: String?, _ files: [File]) -> String {
     if sel == nil { return "" }
     
@@ -277,11 +278,12 @@ func generateNavigationTitle(_ sel: String?, _ files: [File]) -> String {
 // indicate the item is gone, and await its return.
 
 // Holds supported files dropped or opened from Finder, reload reparses this
-var droppedFileCache : [URL] = []
+@MainActor var droppedFileCache : [URL] = []
 
 // Flattened list of supported files from folders and archives
-var fileCache : [URL:File] = [:]
+@MainActor var fileCache : [URL:File] = [:]
 
+@MainActor
 func updateFile(url: URL) -> File {
     let file = File(url:url)
     
@@ -307,6 +309,7 @@ func updateFile(url: URL) -> File {
     return file
 }
 
+@MainActor
 func lookupFile(url: URL) -> File {
     let file = File(url:url)
     if let fileOld = fileCache[file.url] {
@@ -315,6 +318,7 @@ func lookupFile(url: URL) -> File {
     return file
 }
 
+@MainActor
 func lookupFile(selection: String) -> File {
     return lookupFile(url:URL(string:selection)!)
 }
@@ -370,8 +374,9 @@ class Archive: Identifiable, /*Hashable, */ Equatable, Comparable {
 }
 
 // cache of archives to avoid creating these each time
-var archiveCache: [URL:Archive] = [:]
+@MainActor var archiveCache: [URL:Archive] = [:]
 
+@MainActor
 func lookupArchive(_ url: URL) -> Archive {
     let archive = Archive(url)
     
@@ -512,6 +517,7 @@ func isSupportedFilename(_ url: URL) -> Bool {
     return false
 }
 
+@MainActor
 func listFilesFromArchive(_ urlArchive: URL) -> [File] {
     
     let archive = lookupArchive(urlArchive)
@@ -544,6 +550,7 @@ func listFilesFromArchive(_ urlArchive: URL) -> [File] {
     return files
 }
 
+@MainActor
 func listFilesFromURLs(_ urls: [URL]) -> [File]
 {
     var files: [File] = []
