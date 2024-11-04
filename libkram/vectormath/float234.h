@@ -994,13 +994,15 @@ SIMD_CALL float4x4 float4x4m(float3 axis, float radians)
 // These sizes are positive and do not include inversion
 SIMD_CALL float decompose_size(const float4x4& m)
 {
+    // assumes m[0].w is 0
     return length(m[0]);
 }
 SIMD_CALL float3 decompose_scale(const float4x4& m)
 {
-    return float3m(length(m[0]),
-                   length(m[1]),
-                   length(m[2]));
+    // assumes m[i].w is 0
+    return sqrt(float3m(length_squared(m[0]),
+                        length_squared(m[1]),
+                        length_squared(m[2])));
 }
 SIMD_CALL float decompose_scale_max(const float4x4& m)
 {
