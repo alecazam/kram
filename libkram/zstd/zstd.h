@@ -15,8 +15,8 @@ extern "C" {
 #define ZSTD_H_235446
 
 /* ======   Dependency   ======*/
-#include <limits.h>   /* INT_MAX */
-#include <stddef.h>   /* size_t */
+//#include <limits.h>   /* INT_MAX */
+//#include <stddef.h>   /* size_t */
 
 
 /* =====   ZSTDLIB_API : control library symbols visibility   ===== */

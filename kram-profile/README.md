@@ -112,17 +112,19 @@ Perfetto
 
 This is a web-based profiling and flame-graph tool.  It's fast on desktop, and continues to evolve.  Only has second and timecode granularity which isn't enough.  For example, performance profiling for games is in milliseconds.  The team is mostly focused on Chrome profiling which apparently is in seconds.  But the visuals are nice, and it now has hover tips with size/name, and also has an Issues list that the devs are responsive to.  Flutter is using this profiler, and kram-profile does too.
 
-Perfetto lives inside a sandbox due to the browser, so feeding files to Perfetto is it's weekness.  As a result kram-profile's file list is a nice complement, and can send the file data across via Javascript.  This is not unlike an Electron wrapper, but in much less memory.  
+Perfetto lives inside a sandbox due to the browser, so feeding files to Perfetto is one weakness.  As a result kram-profile's file list is a nice complement, and can send the file data across via Javascript.  This is not unlike an Electron wrapper, but in much less memory.  
 
 One limitation is that traces must be nested.  So timestamps cannot overlap.   Make sure to honor this, or traces will overlap verticall and become confused.  There is a C++ SDK to help with writing out traces, and that is a much more compact format than the json.  But more languages can write to the json format.  The Perfetto team is doing no further work on the json format.  And fields like "color" are unsupported, and Perfetto uses it's own coloration for blocks instead.  This coloration is nice and consistent and tied to name.
+
+Having lots of issues trying to reuse the Perfetto web page to load more than one profile.  The web app gets into a bad state, and then won't load any content afterwareds.
 
 Orbit
 ---------
 * https://orbitprofiler.com/
 
-This profiler uses dynamic instrumentation of code via dtrace and trampolines.  Note that Win, macOS can use this sort of system.  Apple blocks access to dtrace on iOS, but there are mentions of ktrace.  So you inject/remove traces dynamically by patching the dll sources directly.  This used to run on macOS, Win, and Linux.  Google Stadio adopted this project, and not it is limited to Linux support.
+This profiler uses dynamic instrumentation of code via dtrace and trampolines.  Note that Win, macOS can use this sort of system.  Apple blocks access to dtrace on iOS, but there are mentions of ktrace.  So you inject/remove traces dynamically by patching the dll sources directly.  This used to run on macOS, Win, and Linux.  Google Stadia adopted this project, and now it is limited to Linux support.
 
-This avoids the need to blindly instrument code or inject scopes into high-frequency routines.  But this patching may not be compatible by the security theater adopted by some mobile devices.
+This avoids the need to blindly instrument code or inject scopes into high-frequency routines.  But this patching is not be compatible by the security theater adopted by iOS devices.
 
 ClangBuildAnalyzer
 --------

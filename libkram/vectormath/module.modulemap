@@ -1,5 +1,6 @@
-module vectormath {
+module vectormath234 {
     // All headers are pulled in by this.
+    requires cplusplus20
     
     // This defaults to namespace simdk
     header "vectormath234.h"

@@ -98,7 +98,7 @@ max vec size per register
 * TODO: Tests of the calls.
 * TODO: Add row vector support (vs. columns)
 * TODO: Consider adding ISPC optimized calls for log, exp, sin, cos, etc
-* TODO: Add debugger natvis and lldb formatters
+* DONE: Add debugger natvis and lldb formatters
 * SOME: Disassembly of the calls (MSVC?)
 
 ---

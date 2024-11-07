@@ -328,14 +328,15 @@ int g_debuglevel = DEBUGLEVEL;
 #ifndef MEM_H_MODULE
 #define MEM_H_MODULE
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 /*-****************************************
 *  Dependencies
 ******************************************/
 #include <stddef.h>  /* size_t, ptrdiff_t */
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
 /**** start inlining compiler.h ****/
 /*
  * Copyright (c) Yann Collet, Facebook, Inc.
@@ -653,9 +654,9 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 *****************************************************************/
 #if  !defined (__VMS) && (defined (__cplusplus) || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */) )
 #  if defined(_AIX)
-#    include <inttypes.h>
+//#    include <inttypes.h>
 #  else
-#    include <stdint.h> /* intptr_t */
+//#    include <stdint.h> /* intptr_t */
 #  endif
   typedef   uint8_t BYTE;
   typedef  uint16_t U16;
@@ -1046,9 +1047,9 @@ MEM_STATIC void MEM_check(void) { DEBUG_STATIC_ASSERT((sizeof(size_t)==4) || (si
 #ifndef ERROR_H_MODULE
 #define ERROR_H_MODULE
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
+//#if defined (__cplusplus)
+//extern "C" {
+//#endif
 
 
 /* ****************************************
@@ -1068,13 +1069,12 @@ extern "C" {
 #ifndef ZSTD_ERRORS_H_398273423
 #define ZSTD_ERRORS_H_398273423
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 /*===== dependency =====*/
 #include <stddef.h>   /* size_t */
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
 /* =====   ZSTDERRORLIB_API : control library symbols visibility   ===== */
 #ifndef ZSTDERRORLIB_VISIBILITY
@@ -1153,6 +1153,10 @@ ZSTDERRORLIB_API const char* ZSTD_getErrorString(ZSTD_ErrorCode code);   /**< Sa
 /**** ended inlining ../zstd_errors.h ****/
 /**** skipping file: zstd_deps.h ****/
 
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
 /* ****************************************
 *  Compiler-specific
@@ -3618,6 +3622,11 @@ size_t FSE_decompress(void* dst, size_t dstCapacity, const void* cSrc, size_t cS
  * in the COPYING file in the root directory of this source tree).
  * You may select, at your option, one of the above-listed licenses.
  */
+
+/* ======   Dependency   ======*/
+#include <limits.h>   /* INT_MAX */
+#include <stddef.h>   /* size_t */
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -3625,9 +3634,6 @@ extern "C" {
 #ifndef ZSTD_H_235446
 #define ZSTD_H_235446
 
-/* ======   Dependency   ======*/
-#include <limits.h>   /* INT_MAX */
-#include <stddef.h>   /* size_t */
 
 
 /* =====   ZSTDLIB_API : control library symbols visibility   ===== */
@@ -7276,11 +7282,12 @@ XXH_PUBLIC_API XXH64_hash_t XXH64_hashFromCanonical(const XXH64_canonical_t* src
 #ifndef ZSTD_TRACE_H
 #define ZSTD_TRACE_H
 
+#include <stddef.h>
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
-#include <stddef.h>
 
 /* weak symbol support */
 #if !defined(ZSTD_HAVE_WEAK_SYMBOLS) && defined(__GNUC__) && \
@@ -9826,15 +9833,14 @@ extern "C" {
 #ifndef ZSTD_V01_H_28739879432
 #define ZSTD_V01_H_28739879432
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 /* *************************************
 *  Includes
 ***************************************/
 #include <stddef.h>   /* size_t */
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
 /* *************************************
 *  Simple one-step function
@@ -9924,14 +9930,15 @@ size_t ZSTDv01_decompressContinue(ZSTDv01_Dctx* dctx, void* dst, size_t maxDstSi
 #ifndef ZSTD_V02_H_4174539423
 #define ZSTD_V02_H_4174539423
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 /* *************************************
 *  Includes
 ***************************************/
 #include <stddef.h>   /* size_t */
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
 
 
 /* *************************************
@@ -10021,15 +10028,14 @@ size_t ZSTDv02_decompressContinue(ZSTDv02_Dctx* dctx, void* dst, size_t maxDstSi
 #ifndef ZSTD_V03_H_298734209782
 #define ZSTD_V03_H_298734209782
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 /* *************************************
 *  Includes
 ***************************************/
 #include <stddef.h>   /* size_t */
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
 /* *************************************
 *  Simple one-step function
@@ -10118,15 +10124,14 @@ size_t ZSTDv03_decompressContinue(ZSTDv03_Dctx* dctx, void* dst, size_t maxDstSi
 #ifndef ZSTD_V04_H_91868324769238
 #define ZSTD_V04_H_91868324769238
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 /* *************************************
 *  Includes
 ***************************************/
 #include <stddef.h>   /* size_t */
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
 /* *************************************
 *  Simple one-step function
@@ -10264,14 +10269,15 @@ size_t ZBUFFv04_recommendedDOutSize(void);
 #ifndef ZSTDv05_H
 #define ZSTDv05_H
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 /*-*************************************
 *  Dependencies
 ***************************************/
 #include <stddef.h>   /* size_t */
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
 /**** skipping file: ../common/mem.h ****/
 
 
@@ -10430,12 +10436,13 @@ size_t ZBUFFv05_recommendedDOutSize(void);
 #ifndef ZSTDv06_H
 #define ZSTDv06_H
 
+/*======  Dependency  ======*/
+#include <stddef.h>   /* size_t */
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
-/*======  Dependency  ======*/
-#include <stddef.h>   /* size_t */
 
 
 /*======  Export for Windows  ======*/
@@ -10606,12 +10613,13 @@ ZSTDLIBv06_API size_t ZBUFFv06_recommendedDOutSize(void);
 #ifndef ZSTDv07_H_235446
 #define ZSTDv07_H_235446
 
+/*======  Dependency  ======*/
+#include <stddef.h>   /* size_t */
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
-/*======  Dependency  ======*/
-#include <stddef.h>   /* size_t */
 
 
 /*======  Export for Windows  ======*/

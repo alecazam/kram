@@ -221,12 +221,12 @@
 #if USE_SIMDLIB
 
 // new vector math
-#if USE_SIMDLIBMODULE
+//#if USE_SIMDLIBMODULE
 // import this as a clang module now
-import vectormath
-#else
+//import vectormath234;
+//#else
 #include "vectormath234.h"
-#endif
+//#endif
 
 #else
 // old vector math, using simd/simd.h

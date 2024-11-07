@@ -112,7 +112,12 @@
 */
 #pragma once
 
+// Alec add this for now (move to define on projects?)
 #if 1
+
+// Make sure large file calls are used.  Should be set across app.
+#define _LARGEFILE64_SOURCE 1
+
 // Alec add this for now (move to define on projects?)
 
 // skip crc read checks to speed up reads

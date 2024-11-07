@@ -666,9 +666,9 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 *****************************************************************/
 #if  !defined (__VMS) && (defined (__cplusplus) || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */) )
 #  if defined(_AIX)
-#    include <inttypes.h>
+//#    include <inttypes.h>
 #  else
-#    include <stdint.h> /* intptr_t */
+//#    include <stdint.h> /* intptr_t */
 #  endif
   typedef   uint8_t BYTE;
   typedef  uint16_t U16;
@@ -3673,7 +3673,7 @@ int ZSTD_pthread_join(ZSTD_pthread_t thread, void** value_ptr);
 
 #elif defined(ZSTD_MULTITHREAD)    /* posix assumed ; need a better detection method */
 /* ===   POSIX Systems   === */
-#  include <pthread.h>
+//#  include <pthread.h>
 
 #if DEBUGLEVEL < 1
 
@@ -3915,8 +3915,8 @@ extern "C" {
 #define ZSTD_H_235446
 
 /* ======   Dependency   ======*/
-#include <limits.h>   /* INT_MAX */
-#include <stddef.h>   /* size_t */
+//#include <limits.h>   /* INT_MAX */
+//#include <stddef.h>   /* size_t */
 
 
 /* =====   ZSTDLIB_API : control library symbols visibility   ===== */
