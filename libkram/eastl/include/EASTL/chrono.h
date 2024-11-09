@@ -584,9 +584,34 @@ namespace chrono
 			EA_RESTORE_VC_WARNING()
 			return uint64_t(frequency * queryCounter());
         #elif defined EA_PLATFORM_SONY
-			return sceKernelGetProcessTimeCounter();
+            auto queryTimeInfo = []
+            {
+                mach_timebase_info_data_t info;
+                mach_timebase_info(&info);
+                return info;
+            };
+            
+            static auto timeInfo = queryTimeInfo();
+            uint64_t t = mach_absolute_time();
+            t *= timeInfo.numer;
+            t /= timeInfo.denom;
+            return t;
 		#elif defined(EA_PLATFORM_APPLE)
-		   return mach_absolute_time();
+            // took this from newer from newer drop of EASTL from 2022 release on 11/8/24
+            // Note that numer/denom will often be 1 and 1, so can skip math.
+            // but is 125/3 on some iOS and M1.
+            auto queryTimeInfo = []
+            {
+                mach_timebase_info_data_t info;
+                mach_timebase_info(&info);
+                return info;
+            };
+            
+            static auto timeInfo = queryTimeInfo();
+            uint64_t t = mach_absolute_time();
+            t *= timeInfo.numer;
+            t /= timeInfo.denom;
+            return t;
 		#elif defined(EA_PLATFORM_POSIX) // Posix means Linux, Unix, and Macintosh OSX, among others (including Linux-based mobile platforms).
 			#if (defined(CLOCK_REALTIME) || defined(CLOCK_MONOTONIC))
 				timespec ts;

@@ -46,8 +46,9 @@ static double queryPeriod()
     mach_timebase_info(&timebase);
 
     // https://eclecticlight.co/2020/11/27/inside-m1-macs-time-and-logs/
-    // On macOS Intel, nanosecondsPerTick are 1ns (1/1)
-    // On macOS M1, nanosecondsPerTick are 41.67ns (num/denom = 125/3)
+    // On macOS Intel, nanosecondsPerTick are 1ns (1/1) = 1Ghz.
+    // On macOS M1, nanosecondsPerTick are 41.67ns (num/denom = 125/3) = 24Mhz
+    // On M2, A16/A17 Pro, and armv8.6-A should be (1/1) = 1Ghz.
     double period = (double)timebase.numer / timebase.denom;
     period *= 1e-9; // convert to seconds
 

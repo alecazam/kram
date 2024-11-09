@@ -983,9 +983,7 @@ float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ)
     float xoff = (r + l) / dx;
     float yoff = (t + b) / dy;
     
-    // zs drops out since zs = inf / -inf = 1, 1-1 = 0
-    // z' = near / -z
-
+    // reverseZ, looking down -Z axis
     float m22;
     float m23;
   
@@ -994,16 +992,23 @@ float4x4 perspective_rhcs(float4 tangents, float nearZ, float farZ)
         m23 = nearZ;
     }
     else {
-        // TODO: handle farZ when not inf, check these
-        m22 = -nearZ / farZ;
-        m23 = nearZ;
+        float dz = farZ - nearZ;
+        m22 = nearZ / dz;
+        m23 = (nearZ * farZ) / dz;
+        
+        // Math looking down -Z axis
+        // ( z * nearZ + nearZ * farZ ) / dz
+        // nearZ * (farZ + z) / (farZ - nearZ)
+        // -nearZ -> nearZ * (farZ - nearZ ) / (farZ - nearZ) = nearZ
+        //   when dividing by w = -(-nearZ) then get 1
+        // -farZ  -> nearZ * (farZ - farZ) / (farZ - nearZ) = 0
     }
         
     float4x4 m(
-        (float4){ xs,       0,   0,  0 },
-        (float4){  0,      ys,   0,  0 },
-        (float4){  xoff, yoff, m22, -1 },
-        (float4){  0,       0, m23,  0 }
+        (float4){xs,       0,   0,  0},
+        (float4){ 0,      ys,   0,  0},
+        (float4){ xoff, yoff, m22, -1},
+        (float4){ 0,       0, m23,  0}
     );
     
     return m;
@@ -1026,16 +1031,16 @@ float4x4 orthographic_rhcs(float4 rect, float nearZ, float farZ)
     float m03 = (r+l) / dx;
     float m13 = (t+b) / dy;
     
-    float dz = -(farZ - nearZ);
-    float zs = 1.0f / dz;
+    // reverzeZ looking down -z axis
+    float dz = (farZ - nearZ);
     
-    float m22 = zs;
-    float m23 = zs * nearZ;
+    float m22 = 1.0 / dz;
+    float m23 = farZ / dz;
     
-    // revZ, can't use infiniteZ with ortho view
-    m22 = -m22;
-    m23 = 1.0f - m23;
-
+    // Math looking down -Z axis
+    // -near -> (-nearZ + farZ) / dz = 1
+    // -far  -> (-farZ + farZ) / dz = 0
+    
     float4x4 m(
         (float4){m00,   0,   0, 0},
         (float4){  0, m11,   0, 0},
