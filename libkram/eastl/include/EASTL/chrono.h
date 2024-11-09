@@ -602,7 +602,7 @@ namespace chrono
 		#elif defined(EA_PLATFORM_APPLE)
             // took this from newer from newer drop of EASTL from 2022 release on 11/8/24
             // Note that numer/denom will often be 1 and 1, so can skip math.
-            // but is 125/3 on some iOS and M1.  Added inNanos check.
+            // but is 125/3 on some iOS and M1.  Added inNanos check.  Test.
             auto queryTimeInfo = []
             {
                 mach_timebase_info_data_t info;
