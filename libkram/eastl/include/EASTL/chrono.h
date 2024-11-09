@@ -584,22 +584,25 @@ namespace chrono
 			EA_RESTORE_VC_WARNING()
 			return uint64_t(frequency * queryCounter());
         #elif defined EA_PLATFORM_SONY
-            auto queryTimeInfo = []
+            auto queryFrequency = []
             {
-                mach_timebase_info_data_t info;
-                mach_timebase_info(&info);
-                return info;
+                // nanoseconds/seconds / ticks/seconds
+                return double(1000000000.0L / (long double)sceKernelGetProcessTimeCounterFrequency());  // nanoseconds per tick
             };
-            
-            static auto timeInfo = queryTimeInfo();
-            uint64_t t = mach_absolute_time();
-            t *= timeInfo.numer;
-            t /= timeInfo.denom;
-            return t;
+
+            auto queryCounter = []
+            {
+                return sceKernelGetProcessTimeCounter();
+            };
+
+            EA_DISABLE_VC_WARNING(4640)  // warning C4640: construction of local static object is not thread-safe (VS2013)
+            static auto frequency = queryFrequency(); // cache cpu frequency on first call
+            EA_RESTORE_VC_WARNING()
+            return uint64_t(frequency * (double)queryCounter());
 		#elif defined(EA_PLATFORM_APPLE)
             // took this from newer from newer drop of EASTL from 2022 release on 11/8/24
             // Note that numer/denom will often be 1 and 1, so can skip math.
-            // but is 125/3 on some iOS and M1.
+            // but is 125/3 on some iOS and M1.  Added inNanos check.
             auto queryTimeInfo = []
             {
                 mach_timebase_info_data_t info;
@@ -607,10 +610,15 @@ namespace chrono
                 return info;
             };
             
-            static auto timeInfo = queryTimeInfo();
             uint64_t t = mach_absolute_time();
-            t *= timeInfo.numer;
-            t /= timeInfo.denom;
+            
+            static auto timeInfo = queryTimeInfo();
+            static const bool isNanos = timeInfo.numer == 1 && timeInfo.denom == 1;
+            if (!isNanos)
+            {
+                t *= timeInfo.numer;
+                t /= timeInfo.denom;
+            }
             return t;
 		#elif defined(EA_PLATFORM_POSIX) // Posix means Linux, Unix, and Macintosh OSX, among others (including Linux-based mobile platforms).
 			#if (defined(CLOCK_REALTIME) || defined(CLOCK_MONOTONIC))

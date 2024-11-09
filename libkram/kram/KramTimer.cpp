@@ -49,8 +49,10 @@ static double queryPeriod()
     // On macOS Intel, nanosecondsPerTick are 1ns (1/1) = 1Ghz.
     // On macOS M1, nanosecondsPerTick are 41.67ns (num/denom = 125/3) = 24Mhz
     // On M2, A16/A17 Pro, and armv8.6-A should be (1/1) = 1Ghz.
+    // So when 1/1, can avoid mul div below, seconds requires mul by 1e-9.
     double period = (double)timebase.numer / timebase.denom;
-    period *= 1e-9; // convert to seconds
+    
+    period *= 1e-9; // convert nanos to seconds
 
     return period;
 }
