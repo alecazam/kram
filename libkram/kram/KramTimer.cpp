@@ -54,7 +54,7 @@ static double queryPeriod()
     
     period *= 1e-9; // convert nanos to seconds
 
-    return period; // foo
+    return period;
 }
 
 static uint64_t queryCounter()
