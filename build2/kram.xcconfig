@@ -8,10 +8,10 @@
 // Also turn on -ftime-trace to review build times in kram-profile.
 
 KRAM_FLAGS_X64 =
-KRAM_FLAGS_X64[arch=x86_64] = -mf16c -mfma
+KRAM_FLAGS_X64[sdk=*][arch=x86_64] = -mf16c -mfma
 
 KRAM_FLAGS_RELEASE =
-KRAM_FLAGS_RELEASE[config=Release] = -DNDEBUG=1
+KRAM_FLAGS_RELEASE[sdk=*][config=Release] = -DNDEBUG=1
 
 KRAM_FLAGS = -ftime-trace
 KRAM_FLAGS = $(KRAM_FLAGS) -DUSE_SIMDLIB=1 -DUSE_SIMDLIBMODULE=1

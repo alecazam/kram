@@ -114,7 +114,7 @@ typedef NS_ENUM(int32_t, ShaderLightingMode) {
 struct Uniforms {
     SIMD_NAMESPACE::float4x4 projectionViewMatrix;
     SIMD_NAMESPACE::float4x4 modelMatrix;
-    SIMD_NAMESPACE::float4 modelMatrixInvScale2;  // to supply inverse, w is determinant
+    //SIMD_NAMESPACE::float4 modelMatrixInvScale2;  // to supply inverse, w is determinant
     SIMD_NAMESPACE::float3 cameraPosition;        // world-space
     float uvPreview;
     float uvToShapeRatio;

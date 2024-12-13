@@ -1492,7 +1492,7 @@ inline const char* toFilenameShort(const char* filename)
 
     // This is per object
     uniforms.modelMatrix = _data->_modelMatrix;
-    uniforms.modelMatrixInvScale2 = _data->_modelMatrixInvScale2;
+   // uniforms.modelMatrixInvScale2 = _data->_modelMatrixInvScale2;
 
     //_rotation += .01;
 }

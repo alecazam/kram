@@ -519,24 +519,28 @@ inline float3x3 toFloat3x3(float4x4 m)
     return float3x3(m[0].xyz, m[1].xyz, m[2].xyz);
 }
 
+// This works even with scale of 0 and is correct over using invT.
+// The normal will be normalize anyways.  Also saves sending down another tfm.
+inline float3x3 adjoint(float3x3 m)
+{
+    return float3x3(cross(m[1], m[2]),
+                    cross(m[2], m[0]),
+                    cross(m[0], m[1]));
+}
+
+
 // this is for vertex shader if tangent supplied
 void transformBasis(thread float3& normal, thread float3& tangent,
-                    float4x4 modelToWorldTfm, float3 invScale2, bool useTangent)
+                    float4x4 modelToWorldTfm, bool useTangent)
 {
     
     float3x3 m = toFloat3x3(modelToWorldTfm);
     
-    // note this is RinvT * n = (Rt)t = R, this is for simple inverse, inv scale handled below
-    // but uniform scale already handled by normalize
-    normal = m * normal;
-    normal *= invScale2;
+    normal = adjoint(m) * normal;
     normal = normalize(normal);
    
-    // question here of whether tangent is transformed by m or mInvT
-    // most apps assume m, but after averaging it can be just as off the surface as the normal
     if (useTangent) {
         tangent = m * tangent;
-        tangent *= invScale2;
         tangent = normalize(tangent);
     }
     
@@ -622,7 +626,7 @@ ColorInOut DrawImageFunc(
     
     if (needsWorldBasis) {
         float3 t = tangent.xyz;
-        transformBasis(normal, t, uniforms.modelMatrix, uniforms.modelMatrixInvScale2.xyz, uniforms.useTangent);
+        transformBasis(normal, t, uniforms.modelMatrix, uniforms.useTangent);
         tangent.xyz = t;
         
         out.normal = toHalf(normal);

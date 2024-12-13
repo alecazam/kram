@@ -521,7 +521,7 @@ public:
 
     // object specific
     float4x4 _modelMatrix;
-    float4 _modelMatrixInvScale2;
+    //float4 _modelMatrixInvScale2;
     float4x4 _modelMatrix2D;
     float4x4 _modelMatrix3D;
 

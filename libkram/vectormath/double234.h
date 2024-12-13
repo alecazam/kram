@@ -106,9 +106,6 @@ SIMD_CALL double4 zeroext(double3 x)
 
 #if SIMD_NEON
 
-// TODO: expose double2 ops on Neon.
-// think I have to, so that 4 can call 2x2 with hi/lo
-
 SIMD_CALL double reduce_min(double2 x)
 {
     return vminvq_f64(x);

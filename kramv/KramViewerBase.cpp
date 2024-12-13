@@ -3052,8 +3052,8 @@ void Data::updateTransforms()
         inverse(_viewMatrix).columns[3].xyz; // this is all ortho
 
     // obj specific
-    _modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix);
-    _showSettings->isInverted = _modelMatrixInvScale2.w < 0.0f;
+    float4 modelMatrixInvScale2 = inverseScaleSquared(_modelMatrix);
+    _showSettings->isInverted = modelMatrixInvScale2.w < 0.0f;
 }
 
 float4x4 Data::computeImageTransform(float panX, float panY, float zoom)

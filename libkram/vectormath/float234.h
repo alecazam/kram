@@ -929,9 +929,13 @@ SIMD_CALL quatf operator-(quatf q)
 SIMD_CALL float3 operator*(quatf q, float3 v)
 {
     // see https://fgiesen.wordpress.com/2019/02/09/rotating-a-single-vector-using-a-quaternion/
+    //float4 qv = q.v;
+    //float3 t = 2.0f * cross(qv.xyz, v);
+    //return v + qv.w * t + cross(qv.xyz, t);
+    
+    // simplified form of above
     float4 qv = q.v;
-    float3 t = 2.0f * cross(qv.xyz, v);
-    return v + qv.w * t + cross(qv.xyz, t);
+    return v + 2.0 * cross(qv.xyz, cross(qv.xyz, v) + qv.w * v);
 }
 
 SIMD_CALL bool equal(quatf x, quatf y)
