@@ -27249,7 +27249,7 @@ inline void log_headers() noexcept {
     printf("|%.*s", 5+2, DASHES);
     printf("|--------");
     printf("|\n");
-    fflush(stdout);
+    // fflush(stdout);
   }
 }
 
@@ -27287,7 +27287,7 @@ inline void log_line(const json_iterator &iter, token_position index, depth_t de
     printf("| %5i ", depth);
     printf("| %.*s ", int(detail.size()), detail.data());
     printf("|\n");
-    fflush(stdout);
+    // fflush(stdout);
   }
 }
 
