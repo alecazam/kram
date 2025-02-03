@@ -33,6 +33,10 @@ static double queryPeriod()
 
 static uint64_t queryCounter()
 {
+    // This doesn't pause when app is paused.
+    // seems like it wouldn't pause when system is paused either.
+    // Needed for multi-core, multi-frequency systems.  This is
+    // a fixed rate timer, so frequency can be cached.
     LARGE_INTEGER counter;
     QueryPerformanceCounter(&counter);
     return counter.QuadPart;
@@ -40,8 +44,12 @@ static uint64_t queryCounter()
 
 #elif KRAM_APPLE
 
+
 static double queryPeriod()
 {
+    double period = 1.0;
+    
+    /* only needed for the mach calls
     mach_timebase_info_data_t timebase;
     mach_timebase_info(&timebase);
 
@@ -50,7 +58,8 @@ static double queryPeriod()
     // On macOS M1, nanosecondsPerTick are 41.67ns (num/denom = 125/3) = 24Mhz
     // On M2, A16/A17 Pro, and armv8.6-A should be (1/1) = 1Ghz.
     // So when 1/1, can avoid mul div below, seconds requires mul by 1e-9.
-    double period = (double)timebase.numer / timebase.denom;
+    period = (double)timebase.numer / timebase.denom;
+    */
     
     period *= 1e-9; // convert nanos to seconds
 
@@ -59,11 +68,36 @@ static double queryPeriod()
 
 static uint64_t queryCounter()
 {
-    // increment when app sleeps
-    // return mach_continuous_time();
+    uint64_t time = 0;
+    
+    // Mach absolute time will, in general, continue to count if your process is suspended in the background.
+    // However, if will stop counting if the CPU goes to sleep.
 
-    // no increment when app sleeps
-    return mach_absolute_time();
+    // Apple docs recommends these non-posix clock calls.
+    // They maybe salt these to avoid fingerprinting, but don't need permissions.
+    // Also they don't need period conversion to nanos.
+    
+    // With continuous time, can store one epoch time to convert to real timings.
+    // But not halting in debugger will skew timings.
+    // May want timeouts to use the absolute timer.
+    
+    // Really each core has different frequencies with P/E, so want a timer
+    // that is consistent.  Also the frequency can ramp up/down.  Timers
+    // like rdtsc drift when a process goes from one core to another.
+    
+    // increment when system sleeps
+    // time = mach_continuous_time();
+    time = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
+    
+    // no increment when system sleeps
+    //time = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    //time = mach_absolute_time();
+    
+    // Have gotten burned by these timers, unclear of precision.
+    // Tracy says these timers are bad, but uses them.
+    // C++11 has std::chrono::high_resolution_clock::now() in <chrono>
+    
+    return time;
 }
 
 #endif
@@ -127,7 +161,7 @@ void addPerfCounter(const char* name, int64_t value)
 
 Perf::Perf()
 {
-    // TODO: should set alongsize exe by default
+    // TODO: should set alongside exe by default
 #if KRAM_WIN
     setPerfDirectory("C:/traces/");
 #else
