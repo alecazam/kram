@@ -482,6 +482,7 @@
 		83D6FF511F48BB3A00F71E0C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -513,6 +514,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 707D4C5C2CC42C2700729BE0 /* kram.xcconfig */;
 			buildSettings = {
+				ARCHS = arm64;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;

@@ -77,11 +77,11 @@ if [[ $buildType == macos ]]; then
  
     # vectormath
     echo "::group::vectormath-vos"
-    xcodebuild build -sdk xros2.0 -workspace kram.xcworkspace -scheme vectormath-vos -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk xros -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
     
     echo "::group::vectormath-ios"
-    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme vectormath-ios -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
  
     echo "::group::vectormath"
@@ -90,11 +90,11 @@ if [[ $buildType == macos ]]; then
  
      # libkram
     echo "::group::kram-vos"
-    xcodebuild build -sdk xros2.0 -workspace kram.xcworkspace -scheme kram-vos -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk xros -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
     
     echo "::group::kram-ios"
-    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram-ios -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
     
     echo "::group::kram"
