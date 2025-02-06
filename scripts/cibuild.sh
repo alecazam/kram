@@ -75,30 +75,33 @@ if [[ $buildType == macos ]]; then
     xcodebuild build -workspace kram.xcworkspace -list
     echo "::endgroup::"
  
+	# note there is a method to make an xcframework, but seems that it has to be signed
+	# instead the vos/ios libs will have unique output dirs, but don't have to when used in a workspace
+
     # vectormath
     echo "::group::vectormath-vos"
-    xcodebuild build -sdk xros -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk xros -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath}/vos BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
     
     echo "::group::vectormath-ios"
-    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath}/ios BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
  
     echo "::group::vectormath"
-    xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-    echo "::endgroup::"
+    xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme vectormath -configuration Release ${xargs} -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath}/mac BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+	echo "::endgroup::"
  
-     # libkram
+    # libkram
     echo "::group::kram-vos"
-    xcodebuild build -sdk xros -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk xros -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=visionOS CONFIGURATION_BUILD_DIR=${binPath}/vos BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
     
     echo "::group::kram-ios"
-    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk iphoneos -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=iOS CONFIGURATION_BUILD_DIR=${binPath}/ios BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
     
     echo "::group::kram"
-    xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath} BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+    xcodebuild build -sdk macosx -workspace kram.xcworkspace -scheme kram -configuration Release ${xargs} -destination generic/platform=macOS CONFIGURATION_BUILD_DIR=${binPath}/mac BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     echo "::endgroup::"
  
 	# install apps so they are signed
