@@ -89,7 +89,7 @@ enum MyDXGIFormat : uint32_t {
     //DXGI_FORMAT_R10G10B10A2_TYPELESS                    = 23,
     //DXGI_FORMAT_R10G10B10A2_UNORM                       = 24,
     //DXGI_FORMAT_R10G10B10A2_UINT                        = 25,
-    //DXGI_FORMAT_R11G11B10_FLOAT                         = 26,
+    DXGI_FORMAT_R11G11B10_FLOAT                         = 26,
 
     //DXGI_FORMAT_R8G8B8A8_TYPELESS                       = 27,
     DXGI_FORMAT_R8G8B8A8_UNORM = 28,
@@ -136,7 +136,7 @@ enum MyDXGIFormat : uint32_t {
 
     //DXGI_FORMAT_A8_UNORM                                = 65,
     //DXGI_FORMAT_R1_UNORM                                = 66,
-    //DXGI_FORMAT_R9G9B9E5_SHAREDEXP                      = 67,
+    DXGI_FORMAT_R9G9B9E5_SHAREDEXP                      = 67,
 
     //DXGI_FORMAT_R8G8_B8G8_UNORM                         = 68,
     //DXGI_FORMAT_G8R8_G8B8_UNORM                         = 69,
@@ -345,6 +345,9 @@ enum GLFormat : uint32_t {
     GL_RG32F = 0x8230,
     GL_RGBA32F = 0x8814,
 
+    GL_R11F_G11F_B10F = 0x8C3A,
+    GL_RGB9_E5 = 0x8C3D,
+    
 #if SUPPORT_RGB
     GL_RGB8 = 0x8051,
     GL_SRGB8 = 0x8C41,
@@ -470,15 +473,15 @@ enum MyVKFormat {
     VK_FORMAT_ASTC_8x8_UNORM_BLOCK = 171,
     VK_FORMAT_ASTC_8x8_SRGB_BLOCK = 172,
 
-// not support these
-//    VK_FORMAT_ASTC_5x4_UNORM_BLOCK = 159,
-//    VK_FORMAT_ASTC_5x4_SRGB_BLOCK = 160,
-//    VK_FORMAT_ASTC_6x5_UNORM_BLOCK = 163,
-//    VK_FORMAT_ASTC_6x5_SRGB_BLOCK = 164,
-//    VK_FORMAT_ASTC_8x5_UNORM_BLOCK = 167,
-//    VK_FORMAT_ASTC_8x5_SRGB_BLOCK = 168,
-//    VK_FORMAT_ASTC_8x6_UNORM_BLOCK = 169,
-//    VK_FORMAT_ASTC_8x6_SRGB_BLOCK = 170,
+// not supporting these
+// VK_FORMAT_ASTC_5x4_UNORM_BLOCK = 159,
+// VK_FORMAT_ASTC_5x4_SRGB_BLOCK = 160,
+// VK_FORMAT_ASTC_6x5_UNORM_BLOCK = 163,
+// VK_FORMAT_ASTC_6x5_SRGB_BLOCK = 164,
+// VK_FORMAT_ASTC_8x5_UNORM_BLOCK = 167,
+// VK_FORMAT_ASTC_8x5_SRGB_BLOCK = 168,
+// VK_FORMAT_ASTC_8x6_UNORM_BLOCK = 169,
+// VK_FORMAT_ASTC_8x6_SRGB_BLOCK = 170,
 
 // VK_FORMAT_ASTC_10x5_UNORM_BLOCK = 173,
 // VK_FORMAT_ASTC_10x5_SRGB_BLOCK = 174,
@@ -493,6 +496,9 @@ enum MyVKFormat {
 // VK_FORMAT_ASTC_12x12_UNORM_BLOCK = 183,
 // VK_FORMAT_ASTC_12x12_SRGB_BLOCK = 184,
 
+    VK_FORMAT_B10G11R11_UFLOAT_PACK32 = 122,
+    VK_FORMAT_E5B9G9R9_UFLOAT_PACK32 = 123,
+    
 #if SUPPORT_RGB
     // import only
     VK_FORMAT_R8G8B8_UNORM = 23,
@@ -718,8 +724,16 @@ static bool initFormatsIfNeeded()
     KTX_FORMAT(EXPrg32f, MyMTLPixelFormatRG32Float, VK_FORMAT_R32G32_SFLOAT, DXGI_FORMAT_R32G32_FLOAT, GL_RG32F, GL_RG, 1, 1, 8, 2, FLAG_32F)
     KTX_FORMAT(EXPrgba32f, MyMTLPixelFormatRGBA32Float, VK_FORMAT_R32G32B32A32_SFLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, GL_RGBA32F, GL_RGBA, 1, 1, 16, 4, FLAG_32F)
 
+    // import only (can convert dds -> ktx/ktx2)
+    KTX_FORMAT(EXPrg11b10f, MyMTLPixelFormatRG11B10Float, VK_FORMAT_B10G11R11_UFLOAT_PACK32, DXGI_FORMAT_R11G11B10_FLOAT, GL_R11F_G11F_B10F, GL_RGB, 1, 1, 4, 3, FLAG_16F)
+    // GL_UNSIGNED_INT_10F_11F_11F_REV
+    
+    // import only (can convert dds -> ktx/ktx2)
+    KTX_FORMAT(EXPrgb9f, MyMTLPixelFormatRGB9E5Float, VK_FORMAT_E5B9G9R9_UFLOAT_PACK32, DXGI_FORMAT_R9G9B9E5_SHAREDEXP, GL_RGB9_E5, GL_RGB, 1, 1, 4, 3, FLAG_16F)
+    // GL_UNSIGNED_INT_5_9_9_9_REV
+    
 #if SUPPORT_RGB
-    // these are import only formats
+    // import only formats (can convert dds -> ktx/ktx2)
     // DX only has one of these as a valid type
     KTX_FORMAT(EXPrgb8, MyMTLPixelFormatRGB8Unorm_internal, VK_FORMAT_R8G8B8_UNORM, DXGI_FORMAT_UNKNOWN, GL_RGB8, GL_RGB, 1, 1, 3, 3, 0)
     KTX_FORMAT(EXPsrgb8, MyMTLPixelFormatRGB8Unorm_sRGB_internal, VK_FORMAT_R8G8B8_SRGB, DXGI_FORMAT_UNKNOWN, GL_SRGB8, GL_SRGB, 1, 1, 3, 3, FLAG_SRGB)

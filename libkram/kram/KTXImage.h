@@ -90,6 +90,10 @@ enum MyMTLPixelFormat {
     // MyMTLPixelFormatRG8Snorm     = 32,
     // MyMTLPixelFormatRGBA8Snorm      = 72,
 
+    // TODO: also 10a2Unorm
+    MyMTLPixelFormatRG11B10Float = 92,
+    MyMTLPixelFormatRGB9E5Float = 93,
+    
     // TODO: also BGRA8Unorm types?
 
     MyMTLPixelFormatR16Float = 25,
