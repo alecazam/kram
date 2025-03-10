@@ -104,9 +104,6 @@ enum MyMTLPixelFormat {
     MyMTLPixelFormatRG32Float = 105,
     MyMTLPixelFormatRGBA32Float = 125,
 
-// TODO: also need rgb9e5 for fallback if ASTC HDR/6H not supported
-// That is Unity's fallback if alpha not needed, otherwise RGBA16F.
-
 #if SUPPORT_RGB
     // Can import files from KTX/KTX2 with RGB data, but convert right away to RGBA.
     // These are not export formats.  Watch alignment on these too.  These

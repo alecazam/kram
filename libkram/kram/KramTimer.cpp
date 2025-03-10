@@ -402,7 +402,7 @@ void Perf::addCounter(const char* name, double time, int64_t amount)
         return;
     }
 
-    // Catapult timings are suppoed to be in micros.
+    // Catapult timings are supposed to be in micros.
     // Convert seconds to micros (as integer), lose nanos.  Note that
     // Perfetto will convert all values to nanos anyways.
     // Raw means nanos, and Seconds is too small of a fraction.
