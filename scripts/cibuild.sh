@@ -122,14 +122,14 @@ if [[ $buildType == macos ]]; then
 	# hlslparser
 	pushd hlslparser
     echo "::group::hlsl-parser"
-    xcodebuild install -sdk macosx -project hlslparser.xcodeproj -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    xcodebuild install -sdk macosx -project hlslparser.xcodeproj -scheme hlslparser -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
 	popd
 
     # kram-profile
     pushd kram-profile
     echo "::group::kram-profiler"
-    xcodebuild install -sdk macosx -project kram-profile.xcodeproj -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
+    xcodebuild install -sdk macosx -project kram-profile.xcodeproj -scheme kram-profile -configuration Release ${xargs} -destination generic/platform=macOS DSTROOT=${binHolderPath} INSTALL_PATH=bin
     echo "::endgroup::"
     popd
 

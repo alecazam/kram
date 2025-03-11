@@ -932,7 +932,9 @@ static int32_t logMessageImpl(const LogMessage& msg)
 #if KRAM_APPLE
     // test os_log
 
-    static bool useOSLog = true;
+    // TODO: setting useOSLog to true, breaks all output from kramc
+    //  but it shows up in debugger.  So stop using it.
+    static bool useOSLog = false;
     if (useOSLog) {
         char tokens[kMaxTokens] = {};
         getFormatTokens(tokens, msg, DebuggerOSLog);
