@@ -439,8 +439,8 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
 
     int32_t dstIndex = 0;
 
-    bool isOddX = width & 1;
-    bool isOddY = height & 1;
+    bool isOddX = (width > 1) && (width & 1);
+    bool isOddY = (height > 1) && (height & 1);
 
     // advance always by 2, but sample from neighbors
     int32_t mipWidth = std::max(1, width / 2);
@@ -464,7 +464,20 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
         float y0w = mipHeight * invHeight;
         float y1w = mipY * invHeight;
 
-        if (!isOddY) {
+        if (height == 3) {
+            ymw = 1.0f/3.0f;
+            y0w = 1.0f/3.0f;
+            y1w = 1.0f/3.0f;
+        }
+        else if (height == 1) {
+            ym = y; // weight is 0
+            y1 = y;
+            
+            ymw = 0.0f;
+            y0w = 1.0f;
+            y1w = 0.0f;
+        }
+        else if (!isOddY) {
             ym = y; // weight is 0
 
             ymw = 0.0f;
@@ -493,7 +506,20 @@ void Mipper::mipmapLevelOdd(const ImageData& srcImage, ImageData& dstImage) cons
             float x0w = mipWidth * invWidth;
             float x1w = mipX * invWidth;
 
-            if (!isOddX) {
+            if (width == 3) {
+                xmw = 1.0f/3.0f;
+                x0w = 1.0f/3.0f;
+                x1w = 1.0f/3.0f;
+            }
+            else if (width == 1) {
+                xm = x; // weight is 0
+                x1 = x;
+                
+                xmw = 0.0f;
+                x0w = 1.0f;
+                x1w = 0.0f;
+            }
+            else if (!isOddX) {
                 xm = x; // weight is 0
 
                 xmw = 0.0f;

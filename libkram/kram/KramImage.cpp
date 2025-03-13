@@ -2099,6 +2099,9 @@ bool KramEncoder::createMipsFromChunks(
     int32_t srcTopMipWidth = srcImage.width;
     int32_t srcTopMipHeight = srcImage.height;
 
+    // Need this to restore the pointers after mip gen
+    const ImageData srcImageSaved = srcImage;
+    
     for (int32_t chunk = 0; chunk < numChunks; ++chunk) {
         Timer timerBuildMips;
 
@@ -2112,7 +2115,12 @@ bool KramEncoder::createMipsFromChunks(
         // reset these dimensions, or the mip mapping drops them to 1x1
         srcImage.width = w;
         srcImage.height = h;
-
+        
+        // restore the pointers
+        srcImage.pixels = srcImageSaved.pixels;
+        srcImage.pixelsHalf = srcImageSaved.pixelsHalf;
+        srcImage.pixelsFloat = srcImageSaved.pixelsFloat;
+        
         if (info.isHDR) {
             // TODO: should this support halfImage too?
 
@@ -2263,7 +2271,7 @@ bool KramEncoder::createMipsFromChunks(
                     // dst becomes src for next mipmap
                     // preserve the isSRGB state
                     bool isSRGBSrc = srcImage.isSRGB;
-                    srcImage = dstMipImage;
+                    srcImage = dstMipImage; // this is changing srcImage.pixels
                     srcImage.isSRGB = isSRGBSrc;
 
                     pixelOffset += dstMipImage.width * dstMipImage.height;

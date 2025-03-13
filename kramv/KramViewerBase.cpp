@@ -588,7 +588,7 @@ string ShowSettings::windowTitleString(const char* filename) const
 
 Data::Data()
 {
-#if USE_SIMDLIB && 1
+#if USE_SIMDLIB && KRAM_DEBUG && 0
     vecf vfmt;
 
     // want to see the simd config

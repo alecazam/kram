@@ -2303,8 +2303,7 @@ static void handle_opaque_block(void *pBlock, const color_rgba *pPixels, const b
 	pParams->m_perceptual = pComp_params->m_perceptual;
 	pParams->m_num_pixels = 16;
 	pParams->m_pPixels = pPixels;
-	pParams->m_has_alpha = false;
-
+	
 	opt_results.m_partition = 0;
 	opt_results.m_index_selector = 0;
 	opt_results.m_rotation = 0;
@@ -2318,6 +2317,10 @@ static void handle_opaque_block(void *pBlock, const color_rgba *pPixels, const b
 		pParams->m_comp_bits = 7;
 		pParams->m_has_pbits = true;
 		pParams->m_endpoints_share_pbit = false;
+        
+        // This means mode has alpha even though this is an opaque block
+        // so deal with the error on alpha too.
+        pParams->m_has_alpha = true;
 
 		color_cell_compressor_results results6;
 		results6.m_pSelectors = opt_results.m_selectors;
@@ -2343,6 +2346,7 @@ static void handle_opaque_block(void *pBlock, const color_rgba *pPixels, const b
 		pParams->m_comp_bits = 6;
 		pParams->m_has_pbits = true;
 		pParams->m_endpoints_share_pbit = true;
+        pParams->m_has_alpha = false;
 
 		const uint8_t *pPartition = &g_bc7_partition2[trial_partition * 16];
 
@@ -2395,6 +2399,8 @@ static void handle_opaque_block(void *pBlock, const color_rgba *pPixels, const b
 			}
 		}
 	}
+
+    pParams->m_has_alpha = false;
 
 	encode_bc7_block(pBlock, &opt_results);
 }
