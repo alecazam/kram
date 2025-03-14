@@ -125,7 +125,11 @@ struct vfloat8
 	 */
 	static ASTCENC_SIMD_INLINE vfloat8 loada(const float* p)
 	{
+#if ASTCENC_VECALIGN == 32
 		return vfloat8(_mm256_load_ps(p));
+#else // 16
+        return vfloat8(_mm256_loadu_ps(p));
+#endif
 	}
 
 	/**
@@ -242,7 +246,11 @@ struct vint8
 	 */
 	static ASTCENC_SIMD_INLINE vint8 loada(const int* p)
 	{
+#if ASTCENC_VECALIGN == 32
 		return vint8(_mm256_load_si256(reinterpret_cast<const __m256i*>(p)));
+#else // 16
+        return vint8(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(p)));
+#endif
 	}
 
 	/**
@@ -534,7 +542,11 @@ ASTCENC_SIMD_INLINE vint8 hmax(vint8 a)
  */
 ASTCENC_SIMD_INLINE void storea(vint8 a, int* p)
 {
-	_mm256_store_si256(reinterpret_cast<__m256i*>(p), a.m);
+#if ASTCENC_VECALIGN == 32
+    _mm256_store_si256(reinterpret_cast<__m256i*>(p), a.m);
+#else // 16
+	_mm256_storeu_si256(reinterpret_cast<__m256i*>(p), a.m);
+#endif
 }
 
 /**
@@ -961,7 +973,11 @@ ASTCENC_SIMD_INLINE void store(vfloat8 a, float* p)
  */
 ASTCENC_SIMD_INLINE void storea(vfloat8 a, float* p)
 {
-	_mm256_store_ps(p, a.m);
+#if ASTCENC_VECALIGN == 32
+    _mm256_store_ps(p, a.m);
+#else // 16
+	_mm256_storeu_ps(p, a.m);
+#endif
 }
 
 /**

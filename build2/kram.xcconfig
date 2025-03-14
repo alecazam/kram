@@ -10,6 +10,7 @@
 // This setting only applies to x64, but many macs only have AVX (2019 MBP).
 // Note that f16c is supported on AVX, but fma requires AVX2.
 // If setting this to AVX, then set GLTF/GLTFMTL too since those don't use config.
+// There isn't currently a fallback to AVX (see SIMD_AVX2).
 CLANG_X86_VECTOR_INSTRUCTIONS = AVX2
 
 KRAM_FLAGS_X64 =
