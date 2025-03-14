@@ -24,8 +24,10 @@ int main(int argc, char* argv[])
     //size_t cpuFeatureSize = 0;
     //sysctlbyname("machdep.cpu.features", nullptr, &cpuFeatureSize, nullptr, 0);
     
+    const char* avx2Features = "machdep.cpu.leaf7_features";
+    
     size_t leaf7FeatureSize = 0;
-    sysctlbyname("machdep.cpu.leaf7_featuress", nullptr, &leaf7FeatureSize, nullptr, 0);
+    sysctlbyname(avx2Features, nullptr, &leaf7FeatureSize, nullptr, 0);
     
     if (leaf7FeatureSize == 0) {
         hasSimdSupport = false;
@@ -35,8 +37,10 @@ int main(int argc, char* argv[])
         
         vector<char> buffer;
         buffer.resize(leaf7FeatureSize);
-        sysctlbyname("machdep.cpu.leaf7_featuress", buffer.data(), &leaf7FeatureSize, nullptr, 0);
+        sysctlbyname(avx2Features, buffer.data(), &leaf7FeatureSize, nullptr, 0);
         
+        // If don't find avx2, then support is not present.
+        // could be running under Rosetta2 but it's supposed to add AVX2 soon.
         if (strstr(buffer.data(), "AVX2") == nullptr) {
             hasSimdSupport = false;
         }
@@ -45,6 +49,8 @@ int main(int argc, char* argv[])
     
 #elif KRAM_WIN
     // TODO: check Win support too
+    // Also need Win for ARM tests (f.e. Prism is SSE4 -> AVX2 soon).
+    
 #endif
     
     if (!hasSimdSupport) {
