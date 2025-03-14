@@ -7,6 +7,11 @@
 // Xcode doesn't set NDEBUG=1 in Release builds.  Ugh.
 // Also turn on -ftime-trace to review build times in kram-profile.
 
+// This setting only applies to x64, but many macs only have AVX (2019 MBP).
+// Note that f16c is supported on AVX, but fma requires AVX2.
+// If setting this to AVX, then set GLTF/GLTFMTL too since those don't use config.
+CLANG_X86_VECTOR_INSTRUCTIONS = AVX2
+
 KRAM_FLAGS_X64 =
 KRAM_FLAGS_X64[sdk=*][arch=x86_64] = -mf16c -mfma
 
