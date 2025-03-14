@@ -70,15 +70,15 @@ int main(int argc, char* argv[])
     // This returns a count of the ids from mthe docs.
     struct CpuInfo {
         int eax, ebx, ecx, edx;
-    };'
+    };
     
     // numIds in 0
     // vendorId (12 char string) returned in 1,3,2
     // can tell intel from amd off vendorId
     CpuInfo cpuInfo = {};
-    __cpuid(cpuInfo, 0);
+    __cpuid((int*)&cpuInfo, 0);
     
-    int numIds = cpuInfo[0];
+    int numIds = cpuInfo.eax;
     if (numIds < 7) {
         hasSimdSupport = false;
     }
