@@ -4,13 +4,15 @@
 #include <sys/sysctl.h>
 #endif
 
+#if KRAM_WIN
+#include <intrin.h>
+#endif
+
 int main(int argc, char* argv[])
 {
     bool hasSimdSupport = true;
     
 #if KRAM_MAC
-    // TODO: test for simd support here
-    
     #if SIMD_AVX2
     
     // can also check AVX1.0
@@ -48,8 +50,20 @@ int main(int argc, char* argv[])
     #endif
     
 #elif KRAM_WIN
-    // TODO: check Win support too
-    // Also need Win for ARM tests (f.e. Prism is SSE4 -> AVX2 soon).
+    // Also handles Win for ARM (f.e. Prism is SSE4 -> AVX2 soon).
+    // See here for more bits (f.e. AVX512)
+    // https://learn.microsoft.com/en-us/cpp/intrinsics/cpuid-cpuidex?view=msvc-170
+    //
+    // ecx bit 28 is avx.
+    // ecx bit 29 is avx2
+    
+    int cpuInfo[4] = {};
+    __cpuid(cpuInfo, 0);
+    
+    #if SIMD_AVX2
+    bool hasAVX2 = cpuInfo[2] & (1 << 29);
+    hasSimdSupport = hasAVX2;
+    #endif
     
 #endif
     
