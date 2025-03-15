@@ -113,9 +113,9 @@ int main(int argc, char* argv[])
     
     // This is GenuineIntel or AuthenticAMD
     char vendorId[12+1] = {};
-    *reinterpret_cast<int*>(vendor + 0) = cpuInfo.ebx;
-    *reinterpret_cast<int*>(vendor + 4) = cpuInfo.edx;
-    *reinterpret_cast<int*>(vendor + 8) = cpuInfo.ecx;
+    *reinterpret_cast<int*>(vendorId + 0) = cpuInfo.ebx;
+    *reinterpret_cast<int*>(vendorId + 4) = cpuInfo.edx;
+    *reinterpret_cast<int*>(vendorId + 8) = cpuInfo.ecx;
        
     int numIds = cpuInfo.eax;
     if (numIds < 7) {
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
         bool hasFMA = cpuInfoByIndex[1].ecx & (1 << 12);
         bool hasF16C = cpuInfoByIndex[1].ecx & (1 << 29);
         
-        if (!hasAVX2))
+        if (!hasAVX2)
             hasSimdSupport = false;
         else if (!hasFMA)
             hasSimdSupport = false;
@@ -171,13 +171,13 @@ int main(int argc, char* argv[])
         __cpuidex((int*)&cpuInfo, extBase+4, 0);
         cpuInfoByIndex[4] = cpuInfo;
         
-        memcpy(brand +  0, &cpuInfoByIndex[2], sizeof(CpuInfo));
-        memcpy(brand + 16, &cpuInfoByIndex[3], sizeof(CpuInfo));
-        memcpy(brand + 32, &cpuInfoByIndex[4].data(), sizeof(CpuInfo));
+        memcpy(brandId +  0, &cpuInfoByIndex[2], sizeof(CpuInfo));
+        memcpy(brandId + 16, &cpuInfoByIndex[3], sizeof(CpuInfo));
+        memcpy(brandId + 32, &cpuInfoByIndex[4], sizeof(CpuInfo));
     }
     
     if (!hasSimdSupport) {
-        KLOGE("Main", "Missing simd support for %s", brand);
+        KLOGE("Main", "Missing simd support for %s", brandId);
         exit(1);
     }
     
