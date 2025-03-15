@@ -12,10 +12,11 @@ using namespace STL_NAMESPACE;
 
 int main(int argc, char* argv[])
 {
-    bool hasSimdSupport = true;
-    
+    // Check for AVX2, FMA, F16C support on Intel.
+    // AVX2 implies the other 2, but still have to enable on compile.
+#if SIMD_AVX2
 #if KRAM_MAC
-    #if SIMD_AVX2
+    bool hasSimdSupport = true;
     
     // can also check AVX1.0
     // F16C (avx/avx2 imply F16C and assume Rosetta too)
@@ -25,13 +26,10 @@ int main(int argc, char* argv[])
     // machdep.cpu.leaf7_features: SMEP ERMS RDWRFSGS TSC_THREAD_OFFSET BMI1 AVX2 BMI2 INVPCID
     
     
-    //size_t cpuFeatureSize = 0;
-    //sysctlbyname("machdep.cpu.features", nullptr, &cpuFeatureSize, nullptr, 0);
-    
-    const char* avx2Features = "machdep.cpu.leaf7_features";
+    const char* leaf7Features = "machdep.cpu.leaf7_features";
     
     size_t leaf7FeatureSize = 0;
-    sysctlbyname(avx2Features, nullptr, &leaf7FeatureSize, nullptr, 0);
+    sysctlbyname(leaf7Features, nullptr, &leaf7FeatureSize, nullptr, 0);
     
     if (leaf7FeatureSize == 0) {
         hasSimdSupport = false;
@@ -39,22 +37,57 @@ int main(int argc, char* argv[])
     else {
         vector<char> buffer;
         buffer.resize(leaf7FeatureSize);
-        sysctlbyname(avx2Features, buffer.data(), &leaf7FeatureSize, nullptr, 0);
+        sysctlbyname(leaf7Features, buffer.data(), &leaf7FeatureSize, nullptr, 0);
         
         // If don't find avx2, then support is not present.
         // could be running under Rosetta2 but it's supposed to add AVX2 soon.
-        if (strstr(buffer.data(), "AVX2") == nullptr) {
+        bool hasAVX2 = strstr(buffer.data(), "AVX2") != nullptr;
+        
+        if (!hasAVX2) {
             hasSimdSupport = false;
         }
     }
-    #endif
+    
+    const char* cpuFeatures = "machdep.cpu.features";
+    
+    size_t cpuFeatureSize = 0;
+    sysctlbyname(cpuFeatures, nullptr, &cpuFeatureSize, nullptr, 0);
+    
+    if (!hasSimdSupport || cpuFeatureSize == 0) {
+        hasSimdSupport = false;
+    }
+    else {
+        vector<char> buffer;
+        buffer.resize(cpuFeatureSize);
+        sysctlbyname(cpuFeatures, buffer.data(), &cpuFeatureSize, nullptr, 0);
+       
+        // Make sure compile has enabled these on AVX2
+        bool hasF16C = strstr(buffer.data(), "F16C") != nullptr;
+        bool hasFMA = strstr(buffer.data(), "FMA") != nullptr;
+        
+        if (!hasF16C) {
+            hasSimdSupport = false;
+        }
+        else if (!hasFMA) {
+            hasSimdSupport = false;
+        }
+    }
+
+    // TODO: can add brand to this if find the sysctlbyname query
+    if (!hasSimdSupport) {
+        KLOGE("Main", "Missing simd support");
+        exit(1);
+    }
     
 #elif KRAM_WIN
+    bool hasSimdSupport = true;
+    
     // Also handles Win for ARM (f.e. Prism is SSE4 -> AVX2 soon).
     // See here for more bits (f.e. AVX512)
     // https://learn.microsoft.com/en-us/cpp/intrinsics/cpuid-cpuidex?view=msvc-170
     
     // f1.ecx bit  0 is sse3
+    // f1.ecx bit 12 is fma
     // f1.ecx bit 19 is sse4.1
     // f1.ecx bit 20 is sse4.2
     // f1.ecx bit 28 is avx.
@@ -78,6 +111,12 @@ int main(int argc, char* argv[])
     CpuInfo cpuInfo = {};
     __cpuid((int*)&cpuInfo, 0);
     
+    // This is GenuineIntel or AuthenticAMD
+    char vendorId[12+1] = {};
+    *reinterpret_cast<int*>(vendor + 0) = cpuInfo.ebx;
+    *reinterpret_cast<int*>(vendor + 4) = cpuInfo.edx;
+    *reinterpret_cast<int*>(vendor + 8) = cpuInfo.ecx;
+       
     int numIds = cpuInfo.eax;
     if (numIds < 7) {
         hasSimdSupport = false;
@@ -95,28 +134,56 @@ int main(int argc, char* argv[])
         __cpuidex((int*)&cpuInfo, 7, 0);
         cpuInfoByIndex[7] = cpuInfo;
         
-        // TODO: probably another for AVX10
-        
-// This is to obtain all the bits, but only care about AVX2
-//        for (int i = 0; i <= numIds; ++i) {
-//            __cpuidex((int*)&cpuInfo, i, 0); // get the values
-//            cpuInfoByIndex[i] = cpuInfo;
-//        }
-        
-        // there are extended bits above 0x8000000
-        
-        #if SIMD_AVX2
         bool hasAVX2 = cpuInfoByIndex[7].ebx & (1 << 5);
-        hasSimdSupport = hasAVX2;
-        #endif
+        
+        bool hasFMA = cpuInfoByIndex[1].ecx & (1 << 12);
+        bool hasF16C = cpuInfoByIndex[1].ecx & (1 << 29);
+        
+        if (!hasAVX2))
+            hasSimdSupport = false;
+        else if (!hasFMA)
+            hasSimdSupport = false;
+        else if (!hasF16C)
+            hasSimdSupport = false;
+    }
+    
+    // extended cpuid attributes
+    int extBase = 0x80000000;
+    __cpuid((int*)&cpuInfo, extBase);
+    numIds = cpuInfo.eax - extBase;
+
+    char brandId[48+1] = {};
+    
+    if (numIds >= 4)
+    {
+        vector<CpuInfo> cpuInfoByIndex;
+        cpuInfoByIndex.resize(numIds+1);
+        
+        // f81
+        __cpuidex((int*)&cpuInfo, extBase+1, 0);
+        cpuInfoByIndex[1] = cpuInfo;
+        
+        // brand
+        __cpuidex((int*)&cpuInfo, extBase+2, 0);
+        cpuInfoByIndex[2] = cpuInfo;
+        __cpuidex((int*)&cpuInfo, extBase+3, 0);
+        cpuInfoByIndex[3] = cpuInfo;
+        __cpuidex((int*)&cpuInfo, extBase+4, 0);
+        cpuInfoByIndex[4] = cpuInfo;
+        
+        memcpy(brand +  0, &cpuInfoByIndex[2], sizeof(CpuInfo));
+        memcpy(brand + 16, &cpuInfoByIndex[3], sizeof(CpuInfo));
+        memcpy(brand + 32, &cpuInfoByIndex[4].data(), sizeof(CpuInfo));
+    }
+    
+    if (!hasSimdSupport) {
+        KLOGE("Main", "Missing simd support for %s", brand);
+        exit(1);
     }
     
 #endif
+#endif
     
-    if (!hasSimdSupport) {
-        KLOGE("Main", "Missing simd support");
-        exit(1);
-    }
     
     // verify that machine has simd support to run
     int errorCode = kram::kramAppMain(argc, argv);
