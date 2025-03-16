@@ -71,6 +71,7 @@ static double queryPeriod()
 static uint64_t queryCounter()
 {
     uint64_t time = 0;
+    time = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
     
     // Mach absolute time will, in general, continue to count if your process is suspended in the background.
     // However, if will stop counting if the CPU goes to sleep.
@@ -89,7 +90,6 @@ static uint64_t queryCounter()
     
     // increment when system sleeps
     // time = mach_continuous_time();
-    time = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
     
     // no increment when system sleeps
     //time = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
@@ -106,7 +106,8 @@ static uint64_t queryCounter()
 
 static double queryPeriod()
 {
-    period *= 1e-9;
+    double period = 1e-9;
+    return period;
 }
 
 static uint64_t queryCounter()
