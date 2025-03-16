@@ -72,7 +72,7 @@ if (BUILD_WIN)
     # all warnings, AVX2, and multiprocess compiles
     target_compile_options(${myTargetApp} PRIVATE /W3 
 	-march=haswell -mf16c -mfma 
-	-fno-exceptions -fno-rtti
+	/GR- /EHs-c-
 	/MP /GF /FC)
     
     # fix STL

@@ -234,13 +234,13 @@ if (BUILD_WIN)
 
     # this is already done by pch for libkram, but other projects need the force include inherited
     # force include (public)
-    target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
+    target_compile_options(${myTargetLib} PUBLIC /FIKramConfig.h)
        
     # all warnings, AVX2, and multiprocess compiles,
     # eliminate duplicate strings, embed full path
     target_compile_options(${myTargetLib} PRIVATE  /W3 
         -march=haswell -mf16c -mfma 
-        -fno-exceptions -fno-rtti
+        /GR- /EHs-c-
         /MP /GF /FC)
     
     # fix STL (don't use -D here, will remove)
