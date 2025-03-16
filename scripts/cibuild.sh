@@ -168,8 +168,10 @@ elif [[ $buildType == linux ]]; then
 
 	pushd build
 
-    # this will use make TODO: switch to ninja (-G Ninja)
-    cmake ..
+    # this will use make
+    # cmake ..
+    # TODO: switch to ninja, so can see failure cli
+    cmake .. -G Ninja
 
 	# build the release build
 	cmake --build . --config Release
