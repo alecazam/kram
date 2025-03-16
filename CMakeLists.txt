@@ -54,8 +54,9 @@ if (BUILD_WIN)
     # the CLI app for Mac/Win that can build content for other platforms, uses libkram
     add_subdirectory(kramc)
 
+    # TODO: this needs a shared libkram, but kramc uses static libkram
     # this is an Explorer thumbnail extension (run script to un/register), uses libkram
-    add_subdirectory(kram-thumb-win)
+    # add_subdirectory(kram-thumb-win)
     
     # hack hlslparser for win build into kram for now, does not use kram
     # add_subdirectory(hlslparser)
@@ -66,9 +67,9 @@ if (BUILD_WIN)
     set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
 
     # install doesn't seem to do anything on WIN32, the build elements are not copied
-    install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
-    install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
-    install(TARGETS kram-thumb-win LIBRARY DESTINATION ${BIN_DIR})
+    #install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
+    #install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
+    #install(TARGETS kram-thumb-win LIBRARY DESTINATION ${BIN_DIR})
     
     # hlslparser is also now in the kram build.  Keep executables up to date.
     # I would use the sln file, but msbuild doesn't like to be called from cibuld.sh
