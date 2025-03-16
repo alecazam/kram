@@ -18,7 +18,7 @@ if (BUILD_LINUX)
 
     # this is already done by pch for libkram, but other projects need the force include inherited
     # force include (public)
-    target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
+    target_compile_options(${myTargetApp} PUBLIC -include KramConfig.h)
 endif()
 
 if (BUILD_MAC)
