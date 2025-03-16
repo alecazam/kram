@@ -79,7 +79,8 @@ endif()
 
 # add_library doesn't establish a project, so still pointing at root CMake
 #set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/libkram)
-set(SOURCE_DIR ${CMAKE_SOURCE_DIR}/libkram)
+#set(SOURCE_DIR ${CMAKE_SOURCE_DIR}/libkram)
+set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libkram)
 
 file(GLOB_RECURSE libSources CONFIGURE_DEPENDS 
 	"${SOURCE_DIR}/astc-encoder/*.cpp"
