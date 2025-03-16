@@ -12,6 +12,8 @@
 #include <mach/mach_time.h>
 #elif KRAM_ANDROID
 #include <trace.h>
+#elif KRAM_LINUX
+// TODO:
 #endif
 
 #define nl '\n'
@@ -97,6 +99,20 @@ static uint64_t queryCounter()
     // Tracy says these timers are bad, but uses them.
     // C++11 has std::chrono::high_resolution_clock::now() in <chrono>
     
+    return time;
+}
+
+#elif KRAM_LINUX
+
+static double queryPeriod()
+{
+    period *= 1e-9;
+}
+
+static uint64_t queryCounter()
+{
+    uint64_t time = 0;
+    // TODO: add implementation
     return time;
 }
 
