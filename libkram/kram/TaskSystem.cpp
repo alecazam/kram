@@ -8,7 +8,7 @@
 //#endif
 
 #if KRAM_APPLE
-#include <pthread/pthread.h>
+#include <pthread.h>
 #include <pthread/qos.h>
 #include <sys/sysctl.h>
 #elif KRAM_WIN
@@ -20,7 +20,7 @@
 #elif KRAM_ANDROID
 #include <sys/resource.h>
 #else
-#include <pthread/pthread.h>
+#include <pthread.h>
 #endif
 
 // TODO: look at replacing this with Job Queue from Filament
