@@ -79,8 +79,8 @@ endif()
 
 # add_library doesn't establish a project, so still pointing at root CMake
 #set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/libkram)
-#set(SOURCE_DIR ${CMAKE_SOURCE_DIR}/libkram)
-set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libkram)
+set(SOURCE_DIR ${CMAKE_SOURCE_DIR}/libkram)
+set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libkram)
 
 file(GLOB_RECURSE libSources CONFIGURE_DEPENDS 
 	"${SOURCE_DIR}/astc-encoder/*.cpp"
@@ -171,24 +171,24 @@ source_group(TREE "${SOURCE_DIR}" PREFIX "source" FILES ${libSources})
 
 target_include_directories(${myTargetLib} PUBLIC
     # public since included in other project files
-    "${SOURCE_DIR}/kram/"
-    "${SOURCE_DIR}/eastl/include/"
-    "${SOURCE_DIR}/vectormath/"
+    "${INCLUDE_DIR}/kram/"
+    "${INCLUDE_DIR}/eastl/include/"
+    "${INCLUDE_DIR}/vectormath/"
 )
 
 target_include_directories(${myTargetLib} PRIVATE
-    "${SOURCE_DIR}/astc-encoder/"
-    "${SOURCE_DIR}/ate/"
-    "${SOURCE_DIR}/bc7enc/"
-    "${SOURCE_DIR}/compressonator/bc6h/"
-    "${SOURCE_DIR}/etc2comp/"
-    "${SOURCE_DIR}/fmt/"
-    "${SOURCE_DIR}/heman/"
-    "${SOURCE_DIR}/lodepng"
-    "${SOURCE_DIR}/miniz/"
-    "${SOURCE_DIR}/squish/"
-    "${SOURCE_DIR}/tmpfileplus/"
-    "${SOURCE_DIR}/zstd/"
+    "${INCLUDE_DIR}/astc-encoder/"
+    "${INCLUDE_DIR}/ate/"
+    "${INCLUDE_DIR}/bc7enc/"
+    "${INCLUDE_DIR}/compressonator/bc6h/"
+    "${INCLUDE_DIR}/etc2comp/"
+    "${INCLUDE_DIR}/fmt/"
+    "${INCLUDE_DIR}/heman/"
+    "${INCLUDE_DIR}/lodepng"
+    "${INCLUDE_DIR}/miniz/"
+    "${INCLUDE_DIR}/squish/"
+    "${INCLUDE_DIR}/tmpfileplus/"
+    "${INCLUDE_DIR}/zstd/"
 )
      
 # only add sources to the library
