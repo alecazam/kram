@@ -2,11 +2,6 @@
 # dll output can be renamed for debug vs. release, but is hard to debug
 set(myTargetLib kram-thumb-win)
 
-# Use the static linked libs, or the exe needs the VCRuntimeDLL installed
-set_property(TARGET ${myTargetLib} PROPERTY
-    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
-
 # caller already set all this
 # project(${myTargetLib} LANGUAGES CXX)
 
@@ -21,6 +16,11 @@ set(SOURCE_FILES
 
 # Module is a DLL library
 add_library(${myTargetLib} MODULE ${SOURCE_FILES})
+
+# Use the static linked libs, or the exe needs the VCRuntimeDLL installed
+# This has to occur after library defined above.
+set_property(TARGET ${myTargetLib} PROPERTY
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
  # to turn off exceptions/rtti use /GR and /EHsc replacement
 string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
