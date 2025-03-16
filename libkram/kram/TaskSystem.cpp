@@ -425,7 +425,7 @@ static void setThreadPriority(std::thread::native_handle_type handle, ThreadPrio
 }
 
 #elif KRAM_LINUX
-static void setThreadPriority(std::thread::native_handle_type handle, uint8_t priority)
+static void setThreadPriority(std::thread::native_handle_type handle, ThreadPriority priority)
 {
     // TODO: this has it's own levels
 }
@@ -433,7 +433,7 @@ static void setThreadPriority(std::thread::native_handle_type handle, uint8_t pr
 
 #elif KRAM_ANDROID
 
-static void setThreadPriority(std::thread::native_handle_type handle, uint8_t priority)
+static void setThreadPriority(std::thread::native_handle_type handle, ThreadPriority priority)
 {
     // This doesn't change policy.
     // Android on -20 to 20, where lower is higher priority
