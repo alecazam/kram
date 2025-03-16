@@ -15,11 +15,14 @@ if (BUILD_LINUX)
         -fno-exceptions -fno-rtti
         -fdata-sections -ffunction-sections
     )
+
+    target_link_libraries(${myTargetApp} PUBLIC libkram)
+
 endif()
 
 if (BUILD_MAC)
     # ate is a macOS/iOS only library, and it varies in encode support by OS revision
-    target_link_libraries(${myTargetApp}
+    target_link_libraries(${myTargetApp} PUBLIC
         ate
         libkram
     )
@@ -76,7 +79,7 @@ if (BUILD_WIN)
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
     )
     
-    target_link_libraries(${myTargetApp} libkram)
+    target_link_libraries(${myTargetApp} PUBLIC libkram)
 
     # When Win rebuilds library, it doesn't relink app to correct code when you
     # build the app target project.  Breakpoints stop working after any library source edit,
