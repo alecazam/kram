@@ -4,6 +4,11 @@
 
 #include "ImmutableString.h"
 
+// for memcpy
+#if KRAM_LINUX
+#include <string.h>
+#endif
+
 namespace kram {
 
 using namespace STL_NAMESPACE;

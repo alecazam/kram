@@ -137,6 +137,9 @@
 // some code not compiling with size_t otherwise
 #include <stddef.h>
 
+// linux need this for memcpy
+#include <string.h>
+
 #if USE_EASTL
 
 #define STL_NAMESPACE eastl
