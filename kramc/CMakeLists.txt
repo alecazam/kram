@@ -8,18 +8,32 @@ add_executable(${myTargetApp})
 
 #-----------------------------------------------------
     
+if (BUILD_LINUX)
+    # Enable all warnings, and also enable f16c sims op (only x64 though)
+    target_compile_options(${myTargetApp} PRIVATE -W -Wall 
+        -mavx2 -mfma -mf16c 
+        -fno-exceptions -fno-rtti
+        -fdata-sections -ffunction-sections
+    )
+
+    # this is already done by pch for libkram, but other projects need the force include inherited
+    # force include (public)
+    target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
+endif()
+
 if (BUILD_MAC)
     # ate is a macOS/iOS only library, and it varies in encode support by OS revision
     target_link_libraries(${myTargetApp}
         ate
-        libkram)
+        libkram
+    )
 
     set_target_properties(${myTargetApp} PROPERTIES
-        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
-        XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
+        #XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
+        #XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
         
         # can't believe this isn't on by default in CMAKE
-        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+        #XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
     
         #-------------------------
         
@@ -33,8 +47,10 @@ if (BUILD_MAC)
         # this drops app from 762KB to 174KB with only ATE enabled
         # note about needing -gfull instead of -gused here or debug info messed up:
         # https://gist.github.com/tkersey/39b4fe69e14b859889ffadccb009e397
-        XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES
-        XCODE_ATTRIBUTE_LLVM_LTO[variant=Release] "Incremental"
+        #XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES
+
+        # This is LTO
+        #XCODE_ATTRIBUTE_LLVM_LTO[variant=Release] "Incremental"
     
         #-------------------------
         # for now disable signing, and just "sign to run locally"
@@ -44,9 +60,15 @@ if (BUILD_MAC)
     )
 
     target_compile_options(${myTargetApp} PRIVATE -W -Wall
-        -mavx2 -mf16c -mfma 
+        -mavx2 -mfma -mf16c 
         -fno-exceptions -fno-rtti
+        -fdata-sections -ffunction-sections
     )
+
+    # only turn on in Release in case this disables incremental linking
+    if (CMAKE_BUILD_TYPE EQUAL "Release")
+        add_link_options(${myTargetApp}, "-dead_strip")
+    endif()
 endif()
 
 #-----------------------------------------------------
@@ -55,7 +77,8 @@ if (BUILD_WIN)
 
     # Use the static linked libs, or the exe needs the VCRuntimeDLL installed
     set_property(TARGET ${myTargetApp} PROPERTY
-        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
     
     target_link_libraries(${myTargetApp} libkram)
 
@@ -71,19 +94,17 @@ if (BUILD_WIN)
     
     # all warnings, AVX2, and multiprocess compiles
     target_compile_options(${myTargetApp} PRIVATE /W3 
-	-march=haswell -mf16c -mfma 
-	/GR- /EHs-c-
-	/MP /GF /FC)
+	   -march=haswell -mf16c -mfma 
+	   /GR- /EHs-c-
+	   /MP /GF /FC
+    )
     
     # fix STL
     target_compile_definitions(${myTargetApp} PRIVATE -D_ITERATOR_DEBUG_LEVEL=0 -D_HAS_EXCEPTIONS=0)
-    
-    if (CMAKE_BUILD_TYPE EQUAL "Debug")
-        target_compile_definitions(${myTargetLib} PRIVATE "/INCREMENTAL")
-        
-    elseif (CMAKE_BUILD_TYPE EQUAL "Release")
-        # only dead strip on Release builds since this disables Incremental linking, may want Profile build that doesn't use this
-        target_compile_definitions(${myTargetLib} PRIVATE "/OPT:REF")
+         
+    if (CMAKE_BUILD_TYPE EQUAL "Release")
+        # This disables Incremental linking, so only set on Release
+        add_link_options(${myTargetApp} PRIVATE "/OPT:REF")
         
         # other possibliities
         # /GL - whole program optimization

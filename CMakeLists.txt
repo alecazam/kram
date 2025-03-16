@@ -6,6 +6,7 @@ cmake_minimum_required(VERSION 3.19.1 FATAL_ERROR)
 # still building Win using Cmake.  macOS uses avx2 and Win uses avx2.
 set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
+set(BUILD_LINUX FALSE)
 
 if (APPLE)
     message(STATUS "build for macOS")
@@ -13,6 +14,9 @@ if (APPLE)
 elseif (WIN32)
     message(STATUS "build for win x64")
     set(BUILD_WIN TRUE)
+elseif (LINUX)
+    message(STATUS "build for linux x64")
+    set(BUILD_LINUX TRUE)
 endif()
 
 #-----------------------------------------------------
@@ -27,6 +31,23 @@ set(CMAKE_CXX_EXTENSIONS NO)
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_DEFAULT_STARTUP_PROJECT "kramc")
+
+#-----------------------------------------------------
+if (BUILD_LINUX)
+    set(myTargetWorkspace kramWorkspace)
+
+    project(${myTargetWorkspace} LANGUAGES C CXX)
+
+    # want to only use clang across all platforms
+    message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
+    
+    # the kram static library libkram which should build on iOS/Android/Mac/Win
+    # this doesn't set a project, but maybe it should
+    add_subdirectory(libkram)
+
+    # the CLI app for Mac/Win that can build content for other platforms, uses libkram
+    add_subdirectory(kramc)
+endif()
     
 #-----------------------------------------------------
 if (BUILD_WIN)
@@ -36,12 +57,6 @@ if (BUILD_WIN)
 
     project(${myTargetWorkspace} LANGUAGES C CXX)
     
-    # use clang-cl on Win, have to set both
-    # this is suggested way to set, but github already reports clang 17.0.3 with VS extensions
-    #  as the default compiler
-    # set(CMAKE_C_COMPILER "clang-cl")
-    # set(CMAKE_CXX_COMPILER "clang-cl")
-
     # want to only use clang across all platforms
     message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
     
@@ -64,7 +79,7 @@ if (BUILD_WIN)
     #-----------------------------------------------------
 
     # was considering platform-specific builds, but mac/win don't conflict
-    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
+    #set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
 
     # install doesn't seem to do anything on WIN32, the build elements are not copied
     #install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
@@ -79,7 +94,7 @@ endif()
 
 #-----------------------------------------------------
 # This part is unmaintained.  Couldn't build app extensions via CMake.
-# So now just mapintain projects
+# So now just maintain projects
 
 if (BUILD_MAC)
     # cmake translates project to sln in Win, but to xcode projects on Mac.
@@ -90,7 +105,7 @@ if (BUILD_MAC)
 
     # CMAKE_OSX_DEPLOYMENT_TARGET must be set as a CACHE variable, or it will be stripped
     set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Minimum macOS")
-    set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)" CACHE STRING "Architecture macOS")
+    set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Architecture macOS")
    
     #-----------------------------------------------------
 

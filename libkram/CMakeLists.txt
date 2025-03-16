@@ -172,7 +172,6 @@ target_include_directories(${myTargetLib} PUBLIC
     "${SOURCE_DIR}/kram/"
     "${SOURCE_DIR}/eastl/include/"
     "${SOURCE_DIR}/vectormath/"
-    
 )
 
 target_include_directories(${myTargetLib} PRIVATE
@@ -195,17 +194,22 @@ target_sources(${myTargetLib} PRIVATE ${libSources})
 
 #-----------------------------------------------------
 
+if (BUILD_LINUX)
+    # Enable all warnings, and also enable f16c sims op (only x64 though)
+    target_compile_options(${myTargetLib} PRIVATE -W -Wall 
+        -mavx2 -mfma -mf16c 
+        -fno-exceptions -fno-rtti
+        -fdata-sections -ffunction-sections
+    )
+
+    # this is already done by pch for libkram, but other projects need the force include inherited
+    # force include (public)
+    target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
+endif()
+
 # note: mac build is all done via Xcode workspace/project now, this cmake build is legacy
 if (BUILD_MAC)
     set_target_properties(${myTargetLib} PROPERTIES
-        XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++20"
-        XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
-        
-        # can't believe this isn't on by default in CMAKE
-        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
-        
-        #-------------------------
-
         # set debug style for apps
         XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
         XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH "NO"
@@ -214,23 +218,22 @@ if (BUILD_MAC)
     # Enable all warnings, and also enable f16c sims op (only x64 though)
     target_compile_options(${myTargetLib} PRIVATE -W -Wall 
         -mavx2 -mfma -mf16c 
-        -fno-exceptions -fno-rtti )
+        -fobjc-arc
+        -fno-exceptions -fno-rtti
+        -fdata-sections -ffunction-sections
+    )
 
     # this is already done by pch for libkram, but other projects need the force include inherited
     # force include (public)
     target_compile_options(${myTargetLib} PUBLIC -include KramConfig.h)
-    
-    # This is only a link option for macOS/iOS lld, but do need to set sections flags for this
-    #if (CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-    #    target_compile_options(${myTargetLib} PUBLIC -dead_strip)
-    #endif()
 endif()
 
 if (BUILD_WIN)
     # TODO: switch to add_target_definitions
 
     set_property(TARGET ${myTargetLib} PROPERTY
-        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
 
     # this is already done by pch for libkram, but other projects need the force include inherited
     # force include (public)
@@ -238,10 +241,12 @@ if (BUILD_WIN)
        
     # all warnings, AVX2, and multiprocess compiles,
     # eliminate duplicate strings, embed full path
+    # TODO: -fdata-sections -ffunction-sections
     target_compile_options(${myTargetLib} PRIVATE  /W3 
         -march=haswell -mf16c -mfma 
         /GR- /EHs-c-
-        /MP /GF /FC)
+        /MP /GF /FC
+    )
     
     # fix STL (don't use -D here, will remove)
     target_compile_definitions(${myTargetLib} PRIVATE _ITERATOR_DEBUG_LEVEL=0 _HAS_EXCEPTIONS=0)

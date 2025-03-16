@@ -21,8 +21,8 @@
 #include "KramImage.h" // has config defines, move them out
 #include "KramMmapHelper.h"
 #include "KramTimer.h"
-#define KRAM_VERSION "1.0"
-//#include "KramVersion.h"
+//#define KRAM_VERSION "1.0"
+#include "KramVersion.h"
 #include "TaskSystem.h"
 #include "lodepng.h"
 #include "miniz.h"

@@ -10,7 +10,8 @@
 
 using namespace STL_NAMESPACE;
 
-int main(int argc, char* argv[])
+// TODO: move this into vectormath
+void checkSimdSupport()
 {
     // Check for AVX2, FMA, F16C support on Intel.
     // AVX2 implies the other 2, but still have to enable on compile.
@@ -60,7 +61,7 @@ int main(int argc, char* argv[])
         vector<char> buffer;
         buffer.resize(cpuFeatureSize);
         sysctlbyname(cpuFeatures, buffer.data(), &cpuFeatureSize, nullptr, 0);
-       
+        
         // Make sure compile has enabled these on AVX2
         bool hasF16C = strstr(buffer.data(), "F16C") != nullptr;
         bool hasFMA = strstr(buffer.data(), "FMA") != nullptr;
@@ -72,7 +73,7 @@ int main(int argc, char* argv[])
             hasSimdSupport = false;
         }
     }
-
+    
     // TODO: can add brand to this if find the sysctlbyname query
     if (!hasSimdSupport) {
         KLOGE("Main", "Missing simd support");
@@ -98,8 +99,8 @@ int main(int argc, char* argv[])
     // f7.ebx bit 26 is avx-512pf
     // f7.ebx bit 27 is avx-512er
     // f7.ebx bit 28 is avx-512cd
-   
-   
+    
+    
     // This returns a count of the ids from mthe docs.
     struct CpuInfo {
         int eax, ebx, ecx, edx;
@@ -116,7 +117,7 @@ int main(int argc, char* argv[])
     *reinterpret_cast<int*>(vendorId + 0) = cpuInfo.ebx;
     *reinterpret_cast<int*>(vendorId + 4) = cpuInfo.edx;
     *reinterpret_cast<int*>(vendorId + 8) = cpuInfo.ecx;
-       
+    
     int numIds = cpuInfo.eax;
     if (numIds < 7) {
         hasSimdSupport = false;
@@ -129,7 +130,7 @@ int main(int argc, char* argv[])
         // This has sse4, avx, f16c
         __cpuidex((int*)&cpuInfo, 1, 0);
         cpuInfoByIndex[1] = cpuInfo;
-
+        
         // This has AVX2, avx512
         __cpuidex((int*)&cpuInfo, 7, 0);
         cpuInfoByIndex[7] = cpuInfo;
@@ -151,7 +152,7 @@ int main(int argc, char* argv[])
     int extBase = 0x80000000;
     __cpuid((int*)&cpuInfo, extBase);
     numIds = cpuInfo.eax - extBase;
-
+    
     char brandId[48+1] = {};
     
     if (numIds >= 4)
@@ -183,7 +184,13 @@ int main(int argc, char* argv[])
     
 #endif
 #endif
-    
+}
+
+int main(int argc, char* argv[])
+{
+    // This will exit if insufficient simd support on x64.
+    // arm64+neon has full support of all operations.
+    checkSimdSupport();
     
     // verify that machine has simd support to run
     int errorCode = kram::kramAppMain(argc, argv);
