@@ -316,17 +316,32 @@ void getThreadName(std::thread::native_handle_type threadHandle, char name[kMaxT
     }
 }
 
-#else
+#elif KRAM_APPLE
 
 void setCurrentThreadName(const char* threadName)
 {
-#if KRAM_APPLE
+    // 64-char limit
     // can only set thread from thread on macOS, sucks
     int val = pthread_setname_np(threadName);
-#else
+    if (val != 0)
+        KLOGW("Thread", "Could not set thread name");
+}
+
+void getThreadName(std::thread::native_handle_type threadHandle, char name[kMaxThreadName])
+{
+    pthread_getname_np(threadHandle, name, kMaxThreadName);
+}
+
+#elif KRAM_LINUX || KRAM_ANDROID
+
+void setCurrentThreadName(const char* threadName)
+{
     // 15 char name limit on Linux/Android, how modern!
-    int val = pthread_setname_np(getCurrentThread(), threadName);
-#endif
+    // Call fails if longer, so have to truncate
+    char threadName16[16];
+    strlcpy(threadName16, threadName, 16);
+    
+    int val = pthread_setname_np(getCurrentThread(), threadName16);
 
     if (val != 0)
         KLOGW("Thread", "Could not set thread name");
@@ -408,6 +423,13 @@ static void setThreadPriority(std::thread::native_handle_type handle, ThreadPrio
             KLOGW("Thread", "Failed to set policy %d priority %d", policy, prioritySys);
     }
 }
+
+#elif KRAM_LINUX
+static void setThreadPriority(std::thread::native_handle_type handle, uint8_t priority)
+{
+    // TODO: this has it's own levels
+}
+
 
 #elif KRAM_ANDROID
 
