@@ -54,6 +54,12 @@ endif()
 #-----------------------------------------------------
 
 if (BUILD_WIN)
+
+    # Use the static linked libs, or the exe needs the VCRuntimeDLL installed
+    set_property(TARGET ${myTargetApp} PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+
     target_link_libraries(${myTargetApp} libkram)
 
     # When Win rebuilds library, it doesn't relink app to correct code when you
