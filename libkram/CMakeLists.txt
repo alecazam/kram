@@ -139,7 +139,7 @@ file(GLOB_RECURSE libSources CONFIGURE_DEPENDS
 )
 
 # no objc on win or linux
-if (BUILD_WIN)
+if (BUILD_WIN OR BUILD_LINUX)
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.mm$")
     list(FILTER libSources EXCLUDE REGEX ".*ateencoder.h$")
 endif()
