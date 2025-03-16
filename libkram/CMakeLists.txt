@@ -228,6 +228,10 @@ endif()
 if (BUILD_WIN)
     # TODO: switch to add_target_definitions
 
+set_property(TARGET ${myTargetLib} PROPERTY
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+
     # to turn off exceptions/rtti use /GR and /EHsc replacement
     string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
