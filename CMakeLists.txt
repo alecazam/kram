@@ -51,6 +51,13 @@ if (BUILD_LINUX)
 
     # the CLI app for Mac/Win that can build content for other platforms, uses libkram
     add_subdirectory(kramc)
+
+    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
+
+    # need app/libs to be in bin directory to zip archive
+    install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
+    install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
+    
 endif()
     
 #-----------------------------------------------------
@@ -82,12 +89,11 @@ if (BUILD_WIN)
 
     #-----------------------------------------------------
 
-    # was considering platform-specific builds, but mac/win don't conflict
-    #set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
+    set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
 
-    # install doesn't seem to do anything on WIN32, the build elements are not copied
-    #install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
-    #install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
+    # need app/libs to be in bin directory to zip archive
+    install(TARGETS libkram ARCHIVE DESTINATION ${BIN_DIR})
+    install(TARGETS kram RUNTIME DESTINATION ${BIN_DIR})
     #install(TARGETS kram-thumb-win LIBRARY DESTINATION ${BIN_DIR})
     
     # hlslparser is also now in the kram build.  Keep executables up to date.
