@@ -19,7 +19,7 @@ if (BUILD_LINUX)
     # librt is for clock_gettime
     target_link_libraries(${myTargetApp} PUBLIC 
         libkram 
-        librt)
+        rt)
 
 endif()
 
