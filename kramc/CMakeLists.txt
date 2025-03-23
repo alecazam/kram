@@ -16,7 +16,10 @@ if (BUILD_LINUX)
         -fdata-sections -ffunction-sections
     )
 
-    target_link_libraries(${myTargetApp} PUBLIC libkram)
+    # librt is for clock_gettime
+    target_link_libraries(${myTargetApp} PUBLIC 
+        libkram 
+        librt)
 
 endif()
 

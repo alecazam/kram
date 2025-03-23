@@ -130,7 +130,7 @@ public:
 // Note: if running multiple processes on the same cpu, then affinity
 // isn't ideal.  It will force work onto the same cores.  Especially if
 // limiting cores to say 4/16, then can run 4 processes faster w/o affinity.
-#define SUPPORT_AFFINITY (KRAM_ANDROID || KRAM_WIN)
+#define SUPPORT_AFFINITY (KRAM_ANDROID || KRAM_WIN || KRAM_LINUX)
 
 // only for ioS/macOS
 enum class ThreadPriority {

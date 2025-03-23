@@ -13,7 +13,7 @@
 #elif KRAM_ANDROID
 #include <trace.h>
 #elif KRAM_LINUX
-// TODO:
+#include <time.h> // needs librt.a
 #endif
 
 #define nl '\n'
@@ -112,8 +112,11 @@ static double queryPeriod()
 
 static uint64_t queryCounter()
 {
-    uint64_t time = 0;
-    // TODO: add implementation
+    timespec ts;
+    /*int result = */ clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    uint64_t time = (uint64_t)ts.tv_nsec + ((uint64_t)ts.tv_sec * 1000000000ULL);
+    
     return time;
 }
 

@@ -170,7 +170,8 @@ elif [[ $buildType == linux ]]; then
 
     # this will use make
     # cmake ..
-    # TODO: switch to ninja, so can see failure cli
+   
+    # this uses Ninja, so can see failures
     cmake .. -G Ninja
 
 	# build the release build
