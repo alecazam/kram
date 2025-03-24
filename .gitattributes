@@ -1,14 +1,27 @@
+# This controls the line-endings on various file types.
+# Most win editors can cope with lf ending files, 
+# and use binary load to avoid cstdlib replacement.
+
+# txt/sh/py scripts need to be lf to run across wsl/macOS
+*.sh text eol=lf
+*.py text eol=lf
+*.txt text eol=lf
+
+*.json text eol=lf
+*.plist text eol=lf
+*.xconfig text eol=lf
+
+*.md text eol=lf
+LICENSE text eol=lf
+meson.build text eol=lf
+*.vcproj text eol=crlf
+
+# what about .cpp/.h files?
+
 #-------------
 # commit various binary file types to git-lfs
 # see here https://rehansaeed.com/gitattributes-best-practices/
 # -text means it's not a text file and is binary
-
-# text/scripts need to be lf to run across wsl/macOS
-*.txt text eol=lf
-*.md text eol=lf
-*.sh text eol=lf
-*.py text eol=lf
-*.vcproj text eol=crlf
 
 # Archives
 *.7z filter=lfs diff=lfs merge=lfs -text
