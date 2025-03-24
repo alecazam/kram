@@ -7,6 +7,7 @@
 *.txt text eol=lf
 *.md text eol=lf
 *.sh text eol=lf
+*.py text eol=lf
 *.vcproj text eol=crlf
 
 # Archives
