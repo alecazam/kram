@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # note: zsh works on  osx, but not on Win git bash, so using bash
 
@@ -164,9 +164,9 @@ elif [[ $buildType == windows ]]; then
 elif [[ $buildType == linux ]]; then
     echo "::group::kram-linux"
 
-    mkdir -p build
+    mkdir -p build3
 
-	pushd build
+	pushd build3
 
     # this will use make
     # cmake ..
