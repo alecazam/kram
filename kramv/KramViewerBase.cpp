@@ -1158,8 +1158,7 @@ bool Data::loadFile()
     string atlasFilename = filenameNoExtension(filename);
     bool hasAtlas = false;
 
-    // replace -a, -d, with -atlas.json
-    const char* dashPosStr = strrchr(atlasFilename.c_str(), '-');
+    // replace -a, -d, with -atlas.jsonc    const char* dashPosStr = strrchr(atlasFilename.c_str(), '-');
     if (dashPosStr != nullptr) {
         atlasFilename = atlasFilename.substr(0, dashPosStr - atlasFilename.c_str());
     }
@@ -1288,6 +1287,14 @@ bool Data::loadFileFromArchive()
         return false;
     }
 
+    // TODO: right now -atlas.json even if already loaded loose
+    // won't apply to archive textures.  Would the -atlas.json file
+    // need to be in the same archive?
+    bool hasAtlas = false;
+    if (!hasAtlas) {
+        clearAtlas();
+    }
+    
     KPERFT("loadFileFromArchive");
 
     const uint8_t* imageData = nullptr;
