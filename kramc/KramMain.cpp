@@ -77,36 +77,37 @@ void checkSimdSupport()
         sysctlbyname(cpuFeatures, bufferFeatures.data(), &cpuFeatureSize, nullptr, 0);
     }
 
-    if (hasSimdSupport) {
-        // If don't find avx2, then support is not present.
-        // could be running under Rosetta2 but it's supposed to add AVX2 soon.
-        bool hasAVX2 = strstr(bufferLeaf7.data(), "AVX2") != nullptr;
+    const char* features = !bufferFeatures.empty() ? bufferFeatures.data() : "";
+    const char* features7 = !bufferLeaf7.empty() ? bufferLeaf7.data() : "";
+   
+    // If don't find avx2, then support is not present.
+    // could be running under Rosetta2 but it's supposed to add AVX2 soon.
+    bool hasAVX2 = strstr(features7, "AVX2") != nullptr;
 
-        if (!hasAVX2) {
-            missingFeatures[missingFeaturesCount++] = "AVX2 ";
-            hasSimdSupport = false;
-        }
+    if (!hasAVX2) {
+        missingFeatures[missingFeaturesCount++] = "AVX2 ";
+        hasSimdSupport = false;
+    }
+
+    // Make sure compile has enabled these on AVX2.
+    // Rosetta2 and Prism often don't emulate these.
+    // (f.e. BMI and F16C)
     
-        // Make sure compile has enabled these on AVX2.
-        // Rosetta2 and Prism often don't emulate these.
-        // (f.e. BMI and F16C)
-        
-        bool hasAVX = strstr(bufferFeatures.data(), "AVX") != nullptr;
-        bool hasF16C = strstr(bufferFeatures.data(), "F16C") != nullptr;
-        bool hasFMA = strstr(bufferFeatures.data(), "FMA") != nullptr;
-        
-        if (!hasAVX) {
-            missingFeatures[missingFeaturesCount++] = "AVX ";
-            hasSimdSupport = false;
-        }
-        if (!hasF16C) {
-            missingFeatures[missingFeaturesCount++] = "F16C ";
-            hasSimdSupport = false;
-        }
-        if (!hasFMA) {
-            missingFeatures[missingFeaturesCount++] = "FMA ";
-            hasSimdSupport = false;
-        }
+    bool hasAVX = strstr(features, "AVX") != nullptr;
+    bool hasF16C = strstr(features, "F16C") != nullptr;
+    bool hasFMA = strstr(features, "FMA") != nullptr;
+    
+    if (!hasAVX) {
+        missingFeatures[missingFeaturesCount++] = "AVX ";
+        hasSimdSupport = false;
+    }
+    if (!hasF16C) {
+        missingFeatures[missingFeaturesCount++] = "F16C ";
+        hasSimdSupport = false;
+    }
+    if (!hasFMA) {
+        missingFeatures[missingFeaturesCount++] = "FMA ";
+        hasSimdSupport = false;
     }
     
     if (!hasSimdSupport) {
@@ -233,7 +234,7 @@ void checkSimdSupport()
         exit(1);
     }
         
-#elif KRAM_LINUX
+#elif KRAM_LINUX // || KRAM_MAC
         
     // This should apply to all clang and gcc builds.  So may want
     // to use on all platforms.
@@ -254,7 +255,13 @@ void checkSimdSupport()
     
     bool hasFMA = __builtin_cpu_supports("fma");
     bool hasAVX = __builtin_cpu_supports("avx");
+    
+    // macOS doesn't support f16c as string?
+    #if  KRAM_MAC
+    bool hasF16C = true; // a lie
+    #else
     bool hasF16C = __builtin_cpu_supports("f16c");
+    #endif
     
     const char* missingFeatures[4] = { "", "", "", "" };
     uint32_t missingFeaturesCount = 0;
