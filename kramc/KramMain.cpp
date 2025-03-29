@@ -26,7 +26,7 @@ void checkSimdSupport()
     
     const char* cpuNameProp = "machdep.cpu.brand_string";
     
-    if (sysctlbyname(cpuNameProp, nullptr, &cpuNameSize, nullptr, 0) >= 0 {
+    if (sysctlbyname(cpuNameProp, nullptr, &cpuNameSize, nullptr, 0) >= 0) {
         cpuName.resize(cpuNameSize);
         
         // Assuming this is ascii
@@ -83,7 +83,7 @@ void checkSimdSupport()
         bool hasAVX2 = strstr(bufferLeaf7.data(), "AVX2") != nullptr;
 
         if (!hasAVX2) {
-            missingFeatures[missingFeaturesCount+++] = "AVX2 ";
+            missingFeatures[missingFeaturesCount++] = "AVX2 ";
             hasSimdSupport = false;
         }
     
@@ -96,15 +96,15 @@ void checkSimdSupport()
         bool hasFMA = strstr(bufferFeatures.data(), "FMA") != nullptr;
         
         if (!hasAVX) {
-            missingFeatures[missingFeaturesCount+++] = "AVX ";
+            missingFeatures[missingFeaturesCount++] = "AVX ";
             hasSimdSupport = false;
         }
         if (!hasF16C) {
-            missingFeatures[missingFeaturesCount+++] = "F16C ";
+            missingFeatures[missingFeaturesCount++] = "F16C ";
             hasSimdSupport = false;
         }
         if (!hasFMA) {
-            missingFeatures[missingFeaturesCount+++] = "FMA ";
+            missingFeatures[missingFeaturesCount++] = "FMA ";
             hasSimdSupport = false;
         }
     }
