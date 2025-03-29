@@ -256,6 +256,9 @@ void checkSimdSupport()
     bool hasAVX = __builtin_cpu_supports("avx");
     bool hasF16C = __builtin_cpu_supports("f16c");
     
+    const char* missingFeatures[4] = { "", "", "", "" };
+    uint32_t missingFeaturesCount = 0;
+    
     if (!hasAVX2) {
         missingFeatures[missingFeaturesCount++] = "AVX2 ";
         hasSimdSupport = false;
