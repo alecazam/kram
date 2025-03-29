@@ -14,8 +14,8 @@ using namespace STL_NAMESPACE;
 void checkSimdSupport()
 {
     // Check for AVX2, FMA, F16C support on Intel.
-    // AVX2 implies the other 2, but still have to enable on compile.
-    // arm64 just has everything needed.  No holes to check, or legacy simd.
+    // Still need to set compile flags, and arm64 emulators are also spotty.
+    // arm64 native has everything needed.  No holes to check, or legacy simd.
     
 #if SIMD_AVX2
 #if KRAM_MAC
@@ -90,6 +90,7 @@ void checkSimdSupport()
         // Make sure compile has enabled these on AVX2.
         // Rosetta2 and Prism often don't emulate these.
         // (f.e. BMI and F16C)
+        
         bool hasAVX = strstr(bufferFeatures.data(), "AVX") != nullptr;
         bool hasF16C = strstr(bufferFeatures.data(), "F16C") != nullptr;
         bool hasFMA = strstr(bufferFeatures.data(), "FMA") != nullptr;
@@ -108,7 +109,6 @@ void checkSimdSupport()
         }
     }
     
-    // TODO: can add brand to this if find the sysctlbyname query
     if (!hasSimdSupport) {
         KLOGE("Main", "Missing simd support for %s%s%s%s on %s",
               missingFeatures[0], missingFeatures[1], missingFeatures[2], missingFeatures[3],
@@ -230,6 +230,52 @@ void checkSimdSupport()
         KLOGE("Main", "Missing simd support for %s%s%s%s on %s",
               missingFeatures[0], missingFeatures[1], missingFeatures[2], missingFeatures[3],
               brandId);
+        exit(1);
+    }
+        
+#elif KRAM_LINUX
+        
+    // This should apply to all clang and gcc builds.  So may want
+    // to use on all platforms.
+        
+    //        Common CPU features that can be checked with __builtin_cpu_supports include:
+    //        sse, sse2, sse3, ssse3, sse4.1, sse4.2
+    //        avx, avx2, avx512f
+    //        fma
+    //        bmi, bmi2
+    //        popcnt
+    //        lzcnt
+    //        mmx
+        
+        
+    bool hasSimdSupport = true;
+        
+    bool hasAVX2 = __builtin_cpu_supports("avx2");
+    
+    bool hasFMA = __builtin_cpu_supports("fma");
+    bool hasAVX = __builtin_cpu_supports("avx");
+    bool hasF16C = __builtin_cpu_supports("f16c");
+    
+    if (!hasAVX2) {
+        missingFeatures[missingFeaturesCount++] = "AVX2 ";
+        hasSimdSupport = false;
+    }
+    if (!hasAVX) {
+        missingFeatures[missingFeaturesCount++] = "AVX ";
+        hasSimdSupport = false;
+    }
+    if (!hasFMA) {
+        missingFeatures[missingFeaturesCount++] = "FMA ";
+        hasSimdSupport = false;
+    }
+    if (!hasF16C) {
+        missingFeatures[missingFeaturesCount++] = "F16C ";
+        hasSimdSupport = false;
+    }
+       
+    if (!hasSimdSupport) {
+        KLOGE("Main", "Missing simd support for %s%s%s%s",
+              missingFeatures[0], missingFeatures[1], missingFeatures[2], missingFeatures[3]);
         exit(1);
     }
     
