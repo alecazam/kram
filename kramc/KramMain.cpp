@@ -15,9 +15,24 @@ void checkSimdSupport()
 {
     // Check for AVX2, FMA, F16C support on Intel.
     // AVX2 implies the other 2, but still have to enable on compile.
+    // arm64 just has everything needed.  No holes to check, or legacy simd.
+    
 #if SIMD_AVX2
 #if KRAM_MAC
     bool hasSimdSupport = true;
+    
+    vector<char> cpuName;
+    size_t cpuNameSize = 0;
+    
+    const char* cpuNameProp = "machdep.cpu.brand_string";
+    
+    if (sysctlbyname(cpuNameProp, nullptr, &cpuNameSize, nullptr, 0) >= 0 {
+        cpuName.resize(cpuNameSize);
+        
+        // Assuming this is ascii
+        sysctlbyname(cpuNameProp, cpuName.data(), &cpuNameSize, nullptr, 0);
+    }
+    
     
     // can also check AVX1.0
     // F16C (avx/avx2 imply F16C and assume Rosetta too)
@@ -25,28 +40,24 @@ void checkSimdSupport()
     // https://csharpmulticore.blogspot.com/2014/12/how-to-check-intel-avx2-support-on-mac-os-x-haswell.html
     // machdep.cpu.features: FPU VME DE PSE TSC MSR PAE MCE CX8 APIC SEP MTRR PGE MCA CMOV PAT PSE36 CLFSH DS ACPI MMX FXSR SSE SSE2 SS HTT TM PBE SSE3 PCLMULQDQ DTES64 MON DSCPL VMX EST TM2 SSSE3 FMA CX16 TPR PDCM SSE4.1 SSE4.2 x2APIC MOVBE POPCNT AES PCID XSAVE OSXSAVE SEGLIM64 TSCTMR AVX1.0 RDRAND F16C
     // machdep.cpu.leaf7_features: SMEP ERMS RDWRFSGS TSC_THREAD_OFFSET BMI1 AVX2 BMI2 INVPCID
-    
+    const char* missingFeatures[4] = { "", "", "", "" };
+    uint32_t missingFeaturesCount = 0;
     
     const char* leaf7Features = "machdep.cpu.leaf7_features";
     
     size_t leaf7FeatureSize = 0;
     sysctlbyname(leaf7Features, nullptr, &leaf7FeatureSize, nullptr, 0);
     
+    vector<char> bufferLeaf7;
+    
     if (leaf7FeatureSize == 0) {
         hasSimdSupport = false;
     }
     else {
-        vector<char> buffer;
-        buffer.resize(leaf7FeatureSize);
-        sysctlbyname(leaf7Features, buffer.data(), &leaf7FeatureSize, nullptr, 0);
+        bufferLeaf7.resize(leaf7FeatureSize);
         
-        // If don't find avx2, then support is not present.
-        // could be running under Rosetta2 but it's supposed to add AVX2 soon.
-        bool hasAVX2 = strstr(buffer.data(), "AVX2") != nullptr;
-        
-        if (!hasAVX2) {
-            hasSimdSupport = false;
-        }
+        // TODO: check failure
+        sysctlbyname(leaf7Features, bufferLeaf7.data(), &leaf7FeatureSize, nullptr, 0);
     }
     
     const char* cpuFeatures = "machdep.cpu.features";
@@ -54,29 +65,54 @@ void checkSimdSupport()
     size_t cpuFeatureSize = 0;
     sysctlbyname(cpuFeatures, nullptr, &cpuFeatureSize, nullptr, 0);
     
+    vector<char> bufferFeatures;
+
     if (!hasSimdSupport || cpuFeatureSize == 0) {
         hasSimdSupport = false;
     }
     else {
-        vector<char> buffer;
-        buffer.resize(cpuFeatureSize);
-        sysctlbyname(cpuFeatures, buffer.data(), &cpuFeatureSize, nullptr, 0);
+        bufferFeatures.resize(cpuFeatureSize);
         
-        // Make sure compile has enabled these on AVX2
-        bool hasF16C = strstr(buffer.data(), "F16C") != nullptr;
-        bool hasFMA = strstr(buffer.data(), "FMA") != nullptr;
-        
-        if (!hasF16C) {
+        // TODO: check failure
+        sysctlbyname(cpuFeatures, bufferFeatures.data(), &cpuFeatureSize, nullptr, 0);
+    }
+
+    if (hasSimdSupport) {
+        // If don't find avx2, then support is not present.
+        // could be running under Rosetta2 but it's supposed to add AVX2 soon.
+        bool hasAVX2 = strstr(bufferLeaf7.data(), "AVX2") != nullptr;
+
+        if (!hasAVX2) {
+            missingFeatures[missingFeaturesCount+++] = "AVX2 ";
             hasSimdSupport = false;
         }
-        else if (!hasFMA) {
+    
+        // Make sure compile has enabled these on AVX2.
+        // Rosetta2 and Prism often don't emulate these.
+        // (f.e. BMI and F16C)
+        bool hasAVX = strstr(bufferFeatures.data(), "AVX") != nullptr;
+        bool hasF16C = strstr(bufferFeatures.data(), "F16C") != nullptr;
+        bool hasFMA = strstr(bufferFeatures.data(), "FMA") != nullptr;
+        
+        if (!hasAVX) {
+            missingFeatures[missingFeaturesCount+++] = "AVX ";
+            hasSimdSupport = false;
+        }
+        if (!hasF16C) {
+            missingFeatures[missingFeaturesCount+++] = "F16C ";
+            hasSimdSupport = false;
+        }
+        if (!hasFMA) {
+            missingFeatures[missingFeaturesCount+++] = "FMA ";
             hasSimdSupport = false;
         }
     }
     
     // TODO: can add brand to this if find the sysctlbyname query
     if (!hasSimdSupport) {
-        KLOGE("Main", "Missing simd support");
+        KLOGE("Main", "Missing simd support for %s%s%s%s on %s",
+              missingFeatures[0], missingFeatures[1], missingFeatures[2], missingFeatures[3],
+              cpuName.data());
         exit(1);
     }
     
@@ -91,7 +127,7 @@ void checkSimdSupport()
     // f1.ecx bit 12 is fma
     // f1.ecx bit 19 is sse4.1
     // f1.ecx bit 20 is sse4.2
-    // f1.ecx bit 28 is avx.
+    // f1.ecx bit 28 is avx
     // f1.ecx bit 29 is f16c (docs are wrong about this being avx2)
     
     // f7.ebx bit 5 is avx2
@@ -99,7 +135,6 @@ void checkSimdSupport()
     // f7.ebx bit 26 is avx-512pf
     // f7.ebx bit 27 is avx-512er
     // f7.ebx bit 28 is avx-512cd
-    
     
     // This returns a count of the ids from mthe docs.
     struct CpuInfo {
@@ -117,6 +152,9 @@ void checkSimdSupport()
     *reinterpret_cast<int*>(vendorId + 0) = cpuInfo.ebx;
     *reinterpret_cast<int*>(vendorId + 4) = cpuInfo.edx;
     *reinterpret_cast<int*>(vendorId + 8) = cpuInfo.ecx;
+    
+    const char* missingFeatures[4] = { "", "", "", "" };
+    uint32_t missingFeaturesCount = 0;
     
     int numIds = cpuInfo.eax;
     if (numIds < 7) {
@@ -138,14 +176,25 @@ void checkSimdSupport()
         bool hasAVX2 = cpuInfoByIndex[7].ebx & (1 << 5);
         
         bool hasFMA = cpuInfoByIndex[1].ecx & (1 << 12);
+        bool hasAVX = cpuInfoByIndex[1].ecx & (1 << 28);
         bool hasF16C = cpuInfoByIndex[1].ecx & (1 << 29);
         
-        if (!hasAVX2)
+        if (!hasAVX2) {
+            missingFeatures[missingFeaturesCount++] = "AVX2 ";
             hasSimdSupport = false;
-        else if (!hasFMA)
+        }
+        if (!hasAVX) {
+            missingFeatures[missingFeaturesCount++] = "AVX ";
             hasSimdSupport = false;
-        else if (!hasF16C)
+        }
+        if (!hasFMA) {
+            missingFeatures[missingFeaturesCount++] = "FMA ";
             hasSimdSupport = false;
+        }
+        if (!hasF16C) {
+            missingFeatures[missingFeaturesCount++] = "F16C ";
+            hasSimdSupport = false;
+        }
     }
     
     // extended cpuid attributes
@@ -178,7 +227,9 @@ void checkSimdSupport()
     }
     
     if (!hasSimdSupport) {
-        KLOGE("Main", "Missing simd support for %s", brandId);
+        KLOGE("Main", "Missing simd support for %s%s%s%s on %s",
+              missingFeatures[0], missingFeatures[1], missingFeatures[2], missingFeatures[3],
+              brandId);
         exit(1);
     }
     
