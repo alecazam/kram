@@ -111,7 +111,7 @@ void checkSimdSupport()
     }
     
     if (!hasSimdSupport) {
-        KLOGE("Main", "Missing simd support for %s%s%s%s on %s",
+        KLOGE("Main", "Missing simd support for %s%s%s%son %s",
               missingFeatures[0], missingFeatures[1], missingFeatures[2], missingFeatures[3],
               cpuName.data());
         exit(1);
@@ -228,7 +228,7 @@ void checkSimdSupport()
     }
     
     if (!hasSimdSupport) {
-        KLOGE("Main", "Missing simd support for %s%s%s%s on %s",
+        KLOGE("Main", "Missing simd support for %s%s%s%son %s",
               missingFeatures[0], missingFeatures[1], missingFeatures[2], missingFeatures[3],
               brandId);
         exit(1);
