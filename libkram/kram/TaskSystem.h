@@ -90,7 +90,8 @@ public:
     {
         {
             mylock lock{_mutex};
-            // TODO: fix this construct, it's saying no matching sctor for mydeque<eastl::function<void ()>>>::value_type
+            // TODO: fix this construct, eastl is saying no matching sctor for
+            // mydeque<eastl::function<void ()>>>::value_type
 #if USE_EASTL
             KLOGE("TaskSystem", "Fix eastl deque or function");
             //_q.emplace_back(forward<F>(f));

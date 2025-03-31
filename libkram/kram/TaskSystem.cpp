@@ -617,7 +617,7 @@ task_system::task_system(int32_t count) : _count(std::min(count, (int32_t)GetCor
     // see WWDC 2021 presentation here
     // Tune CPU job scheduling for Apple silicon games
     // https://developer.apple.com/videos/play/tech-talks/110147/
-    ThreadInfo infoMain = {"Main", ThreadPriority::Interactive, 0};
+    ThreadInfo infoMain = {"Sheduler", ThreadPriority::Interactive, 0};
     setThreadInfo(infoMain);
 
     // Note that running work on core0 when core0 may starve it
@@ -717,7 +717,7 @@ static ThreadPriority getThreadPriority(std::thread::native_handle_type handle)
 void task_system::log_threads()
 {
     ThreadInfo info = {};
-    info.name = "Main";
+    info.name = "Scheduler";
 #if SUPPORT_AFFINITY
     info.affinity = 0;
 #endif
