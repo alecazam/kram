@@ -84,11 +84,11 @@ void futex::notify_all() {
 // Win8+
 
 void futex::wait(uint32_t expectedValue) {
-    WaitOnAddress(&_value, &expectedValue(), sizeof(uint32_t), INFINITE);
+    WaitOnAddress(&_value, &expectedValue, sizeof(uint32_t), INFINITE);
 }
 
 void futex::notify_one() {
-    WakeByAddressSingle(&_value)
+    WakeByAddressSingle(&_value);
 }
 
 void futex::notify_all() {
