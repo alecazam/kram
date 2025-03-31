@@ -187,7 +187,7 @@ void Scheduler::scheduleJob(Job2& job) {
             Worker* worker = _workers[0];
             
             lock_guard<mutex> lock(worker->_mutex);
-            worker->_queue.push(move(job));
+            worker->_queue.push(std::move(job));
             _stats.jobsTotal++;
         }
         
@@ -199,7 +199,7 @@ void Scheduler::scheduleJob(Job2& job) {
             return;
         
         lock_guard<mutex> lock(worker->_mutex);
-        worker->_queue.push(move(job));
+        worker->_queue.push(std::move(job));
         _stats.jobsTotal++;
     }
 }
@@ -237,7 +237,7 @@ bool Worker::stealFromOtherQueues(Job2& job)
         // lots of mutex locks
         lock_guard<mutex> lock(worker->_mutex);
         if (!worker->_queue.empty()) {
-            job = move(worker->_queue.top());
+            job = std::move(worker->_queue.top());
             worker->_queue.pop();
             
             SchedulerStats& stats = _scheduler->stats();
@@ -296,7 +296,7 @@ void Worker::run()
         {
             lock_guard<mutex> lock(_mutex);
             if (!_queue.empty()) {
-                job = move(_queue.top());
+                job = std::move(_queue.top());
                 _queue.pop();
                 stats.jobsExecuting++;
                 found = true;
