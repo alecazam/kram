@@ -14,6 +14,9 @@
 #elif KRAM_WIN
 // annoying that windows.h has to be ordered first
 // clang-format off
+#ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 // clang-format off
 #include <processthreadsapi.h>

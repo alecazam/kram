@@ -22,6 +22,10 @@
 
 #if KRAM_WIN
 #include <intrin.h> // for AddressOfReturnAdress, ReturnAddress
+
+#ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 
 #if KRAM_LOG_STACKTRACE

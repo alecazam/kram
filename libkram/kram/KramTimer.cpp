@@ -7,6 +7,9 @@
 #include "TaskSystem.h"
 
 #if KRAM_WIN
+#ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #elif KRAM_APPLE
 #include <mach/mach_time.h>
