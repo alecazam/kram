@@ -41,8 +41,8 @@ public:
 class Worker {
 public:
     string _name;
-    
     priority_queue<Job2> _queue;
+    AtomicValue _queueSize;
     mutex _mutex; // for queue
     futex _futex; // to wait/notify threads
     Scheduler* _scheduler = nullptr;

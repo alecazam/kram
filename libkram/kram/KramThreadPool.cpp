@@ -177,33 +177,52 @@ Scheduler::Scheduler(uint32_t numWorkers) {
 void Scheduler::scheduleJob(Job2& job) {
     auto currentThread = getCurrentThread();
 
+    // job subtasks always first pushed to their own queue.
+    // if this is null, then it's either the scheduler thread or a random thread
+    //  trying to submit a job (which goes to scheduler).
+    Worker* worker = findWorker(currentThread);
+    
     // Already on same thread.  That thread is awake.
     // But another thread could be stealing a job,
-    // so for now project queue with mutex.
-    if (currentThread == _schedulerThread) {
-        // TODO: need to pick a best queue to put work on?
+    // So for now project queue with mutex.
+    
+    if (currentThread == _schedulerThread || !worker) {
+        // Need to pick a best queue to put work on?
         // otherwise everything gets stuck on scheduler queue
         // and then is stolen off it.
         
         // Scheduler thread needs to ensure a worker is awake
         // since it doesn't run it's own work?
+        
+        // Atomic count per Worker helps here.  Can read outside
+        // of lock, and can then spread work more evenly.
+        
+        uint32_t minQueue = 0;
+        uint32_t minQueueCount = _workers[0]->_queueSize;
+        
+        for (uint32_t i = 1; i < _workers.size(); ++i) {
+            uint32_t queueCount = _workers[i]->_queueSize;
+            if (queueCount < minQueueCount) {
+                minQueueCount = queueCount;
+                minQueue = i;
+            }
+        }
+        
         {
-            Worker* worker = _workers[0];
+            worker = _workers[minQueue];
             
             lock_guard<mutex> lock(worker->_mutex);
             worker->_queue.push(std::move(job));
+            worker->_queueSize++;
             _stats.jobsTotal++;
         }
         
         _workers[0]->_futex.notify_one();
     }
     else {
-        Worker* worker = findWorker(currentThread);
-        if (!worker)
-            return;
-        
         lock_guard<mutex> lock(worker->_mutex);
         worker->_queue.push(std::move(job));
+        worker->_queueSize++;
         _stats.jobsTotal++;
     }
 }
@@ -231,31 +250,50 @@ void Scheduler::stop()
 
 bool Worker::stealFromOtherQueues(Job2& job)
 {
+    // Is this safe to test?
+    if (_scheduler->stats().jobsRemaining() == 0)
+        return false;
+    
     bool found = false;
     
-    // TODO: this is always going to vist 0...n
-    for (Worker* worker: _scheduler->workers()) {
-        if (worker == this)
-            continue;
+    auto& workers = _scheduler->workers();
+
+    // This will visit buddy and then the rest
+    for (uint32_t i = 0; i < workers.size()-1; ++i) {
+        Worker* worker = workers[(_workerId+1+i) % workers.size()];
         
-        // lots of mutex locks
+        // This should never visit caller Worker.
+        KASSERT(worker != this);
+        
+        // lots of expensive queue mutex locks below searching for jobs
+        // use atomic queueSize per worker.  A little racy.
+//        if (worker->queueSize == 0) {
+//            continue;
+//        }
+        
         lock_guard<mutex> lock(worker->_mutex);
         if (!worker->_queue.empty()) {
             job = std::move(worker->_queue.top());
             worker->_queue.pop();
+            worker->_queueSize--;
             
             SchedulerStats& stats = _scheduler->stats();
             stats.jobsExecuting++;
             found = true;
             break;
         }
+        
     }
-    
+
     return found;
 }
 
 void Worker::wakeWorkers()
 {
+    // Is this safe to test?
+    if (_scheduler->stats().jobsRemaining() == 0)
+        return;
+    
     // This takes responsibility off the main thread
     // to keep waking threads to run tasks.
     auto& workers = _scheduler->workers();
@@ -302,6 +340,7 @@ void Worker::run()
             if (!_queue.empty()) {
                 job = std::move(_queue.top());
                 _queue.pop();
+                _queueSize--;
                 stats.jobsExecuting++;
                 found = true;
             }
