@@ -39,6 +39,9 @@
 //
 // TODO: add ability to grow/shrink workers
 //
+// TODO: sucky part of using Worker* is that these are spread across memory
+//   but can grow/shrink count.
+//
 // Inspired by notes from Andreas Fredriksson on building a better thread
 // pool. Otherwise, every pool just uses a single cv and mutex.  That cv
 // then has to do a lot of wakey wakey when the thread/core counts are high.
@@ -52,17 +55,21 @@ namespace kram {
 using namespace STL_NAMESPACE;
 
 
-// futex is 0 when not available and 1 when availalb.e
+// futex is 0 when waiting, and 1+ when active.
+// futex wait and timout support with newer macOS API, but requires iOS17.4/macOS14.4.
+// #include "os/os_sync_wait_on_address.h"
+// int os_sync_wait_on_address(void *addr, uint64_t value, size_t size, os_sync_wait_on_address_flags_t flags);
+
 
 #if KRAM_MAC
 
-// C++20 calls below
-// iOS14, macOS 11
+// C++20 calls below.
+// iOS 14/macOS 11
 
 void futex::wait(uint32_t expectedValue) {
     auto monitor = __libcpp_atomic_monitor(&_value);
     // Check again if we should still go to sleep.
-    if (_value.load() != expectedValue) {
+    if (_value.load(memory_order_relaxed) != expectedValue) {
         return;
     }
     // Wait, but only if there's been no new notifications
@@ -84,6 +91,7 @@ void futex::notify_all() {
 // Win8+
 
 void futex::wait(uint32_t expectedValue) {
+    // this waits until value shifts
     WaitOnAddress(&_value, &expectedValue, sizeof(uint32_t), INFINITE);
 }
 
@@ -198,31 +206,31 @@ void Scheduler::scheduleJob(Job2& job) {
         // of lock, and can then spread work more evenly.
         
         uint32_t minQueue = 0;
-        uint32_t minQueueCount = _workers[0]->_queueSize;
+        uint32_t minQueueCount = _workers[0]->queueSize();
         
         for (uint32_t i = 1; i < _workers.size(); ++i) {
-            uint32_t queueCount = _workers[i]->_queueSize;
+            uint32_t queueCount = _workers[i]->queueSize();
             if (queueCount < minQueueCount) {
                 minQueueCount = queueCount;
                 minQueue = i;
             }
         }
         
+        worker = _workers[minQueue];
+        
         {
-            worker = _workers[minQueue];
-            
             lock_guard<mutex> lock(worker->_mutex);
             worker->_queue.push(std::move(job));
-            worker->_queueSize++;
+            worker->incQueueSize();
             _stats.jobsTotal++;
         }
         
-        _workers[0]->_futex.notify_one();
+        worker->_futex.notify_one();
     }
     else {
         lock_guard<mutex> lock(worker->_mutex);
         worker->_queue.push(std::move(job));
-        worker->_queueSize++;
+        worker->incQueueSize();
         _stats.jobsTotal++;
     }
 }
@@ -267,7 +275,7 @@ bool Worker::stealFromOtherQueues(Job2& job)
         
         // lots of expensive queue mutex locks below searching for jobs
         // use atomic queueSize per worker.  A little racy.
-//        if (worker->queueSize == 0) {
+//        if (worker->queueSize() == 0) { // _queueSize
 //            continue;
 //        }
         
@@ -275,7 +283,7 @@ bool Worker::stealFromOtherQueues(Job2& job)
         if (!worker->_queue.empty()) {
             job = std::move(worker->_queue.top());
             worker->_queue.pop();
-            worker->_queueSize--;
+            worker->decQueueSize();
             
             SchedulerStats& stats = _scheduler->stats();
             stats.jobsExecuting++;
@@ -340,7 +348,7 @@ void Worker::run()
             if (!_queue.empty()) {
                 job = std::move(_queue.top());
                 _queue.pop();
-                _queueSize--;
+                decQueueSize();
                 stats.jobsExecuting++;
                 found = true;
             }
@@ -373,8 +381,9 @@ void Worker::run()
         // Conditionally go to sleep (perhaps we were told there is a
         // parallel job we can help with)
         else if(shouldSleep()) {
-            // Put the thread to sleep until more jobs are scheduled
-            _futex.wait(1); // TODO: fix wait to not take value
+            // Put the thread to sleep until more jobs are scheduled.
+            // Wakes when value is non-zero and notify called.
+            _futex.wait(0);
         }
     }
 }

@@ -8,12 +8,18 @@ using AtomicValue = atomic<uint32_t>;
 
 // fast locking
 class futex {
-    public: // for now leave this public
+public: // for now leave this public
     AtomicValue _value;
     futex() = default;
+    
 public:
-    void wait(uint32_t expectedValue);
+    // wait.  wake when atomic does not match expectedValue and notify called
+    void wait(uint32_t expectedValue = 0);
+    
+    // wake first thread waiting
     void notify_one();
+    
+    // wake all threads wiating
     void notify_all();
 };
     
@@ -42,9 +48,8 @@ class Worker {
 public:
     string _name;
     priority_queue<Job2> _queue;
-    AtomicValue _queueSize;
     mutex _mutex; // for queue
-    futex _futex; // to wait/notify threads
+    futex _futex; // to wait/notify threads, holds count of jobs in queue
     Scheduler* _scheduler = nullptr;
     uint32_t _workerId = 0;
     bool _isExecuting = false;
@@ -55,6 +60,11 @@ public:
         _scheduler = scheduler;
     }
     
+    // could be const, but it's atomic so volatile
+    uint32_t queueSize() { return _futex._value; }
+    void incQueueSize() { _futex._value++; }
+    void decQueueSize() { _futex._value--; }
+    
     void run();
     
 private:
@@ -63,7 +73,8 @@ private:
     bool shouldSleep();
 };
 
-struct SchedulerStats {
+class SchedulerStats {
+public:
     AtomicValue jobsTotal;
     AtomicValue jobsExecuting;
     uint32_t jobsRemaining() const { return jobsTotal - jobsExecuting; }
