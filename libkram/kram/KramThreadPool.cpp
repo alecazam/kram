@@ -103,12 +103,12 @@ void futex::wait(uint32_t expectedValue) {
 }
 
 void futex::notify_one() {
-    syscall(SYS_futex, &_value, FUTEX_WAKE_BITSET | FUTEX_PRIVATE_FLAT,
+    syscall(SYS_futex, &_value, FUTEX_WAKE_BITSET | FUTEX_PRIVATE_FLAG,
             NULL, NULL, 1);
 }
 
 void futex::notify_all() {
-    syscall(SYS_futex, &value, FUTEX_WAKE_BITSET | FUTEX_PRIVATE_FLAT,
+    syscall(SYS_futex, &value, FUTEX_WAKE_BITSET | FUTEX_PRIVATE_FLAG,
             NULL, NULL, INT32_MAX); // TODO: UINT32_MAX?
 }
 

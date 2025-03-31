@@ -102,7 +102,7 @@ private:
     vector<Worker*> _workers;
     vector<thread> _threads;
     SchedulerStats _stats;
-    thread::native_handle_type _schedulerThread = nullptr;
+    thread::native_handle_type _schedulerThread = 0;
 };
 
 } // namespace kram
