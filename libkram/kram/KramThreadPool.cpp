@@ -108,7 +108,7 @@ void futex::notify_one() {
 }
 
 void futex::notify_all() {
-    syscall(SYS_futex, &value, FUTEX_WAKE_BITSET | FUTEX_PRIVATE_FLAG,
+    syscall(SYS_futex, &_value, FUTEX_WAKE_BITSET | FUTEX_PRIVATE_FLAG,
             NULL, NULL, INT32_MAX); // TODO: UINT32_MAX?
 }
 
