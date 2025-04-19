@@ -132,6 +132,8 @@
 		707789ED2881BA81008A51BC /* bc7decomp_ref.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707789D32881BA81008A51BC /* bc7decomp_ref.cpp */; };
 		707789F12881BCE2008A51BC /* rdo_bc_encoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707789EF2881BCE2008A51BC /* rdo_bc_encoder.cpp */; };
 		707789F32881BCE2008A51BC /* rdo_bc_encoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 707789F02881BCE2008A51BC /* rdo_bc_encoder.h */; };
+		707B2AB42D99BF7A00DD3F0B /* KramThreadPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 707B2AB22D99BF7A00DD3F0B /* KramThreadPool.h */; };
+		707B2AB52D99BF7A00DD3F0B /* KramThreadPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707B2AB32D99BF7A00DD3F0B /* KramThreadPool.cpp */; };
 		70871DC927DDDBCD00D0B9E1 /* astcenc_vecmathlib_common_4.h in Headers */ = {isa = PBXBuildFile; fileRef = 70871DA727DDDBCC00D0B9E1 /* astcenc_vecmathlib_common_4.h */; };
 		70871DCB27DDDBCD00D0B9E1 /* astcenc_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DA827DDDBCC00D0B9E1 /* astcenc_image.cpp */; };
 		70871DCD27DDDBCD00D0B9E1 /* astcenc_find_best_partitioning.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DA927DDDBCC00D0B9E1 /* astcenc_find_best_partitioning.cpp */; };
@@ -473,6 +475,8 @@
 		707789D42881BA81008A51BC /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		707789EF2881BCE2008A51BC /* rdo_bc_encoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rdo_bc_encoder.cpp; sourceTree = "<group>"; };
 		707789F02881BCE2008A51BC /* rdo_bc_encoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rdo_bc_encoder.h; sourceTree = "<group>"; };
+		707B2AB22D99BF7A00DD3F0B /* KramThreadPool.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramThreadPool.h; sourceTree = "<group>"; };
+		707B2AB32D99BF7A00DD3F0B /* KramThreadPool.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramThreadPool.cpp; sourceTree = "<group>"; };
 		707D4C732CC436A000729BE0 /* kram.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = kram.xcconfig; sourceTree = "<group>"; };
 		70871DA727DDDBCC00D0B9E1 /* astcenc_vecmathlib_common_4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = astcenc_vecmathlib_common_4.h; sourceTree = "<group>"; };
 		70871DA827DDDBCC00D0B9E1 /* astcenc_image.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = astcenc_image.cpp; sourceTree = "<group>"; };
@@ -806,6 +810,8 @@
 				70D222E22AD22BED00B9EA23 /* BlockedLinearAllocator.cpp */,
 				70D222DD2AD2132300B9EA23 /* ImmutableString.h */,
 				70D222DC2AD2132300B9EA23 /* ImmutableString.cpp */,
+				707B2AB22D99BF7A00DD3F0B /* KramThreadPool.h */,
+				707B2AB32D99BF7A00DD3F0B /* KramThreadPool.cpp */,
 				706EEE3826D1583F001C950E /* TaskSystem.h */,
 				706EEE1F26D1583F001C950E /* TaskSystem.cpp */,
 			);
@@ -1174,6 +1180,7 @@
 				707789D72881BA81008A51BC /* bc7enc.h in Headers */,
 				706EEFDE26D15984001C950E /* EtcImage.h in Headers */,
 				709B8D4B28D7BCAD0081BD1F /* std.h in Headers */,
+				707B2AB42D99BF7A00DD3F0B /* KramThreadPool.h in Headers */,
 				70CDB65027A1382700A546C1 /* KramDDSHelper.h in Headers */,
 				709B8D4328D7BCAD0081BD1F /* args.h in Headers */,
 				708A6A9C2708CE4700BA5410 /* bc6h_encode.h in Headers */,
@@ -1387,6 +1394,7 @@
 				706EEFB626D1595D001C950E /* Kram.cpp in Sources */,
 				706EEFB726D1595D001C950E /* squish.cpp in Sources */,
 				706EEFB826D1595D001C950E /* colourset.cpp in Sources */,
+				707B2AB52D99BF7A00DD3F0B /* KramThreadPool.cpp in Sources */,
 				70871DD327DDDBCD00D0B9E1 /* astcenc_partition_tables.cpp in Sources */,
 				709B8D3728D7BCAD0081BD1F /* os.cpp in Sources */,
 				706EFF8126D34740001C950E /* hashtable.cpp in Sources */,
@@ -1421,7 +1429,7 @@
 			baseConfigurationReference = 707D4C732CC436A000729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = arm64;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -1515,7 +1523,7 @@
 			baseConfigurationReference = 707D4C732CC436A000729BE0 /* kram.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = arm64;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;

@@ -392,7 +392,7 @@ static void setThreadPriority(std::thread::native_handle_type macroUnusedArg(han
     // There is a narrow range of offsets per qos.
     // QOS_CLASS_USER_INTERACTIVE: 38-47  -9
     // QOS_CLASS_USER_INITIATED:   32-37  -5
-    // QOS_CLASS_DEFAULTL          21-31 -10
+    // QOS_CLASS_DEFAULT:          21-31 -10
     // QOS_CLASS_UTILITY:           5-20 -15
     // QOS_CLASS_BACKGROUND:        0-4   -4
     

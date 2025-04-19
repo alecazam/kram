@@ -220,6 +220,11 @@ struct ViewFramebufferData {
         _data = data;
         _device = view.device;
 
+        // 11gb on a 16gb machine.
+        // Represents the max size of a render encoder.
+        double kInvOneMB = 1.0 / (1024.0 * 1024.0);
+        KLOGI("Rendererr", "%0.3f mb", _device.recommendedMaxWorkingSetSize * kInvOneMB );
+        
         _loader = [KramLoader new];
         _loader.device = _device;
 

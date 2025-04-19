@@ -32,6 +32,7 @@ using mymutex = std::recursive_mutex;
 using mylock = std::unique_lock<mymutex>;
 using mycondition = std::condition_variable_any;
 
+// TOOO: can also have a priority_queue
 #define mydeque deque
 #define myfunction function
 

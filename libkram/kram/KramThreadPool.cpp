@@ -225,6 +225,7 @@ void Scheduler::scheduleJob(Job2& job) {
             _stats.jobsTotal++;
         }
         
+        // here the scheduler or random thread needs to wake a worker
         worker->_futex.notify_one();
     }
     else {
@@ -232,26 +233,33 @@ void Scheduler::scheduleJob(Job2& job) {
         worker->_queue.push(std::move(job));
         worker->incQueueSize();
         _stats.jobsTotal++;
+        
+        // the job is already awake and scheduling to its own queue
+        // so don't need to notify.
     }
 }
 
 void Scheduler::stop()
 {
     // has to be called on scheduler thread
-    KASSERT(getCurrentThread() == _schedulerThread);
+    // just don't call from a worker
+    //KASSERT(getCurrentThread() == _schedulerThread);
     
     if (_isStop)
         return;
     
     _isStop = true;
     
-    // have all threads wait on each other to finish
     for (uint32_t i = 0; i < _workers.size(); ++i) {
+        // wake it
         _workers[i]->_futex.notify_one();
+        
+        // wait on thread to end
         _threads[i].join();
         
-        // since had to use ptrs
+        // since had to use ptrs, delete them
         delete _workers[i];
+        _workers[i] = nullptr;
     }
 }
    
@@ -273,9 +281,9 @@ bool Worker::stealFromOtherQueues(Job2& job)
         // This should never visit caller Worker.
         KASSERT(worker != this);
         
-        // lots of expensive queue mutex locks below searching for jobs
+        // loop of expensive queue mutex locks below searching for jobs
         // use atomic queueSize per worker.  A little racy.
-//        if (worker->queueSize() == 0) { // _queueSize
+//        if (worker->queueSize() == 0) {
 //            continue;
 //        }
         
@@ -287,6 +295,8 @@ bool Worker::stealFromOtherQueues(Job2& job)
             
             SchedulerStats& stats = _scheduler->stats();
             stats.jobsExecuting++;
+            
+            // stop search, since returning a job
             found = true;
             break;
         }
