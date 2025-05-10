@@ -898,7 +898,7 @@ bool SavePNG(Image& image, const char* filename)
     }
 
     FileHelper fileHelper;
-    if (!fileHelper.open(filename, "wb+")) {
+    if (!fileHelper.open(filename, "w+b")) {
         return false;
     }
 
@@ -1967,7 +1967,7 @@ static int32_t kramAppInfo(vector<const char*>& args)
 
     FileHelper dstFileHelper;
     if (!dstFilename.empty()) {
-        if (!dstFileHelper.open(dstFilename.c_str(), "wb+")) {
+        if (!dstFileHelper.open(dstFilename.c_str(), "w+b")) {
             KLOGE("Kram", "info couldn't open output file");
             return -1;
         }
