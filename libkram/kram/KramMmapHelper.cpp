@@ -1,4 +1,4 @@
-// kram - Copyright 2020-2023 by Alec Miller. - MIT License
+// kram - Copyright 2020-2025 by Alec Miller. - MIT License
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
@@ -18,6 +18,7 @@
 #endif
 
 MmapHelper::MmapHelper() {}
+
 MmapHelper::MmapHelper(MmapHelper &&rhs)
 {
     addr = rhs.addr;
@@ -30,7 +31,7 @@ MmapHelper::MmapHelper(MmapHelper &&rhs)
 
 MmapHelper::~MmapHelper() { close(); }
 
-bool MmapHelper::open(const char *filename)
+bool MmapHelper::open(const char* filename)
 {
     if (addr) {
         return false;

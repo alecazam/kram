@@ -1,4 +1,4 @@
-// kram - Copyright 2020-2023 by Alec Miller. - MIT License
+// kram - Copyright 2020-2025 by Alec Miller. - MIT License
 // The license and copyright notice shall be included
 // in all copies or substantial portions of the Software.
 
@@ -19,10 +19,10 @@ public:
     bool open(const char *filename);
     void close();
 
-    const uint8_t *data() { return addr; }
+    const uint8_t* data() { return addr; }
     size_t dataLength() { return length; }
 
 private:
-    const uint8_t *addr = nullptr;
+    const uint8_t* addr = nullptr;
     size_t length = 0;
 };
