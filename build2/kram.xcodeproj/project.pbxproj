@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		702E0DB62CA10BC100B652B7 /* astcenc_mathlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70871DB327DDDBCC00D0B9E1 /* astcenc_mathlib.cpp */; };
+		706178192DE16211001545E1 /* KramFileIO.h in Headers */ = {isa = PBXBuildFile; fileRef = 706178172DE16211001545E1 /* KramFileIO.h */; };
+		7061781A2DE16211001545E1 /* KramFileIO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706178182DE16211001545E1 /* KramFileIO.cpp */; };
 		706EEF7F26D1595D001C950E /* EtcBlock4x4Encoding_RGB8.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAA26D1583E001C950E /* EtcBlock4x4Encoding_RGB8.cpp */; };
 		706EEF8026D1595D001C950E /* EtcImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAC26D1583E001C950E /* EtcImage.cpp */; };
 		706EEF8126D1595D001C950E /* EtcDifferentialTrys.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 706EEDAF26D1583E001C950E /* EtcDifferentialTrys.cpp */; };
@@ -207,6 +209,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		706178172DE16211001545E1 /* KramFileIO.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KramFileIO.h; sourceTree = "<group>"; };
+		706178182DE16211001545E1 /* KramFileIO.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KramFileIO.cpp; sourceTree = "<group>"; };
 		706ECDDE26D1577A001C950E /* libkram.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libkram.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		706EEDAA26D1583E001C950E /* EtcBlock4x4Encoding_RGB8.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EtcBlock4x4Encoding_RGB8.cpp; sourceTree = "<group>"; };
 		706EEDAB26D1583E001C950E /* EtcErrorMetric.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EtcErrorMetric.h; sourceTree = "<group>"; };
@@ -803,6 +807,8 @@
 				706EEE3526D1583F001C950E /* Kram.cpp */,
 				706EEE3626D1583F001C950E /* KramFileHelper.h */,
 				706EEE2126D1583F001C950E /* KramFileHelper.cpp */,
+				706178172DE16211001545E1 /* KramFileIO.h */,
+				706178182DE16211001545E1 /* KramFileIO.cpp */,
 				706EEE3726D1583F001C950E /* KramMipper.h */,
 				706EEE1C26D1583F001C950E /* KramMipper.cpp */,
 				706EEE2D26D1583F001C950E /* win_mmap.h */,
@@ -1262,6 +1268,7 @@
 				709B8D2D28D7BCAD0081BD1F /* ostream.h in Headers */,
 				706EF01B26D15985001C950E /* lodepng.h in Headers */,
 				709B8D4928D7BCAD0081BD1F /* format.h in Headers */,
+				706178192DE16211001545E1 /* KramFileIO.h in Headers */,
 				70D222F82ADAFA1500B9EA23 /* dlmalloc.h in Headers */,
 				706EF01C26D15985001C950E /* tmpfileplus.h in Headers */,
 				709B8D3328D7BCAD0081BD1F /* xchar.h in Headers */,
@@ -1389,6 +1396,7 @@
 				706EEFB426D1595D001C950E /* KramMmapHelper.cpp in Sources */,
 				709B8D3928D7BCAD0081BD1F /* format.cpp in Sources */,
 				70D222DE2AD2132300B9EA23 /* ImmutableString.cpp in Sources */,
+				7061781A2DE16211001545E1 /* KramFileIO.cpp in Sources */,
 				70871DCB27DDDBCD00D0B9E1 /* astcenc_image.cpp in Sources */,
 				706EFF7326D34740001C950E /* thread_support.cpp in Sources */,
 				706EEFB626D1595D001C950E /* Kram.cpp in Sources */,

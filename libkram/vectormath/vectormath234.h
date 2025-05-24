@@ -169,16 +169,16 @@
 #ifndef SIMD_CONFIG
 
 // fp comparisons gen a corresponding signed integer type
-#define SIMD_INT 1
-#define SIMD_LONG 1
-
 // apple is signed-char, so make sure to set on -fsigned-char on other platforms
 #define SIMD_CHAR 1
 #define SIMD_SHORT 1
+#define SIMD_INT 1
+#define SIMD_LONG 1
 
 // don't need these yet, but easy to add with macros
 //#define SIMD_UCHAR  0
 //#define SIMD_USHORT 0
+//#define SIMD_UINT   0
 //#define SIMD_ULONG  0
 
 // Vector and matrix types.  Currently only matrix types for SIMD_FLOAT, SIMD_DOUBLE.
@@ -341,12 +341,12 @@
 
 //-----------------------------------
 
-#define macroMatrixOps(type)                                                                         \
-    SIMD_CALL_OP type& operator*=(type& x, const type& y)                                            \
-    {                                                                                                \
-        x = mul(x, y);                                                                               \
-        return x;                                                                                    \
-    }                                                                                                \
+#define macroMatrixOps(type) \
+    SIMD_CALL_OP type& operator*=(type& x, const type& y) \
+    { \
+        x = mul(x, y); \
+        return x; \
+    } \
     SIMD_CALL_OP type& operator+=(type& x, const type& y)                                            \
     {                                                                                                \
         x = add(x, y);                                                                               \
@@ -489,7 +489,7 @@ macroVector1TypesStorageRenames(char, simd_char)
 }
 
 namespace SIMD_NAMESPACE {
-macroVector4TypesStorageRenames(char, char)
+macroVector1TypesStorageRenames(char, char)
 }
 #endif // __cplusplus
 #endif // SIMD_CHAR
@@ -660,6 +660,26 @@ struct vecf {
     string str(int4 v) const;
 #endif
 
+#if SIMD_SHORT
+    // vector
+    //string str(short2 v) const;
+    //string str(short3 v) const;
+    //string str(short4 v) const;
+    //string str(short8 v) const;
+    //string str(short16 v) const;
+#endif
+    
+#if SIMD_CHAR
+    // vector
+    // TODO: up to 32
+    //string str(char2 v) const;
+    //string str(char3 v) const;
+    //string str(char4 v) const;
+    //string str(char8 v) const;
+    //string str(char16 v) const;
+    //string str(char32 v) const;
+#endif
+
     // Just stuffing this here for now
     string simd_configs() const;
     string simd_alignments() const;
@@ -668,5 +688,23 @@ struct vecf {
 } // namespace SIMD_NAMESPACE
 
 #endif // __cplusplus
+
+//-------------------------------
+// Compression utils.
+// Fast delta encode/decode for indices.
+#if SIMD_INT
+void deltaEncodeU32(uint32_t * buffer, size_t length, uint32_t starting_point = 0);
+void deltaDecodeU32(uint32_t * buffer, size_t length, uint32_t starting_point = 0);
+#endif
+
+#if SIMD_SHORT
+void deltaEncodeU16(uint16_t * buffer, size_t length, uint16_t starting_point = 0);
+void deltaDecodeU16(uint16_t * buffer, size_t length, uint16_t starting_point = 0);
+#endif
+
+#if SIMD_CHAR
+void deltaEncodeU8(uint8_t * buffer, size_t length, uint8_t starting_point = 0);
+void deltaDecodeU8(uint8_t * buffer, size_t length, uint8_t starting_point = 0);
+#endif
 
 #endif

@@ -159,7 +159,7 @@ void TestCalls()
 #if SIMD_FLOAT
     float4a va = 0;
     float4p vp = (float)1;
-
+    
     va = vp;
     vp = va;
 #endif
@@ -176,22 +176,22 @@ inline string format(const char* format, ...) __printflike(1, 2);
 inline string format(const char* format, ...)
 {
     string str;
-
+    
     va_list args;
     va_start(args, format);
-
+    
     // format once to get length (without NULL at end)
     va_list argsCopy;
     va_copy(argsCopy, args);
     int32_t len = vsnprintf(NULL, 0, format, argsCopy);
     va_end(argsCopy);
-
+    
     // replace string
     str.resize(len, 0);
     vsnprintf((char*)str.c_str(), len + 1, format, args);
-
+    
     va_end(args);
-
+    
     return str;
 }
 
@@ -346,20 +346,20 @@ string vecf::str(long4 v) const
 string vecf::simd_configs() const
 {
     string s;
-
+    
 #define FMT_CONFIG(val) s += format("%s: %d\n", #val, val);
-
+    
     FMT_CONFIG(SIMD_SSE);
     FMT_CONFIG(SIMD_NEON);
-
+    
 #if SIMD_SSE
     bool hasSSE42 = false;
     bool hasAVX = false;
     bool hasAVX2 = false;
-
+    
     bool hasF16C = false;
     bool hasFMA = false;
-
+    
 #if SIMD_SSE
     hasSSE42 = true;
 #endif
@@ -369,51 +369,51 @@ string vecf::simd_configs() const
 #if SIMD_AVX2
     hasAVX2 = true;
 #endif
-
+    
     // TODO: AVX-512 flags (combine into one?)
     // (__AVX512F__) && (__AVX512DQ__) && (__AVX512CD__) && (__AVX512BW__) && (__AVX512VL__) && (__AVX512VBMI2__)
-
+    
 #ifdef __F16C__
     hasF16C = true;
 #endif
 #ifdef __FMA__
     hasFMA = true;
 #endif
-
+    
     if (hasAVX2)
         s += format("%s: %d\n", "AVX2 ", hasAVX2);
     else if (hasAVX)
         s += format("%s: %d\n", "AVX  ", hasAVX);
     else if (hasSSE42)
         s += format("%s: %d\n", "SSE42 ", hasSSE42);
-
+    
     s += format("%s: %d\n", "F16C  ", hasF16C);
     s += format("%s: %d\n", "FMA   ", hasFMA);
-
+    
     // fp-contract, etc ?
     // CRC (may not be worth it)
-
+    
 #endif
-
+    
 #if SIMD_NEON
     // any neon setting, arm64 version
     // __ARM_VFPV4__
     // CRC (may not be worth it)
-
+    
 #endif
-
+    
     FMT_CONFIG(SIMD_FLOAT_EXT);
     FMT_CONFIG(SIMD_HALF_FLOAT16);
 #if SIMD_HALF
     FMT_CONFIG(SIMD_HALF4_ONLY);
 #endif
-
+    
     FMT_SEP();
-
+    
     FMT_CONFIG(SIMD_CMATH_MATH);
     FMT_CONFIG(SIMD_ACCELERATE_MATH);
 #if SIMD_ACCELERATE_MATH
-// Dump the min version. This is supposed to control SIMD_LIBRARY_VERSION
+    // Dump the min version. This is supposed to control SIMD_LIBRARY_VERSION
 #if __APPLE__
 #if TARGET_OS_OSX
     FMT_CONFIG(__MAC_OS_X_VERSION_MIN_REQUIRED);
@@ -423,89 +423,89 @@ string vecf::simd_configs() const
     FMT_CONFIG(__IPHONE_OS_VERSION_MIN_REQUIRED);
 #endif
 #endif
-
+    
     FMT_CONFIG(SIMD_LIBRARY_VERSION); // lib based on min os target
     FMT_CONFIG(SIMD_CURRENT_LIBRARY_VERSION); // max lib based on sdk
     FMT_CONFIG(SIMD_LIBRARY_VERSION_TEST);
     FMT_CONFIG(SIMD_ACCELERATE_MATH_NAMES);
 #endif
-
+    
     FMT_SEP();
-
+    
     FMT_CONFIG(SIMD_HALF);
     FMT_CONFIG(SIMD_FLOAT);
     FMT_CONFIG(SIMD_DOUBLE);
-
+    
     FMT_CONFIG(SIMD_INT);
     FMT_CONFIG(SIMD_LONG);
-
+    
     // don't have these implemented yet
     //FMT_CONFIG(SIMD_CHAR);
     //FMT_CONFIG(SIMD_SHORT);
-
+    
 #undef FMT_CONFIG
-
+    
     return s;
 }
 
 string vecf::simd_alignments() const
 {
     string s;
-
+    
 #define FMT_CONFIG(val) s += format("%s: %zu %zu\n", #val, sizeof(val), __alignof(val));
-
+    
     // TODO: add other types int, half?
-
+    
 #if SIMD_FLOAT
     FMT_SEP();
-
+    
     FMT_CONFIG(float2);
     FMT_CONFIG(float3);
     FMT_CONFIG(float4);
     FMT_CONFIG(float8);
     //FMT_CONFIG(float16);
-
+    
     FMT_CONFIG(float2x2);
     FMT_CONFIG(float3x3);
     FMT_CONFIG(float3x4);
     FMT_CONFIG(float4x4);
 #endif
-
+    
 #if SIMD_DOUBLE
     FMT_SEP();
-
+    
     FMT_CONFIG(double2);
     FMT_CONFIG(double3);
     FMT_CONFIG(double4);
     // FMT_CONFIG(double8);
-
+    
     FMT_CONFIG(double2x2);
     FMT_CONFIG(double3x3);
     FMT_CONFIG(double3x4);
     FMT_CONFIG(double4x4);
 #endif
-
+    
 #if SIMD_INT
     FMT_SEP();
-
+    
     FMT_CONFIG(int2);
     FMT_CONFIG(int3);
     FMT_CONFIG(int4);
     FMT_CONFIG(int8);
     //FMT_CONFIG(int16);
 #endif
-
+    
 #if SIMD_LONG
     FMT_SEP();
-
+    
     FMT_CONFIG(long2);
     FMT_CONFIG(long3);
     FMT_CONFIG(long4);
     //FMT_CONFIG(long8);
 #endif
-
+    
 #undef FMT_CONFIG
-
+    
     return s;
 }
 
@@ -534,24 +534,24 @@ float4 float4m(half4 vv)
     // https://gcc.gnu.org/onlinedocs/gcc-7.5.0/gcc/Half-Precision.html
     // https://developer.arm.com/documentation/dui0491/i/Using-NEON-Support/Converting-vectors
     __m128i reg16 = _mm_setzero_si128();
-
+    
     // TODO: switch to load low 64-bits, but don't know which one _mm_cvtsi32_si128(&vv.reg); ?
     // want 0 extend here, sse overuses int32_t when really unsigned and zero extended value
     reg16 = _mm_insert_epi16(reg16, vv[0], 0);
     reg16 = _mm_insert_epi16(reg16, vv[1], 1);
     reg16 = _mm_insert_epi16(reg16, vv[2], 2);
     reg16 = _mm_insert_epi16(reg16, vv[3], 3);
-
+    
     return simd::float4(_mm_cvtph_ps(reg16));
 }
 
 half4 half4m(float4 vv)
 {
     __m128i reg16 = _mm_cvtps_ph(*(const __m128*)&vv, 0); // 4xfp32-> 4xfp16,  round to nearest-even
-
+    
     // TODO: switch to store/steam, but don't know which one _mm_storeu_epi16 ?
     half4 val; // = 0;
-
+    
     // 0 extended
     val[0] = (half)_mm_extract_epi16(reg16, 0);
     val[1] = (half)_mm_extract_epi16(reg16, 1);
@@ -562,6 +562,187 @@ half4 half4m(float4 vv)
 
 #endif // SIMD_SSE
 #endif // SIMD_HALF4_ONLY
+
+
+// Adapted from this code for uint32_t.
+// https://github.com/lemire/FastDifferentialCoding/blob/master/src/fastdelta.c
+// Don't have uchar, ushort, uint, ulong support, but can use signed.
+
+#if SIMD_INT
+void deltaEncodeU32(uint32_t * buffer, size_t length, uint32_t starting_point) {
+    constexpr uint32_t elementCount = 4;
+    constexpr uint32_t elementSize = sizeof(uint32_t);
+    
+    // Could do 2 unaligned loads (second shifted by 1 element) instead of alignr.
+    // but that would lower simd count if multiple of elementCount
+    int4p* b = (int4p*)buffer;
+    int4 prev = starting_point;
+    size_t i = 0;
+    for(; i < length/elementCount; i++) {
+        int4 curr = b[i];
+        int4 delta = curr - _mm_alignr_epi8(curr, prev, (elementCount-1)*elementSize);
+        b[i] = delta;
+        prev = curr;
+    }
+    
+    // 1 to (elementCount-1) indices don't fit above
+    uint32_t lastprev = prev[elementCount-1];
+    for(i = elementCount * i; i < length; ++i) {
+        uint32_t curr = buffer[i];
+        buffer[i] = curr - lastprev;
+        lastprev = curr;
+    }
+}
+
+// write to buffer the successive differences of buffer (buffer[0]-starting_point, buffer[1]-buffer[2], ...)
+// there are "length" values in buffer
+void deltaDecodeU32(uint32_t * buffer, size_t length, uint32_t starting_point) {
+    constexpr uint32_t elementCount = 4;
+    constexpr uint32_t elementSize = sizeof(uint32_t);
+    
+    int4p* b = (int4p*)buffer;
+    int4 prev = starting_point;
+    size_t i = 0;
+    for(; i  < length/elementCount; i++) {
+        int4 curr = b[i];
+        
+        // this is prefix sum
+        int4 _tmp1 = _mm_slli_si128(curr, 2*elementSize) + curr;
+        int4 _tmp2 = _mm_slli_si128(_tmp1, 1*elementSize) + _tmp1;
+        prev = _tmp2 + _mm_shuffle_epi32(prev, _MM_SHUFFLE(3, 3, 3, 3));
+        
+        b[i] = prev;
+    }
+    uint32_t lastprev = prev[elementCount-1];
+    for(i = elementCount * i ; i < length; ++i) {
+        lastprev += buffer[i];
+        buffer[i] = lastprev;
+    }
+}
+#endif
+
+#if SIMD_SHORT
+void deltaEncodeU16(uint16_t * buffer, size_t length, uint16_t starting_point) {
+    constexpr uint32_t elementCount = 8;
+    constexpr uint32_t elementSize = sizeof(uint16_t);
+    
+    // Could do 2 unaligned loads (second shifted by 1 element) instead of alignr.
+    // but that would lower simd count if multiple of elementCount
+    short8p* b = (short8p*)buffer;
+    short8 prev = starting_point;
+    size_t i = 0;
+    for(; i < length/elementCount; i++) {
+        short8 curr = b[i];
+        short8 delta = curr - _mm_alignr_epi8(curr, prev, (elementCount-1)*elementSize);
+        b[i] = delta;
+        prev = curr;
+    }
+    
+    // 1 to (elementCount-1) indices don't fit above
+    uint16_t lastprev = prev[elementCount-1];
+    for(i = elementCount * i; i < length; ++i) {
+        uint16_t curr = buffer[i];
+        buffer[i] = curr - lastprev;
+        lastprev = curr;
+    }
+}
+
+// write to buffer the successive differences of buffer (buffer[0]-starting_point, buffer[1]-buffer[2], ...)
+// there are "length" values in buffer
+void deltaDecodeU16(uint16_t * buffer, size_t length, uint16_t starting_point) {
+    /* decode may be faster as scalar, lots of simd ops to prefix 8 values
+    constexpr uint32_t elementCount = 8;
+    constexpr uint32_t elementSize = sizeof(uint16_t);
+    
+    short8p* b = (short8p*)buffer;
+    short8 prev = starting_point;
+    size_t i = 0;
+    for(; i < length/elementCount; i++) {
+        short8 curr = b[i];
+        
+        // this is prefix sum
+        // TODO: way more values to add (8 total, this is for 4)
+        short8 _tmp1 = _mm_slli_si128(curr, 2*elementSize) + curr;
+        short8 _tmp2 = _mm_slli_si128(_tmp1, 1*elementSize) + _tmp1;
+        prev = _tmp2 + _mm_shuffle_epi32(prev, _MM_SHUFFLE(3, 3, 3, 3));
+        
+        b[i] = prev;
+    }
+    uint16_t lastprev = prev[elementCount-1];
+    for(i = 4 * i ; i < length; ++i) {
+        lastprev = lastprev + buffer[i];
+        buffer[i] = lastprev;
+    }
+    */
+    
+    uint16_t lastprev = starting_point;
+    for(size_t i = 0; i < length; ++i) {
+        lastprev += buffer[i];
+        buffer[i] = lastprev;
+    }
+}
+#endif
+
+#if SIMD_CHAR
+void deltaEncodeU8(uint8_t * buffer, size_t length, uint8_t starting_point) {
+    constexpr uint32_t elementCount = 16;
+    constexpr uint32_t elementSize = sizeof(uint8_t);
+    
+    char16p* b = (char16p*)buffer;
+    char16 prev = starting_point;
+    size_t i = 0;
+    for(; i < length/elementCount; i++) {
+        char16 curr = b[i];
+        char16 delta = curr - _mm_alignr_epi8(curr, prev, (elementCount-1)*elementSize);
+        b[i] = delta;
+        prev = curr;
+    }
+    
+    // 1 to (elementCount-1) indices don't fit above
+    uint8_t lastprev = prev[elementCount-1];
+    for(i = elementCount * i; i < length; ++i) {
+        uint8_t curr = buffer[i];
+        buffer[i] = curr - lastprev;
+        lastprev = curr;
+    }
+}
+
+// write to buffer the successive differences of buffer (buffer[0]-starting_point, buffer[1]-buffer[2], ...)
+// there are "length" values in buffer
+void deltaDecodeU8(uint8_t * buffer, size_t length, uint8_t starting_point) {
+    /* decode may be faster as scalar, lots of simd ops to prefix 16 values
+    constexpr uint32_t elementCount = 16;
+    constexpr uint32_t elementSize = sizeof(uint8_t);
+    
+    // This is a confusing name.  Really char8x16
+    char16p* b = (char16p*)buffer;
+    char16 prev = starting_point;
+    size_t i = 0;
+    for(; i  < length/elementCount; i++) {
+        char16 curr = b[i];
+        
+        // this is prefix sum
+        // TODO: way more values to add (16 total, this is for 4)
+        char16 _tmp1 = _mm_slli_si128(curr, 2*elementSize) + curr;
+        char16 _tmp2 = _mm_slli_si128(_tmp1, 1*elementSize) + _tmp1;
+        prev = _tmp2 + _mm_shuffle_epi32(prev, _MM_SHUFFLE(3, 3, 3, 3));
+        
+        b[i] = prev;
+    }
+    uint8_t lastprev = prev[elementCount-1];
+    for(i = elementCount * i ; i < length; ++i) {
+        lastprev = lastprev + buffer[i];
+        buffer[i] = lastprev;
+    }
+    */
+    uint8_t lastprev = starting_point;
+    for(size_t i = 0; i < length; ++i) {
+        lastprev += buffer[i];
+        buffer[i] = lastprev;
+    }
+}
+#endif
+
 
 } // namespace SIMD_NAMESPACE
 #endif // USE_SIMDLIB

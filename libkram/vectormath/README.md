@@ -17,7 +17,7 @@ float4 v = 1.0f.          v = 1,1,1,1
 
 Matrices are 2x2, 3x3, 3x4, and 4x4 column only.  Matrices have a C++ type with operators and calls.  Chop out with defines float, double, half, but keep int for the conditional tests.   Easy to add more types with the macros - u/char, u/long, u/short. 
 
-I gutted the arrmv7 stuff from sse2neon.h so that's readable.  But this is only needed for an _mm_shuffle_ps.  Updated sse_mathfun for the cos/sin/log ops, but it's currently only reference fp32 SSE.  I added the fp16 <-> fp32 calls, since that's all Android has.  
+I gutted the armv7 stuff from sse2neon.h so that's readable.  But this is only needed for an _mm_shuffle_ps.  Updated sse_mathfun for the cos/sin/log ops, but it's currently only reference fp32 SSE.  I added the fp16 <-> fp32 calls, since that's all Android has.  
 
 Apple Accelerate has similar calls and structs.  The lib holds the optimized calls for sin, cos, log, inverse, but you only get them if you're on a new enough iOS/macOS.   And that api is so much code, that for some things it's not using the best methods.  
 
