@@ -13,6 +13,7 @@
 #include "KTXImage.h"
 #include "Kram.h"
 #include "KramFileHelper.h"
+#include "KramFileIO.h"
 #include "KramImage.h"
 #include "KramImageInfo.h"
 #include "KramLog.h"

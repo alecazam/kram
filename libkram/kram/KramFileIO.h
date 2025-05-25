@@ -23,7 +23,8 @@ private:
 
     bool _isReadOnly = false;
     bool _isResizeable = false;
-
+    bool _isFailed = false;
+    
     // dynamic vector
     vector<uint8_t>* mem = nullptr;
 
@@ -60,7 +61,8 @@ public:
     bool isFile() const { return fp != nullptr; }
     bool isData() const { return _data != nullptr; }
     bool isMemory() const { return mem != nullptr; }
-
+    bool isFailed() const { return _isFailed; }
+    
     void writeArray32u(const uint32_t* data, int count) { write(data, sizeof(uint32_t), count); }
     void writeArray16u(const uint16_t* data, int count) { write(data, sizeof(uint16_t), count); }
     void writeArray8u(const uint8_t* data, int count) { write(data, sizeof(uint8_t), count); }
@@ -166,4 +168,4 @@ private:
 // to better distinguish mmap/buffer io
 using DataIO = FileIO;
 
-} //namespace ba
+} //namespace kram

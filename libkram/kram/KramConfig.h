@@ -255,4 +255,11 @@ inline size_t vsizeof(const vector<T>& v)
 {
     return sizeof(T) * v.size();
 }
+
+template <typename T>
+inline size_t velemsizeof(const vector<T>& v)
+{
+    return sizeof(T);
+}
+    
 } // namespace kram

@@ -96,7 +96,10 @@ void FileIO::read(void* data_, int size, int count)
 {
     size_t numberOfBytes = size * count;
     if (isFile() && fp) {
-        fread(data_, 1, numberOfBytes, fp);
+        size_t readBytes = fread(data_, 1, numberOfBytes, fp);
+        if (readBytes != numberOfBytes) {
+            _isFailed = true;
+        }
     }
     else if (isData() && _data) {
         if (dataLocation + numberOfBytes <= dataLength) {
@@ -104,13 +107,16 @@ void FileIO::read(void* data_, int size, int count)
             dataLocation += numberOfBytes;
         }
         else {
-            KASSERT(false);
+            _isFailed = true;
         }
     }
     else if (isMemory() && mem) {
         if (dataLocation + numberOfBytes <= dataLength) {
             memcpy(data_, _data + dataLocation, numberOfBytes);
             dataLocation += numberOfBytes;
+        }
+        else {
+            _isFailed = true;
         }
     }
 }
@@ -124,7 +130,10 @@ void FileIO::write(const void* data_, int size, int count)
 
     int numberOfBytes = size * count;
     if (isFile() && fp) {
-        fwrite(data_, 1, numberOfBytes, fp);
+        size_t writeBytes = fwrite(data_, 1, numberOfBytes, fp);
+        if (writeBytes != numberOfBytes) {
+            _isFailed = true;
+        }
     }
     else if (isData() && _data) {
         if (dataLocation + numberOfBytes <= dataLength) {
@@ -132,7 +141,7 @@ void FileIO::write(const void* data_, int size, int count)
             dataLocation += numberOfBytes;
         }
         else {
-            KASSERT(false);
+            _isFailed = true;
         }
     }
     else if (isMemory() && mem) {
@@ -143,6 +152,8 @@ void FileIO::write(const void* data_, int size, int count)
             dataLength = totalBytes;
         }
 
+        // TOOD: handle resize failure?
+        
         memcpy(const_cast<uint8_t*>(_data) + dataLocation, data_, numberOfBytes);
         dataLocation += numberOfBytes;
     }
