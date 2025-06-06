@@ -156,6 +156,7 @@
 #include <EASTL/map.h>
 #include <EASTL/shared_ptr.h> // includes thread/mutex
 #include <EASTL/sort.h>
+#include <EASTL/span.h>
 #include <EASTL/unique_ptr.h>
 #include <EASTL/unordered_map.h>
 #include <EASTL/vector.h>
@@ -191,6 +192,7 @@
 #include <mutex>
 #include <random>
 #include <string>
+#include <span>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -244,10 +246,10 @@
 // this just strips args
 #define macroUnusedVar(x) (void)x
 
-    //---------------------------------------
+//---------------------------------------
 
-    namespace kram {
-        using namespace STL_NAMESPACE;
+namespace kram {
+using namespace STL_NAMESPACE;
 
 // Use this on vectors
 template <typename T>
@@ -260,6 +262,17 @@ template <typename T>
 inline size_t velemsizeof(const vector<T>& v)
 {
     return sizeof(T);
+}
+
+// TODO: make sure these don't conflict with std:: versions
+template <typename T>
+inline constexpr const span<T> make_span(const vector<T>& v) {
+    return span<T, dynamic_extent>(const_cast<T*>(v.data()), v.size());
+}
+
+template <typename T>
+inline constexpr span<T> make_span(vector<T>& v) {
+    return span<T, dynamic_extent>(v.data(), v.size());
 }
     
 } // namespace kram

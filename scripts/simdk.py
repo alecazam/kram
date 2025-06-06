@@ -99,17 +99,18 @@ def __lldb_init_module(debugger, internal_dict):
     # simdk library
     
     # TODO: more packed types
-    debugger.HandleCommand("type summary add -F simdk.float2_summary half2p")
-    debugger.HandleCommand("type summary add -F simdk.float3_summary half3p")
-    debugger.HandleCommand("type summary add -F simdk.float4_summary half4p")
+    # These just cause Xcode to report (None, None, None)
+    #debugger.HandleCommand("type summary add -F simdk.float2_summary half2p")
+    #debugger.HandleCommand("type summary add -F simdk.float3_summary half3p")
+    #debugger.HandleCommand("type summary add -F simdk.float4_summary half4p")
 
-    debugger.HandleCommand("type summary add -F simdk.float2_summary float2p")
-    debugger.HandleCommand("type summary add -F simdk.float3_summary float3p")
-    debugger.HandleCommand("type summary add -F simdk.float4_summary float4p")
+    #debugger.HandleCommand("type summary add -F simdk.float2_summary float2p")
+    #debugger.HandleCommand("type summary add -F simdk.float3_summary float3p")
+    #debugger.HandleCommand("type summary add -F simdk.float4_summary float4p")
 
-    debugger.HandleCommand("type summary add -F simdk.float2_summary double2p")
-    debugger.HandleCommand("type summary add -F simdk.float3_summary double3p")
-    debugger.HandleCommand("type summary add -F simdk.float4_summary double4p")
+    #debugger.HandleCommand("type summary add -F simdk.float2_summary double2p")
+    #debugger.HandleCommand("type summary add -F simdk.float3_summary double3p")
+    #debugger.HandleCommand("type summary add -F simdk.float4_summary double4p")
 
     # aligned types
     debugger.HandleCommand("type summary add -F simdk.float2_summary short2a")

@@ -10,6 +10,32 @@
 
 using namespace STL_NAMESPACE;
 
+#if SIMD_AVX2
+#if KRAM_MAC
+
+inline const char* getMacOSVersion() {
+    static char str[256] = {};
+    if (str[0] == 0) {
+        size_t size = sizeof(str);
+        if (sysctlbyname("kern.osproductversion", str, &size, NULL, 0) == 0) {
+            return str;
+        }
+    }
+    return str;
+}
+
+inline uint32_t getMacOSMajorVersion() {
+    // 15.4
+    static uint32_t majorVersion = 0;
+    if (majorVersion == 0) {
+        sscanf(getMacOSVersion(), "%u", &majorVersion);
+    }
+    return majorVersion;
+}
+
+#endif
+#endif
+
 // TODO: move this into vectormath
 void checkSimdSupport()
 {
@@ -19,6 +45,16 @@ void checkSimdSupport()
     
 #if SIMD_AVX2
 #if KRAM_MAC
+    // Apple added AVX2 support to Rosetta in macOS 15 with no way
+    // to detect it.   Really awesome, so skip the test.  There are
+    // no supporting Intel hw devices on macOS 15 that don't have AVX2.
+    //const char* macOSVersion = getMacOSVersion();
+    // KLOGI("kram", "%s", macOSVersion);
+    uint32_t majorOSVersions = getMacOSMajorVersion();
+    if (majorOSVersions >= 15) {
+        return;
+    }
+    
     bool hasSimdSupport = true;
     
     vector<char> cpuName;
