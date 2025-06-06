@@ -10,6 +10,7 @@
 
 using namespace STL_NAMESPACE;
 
+// These aren't avx2 specific, but just don't want unused func warning 
 #if SIMD_AVX2
 #if KRAM_MAC
 
@@ -23,6 +24,21 @@ inline const char* getMacOSVersion() {
     }
     return str;
 }
+
+inline bool isRunningUnderRosetta() {
+    int ret = 0;
+    size_t size = sizeof(ret);
+    if (sysctlbyname("sysctl.proc_translated", &ret, &size, NULL, 0) == -1) {
+        if (errno == ENOENT) {
+            // sysctl doesn't exist - not running under Rosetta
+            return false;
+        }
+        // Other error occurred
+        return false;
+    }
+    return ret > 0;
+}
+
 
 inline uint32_t getMacOSMajorVersion() {
     // 15.4
@@ -45,10 +61,10 @@ void checkSimdSupport()
     
 #if SIMD_AVX2
 #if KRAM_MAC
-    // Apple added AVX2 support to Rosetta in macOS 15 with no way
+    // Apple added AVX2 and F16C? support to Rosetta in macOS 15 with no way
     // to detect it.   Really awesome, so skip the test.  There are
     // no supporting Intel hw devices on macOS 15 that don't have AVX2.
-    //const char* macOSVersion = getMacOSVersion();
+    // const char* macOSVersion = getMacOSVersion();
     // KLOGI("kram", "%s", macOSVersion);
     uint32_t majorOSVersions = getMacOSMajorVersion();
     if (majorOSVersions >= 15) {
@@ -147,9 +163,12 @@ void checkSimdSupport()
     }
     
     if (!hasSimdSupport) {
-        KLOGE("Main", "Missing simd support for %s%s%s%son %s",
+        bool isEmulated = isRunningUnderRosetta() && (majorVersion < 15);
+        const char* emulatedHint = isEmulated ? " install macOS 15.0+" : "";
+        
+        KLOGE("Main", "Missing simd support for %s%s%s%son %s%s",
               missingFeatures[0], missingFeatures[1], missingFeatures[2], missingFeatures[3],
-              cpuName.data());
+              cpuName.data(), emulatedHint);
         exit(1);
     }
     
