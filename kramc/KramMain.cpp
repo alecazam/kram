@@ -10,7 +10,7 @@
 
 using namespace STL_NAMESPACE;
 
-// These aren't avx2 specific, but just don't want unused func warning 
+// These aren't avx2 specific, but just don't want unused func warning
 #if SIMD_AVX2
 #if KRAM_MAC
 
@@ -42,11 +42,11 @@ inline bool isRunningUnderRosetta() {
 
 inline uint32_t getMacOSMajorVersion() {
     // 15.4
-    static uint32_t majorVersion = 0;
-    if (majorVersion == 0) {
-        sscanf(getMacOSVersion(), "%u", &majorVersion);
+    static uint32_t majorOSVersion = 0;
+    if (majorOSVersion == 0) {
+        sscanf(getMacOSVersion(), "%u", &majorOSVersion);
     }
-    return majorVersion;
+    return majorOSVersion;
 }
 
 #endif
@@ -66,8 +66,8 @@ void checkSimdSupport()
     // no supporting Intel hw devices on macOS 15 that don't have AVX2.
     // const char* macOSVersion = getMacOSVersion();
     // KLOGI("kram", "%s", macOSVersion);
-    uint32_t majorOSVersions = getMacOSMajorVersion();
-    if (majorOSVersions >= 15) {
+    uint32_t majorOSVersion = getMacOSMajorVersion();
+    if (majorOSVersion >= 15) {
         return;
     }
     
@@ -163,7 +163,7 @@ void checkSimdSupport()
     }
     
     if (!hasSimdSupport) {
-        bool isEmulated = isRunningUnderRosetta() && (majorVersion < 15);
+        bool isEmulated = isRunningUnderRosetta() && (majorOSVersion < 15);
         const char* emulatedHint = isEmulated ? " install macOS 15.0+" : "";
         
         KLOGE("Main", "Missing simd support for %s%s%s%son %s%s",
