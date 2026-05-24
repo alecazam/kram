@@ -141,14 +141,14 @@ HLSL2021 6.2 includes full half and int support.   So that is the compilation ta
 
 * Adreno also doesn't support half storage, so this limits SSBO and UBO usage.   
 
-* macOS on M1 - Rosetta2 lacks AVX and f16c cpu support, so translated x64 apps crash. Build Apple Silicon to fix this.  Win on ARM emulation (Qcom X Elite) also has the same limitations.  Neon is 16 128-bit registers where AVX needs 16 256-bit registers.
+* macOS on M1 - Rosetta2 v1 lacks AVX/2 and f16c cpu support, so translated x64 apps crash. v2 has support. Build Apple Silicon to fix this.  Win on ARM emulation (Qcom X Elite) using Prism also has the same limitations, but there is now a newer version that does.  Neon arm64 is 32 128-bit registers where AVX/2 uses 16 256-bit registers.
 
 * Android missing cpu arm64+f16 support from Redmi Note 8 and other chips.
   vcvt_f32_f16 is still present without this.  Do math in fp32x4, then converter to fp16x4.
   
 Dealing with Double
 ---
-* HLSL double suport is a joke.  Nvidia hobble fp64 output to 1/16th or less of the fp32 performance on GeForce to sell Quadro for CAD.  AMD is similar.
+* HLSL double suport is slow.  Nvidia hobble fp64 output to 1/16th or less of the fp32 performance on GeForce to sell Quadro for CAD.  AMD is similar.
 * Intel removed fp64 support in Gen11/12/13 and from ARC.
 * HLSL only supports 3 ops in DX11.1 - div, rcp, fma.
 * HLSL requires touint and todouble to pass between shader stages
@@ -224,9 +224,11 @@ iOS
 * A11 - 2/2, gpu ICB, tile shaders, Raster Order Groups, MSAA improvements, more gpus, async compute/raster
 * A12 - 2/4,
 * A13 - Argument Buffer indirection for material indexing, sparse texturing
-* A14/M1 - lossy FBO compression, mesh shaders,
+* A14/M1 - lossy FBO compression, mesh shader/RT emulation
 * A15/M2 - no new gpu hw
-* A16/M3? - rumored RT hw
+* A16/M3 - mesh shader/RT hw, register reduction 
+* A17/M4 - smaller RT bvh
+* A18/M5 - 45% faster than M4 in what?, sampler min/max
 * No SamplerMinMax support
 
 * https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf

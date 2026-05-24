@@ -397,12 +397,6 @@ void Data::listFilesInFolder(const string& archiveFilename, int32_t urlIndex, bo
     // Insert code here to tear down your application
 }
 
-- (BOOL)applicationShouldTerminateAfterLastWindowClosed:
-    (NSApplication*)sender
-{
-    return YES;
-}
-
 - (void)application:(NSApplication*)sender
            openURLs:(nonnull NSArray<NSURL*>*)urls
 {

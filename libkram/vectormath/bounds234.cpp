@@ -1,3 +1,7 @@
+// kram - Copyright 2020-2025 by Alec Miller. - MIT License
+// The license and copyright notice shall be included
+// in all copies or substantial portions of the Software.
+
 #include "vectormath234.h"
 
 #if SIMD_FLOAT && SIMD_INT

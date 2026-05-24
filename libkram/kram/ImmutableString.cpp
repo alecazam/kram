@@ -17,20 +17,22 @@ ImmutableStringPool::ImmutableStringPool(size_t capacity_)
 {
     capacity = capacity_;
 
+    const size_t headerSize = sizeof(ImmutableStringInfo);
+    
     // empty string is always 0.  Only one buffer for now.  Does not grow.
     ImmutableStringInfo info = {0, (uint16_t)counter++};
     mem = new char[capacity];
 
-    memcpy(mem, &info, sizeof(ImmutableStringInfo));
-    mem[sizeof(ImmutableStringInfo)] = 0;
+    memcpy(mem, &info, headerSize);
+    mem[headerSize] = 0;
 
-    emptyString = mem + sizeof(ImmutableStringInfo);
+    emptyString = mem + headerSize;
 
     keyTable.reserve(1024);
 
     // keep aligned to 2B for ImmutableStringInfo
     uint32_t sz = 2;
-    size += sz + sizeof(ImmutableStringInfo);
+    size += sz + headerSize;
 }
 
 ImmutableStringPool::~ImmutableStringPool()
@@ -67,7 +69,8 @@ ImmutableString ImmutableStringPool::getImmutableString(const char* s)
     size_t sz = strlen(s) + 1;
 
     // see if it will fit the block
-    if ((size + sz + sizeof(ImmutableStringInfo)) > capacity) {
+    const size_t headerSize = sizeof(ImmutableStringInfo);
+    if ((size + sz + headerSize) > capacity) {
         KLOGE("ImmutableString", "Pool cannot fit string length %zu", sz);
         return emptyString;
     }
@@ -76,16 +79,16 @@ ImmutableString ImmutableStringPool::getImmutableString(const char* s)
     ImmutableStringInfo info = {(uint16_t)(counter++), (uint16_t)(sz - 1)}; // hashStr };
 
     // 4B header
-    sz += sizeof(ImmutableStringInfo);
+    sz += headerSize;
 
-    // This finds a string from a 2B lookup uisng the info.counter
-    keyTable.push_back(size + sizeof(ImmutableStringPool));
+    // This finds a string from a 2B lookup using the info.counter
+    keyTable.push_back(size + sizeof(ImmutableStringInfo));
 
     // append it
     char* immStr = mem + size;
 
-    memcpy(immStr, &info, sizeof(ImmutableStringInfo));
-    immStr += sizeof(ImmutableStringInfo);
+    memcpy(immStr, &info, headerSize);
+    immStr += headerSize;
     memcpy(immStr, s, sz);
 
     // add it into the map

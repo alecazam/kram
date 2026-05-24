@@ -36,7 +36,7 @@ using mycondition = std::condition_variable_any;
 #define mydeque deque
 #define myfunction function
 
-class notification_queue {
+class task_queue {
     mydeque<myfunction<void()>> _q;
     bool _done = false;
     mymutex _mutex;
@@ -154,7 +154,7 @@ std::thread::native_handle_type getCurrentThread();
 // This only works for current thread, but simplifies setting several thread params.
 void setThreadInfo(ThreadInfo& info);
 
-// This is limited to 16 on linux
+// This is limited to 16 on linux/android
 // #define TASK_COMM_LEN 16
 constexpr const uint32_t kMaxThreadName = 32;
 
@@ -176,7 +176,7 @@ class task_system {
     vector<string> _threadNames;
 
     // currently one queue to each thread, but can steal from other queues
-    vector<notification_queue> _q;
+    vector<task_queue> _q;
     std::atomic<int32_t> _index;
 
     void run(int32_t threadIndex);
