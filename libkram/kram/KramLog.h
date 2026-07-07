@@ -6,7 +6,10 @@
 
 #include <cassert>
 
-// This has __printflike on macOS/Linux
+// This has __printflike on macOS/Linux,
+// May want to define own macro.  That way works on Win.
+// #define PRINTFLIKE(fmt_idx, var_idx) __attribute__((format(printf, fmt_idx, var_idx)))
+
 #if KRAM_WIN
 // TODO: fix for Win
 #else

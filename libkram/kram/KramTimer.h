@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <cassert>
+//#include <cassert>
 
 // These are only here for Perf class
 #include "KramFileHelper.h"
@@ -27,13 +27,13 @@ public:
     }
     void start()
     {
-        assert(_timeElapsed >= 0.0);
+        KASSERT(_timeElapsed >= 0.0);
         _timeElapsed -= currentTimestamp();
     }
 
     void stop()
     {
-        assert(_timeElapsed < 0.0);
+        KASSERT(_timeElapsed < 0.0);
         _timeElapsed += currentTimestamp();
     }
 
@@ -51,13 +51,13 @@ public:
         return timeElapsed() * 1e3;
     }
 
-    bool isStopped() const { return _timeElapsed < 0.0; }
+    bool isStopped() const { return _timeElapsed >= 0.0; }
 
 private:
     double _timeElapsed = 0.0;
 };
 
-// This scope records add to  timeElapsed if the timer is stopped alredy.
+// This scope adds to timeElapsed if the timer is stopped alredy.
 class TimerScope {
 public:
     TimerScope(Timer& timer)

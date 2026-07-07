@@ -11,36 +11,23 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        #os: [ubuntu-latest, macos-latest, windows-latest]
-        #os: [macos-latest, windows-latest]
-        #os: [macos-15, windows-latest]
-        os: [ubuntu-latest, macos-15, windows-latest]
+        os: [ubuntu-latest, macos-15, windows-2022]
         
     steps:
       - name: Update CMake
         uses: lukka/get-cmake@latest
 
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build and install to bin/
         run: ./scripts/cibuild.sh ${{ matrix.os }}
         shell: bash
 
-      # this doesn't work with a matrix, only macos is uploaded, no way to specify same tag  
-      # - name: Upload build to releases
-      #   uses: "marvinpinto/action-automatic-releases@latest"
-      #   with:
-      #     repo_token: "${{ secrets.GITHUB_TOKEN }}"
-      #     prerelease: false
-      #     files: bin/*.zip
-
-      # so do another upload to get both
       - name: Upload all builds to releases
-        uses: svenstaro/upload-release-action@v2
+        uses: softprops/action-gh-release@v3
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: bin/*.zip
-          file_glob: true
-          tag: ${{ github.ref }}
-          overwrite: true
+          prerelease: false # Forces GitHub to mark it as a Pre-Release
+          draft: false
+          generate_release_notes: true # Auto-generates changelogs using AI/commits
+          files: bin/*.zip

@@ -1158,7 +1158,7 @@ bool Data::loadFile()
     string atlasFilename = filenameNoExtension(filename);
     bool hasAtlas = false;
 
-    // replace -a, -d, with -atlas.jsonc
+    // replace -a, -d, with -atlas.json
     const char* dashPosStr = strrchr(atlasFilename.c_str(), '-');
     if (dashPosStr != nullptr) {
         atlasFilename = atlasFilename.substr(0, dashPosStr - atlasFilename.c_str());
