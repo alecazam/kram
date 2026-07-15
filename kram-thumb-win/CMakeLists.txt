@@ -33,11 +33,12 @@ target_compile_options(${myTargetLib} PRIVATE /W3 -march=haswell -mf16c -mfma /M
 target_compile_definitions(${myTargetLib} PRIVATE -D_ITERATOR_DEBUG_LEVEL=0 -D_HAS_EXCEPTIONS=0 -DUNICODE -D_UNICODE)
     
 if (CMAKE_BUILD_TYPE EQUAL "Debug")
-    target_compile_definitions(${myTargetLib} PRIVATE "/INCREMENTAL")
+    target_compile_options(${myTargetLib} PRIVATE "/INCREMENTAL")
         
 elseif (CMAKE_BUILD_TYPE EQUAL "Release")
     # only dead strip on Release builds since this disables Incremental linking, may want Profile build that doesn't use this
-    target_compile_definitions(${myTargetLib} PRIVATE "/OPT:REF")
+    target_compile_options(${myTargetLib} PRIVATE /Gy /Gw)
+    add_link_options(${myTargetLib} PRIVATE /OPT:REF /OPT:ICF)
 endif()
 
 target_link_libraries(${myTargetLib} PRIVATE shlwapi.lib libkram)

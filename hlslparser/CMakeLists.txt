@@ -74,11 +74,12 @@ if (BUILD_WIN)
     target_compile_definitions(${myTargetApp} PRIVATE _ITERATOR_DEBUG_LEVEL=0 _HAS_EXCEPTIONS=0)
 
     if (CMAKE_BUILD_TYPE EQUAL "Debug")
-        target_compile_definitions(${myTargetApp} PRIVATE "/INCREMENTAL")
+        target_compile_options(${myTargetApp} PRIVATE "/INCREMENTAL")
         
     elseif (CMAKE_BUILD_TYPE EQUAL "Release")
         # only dead strip on Release builds since this disables Incremental linking, may want Profile build that doesn't use this
-        target_compile_definitions(${myTargetApp} PRIVATE "/OPT:REF")
+        target_compile_options(${myTargetApp} PRIVATE /Gy /Gw)
+        add_link_options(${myTargetApp} PRIVATE /OPT:REF /OPT:ICF)
         
         # other possibliities
         # /GL - whole program optimization

@@ -1624,7 +1624,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = Automatic;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -1642,7 +1641,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = Automatic;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SUPPORTS_MACCATALYST = NO;

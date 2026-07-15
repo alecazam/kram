@@ -78,9 +78,11 @@ endif()
 if (BUILD_WIN)
 
     # Use the static linked libs, or the exe needs the VCRuntimeDLL installed
-    set_property(TARGET ${myTargetApp} PROPERTY
-        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
-    )
+    # The DLL is now present on Win10/Win11 and higher.  Only older Win10 and prior needs explicit install.
+    # Switch back to /MD default so that app size is smaller.
+    #set_property(TARGET ${myTargetApp} PROPERTY
+    #    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    #)
     
     target_link_libraries(${myTargetApp} PUBLIC libkram)
 
@@ -106,11 +108,13 @@ if (BUILD_WIN)
          
     if (CMAKE_BUILD_TYPE EQUAL "Release")
         # This disables Incremental linking, so only set on Release
-        add_link_options(${myTargetApp} PRIVATE "/OPT:REF")
+        target_compile_options(${myTargetApp} PRIVATE /Gy /Gw)
+        add_link_options(${myTargetApp} PRIVATE /OPT:REF /OPT:ICF)
         
         # other possibliities
         # /GL - whole program optimization
         # /Gy - edit and continue with function level linking (unsupported for clang)
+	# /Gw - enable data sections
         # /Oi - enable intrinsic functions
     
     endif()
