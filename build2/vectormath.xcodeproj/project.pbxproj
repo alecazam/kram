@@ -254,6 +254,7 @@
 				MODULEMAP_FILE = ../libkram/vectormath/module.modulemap;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c c++";
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LIBTOOLFLAGS = "-no_warning_for_no_symbols";
 				SDKROOT = auto;
 				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
@@ -314,6 +315,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MODULEMAP_FILE = ../libkram/vectormath/module.modulemap;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c c++";
+				OTHER_LIBTOOLFLAGS = "-no_warning_for_no_symbols";
 				SDKROOT = auto;
 				XROS_DEPLOYMENT_TARGET = 2.0;
 			};

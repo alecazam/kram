@@ -2424,15 +2424,15 @@ A tool to help profile mem, perf, and builds.
                 break
             }
         }
-        
-        let doClamp = true
-        if doClamp {
+//        
+//        let doClamp = true
+//        if doClamp {
             index = clamp(index + (advanceList == true ? 1:-1), 0, fileList.count-1)
-        }
-        else {
-            // this wraps, but List view needs to scroll to this if not visible
-            index = (index + fileList.count + (advanceList == true ? 1:-1)) % fileList.count
-        }
+//        }
+//        else {
+//            // this wraps, but List view needs to scroll to this if not visible
+//            index = (index + fileList.count + (advanceList == true ? 1:-1)) % fileList.count
+//        }
         return fileList[index].id
     }
     

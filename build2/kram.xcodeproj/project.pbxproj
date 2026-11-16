@@ -1519,6 +1519,7 @@
 					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
 				);
+				OTHER_LIBTOOLFLAGS = "-no_warning_for_no_symbols";
 				SDKROOT = auto;
 				USER_HEADER_SEARCH_PATHS = "";
 				XROS_DEPLOYMENT_TARGET = 2.0;
@@ -1609,6 +1610,7 @@
 					"-DCOMPILE_BASIS=0",
 					"-DCOMPILE_EASTL=0",
 				);
+				OTHER_LIBTOOLFLAGS = "-no_warning_for_no_symbols";
 				SDKROOT = auto;
 				USER_HEADER_SEARCH_PATHS = "";
 				XROS_DEPLOYMENT_TARGET = 2.0;

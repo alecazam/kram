@@ -693,7 +693,7 @@ namespace ert
 				printf("%u%c", len_hist[i], (i < block_size_to_optimize_in_bytes) ? ',' : '\n');
 
 			printf("Total second matches: %u %3.2f%%\n", total_second_matches, total_second_matches * 100.0f / num_blocks);
-			printf("Secod match length histogram:\n");
+			printf("Second match length histogram:\n");
 			for (uint32_t i = MIN_MATCH_LEN; i <= block_size_to_optimize_in_bytes; i++)
 				printf("%u%c", second_len_hist[i], (i < block_size_to_optimize_in_bytes) ? ',' : '\n');
 		}

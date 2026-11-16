@@ -1254,7 +1254,8 @@ namespace rdo_bc
 			if ((bc1_punchthrough_flag) && (!m_params.m_use_bc1_3color_mode))
 				fprintf(stderr, "WARNING: BC1 output used 3-color mode, when this was disabled!\n");
 
-			if ((used_bc1_transparent_texels_for_black) && (!used_bc1_transparent_texels_for_black))
+            // Alec this this might be fix for this line
+			if ((used_bc1_transparent_texels_for_black) && (!m_params.m_use_bc1_3color_mode_for_black))
 				fprintf(stderr, "WARNING: BC1 output used the transparent selector for black, when this was disabled!\n");
 		}
 

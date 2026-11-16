@@ -2720,7 +2720,7 @@ inline std::ostream& operator<<(std::ostream& out, simdjson_result<padded_string
 } // namespace simdjson
 
 // This is deliberately outside of simdjson so that people get it without having to use the namespace
-inline simdjson::padded_string operator "" _padded(const char *str, size_t len) {
+inline simdjson::padded_string operator ""_padded(const char *str, size_t len) {
   return simdjson::padded_string(str, len);
 }
 

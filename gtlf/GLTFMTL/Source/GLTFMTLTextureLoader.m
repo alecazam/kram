@@ -106,7 +106,7 @@ unsigned char *GLTFMTLConvertImageToRGBA8U(CGImageRef image)
         .bitsPerComponent = sizeof(unsigned char) * 8,
         .bitsPerPixel = sizeof(unsigned char) * 8 * 4,
         .colorSpace = dstColorSpace,
-        .bitmapInfo = kCGBitmapByteOrder32Big | kCGImageAlphaLast
+        .bitmapInfo = kCGBitmapByteOrder32Big | (CGBitmapInfo)kCGImageAlphaLast
     };
     
     vImage_Error error = kvImageNoError;

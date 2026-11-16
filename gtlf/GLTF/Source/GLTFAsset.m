@@ -688,7 +688,7 @@
             NSUInteger indexAccessorIndex = [submeshProperties[@"indices"] intValue];
             if (indexAccessorIndex < _accessors.count) {
                 GLTFAccessor *indexAccessor = _accessors[indexAccessorIndex];
-                if (indexAccessor.componentType == GLTFTextureTypeUChar) {
+                if (indexAccessor.componentType == GLTFDataTypeUChar) {
                     // Fix up 8-bit indices, since they're unsupported in modern APIs
                     uint8_t *sourceIndices = indexAccessor.bufferView.buffer.contents + indexAccessor.offset + indexAccessor.bufferView.offset;
                     
