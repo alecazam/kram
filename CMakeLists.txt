@@ -8,6 +8,10 @@ set(BUILD_MAC FALSE)
 set(BUILD_WIN FALSE)
 set(BUILD_LINUX FALSE)
 
+# Want static linking across all.  Bigger app size, but avoids requiring installing the runtime.
+# As of newer Win11 builds, the runtime is now present in the OS.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 if (APPLE)
     message(STATUS "build for macOS")
     set(BUILD_MAC TRUE)

@@ -16,6 +16,9 @@ struct FileIO {
 private:
     FILE* fp = nullptr;
 
+     // dynamic vector
+    vector<uint8_t>* mem = nullptr;
+
     // can point mmap to this
     const uint8_t* _data = nullptr;
     int dataLength = 0;
@@ -24,10 +27,7 @@ private:
     bool _isReadOnly = false;
     bool _isResizeable = false;
     bool _isFailed = false;
-    
-    // dynamic vector
-    vector<uint8_t>* mem = nullptr;
-
+   
 public:
     // FileIO doesn't deal with lifetime of the incoming data
     // may eventually have helpers return a FileIO object
