@@ -662,6 +662,7 @@ struct PerfettoEvent: Codable {
     var dur: Int?
     var name: String?
     var args: [String : AnyCodable]?
+    var id: Int?
     
     // var tts: Int? - thread clock timestamp
     // var cname: String? - color name from table
@@ -1190,7 +1191,7 @@ func generateBuildReport(buildTimings: [String:BuildTiming],
         
         // then duration
         // has to be > to work as a single tid
-        if $0.dur != $1.dur! {
+        if $0.dur! != $1.dur! {
             return $0.dur! > $1.dur!
         }
         
@@ -1592,13 +1593,12 @@ func updateBuildTimingTask(_ file: File) /*async */ throws {
         json = fileContent
     }
     
-    let decoder = JSONDecoder()
-    let perfettoProfile = try decoder.decode(PerfettoProfile.self, from: json)
-    if perfettoProfile.traceEvents == nil { // an array
+    let perfettoProfile = loadPerfetto(json:json)
+    if perfettoProfile == nil {
         return
     }
     
-    var events = perfettoProfile.traceEvents!
+    var events = perfettoProfile!.traceEvents!
     
     // demangle the OptFunction name
     for i in 0..<events.count {
@@ -1932,6 +1932,43 @@ func replaceFunctionNamespaces(_ detail: inout String) {
     }
 }
 
+func loadPerfetto(json: Data) -> PerfettoProfile? {
+    do {
+        let decoder = JSONDecoder()
+        var perfettoProfile = try decoder.decode(PerfettoProfile.self, from: json)
+        
+        if perfettoProfile.traceEvents == nil {
+            return nil
+        }
+        
+        var traceEventsFiltered: [PerfettoEvent] = []
+        for i in 0..<perfettoProfile.traceEvents!.count {
+            var event = perfettoProfile.traceEvents![i]
+            if event.name == "Source" {
+                if ( event.ph == "e" ) {
+                    continue;
+                } else if ( event.ph == "b" ) {
+                    for j in i..<perfettoProfile.traceEvents!.count {
+                        let end = perfettoProfile.traceEvents![j]
+                        if (end.ph == "e" && end.cat == event.cat && end.id == event.id) {
+                            event.dur = end.ts! - event.ts!
+                            break
+                        }
+                    }
+                }
+            }
+
+            traceEventsFiltered.append( event )
+        }
+        perfettoProfile.traceEvents = traceEventsFiltered
+
+        return perfettoProfile
+    } catch {
+        log.error(error.localizedDescription)
+        return nil
+    }
+}
+
 func loadFileJS(_ file: File) -> String? {
     
     do {
@@ -1973,12 +2010,7 @@ func loadFileJS(_ file: File) -> String? {
                 
                 // walk the file and compute the duration if we don't already have it
                 if isJson && file.duration == 0.0 {
-                    let decoder = JSONDecoder()
-                    let perfettoProfile = try decoder.decode(PerfettoProfile.self, from: fileContent)
-                    
-                    if perfettoProfile.traceEvents == nil {
-                        return nil
-                    }
+                    let perfettoProfile = loadPerfetto(json:fileContent)!
             
                     file.duration = updateDuration(perfettoProfile.traceEvents!)
                     
@@ -2019,13 +2051,8 @@ func loadFileJS(_ file: File) -> String? {
             
             // here having to ungzip and decode just to display the content
             // have already processed the build files in an async task
-            let decoder = JSONDecoder()
-            var perfettoProfile = try decoder.decode(PerfettoProfile.self, from: json)
-            
-            if perfettoProfile.traceEvents == nil {
-                return nil
-            }
-            
+            var perfettoProfile = loadPerfetto(json:json)!
+
             // demangle the OptFunction name
             // This is the only name not demangled
             // https://github.com/llvm/llvm-project/issues/45901
